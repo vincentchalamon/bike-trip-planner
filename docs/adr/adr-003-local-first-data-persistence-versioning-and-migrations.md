@@ -209,7 +209,7 @@ migration chain (if we implement file-based migrations in the future).
 ```typescript
 export const exportTripToFile = (trip: TripStateData) => {
     const exportPayload = {
-        _Bike Trip PlannerVersion: 1, // Metadata for future migrations
+        BikeTripPlannerVersion: 1, // Metadata for future migrations
         data: trip,
     };
 

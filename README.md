@@ -31,24 +31,24 @@ Type safety is enforced end-to-end: PHP DTOs define the schema → API Platform 
 
 ## Tech stack
 
-| Layer       | Technology                                              |
-|-------------|--------------------------------------------------------|
-| Backend     | PHP 8.5, Symfony 8, API Platform 4.2, FrankenPHP       |
-| Frontend    | Next.js 16 (App Router), React 19, TypeScript (strict) |
-| State       | Zustand + Immer, localStorage persistence              |
-| Styling     | Tailwind CSS                                           |
-| PDF         | Gotenberg 8 (headless Chromium), Twig templates        |
-| Testing     | PHPUnit 13 (backend), Playwright 1.58 (E2E)            |
-| Quality     | PHPStan level 9, PHP-CS-Fixer, ESLint, Prettier        |
-| Runtime     | Docker (FrankenPHP, Node, Gotenberg)                   |
+| Layer    | Technology                                             |
+|----------|--------------------------------------------------------|
+| Backend  | PHP 8.5, Symfony 8, API Platform 4.2, FrankenPHP       |
+| Frontend | Next.js 16 (App Router), React 19, TypeScript (strict) |
+| State    | Zustand + Immer, localStorage persistence              |
+| Styling  | Tailwind CSS                                           |
+| PDF      | Gotenberg 8 (headless Chromium), Twig templates        |
+| Testing  | PHPUnit 13 (backend), Playwright 1.58 (E2E)            |
+| Quality  | PHPStan level 9, PHP-CS-Fixer, ESLint, Prettier        |
+| Runtime  | Docker (FrankenPHP, Node, Gotenberg)                   |
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Getting Started](docs/getting-started.md) | Requirements, installation, and local setup |
-| [Contributing](docs/contributing.md) | Development workflow, standards, and tooling |
-| [Architecture Decisions](docs/adr/) | ADRs explaining every major technical choice |
+| Document                                           | Description                                                |
+|----------------------------------------------------|------------------------------------------------------------|
+| [Getting Started](docs/getting-started.md)         | Requirements, installation, and local setup                |
+| [Contributing](docs/contributing.md)               | Development workflow, standards, and tooling               |
+| [Architecture Decisions](docs/adr/)                | ADRs explaining every major technical choice               |
 | [Claude Code Tooling](docs/claude-code-tooling.md) | MCP servers, hooks, and skills for AI-assisted development |
 
 ## Quick start
