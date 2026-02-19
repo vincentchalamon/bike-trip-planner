@@ -1,0 +1,35 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); for p in \".env\" \"schema.d.ts\" \"compose.override\" \"vendor/\" \"node_modules/\"; do if [[ \"$FILE\" == *\"$p\"* ]]; then echo \"Fichier protégé: $p\" >&2; exit 2; fi; done; exit 0'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *.php ]]; then docker compose exec -T php vendor/bin/php-cs-fixer fix \"${FILE#*/api/}\" --quiet 2>/dev/null; fi; exit 0'"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx ]]; then docker compose exec -T pwa npx prettier --write \"${FILE#*/pwa/}\" 2>/dev/null; fi; exit 0'"
+          }
+        ]
+      }
+    ]
+  }
+}

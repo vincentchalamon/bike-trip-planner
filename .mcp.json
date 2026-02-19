@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "openapi-spec": {
+      "command": "npx",
+      "args": ["-y", "apidog-mcp-server@latest", "--oas=https://localhost/docs.json"]
+    }
+  }
+}
