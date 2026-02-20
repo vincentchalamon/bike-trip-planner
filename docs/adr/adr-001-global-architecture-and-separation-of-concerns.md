@@ -262,7 +262,7 @@ Husky).
 
 ## Verification
 
-1. `docker compose up -d` — successfully boots FrankenPHP and Node.js containers.
+1. `docker compose up --wait` — successfully boots FrankenPHP and Node.js containers.
 2. `curl -k https://localhost/docs.json` — returns the OpenAPI specification generated automatically by API Platform.
 3. `docker compose exec php vendor/bin/phpstan analyse -l 9 src/` — returns zero errors.
 4. `docker compose exec pwa npm run lint` — returns zero ESLint errors.

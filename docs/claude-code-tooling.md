@@ -93,7 +93,7 @@ Hooks are deterministic shell commands triggered at specific points in the Claud
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *.php ]]; then docker compose exec -T php vendor/bin/php-cs-fixer fix \"${FILE#*/api/}\" --quiet 2>/dev/null; fi; exit 0'"
+            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *.php ]]; then make php-cs-fixer -- \"${FILE#*/api/}\" --quiet 2>/dev/null; fi; exit 0'"
           }
         ]
       }
@@ -117,7 +117,7 @@ Hooks are deterministic shell commands triggered at specific points in the Claud
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx ]]; then docker compose exec -T pwa npx prettier --write \"${FILE#*/pwa/}\" 2>/dev/null; fi; exit 0'"
+            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx ]]; then make prettier -- --write \"${FILE#*/pwa/}\" 2>/dev/null; fi; exit 0'"
           }
         ]
       }
@@ -236,8 +236,8 @@ description: Regenerate TypeScript types from backend OpenAPI spec and verify fr
 When backend DTOs change, run the type generation pipeline:
 
 1. Ensure the PHP backend is running: `docker compose ps php`
-2. Generate types: `docker compose exec pwa npm run typegen`
-3. Check for TypeScript errors: `docker compose exec pwa npx tsc --noEmit`
+2. Generate types: `make typegen`
+3. Check for TypeScript errors: `make tsc --noEmit`
 4. If errors exist, fix the frontend code to match the new types
 5. Report what changed in `pwa/src/lib/api/schema.d.ts`
 ```

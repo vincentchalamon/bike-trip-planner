@@ -19,5 +19,17 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         'php_errors' => [
             'log' => true,
         ],
+        'http_client' => [
+            'scoped_clients' => [
+                'komoot.client' => [
+                    'base_uri' => 'https://www.komoot.com',
+                    'max_redirects' => 2,
+                    'timeout' => 10,
+                    'headers' => [
+                        'Accept' => 'application/gpx+xml, text/html',
+                    ],
+                ],
+            ],
+        ],
     ]);
 };

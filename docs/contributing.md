@@ -39,17 +39,17 @@ The pre-commit hook runs `make qa` automatically. A commit is rejected if QA fai
 
 ```bash
 # PHP unit tests only
-docker compose exec php vendor/bin/phpunit --filter=MyTestClass
+make test-php -- --filter=MyTestClass
 
 # A specific Playwright test
-docker compose exec pwa npx playwright test tests/my-feature.spec.ts
+make test-e2e -- tests/my-feature.spec.ts
 ```
 
 ### 4. After changing backend DTOs, regenerate types
 
 ```bash
 make start                      # Backend must be running
-docker compose exec pwa npm run typegen
+make typegen
 ```
 
 TypeScript compilation will fail until types are regenerated — this is intentional. The type contract (see [ADR-002](adr/adr-002-interface-contract-and-strict-typing.md)) enforces frontend/backend consistency at compile time.
@@ -60,11 +60,11 @@ TypeScript compilation will fail until types are regenerated — this is intenti
 
 ### PHP
 
-| Tool         | Standard                 | Command                                                        |
-|--------------|--------------------------|----------------------------------------------------------------|
-| PHPStan      | Level 9 (strict)         | `docker compose exec php vendor/bin/phpstan analyse -l 9 src/` |
-| PHP-CS-Fixer | PSR-12 + Symfony rules   | `docker compose exec php vendor/bin/php-cs-fixer fix`          |
-| PHPUnit      | Unit + integration tests | `docker compose exec php vendor/bin/phpunit`                   |
+| Tool         | Standard                 | Command             |
+|--------------|--------------------------|---------------------|
+| PHPStan      | Level 9 (strict)         | `make phpstan`      |
+| PHP-CS-Fixer | PSR-12 + Symfony rules   | `make php-cs-fixer` |
+| PHPUnit      | Unit + integration tests | `make test-php`     |
 
 **Key conventions:**
 - State Providers and Processors, never controllers with repositories (stateless backend)
@@ -74,12 +74,12 @@ TypeScript compilation will fail until types are regenerated — this is intenti
 
 ### TypeScript / Frontend
 
-| Tool       | Standard        | Command                                             |
-|------------|-----------------|-----------------------------------------------------|
-| TypeScript | Strict mode     | `docker compose exec pwa npx tsc --noEmit`          |
-| ESLint     | Next.js ruleset | `docker compose exec pwa npx eslint src/`           |
-| Prettier   | Project config  | `docker compose exec pwa npx prettier --check src/` |
-| Playwright | E2E tests       | `docker compose exec pwa npx playwright test`       |
+| Tool       | Standard        | Command                      |
+|------------|-----------------|------------------------------|
+| TypeScript | Strict mode     | `make tsc`                   |
+| ESLint     | Next.js ruleset | `make eslint`                |
+| Prettier   | Project config  | `make prettier -- --write .` |
+| Playwright | E2E tests       | `make test-e2e`              |
 
 **Key conventions:**
 - All API calls go through the `openapi-fetch` client — never use `fetch` directly

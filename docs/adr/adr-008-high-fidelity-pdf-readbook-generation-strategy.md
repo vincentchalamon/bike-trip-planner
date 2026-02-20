@@ -97,9 +97,9 @@ and severely limits the design quality of the exported Roadbook.
 
 ### 7.1 — Infrastructure (Docker Compose)
 
-We add the official Gotenberg image to our `docker-compose.yml`.
+We add the official Gotenberg image to our `compose.yaml`.
 
-**File:** `docker-compose.yml`
+**File:** `compose.yaml`
 
 ```yaml
 services:

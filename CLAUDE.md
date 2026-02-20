@@ -32,11 +32,11 @@ make pwa-shell          # Bash inside Node container
 Running specific tools inside containers:
 
 ```bash
-docker compose exec php vendor/bin/phpstan analyse -l 9 src/
-docker compose exec php vendor/bin/phpunit
-docker compose exec php vendor/bin/phpunit --filter=TestClassName
-docker compose exec pwa npx playwright test
-docker compose exec pwa npx playwright test tests/specific-test.spec.ts
+make phpstan
+make phpunit
+make phpunit -- --filter=TestClassName
+make test-e2e
+make test-e2e -- tests/specific-test.spec.ts
 ```
 
 When backend DTOs change, regenerate frontend types:
