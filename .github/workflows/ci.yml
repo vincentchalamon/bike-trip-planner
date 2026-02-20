@@ -1,0 +1,202 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request: ~
+  workflow_dispatch: ~
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  APP_ENV: test
+
+jobs:
+  api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/esoledad/php:8.5
+      options: --user root
+#    services:
+#      gotenberg:
+#        image: gotenberg:version
+#        env:
+#          FOO: bar
+#        options: >-
+#          --health-cmd "pg_isready --dbname app --username app"
+#          --health-interval 10s
+#          --health-timeout 5s
+#          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Fix repository ownership
+        run: git config --global --add safe.directory $(pwd)
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+      - run: cd api/
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit
+
+  docker-lint:
+    name: Docker Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Fix repository ownership
+        run: git config --global --add safe.directory $(pwd)
+      - name: Lint Dockerfiles
+        uses: hadolint/hadolint-action@v3.3.0
+        with:
+          recursive: true
+
+  openapi-lint:
+    name: OpenAPI Lint
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/esoledad/php:8.5
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Fix repository ownership
+        run: git config --global --add safe.directory $(pwd)
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+      - run: cd api/
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
+      - name: Check OpenAPI
+        run: bin/console api:openapi:export --yaml | redocly lint /dev/stdin
+
+  php-lint:
+    name: PHP Lint
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/esoledad/php:8.5
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Fix repository ownership
+        run: git config --global --add safe.directory $(pwd)
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+      - run: cd api/
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
+      - name: Lint PHP files
+        run: vendor/bin/php-cs-fixer fix --dry-run --diff --ansi
+
+  markdown-lint:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/esoledad/php:8.5
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Fix repository ownership
+        run: git config --global --add safe.directory $(pwd)
+      - name: Lint Markdown files
+        run: markdownlint "**/*.md"
+
+  security-check:
+    name: Security Check
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/esoledad/php:8.5
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Fix repository ownership
+        run: git config --global --add safe.directory $(pwd)
+      - run: cd api/
+      - name: Check Security
+        run: symfony check:security
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/esoledad/php:8.5
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Fix repository ownership
+        run: git config --global --add safe.directory $(pwd)
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+      - run: cd api/
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
+      - name: WarmUp Cache
+        env:
+          APP_ENV: dev # required for parameters.symfony.containerXmlPath
+        run: bin/console cache:warmup --no-optional-warmers
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse -c phpstan.dist.neon
+
+  rector:
+    name: Rector
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/esoledad/php:8.5
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Fix repository ownership
+        run: git config --global --add safe.directory $(pwd)
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+      - run: cd api/
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
+      - name: Run Rector
+        run: vendor/bin/rector process --dry-run
