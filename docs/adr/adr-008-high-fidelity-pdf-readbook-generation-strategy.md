@@ -145,7 +145,7 @@ use App\ApiResource\TripResponse;
 
 final class PdfExportController extends AbstractController
 {
-    #[Route('/api/v1/export-pdf', name: 'api_export_pdf', methods: ['POST'])]
+    #[Route('/export-pdf', name: 'api_export_pdf', methods: ['POST'])]
     public function __invoke(
         Request $request,
         GotenbergPdfInterface $gotenbergPdf,
@@ -228,7 +228,7 @@ export const downloadPdfRoadbook = async () => {
     const tripState = useTripStore.getState().trip;
     if (!tripState) return;
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/export-pdf`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/export-pdf`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

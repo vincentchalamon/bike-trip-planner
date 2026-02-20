@@ -171,7 +171,7 @@ test.describe('Trip Generation Flow', () => {
     test('User can generate a trip and export a PDF roadbook', async ({page}) => {
         // 1. Mock the backend API Platform response to ensure deterministic, fast testing 
         // without hitting the real PHP server or OSM Overpass
-        await page.route('**/api/v1/generate-trip', async (route) => {
+        await page.route('**/generate-trip', async (route) => {
             const json = {
                 id: '123e4567-e89b-12d3-a456-426614174000',
                 totalDistance: 150.5,

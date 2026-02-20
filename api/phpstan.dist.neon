@@ -1,0 +1,53 @@
+# https://phpstan.org/blog/what-is-bleeding-edge
+includes:
+	- vendor/phpstan/phpstan/conf/bleedingEdge.neon
+
+parameters:
+    level: 6
+    treatPhpDocTypesAsCertain: false
+    paths:
+        - bin/
+        - config/
+        - public/
+        - src/
+        - tests/
+    excludePaths:
+        - config/reference.php
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+        consoleApplicationLoader: utils/phpstan/console-loader.php
+    doctrine:
+        objectManagerLoader: utils/phpstan/doctrine-object-manager.php
+    phpat:
+        ignore_built_in_classes: true
+    banned_code:
+        nodes:
+            # enable detection of echo
+            - type: Stmt_Echo
+              functions: null
+            # enable detection of eval
+            - type: Expr_Eval
+              functions: null
+            # enable detection of die/exit
+            - type: Expr_Exit
+              functions: null
+            # enable detection of a set of functions
+            - type: Expr_FuncCall
+              functions:
+                  - dd
+                  - debug_backtrace
+                  - dump
+                  - exec
+                  - passthru
+                  - phpinfo
+                  - print_r
+                  - proc_open
+                  - shell_exec
+                  - system
+                  - var_dump
+            # enable detection of print statements
+            - type: Expr_Print
+              functions: null
+            # enable detection of shell execution by backticks
+            - type: Expr_ShellExec
+              functions: null

@@ -1,0 +1,26 @@
+* text=auto eol=lf
+
+*.conf text eol=lf
+*.html text eol=lf
+*.ini text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.php text eol=lf
+*.sh text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+/api/bin/console text eol=lf
+/api/**/composer.lock text eol=lf merge=ours
+/pwa/package-lock.json text eol=lf merge=ours
+
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary

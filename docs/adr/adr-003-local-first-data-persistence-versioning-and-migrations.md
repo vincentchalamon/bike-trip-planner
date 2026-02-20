@@ -48,7 +48,7 @@ schema (data migration), and validate its integrity before it is allowed into th
 
 ## Considered Options
 
-### Option A: Backend Migration Endpoint (`/api/v1/migrate`)
+### Option A: Backend Migration Endpoint (`/v1/migrate`)
 
 Send the raw imported JSON to the API Platform backend. The PHP application detects the version, runs PHP-based
 migrations, and returns the updated `TripResponse` DTO.
