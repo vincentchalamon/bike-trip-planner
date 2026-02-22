@@ -10,7 +10,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             'deprecation',
         ],
     ]);
-    if ($containerConfigurator->env() === 'dev') {
+    if ('dev' === $containerConfigurator->env()) {
         $containerConfigurator->extension('monolog', [
             'handlers' => [
                 'main' => [
@@ -33,7 +33,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             ],
         ]);
     }
-    if ($containerConfigurator->env() === 'test') {
+
+    if ('test' === $containerConfigurator->env()) {
         $containerConfigurator->extension('monolog', [
             'handlers' => [
                 'main' => [
@@ -56,7 +57,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             ],
         ]);
     }
-    if ($containerConfigurator->env() === 'prod') {
+
+    if ('prod' === $containerConfigurator->env()) {
         $containerConfigurator->extension('monolog', [
             'handlers' => [
                 'main' => [

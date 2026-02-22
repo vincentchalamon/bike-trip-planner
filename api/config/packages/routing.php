@@ -10,7 +10,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             'default_uri' => '%env(DEFAULT_URI)%',
         ],
     ]);
-    if ($containerConfigurator->env() === 'prod') {
+    if ('prod' === $containerConfigurator->env()) {
         $containerConfigurator->extension('framework', [
             'router' => [
                 'strict_requirements' => null,
