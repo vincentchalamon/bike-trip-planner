@@ -11,26 +11,34 @@
     "test:ts": "tsc --noEmit"
   },
   "dependencies": {
-    "@api-platform/api-doc-parser": "^0.15.2",
+    "@api-platform/api-doc-parser": "^0.16.10",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "dayjs": "^1.11.19",
     "immer": "^11.1.4",
+    "lucide-react": "^0.575.0",
     "next": "^16.1.6",
+    "next-themes": "^0.4.6",
     "openapi-fetch": "^0.17.0",
+    "radix-ui": "^1.4.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^0.1.0",
+    "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.2",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "openapi-typescript": "^6.7.6",
+    "openapi-typescript": "^7.13.0",
+    "shadcn": "^3.8.5",
     "tailwindcss": "^4",
+    "tw-animate-css": "^1.4.0",
     "typescript": "^5"
   }
 }
