@@ -18,8 +18,6 @@ parameters:
         consoleApplicationLoader: utils/phpstan/console-loader.php
     doctrine:
         objectManagerLoader: utils/phpstan/doctrine-object-manager.php
-    phpat:
-        ignore_built_in_classes: true
     banned_code:
         nodes:
             # enable detection of echo
