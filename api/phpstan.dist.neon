@@ -16,8 +16,6 @@ parameters:
     symfony:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
         consoleApplicationLoader: utils/phpstan/console-loader.php
-    doctrine:
-        objectManagerLoader: utils/phpstan/doctrine-object-manager.php
     banned_code:
         nodes:
             # enable detection of echo
