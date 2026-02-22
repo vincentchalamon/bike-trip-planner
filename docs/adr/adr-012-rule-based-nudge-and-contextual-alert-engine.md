@@ -78,6 +78,7 @@ class, automatically tagged and injected into an `AnalyzerRegistry` that iterate
 
 ## Decision Outcome
 
+<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Tagged Iterator Pattern)**
 
 ### Why Other Options Were Rejected
@@ -123,7 +124,6 @@ final class Alert
         public readonly ?float $lon = null,
     ) {}
 }
-
 ```
 
 ### 12.2 — The Analyzer Interface
@@ -153,7 +153,6 @@ interface StageAnalyzerInterface
      */
     public static function getPriority(): int;
 }
-
 ```
 
 ### 12.3 — Implementing an Isolated Rule (The "Lunch Nudge")
@@ -202,7 +201,6 @@ final class LunchNudgeAnalyzer implements StageAnalyzerInterface
         return 100; // Low priority, runs after critical safety checks
     }
 }
-
 ```
 
 ### 12.4 — The Registry (Orchestrator)
@@ -241,7 +239,6 @@ final readonly class AnalyzerRegistry
         }
     }
 }
-
 ```
 
 ### 12.5 — Frontend Rendering (Progressive Disclosure)
@@ -277,7 +274,6 @@ const AlertBadge = ({alert}: { alert: Alert }) => {
         </div>
     );
 };
-
 ```
 
 ---

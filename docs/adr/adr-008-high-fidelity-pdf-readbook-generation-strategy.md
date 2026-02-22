@@ -70,6 +70,7 @@ PDF.
 
 ## Decision Outcome
 
+<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Gotenberg Microservice)**
 
 ### Why Other Options Were Rejected
@@ -82,7 +83,7 @@ unacceptable for readability. The PDF must contain selectable, vector-based text
 Maintaining a separate, outdated CSS methodology (floats and tables) solely for Dompdf creates immense technical debt
 and severely limits the design quality of the exported Roadbook.
 
-### Why Option C was Chosen:
+### Why Option C was Chosen
 
 * **Chromium Engine:** Gotenberg wraps headless Chromium, guaranteeing 100% compatibility with modern CSS, external
   stylesheets, and embedded fonts.
@@ -110,7 +111,6 @@ services:
     ports:
       - '3000:3000'
     restart: unless-stopped
-
 ```
 
 ### 7.2 — Backend Bundle Installation
@@ -119,7 +119,6 @@ We install the official SensioLabs Gotenberg bundle in the PHP application.
 
 ```bash
 docker compose exec php composer require sensiolabs/gotenberg-bundle
-
 ```
 
 The bundle automatically configures a `GOTENBERG_DSN` pointing to the new container in the `.env` file (
@@ -170,7 +169,6 @@ final class PdfExportController extends AbstractController
             ->stream(); // Returns the raw PDF binary stream directly to the client
     }
 }
-
 ```
 
 ### 7.4 — Template Design (Twig)
@@ -211,7 +209,6 @@ file or use the CDN for styling the printable document.
     {% endfor %}
 </body>
 </html>
-
 ```
 
 ### 7.5 — Frontend Implementation
@@ -249,20 +246,17 @@ export const downloadPdfRoadbook = async () => {
     a.remove();
     window.URL.revokeObjectURL(url);
 };
-
 ```
 
 ---
 
 ## Verification
 
-1. **Docker Boot Validation:** Verify `gotenberg:8` boots correctly via `docker compose logs gotenberg` and exposes port
-    3000.
+1. **Docker Boot Validation:** Verify `gotenberg:8` boots correctly via `docker compose logs gotenberg` and exposes port 3000.
 2. **End-to-End Test (Playwright):** - Load a complex trip into the application.
 
-* Click the "Export PDF" button.
-* Assert that a file download is triggered, that its MIME type is `application/pdf`, and that the file size is bytes.
-
+   * Click the "Export PDF" button.
+   * Assert that a file download is triggered, that its MIME type is `application/pdf`, and that the file size is bytes.
 
 3. **Visual Regression:** Open the generated PDF and manually verify that Tailwind classes (e.g., Flexbox column
    layouts, text colors) are respected and that pagination occurs correctly using CSS `page-break-before` rules.
@@ -301,4 +295,4 @@ export const downloadPdfRoadbook = async () => {
 * [sensiolabs/GotenbergBundle Official Repository](https://github.com/sensiolabs/GotenbergBundle)
 * [How to generate a PDF file in a few lines of code with Symfony (SensioLabs Blog)](https://medium.com/the-sensiolabs-tech-blog/how-to-generate-a-pdf-file-in-a-few-lines-of-code-with-symfony-39786a679d29)
 * [SymfonyLive Paris 2025: Du lego de composants pour un bundle Gotenberg !](https://live.symfony.com/2025-paris/schedule/du-lego-de-composants-pour-un-bundle-gotenberg)
-* 
+*

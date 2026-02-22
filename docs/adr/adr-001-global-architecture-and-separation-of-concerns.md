@@ -77,6 +77,7 @@ API engine, and a Next.js 16 Single Page Application (SPA) as the state manager 
 
 ## Decision Outcome
 
+<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (API Platform with Next.js SPA)**
 
 ### Why Other Options Were Rejected
@@ -151,7 +152,6 @@ final class TripRequest
     #[Assert\Url]
     public string $komootUrl;
 }
-
 ```
 
 **Create:** `api/src/State/TripGenerationProcessor.php`
@@ -186,7 +186,6 @@ final readonly class TripGenerationProcessor implements ProcessorInterface
         return new TripResponse(/* ... */);
     }
 }
-
 ```
 
 ### 1.3 — Frontend Implementation (State Manager)
@@ -237,7 +236,6 @@ export const useTripStore = create<TripState>()(
         }
     )
 );
-
 ```
 
 ### 1.4 — Code Quality Standards

@@ -75,6 +75,7 @@ Stages are positioned to the right of the timeline, vertically aligned with the 
 Each stage is represented to the right of the timeline, correctly positioned vertically according to its date.
 
 Each stage follows the timeline and displays in 3 rows:
+
 1. the departure location in bold with a #9DA5A7 colored pencil icon to the right indicating (on hover) that this field is editable, occupying 50% of the width, with a right arrow icon to the right, and then followed by the arrival location in bold with the same design. Both locations with the arrow in between indicate the direction (from a location to another)
 2. the metadata: stage distance, elevation gain and forecasted weather, each with a colored icon (and concise description for forecasted weather, e.g., "sunny", "rainy", etc.), in a smaller and light-gray text color to indicate them as a notice
 3. any applicable alerts
@@ -84,6 +85,7 @@ Upon entering the arrival location, the stage's distance and elevation are autom
 Typing in a location field offers place suggestions powered by a search engine.
 
 A stage may display the following alerts:
+
 - if the stage date falls on a public holiday (shops may be closed)
 - if the stage route is too long (distance > 80km)
 - if the stage route is too difficult (elevation > 1200m)

@@ -74,6 +74,7 @@ Use a paid aggregator API to fetch live hotel data.
 
 ## Decision Outcome
 
+<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (OSM Discovery + Heuristic Pricing + Deep Linking)**
 
 ### Why Other Options Were Rejected
@@ -107,7 +108,6 @@ out body;
 >;
 out skel qt;
 QL;
-
 ```
 
 ### 13.2 — The Heuristic Pricing Engine
@@ -154,7 +154,6 @@ final class PricingHeuristicEngine
         };
     }
 }
-
 ```
 
 ### 13.3 — The OpenAPI Contract
@@ -179,7 +178,6 @@ final class Accommodation
         public readonly bool $isExactPrice
     ) {}
 }
-
 ```
 
 ### 13.4 — Frontend Parameterized Deep Linking
@@ -213,7 +211,6 @@ export const generateBookingLink = (lat: number, lon: number, checkinDate: strin
 
     return `${baseUrl}?${params.toString()}`;
 };
-
 ```
 
 ---

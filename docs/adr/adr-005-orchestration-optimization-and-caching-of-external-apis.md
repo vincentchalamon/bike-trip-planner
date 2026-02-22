@@ -68,6 +68,7 @@ The PHP backend compresses the spatial query using a decimated polyline, and uti
 
 ## Decision Outcome
 
+<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Backend Orchestration with Spatial Decimation and Caching)**
 
 ### Why Other Options Were Rejected
@@ -130,7 +131,6 @@ final class OverpassQueryBuilder
         QL;
     }
 }
-
 ```
 
 ### 5.2 — Transparent HTTP Caching (Symfony)
@@ -147,7 +147,6 @@ framework:
     # Use the local filesystem for the application cache pool
     app: cache.adapter.filesystem
     directory: '%kernel.project_dir%/var/cache/api_responses'
-
 ```
 
 **Configuration:** `api/config/packages/framework.yaml`
@@ -161,7 +160,6 @@ framework:
         timeout: 30
       weather.client:
         base_uri: 'https://api.openweathermap.org/data/2.5/'
-
 ```
 
 **File:** `api/src/Osm/OsmScanner.php`
@@ -198,7 +196,6 @@ final readonly class OsmScanner
         return $response->toArray();
     }
 }
-
 ```
 
 ### 5.3 — Cache Invalidation and Variations
@@ -215,9 +212,8 @@ final readonly class OsmScanner
 1. **Cache Hit Assertions:** - Write a PHPUnit test that calls the `OsmScanner` twice with the same mocked Overpass QL
    query.
 
-* Assert that the underlying mock `HttpClient` only registers `1` network request, proving the `CachingHttpClient`
-  successfully intercepted the second call.
-
+   * Assert that the underlying mock `HttpClient` only registers `1` network request, proving the `CachingHttpClient`
+     successfully intercepted the second call.
 
 2. **Query Length Validation:** Ensure the output of the Douglas-Peucker decimation (ADR-004) produces an Overpass QL
    string under 8KB to avoid HTTP `414 URI Too Long` or `413 Payload Too Large` errors from the Overpass API.

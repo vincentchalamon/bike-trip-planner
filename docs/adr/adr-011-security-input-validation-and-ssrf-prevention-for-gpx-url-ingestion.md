@@ -75,6 +75,7 @@ strict API Platform DTO validation and a hardened `XMLReader` configuration that
 
 ## Decision Outcome
 
+<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Strict Allowlisting, Scoped HTTP Clients, and Hardened XMLReader)**
 
 ### Why Other Options Were Rejected
@@ -109,7 +110,6 @@ framework:
         timeout: 10
         headers:
           Accept: 'application/gpx+xml, text/html'
-
 ```
 
 ### 10.2 — API Platform Input Validation
@@ -139,7 +139,6 @@ final class TripRequest
     )]
     public string $komootUrl;
 }
-
 ```
 
 ### 10.3 — Hardening the XML GPX Parser (XXE Protection)
@@ -175,7 +174,6 @@ final class GpxStreamParser
         $reader->close();
     }
 }
-
 ```
 
 ### 10.4 — Payload Size Restrictions (Nginx & PHP-FPM)
@@ -191,7 +189,6 @@ server {
     # Limit file uploads to 15MB (A massive 1500km GPX is rarely larger than 10MB)
     client_max_body_size 15M; 
 }
-
 ```
 
 **Configuration:** `docker/php/php.ini`
@@ -202,7 +199,6 @@ upload_max_filesize = 15M
 post_max_size = 15M
 memory_limit = 128M
 max_execution_time = 30
-
 ```
 
 ---
@@ -214,22 +210,21 @@ max_execution_time = 30
    Bad Request error before the HTTP client is ever invoked.
 2. **XXE Playwright Test:** Create a malicious `payload.gpx` containing a "Billion Laughs" XML bomb.
 
-```xml
-<?xml version="1.0"?>
-<!DOCTYPE lolz [
-        <!ENTITY lol "lol">
-        <!ENTITY lol1 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
-        ]>
-<gpx>
-    <trk>
-        <name>&lol9;</name>
-    </trk>
-</gpx>
+    ```xml
+    <?xml version="1.0"?>
+    <!DOCTYPE lolz [
+            <!ENTITY lol "lol">
+            <!ENTITY lol1 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+            ]>
+    <gpx>
+        <trk>
+            <name>&lol9;</name>
+        </trk>
+    </gpx>
+    ```
 
-```
-
-Upload this file via the Next.js frontend in a Playwright E2E test. Assert that the server responds with a
-`400 Bad Request` and does not crash the Docker container (memory limit respected).
+    Upload this file via the Next.js frontend in a Playwright E2E test. Assert that the server responds with a
+    `400 Bad Request` and does not crash the Docker container (memory limit respected).
 
 3. **Redirect Test:** Mock a server that responds to a Komoot URL with a `301 Redirect` to `http://169.254.169.254` (AWS
    Metadata IP). Assert that the `ScopedHttpClient` throws a `RedirectionException` and refuses to connect to the

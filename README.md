@@ -15,6 +15,7 @@ A local-first bikepacking trip planner. Paste a Komoot tour URL, get a structure
 
 ## Architecture overview
 
+<!-- markdownlint-disable MD040 -->
 ```
 Browser (Next.js 16)          PHP Backend (API Platform 4.2)
   localStorage (Zustand)  ←→   Stateless computation

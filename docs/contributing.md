@@ -67,6 +67,7 @@ TypeScript compilation will fail until types are regenerated — this is intenti
 | PHPUnit      | Unit + integration tests | `make test-php`     |
 
 **Key conventions:**
+
 - State Providers and Processors, never controllers with repositories (stateless backend)
 - DTOs use `Request`/`Response` suffixes (`TripRequest`, `TripResponse`)
 - New alert rules implement `StageAnalyzerInterface` and are tagged with `#[AutoconfigureTag('app.stage_analyzer')]`; no other registration needed
@@ -82,6 +83,7 @@ TypeScript compilation will fail until types are regenerated — this is intenti
 | Playwright | E2E tests       | `make test-e2e`              |
 
 **Key conventions:**
+
 - All API calls go through the `openapi-fetch` client — never use `fetch` directly
 - State lives in Zustand stores with `persist` middleware; never in component state for trip data
 - Zod schemas in `src/lib/validation/` must stay manually aligned with PHP DTOs
@@ -140,6 +142,7 @@ See [docs/claude-code-tooling.md](claude-code-tooling.md) for the full guide, in
 
 ## Project structure reference
 
+<!-- markdownlint-disable MD040 -->
 ```
 bike-trip-planner/
 ├── api/                          # PHP backend

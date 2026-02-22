@@ -77,6 +77,7 @@ A minimalist, unopinionated state management library (Zustand) combined with imm
 
 ## Decision Outcome
 
+<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Zustand + Immer + Persist)**
 
 ### Why Other Options Were Rejected
@@ -89,7 +90,7 @@ including heavy MapLibre canvas components) would re-render, causing severe UI l
 It violates the bundle size and DX drivers. Zustand accomplishes the exact same goal with less than 2kB of bundle size
 and zero `<Provider>` wrapper components, keeping the Next.js App Router tree perfectly clean.
 
-### Why Option C was Chosen:
+### Why Option C was Chosen
 
 * **Zustand `persist`:** Natively handles serializing and deserializing the state to `localStorage` with built-in
   versioning and migration hooks (critical for ADR-003).
@@ -110,7 +111,6 @@ We install Zustand and Immer in the Next.js workspace.
 ```bash
 cd pwa
 npm install zustand immer
-
 ```
 
 ### 11.2 — The Store Definition
@@ -172,7 +172,6 @@ export const useTripStore = create<TripState>()(
         }
     )
 );
-
 ```
 
 ### 11.3 — Preventing Next.js Hydration Mismatches
@@ -205,7 +204,6 @@ export default function HydrationBoundary({children}: { children: React.ReactNod
 
     return <>{children}</>;
 }
-
 ```
 
 **Usage in a Layout or Page:**
@@ -221,7 +219,6 @@ export default function Page() {
         </HydrationBoundary>
     );
 }
-
 ```
 
 ---

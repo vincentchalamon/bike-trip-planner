@@ -74,6 +74,7 @@ Booting the entire Docker stack and driving the application solely through Cypre
 
 ## Decision Outcome
 
+<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (PHPUnit 13 + Playwright)**
 
 ### Why Other Options Were Rejected
@@ -86,7 +87,7 @@ real rendering engine. Verifying that a polyline renders correctly on a map requ
 Playwright outpaces Cypress in 2026 by offering a superior Trace Viewer, native out-of-process multi-tab/multi-origin
 support, and built-in API mocking capabilities.
 
-### Why Option C was Chosen:
+### Why Option C was Chosen
 
 * **PHPUnit 13:** As of PHPUnit 13, doc-block annotations (e.g., `@dataProvider`, `@group`) are deprecated in favor of
   native PHP 8 Attributes (`#[DataProvider]`, `#[Group]`), making the test code much cleaner and statically analyzable
@@ -146,7 +147,6 @@ final class PacingEngineTest extends TestCase
         ];
     }
 }
-
 ```
 
 ### 8.2 — Frontend: Playwright (E2E & UI Testing)
@@ -156,7 +156,6 @@ Playwright will be installed in the Next.js workspace to test the application ex
 ```bash
 cd pwa
 npx playwright install --with-deps
-
 ```
 
 We will leverage Playwright's ability to interact with the DOM and intercept network requests to simulate the API
@@ -202,7 +201,6 @@ test.describe('Trip Generation Flow', () => {
         expect(download.suggestedFilename()).toBe('Bike Trip Planner_Roadbook_123e4567-e89b-12d3-a456-426614174000.pdf');
     });
 });
-
 ```
 
 ### 8.3 — Continuous Integration (CI) Configuration
@@ -213,13 +211,12 @@ The test suite will be orchestrated via a Makefile and executed in a CI environm
 
 ```makefile
 test-backend: ## Run PHPUnit 13 tests
-	docker compose exec php vendor/bin/phpunit
+ docker compose exec php vendor/bin/phpunit
 
 test-e2e: ## Run Playwright E2E tests
-	docker compose exec pwa npx playwright test
+ docker compose exec pwa npx playwright test
 
 test-all: test-backend test-e2e
-
 ```
 
 ---

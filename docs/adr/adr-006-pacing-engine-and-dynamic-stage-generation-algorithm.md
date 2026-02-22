@@ -84,6 +84,7 @@ moment the accumulated distance exceeds the dynamic target.
 
 ## Decision Outcome
 
+<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Deterministic Weighted Polyline Traversal)**
 
 ### Why Other Options Were Rejected
@@ -193,7 +194,6 @@ final class PacingEngine
         // to ensure the entire GPX is covered even if the math falls short.
     }
 }
-
 ```
 
 ### 6.2 — Edge Case Management (The "Reliquat")

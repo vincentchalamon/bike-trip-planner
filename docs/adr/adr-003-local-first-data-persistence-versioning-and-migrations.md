@@ -67,6 +67,7 @@ validation boundary using `Zod` (schema validation library) before hydrating the
 
 ## Decision Outcome
 
+<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Unified Frontend Pipeline with Zustand + Zod)**
 
 ### Why Other Options Were Rejected
@@ -83,7 +84,7 @@ validation boundary using `Zod` (schema validation library) before hydrating the
   `.json` file and breaks the structure (e.g., changing a number to a string), Zustand will ingest it, corrupting the
   store and crashing Next.js React Server/Client Components.
 
-### Why Option C was Chosen:
+### Why Option C was Chosen
 
 * **Zustand (v5.x)** provides a native `version` integer and a `migrate(persistedState, version)` callback specifically
   designed for Redux/Zustand local-first migrations.
@@ -100,7 +101,6 @@ We will introduce `zod` to the frontend workspace to parse untrusted JSON.
 
 ```bash
 npm install zod
-
 ```
 
 We create a runtime validation schema that strictly mirrors the current OpenAPI-generated types.
@@ -127,7 +127,6 @@ export const TripSchema = z.object({
         })
     )
 });
-
 ```
 
 ### 3.2 — Implementing Zustand Migrations
@@ -196,7 +195,6 @@ export const useTripStore = create<TripState>()(
         }
     )
 );
-
 ```
 
 ### 3.3 — The Export Structure
@@ -217,7 +215,6 @@ export const exportTripToFile = (trip: TripStateData) => {
     const url = URL.createObjectURL(blob);
     // ... trigger browser download
 };
-
 ```
 
 ---
@@ -229,10 +226,9 @@ export const exportTripToFile = (trip: TripStateData) => {
 2. **End-to-End Testing (Playwright):** * Inject a malformed JSON string into the browser's `localStorage` via
    Playwright's `page.evaluate()`.
 
-* Reload the page.
-* Verify that the application does not crash (React Error Boundary should not trigger) and that the store gracefully
-  resets to `null` due to the Zod validation failure.
-
+   * Reload the page.
+   * Verify that the application does not crash (React Error Boundary should not trigger) and that the store gracefully
+     resets to `null` due to the Zod validation failure.
 
 3. **Manual Import Validation:** Upload a `.json` file where `totalDistance` is a string `"100"` instead of a number
    `100`. Verify the UI displays a clean "Invalid file" toast notification rather than crashing.

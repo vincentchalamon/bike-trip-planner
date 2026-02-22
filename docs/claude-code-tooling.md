@@ -12,7 +12,7 @@ Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 f
 
 **Purpose:** Automates browser interactions — E2E tests, UI validation, form filling, screenshots. Essential for the project's Playwright tests (ADR-009).
 
-- **Source:** https://github.com/microsoft/playwright-mcp
+- **Source:** <https://github.com/microsoft/playwright-mcp>
 - **Status:** Already enabled in plugins (`playwright@claude-plugins-official`)
 - **Usage:** Available directly via `browser_*` tools (snapshot, click, navigate, etc.)
 
@@ -22,7 +22,7 @@ Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 f
 
 **Purpose:** Queries up-to-date documentation for any library (Symfony, Next.js, API Platform, Zustand, etc.) directly within the Claude Code context. Prevents hallucinations about recent APIs.
 
-- **Source:** https://github.com/upstash/context7
+- **Source:** <https://github.com/upstash/context7>
 - **Status:** Already enabled (`context7@claude-plugins-official`)
 - **Usage:** `resolve-library-id` then `query-docs` to get up-to-date documentation
 
@@ -32,11 +32,13 @@ Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 f
 
 **Purpose:** Native management of PRs, issues, code reviews, GitHub Actions from Claude Code. Essential once the repo is on GitHub.
 
-- **Source:** https://github.com/github/github-mcp-server
+- **Source:** <https://github.com/github/github-mcp-server>
 - **Installation:**
+
   ```bash
   claude mcp add --scope project --transport http github https://api.githubcopilot.com/mcp/
   ```
+
   Then `/mcp` in Claude Code to authenticate via OAuth.
 - **Key features:** create/merge PRs, comment on issues, search code, trigger CI workflows
 
@@ -46,8 +48,9 @@ Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 f
 
 **Purpose:** Loads the backend's OpenAPI spec as context for Claude. Enables generating type-safe frontend code directly from the spec, validating DTO↔TypeScript consistency, and exploring endpoints.
 
-- **Source:** https://docs.apidog.com/apidog-mcp-server
+- **Source:** <https://docs.apidog.com/apidog-mcp-server>
 - **Installation:** Add to `.mcp.json` at the project root:
+
   ```json
   {
     "mcpServers": {
@@ -58,6 +61,7 @@ Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 f
     }
   }
   ```
+
 - **Relevance to Bike Trip Planner:** The type contract (ADR-002) relies on the OpenAPI spec. Having the spec in the Claude context helps maintain backend↔frontend consistency.
 
 ---
@@ -66,8 +70,8 @@ Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 f
 
 **Purpose:** Interact with Docker containers (logs, exec, inspect) using natural language. Useful for debugging the project's 3 containers (php, pwa, gotenberg).
 
-- **Source:** https://github.com/portainer/portainer-mcp
-- **Alternative:** Docker Desktop MCP — https://www.docker.com/blog/introducing-docker-hub-mcp-server/
+- **Source:** <https://github.com/portainer/portainer-mcp>
+- **Alternative:** Docker Desktop MCP — <https://www.docker.com/blog/introducing-docker-hub-mcp-server/>
 - **Note:** For this project, `make php-shell` / `make pwa-shell` + Bash commands are often sufficient. Consider this if Docker debugging becomes frequent.
 
 ---
@@ -76,9 +80,9 @@ Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 f
 
 Hooks are deterministic shell commands triggered at specific points in the Claude Code lifecycle. Configured in `.claude/settings.json` (project) or `~/.claude/settings.json` (global).
 
-**Documentation:** https://code.claude.com/docs/en/hooks-guide
-**Examples (20+):** https://aiorg.dev/blog/claude-code-hooks
-**Anthropic Blog:** https://claude.com/blog/how-to-configure-hooks
+**Documentation:** <https://code.claude.com/docs/en/hooks-guide>
+**Examples (20+):** <https://aiorg.dev/blog/claude-code-hooks>
+**Anthropic Blog:** <https://claude.com/blog/how-to-configure-hooks>
 
 ### 2.1 PostToolUse — Auto-format PHP with PHP-CS-Fixer ⭐ RECOMMENDED
 
@@ -180,18 +184,20 @@ Hooks are deterministic shell commands triggered at specific points in the Claud
 
 Skills are `.claude/skills/<name>/SKILL.md` files in the project. They add `/name` commands that can be invoked in Claude Code.
 
-**Documentation:** https://code.claude.com/docs/en/skills
+**Documentation:** <https://code.claude.com/docs/en/skills>
 
 ### 3.1 Skill `/webapp-testing` (official Anthropic) ⭐ RECOMMENDED
 
 **Purpose:** Automates web application testing via Playwright — verifies UI, debugs user flows, generates test scripts.
 
-- **Source:** https://github.com/anthropics/skills/tree/main/skills/webapp-testing
+- **Source:** <https://github.com/anthropics/skills/tree/main/skills/webapp-testing>
 - **Installation:**
+
   ```bash
   # From Claude Code:
   /plugin marketplace add anthropics/skills
   ```
+
   Or manually copy the SKILL.md content into `.claude/skills/webapp-testing/SKILL.md`.
 
 ---
@@ -201,6 +207,7 @@ Skills are `.claude/skills/<name>/SKILL.md` files in the project. They add `/nam
 **Purpose:** Runs the full QA pipeline and interprets results. Avoids retyping Docker commands every time.
 
 Create `.claude/skills/qa/SKILL.md`:
+
 ```markdown
 ---
 name: qa
@@ -227,6 +234,7 @@ Run the project's quality assurance pipeline:
 **Purpose:** Regenerates TypeScript types from the backend's OpenAPI spec and verifies frontend compilation.
 
 Create `.claude/skills/typegen/SKILL.md`:
+
 ```markdown
 ---
 name: typegen
@@ -248,7 +256,7 @@ When backend DTOs change, run the type generation pipeline:
 
 **Purpose:** Guides the creation of custom MCP servers if you need to integrate specific tools (e.g., wrapper for Symfony `bin/console` commands).
 
-- **Source:** https://github.com/anthropics/skills/tree/main/skills/mcp-builder
+- **Source:** <https://github.com/anthropics/skills/tree/main/skills/mcp-builder>
 
 ---
 

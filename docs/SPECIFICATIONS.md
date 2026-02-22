@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # FEATURES SPECIFICATIONS
 
 Bike Trip Planner is an intelligent bikepacking trip generator designed to simplify logistical and safety planning. The application transforms a route intent (Komoot URL/GPX) into a detailed roadbook, anticipating the cyclist's needs (water, fatigue, safety, resupply) without requiring a database (local-first approach).
@@ -43,9 +44,9 @@ Filling this field triggers a chain of promises:
 
 - **Functional (PHPUnit):** `KomootParserTest` must validate that a test URL returns a `TripDTO` object with a distance of **125 km** and an elevation gain of **1200 m**.
 - **E2E (Playwright):**
-    - Enter the URL in the input field.
-    - Verify that the `SummaryCard` component displays "125 km" and "1200 m D+".
-    - Verify that an error is displayed if the URL is of type `google.com`.
+  - Enter the URL in the input field.
+  - Verify that the `SummaryCard` component displays "125 km" and "1200 m D+".
+  - Verify that an error is displayed if the URL is of type `google.com`.
 
 ---
 
@@ -59,13 +60,13 @@ This engine dynamically modifies the suggested stage lengths. If the user change
 
 #### Mathematical Fatigue Formula
 
-The target distance for day *n* (*Dn*) is defined by:
+The target distance for day $`n`$ ($`Dn`$) is defined by:
 
-*Dn = (Dbase x P^(n-1)) - (D+n / 50)*
+$`Dn = (Dbase x P^(n-1)) - (D+n / 50)`$
 
-- *Dbase*: Theoretical average distance (Total Distance / Number of Days).
-- *P*: Fatigue factor (0.9, i.e., -10% per day).
-- *D+n*: Elevation gain for stage *n* in meters.
+- $`Dbase`$: Theoretical average distance (Total Distance / Number of Days).
+- $`P`$: Fatigue factor (0.9, i.e., -10% per day).
+- $`D+n`$: Elevation gain for stage $`n`$ in meters.
 
 #### Detailed Scenario
 
@@ -84,18 +85,18 @@ The target distance for day *n* (*Dn*) is defined by:
 
 ##### Acceptance Criteria (AC)
 
-1. **Formula application:** For a trip of *n* days, each stage *i* must have a target distance *Di* calculated as:
-   *Di = (Dbase x 0.9^(i-1)) - (D+i / 50)*
-2. **Remainder:** If the sum of *Di* is less than the total distance, the difference is added evenly to the first two stages.
+1. **Formula application:** For a trip of $`n`$ days, each stage $`i`$ must have a target distance $`Di`$ calculated as:
+   $`Di = (Dbase x 0.9^(i-1)) - (D+i / 50)`$
+2. **Remainder:** If the sum of $`Di`$ is less than the total distance, the difference is added evenly to the first two stages.
 3. **Reactivity:** If the user manually changes the number of days, the engine instantly recalculates the breakdown.
 
 ##### Tests
 
 - **Functional (PHPUnit):** `PacingServiceTest` simulating a 3-day trip of **200 km** with no elevation. Verify that D1 > D2 > D3.
 - **E2E (Playwright):**
-    - Load a trip.
-    - Change the number of days from 2 to 4 via a `Select`.
-    - Verify that the number of `StageCard` cards changes from 2 to 4.
+  - Load a trip.
+  - Change the number of days from 2 to 4 via a `Select`.
+  - Verify that the number of `StageCard` cards changes from 2 to 4.
 
 ---
 
@@ -134,9 +135,9 @@ Each stage displays a "Alerts & Services" section grouping interactive badges.
 
 - **Functional (PHPUnit):** `OsmScannerTest` with a mocked Overpass response containing a station and a cemetery. Verify that the service returns 2 POIs.
 - **E2E (Playwright):**
-    - Open the detail view of Stage 1.
-    - Verify the presence of a "Water" icon and a "Train" icon.
-    - Click on the station and verify that an external link to SNCF Connect opens in a new tab.
+  - Open the detail view of Stage 1.
+  - Verify the presence of a "Water" icon and a "Train" icon.
+  - Click on the station and verify that an external link to SNCF Connect opens in a new tab.
 
 #### US #4: Danger and Terrain Alerts
 
@@ -152,8 +153,8 @@ Each stage displays a "Alerts & Services" section grouping interactive badges.
 
 - **Functional (PHPUnit):** `SafetyAnalyzerTest` receiving a national road segment without a cycle lane. Must return an `Alert` of type `CRITICAL`.
 - **E2E (Playwright):**
-    - Select the "Road Bike" profile.
-    - Verify that an orange banner "Warning: Unpaved terrain" appears on the relevant stages.
+  - Select the "Road Bike" profile.
+  - Verify that an orange banner "Warning: Unpaved terrain" appears on the relevant stages.
 
 ---
 
@@ -189,9 +190,9 @@ If the user has not set a lunch stop (type "Point of Interest" or "Accommodation
 
 - **Functional (PHPUnit):** `NudgeServiceTest` verifying that if a "Lunch POI" is added, the automatic suggestions disappear from the JSON response.
 - **E2E (Playwright):**
-    - Verify the "Lunch Suggestions" section on an empty stage.
-    - Manually add a restaurant.
-    - Verify that the suggestions section disappears.
+  - Verify the "Lunch Suggestions" section on an empty stage.
+  - Manually add a restaurant.
+  - Verify that the suggestions section disappears.
 
 ---
 
@@ -232,8 +233,8 @@ The export generates a PDF file optimized for smartphone reading (portrait forma
 
 - **Functional (PHPUnit):** `PdfGeneratorTest` verifying that the generated file starts with the PDF header (`%PDF-`).
 - **E2E (Playwright):**
-    - Click the "Export as PDF" button.
-    - Verify that the download triggers and that the filename contains the trip title.
+  - Click the "Export as PDF" button.
+  - Verify that the download triggers and that the filename contains the trip title.
 
 ---
 

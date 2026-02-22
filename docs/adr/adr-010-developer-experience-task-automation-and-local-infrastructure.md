@@ -80,6 +80,7 @@ frontend container) to trigger Git hooks.
 
 ## Decision Outcome
 
+<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (GNU Make + Husky)**
 
 ### Why Other Options Were Rejected
@@ -106,48 +107,47 @@ with `##`, creating a beautiful, self-documenting help menu. This is particularl
 .PHONY: help start stop install qa test php-shell pwa-shell
 
 help: ## Show this help message
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+ @awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
 ## --- 🐳 Docker Infrastructure ---
 start: ## Start the Docker environment (Detached)
-	docker compose up -d
+ docker compose up -d
 
 stop: ## Stop the Docker environment
-	docker compose stop
+ docker compose stop
 
 ## --- 📦 Dependencies ---
 install: ## Install both PHP and Node dependencies
-	docker compose exec php composer install
-	docker compose exec pwa npm install
+ docker compose exec php composer install
+ docker compose exec pwa npm install
 
 ## --- 🛡️ Quality Assurance & Linting ---
 qa-php: ## Run PHPStan and PHP-CS-Fixer
-	docker compose exec php vendor/bin/php-cs-fixer fix --allow-risky=yes
-	docker compose exec php vendor/bin/phpstan analyse -l 9 src/
+ docker compose exec php vendor/bin/php-cs-fixer fix --allow-risky=yes
+ docker compose exec php vendor/bin/phpstan analyse -l 9 src/
 
 qa-pwa: ## Run ESLint, Prettier, and TypeScript checks
-	docker compose exec pwa npm run lint
-	docker compose exec pwa npx prettier --write .
-	docker compose exec pwa npm run test:ts
+ docker compose exec pwa npm run lint
+ docker compose exec pwa npx prettier --write .
+ docker compose exec pwa npm run test:ts
 
 qa: qa-php qa-pwa ## Run all QA tools across both stacks
 
 ## --- 🧪 Testing ---
 test-php: ## Run PHPUnit tests
-	docker compose exec php vendor/bin/phpunit
+ docker compose exec php vendor/bin/phpunit
 
 test-e2e: ## Run Playwright End-to-End tests
-	docker compose exec pwa npx playwright test
+ docker compose exec pwa npx playwright test
 
 test: qa test-php test-e2e ## Run full test suite (Requires QA to pass first)
 
 ## --- 💻 Interactive Shells ---
 php-shell: ## Open a bash shell inside the PHP container
-	docker compose exec php /bin/sh
+ docker compose exec php /bin/sh
 
 pwa-shell: ## Open a bash shell inside the Next.js container
-	docker compose exec pwa /bin/sh
-
+ docker compose exec pwa /bin/sh
 ```
 
 ### 9.2 — Pre-Commit Hooks (Husky)
@@ -169,7 +169,6 @@ will execute `make` commands at the repository root.
     "husky": "^9.0.0"
   }
 }
-
 ```
 
 **File:** `pwa/.husky/pre-commit`
@@ -186,7 +185,6 @@ echo "🚀 Running Quality Assurance checks (PHP & TS)..."
 make qa
 
 # If 'make qa' fails, the commit is aborted.
-
 ```
 
 ### 9.3 — Developer Workflow Definition

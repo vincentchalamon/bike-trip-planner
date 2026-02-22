@@ -69,6 +69,7 @@ to decimate the coordinates before JSON serialization.
 
 ## Decision Outcome
 
+<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Stream Parsing + Data Decimation)**
 
 ### Why Other Options Were Rejected
@@ -134,7 +135,6 @@ final class GpxStreamParser
         $reader->close();
     }
 }
-
 ```
 
 ### 4.2 — Elevation Smoothing (Thresholding & Moving Average)
@@ -176,7 +176,6 @@ final class ElevationCalculator
         return $totalAscent;
     }
 }
-
 ```
 
 ### 4.3 — Data Decimation (Douglas-Peucker Algorithm)
@@ -216,7 +215,6 @@ final readonly class RouteSimplifier
         return $decimatedPoints;
     }
 }
-
 ```
 
 ### 4.4 — Komoot URL Ingestion
