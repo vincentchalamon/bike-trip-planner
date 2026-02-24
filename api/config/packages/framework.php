@@ -29,6 +29,19 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'Accept' => 'application/gpx+xml, text/html',
                     ],
                 ],
+                'overpass.client' => [
+                    'base_uri' => 'https://overpass-api.de',
+                    'timeout' => 30,
+                ],
+                'weather.client' => [
+                    'base_uri' => 'https://openweathermap.org',
+                    'timeout' => 10,
+                ],
+                'google_mymaps.client' => [
+                    'base_uri' => 'https://www.google.com',
+                    'max_redirects' => 5,
+                    'timeout' => 15,
+                ],
             ],
         ],
     ]);

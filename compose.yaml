@@ -9,6 +9,11 @@ services:
     environment:
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-example\.com|localhost}|php$$}
+      MERCURE_URL: https://mercure/.well-known/mercure
+      MERCURE_PUBLIC_URL: https://localhost:8443/.well-known/mercure
+      MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
+      GOTENBERG_DSN: http://gotenberg:3000
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -53,6 +58,8 @@ services:
     tty: true
     volumes:
       - ./pwa/:/app
+      - pwa_node_modules:/app/node_modules
+      - pwa_next:/app/.next
     ports:
       - target: 3000
         published: 3000
@@ -75,3 +82,66 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+
+  mercure:
+    image: dunglas/mercure
+    restart: unless-stopped
+    environment:
+      MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+    ports:
+      - target: 80
+        published: 8080
+        protocol: tcp
+      - target: 443
+        published: 8443
+        protocol: tcp
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "https://localhost/healthz"]
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  worker:
+    image: esoledad/php:8.5
+    working_dir: /app
+    entrypoint: /app/docker/php/docker-entrypoint.sh
+    command: bin/console messenger:consume async --time-limit=3600 -vv
+    user: root
+    restart: unless-stopped
+    environment:
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-example\.com|localhost}|php$$}
+      MERCURE_URL: https://mercure/.well-known/mercure
+      MERCURE_PUBLIC_URL: https://localhost/.well-known/mercure
+      MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
+      GOTENBERG_DSN: http://gotenberg:3000
+      # See https://xdebug.org/docs/all_settings#mode
+      XDEBUG_MODE: "${XDEBUG_MODE:-off}"
+    extra_hosts:
+      # Ensure that host.docker.internal is correctly defined on Linux
+      - host.docker.internal:host-gateway
+    tty: true
+    volumes:
+      - ./api/:/app
+      - /app/var
+      # If you develop on Mac or Windows you can remove the vendor/ directory
+      #  from the bind-mount for better performance by enabling the next line:
+      #- /app/vendor
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    ports:
+      - target: 6379
+        published: 6379
+        protocol: tcp
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pwa_node_modules: ~
+  pwa_next: ~
