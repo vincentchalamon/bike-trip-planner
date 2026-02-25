@@ -7,18 +7,19 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 return static function (ContainerConfigurator $containerConfigurator): void {
     $containerConfigurator->extension('framework', [
         'cache' => [
-            'directory' => '%kernel.cache_dir%/pools',
-            'default_redis_provider' => 'redis://localhost',
+            'default_redis_provider' => '%env(REDIS_URL)%',
             'pools' => [
-                'trip_state' => [
+                'cache.trip_state' => [
                     'adapter' => 'cache.adapter.redis',
-                    'default_lifetime' => 30, // in minutes
+                    'default_lifetime' => 1800, // 30 minutes
                 ],
-                'osm' => [
+                'cache.osm' => [
                     'adapter' => 'cache.adapter.filesystem',
+                    'default_lifetime' => 86400, // 24 hours
                 ],
-                'weather' => [
+                'cache.weather' => [
                     'adapter' => 'cache.adapter.filesystem',
+                    'default_lifetime' => 10800, // 3 hours
                 ],
             ],
         ],

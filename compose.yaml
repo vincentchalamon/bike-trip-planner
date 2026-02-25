@@ -13,6 +13,8 @@ services:
       MERCURE_PUBLIC_URL: https://localhost:8443/.well-known/mercure
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
+      MESSENGER_FAILED_DSN: redis://redis:6379/failed
+      REDIS_URL: redis://redis:6379
       GOTENBERG_DSN: http://gotenberg:3000
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
@@ -116,6 +118,8 @@ services:
       MERCURE_PUBLIC_URL: https://localhost/.well-known/mercure
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
+      MESSENGER_FAILED_DSN: redis://redis:6379/failed
+      REDIS_URL: redis://redis:6379
       GOTENBERG_DSN: http://gotenberg:3000
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"

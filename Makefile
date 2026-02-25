@@ -27,7 +27,7 @@ eslint: ## Run Eslint
 	docker compose exec pwa npm run lint
 
 prettier: ## Run Prettier
-	docker compose exec pwa npx prettier
+	docker compose exec pwa npx prettier --check .
 
 typescript-check: ## Run TypeScript Check
 	docker compose exec pwa npm run test:ts
