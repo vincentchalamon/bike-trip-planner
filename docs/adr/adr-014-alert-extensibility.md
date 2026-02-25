@@ -79,30 +79,30 @@ final class AnalyzerRegistry
 
 1. Create the class in `src/Analyzer/Rules/`:
 
-```php
-namespace App\Analyzer\Rules;
-
-use App\Analyzer\StageAnalyzerInterface;
-use App\ApiResource\Model\Alert;
-use App\ApiResource\Model\Stage;
-use App\Enum\AlertType;
-
-final class MyNewAnalyzer implements StageAnalyzerInterface
-{
-    public function analyze(Stage $stage, array $context = []): array
+    ```php
+    namespace App\Analyzer\Rules;
+    
+    use App\Analyzer\StageAnalyzerInterface;
+    use App\ApiResource\Model\Alert;
+    use App\ApiResource\Model\Stage;
+    use App\Enum\AlertType;
+    
+    final class MyNewAnalyzer implements StageAnalyzerInterface
     {
-        if ($someCondition) {
-            return [new Alert(AlertType::Warning, 'Message actionnable', $lat, $lon)];
+        public function analyze(Stage $stage, array $context = []): array
+        {
+            if ($someCondition) {
+                return [new Alert(AlertType::Warning, 'Message actionnable', $lat, $lon)];
+            }
+            return [];
         }
-        return [];
+    
+        public static function getPriority(): int
+        {
+            return 50; // 10=critical, 100=nudge
+        }
     }
-
-    public static function getPriority(): int
-    {
-        return 50; // 10=critical, 100=nudge
-    }
-}
-```
+    ```
 
 2. **That is all.** Symfony autoconfiguration discovers the class automatically via
    `#[AutoconfigureTag]` on the interface.

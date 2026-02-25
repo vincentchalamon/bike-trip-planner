@@ -109,7 +109,7 @@ jobs:
       - name: Fix repository ownership
         run: git config --global --add safe.directory $(pwd)
       - name: Run Markdownlint
-        run: markdownlint "**/*.md"
+        run: markdownlint "**/*.md" --ignore "vendor/**" --ignore "vendor-bin/**"
 
   symfony-security-check:
     name: Security Check

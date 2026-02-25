@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="BikeTripPlanner" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Test Route</name>
+    <trkseg>
+      <trkpt lat="45.0000" lon="5.0000"><ele>300</ele></trkpt>
+      <trkpt lat="45.0100" lon="5.0100"><ele>310</ele></trkpt>
+      <trkpt lat="45.0200" lon="5.0200"><ele>320</ele></trkpt>
+      <trkpt lat="45.0300" lon="5.0300"><ele>315</ele></trkpt>
+      <trkpt lat="45.0400" lon="5.0400"><ele>325</ele></trkpt>
+      <trkpt lat="45.0500" lon="5.0500"><ele>340</ele></trkpt>
+      <trkpt lat="45.0600" lon="5.0600"><ele>350</ele></trkpt>
+      <trkpt lat="45.0700" lon="5.0700"><ele>345</ele></trkpt>
+      <trkpt lat="45.0800" lon="5.0800"><ele>355</ele></trkpt>
+      <trkpt lat="45.0900" lon="5.0900"><ele>360</ele></trkpt>
+      <trkpt lat="45.1000" lon="5.1000"><ele>370</ele></trkpt>
+      <trkpt lat="45.1100" lon="5.1100"><ele>375</ele></trkpt>
+      <trkpt lat="45.1200" lon="5.1200"><ele>380</ele></trkpt>
+      <trkpt lat="45.1300" lon="5.1300"><ele>385</ele></trkpt>
+      <trkpt lat="45.1400" lon="5.1400"><ele>390</ele></trkpt>
+      <trkpt lat="45.1500" lon="5.1500"><ele>395</ele></trkpt>
+      <trkpt lat="45.1600" lon="5.1600"><ele>400</ele></trkpt>
+      <trkpt lat="45.1700" lon="5.1700"><ele>405</ele></trkpt>
+      <trkpt lat="45.1800" lon="5.1800"><ele>410</ele></trkpt>
+      <trkpt lat="45.1900" lon="5.1900"><ele>415</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

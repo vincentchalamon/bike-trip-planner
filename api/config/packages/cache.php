@@ -24,4 +24,15 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             ],
         ],
     ]);
+    if ('test' === $containerConfigurator->env()) {
+        $containerConfigurator->extension('framework', [
+            'cache' => [
+                'pools' => [
+                    'cache.trip_state' => [
+                        'adapter' => 'cache.adapter.array',
+                    ],
+                ],
+            ],
+        ]);
+    }
 };

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            .page-break { page-break-before: always; }
+        }
+        body { font-family: sans-serif; }
+        a { color: #2563eb; text-decoration: underline; }
+    </style>
+</head>
+<body class="bg-white text-gray-900 p-8 max-w-4xl mx-auto">
+
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">{{ title }}</h1>
+        <p class="text-gray-500 text-sm">Généré le {{ "now"|date("d/m/Y") }}</p>
+        <p class="text-gray-600 mt-2">{{ stages|length }} étape{{ stages|length > 1 ? 's' : '' }}</p>
+    </div>
+
+    {# Summary table #}
+    <table class="w-full border-collapse mb-8 text-sm">
+        <thead>
+            <tr class="bg-gray-100">
+                <th class="border border-gray-300 px-3 py-2 text-left">Étape</th>
+                <th class="border border-gray-300 px-3 py-2 text-right">Distance</th>
+                <th class="border border-gray-300 px-3 py-2 text-right">D+</th>
+                <th class="border border-gray-300 px-3 py-2 text-left">Départ</th>
+                <th class="border border-gray-300 px-3 py-2 text-left">Arrivée</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stage in stages %}
+            <tr class="{{ loop.index is odd ? 'bg-white' : 'bg-gray-50' }}">
+                <td class="border border-gray-300 px-3 py-2">Jour {{ stage.dayNumber }}{% if stage.label %} — {{ stage.label }}{% endif %}</td>
+                <td class="border border-gray-300 px-3 py-2 text-right">{{ stage.distance|number_format(1) }} km</td>
+                <td class="border border-gray-300 px-3 py-2 text-right">{{ stage.elevation|number_format(0) }} m</td>
+                <td class="border border-gray-300 px-3 py-2">{{ stage.startPoint.lat|number_format(4) }}, {{ stage.startPoint.lon|number_format(4) }}</td>
+                <td class="border border-gray-300 px-3 py-2">{{ stage.endPoint.lat|number_format(4) }}, {{ stage.endPoint.lon|number_format(4) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {# Stage details #}
+    {% for stage in stages %}
+    <div class="{{ not loop.first ? 'page-break' : '' }} mb-8">
+        <div class="border-l-4 border-blue-500 pl-4 mb-4">
+            <h2 class="text-xl font-bold text-gray-800">
+                Jour {{ stage.dayNumber }}{% if stage.label %} — {{ stage.label }}{% endif %}
+            </h2>
+            <div class="text-gray-600 text-sm mt-1">
+                <span class="mr-4">📏 {{ stage.distance|number_format(1) }} km</span>
+                <span class="mr-4">⛰️ {{ stage.elevation|number_format(0) }} m D+</span>
+            </div>
+        </div>
+
+        {# Weather #}
+        {% if stage.weather %}
+        <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-4 text-sm">
+            <strong>Météo :</strong>
+            {{ stage.weather.description }} —
+            {{ stage.weather.tempMin|number_format(0) }}°C / {{ stage.weather.tempMax|number_format(0) }}°C —
+            Vent {{ stage.weather.windSpeed|number_format(0) }} km/h {{ stage.weather.windDirection }} —
+            Précipitations : {{ stage.weather.precipitationProbability }}%
+        </div>
+        {% endif %}
+
+        {# Alerts #}
+        {% if stage.alerts %}
+        <div class="mb-4">
+            {% for alert in stage.alerts %}
+            <div class="flex items-start gap-2 p-2 rounded mb-2 text-sm
+                {{ alert.type.value == 'critical' ? 'bg-red-50 border border-red-300 text-red-800' :
+                   (alert.type.value == 'warning' ? 'bg-yellow-50 border border-yellow-300 text-yellow-800' :
+                   'bg-gray-50 border border-gray-200 text-gray-700') }}">
+                <span>{{ alert.type.value == 'critical' ? '🔴' : (alert.type.value == 'warning' ? '⚠️' : 'ℹ️') }}</span>
+                <span>{{ alert.message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {# Accommodations #}
+        {% if stage.accommodations %}
+        <div class="mb-4">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">🛏️ Hébergements</h3>
+            <ul class="text-sm text-gray-600 space-y-1">
+                {% for acc in stage.accommodations %}
+                <li>
+                    {{ acc.name }} ({{ acc.type }}) —
+                    {% if acc.isExactPrice %}
+                        {{ acc.estimatedPriceMin|number_format(0) }} €
+                    {% else %}
+                        {{ acc.estimatedPriceMin|number_format(0) }}–{{ acc.estimatedPriceMax|number_format(0) }} €
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {# POIs #}
+        {% if stage.pois %}
+        <div class="mb-4">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">📍 Points d'intérêt</h3>
+            <ul class="text-sm text-gray-600 columns-2 space-y-1">
+                {% for poi in stage.pois|slice(0, 10) %}
+                <li>{{ poi.name }} ({{ poi.category }})</li>
+                {% endfor %}
+                {% if stage.pois|length > 10 %}
+                <li class="text-gray-400">+ {{ stage.pois|length - 10 }} autres…</li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+</body>
+</html>

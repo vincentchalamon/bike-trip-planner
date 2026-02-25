@@ -1,0 +1,160 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\MessageHandler;
+
+use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Stage;
+use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationTrackerInterface;
+use App\Engine\DistanceCalculator;
+use App\Engine\ElevationCalculator;
+use App\Engine\PacingEngineRegistry;
+use App\Engine\RouteSimplifier;
+use App\Enum\ComputationName;
+use App\Enum\SourceType;
+use App\Mercure\MercureEventType;
+use App\Mercure\TripUpdatePublisherInterface;
+use App\Message\GenerateStageGpx;
+use App\Message\GenerateStages;
+use App\Repository\TripRequestRepositoryInterface;
+use Psr\Container\ContainerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
+
+#[AsMessageHandler]
+final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
+{
+    public function __construct(
+        ComputationTrackerInterface $computationTracker,
+        TripUpdatePublisherInterface $publisher,
+        private TripRequestRepositoryInterface $tripStateManager,
+        #[Autowire(service: 'app.engine_registry')]
+        private ContainerInterface $engineRegistry,
+        private MessageBusInterface $messageBus,
+    ) {
+        parent::__construct($computationTracker, $publisher);
+    }
+
+    public function __invoke(GenerateStages $message): void
+    {
+        $tripId = $message->tripId;
+        $request = $this->tripStateManager->getRequest($tripId);
+
+        if (!$request instanceof TripRequest) {
+            return;
+        }
+
+        $this->executeWithTracking($tripId, ComputationName::STAGES, function () use ($tripId, $request): void {
+            $sourceType = $this->tripStateManager->getSourceType($tripId);
+
+            if ($sourceType === SourceType::KOMOOT_COLLECTION->value) {
+                $stages = $this->generateCollectionStages($tripId);
+            } else {
+                $stages = $this->generatePacingStages($tripId, $request);
+            }
+
+            if (\count($stages) < 2) {
+                $this->publisher->publishValidationError($tripId, 'MIN_STAGES', 'Minimum 2 étapes requises.');
+            }
+
+            $this->tripStateManager->storeStages($tripId, $stages);
+
+            $this->publisher->publish($tripId, MercureEventType::STAGES_COMPUTED, [
+                'stages' => array_map(
+                    static fn (Stage $s): array => ['dayNumber' => $s->dayNumber, 'distance' => round($s->distance, 1)],
+                    $stages,
+                ),
+            ]);
+
+            $this->messageBus->dispatch(new GenerateStageGpx($tripId));
+        });
+    }
+
+    /** @return list<Stage> */
+    private function generateCollectionStages(string $tripId): array
+    {
+        $tracksData = $this->tripStateManager->getTracksData($tripId);
+
+        if (null === $tracksData) {
+            return [];
+        }
+
+        $stages = [];
+
+        foreach ($tracksData as $i => $trackData) {
+            $points = array_map(
+                static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']),
+                $trackData,
+            );
+
+            if ([] === $points) {
+                continue;
+            }
+
+            $distance = $this->engineRegistry
+                ->get(DistanceCalculator::class)
+                ->calculateTotalDistance($points);
+            $elevation = $this->engineRegistry->get(ElevationCalculator::class)->calculateTotalAscent($points);
+            $geometry = $this->engineRegistry->get(RouteSimplifier::class)->simplify($points);
+
+            $stages[] = new Stage(
+                tripId: $tripId,
+                dayNumber: $i + 1,
+                distance: $distance,
+                elevation: $elevation,
+                startPoint: $points[0],
+                endPoint: $points[\count($points) - 1],
+                geometry: $geometry,
+            );
+        }
+
+        return $stages;
+    }
+
+    /**
+     * @return list<Stage>
+     */
+    private function generatePacingStages(string $tripId, TripRequest $request): array
+    {
+        $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
+
+        if (null === $decimatedData) {
+            return [];
+        }
+
+        $decimatedPoints = array_map(
+            static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']),
+            $decimatedData,
+        );
+
+        $allPointsData = $this->tripStateManager->getRawPoints($tripId);
+        $allPoints = null !== $allPointsData
+            ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $allPointsData)
+            : $decimatedPoints;
+
+        $totalDistance = $this->engineRegistry
+            ->get(DistanceCalculator::class)
+            ->calculateTotalDistance($allPoints);
+
+        if ($request->endDate instanceof \DateTimeImmutable && $request->startDate instanceof \DateTimeImmutable) {
+            $numberOfDays = (int) $request->startDate->diff($request->endDate)->days + 1;
+        } else {
+            $numberOfDays = (int) ceil($totalDistance / 80);
+            $numberOfDays = max(1, $numberOfDays);
+        }
+
+        return $this->engineRegistry
+            ->get(PacingEngineRegistry::class)
+            ->generateStages(
+                $tripId,
+                $decimatedPoints,
+                $numberOfDays,
+                $totalDistance,
+                $request->fatigueFactor,
+                $request->elevationPenalty,
+            );
+    }
+}

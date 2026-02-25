@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Rector\Config\RectorConfig;
 use Rector\Set\ValueObject\SetList;
+use Rector\PHPUnit\Set\PHPUnitSetList;
 
 $rector = RectorConfig::configure()
     ->withPaths([
@@ -23,6 +24,7 @@ $rector = RectorConfig::configure()
         SetList::INSTANCEOF,
         SetList::PRIVATIZATION,
         SetList::TYPE_DECLARATION,
+        PHPUnitSetList::PHPUNIT_120,
     ])
     ->withAttributesSets()
     ->withComposerBased(phpunit: true, symfony: true)
