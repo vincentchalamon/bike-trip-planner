@@ -36,7 +36,7 @@ typescript-check: ## Run TypeScript Check
 	docker compose exec pwa npm run test:ts
 
 markdownlint: ## Run Markdownlint
-	docker compose exec php markdownlint "**/*.md" --fix --ignore "vendor/**" --ignore "vendor-bin/**"
+	docker run --rm -v $$(pwd):/app -w /app davidanson/markdownlint-cli2 "**/*.md" "!.claude/**" "!api/vendor/**" "!api/vendor-bin/**" "!pwa/node_modules/**"
 
 tsc: typescript-check ## Alias for "typescript-check"
 
