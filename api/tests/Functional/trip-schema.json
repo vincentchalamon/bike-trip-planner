@@ -1,0 +1,147 @@
+{
+  "$schema": "https:\/\/json-schema.org\/draft-07\/schema#",
+  "type": "object",
+  "required": [
+    "@context",
+    "@id",
+    "@type",
+    "id",
+    "computationStatus"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "@context": {
+      "type": "string",
+      "const": "/contexts/Trip"
+    },
+    "@id": {
+      "type": "string",
+      "pattern": "^/trips/.+$"
+    },
+    "@type": {
+      "type": "string",
+      "const": "Trip"
+    },
+    "id": {
+      "type": "string"
+    },
+    "computationStatus": {
+      "type": "object",
+      "required": [
+        "route",
+        "stages",
+        "stage_gpx",
+        "pois",
+        "accommodations",
+        "terrain",
+        "weather",
+        "calendar",
+        "wind",
+        "resupply",
+        "bike_shops"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "route": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "stages": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "stage_gpx": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "pois": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "accommodations": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "terrain": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "weather": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "calendar": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "wind": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "resupply": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "bike_shops": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        }
+      }
+    }
+  }
+}

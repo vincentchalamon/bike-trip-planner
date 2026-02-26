@@ -6,6 +6,33 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 
 return static function (ContainerConfigurator $containerConfigurator): void {
     $containerConfigurator->extension('framework', [
-        'cache' => null,
+        'cache' => [
+            'default_redis_provider' => '%env(REDIS_URL)%',
+            'pools' => [
+                'cache.trip_state' => [
+                    'adapter' => 'cache.adapter.redis',
+                    'default_lifetime' => 1800, // 30 minutes
+                ],
+                'cache.osm' => [
+                    'adapter' => 'cache.adapter.filesystem',
+                    'default_lifetime' => 86400, // 24 hours
+                ],
+                'cache.weather' => [
+                    'adapter' => 'cache.adapter.filesystem',
+                    'default_lifetime' => 10800, // 3 hours
+                ],
+            ],
+        ],
     ]);
+    if ('test' === $containerConfigurator->env()) {
+        $containerConfigurator->extension('framework', [
+            'cache' => [
+                'pools' => [
+                    'cache.trip_state' => [
+                        'adapter' => 'cache.adapter.array',
+                    ],
+                ],
+            ],
+        ]);
+    }
 };

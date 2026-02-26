@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# Required for healthcheck
+apk add curl
+
 if [ "$1" = 'node' ] || [ "$1" = 'npm' ]; then
 	if [ -z "$(ls -A 'node_modules/' 2>/dev/null)" ]; then
 		npm install

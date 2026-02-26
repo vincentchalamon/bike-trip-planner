@@ -208,29 +208,29 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *             initial_marking?: list<scalar|Param|null>,
  *             events_to_dispatch?: list<string|Param>|null,
  *             places?: list<array{ // Default: []
- *                 name: scalar|Param|null,
- *                 metadata?: list<mixed>,
+ *                 name?: scalar|Param|null,
+ *                 metadata?: array<string, mixed>,
  *             }>,
- *             transitions: list<array{ // Default: []
- *                 name: string|Param,
+ *             transitions?: list<array{ // Default: []
+ *                 name?: string|Param,
  *                 guard?: string|Param, // An expression to block the transition.
  *                 from?: list<array{ // Default: []
- *                     place: string|Param,
+ *                     place?: string|Param,
  *                     weight?: int|Param, // Default: 1
  *                 }>,
  *                 to?: list<array{ // Default: []
- *                     place: string|Param,
+ *                     place?: string|Param,
  *                     weight?: int|Param, // Default: 1
  *                 }>,
  *                 weight?: int|Param, // Default: 1
- *                 metadata?: list<mixed>,
+ *                 metadata?: array<string, mixed>,
  *             }>,
- *             metadata?: list<mixed>,
+ *             metadata?: array<string, mixed>,
  *         }>,
  *     },
  *     router?: bool|array{ // Router configuration
  *         enabled?: bool|Param, // Default: false
- *         resource: scalar|Param|null,
+ *         resource?: scalar|Param|null,
  *         type?: scalar|Param|null,
  *         default_uri?: scalar|Param|null, // The default URI used to generate URLs in a non-HTTP context. // Default: null
  *         http_port?: scalar|Param|null, // Default: 80
@@ -353,10 +353,10 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         mapping?: array{
  *             paths?: list<scalar|Param|null>,
  *         },
- *         default_context?: list<mixed>,
+ *         default_context?: array<string, mixed>,
  *         named_serializers?: array<string, array{ // Default: []
  *             name_converter?: scalar|Param|null,
- *             default_context?: list<mixed>,
+ *             default_context?: array<string, mixed>,
  *             include_built_in_normalizers?: bool|Param, // Whether to include the built-in normalizers // Default: true
  *             include_built_in_encoders?: bool|Param, // Whether to include the built-in encoders // Default: true
  *         }>,
@@ -419,8 +419,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         resources?: array<string, scalar|Param|null>,
  *     },
  *     messenger?: bool|array{ // Messenger configuration
- *         enabled?: bool|Param, // Default: false
- *         routing?: array<string, array{ // Default: []
+ *         enabled?: bool|Param, // Default: true
+ *         routing?: array<string, string|array{ // Default: []
  *             senders?: list<scalar|Param|null>,
  *         }>,
  *         serializer?: array{
@@ -433,7 +433,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         transports?: array<string, string|array{ // Default: []
  *             dsn?: scalar|Param|null,
  *             serializer?: scalar|Param|null, // Service id of a custom serializer to use. // Default: null
- *             options?: list<mixed>,
+ *             options?: array<string, mixed>,
  *             failure_transport?: scalar|Param|null, // Transport name to send failed messages to (after all retries have failed). // Default: null
  *             retry_strategy?: string|array{
  *                 service?: scalar|Param|null, // Service id to override the retry strategy entirely. // Default: null
@@ -455,7 +455,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                 allow_no_senders?: bool|Param, // Default: true
  *             },
  *             middleware?: list<string|array{ // Default: []
- *                 id: scalar|Param|null,
+ *                 id?: scalar|Param|null,
  *                 arguments?: list<mixed>,
  *             }>,
  *         }>,
@@ -627,7 +627,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *             lock_factory?: scalar|Param|null, // The service ID of the lock factory used by this limiter (or null to disable locking). // Default: "auto"
  *             cache_pool?: scalar|Param|null, // The cache pool to use for storing the current limiter state. // Default: "cache.rate_limiter"
  *             storage_service?: scalar|Param|null, // The service ID of a custom storage implementation, this precedes any configured "cache_pool". // Default: null
- *             policy: "fixed_window"|"token_bucket"|"sliding_window"|"compound"|"no_limit"|Param, // The algorithm to be used by this limiter.
+ *             policy?: "fixed_window"|"token_bucket"|"sliding_window"|"compound"|"no_limit"|Param, // The algorithm to be used by this limiter.
  *             limiters?: list<scalar|Param|null>,
  *             limit?: int|Param, // The maximum allowed hits in a fixed interval or burst.
  *             interval?: scalar|Param|null, // Configures the fixed interval if "policy" is set to "fixed_window" or "sliding_window". The value must be a number followed by "second", "minute", "hour", "day", "week" or "month" (or their plural equivalent).
@@ -672,7 +672,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         enabled?: bool|Param, // Default: false
  *         message_bus?: scalar|Param|null, // The message bus to use. // Default: "messenger.default_bus"
  *         routing?: array<string, array{ // Default: []
- *             service: scalar|Param|null,
+ *             service?: scalar|Param|null,
  *             secret?: scalar|Param|null, // Default: ""
  *         }>,
  *     },
@@ -860,12 +860,12 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         },
  *     },
  *     mercure?: bool|array{
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *         hub_url?: scalar|Param|null, // The URL sent in the Link HTTP header. If not set, will default to the URL for MercureBundle's default hub. // Default: null
  *         include_type?: bool|Param, // Always include @type in updates (including delete ones). // Default: false
  *     },
  *     messenger?: bool|array{
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *     },
  *     elasticsearch?: bool|array{
  *         enabled?: bool|Param, // Default: false
@@ -879,7 +879,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         },
  *         termsOfService?: scalar|Param|null, // A URL to the Terms of Service for the API. MUST be in the format of a URL. // Default: null
  *         tags?: list<array{ // Default: []
- *             name: scalar|Param|null,
+ *             name?: scalar|Param|null,
  *             description?: scalar|Param|null, // Default: null
  *         }>,
  *         license?: array{
@@ -1002,7 +1002,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     use_microseconds?: scalar|Param|null, // Default: true
  *     channels?: list<scalar|Param|null>,
  *     handlers?: array<string, array{ // Default: []
- *         type: scalar|Param|null,
+ *         type?: scalar|Param|null,
  *         id?: scalar|Param|null,
  *         enabled?: bool|Param, // Default: true
  *         priority?: scalar|Param|null, // Default: 0
@@ -1125,7 +1125,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         headers?: list<scalar|Param|null>,
  *         mailer?: scalar|Param|null, // Default: null
  *         email_prototype?: string|array{
- *             id: scalar|Param|null,
+ *             id?: scalar|Param|null,
  *             method?: scalar|Param|null, // Default: null
  *         },
  *         verbosity_levels?: array{
@@ -1152,7 +1152,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  * @psalm-type SensiolabsGotenbergConfig = array{
  *     assets_directory?: list<scalar|Param|null>,
  *     version?: scalar|Param|null, // Version of Gotenberg // Default: null
- *     http_client: scalar|Param|null, // HTTP Client reference to use. (Must have a base_uri)
+ *     http_client?: scalar|Param|null, // HTTP Client reference to use. (Must have a base_uri)
  *     request_context?: array{ // Override the request Gotenberg will make to call one of your routes.
  *         base_uri?: scalar|Param|null, // Used only when using `->route()`. Overrides the guessed `base_url` from the request. May be useful in CLI.
  *     },
@@ -1193,10 +1193,58 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                 pdf_format?: "PDF/A-1b"|"PDF/A-2b"|"PDF/A-3b"|Param,
  *                 flatten?: bool|Param,
  *                 download_from?: list<array{ // Default: []
- *                     url: scalar|Param|null,
+ *                     url?: scalar|Param|null,
  *                     extraHttpHeaders?: array<string, array{ // Default: []
- *                         name: scalar|Param|null,
- *                         value: scalar|Param|null,
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
+ *                     }>,
+ *                 }>,
+ *             },
+ *             encrypt?: array{
+ *                 webhook?: string|array{
+ *                     config_name?: scalar|Param|null,
+ *                     success?: array{
+ *                         url?: scalar|Param|null,
+ *                         route?: mixed,
+ *                         method?: "POST"|"PUT"|"PATCH"|Param,
+ *                     },
+ *                     error?: array{
+ *                         url?: scalar|Param|null,
+ *                         route?: mixed,
+ *                         method?: "POST"|"PUT"|"PATCH"|Param,
+ *                     },
+ *                     extra_http_headers?: array<string, mixed>,
+ *                 },
+ *                 owner_password?: scalar|Param|null,
+ *                 user_password?: scalar|Param|null,
+ *                 download_from?: list<array{ // Default: []
+ *                     url?: scalar|Param|null,
+ *                     extraHttpHeaders?: array<string, array{ // Default: []
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
+ *                     }>,
+ *                 }>,
+ *             },
+ *             embed?: array{
+ *                 webhook?: string|array{
+ *                     config_name?: scalar|Param|null,
+ *                     success?: array{
+ *                         url?: scalar|Param|null,
+ *                         route?: mixed,
+ *                         method?: "POST"|"PUT"|"PATCH"|Param,
+ *                     },
+ *                     error?: array{
+ *                         url?: scalar|Param|null,
+ *                         route?: mixed,
+ *                         method?: "POST"|"PUT"|"PATCH"|Param,
+ *                     },
+ *                     extra_http_headers?: array<string, mixed>,
+ *                 },
+ *                 download_from?: list<array{ // Default: []
+ *                     url?: scalar|Param|null,
+ *                     extraHttpHeaders?: array<string, array{ // Default: []
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
  *                     }>,
  *                 }>,
  *             },
@@ -1216,10 +1264,10 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                     extra_http_headers?: array<string, mixed>,
  *                 },
  *                 download_from?: list<array{ // Default: []
- *                     url: scalar|Param|null,
+ *                     url?: scalar|Param|null,
  *                     extraHttpHeaders?: array<string, array{ // Default: []
- *                         name: scalar|Param|null,
- *                         value: scalar|Param|null,
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
  *                     }>,
  *                 }>,
  *             },
@@ -1258,13 +1306,16 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                     Trapped?: "True"|"False"|"Unknown"|Param,
  *                 },
  *                 flatten?: bool|Param,
+ *                 owner_password?: scalar|Param|null,
+ *                 user_password?: scalar|Param|null,
  *                 download_from?: list<array{ // Default: []
- *                     url: scalar|Param|null,
+ *                     url?: scalar|Param|null,
  *                     extraHttpHeaders?: array<string, array{ // Default: []
- *                         name: scalar|Param|null,
- *                         value: scalar|Param|null,
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
  *                     }>,
  *                 }>,
+ *                 wait_for_selector?: scalar|Param|null,
  *                 wait_for_expression?: scalar|Param|null,
  *                 wait_delay?: scalar|Param|null,
  *                 skip_network_idle_event?: bool|Param,
@@ -1284,28 +1335,33 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                 paper_height?: scalar|Param|null,
  *                 paper_width?: scalar|Param|null,
  *                 single_page?: bool|Param,
+ *                 ignore_resource_http_status_domains?: list<scalar|Param|null>,
  *                 fail_on_console_exceptions?: bool|Param,
  *                 fail_on_resource_loading_failed?: bool|Param,
  *                 fail_on_resource_http_status_codes?: list<int|Param>,
  *                 fail_on_http_status_codes?: list<int|Param>,
  *                 emulated_media_type?: "print"|"screen"|Param,
+ *                 emulated_media_features?: list<array{ // Default: []
+ *                     name?: scalar|Param|null,
+ *                     value?: scalar|Param|null,
+ *                 }>,
  *                 extra_http_headers?: array<string, mixed>,
  *                 user_agent?: scalar|Param|null,
  *                 cookies?: list<array{ // Default: []
- *                     name: scalar|Param|null,
- *                     value: scalar|Param|null,
- *                     domain: scalar|Param|null,
+ *                     name?: scalar|Param|null,
+ *                     value?: scalar|Param|null,
+ *                     domain?: scalar|Param|null,
  *                     path?: scalar|Param|null,
  *                     secure?: bool|Param,
  *                     httpOnly?: bool|Param,
  *                     sameSite?: "Strict"|"Lax"|"None"|Param,
  *                 }>,
  *                 footer?: array{
- *                     template: scalar|Param|null,
+ *                     template?: scalar|Param|null,
  *                     context?: list<mixed>,
  *                 },
  *                 header?: array{
- *                     template: scalar|Param|null,
+ *                     template?: scalar|Param|null,
  *                     context?: list<mixed>,
  *                 },
  *             },
@@ -1369,12 +1425,14 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                 password?: scalar|Param|null,
  *                 flatten?: bool|Param,
  *                 download_from?: list<array{ // Default: []
- *                     url: scalar|Param|null,
+ *                     url?: scalar|Param|null,
  *                     extraHttpHeaders?: array<string, array{ // Default: []
- *                         name: scalar|Param|null,
- *                         value: scalar|Param|null,
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
  *                     }>,
  *                 }>,
+ *                 owner_password?: scalar|Param|null,
+ *                 user_password?: scalar|Param|null,
  *             },
  *             markdown?: array{
  *                 webhook?: string|array{
@@ -1411,13 +1469,16 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                     Trapped?: "True"|"False"|"Unknown"|Param,
  *                 },
  *                 flatten?: bool|Param,
+ *                 owner_password?: scalar|Param|null,
+ *                 user_password?: scalar|Param|null,
  *                 download_from?: list<array{ // Default: []
- *                     url: scalar|Param|null,
+ *                     url?: scalar|Param|null,
  *                     extraHttpHeaders?: array<string, array{ // Default: []
- *                         name: scalar|Param|null,
- *                         value: scalar|Param|null,
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
  *                     }>,
  *                 }>,
+ *                 wait_for_selector?: scalar|Param|null,
  *                 wait_for_expression?: scalar|Param|null,
  *                 wait_delay?: scalar|Param|null,
  *                 skip_network_idle_event?: bool|Param,
@@ -1437,28 +1498,33 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                 paper_height?: scalar|Param|null,
  *                 paper_width?: scalar|Param|null,
  *                 single_page?: bool|Param,
+ *                 ignore_resource_http_status_domains?: list<scalar|Param|null>,
  *                 fail_on_console_exceptions?: bool|Param,
  *                 fail_on_resource_loading_failed?: bool|Param,
  *                 fail_on_resource_http_status_codes?: list<int|Param>,
  *                 fail_on_http_status_codes?: list<int|Param>,
  *                 emulated_media_type?: "print"|"screen"|Param,
+ *                 emulated_media_features?: list<array{ // Default: []
+ *                     name?: scalar|Param|null,
+ *                     value?: scalar|Param|null,
+ *                 }>,
  *                 extra_http_headers?: array<string, mixed>,
  *                 user_agent?: scalar|Param|null,
  *                 cookies?: list<array{ // Default: []
- *                     name: scalar|Param|null,
- *                     value: scalar|Param|null,
- *                     domain: scalar|Param|null,
+ *                     name?: scalar|Param|null,
+ *                     value?: scalar|Param|null,
+ *                     domain?: scalar|Param|null,
  *                     path?: scalar|Param|null,
  *                     secure?: bool|Param,
  *                     httpOnly?: bool|Param,
  *                     sameSite?: "Strict"|"Lax"|"None"|Param,
  *                 }>,
  *                 footer?: array{
- *                     template: scalar|Param|null,
+ *                     template?: scalar|Param|null,
  *                     context?: list<mixed>,
  *                 },
  *                 header?: array{
- *                     template: scalar|Param|null,
+ *                     template?: scalar|Param|null,
  *                     context?: list<mixed>,
  *                 },
  *             },
@@ -1494,11 +1560,13 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                     Trapped?: "True"|"False"|"Unknown"|Param,
  *                 },
  *                 flatten?: bool|Param,
+ *                 owner_password?: scalar|Param|null,
+ *                 user_password?: scalar|Param|null,
  *                 download_from?: list<array{ // Default: []
- *                     url: scalar|Param|null,
+ *                     url?: scalar|Param|null,
  *                     extraHttpHeaders?: array<string, array{ // Default: []
- *                         name: scalar|Param|null,
- *                         value: scalar|Param|null,
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
  *                     }>,
  *                 }>,
  *             },
@@ -1537,11 +1605,13 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                     Trapped?: "True"|"False"|"Unknown"|Param,
  *                 },
  *                 flatten?: bool|Param,
+ *                 owner_password?: scalar|Param|null,
+ *                 user_password?: scalar|Param|null,
  *                 download_from?: list<array{ // Default: []
- *                     url: scalar|Param|null,
+ *                     url?: scalar|Param|null,
  *                     extraHttpHeaders?: array<string, array{ // Default: []
- *                         name: scalar|Param|null,
- *                         value: scalar|Param|null,
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
  *                     }>,
  *                 }>,
  *             },
@@ -1580,13 +1650,16 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                     Trapped?: "True"|"False"|"Unknown"|Param,
  *                 },
  *                 flatten?: bool|Param,
+ *                 owner_password?: scalar|Param|null,
+ *                 user_password?: scalar|Param|null,
  *                 download_from?: list<array{ // Default: []
- *                     url: scalar|Param|null,
+ *                     url?: scalar|Param|null,
  *                     extraHttpHeaders?: array<string, array{ // Default: []
- *                         name: scalar|Param|null,
- *                         value: scalar|Param|null,
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
  *                     }>,
  *                 }>,
+ *                 wait_for_selector?: scalar|Param|null,
  *                 wait_for_expression?: scalar|Param|null,
  *                 wait_delay?: scalar|Param|null,
  *                 skip_network_idle_event?: bool|Param,
@@ -1606,28 +1679,33 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                 paper_height?: scalar|Param|null,
  *                 paper_width?: scalar|Param|null,
  *                 single_page?: bool|Param,
+ *                 ignore_resource_http_status_domains?: list<scalar|Param|null>,
  *                 fail_on_console_exceptions?: bool|Param,
  *                 fail_on_resource_loading_failed?: bool|Param,
  *                 fail_on_resource_http_status_codes?: list<int|Param>,
  *                 fail_on_http_status_codes?: list<int|Param>,
  *                 emulated_media_type?: "print"|"screen"|Param,
+ *                 emulated_media_features?: list<array{ // Default: []
+ *                     name?: scalar|Param|null,
+ *                     value?: scalar|Param|null,
+ *                 }>,
  *                 extra_http_headers?: array<string, mixed>,
  *                 user_agent?: scalar|Param|null,
  *                 cookies?: list<array{ // Default: []
- *                     name: scalar|Param|null,
- *                     value: scalar|Param|null,
- *                     domain: scalar|Param|null,
+ *                     name?: scalar|Param|null,
+ *                     value?: scalar|Param|null,
+ *                     domain?: scalar|Param|null,
  *                     path?: scalar|Param|null,
  *                     secure?: bool|Param,
  *                     httpOnly?: bool|Param,
  *                     sameSite?: "Strict"|"Lax"|"None"|Param,
  *                 }>,
  *                 footer?: array{
- *                     template: scalar|Param|null,
+ *                     template?: scalar|Param|null,
  *                     context?: list<mixed>,
  *                 },
  *                 header?: array{
- *                     template: scalar|Param|null,
+ *                     template?: scalar|Param|null,
  *                     context?: list<mixed>,
  *                 },
  *             },
@@ -1649,12 +1727,13 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                     extra_http_headers?: array<string, mixed>,
  *                 },
  *                 download_from?: list<array{ // Default: []
- *                     url: scalar|Param|null,
+ *                     url?: scalar|Param|null,
  *                     extraHttpHeaders?: array<string, array{ // Default: []
- *                         name: scalar|Param|null,
- *                         value: scalar|Param|null,
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
  *                     }>,
  *                 }>,
+ *                 wait_for_selector?: scalar|Param|null,
  *                 wait_for_expression?: scalar|Param|null,
  *                 wait_delay?: scalar|Param|null,
  *                 optimize_for_speed?: bool|Param,
@@ -1665,28 +1744,33 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                 height?: int|Param,
  *                 width?: int|Param,
  *                 skip_network_idle_event?: bool|Param,
+ *                 ignore_resource_http_status_domains?: list<scalar|Param|null>,
  *                 fail_on_console_exceptions?: bool|Param,
  *                 fail_on_resource_loading_failed?: bool|Param,
  *                 fail_on_resource_http_status_codes?: list<int|Param>,
  *                 fail_on_http_status_codes?: list<int|Param>,
  *                 emulated_media_type?: "print"|"screen"|Param,
+ *                 emulated_media_features?: list<array{ // Default: []
+ *                     name?: scalar|Param|null,
+ *                     value?: scalar|Param|null,
+ *                 }>,
  *                 extra_http_headers?: array<string, mixed>,
  *                 user_agent?: scalar|Param|null,
  *                 cookies?: list<array{ // Default: []
- *                     name: scalar|Param|null,
- *                     value: scalar|Param|null,
- *                     domain: scalar|Param|null,
+ *                     name?: scalar|Param|null,
+ *                     value?: scalar|Param|null,
+ *                     domain?: scalar|Param|null,
  *                     path?: scalar|Param|null,
  *                     secure?: bool|Param,
  *                     httpOnly?: bool|Param,
  *                     sameSite?: "Strict"|"Lax"|"None"|Param,
  *                 }>,
  *                 footer?: array{
- *                     template: scalar|Param|null,
+ *                     template?: scalar|Param|null,
  *                     context?: list<mixed>,
  *                 },
  *                 header?: array{
- *                     template: scalar|Param|null,
+ *                     template?: scalar|Param|null,
  *                     context?: list<mixed>,
  *                 },
  *             },
@@ -1706,12 +1790,13 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                     extra_http_headers?: array<string, mixed>,
  *                 },
  *                 download_from?: list<array{ // Default: []
- *                     url: scalar|Param|null,
+ *                     url?: scalar|Param|null,
  *                     extraHttpHeaders?: array<string, array{ // Default: []
- *                         name: scalar|Param|null,
- *                         value: scalar|Param|null,
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
  *                     }>,
  *                 }>,
+ *                 wait_for_selector?: scalar|Param|null,
  *                 wait_for_expression?: scalar|Param|null,
  *                 wait_delay?: scalar|Param|null,
  *                 optimize_for_speed?: bool|Param,
@@ -1722,28 +1807,33 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                 height?: int|Param,
  *                 width?: int|Param,
  *                 skip_network_idle_event?: bool|Param,
+ *                 ignore_resource_http_status_domains?: list<scalar|Param|null>,
  *                 fail_on_console_exceptions?: bool|Param,
  *                 fail_on_resource_loading_failed?: bool|Param,
  *                 fail_on_resource_http_status_codes?: list<int|Param>,
  *                 fail_on_http_status_codes?: list<int|Param>,
  *                 emulated_media_type?: "print"|"screen"|Param,
+ *                 emulated_media_features?: list<array{ // Default: []
+ *                     name?: scalar|Param|null,
+ *                     value?: scalar|Param|null,
+ *                 }>,
  *                 extra_http_headers?: array<string, mixed>,
  *                 user_agent?: scalar|Param|null,
  *                 cookies?: list<array{ // Default: []
- *                     name: scalar|Param|null,
- *                     value: scalar|Param|null,
- *                     domain: scalar|Param|null,
+ *                     name?: scalar|Param|null,
+ *                     value?: scalar|Param|null,
+ *                     domain?: scalar|Param|null,
  *                     path?: scalar|Param|null,
  *                     secure?: bool|Param,
  *                     httpOnly?: bool|Param,
  *                     sameSite?: "Strict"|"Lax"|"None"|Param,
  *                 }>,
  *                 footer?: array{
- *                     template: scalar|Param|null,
+ *                     template?: scalar|Param|null,
  *                     context?: list<mixed>,
  *                 },
  *                 header?: array{
- *                     template: scalar|Param|null,
+ *                     template?: scalar|Param|null,
  *                     context?: list<mixed>,
  *                 },
  *             },
@@ -1763,12 +1853,13 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                     extra_http_headers?: array<string, mixed>,
  *                 },
  *                 download_from?: list<array{ // Default: []
- *                     url: scalar|Param|null,
+ *                     url?: scalar|Param|null,
  *                     extraHttpHeaders?: array<string, array{ // Default: []
- *                         name: scalar|Param|null,
- *                         value: scalar|Param|null,
+ *                         name?: scalar|Param|null,
+ *                         value?: scalar|Param|null,
  *                     }>,
  *                 }>,
+ *                 wait_for_selector?: scalar|Param|null,
  *                 wait_for_expression?: scalar|Param|null,
  *                 wait_delay?: scalar|Param|null,
  *                 optimize_for_speed?: bool|Param,
@@ -1779,33 +1870,59 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *                 height?: int|Param,
  *                 width?: int|Param,
  *                 skip_network_idle_event?: bool|Param,
+ *                 ignore_resource_http_status_domains?: list<scalar|Param|null>,
  *                 fail_on_console_exceptions?: bool|Param,
  *                 fail_on_resource_loading_failed?: bool|Param,
  *                 fail_on_resource_http_status_codes?: list<int|Param>,
  *                 fail_on_http_status_codes?: list<int|Param>,
  *                 emulated_media_type?: "print"|"screen"|Param,
+ *                 emulated_media_features?: list<array{ // Default: []
+ *                     name?: scalar|Param|null,
+ *                     value?: scalar|Param|null,
+ *                 }>,
  *                 extra_http_headers?: array<string, mixed>,
  *                 user_agent?: scalar|Param|null,
  *                 cookies?: list<array{ // Default: []
- *                     name: scalar|Param|null,
- *                     value: scalar|Param|null,
- *                     domain: scalar|Param|null,
+ *                     name?: scalar|Param|null,
+ *                     value?: scalar|Param|null,
+ *                     domain?: scalar|Param|null,
  *                     path?: scalar|Param|null,
  *                     secure?: bool|Param,
  *                     httpOnly?: bool|Param,
  *                     sameSite?: "Strict"|"Lax"|"None"|Param,
  *                 }>,
  *                 footer?: array{
- *                     template: scalar|Param|null,
+ *                     template?: scalar|Param|null,
  *                     context?: list<mixed>,
  *                 },
  *                 header?: array{
- *                     template: scalar|Param|null,
+ *                     template?: scalar|Param|null,
  *                     context?: list<mixed>,
  *                 },
  *             },
  *         },
  *     },
+ * }
+ * @psalm-type MercureConfig = array{
+ *     hubs?: array<string, array{ // Default: []
+ *         url?: scalar|Param|null, // URL of the hub's publish endpoint
+ *         public_url?: scalar|Param|null, // URL of the hub's public endpoint // Default: null
+ *         jwt?: string|array{ // JSON Web Token configuration.
+ *             value?: scalar|Param|null, // JSON Web Token to use to publish to this hub.
+ *             provider?: scalar|Param|null, // The ID of a service to call to provide the JSON Web Token.
+ *             factory?: scalar|Param|null, // The ID of a service to call to create the JSON Web Token.
+ *             publish?: list<scalar|Param|null>,
+ *             subscribe?: list<scalar|Param|null>,
+ *             secret?: scalar|Param|null, // The JWT Secret to use.
+ *             passphrase?: scalar|Param|null, // The JWT secret passphrase. // Default: ""
+ *             algorithm?: scalar|Param|null, // The algorithm to use to sign the JWT // Default: "hmac.sha256"
+ *         },
+ *         jwt_provider?: scalar|Param|null, // Deprecated: The child node "jwt_provider" at path "mercure.hubs..jwt_provider" is deprecated, use "jwt.provider" instead. // The ID of a service to call to generate the JSON Web Token.
+ *         bus?: scalar|Param|null, // Name of the Messenger bus where the handler for this hub must be registered. Default to the default bus if Messenger is enabled.
+ *     }>,
+ *     default_hub?: scalar|Param|null,
+ *     default_cookie_lifetime?: int|Param, // Default lifetime of the cookie containing the JWT, in seconds. Defaults to the value of "framework.session.cookie_lifetime". // Default: null
+ *     enable_profiler?: bool|Param, // Deprecated: The child node "enable_profiler" at path "mercure.enable_profiler" is deprecated. // Enable Symfony Web Profiler integration.
  * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,
@@ -1818,6 +1935,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     monolog?: MonologConfig,
  *     web_profiler?: WebProfilerConfig,
  *     sensiolabs_gotenberg?: SensiolabsGotenbergConfig,
+ *     mercure?: MercureConfig,
  *     "when@dev"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
@@ -1829,6 +1947,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         monolog?: MonologConfig,
  *         web_profiler?: WebProfilerConfig,
  *         sensiolabs_gotenberg?: SensiolabsGotenbergConfig,
+ *         mercure?: MercureConfig,
  *     },
  *     "when@test"?: array{
  *         imports?: ImportsConfig,
@@ -1841,6 +1960,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         monolog?: MonologConfig,
  *         web_profiler?: WebProfilerConfig,
  *         sensiolabs_gotenberg?: SensiolabsGotenbergConfig,
+ *         mercure?: MercureConfig,
  *     },
  *     ...<string, ExtensionType|array{ // extra keys must follow the when@%env% pattern or match an extension alias
  *         imports?: ImportsConfig,
@@ -1859,7 +1979,10 @@ final class App
      */
     public static function config(array $config): array
     {
-        return AppReference::config($config);
+        /** @var ConfigType $config */
+        $config = AppReference::config($config);
+
+        return $config;
     }
 }
 

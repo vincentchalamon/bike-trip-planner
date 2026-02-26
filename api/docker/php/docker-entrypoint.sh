@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+symfony server:ca:install
+
 if [ "$1" = 'symfony' ] || [ "$1" = 'php' ] || [ "$1" = 'bin/console' ]; then
 	if [ -z "$(ls -A 'vendor/' 2>/dev/null)" ]; then
 		composer install --prefer-dist --no-progress --no-interaction

@@ -1,0 +1,48 @@
+{
+  "$schema": "https:\/\/json-schema.org\/draft-07\/schema#",
+  "type": "object",
+  "required": [
+    "@context",
+    "@id",
+    "@type",
+    "status",
+    "detail",
+    "title",
+    "type",
+    "description"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "@context": {
+      "type": "string",
+      "const": "/contexts/Error"
+    },
+    "@id": {
+      "type": "string",
+      "pattern": "^/errors/\\d+$"
+    },
+    "@type": {
+      "type": "string",
+      "const": "Error"
+    },
+    "type": {
+      "type": "string",
+      "pattern": "^/errors/\\d+$"
+    },
+    "title": {
+      "type": "string"
+    },
+    "detail": {
+      "type": "string"
+    },
+    "status": {
+      "type": "integer"
+    },
+    "description": {
+      "type": "string"
+    },
+    "trace": {
+      "type": "array"
+    }
+  }
+}

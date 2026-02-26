@@ -8,6 +8,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $containerConfigurator->extension('api_platform', [
         'title' => 'Bike Trip Planner API',
         'version' => '1.0.0',
+        'mercure' => [
+            'include_type' => true,
+        ],
         'formats' => [
             'jsonld' => [
                 'application/ld+json',

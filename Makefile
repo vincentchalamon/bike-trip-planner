@@ -20,6 +20,9 @@ install: ## Install both PHP and Node dependencies
 php-cs-fixer: ## Run PHP CS Fixer
 	docker compose exec php vendor/bin/php-cs-fixer fix --allow-risky=yes
 
+rector: ## Run Rector
+	docker compose exec php vendor/bin/rector process
+
 phpstan: ## Run PHPStan
 	docker compose exec php vendor/bin/phpstan analyse -c phpstan.dist.neon
 
@@ -27,16 +30,21 @@ eslint: ## Run Eslint
 	docker compose exec pwa npm run lint
 
 prettier: ## Run Prettier
-	docker compose exec pwa npx prettier
+	docker compose exec pwa npx prettier --check .
 
 typescript-check: ## Run TypeScript Check
 	docker compose exec pwa npm run test:ts
 
+markdownlint: ## Run Markdownlint
+	docker compose exec php markdownlint "**/*.md" --fix --ignore "vendor/**" --ignore "vendor-bin/**"
+
 tsc: typescript-check ## Alias for "typescript-check"
 
-qa-php: php-cs-fixer phpstan ## Run PHPStan and PHP CS Fixer
+qa-php: php-cs-fixer rector phpstan ## Run PHPStan and PHP CS Fixer
 
 qa-pwa: eslint prettier typescript-check ## Run ESLint, Prettier, and TypeScript Check
+
+qa-doc: markdownlint ## Run ESLint, Prettier, and TypeScript Check
 
 qa: qa-php qa-pwa ## Run all QA tools across both stacks
 
@@ -46,12 +54,20 @@ test-php: ## Run PHPUnit tests
 
 phpunit: test-php ## Alias for "test-php"
 
+openapi-lint: ## Run OpenAPI lint
+	docker compose exec php bin/console api:openapi:export --yaml | docker compose exec -T php redocly lint /dev/stdin
+
+redocly: openapi-lint ## Alias for "test-php"
+
+security-check: ## Run Security Check
+	docker compose exec php symfony check:security
+
 test-e2e: ## Run Playwright End-to-End tests
 	docker compose exec pwa npx playwright test
 
 playwright: test-e2e ## Alias for "test-e2e"
 
-test: qa test-php test-e2e ## Run full test suite (Requires QA to pass first)
+test: qa test-php test-e2e openapi-lint security-check ## Run full test suite (Requires QA to pass first)
 
 ## --- 💻 Interactive Shells ---
 php-shell: ## Open a bash shell inside the PHP container
