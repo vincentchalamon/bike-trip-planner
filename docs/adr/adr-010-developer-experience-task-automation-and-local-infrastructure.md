@@ -14,7 +14,7 @@
 
 The Bike Trip Planner architecture relies on a heterogeneous stack:
 
-1. A stateless API Platform backend running on PHP 8.5 via FrankenPHP.
+1. A stateless API Platform backend running on PHP 8.5.
 2. A Next.js 16 frontend running on Node.js.
 3. A Gotenberg microservice for PDF generation.
 
@@ -191,7 +191,7 @@ make qa
 
 With this infrastructure in place, the official workflow for any contributor (human or AI) is strictly defined:
 
-1. **Bootstrapping:** `make start` followed by `make install`.
+1. **Bootstrapping:** `make start-dev`.
 2. **Development:** Modify code in `api/` or `pwa/`.
 3. **Type Generation:** If backend DTOs change, run `npm run typegen` in the `pwa/` folder to update OpenAPI schemas (as
    per ADR-002).
@@ -207,8 +207,6 @@ With this infrastructure in place, the official workflow for any contributor (hu
 2. **Pre-commit Rejection:** Introduce a deliberate TypeScript type error in `pwa/src/store/useTripStore.ts`. Attempt to
    `git commit`. Verify that the Husky hook intercepts the commit, runs `make qa`, and aborts the commit process with a
    non-zero exit code.
-3. **Cross-Container Execution:** Run `make install`. Verify that Composer installs dependencies in the `php` container
-   and NPM installs dependencies in the `pwa` container without requiring either to be installed on the host OS.
 
 ---
 

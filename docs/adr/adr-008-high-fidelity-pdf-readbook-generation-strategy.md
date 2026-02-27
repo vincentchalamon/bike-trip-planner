@@ -88,7 +88,7 @@ and severely limits the design quality of the exported Roadbook.
 * **Chromium Engine:** Gotenberg wraps headless Chromium, guaranteeing 100% compatibility with modern CSS, external
   stylesheets, and embedded fonts.
 * **Stateless & Containerized:** Gotenberg is deployed as a standalone Docker container (`gotenberg/gotenberg:8`)
-  exposing a simple API. It scales independently and doesn't bloat the FrankenPHP container.
+  exposing a simple API. It scales independently and doesn't bloat the Caddy container.
 * **First-Class Symfony Integration:** The recently released `sensiolabs/gotenberg-bundle` provides native Twig
   integration, seamless asset management, and utilizes the blazing-fast Symfony HttpClient out of the box.
 

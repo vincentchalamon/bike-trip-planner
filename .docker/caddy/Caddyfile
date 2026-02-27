@@ -1,0 +1,31 @@
+{
+	{$CADDY_GLOBAL_OPTIONS}
+}
+
+{$CADDY_EXTRA_CONFIG}
+
+{$SERVER_NAME:localhost} {
+	log
+	encode zstd gzip
+
+	handle /.well-known/mercure* {
+		reverse_proxy {$MERCURE_UPSTREAM:mercure:80}
+	}
+
+	@pwa expression `(
+			header({'Accept': '*text/html*'})
+			&& !path(
+				'/docs*', '/graphql*', '/bundles*', '/contexts*', '/_profiler*', '/_wdt*',
+				'*.json*', '*.html', '*.csv', '*.yml', '*.yaml', '*.xml'
+			)
+		)
+		|| path('/favicon.ico', '/manifest.json', '/robots.txt', '/sitemap*', '/_next*', '/__next*')
+		|| query({'_rsc': '*'})`
+	handle @pwa {
+		reverse_proxy {$PWA_UPSTREAM:pwa:3000}
+	}
+
+	handle {
+		reverse_proxy {$PHP_UPSTREAM:php:80}
+	}
+}

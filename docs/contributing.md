@@ -6,7 +6,27 @@ This guide covers everything you need to contribute to Bike Trip Planner: settin
 
 ## Local development environment
 
-Follow [Getting Started](getting-started.md) to install and run the application. Once it is running, you have a fully functional development environment — both the PHP backend and the Next.js frontend support hot-reload out of the box.
+Follow [Getting Started](getting-started.md) to install and run the application. For development purposes, use:
+
+```bash
+make start-dev
+```
+
+This boots multiple services in development mode:
+
+| Service     | URL                                         | Description                 |
+|-------------|---------------------------------------------|-----------------------------|
+| `php`       | `https://localhost/docs`                    | API Platform backend        |
+| `pwa`       | `https://localhost`                         | Next.js frontend            |
+| `worker`    | Internal only                               | Async messages worker       |
+| `gotenberg` | Internal only                               | PDF generation microservice |
+| `mercure`   | `https://localhost/.well-known/mercure/ui/` | Server-push microservice    |
+| `redis`     | Internal only                               | Cache microservice          |
+| `caddy`     | Internal only                               | Web server microservice     |
+
+> **TLS:** Caddy generates a self-signed certificate for `localhost`. Accept the browser warning on first load, or install the certificate into your system trust store.
+
+Once it is running, you have a fully functional development environment — both the PHP backend and the Next.js frontend support hot-reload out of the box.
 
 ### Useful development commands
 
@@ -15,7 +35,11 @@ make php-shell    # Enter the PHP container
 make pwa-shell    # Enter the Node container
 make qa           # Run the full QA pipeline
 make test         # Run QA + PHPUnit + Playwright
+make php-shell    # Bash inside the PHP container
+make pwa-shell    # Bash inside the Node container
 ```
+
+See `make help` for the full list of available targets.
 
 ---
 
@@ -48,7 +72,7 @@ make test-e2e -- tests/my-feature.spec.ts
 ### 4. After changing backend DTOs, regenerate types
 
 ```bash
-make start                      # Backend must be running
+make start-dev                  # Backend must be running
 make typegen
 ```
 
@@ -128,7 +152,7 @@ The `.mcp.json` at the project root configures the **Apidog MCP server**, which 
 - Generating type-safe API client code from endpoints
 - Catching DTO/TypeScript drift without running the full QA pipeline
 
-> **Requirement:** The PHP backend must be running (`make start`) for the Apidog MCP server to fetch the spec.
+> **Requirement:** The PHP backend must be running (`make start-dev`) for the Apidog MCP server to fetch the spec.
 
 ### Recommended additional tools
 

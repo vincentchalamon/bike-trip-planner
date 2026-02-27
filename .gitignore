@@ -2,3 +2,8 @@
 .claude/settings.local.json
 /.env
 openapi.*
+
+docker-compose.override.yaml
+docker-compose.override.yml
+compose.override.yaml
+compose.override.yml

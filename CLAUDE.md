@@ -8,7 +8,7 @@ Bike Trip Planner — a local-first bikepacking trip planner. Decoupled architec
 
 ## Tech Stack
 
-- **Backend:** PHP 8.5, API Platform 4.2, Symfony 8, FrankenPHP (Docker)
+- **Backend:** PHP 8.5, API Platform 4.2, Symfony 8, Caddy (Docker)
 - **Frontend:** Next.js 16 (App Router), React 19, TypeScript (strict), Zustand + Immer, Tailwind CSS
 - **PDF:** Gotenberg 8 microservice (headless Chromium via Twig templates)
 - **Testing:** PHPUnit 13 (backend), Playwright 1.58 (E2E)
@@ -19,8 +19,7 @@ Bike Trip Planner — a local-first bikepacking trip planner. Decoupled architec
 All orchestrated via Makefile. Run `make help` for full list.
 
 ```bash
-make start              # Boot Docker environment (php, pwa, gotenberg)
-make install            # Install Composer + NPM dependencies
+make start-dev          # Boot Docker environment (php, pwa, gotenberg)
 make qa                 # Full QA: PHPStan + PHP-CS-Fixer + ESLint + Prettier + TS checks
 make test               # Full suite: QA → PHPUnit → Playwright
 make test-php           # PHPUnit 13 only

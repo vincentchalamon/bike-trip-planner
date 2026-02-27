@@ -1510,7 +1510,7 @@ make test-e2e     # Playwright (6 fichiers de test, 5 projets navigateur)
 
 ### Verification manuelle
 
-1. `make start` puis ouvrir `http://localhost:3000`
+1. `make start-dev` puis ouvrir `https://localhost`
 2. Coller `https://www.komoot.com/tour/123456` dans le champ magic link
 3. Verifier le chargement progressif (spinner -> distance/elevation -> etapes ->
    meteo -> POIs -> accommodations -> alertes -> "trip complete")

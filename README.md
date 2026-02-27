@@ -34,14 +34,14 @@ Type safety is enforced end-to-end: PHP DTOs define the schema → API Platform 
 
 | Layer    | Technology                                             |
 |----------|--------------------------------------------------------|
-| Backend  | PHP 8.5, Symfony 8, API Platform 4.2, FrankenPHP       |
+| Backend  | PHP 8.5, Symfony 8, API Platform 4.2, Caddy            |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript (strict) |
 | State    | Zustand + Immer, localStorage persistence              |
 | Styling  | Tailwind CSS                                           |
 | PDF      | Gotenberg 8 (headless Chromium), Twig templates        |
 | Testing  | PHPUnit 13 (backend), Playwright 1.58 (E2E)            |
 | Quality  | PHPStan level 9, PHP-CS-Fixer, ESLint, Prettier        |
-| Runtime  | Docker (FrankenPHP, Node, Gotenberg)                   |
+| Runtime  | Docker (Caddy, Node, Gotenberg)                        |
 
 ## Documentation
 
@@ -57,11 +57,10 @@ Type safety is enforced end-to-end: PHP DTOs define the schema → API Platform 
 ```bash
 git clone <repo-url> bike-trip-planner
 cd bike-trip-planner
-make install
 make start
 ```
 
-The app is available at `https://localhost` (PWA) and `https://localhost/api` (API).
+The app is available at `https://localhost` (PWA) and `https://localhost/docs` (API).
 
 See [Getting Started](docs/getting-started.md) for prerequisites and detailed setup.
 
