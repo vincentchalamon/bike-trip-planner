@@ -42,6 +42,14 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'max_redirects' => 5,
                     'timeout' => 15,
                 ],
+                'nominatim.client' => [
+                    'base_uri' => 'https://nominatim.openstreetmap.org',
+                    'timeout' => 10,
+                    'headers' => [
+                        'User-Agent' => 'BikeTripPlanner/1.0',
+                        'Accept' => 'application/json',
+                    ],
+                ],
             ],
         ],
     ]);

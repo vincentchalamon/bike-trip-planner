@@ -64,7 +64,22 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
 
             $this->publisher->publish($tripId, MercureEventType::STAGES_COMPUTED, [
                 'stages' => array_map(
-                    static fn (Stage $s): array => ['dayNumber' => $s->dayNumber, 'distance' => round($s->distance, 1)],
+                    static fn (Stage $s): array => [
+                        'dayNumber' => $s->dayNumber,
+                        'distance' => round($s->distance, 1),
+                        'elevation' => (int) $s->elevation,
+                        'startPoint' => [
+                            'lat' => $s->startPoint->lat,
+                            'lon' => $s->startPoint->lon,
+                            'ele' => $s->startPoint->ele,
+                        ],
+                        'endPoint' => [
+                            'lat' => $s->endPoint->lat,
+                            'lon' => $s->endPoint->lon,
+                            'ele' => $s->endPoint->ele,
+                        ],
+                        'label' => $s->label,
+                    ],
                     $stages,
                 ),
             ]);
