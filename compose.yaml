@@ -162,7 +162,9 @@ services:
       SERVER_NAME: ":80"
       MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
-      MERCURE_EXTRA_DIRECTIVES: demo
+      MERCURE_EXTRA_DIRECTIVES: |-
+        anonymous
+        demo
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost/healthz"]
       interval: 5s
