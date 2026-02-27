@@ -82,3 +82,8 @@ pwa-shell: ## Open a bash shell inside the Next.js container
 ## --- 💻 Tooling ---
 typegen: ## Run Typegen
 	docker compose exec pwa npm run typegen
+
+cache-pool-clear: ## Clear API cache pool
+	docker compose exec php bin/console cache:pool:clear --all
+
+cache-clear: cache-pool-clear ## Alias for cache-pool-clear
