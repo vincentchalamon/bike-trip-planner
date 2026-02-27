@@ -22,6 +22,10 @@ interface TripRequestRepositoryInterface
 
     public function storeRequest(string $tripId, TripRequest $request): void;
 
+    public function getTitle(string $tripId): ?string;
+
+    public function storeTitle(string $tripId, ?string $title): void;
+
     /** @param list<array{lat: float, lon: float, ele: float}> $rawPoints */
     public function storeRawPoints(string $tripId, array $rawPoints): void;
 

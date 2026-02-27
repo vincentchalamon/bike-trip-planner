@@ -31,6 +31,12 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'cache.trip_state' => [
                         'adapter' => 'cache.adapter.array',
                     ],
+                    'cache.osm' => [
+                        'adapter' => 'cache.adapter.array',
+                    ],
+                    'cache.weather' => [
+                        'adapter' => 'cache.adapter.array',
+                    ],
                 ],
             ],
         ]);

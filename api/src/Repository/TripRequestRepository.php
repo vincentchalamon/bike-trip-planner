@@ -37,6 +37,19 @@ final readonly class TripRequestRepository implements TripRequestRepositoryInter
         $this->set($this->requestKey($tripId), $request);
     }
 
+    public function getTitle(string $tripId): ?string
+    {
+        /** @var string|null $value */
+        $value = $this->get($this->titleKey($tripId));
+
+        return $value;
+    }
+
+    public function storeTitle(string $tripId, ?string $title): void
+    {
+        $this->set($this->titleKey($tripId), $title);
+    }
+
     /** @param list<array{lat: float, lon: float, ele: float}> $rawPoints */
     public function storeRawPoints(string $tripId, array $rawPoints): void
     {
@@ -168,5 +181,10 @@ final readonly class TripRequestRepository implements TripRequestRepositoryInter
     private function tracksDataKey(string $tripId): string
     {
         return \sprintf('trip.%s.tracks_data', $tripId);
+    }
+
+    private function titleKey(string $tripId): string
+    {
+        return \sprintf('trip.%s.title', $tripId);
     }
 }

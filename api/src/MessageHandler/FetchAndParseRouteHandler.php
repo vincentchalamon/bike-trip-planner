@@ -72,6 +72,7 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
             ));
 
             $this->tripStateManager->storeSourceType($tripId, $result->sourceType->value);
+            $this->tripStateManager->storeTitle($tripId, $result->title);
 
             // Store decimated points (full route for pacing) for single-track sources
             $decimated = $this->engineRegistry->get(RouteSimplifier::class)->simplify($allPoints);
@@ -89,6 +90,7 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
                 'totalDistance' => round($totalDistance, 1),
                 'totalElevation' => (int) $totalElevation,
                 'sourceType' => $result->sourceType->value,
+                'title' => $result->title,
             ]);
 
             // Store raw tracks for collection source type (multiple tracks = 1 stage per track)

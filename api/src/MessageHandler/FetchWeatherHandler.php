@@ -106,7 +106,25 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
             $this->tripStateManager->storeStages($tripId, $stages);
 
             $this->publisher->publish($tripId, MercureEventType::WEATHER_FETCHED, [
-                'stagesWithWeather' => \count(array_filter($stages, static fn (Stage $s): bool => $s->weather instanceof WeatherForecast)),
+                'stagesWithWeather' => \count(array_filter(
+                    $stages,
+                    static fn (Stage $s): bool => $s->weather instanceof WeatherForecast
+                )),
+                'stages' => array_map(
+                    static fn (Stage $s): array => [
+                        'dayNumber' => $s->dayNumber,
+                        'weather' => $s->weather instanceof WeatherForecast ? [
+                            'icon' => $s->weather->icon,
+                            'description' => $s->weather->description,
+                            'tempMin' => $s->weather->tempMin,
+                            'tempMax' => $s->weather->tempMax,
+                            'windSpeed' => round($s->weather->windSpeed, 1),
+                            'windDirection' => $s->weather->windDirection,
+                            'precipitationProbability' => $s->weather->precipitationProbability,
+                        ] : null,
+                    ],
+                    $stages
+                ),
             ]);
 
             $this->messageBus->dispatch(new AnalyzeWind($tripId));
