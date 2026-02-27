@@ -26,7 +26,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'max_redirects' => 2,
                     'timeout' => 10,
                     'headers' => [
-                        'Accept' => 'application/gpx+xml, text/html',
+                        'Accept' => 'text/html',
+                        'User-Agent' => 'BikeTripPlanner/1.0',
                     ],
                 ],
                 'overpass.client' => [
@@ -46,8 +47,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'base_uri' => 'https://nominatim.openstreetmap.org',
                     'timeout' => 10,
                     'headers' => [
-                        'User-Agent' => 'BikeTripPlanner/1.0',
                         'Accept' => 'application/json',
+                        'User-Agent' => 'BikeTripPlanner/1.0',
                     ],
                 ],
             ],

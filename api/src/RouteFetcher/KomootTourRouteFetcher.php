@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\RouteFetcher;
 
 use App\Enum\SourceType;
-use App\RouteParser\GpxStreamRouteParser;
-use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -17,8 +15,7 @@ final readonly class KomootTourRouteFetcher implements RouteFetcherInterface
     public function __construct(
         #[Autowire(service: 'komoot.client')]
         private HttpClientInterface $komootClient,
-        #[Autowire(service: 'app.route_parser_registry')]
-        private ContainerInterface $routeParserRegistry,
+        private KomootHtmlExtractor $htmlExtractor,
     ) {
     }
 
@@ -32,8 +29,8 @@ final readonly class KomootTourRouteFetcher implements RouteFetcherInterface
         preg_match(self::PATTERN, $url, $matches);
         $tourId = $matches[1];
 
-        $response = $this->komootClient->request('GET', \sprintf('/api/v007/tours/%s.gpx', $tourId), [
-            'headers' => ['Accept' => 'application/gpx+xml'],
+        $response = $this->komootClient->request('GET', \sprintf('/tour/%s', $tourId), [
+            'headers' => ['Accept' => 'text/html'],
         ]);
 
         $statusCode = $response->getStatusCode();
@@ -50,17 +47,13 @@ final readonly class KomootTourRouteFetcher implements RouteFetcherInterface
             throw new \RuntimeException(\sprintf('Komoot tour %s returned HTTP %d.', $tourId, $statusCode));
         }
 
-        $gpxContent = $response->getContent();
-        $points = $this->routeParserRegistry->get(GpxStreamRouteParser::class)->parse($gpxContent);
-
-        if ([] === $points) {
-            throw new \RuntimeException(\sprintf('Komoot tour %s GPX contains no track points.', $tourId));
-        }
+        $html = $response->getContent();
+        $tourData = $this->htmlExtractor->extractTourData($html);
 
         return new RouteFetchResult(
             sourceType: SourceType::KOMOOT_TOUR,
-            tracks: [$points],
-            title: \sprintf('Komoot Tour %s', $tourId),
+            tracks: [$tourData['coordinates']],
+            title: $tourData['name'],
         );
     }
 }
