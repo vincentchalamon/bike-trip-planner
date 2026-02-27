@@ -64,7 +64,7 @@ final readonly class CheckResupplyHandler extends AbstractTripMessageHandler
                             'stageIndex' => $i,
                             'distance' => round($distanceSinceLastResupply, 1),
                             'message' => \sprintf(
-                                'Aucun point de ravitaillement détecté depuis %.0f km (étape %d).',
+                                'No refueling points detected since %.0f km (stage %d).',
                                 $distanceSinceLastResupply,
                                 $stage->dayNumber,
                             ),

@@ -51,11 +51,11 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                     $nudges[] = [
                         'stageIndex' => $i,
                         'date' => $stageDate->format('Y-m-d'),
-                        'holiday' => $holiday?->getName() ?? 'Jour férié',
+                        'holiday' => $holiday?->getName() ?? 'Public holiday',
                         'message' => \sprintf(
-                            'Étape %d coïncide avec un jour férié (%s). Certains commerces peuvent être fermés.',
+                            'Step %d coincides with a public holiday (%s). Some businesses may be closed.',
                             $stage->dayNumber,
-                            $holiday?->getName() ?? 'Jour férié',
+                            $holiday?->getName() ?? 'Public holiday',
                         ),
                     ];
                 }
