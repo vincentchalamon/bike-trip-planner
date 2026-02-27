@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Accommodation\AccommodationMetadataExtractor;
 use App\ApiResource\Model\Accommodation;
+use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Engine\PricingHeuristicEngine;
 use App\Enum\ComputationName;
@@ -15,12 +17,16 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsMessageHandler]
 final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandler
 {
+    private const float DEDUP_DISTANCE_METERS = 200.0;
+
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
@@ -29,6 +35,10 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         private QueryBuilderInterface $queryBuilder,
         #[Autowire(service: 'app.engine_registry')]
         private ContainerInterface $engineRegistry,
+        private AccommodationMetadataExtractor $metadataExtractor,
+        #[Autowire(service: 'accommodation_scraper.client')]
+        private HttpClientInterface $scraperClient,
+        private LoggerInterface $logger,
     ) {
         parent::__construct($computationTracker, $publisher);
     }
@@ -43,44 +53,54 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         }
 
         $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages): void {
+            // Single Overpass query for all stage endpoints (instead of 1 per stage)
+            $endPoints = array_map(static fn (Stage $stage): \App\ApiResource\Model\Coordinate => $stage->endPoint, $stages);
+            $query = $this->queryBuilder->buildAccommodationQuery($endPoints);
+            $result = $this->scanner->query($query);
+
+            /** @var list<array{id?: int, type?: string, tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
+            $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
+
+            // Phase 1: Parse OSM elements into candidates (no HTTP)
+            $allCandidates = $this->parseOsmElements($elements);
+
+            // Distribute candidates to their nearest stage endpoint
+            $candidatesByStage = $this->distributeCandidatesByStage($allCandidates, $stages);
+
+            // Deduplicate + limit to 5 per stage BEFORE any scraping
+            $retainedByStage = [];
+            foreach ($candidatesByStage as $i => $candidates) {
+                $retainedByStage[$i] = \array_slice($this->deduplicate($candidates), 0, 5);
+            }
+
+            // Async scraping: 2 waves of parallel HTTP requests
+            $retainedByStage = $this->scrapeAsync($retainedByStage);
+
+            // Build Accommodation DTOs, publish per stage, and store
             foreach ($stages as $i => $stage) {
-                $query = $this->queryBuilder->buildAccommodationQuery([$stage->endPoint]);
-                $result = $this->scanner->query($query);
-
                 $accommodations = [];
-                /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
-                $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
-                foreach ($elements as $element) {
-                    $tags = $element['tags'] ?? [];
-                    $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                    $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
-
-                    if (null === $lat || null === $lon) {
-                        continue;
-                    }
-
-                    $type = $tags['tourism'] ?? 'hotel';
-                    $name = $tags['name'] ?? $type;
-                    $pricing = $this->engineRegistry
-                        ->get(PricingHeuristicEngine::class)
-                        ->estimatePrice($type, $tags);
-
+                foreach ($retainedByStage[$i] ?? [] as $raw) {
                     $accommodation = new Accommodation(
-                        name: $name,
-                        type: $type,
-                        lat: (float) $lat,
-                        lon: (float) $lon,
-                        estimatedPriceMin: $pricing['min'],
-                        estimatedPriceMax: $pricing['max'],
-                        isExactPrice: $pricing['isExact'],
+                        name: $raw['name'],
+                        type: $raw['type'],
+                        lat: $raw['lat'],
+                        lon: $raw['lon'],
+                        estimatedPriceMin: $raw['priceMin'],
+                        estimatedPriceMax: $raw['priceMax'],
+                        isExactPrice: $raw['isExact'],
+                        url: $raw['url'],
                     );
 
                     $stage->addAccommodation($accommodation);
                     $accommodations[] = [
                         'name' => $accommodation->name,
                         'type' => $accommodation->type,
-                        'priceMin' => $accommodation->estimatedPriceMin,
-                        'priceMax' => $accommodation->estimatedPriceMax,
+                        'lat' => $accommodation->lat,
+                        'lon' => $accommodation->lon,
+                        'estimatedPriceMin' => $accommodation->estimatedPriceMin,
+                        'estimatedPriceMax' => $accommodation->estimatedPriceMax,
+                        'isExactPrice' => $accommodation->isExactPrice,
+                        'url' => $accommodation->url,
                     ];
                 }
 
@@ -92,5 +112,262 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
 
             $this->tripStateManager->storeStages($tripId, $stages);
         });
+    }
+
+    /**
+     * Parse OSM elements into candidate arrays without any HTTP requests.
+     *
+     * @param list<array{id?: int, type?: string, tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements
+     *
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>
+     */
+    private function parseOsmElements(array $elements): array
+    {
+        $candidates = [];
+
+        foreach ($elements as $element) {
+            $tags = $element['tags'] ?? [];
+            $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
+            $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
+
+            if (null === $lat || null === $lon) {
+                continue;
+            }
+
+            $url = $tags['website']
+                ?? $tags['contact:website']
+                ?? (isset($element['id'], $element['type'])
+                    ? \sprintf('https://www.openstreetmap.org/%s/%d', $element['type'], $element['id'])
+                    : null);
+
+            $type = $tags['tourism'] ?? 'hotel';
+            $name = $tags['name'] ?? $type;
+            $tagCount = \count($tags);
+            $pricing = $this->engineRegistry
+                ->get(PricingHeuristicEngine::class)
+                ->estimatePrice($type, $tags);
+
+            $candidates[] = [
+                'name' => $name,
+                'type' => $type,
+                'lat' => (float) $lat,
+                'lon' => (float) $lon,
+                'priceMin' => $pricing['min'],
+                'priceMax' => $pricing['max'],
+                'isExact' => $pricing['isExact'],
+                'url' => $url,
+                'tagCount' => $tagCount,
+                'hasWebsite' => isset($tags['website']) || isset($tags['contact:website']),
+            ];
+        }
+
+        return $candidates;
+    }
+
+    /**
+     * Assign each candidate to the stage whose endPoint is closest.
+     *
+     * @param list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}> $candidates
+     * @param list<Stage>                                                                                                                                                     $stages
+     *
+     * @return array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>>
+     */
+    private function distributeCandidatesByStage(array $candidates, array $stages): array
+    {
+        /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>> $result */
+        $result = [];
+        foreach (array_keys($stages) as $i) {
+            $result[$i] = [];
+        }
+
+        foreach ($candidates as $candidate) {
+            $closestStage = 0;
+            $closestDistance = \PHP_FLOAT_MAX;
+
+            foreach ($stages as $i => $stage) {
+                $distance = $this->haversineDistance(
+                    $candidate['lat'],
+                    $candidate['lon'],
+                    $stage->endPoint->lat,
+                    $stage->endPoint->lon,
+                );
+                if ($distance < $closestDistance) {
+                    $closestDistance = $distance;
+                    $closestStage = $i;
+                }
+            }
+
+            $result[$closestStage][] = $candidate;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Scrape accommodation metadata in 2 parallel waves via Symfony HttpClient multiplexing.
+     *
+     * Wave 1: main-page requests for all candidates with a website URL.
+     * Wave 2: price-page requests for candidates whose main page had no price.
+     *
+     * @param array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>> $retainedByStage
+     *
+     * @return array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>>
+     */
+    private function scrapeAsync(array $retainedByStage): array
+    {
+        // Collect all scrapable candidates
+        /** @var list<array{stageIdx: int, candidateIdx: int, url: string}> $scrapableItems */
+        $scrapableItems = [];
+        foreach ($retainedByStage as $stageIdx => $candidates) {
+            foreach ($candidates as $candidateIdx => $candidate) {
+                if ($candidate['hasWebsite'] && null !== $candidate['url']) {
+                    $scrapableItems[] = [
+                        'stageIdx' => $stageIdx,
+                        'candidateIdx' => $candidateIdx,
+                        'url' => $candidate['url'],
+                    ];
+                }
+            }
+        }
+
+        if ([] === $scrapableItems) {
+            return $retainedByStage;
+        }
+
+        // Wave 1: Fire all main-page requests (non-blocking)
+        $mainResponses = [];
+        foreach ($scrapableItems as $key => $item) {
+            try {
+                $mainResponses[$key] = $this->scraperClient->request('GET', $item['url'], ['timeout' => 5]);
+            } catch (\Throwable) {
+                // Skip malformed URLs
+            }
+        }
+
+        // Wave 1: Collect results — Symfony HttpClient multiplexes responses concurrently
+        /** @var list<array{stageIdx: int, candidateIdx: int, url: string, html: string}> $needsPricePage */
+        $needsPricePage = [];
+        foreach ($mainResponses as $key => $response) {
+            $item = $scrapableItems[$key];
+            try {
+                $html = $response->getContent();
+                $scraped = $this->metadataExtractor->extract($html);
+
+                if (null !== $scraped->name) {
+                    $retainedByStage[$item['stageIdx']][$item['candidateIdx']]['name'] = $scraped->name;
+                }
+
+                if (null !== $scraped->type) {
+                    $retainedByStage[$item['stageIdx']][$item['candidateIdx']]['type'] = $scraped->type;
+                }
+
+                if (null !== $scraped->priceMin) {
+                    $retainedByStage[$item['stageIdx']][$item['candidateIdx']]['priceMin'] = $scraped->priceMin;
+                    $retainedByStage[$item['stageIdx']][$item['candidateIdx']]['priceMax'] = $scraped->priceMax ?? $scraped->priceMin;
+                    $retainedByStage[$item['stageIdx']][$item['candidateIdx']]['isExact'] = true;
+                } else {
+                    $needsPricePage[] = [
+                        'stageIdx' => $item['stageIdx'],
+                        'candidateIdx' => $item['candidateIdx'],
+                        'url' => $item['url'],
+                        'html' => $html,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                $this->logger->debug('Accommodation scraping failed.', ['url' => $item['url'], 'error' => $e->getMessage()]);
+            }
+        }
+
+        if ([] === $needsPricePage) {
+            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>> $result */
+            $result = $retainedByStage;
+
+            return $result;
+        }
+
+        // Wave 2: Fire all price-page requests (non-blocking)
+        /** @var list<array{stageIdx: int, candidateIdx: int, response: \Symfony\Contracts\HttpClient\ResponseInterface}> $priceResponses */
+        $priceResponses = [];
+        foreach ($needsPricePage as $item) {
+            $pricePages = $this->metadataExtractor->discoverPricePagePaths($item['html'], $item['url']);
+            foreach ($pricePages as $pricePageUrl) {
+                try {
+                    $priceResponses[] = [
+                        'stageIdx' => $item['stageIdx'],
+                        'candidateIdx' => $item['candidateIdx'],
+                        'response' => $this->scraperClient->request('GET', $pricePageUrl, ['timeout' => 5]),
+                    ];
+                } catch (\Throwable) {
+                    // Skip malformed URLs
+                }
+            }
+        }
+
+        // Wave 2: Collect results (first price found wins per candidate)
+        /** @var array<string, true> $priceFound */
+        $priceFound = [];
+        foreach ($priceResponses as $priceItem) {
+            $candidateKey = $priceItem['stageIdx'].'-'.$priceItem['candidateIdx'];
+            if (isset($priceFound[$candidateKey])) {
+                continue;
+            }
+
+            try {
+                $priceHtml = $priceItem['response']->getContent();
+                $extracted = $this->metadataExtractor->extractPricesFromHtml($priceHtml);
+                if (null !== $extracted) {
+                    $retainedByStage[$priceItem['stageIdx']][$priceItem['candidateIdx']]['priceMin'] = $extracted['priceMin'];
+                    $retainedByStage[$priceItem['stageIdx']][$priceItem['candidateIdx']]['priceMax'] = $extracted['priceMax'];
+                    $retainedByStage[$priceItem['stageIdx']][$priceItem['candidateIdx']]['isExact'] = true;
+                    $priceFound[$candidateKey] = true;
+                }
+            } catch (\Throwable) {
+                // Skip failed price pages
+            }
+        }
+
+        /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>> $result */
+        $result = $retainedByStage;
+
+        return $result;
+    }
+
+    /**
+     * @param list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}> $accommodations
+     *
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>
+     */
+    private function deduplicate(array $accommodations): array
+    {
+        $kept = [];
+
+        foreach ($accommodations as $candidate) {
+            $normalizedName = mb_strtolower(trim($candidate['name']));
+            $isDuplicate = false;
+
+            foreach ($kept as $existing) {
+                $existingNormalized = mb_strtolower(trim($existing['name']));
+                if ($normalizedName === $existingNormalized && $this->haversineDistance($candidate['lat'], $candidate['lon'], $existing['lat'], $existing['lon']) < self::DEDUP_DISTANCE_METERS) {
+                    $isDuplicate = true;
+                    break;
+                }
+            }
+
+            if (!$isDuplicate) {
+                $kept[] = $candidate;
+            }
+        }
+
+        return $kept;
+    }
+
+    private function haversineDistance(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        $earthRadius = 6371000.0;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
+
+        return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 }

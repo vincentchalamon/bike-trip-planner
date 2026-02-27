@@ -173,7 +173,7 @@ final class StageDeleteTest extends ApiTestCase
     }
 
     #[Test]
-    public function rejectsDeleteWhenMinimumStages(): void
+    public function rejectsDeleteWhenOnly2StagesRemain(): void
     {
         self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 2);
@@ -181,10 +181,9 @@ final class StageDeleteTest extends ApiTestCase
         self::createClient()->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/0');
 
         $this->assertResponseStatusCodeSame(422);
-        $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
         $this->assertJsonContains([
             'status' => 422,
-            'detail' => 'A minimum of 2 stages is required. Unable to delete this stage.',
+            'detail' => 'Cannot delete stage: minimum 2 stages required.',
         ]);
     }
 

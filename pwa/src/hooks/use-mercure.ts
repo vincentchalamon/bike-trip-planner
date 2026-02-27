@@ -23,12 +23,16 @@ function dispatchEvent(event: MercureEvent): void {
     case "stages_computed": {
       const stages = event.data.stages.map((s) => ({
         ...s,
+        elevationLoss: s.elevationLoss ?? 0,
+        geometry: s.geometry ?? [],
+        label: s.label ?? null,
         startLabel: null,
         endLabel: null,
         weather: null,
         alerts: [],
         pois: [],
         accommodations: [],
+        gpxContent: null,
       }));
       store.setStages(stages);
       resolveStageLabels(stages);
@@ -55,11 +59,53 @@ function dispatchEvent(event: MercureEvent): void {
       break;
 
     case "terrain_alerts":
+      for (const [indexStr, alerts] of Object.entries(
+        event.data.alertsByStage,
+      )) {
+        const idx = Number(indexStr);
+        if (!isNaN(idx) && alerts.length > 0) {
+          store.updateStageAlerts(idx, alerts);
+        }
+      }
+      break;
+
     case "calendar_alerts":
+      for (const nudge of event.data.nudges) {
+        store.updateStageAlerts(nudge.stageIndex, [
+          { type: "nudge", message: nudge.message, lat: null, lon: null },
+        ]);
+      }
+      break;
+
     case "wind_alerts":
+      if (event.data.alerts.length > 0) {
+        store.updateStageAlerts(0, event.data.alerts);
+      }
+      break;
+
     case "resupply_nudges":
+      for (const nudge of event.data.nudges) {
+        store.updateStageAlerts(nudge.stageIndex, [
+          { type: "nudge", message: nudge.message, lat: null, lon: null },
+        ]);
+      }
+      break;
+
     case "bike_shop_alerts":
-      store.updateStageAlerts(event.data.stageIndex, event.data.alerts);
+      for (const alert of event.data.alerts) {
+        store.updateStageAlerts(alert.stageIndex, [
+          {
+            type: alert.type as "nudge",
+            message: alert.message,
+            lat: null,
+            lon: null,
+          },
+        ]);
+      }
+      break;
+
+    case "stage_gpx_ready":
+      store.updateStageGpx(event.data.stageIndex, event.data.gpxContent);
       break;
 
     case "trip_complete":

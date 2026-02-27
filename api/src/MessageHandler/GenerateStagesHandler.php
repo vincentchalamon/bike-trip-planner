@@ -68,6 +68,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
                         'dayNumber' => $s->dayNumber,
                         'distance' => round($s->distance, 1),
                         'elevation' => (int) $s->elevation,
+                        'elevationLoss' => (int) $s->elevationLoss,
                         'startPoint' => [
                             'lat' => $s->startPoint->lat,
                             'lon' => $s->startPoint->lon,
@@ -113,6 +114,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
                 ->get(DistanceCalculator::class)
                 ->calculateTotalDistance($points);
             $elevation = $this->engineRegistry->get(ElevationCalculator::class)->calculateTotalAscent($points);
+            $elevationLoss = $this->engineRegistry->get(ElevationCalculator::class)->calculateTotalDescent($points);
             $geometry = $this->engineRegistry->get(RouteSimplifier::class)->simplify($points);
 
             $stages[] = new Stage(
@@ -123,6 +125,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
                 startPoint: $points[0],
                 endPoint: $points[\count($points) - 1],
                 geometry: $geometry,
+                elevationLoss: $elevationLoss,
             );
         }
 

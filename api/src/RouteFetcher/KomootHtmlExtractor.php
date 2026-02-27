@@ -112,27 +112,33 @@ final readonly class KomootHtmlExtractor
             throw new \RuntimeException('Embedded data not found in Komoot page.');
         }
 
-        /** @var array<string, mixed>|null $collection */
-        $collection = is_array($embedded['collection'] ?? null) ? $embedded['collection'] : null;
-        if (null === $collection) {
+        /** @var array<string, mixed>|null $collectionHal */
+        $collectionHal = is_array($embedded['collectionHal'] ?? null) ? $embedded['collectionHal'] : null;
+        if (null === $collectionHal) {
             throw new \RuntimeException('Collection data not found in Komoot page.');
         }
 
-        $name = \is_string($collection['name'] ?? null) ? $collection['name'] : 'Komoot Collection';
+        $name = \is_string($collectionHal['name'] ?? null) ? $collectionHal['name'] : 'Komoot Collection';
 
-        /** @var array<string, mixed>|null $collEmbedded */
-        $collEmbedded = is_array($collection['_embedded'] ?? null) ? $collection['_embedded'] : null;
+        /** @var array<string, mixed>|null $halEmbedded */
+        $halEmbedded = is_array($collectionHal['_embedded'] ?? null) ? $collectionHal['_embedded'] : null;
 
-        /** @var list<array{id?: mixed}> $tours */
-        $tours = is_array($collEmbedded['tours'] ?? null) ? $collEmbedded['tours'] : [];
+        /** @var array<string, mixed>|null $compilation */
+        $compilation = is_array($halEmbedded['compilation'] ?? null) ? $halEmbedded['compilation'] : null;
+
+        /** @var array<string, mixed>|null $compilationEmbedded */
+        $compilationEmbedded = is_array($compilation['_embedded'] ?? null) ? $compilation['_embedded'] : null;
+
+        /** @var list<array{id?: mixed}> $items */
+        $items = is_array($compilationEmbedded['items'] ?? null) ? $compilationEmbedded['items'] : [];
 
         $tourIds = [];
-        foreach ($tours as $tour) {
-            if (!is_array($tour)) {
+        foreach ($items as $item) {
+            if (!is_array($item)) {
                 continue;
             }
 
-            $id = $tour['id'] ?? null;
+            $id = $item['id'] ?? null;
             if (is_int($id) || is_string($id)) {
                 $tourIds[] = (string) $id;
             }

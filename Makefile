@@ -80,7 +80,11 @@ pwa-shell: ## Open a bash shell inside the Next.js container
 	docker compose exec pwa /bin/sh
 
 ## --- 💻 Tooling ---
-typegen: ## Run Typegen
+openapigen: ## Generate OpenAPI
+	docker compose exec php bin/console api:openapi:export > pwa/openapi.json
+	docker compose exec php bin/console api:openapi:export --yaml > pwa/openapi.yaml
+
+typegen: openapigen ## Run Typegen
 	docker compose exec pwa npm run typegen
 
 cache-pool-clear: ## Clear API cache pool

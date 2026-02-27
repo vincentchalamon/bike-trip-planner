@@ -10,7 +10,7 @@ Ensure the following tools are installed before continuing.
 
 | Tool           | Minimum version | Purpose                                      |
 |----------------|-----------------|----------------------------------------------|
-| Docker         | 24+             | Runs all services (PHP, Node, Gotenberg)     |
+| Docker         | 24+             | Runs all services (PHP, Node)                |
 | Docker Compose | 2.20+           | Orchestrates the multi-container environment |
 | Git            | 2.40+           | Version control                              |
 | Make           | 4+              | Task runner (wraps Docker Compose commands)  |
@@ -49,7 +49,6 @@ This boots multiple services:
 | `php`       | `https://localhost/docs` | API Platform backend        |
 | `pwa`       | `https://localhost`      | Next.js frontend            |
 | `worker`    | Internal only            | Async messages worker       |
-| `gotenberg` | Internal only            | PDF generation microservice |
 | `mercure`   | Internal only            | Server-push microservice    |
 | `redis`     | Internal only            | Cache microservice          |
 | `caddy`     | Internal only            | Web server microservice     |

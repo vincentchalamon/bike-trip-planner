@@ -14,6 +14,7 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
@@ -26,6 +27,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
+        private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher);
     }
@@ -46,7 +48,9 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::BIKE_SHOPS, function () use ($tripId, $stages): void {
+        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+
+        $this->executeWithTracking($tripId, ComputationName::BIKE_SHOPS, function () use ($tripId, $stages, $locale): void {
             $stagesWithoutBikeShop = [];
 
             foreach ($stages as $i => $stage) {
@@ -60,9 +64,11 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                         'stageIndex' => $i,
                         'dayNumber' => $stage->dayNumber,
                         'type' => AlertType::NUDGE->value,
-                        'message' => \sprintf(
-                            'No bike shops detected on stage %d. In case of a breakdown, the next town may be far away.',
-                            $stage->dayNumber,
+                        'message' => $this->translator->trans(
+                            'alert.bike_shop.nudge',
+                            ['%stage%' => $stage->dayNumber],
+                            'alerts',
+                            $locale,
                         ),
                     ];
                 }

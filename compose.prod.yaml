@@ -6,14 +6,12 @@ services:
       target: frankenphp_prod
     restart: unless-stopped
     depends_on:
-      - gotenberg
       - redis
     environment:
       APP_ENV: prod
       CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
       CADDY_EXTRA_CONFIG: ${CADDY_EXTRA_CONFIG:-}
       SERVER_NAME: ${SERVER_NAME:-localhost}
-      GOTENBERG_UPSTREAM: gotenberg:3000
       PWA_UPSTREAM: pwa:3000
       MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
@@ -26,7 +24,7 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
-      GOTENBERG_DSN: http://gotenberg:3000
+
     tty: true
     volumes:
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
@@ -43,6 +41,8 @@ services:
       context: ./api
       dockerfile: .docker/php/Dockerfile
     restart: unless-stopped
+    deploy:
+      replicas: 5
     depends_on:
       - redis
     environment:
@@ -66,7 +66,6 @@ services:
       target: prod
     restart: unless-stopped
     depends_on:
-      - gotenberg
       - php # Mercure dependency
     tty: true
     environment:
@@ -90,15 +89,6 @@ services:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       timeout: 3s
       retries: 5
-
-  gotenberg:
-    image: gotenberg/gotenberg:8
-    restart: unless-stopped
-    healthcheck:
-      test: curl -f http://localhost:3000 || exit 1
-      timeout: 5s
-      retries: 5
-      start_period: 60s
 
 volumes:
   caddy_data: ~

@@ -2,7 +2,7 @@
 
 ## Context
 
-Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 frontend + Gotenberg PDF) with no code implemented yet. This document recommends the most useful Claude Code tools (MCP servers, hooks, skills) for this stack, ranked by priority.
+Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 frontend) with no code implemented yet. This document recommends the most useful Claude Code tools (MCP servers, hooks, skills) for this stack, ranked by priority.
 
 ---
 
@@ -68,7 +68,7 @@ Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 f
 
 ### 1.5 Docker MCP / Portainer MCP (OPTIONAL)
 
-**Purpose:** Interact with Docker containers (logs, exec, inspect) using natural language. Useful for debugging the project's 3 containers (php, pwa, gotenberg).
+**Purpose:** Interact with Docker containers (logs, exec, inspect) using natural language. Useful for debugging the project's 3 containers (php, pwa).
 
 - **Source:** <https://github.com/portainer/portainer-mcp>
 - **Alternative:** Docker Desktop MCP — <https://www.docker.com/blog/introducing-docker-hub-mcp-server/>

@@ -6,6 +6,7 @@ namespace App\MessageHandler;
 
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
+use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
@@ -13,13 +14,13 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
 use App\Message\FetchWeather;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Weather\OpenMeteoProvider;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsMessageHandler]
 final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
@@ -28,8 +29,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripStateManager,
-        #[Autowire(service: 'weather.client')]
-        private HttpClientInterface $weatherClient,
+        private OpenMeteoProvider $weatherProvider,
         #[Autowire(service: 'cache.weather')]
         private CacheInterface $weatherCache,
         private MessageBusInterface $messageBus,
@@ -44,57 +44,45 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         $request = $this->tripStateManager->getRequest($tripId);
         $stages = $this->tripStateManager->getStages($tripId);
 
-        if (in_array(null, [$request, $stages, $request?->startDate], true)) {
+        if (!$request instanceof TripRequest || null === $stages) {
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::WEATHER, function () use ($tripId, $stages): void {
-            $apiKey = $_ENV['OPENWEATHER_API_KEY'] ?? '';
+        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
+        $this->executeWithTracking($tripId, ComputationName::WEATHER, function () use ($tripId, $stages, $locale): void {
             foreach ($stages as $i => $stage) {
                 $lat = $stage->startPoint->lat;
                 $lon = $stage->startPoint->lon;
-                $cacheKey = \sprintf('weather.%s.%s.%d', round($lat, 2), round($lon, 2), $i);
+                $cacheKey = \sprintf('weather.%s.%s.%s.%d', $locale, round($lat, 2), round($lon, 2), $i);
 
                 try {
-                    /** @var array<string, mixed> $weatherData */
-                    $weatherData = $this->weatherCache->get($cacheKey, function (ItemInterface $item) use ($lat, $lon, $apiKey): array {
+                    /** @var array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int} $weatherData */
+                    $weatherData = $this->weatherCache->get($cacheKey, function (ItemInterface $item) use ($lat, $lon, $locale): array {
                         $item->expiresAfter(10800); // 3 hours
 
-                        $response = $this->weatherClient->request('GET', '/api/2.5/forecast', [
-                            'query' => [
-                                'lat' => $lat,
-                                'lon' => $lon,
-                                'appid' => $apiKey,
-                                'units' => 'metric',
-                                'cnt' => 1,
-                            ],
-                        ]);
+                        $forecast = $this->weatherProvider->fetchForecast($lat, $lon, $locale);
 
-                        /* @var array<string, mixed> */
-                        return $response->toArray();
+                        return [
+                            'icon' => $forecast->icon,
+                            'description' => $forecast->description,
+                            'tempMin' => $forecast->tempMin,
+                            'tempMax' => $forecast->tempMax,
+                            'windSpeed' => $forecast->windSpeed,
+                            'windDirection' => $forecast->windDirection,
+                            'precipitationProbability' => $forecast->precipitationProbability,
+                        ];
                     });
 
-                    /** @var array{list?: list<array{weather?: list<array{icon?: string, description?: string}>, main?: array{temp_min?: float, temp_max?: float}, wind?: array{speed?: float, deg?: int}, pop?: float}>} $weatherData */
-                    $firstForecast = $weatherData['list'][0] ?? [];
-                    $weatherItem = $firstForecast['weather'][0] ?? [];
-                    $main = $firstForecast['main'] ?? [];
-                    $wind = $firstForecast['wind'] ?? [];
-
-                    $windDeg = (int) ($wind['deg'] ?? 0);
-                    $windDirection = $this->degToDirection($windDeg);
-
-                    $forecast = new WeatherForecast(
-                        icon: $weatherItem['icon'] ?? 'unknown',
-                        description: $weatherItem['description'] ?? '',
-                        tempMin: (float) ($main['temp_min'] ?? 0),
-                        tempMax: (float) ($main['temp_max'] ?? 0),
-                        windSpeed: (float) ($wind['speed'] ?? 0) * 3.6, // m/s to km/h
-                        windDirection: $windDirection,
-                        precipitationProbability: (int) (($firstForecast['pop'] ?? 0) * 100),
+                    $stage->weather = new WeatherForecast(
+                        icon: $weatherData['icon'],
+                        description: $weatherData['description'],
+                        tempMin: $weatherData['tempMin'],
+                        tempMax: $weatherData['tempMax'],
+                        windSpeed: $weatherData['windSpeed'],
+                        windDirection: $weatherData['windDirection'],
+                        precipitationProbability: $weatherData['precipitationProbability'],
                     );
-
-                    $stage->weather = $forecast;
                 } catch (\Throwable $e) {
                     $this->logger->warning('Weather fetch failed for stage.', [
                         'stageIndex' => $i,
@@ -129,12 +117,5 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
 
             $this->messageBus->dispatch(new AnalyzeWind($tripId));
         });
-    }
-
-    private function degToDirection(int $deg): string
-    {
-        $directions = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
-
-        return $directions[(int) round($deg / 45) % 8];
     }
 }

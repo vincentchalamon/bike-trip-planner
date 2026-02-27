@@ -16,7 +16,6 @@ The Bike Trip Planner architecture relies on a heterogeneous stack:
 
 1. A stateless API Platform backend running on PHP 8.5.
 2. A Next.js 16 frontend running on Node.js.
-3. A Gotenberg microservice for PDF generation.
 
 Managing a polyglot monorepo introduces significant cognitive overhead and operational friction. A developer (or an AI
 coding agent like Claude Code) must remember different commands to execute tests, run static analysis, or install

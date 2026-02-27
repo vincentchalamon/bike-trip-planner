@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typegen": "openapi-typescript ../openapi.json -o ./src/lib/api/schema.d.ts",
+    "typegen": "openapi-typescript openapi.json -o ./src/lib/api/schema.d.ts",
     "test:ts": "tsc --noEmit"
   },
   "dependencies": {
@@ -19,6 +19,7 @@
     "immer": "^11.1.4",
     "lucide-react": "^0.575.0",
     "next": "^16.1.6",
+    "next-intl": "^4.8.3",
     "next-themes": "^0.4.6",
     "openapi-fetch": "^0.17.0",
     "radix-ui": "^1.4.3",

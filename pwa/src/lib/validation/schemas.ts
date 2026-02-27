@@ -39,12 +39,14 @@ export const AccommodationSchema = z.object({
   estimatedPriceMin: z.number(),
   estimatedPriceMax: z.number(),
   isExactPrice: z.boolean(),
+  url: z.string().nullable().optional(),
 });
 
 export const StageDataSchema = z.object({
   dayNumber: z.number(),
   distance: z.number(),
   elevation: z.number(),
+  elevationLoss: z.number().default(0),
   startPoint: CoordinateSchema,
   endPoint: CoordinateSchema,
   geometry: z.array(CoordinateSchema),
@@ -55,6 +57,7 @@ export const StageDataSchema = z.object({
   alerts: z.array(AlertSchema),
   pois: z.array(PointOfInterestSchema),
   accommodations: z.array(AccommodationSchema),
+  gpxContent: z.string().nullable().optional(),
 });
 
 export const TripStateSchema = z.object({
@@ -70,6 +73,8 @@ export const TripStateSchema = z.object({
   sourceType: z.string().nullable(),
   startDate: z.string().nullable(),
   endDate: z.string().nullable(),
+  fatigueFactor: z.number().min(0.5).max(1.0).default(0.9),
+  elevationPenalty: z.number().positive().default(50),
   stages: z.array(StageDataSchema),
   computationStatus: z.record(z.string(), z.string()),
 });

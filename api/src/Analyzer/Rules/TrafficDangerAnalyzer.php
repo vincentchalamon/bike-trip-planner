@@ -8,11 +8,17 @@ use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 {
     /** @var list<string> */
     private const array DANGEROUS_HIGHWAYS = ['primary', 'secondary'];
+
+    public function __construct(
+        private TranslatorInterface $translator,
+    ) {
+    }
 
     public function analyze(Stage $stage, array $context = []): array
     {
@@ -43,11 +49,16 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 
         $first = $dangerousSegments[0];
 
+        /** @var string $locale */
+        $locale = $context['locale'] ?? 'en';
+
         return [new Alert(
             type: AlertType::CRITICAL,
-            message: \sprintf(
-                '%d segment(s) sur route principale (primary/secondary) sans piste cyclable détecté(s).',
-                \count($dangerousSegments),
+            message: $this->translator->trans(
+                'alert.traffic.critical',
+                ['%count%' => \count($dangerousSegments)],
+                'alerts',
+                $locale,
             ),
             lat: $first['lat'] ?? $stage->startPoint->lat,
             lon: $first['lon'] ?? $stage->startPoint->lon,

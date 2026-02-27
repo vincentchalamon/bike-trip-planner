@@ -19,7 +19,6 @@ This boots multiple services in development mode:
 | `php`       | `https://localhost/docs`                    | API Platform backend        |
 | `pwa`       | `https://localhost`                         | Next.js frontend            |
 | `worker`    | Internal only                               | Async messages worker       |
-| `gotenberg` | Internal only                               | PDF generation microservice |
 | `mercure`   | `https://localhost/.well-known/mercure/ui/` | Server-push microservice    |
 | `redis`     | Internal only                               | Cache microservice          |
 | `caddy`     | Internal only                               | Web server microservice     |
@@ -178,7 +177,7 @@ bike-trip-planner/
 │   │   ├── Osm/                  # Overpass API queries
 │   │   ├── Pricing/              # Accommodation heuristic pricing
 │   │   └── Analyzer/             # Alert engine (Chain of Responsibility)
-│   └── templates/                # Twig templates for PDF roadbook
+│   └── templates/                # Twig templates
 ├── pwa/                          # Next.js frontend
 │   ├── src/
 │   │   ├── app/                  # Next.js App Router pages

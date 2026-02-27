@@ -114,7 +114,7 @@ final readonly class GeocodeController
                 ],
             ]);
 
-            /** @var array{name?: string, display_name?: string, lat?: string, lon?: string, type?: string, addresstype?: string, error?: string} $data */
+            /** @var array{name?: string, display_name?: string, lat?: string, lon?: string, type?: string, addresstype?: string, address?: array{city?: string, town?: string, village?: string, hamlet?: string, municipality?: string}, error?: string} $data */
             $data = $response->toArray();
         } catch (\Throwable) {
             return new JsonResponse(['error' => 'Geocoding service unavailable'], Response::HTTP_BAD_GATEWAY);
@@ -124,8 +124,16 @@ final readonly class GeocodeController
             return new JsonResponse(['results' => []]);
         }
 
+        // Prefer city/town/village name over the raw POI name
+        $address = $data['address'] ?? [];
+        $name = $data['name'] ?? '';
+        $cityName = $address['city'] ?? $address['town'] ?? $address['village'] ?? $address['hamlet'] ?? $address['municipality'] ?? null;
+        if (null !== $cityName && '' !== $cityName) {
+            $name = $cityName;
+        }
+
         $results = [[
-            'name' => $data['name'] ?? '',
+            'name' => $name,
             'lat' => (float) ($data['lat'] ?? $latFloat),
             'lon' => (float) ($data['lon'] ?? $lonFloat),
             'displayName' => $data['display_name'] ?? '',

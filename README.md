@@ -1,6 +1,6 @@
 # Bike Trip Planner
 
-A local-first bikepacking trip planner. Paste a Komoot tour URL, get a structured day-by-day roadbook with pacing, elevation alerts, accommodation suggestions, and a downloadable PDF — all without an account or cloud storage.
+A local-first bikepacking trip planner. Paste a Komoot tour URL, get a structured day-by-day roadbook with pacing, elevation alerts, and accommodation suggestions — all without an account or cloud storage.
 
 ---
 
@@ -10,7 +10,6 @@ A local-first bikepacking trip planner. Paste a Komoot tour URL, get a structure
 - **Pacing engine** — Distributes distance across days accounting for cumulative fatigue and elevation gain, with a configurable minimum daily threshold.
 - **Alert engine** — Rule-based system that flags dangerous passes, exposed ridges, remote segments with no services, and weather windows.
 - **Accommodation scanner** — Queries OpenStreetMap Overpass for bivouac spots, refuges, and gîtes near each stage end, with heuristic pricing.
-- **PDF roadbook** — Exports a printable roadbook (via Gotenberg) with stage maps, elevation profiles, and alert summaries.
 - **Local-first** — All trip data is stored in the browser's `localStorage`. No account required, no data leaves your machine unless you request a plan computation.
 
 ## Architecture overview
@@ -22,7 +21,6 @@ Browser (Next.js 16)          PHP Backend (API Platform 4.2)
   Zod validation               GPX parsing + pacing engine
   openapi-fetch (typed)        OSM Overpass + weather APIs
                                ↓
-                          Gotenberg (PDF)
                           Headless Chromium via Twig
 ```
 
@@ -38,10 +36,9 @@ Type safety is enforced end-to-end: PHP DTOs define the schema → API Platform 
 | Frontend | Next.js 16 (App Router), React 19, TypeScript (strict) |
 | State    | Zustand + Immer, localStorage persistence              |
 | Styling  | Tailwind CSS                                           |
-| PDF      | Gotenberg 8 (headless Chromium), Twig templates        |
 | Testing  | PHPUnit 13 (backend), Playwright 1.58 (E2E)            |
 | Quality  | PHPStan level 9, PHP-CS-Fixer, ESLint, Prettier        |
-| Runtime  | Docker (Caddy, Node, Gotenberg)                        |
+| Runtime  | Docker (Caddy, Node)                                   |
 
 ## Documentation
 

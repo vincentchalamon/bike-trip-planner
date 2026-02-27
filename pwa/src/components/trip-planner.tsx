@@ -1,40 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { MagicLinkInput } from "@/components/magic-link-input";
 import { TripSummary } from "@/components/trip-summary";
 import { TripHeader } from "@/components/trip-header";
+import { PacingSettings } from "@/components/pacing-settings";
 import { Timeline } from "@/components/timeline";
-import { ExportPdfButton } from "@/components/export-pdf-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useMercure } from "@/hooks/use-mercure";
 import { apiClient, parseApiError, isNetworkError } from "@/lib/api/client";
 import { getRandomTripName } from "@/components/trip-title";
-import type { AccommodationData } from "@/lib/validation/schemas";
-import type { GeocodeResult } from "@/lib/geocode/client";
-
-function haversineDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+import type { AccommodationData, StageData } from "@/lib/validation/schemas";
 
 export function TripPlanner() {
+  const t = useTranslations();
   const trip = useTripStore((s) => s.trip);
   const totalDistance = useTripStore((s) => s.totalDistance);
   const totalElevation = useTripStore((s) => s.totalElevation);
+  const totalElevationLoss = useTripStore((s) => s.totalElevationLoss);
   const stages = useTripStore((s) => s.stages);
   const startDate = useTripStore((s) => s.startDate);
   const endDate = useTripStore((s) => s.endDate);
@@ -49,9 +36,14 @@ export function TripPlanner() {
   const updateLocalAccommodation = useTripStore(
     (s) => s.updateLocalAccommodation,
   );
-  const updateStageLabel = useTripStore((s) => s.updateStageLabel);
+  const deleteStage = useTripStore((s) => s.deleteStage);
+  const fatigueFactor = useTripStore((s) => s.fatigueFactor);
+  const elevationPenalty = useTripStore((s) => s.elevationPenalty);
+  const updatePacingSettings = useTripStore((s) => s.updatePacingSettings);
   const isProcessing = useUiStore((s) => s.isProcessing);
   const setProcessing = useUiStore((s) => s.setProcessing);
+
+  const [newAccKey, setNewAccKey] = useState<string | null>(null);
 
   const tripId = trip?.id ?? null;
   useMercure(tripId);
@@ -62,8 +54,14 @@ export function TripPlanner() {
     setProcessing(true);
 
     try {
+      const today = new Date().toISOString().split("T")[0] ?? null;
       const { data, error, response } = await apiClient.POST("/trips", {
-        body: { sourceUrl, fatigueFactor: 0.9, elevationPenalty: 50 },
+        body: {
+          sourceUrl,
+          fatigueFactor,
+          elevationPenalty,
+          startDate: startDate ?? today,
+        },
       });
 
       if (error || !data) {
@@ -73,6 +71,10 @@ export function TripPlanner() {
         return;
       }
 
+      if (!startDate && today) {
+        updateDates(today, null);
+      }
+
       setTrip({
         id: data.id ?? "",
         title: getRandomTripName(),
@@ -80,9 +82,9 @@ export function TripPlanner() {
       });
     } catch (err) {
       if (isNetworkError(err)) {
-        toast.error("Network error. Please check your connection.");
+        toast.error(t("errors.networkError"));
       } else {
-        toast.error("An unexpected error occurred.");
+        toast.error(t("errors.unexpectedError"));
       }
       setProcessing(false);
     }
@@ -103,8 +105,8 @@ export function TripPlanner() {
         body: {
           startDate: newStart,
           endDate: newEnd,
-          fatigueFactor: 0.9,
-          elevationPenalty: 50,
+          fatigueFactor,
+          elevationPenalty,
         },
       });
 
@@ -115,13 +117,17 @@ export function TripPlanner() {
         setProcessing(true);
       }
     } catch {
-      toast.error("Failed to update dates.");
+      toast.error(t("errors.failedUpdateDates"));
     }
   }
 
   // --- Stage operations ---
   async function handleDeleteStage(index: number) {
     if (!tripId) return;
+
+    const snapshot = [...stages];
+    deleteStage(index);
+
     try {
       const { error, response } = await apiClient.DELETE(
         "/trips/{tripId}/stages/{index}",
@@ -132,75 +138,86 @@ export function TripPlanner() {
       if (error) {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
+        useTripStore.getState().setStages(snapshot);
       } else {
         setProcessing(true);
       }
     } catch {
-      toast.error("Failed to delete stage.");
-    }
-  }
-
-  async function handleMoveStage(index: number, direction: "up" | "down") {
-    if (!tripId) return;
-    const toIndex = direction === "up" ? index - 1 : index + 1;
-    try {
-      const { error, response } = await apiClient.PATCH(
-        "/trips/{tripId}/stages/{index}/move",
-        {
-          params: { path: { tripId, index: String(index) } },
-          headers: { "Content-Type": "application/merge-patch+json" },
-          body: { toIndex },
-        },
-      );
-      if (error) {
-        const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
-      } else {
-        setProcessing(true);
-      }
-    } catch {
-      toast.error("Failed to move stage.");
+      toast.error(t("errors.failedDeleteStage"));
+      useTripStore.getState().setStages(snapshot);
     }
   }
 
   async function handleAddStage(afterIndex: number) {
     if (!tripId) return;
+
+    const prevStage = stages[afterIndex];
+    const nextStage = stages[afterIndex + 1];
+    const startPoint = prevStage?.endPoint ?? prevStage?.startPoint;
+    const endPoint = nextStage?.startPoint ?? prevStage?.endPoint;
+
+    if (!startPoint || !endPoint) {
+      toast.error(t("errors.failedAddStage"));
+      return;
+    }
+
+    // Optimistically insert a placeholder stage
+    const placeholder: StageData = {
+      dayNumber: afterIndex + 2,
+      distance: 0,
+      elevation: 0,
+      elevationLoss: 0,
+      startPoint: {
+        lat: startPoint.lat,
+        lon: startPoint.lon,
+        ele: startPoint.ele ?? 0,
+      },
+      endPoint: {
+        lat: endPoint.lat,
+        lon: endPoint.lon,
+        ele: endPoint.ele ?? 0,
+      },
+      geometry: [],
+      label: null,
+      startLabel: prevStage?.endLabel ?? null,
+      endLabel: nextStage?.startLabel ?? null,
+      weather: null,
+      alerts: [],
+      pois: [],
+      accommodations: [],
+      gpxContent: null,
+    };
+    const updatedStages = stages.map((s) => ({ ...s }));
+    updatedStages.splice(afterIndex + 1, 0, placeholder);
+    updatedStages.forEach((s, i) => {
+      s.dayNumber = i + 1;
+    });
+    useTripStore.getState().setStages(updatedStages);
+
     try {
       const { error, response } = await apiClient.POST(
         "/trips/{tripId}/stages",
         {
           params: { path: { tripId } },
-          body: { position: afterIndex + 1 },
+          body: { position: afterIndex + 1, startPoint, endPoint },
         },
       );
       if (error) {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
+        // Revert on error
+        useTripStore.getState().setStages(stages);
       } else {
         setProcessing(true);
       }
     } catch {
-      toast.error("Failed to add stage.");
+      toast.error(t("errors.failedAddStage"));
+      useTripStore.getState().setStages(stages);
     }
   }
 
-  async function handleStageLocationChange(
-    index: number,
-    field: "start" | "end",
-    result: GeocodeResult,
-  ) {
+  async function handleDistanceChange(index: number, distance: number) {
     if (!tripId) return;
-
-    updateStageLabel(
-      index,
-      field === "start" ? "startLabel" : "endLabel",
-      result.name,
-    );
-
-    const body =
-      field === "start"
-        ? { startPoint: { lat: result.lat, lon: result.lon, ele: 0 } }
-        : { endPoint: { lat: result.lat, lon: result.lon, ele: 0 } };
 
     try {
       const { error, response } = await apiClient.PATCH(
@@ -208,7 +225,7 @@ export function TripPlanner() {
         {
           params: { path: { tripId, index: String(index) } },
           headers: { "Content-Type": "application/merge-patch+json" },
-          body,
+          body: { distance },
         },
       );
       if (error) {
@@ -218,14 +235,42 @@ export function TripPlanner() {
         setProcessing(true);
       }
     } catch {
-      toast.error("Failed to update stage location.");
+      toast.error(t("errors.failedUpdateLocation"));
+    }
+  }
+
+  // --- Pacing settings ---
+  async function handlePacingChange(newFatigue: number, newElevation: number) {
+    updatePacingSettings(newFatigue, newElevation);
+    if (!tripId) return;
+
+    try {
+      const { error, response } = await apiClient.PATCH("/trips/{id}", {
+        params: { path: { id: tripId } },
+        headers: { "Content-Type": "application/merge-patch+json" },
+        body: {
+          fatigueFactor: newFatigue,
+          elevationPenalty: newElevation,
+        },
+      });
+
+      if (error) {
+        const apiError = parseApiError(response.status, error);
+        toast.error(apiError.message);
+      } else {
+        setProcessing(true);
+      }
+    } catch {
+      toast.error(t("errors.failedUpdatePacing"));
     }
   }
 
   // --- Accommodations ---
   function handleAddAccommodation(stageIndex: number) {
+    const stage = stages[stageIndex];
+    const accIndex = stage?.accommodations.length ?? 0;
     const newAcc: AccommodationData = {
-      name: "New accommodation",
+      name: t("accommodation.new"),
       type: "other",
       lat: 0,
       lon: 0,
@@ -234,40 +279,35 @@ export function TripPlanner() {
       isExactPrice: false,
     };
     addLocalAccommodation(stageIndex, newAcc);
+    setNewAccKey(`${stageIndex}-${accIndex}`);
   }
 
   // --- Derived data ---
   const firstStage = stages[0];
-  const lastStage = stages[stages.length - 1];
-  const departureLabel = firstStage?.startLabel ?? "";
-  const arrivalLabel = lastStage?.endLabel ?? "";
-  const isLoop =
-    firstStage && lastStage
-      ? haversineDistance(
-          firstStage.startPoint.lat,
-          firstStage.startPoint.lon,
-          lastStage.endPoint.lat,
-          lastStage.endPoint.lon,
-        ) < 1
-      : false;
   const firstWeather = firstStage?.weather ?? null;
+  const isWeatherLoading = isProcessing && stages.length > 0 && !firstWeather;
 
   return (
-    <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
+    <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative">
       {/* Skip link */}
       <a
         href="#timeline"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-background focus:p-2 focus:rounded"
       >
-        Skip to timeline
+        {t("layout.skipToTimeline")}
       </a>
 
-      {/* Magic link input */}
-      <MagicLinkInput
-        onSubmit={handleMagicLink}
-        isProcessing={isProcessing}
-        disabled={false}
-      />
+      {/* Toolbar: magic link + buttons */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <MagicLinkInput
+            onSubmit={handleMagicLink}
+            isProcessing={isProcessing}
+            disabled={false}
+          />
+        </div>
+        <ThemeToggle />
+      </div>
 
       {/* Trip content */}
       {trip && (
@@ -276,44 +316,45 @@ export function TripPlanner() {
           <TripSummary
             totalDistance={totalDistance}
             totalElevation={totalElevation}
+            totalElevationLoss={totalElevationLoss}
+            weather={firstWeather}
+            isWeatherLoading={isWeatherLoading}
+            isProcessing={isProcessing}
           />
 
-          {/* Header: title + locations + calendar */}
+          {/* Header: title + locations + calendar + pacing */}
           <TripHeader
             title={trip.title}
             onTitleChange={updateTitle}
-            departureLabel={departureLabel}
-            arrivalLabel={arrivalLabel}
-            isLoop={isLoop}
-            weather={firstWeather}
             startDate={startDate}
             endDate={endDate}
             onDatesChange={handleDatesChange}
-            onDepartureChange={() => {}}
-            onArrivalChange={() => {}}
-          />
+            showTitleSuggestion={totalDistance !== null}
+            isTitleLoading={isProcessing && totalDistance === null}
+          >
+            <PacingSettings
+              fatigueFactor={fatigueFactor}
+              elevationPenalty={elevationPenalty}
+              onUpdate={handlePacingChange}
+            />
+          </TripHeader>
 
           {/* Timeline */}
           <div id="timeline">
             <Timeline
               stages={stages}
+              startDate={startDate}
+              isProcessing={isProcessing}
               onDeleteStage={handleDeleteStage}
-              onMoveStage={handleMoveStage}
               onAddStage={handleAddStage}
-              onStageStartChange={(i, r) =>
-                handleStageLocationChange(i, "start", r)
-              }
-              onStageEndChange={(i, r) =>
-                handleStageLocationChange(i, "end", r)
-              }
+              onDistanceChange={handleDistanceChange}
               onAddAccommodation={handleAddAccommodation}
               onUpdateAccommodation={updateLocalAccommodation}
               onRemoveAccommodation={removeLocalAccommodation}
+              newAccKey={newAccKey}
+              onClearNewAcc={() => setNewAccKey(null)}
             />
           </div>
-
-          {/* Export PDF */}
-          <ExportPdfButton />
         </div>
       )}
     </main>

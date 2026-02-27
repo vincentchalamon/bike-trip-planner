@@ -13,10 +13,6 @@ final class TripRequest
 {
     #[Assert\NotBlank(groups: ['trip_request:create'])]
     #[Assert\Url(protocols: ['https'])]
-    #[Assert\Regex(
-        pattern: '#^https://(?:www\.komoot\.com/(?:[a-z]{2}-[a-z]{2}/)?(?:tour/\d+|collection/\d+/.+)|www\.google\.com/maps/d/.+|maps\.app\.goo\.gl/.+)#',
-        message: 'The URL must be a valid Komoot tour/collection, Google My Maps or maps.app.goo.gl link.',
-    )]
     public ?string $sourceUrl = null;
 
     public ?\DateTimeImmutable $startDate = null {

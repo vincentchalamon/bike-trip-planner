@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import { useLocale } from "next-intl";
 import dayjs, { type Dayjs } from "dayjs";
+import "dayjs/locale/fr";
+import "dayjs/locale/en";
 
 export interface CalendarDay {
   date: Dayjs;
   isCurrentMonth: boolean;
   isToday: boolean;
+  isPast: boolean;
   isSelected: boolean;
   isInRange: boolean;
   isStart: boolean;
@@ -34,6 +38,7 @@ export function useCalendar({
   endDate,
   onDatesChange,
 }: UseCalendarOptions): UseCalendarReturn {
+  const locale = useLocale();
   const start = startDate ? dayjs(startDate) : null;
   const end = endDate ? dayjs(endDate) : null;
 
@@ -43,10 +48,12 @@ export function useCalendar({
 
   const [selectingEnd, setSelectingEnd] = useState(false);
 
-  const weekDayLabels = useMemo(
-    () => ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    [],
-  );
+  const weekDayLabels = useMemo(() => {
+    const monday = dayjs().locale(locale).startOf("week");
+    return Array.from({ length: 7 }, (_, i) =>
+      monday.add(i, "day").format("dd"),
+    );
+  }, [locale]);
 
   const weeks = useMemo(() => {
     const firstDay = currentMonth.startOf("month");
@@ -80,6 +87,7 @@ export function useCalendar({
           date: current,
           isCurrentMonth: current.month() === currentMonth.month(),
           isToday: current.isSame(today, "day"),
+          isPast: current.isBefore(today, "day"),
           isSelected: isStart || isEnd,
           isInRange,
           isStart,
@@ -104,23 +112,36 @@ export function useCalendar({
 
   const selectDate = useCallback(
     (date: Dayjs) => {
+      const today = dayjs().startOf("day");
+      if (date.isBefore(today, "day")) return;
+
       const dateStr = date.format("YYYY-MM-DD");
+
       if (!selectingEnd || !start) {
-        onDatesChange(dateStr, endDate);
+        // First click or no start: set as start date, clear end
+        onDatesChange(dateStr, null);
         setSelectingEnd(true);
       } else {
-        if (date.isBefore(start)) {
-          onDatesChange(dateStr, startDate);
+        // Second click: set as end date
+        if (date.isBefore(start, "day")) {
+          // Clicked before start: treat as new start date, clear end
+          onDatesChange(dateStr, null);
+          setSelectingEnd(true);
+        } else if (date.isSame(start, "day")) {
+          // Clicked same day: clear selection
+          onDatesChange(null, null);
+          setSelectingEnd(false);
         } else {
+          // Clicked after start: set as end date
           onDatesChange(startDate, dateStr);
+          setSelectingEnd(false);
         }
-        setSelectingEnd(false);
       }
     },
-    [selectingEnd, start, startDate, endDate, onDatesChange],
+    [selectingEnd, start, startDate, onDatesChange],
   );
 
-  const monthLabel = currentMonth.format("MMMM YYYY");
+  const monthLabel = currentMonth.locale(locale).format("MMMM YYYY");
 
   return {
     currentMonth,

@@ -40,7 +40,7 @@ export function WeatherIndicator({ weather }: WeatherIndicatorProps) {
   const Icon = iconMap[weather.icon] ?? Cloud;
 
   return (
-    <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60 mt-6">
+    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
       <Icon className="h-4 w-4" />
       <span>
         {weather.description}, {Math.round(weather.tempMin)}-

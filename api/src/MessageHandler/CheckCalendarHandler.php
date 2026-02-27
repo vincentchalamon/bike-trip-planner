@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
@@ -11,6 +12,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCalendar;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Yasumi\Yasumi;
 
 #[AsMessageHandler]
@@ -20,6 +22,7 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripStateManager,
+        private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher);
     }
@@ -30,13 +33,14 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
         $request = $this->tripStateManager->getRequest($tripId);
         $stages = $this->tripStateManager->getStages($tripId);
 
-        if (in_array(null, [$request, $stages, $request?->startDate], true)) {
+        if (!$request instanceof TripRequest || null === $stages) {
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::CALENDAR, function () use ($tripId, $request, $stages): void {
-            $startDate = $request->startDate;
-            \assert($startDate instanceof \DateTimeImmutable);
+        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+
+        $this->executeWithTracking($tripId, ComputationName::CALENDAR, function () use ($tripId, $request, $stages, $locale): void {
+            $startDate = $request->startDate ?? new \DateTimeImmutable('today');
             $year = (int) $startDate->format('Y');
 
             $holidays = Yasumi::create('France', $year);
@@ -47,15 +51,28 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                 $stageDate = $startDate->modify(\sprintf('+%d days', $i));
 
                 if ($holidays->isHoliday($stageDate)) {
-                    $holiday = $holidays->getHoliday($stageDate->format('Y-m-d'));
+                    // Find the matching holiday name by iterating
+                    $holidayName = null;
+                    foreach ($holidays->getHolidays() as $holiday) {
+                        if ($holiday->format('Y-m-d') === $stageDate->format('Y-m-d')) {
+                            $holidayName = $holiday->getName();
+                            break;
+                        }
+                    }
+
+                    $fallback = $this->translator->trans('alert.calendar.fallback', [], 'alerts', $locale);
                     $nudges[] = [
                         'stageIndex' => $i,
                         'date' => $stageDate->format('Y-m-d'),
-                        'holiday' => $holiday?->getName() ?? 'Public holiday',
-                        'message' => \sprintf(
-                            'Step %d coincides with a public holiday (%s). Some businesses may be closed.',
-                            $stage->dayNumber,
-                            $holiday?->getName() ?? 'Public holiday',
+                        'holiday' => $holidayName ?? $fallback,
+                        'message' => $this->translator->trans(
+                            'alert.calendar.nudge',
+                            [
+                                '%stage%' => $stage->dayNumber,
+                                '%holiday%' => $holidayName ?? $fallback,
+                            ],
+                            'alerts',
+                            $locale,
                         ),
                     ];
                 }

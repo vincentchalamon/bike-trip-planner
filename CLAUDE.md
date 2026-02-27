@@ -10,7 +10,6 @@ Bike Trip Planner — a local-first bikepacking trip planner. Decoupled architec
 
 - **Backend:** PHP 8.5, API Platform 4.2, Symfony 8, Caddy (Docker)
 - **Frontend:** Next.js 16 (App Router), React 19, TypeScript (strict), Zustand + Immer, Tailwind CSS
-- **PDF:** Gotenberg 8 microservice (headless Chromium via Twig templates)
 - **Testing:** PHPUnit 13 (backend), Playwright 1.58 (E2E)
 - **Quality:** PHPStan Level 9, PHP-CS-Fixer (PSR-12/Symfony), ESLint, Prettier
 
@@ -19,7 +18,7 @@ Bike Trip Planner — a local-first bikepacking trip planner. Decoupled architec
 All orchestrated via Makefile. Run `make help` for full list.
 
 ```bash
-make start-dev          # Boot Docker environment (php, pwa, gotenberg)
+make start-dev          # Boot Docker environment (php, pwa)
 make qa                 # Full QA: PHPStan + PHP-CS-Fixer + ESLint + Prettier + TS checks
 make test               # Full suite: QA → PHPUnit → Playwright
 make test-php           # PHPUnit 13 only
@@ -62,7 +61,7 @@ Backend PHP DTOs define the schema → API Platform exports OpenAPI spec → `np
   - `src/Osm/` — Overpass queries
   - `src/Pricing/` — Heuristic accommodation pricing
   - `src/Analyzer/` — Rule-based alert engine using Chain of Responsibility with Symfony tagged services (`#[AutoconfigureTag('app.stage_analyzer')]`)
-  - `templates/` — Twig templates for PDF roadbook
+  - `templates/` — Twig templates
 - `pwa/` — Next.js frontend
   - `src/store/` — Zustand stores with persist middleware (localStorage)
   - `src/lib/api/` — Generated types (`schema.d.ts`) and openapi-fetch client
@@ -77,7 +76,6 @@ Backend PHP DTOs define the schema → API Platform exports OpenAPI spec → `np
 - **External API caching:** Symfony CachingHttpClient with FilesystemAdapter. OSM data cached 24h, weather 3h. Scoped HTTP clients prevent SSRF.
 - **Pacing formula:** `target_day_n = base_target * (0.9 ^ (n-1)) - (elevation_gain / 50)` with 30km minimum threshold.
 - **Alert engine:** New rules implement `StageAnalyzerInterface` and are auto-discovered via `#[TaggedIterator]`. Priority integers control execution order.
-- **PDF export:** Backend renders Twig → sends HTML to Gotenberg → returns PDF stream. Template uses Tailwind CDN.
 
 ### Security Constraints
 

@@ -21,5 +21,6 @@ export async function reverseGeocode(
 ): Promise<GeocodeResult | null> {
   const res = await fetch(`/geocode/reverse?lat=${lat}&lon=${lon}`);
   if (!res.ok) return null;
-  return (await res.json()) as GeocodeResult;
+  const data = (await res.json()) as { results: GeocodeResult[] };
+  return data.results[0] ?? null;
 }

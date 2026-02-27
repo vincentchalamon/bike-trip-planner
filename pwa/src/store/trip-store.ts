@@ -1,9 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import { TripStateSchema } from "@/lib/validation/schemas";
 import type {
   StageData,
   WeatherData,
@@ -22,17 +20,20 @@ interface TripState {
   trip: TripIdentity | null;
   totalDistance: number | null;
   totalElevation: number | null;
+  totalElevationLoss: number | null;
   sourceType: string | null;
   startDate: string | null;
   endDate: string | null;
+  fatigueFactor: number;
+  elevationPenalty: number;
   stages: StageData[];
   computationStatus: Record<string, string>;
-  hasHydrated: boolean;
 
   setTrip: (trip: TripIdentity) => void;
   updateRouteData: (data: {
     totalDistance: number;
     totalElevation: number;
+    totalElevationLoss: number;
     sourceType: string;
     title: string | null;
   }) => void;
@@ -58,174 +59,154 @@ interface TripState {
   ) => void;
   updateTitle: (title: string) => void;
   updateDates: (startDate: string | null, endDate: string | null) => void;
+  updatePacingSettings: (
+    fatigueFactor: number,
+    elevationPenalty: number,
+  ) => void;
   setComputationStatus: (status: Record<string, string>) => void;
+  updateStageGpx: (stageIndex: number, gpxContent: string) => void;
+  deleteStage: (stageIndex: number) => void;
   clearTrip: () => void;
-  setHasHydrated: (value: boolean) => void;
 }
 
 const initialState = {
   trip: null,
   totalDistance: null,
   totalElevation: null,
+  totalElevationLoss: null,
   sourceType: null,
   startDate: null,
   endDate: null,
+  fatigueFactor: 0.9,
+  elevationPenalty: 50,
   stages: [],
   computationStatus: {},
-  hasHydrated: false,
 };
 
 export const useTripStore = create<TripState>()(
-  persist(
-    immer((set) => ({
-      ...initialState,
+  immer((set) => ({
+    ...initialState,
 
-      setTrip: (trip) =>
-        set((state) => {
-          state.trip = trip;
-        }),
+    setTrip: (trip) =>
+      set((state) => {
+        state.trip = trip;
+      }),
 
-      updateRouteData: (data) =>
-        set((state) => {
-          state.totalDistance = data.totalDistance;
-          state.totalElevation = data.totalElevation;
-          state.sourceType = data.sourceType;
-          if (data.title && state.trip) {
-            state.trip.title = data.title;
-          }
-        }),
-
-      setStages: (stages) =>
-        set((state) => {
-          state.stages = stages;
-        }),
-
-      updateStageWeather: (dayNumber, weather) =>
-        set((state) => {
-          const stage = state.stages.find((s) => s.dayNumber === dayNumber);
-          if (stage) stage.weather = weather;
-        }),
-
-      updateStagePois: (stageIndex, pois) =>
-        set((state) => {
-          if (state.stages[stageIndex]) {
-            state.stages[stageIndex].pois = pois;
-          }
-        }),
-
-      updateStageAccommodations: (stageIndex, accs) =>
-        set((state) => {
-          if (state.stages[stageIndex]) {
-            state.stages[stageIndex].accommodations = accs;
-          }
-        }),
-
-      updateStageAlerts: (stageIndex, alerts) =>
-        set((state) => {
-          if (state.stages[stageIndex]) {
-            const existing = state.stages[stageIndex].alerts;
-            state.stages[stageIndex].alerts = [...existing, ...alerts];
-          }
-        }),
-
-      updateStageLabel: (stageIndex, field, value) =>
-        set((state) => {
-          if (state.stages[stageIndex]) {
-            state.stages[stageIndex][field] = value;
-          }
-        }),
-
-      addLocalAccommodation: (stageIndex, acc) =>
-        set((state) => {
-          if (state.stages[stageIndex]) {
-            state.stages[stageIndex].accommodations.push(acc);
-          }
-        }),
-
-      removeLocalAccommodation: (stageIndex, accIndex) =>
-        set((state) => {
-          if (state.stages[stageIndex]) {
-            state.stages[stageIndex].accommodations.splice(accIndex, 1);
-          }
-        }),
-
-      updateLocalAccommodation: (stageIndex, accIndex, data) =>
-        set((state) => {
-          const acc = state.stages[stageIndex]?.accommodations[accIndex];
-          if (acc) {
-            Object.assign(acc, data);
-          }
-        }),
-
-      updateTitle: (title) =>
-        set((state) => {
-          if (state.trip) state.trip.title = title;
-        }),
-
-      updateDates: (startDate, endDate) =>
-        set((state) => {
-          state.startDate = startDate;
-          state.endDate = endDate;
-        }),
-
-      setComputationStatus: (status) =>
-        set((state) => {
-          state.computationStatus = status;
-        }),
-
-      clearTrip: () =>
-        set((state) => {
-          Object.assign(state, { ...initialState, hasHydrated: true });
-        }),
-
-      setHasHydrated: (value) =>
-        set((state) => {
-          state.hasHydrated = value;
-        }),
-    })),
-    {
-      name: "bike-trip-planner-storage",
-      version: 1,
-      partialize: (state) => {
-        const {
-          hasHydrated: _,
-          setTrip: _a,
-          updateRouteData: _b,
-          setStages: _c,
-          updateStageWeather: _d,
-          updateStagePois: _e,
-          updateStageAccommodations: _f,
-          updateStageAlerts: _g,
-          updateStageLabel: _h,
-          addLocalAccommodation: _i,
-          removeLocalAccommodation: _j,
-          updateLocalAccommodation: _k,
-          updateTitle: _l,
-          updateDates: _m,
-          setComputationStatus: _n,
-          clearTrip: _o,
-          setHasHydrated: _p,
-          ...rest
-        } = state;
-        return rest;
-      },
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-      },
-      migrate: (persisted, version) => {
-        if (version === 0 || version === 1) {
-          return persisted as object;
+    updateRouteData: (data) =>
+      set((state) => {
+        state.totalDistance = data.totalDistance;
+        state.totalElevation = data.totalElevation;
+        state.totalElevationLoss = data.totalElevationLoss;
+        state.sourceType = data.sourceType;
+        if (data.title && state.trip) {
+          state.trip.title = data.title;
         }
-        return persisted as object;
-      },
-      merge: (persisted, current) => {
-        const result = TripStateSchema.safeParse(persisted);
-        if (result.success) {
-          return { ...current, ...result.data };
+      }),
+
+    setStages: (stages) =>
+      set((state) => {
+        state.stages = stages;
+      }),
+
+    updateStageWeather: (dayNumber, weather) =>
+      set((state) => {
+        const stage = state.stages.find((s) => s.dayNumber === dayNumber);
+        if (stage) stage.weather = weather;
+      }),
+
+    updateStagePois: (stageIndex, pois) =>
+      set((state) => {
+        if (state.stages[stageIndex]) {
+          state.stages[stageIndex].pois = pois;
         }
-        // Corrupted localStorage: wipe gracefully (ADR-003)
-        return current;
-      },
-    },
-  ),
+      }),
+
+    updateStageAccommodations: (stageIndex, accs) =>
+      set((state) => {
+        if (state.stages[stageIndex]) {
+          state.stages[stageIndex].accommodations = accs;
+        }
+      }),
+
+    updateStageAlerts: (stageIndex, alerts) =>
+      set((state) => {
+        if (state.stages[stageIndex]) {
+          const existing = state.stages[stageIndex].alerts;
+          const existingMessages = new Set(existing.map((a) => a.message));
+          const unique = alerts.filter((a) => !existingMessages.has(a.message));
+          state.stages[stageIndex].alerts = [...existing, ...unique];
+        }
+      }),
+
+    updateStageLabel: (stageIndex, field, value) =>
+      set((state) => {
+        if (state.stages[stageIndex]) {
+          state.stages[stageIndex][field] = value;
+        }
+      }),
+
+    addLocalAccommodation: (stageIndex, acc) =>
+      set((state) => {
+        if (state.stages[stageIndex]) {
+          state.stages[stageIndex].accommodations.push(acc);
+        }
+      }),
+
+    removeLocalAccommodation: (stageIndex, accIndex) =>
+      set((state) => {
+        if (state.stages[stageIndex]) {
+          state.stages[stageIndex].accommodations.splice(accIndex, 1);
+        }
+      }),
+
+    updateLocalAccommodation: (stageIndex, accIndex, data) =>
+      set((state) => {
+        const acc = state.stages[stageIndex]?.accommodations[accIndex];
+        if (acc) {
+          Object.assign(acc, data);
+        }
+      }),
+
+    updateTitle: (title) =>
+      set((state) => {
+        if (state.trip) state.trip.title = title;
+      }),
+
+    updateDates: (startDate, endDate) =>
+      set((state) => {
+        state.startDate = startDate;
+        state.endDate = endDate;
+      }),
+
+    updatePacingSettings: (fatigueFactor, elevationPenalty) =>
+      set((state) => {
+        state.fatigueFactor = fatigueFactor;
+        state.elevationPenalty = elevationPenalty;
+      }),
+
+    setComputationStatus: (status) =>
+      set((state) => {
+        state.computationStatus = status;
+      }),
+
+    updateStageGpx: (stageIndex, gpxContent) =>
+      set((state) => {
+        if (state.stages[stageIndex]) {
+          state.stages[stageIndex].gpxContent = gpxContent;
+        }
+      }),
+
+    deleteStage: (stageIndex) =>
+      set((state) => {
+        state.stages.splice(stageIndex, 1);
+        state.stages.forEach((s, i) => {
+          s.dayNumber = i + 1;
+        });
+      }),
+
+    clearTrip: () =>
+      set((state) => {
+        Object.assign(state, initialState);
+      }),
+  })),
 );

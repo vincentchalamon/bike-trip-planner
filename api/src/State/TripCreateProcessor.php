@@ -13,6 +13,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Uid\Uuid;
 
@@ -25,6 +26,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
+        private RequestStack $requestStack,
     ) {
     }
 
@@ -37,6 +39,9 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $tripId = Uuid::v7()->toRfc4122();
 
         $this->tripStateManager->initializeTrip($tripId, $data);
+
+        $locale = $this->requestStack->getCurrentRequest()?->getPreferredLanguage(['en', 'fr']) ?? 'en';
+        $this->tripStateManager->storeLocale($tripId, $locale);
 
         $computations = ComputationName::cases();
         $this->computationTracker->initializeComputations($tripId, $computations);

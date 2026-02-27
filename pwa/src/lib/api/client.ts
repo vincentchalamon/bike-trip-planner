@@ -1,10 +1,18 @@
 import createClient from "openapi-fetch";
 import type { paths } from "./schema";
 
+function getBrowserLocale(): string {
+  if (typeof navigator !== "undefined") {
+    return navigator.language;
+  }
+  return "fr";
+}
+
 export const apiClient = createClient<paths>({
   headers: {
     "Content-Type": "application/ld+json",
     Accept: "application/ld+json",
+    "Accept-Language": getBrowserLocale(),
   },
 });
 

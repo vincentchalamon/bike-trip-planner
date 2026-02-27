@@ -141,7 +141,7 @@ final class TripUpdateTest extends ApiTestCase
     }
 
     #[Test]
-    public function rejectsInvalidDomainSourceUrl(): void
+    public function acceptsAnyHttpsSourceUrl(): void
     {
         self::createClient();
         $this->seedTrip(self::TRIP_ID);
@@ -149,20 +149,11 @@ final class TripUpdateTest extends ApiTestCase
         self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
             'json' => [
-                'sourceUrl' => 'https://evil.example.com/tour/123',
+                'sourceUrl' => 'https://unknown-provider.example.com/route/123',
             ],
         ]);
 
-        $this->assertResponseStatusCodeSame(422);
-        $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/validation-error-schema.json'));
-        $this->assertJsonContains([
-            'violations' => [
-                [
-                    'propertyPath' => 'sourceUrl',
-                    'message' => 'The URL must be a valid Komoot tour/collection, Google My Maps or maps.app.goo.gl link.',
-                ],
-            ],
-        ]);
+        $this->assertResponseStatusCodeSame(202);
     }
 
     #[Test]
@@ -424,7 +415,6 @@ final class TripUpdateTest extends ApiTestCase
         yield 'negative elevation penalty' => [['elevationPenalty' => -5.0], 'elevationPenalty'];
         yield 'zero elevation penalty' => [['elevationPenalty' => 0.0], 'elevationPenalty'];
         yield 'invalid URL protocol' => [['sourceUrl' => 'http://www.komoot.com/tour/123'], 'sourceUrl'];
-        yield 'invalid URL domain' => [['sourceUrl' => 'https://evil.com/tour/123'], 'sourceUrl'];
     }
 
     /**

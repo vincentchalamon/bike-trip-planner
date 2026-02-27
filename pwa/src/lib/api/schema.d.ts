@@ -120,6 +120,7 @@ export interface components {
       estimatedPriceMin?: number;
       estimatedPriceMax?: number;
       isExactPrice?: boolean;
+      url?: string | null;
     };
     "Alert.jsonld": {
       /** @enum {string} */
@@ -243,6 +244,7 @@ export interface components {
       startPoint?: components["schemas"]["Coordinate"] | null;
       endPoint?: components["schemas"]["Coordinate"] | null;
       label?: string | null;
+      distance?: number | null;
       toIndex?: number | null;
     };
     "Stage.StageRequest.jsonMergePatch": {
@@ -250,6 +252,7 @@ export interface components {
       startPoint?: components["schemas"]["Coordinate"] | null;
       endPoint?: components["schemas"]["Coordinate"] | null;
       label?: string | null;
+      distance?: number | null;
       toIndex?: number | null;
     };
     "Stage.StageResponse.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
@@ -266,6 +269,7 @@ export interface components {
       dayNumber?: number;
       distance?: number;
       elevation?: number;
+      elevationLoss?: number;
       startPoint?: components["schemas"]["Coordinate.jsonld"];
       endPoint?: components["schemas"]["Coordinate.jsonld"];
       geometry?: components["schemas"]["Coordinate.jsonld"][];
@@ -285,6 +289,7 @@ export interface components {
       endPoint?: components["schemas"]["Coordinate.jsonld"];
       geometry?: components["schemas"]["Coordinate.jsonld"][];
       label?: string | null;
+      elevationLoss?: number;
     };
     "Trip.TripRequest": {
       sourceUrl: string | null;

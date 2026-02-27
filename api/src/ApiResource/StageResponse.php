@@ -43,6 +43,8 @@ final class StageResponse
 
     public float $elevation;
 
+    public float $elevationLoss;
+
     public Coordinate $startPoint;
 
     public Coordinate $endPoint;

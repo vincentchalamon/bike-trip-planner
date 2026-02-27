@@ -8,6 +8,7 @@ export interface StagePayload {
   dayNumber: number;
   distance: number;
   elevation: number;
+  elevationLoss: number;
   startPoint: CoordinatePayload;
   endPoint: CoordinatePayload;
   geometry: CoordinatePayload[];
@@ -58,6 +59,7 @@ export type MercureEvent =
       data: {
         totalDistance: number;
         totalElevation: number;
+        totalElevationLoss: number;
         sourceType: string;
         title: string | null;
       };
@@ -71,23 +73,38 @@ export type MercureEvent =
     }
   | {
       type: "terrain_alerts";
-      data: { stageIndex: number; alerts: AlertPayload[] };
+      data: { alertsByStage: Record<string, AlertPayload[]> };
     }
   | {
       type: "calendar_alerts";
-      data: { stageIndex: number; alerts: AlertPayload[] };
+      data: {
+        nudges: { stageIndex: number; message: string; date: string }[];
+      };
     }
   | {
       type: "wind_alerts";
-      data: { stageIndex: number; alerts: AlertPayload[] };
+      data: { alerts: AlertPayload[] };
     }
   | {
       type: "resupply_nudges";
-      data: { stageIndex: number; alerts: AlertPayload[] };
+      data: {
+        nudges: { stageIndex: number; message: string; distance: number }[];
+      };
     }
   | {
       type: "bike_shop_alerts";
-      data: { stageIndex: number; alerts: AlertPayload[] };
+      data: {
+        alerts: {
+          stageIndex: number;
+          type: string;
+          message: string;
+          dayNumber: number;
+        }[];
+      };
+    }
+  | {
+      type: "stage_gpx_ready";
+      data: { stageIndex: number; gpxContent: string };
     }
   | { type: "validation_error"; data: { code: string; message: string } }
   | {
