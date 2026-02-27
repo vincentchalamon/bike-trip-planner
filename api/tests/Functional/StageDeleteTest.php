@@ -184,7 +184,7 @@ final class StageDeleteTest extends ApiTestCase
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
         $this->assertJsonContains([
             'status' => 422,
-            'detail' => 'Minimum 2 stages required. Unable to delete this stage.',
+            'detail' => 'A minimum of 2 stages is required. Unable to delete this stage.',
         ]);
     }
 

@@ -49,7 +49,7 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         }
 
         if (\count($stages) <= 2) {
-            throw new UnprocessableEntityHttpException('Minimum 2 stages required. Unable to delete this stage.');
+            throw new UnprocessableEntityHttpException('A minimum of 2 stages is required. Unable to delete this stage.');
         }
 
         $sourceType = $this->tripStateManager->getSourceType($tripId);
