@@ -7,13 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typegen": "npx openapi-typescript https://localhost/docs.json -o ./src/lib/api/schema.d.ts",
+    "typegen": "openapi-typescript ../openapi.json -o ./src/lib/api/schema.d.ts",
     "test:ts": "tsc --noEmit"
   },
   "dependencies": {
     "@api-platform/api-doc-parser": "^0.16.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "dayjs": "^1.11.19",
     "immer": "^11.1.4",
     "lucide-react": "^0.575.0",
@@ -23,6 +24,7 @@
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6",
     "zustand": "^5.0.11"

@@ -341,7 +341,6 @@ contient les types TypeScript pour toutes les operations et tous les schemas de 
 
 Creer l'instance `openapi-fetch` typee depuis `schema.d.ts` :
 
-- `baseUrl` : `/api` (les requetes sont proxifiees par Next.js vers le backend PHP)
 - Header par defaut : `Content-Type: application/ld+json` (format API Platform)
 - Header `Accept: application/ld+json`
 
@@ -912,11 +911,11 @@ Structure :
 
 Variantes via CVA (class-variance-authority, inclus avec shadcn) :
 
-| Type | Classes |
-|---|---|
-| `critical` | `bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400` |
-| `warning` | `bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400` |
-| `nudge` | `bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400` |
+| Type       | Classes                                                                    |
+|------------|----------------------------------------------------------------------------|
+| `critical` | `bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400`             |
+| `warning`  | `bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400` |
+| `nudge`    | `bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400`         |
 
 - Classes communes : `rounded-md px-3 py-1.5 text-sm font-medium`
 - Pas de bordure (conformement aux specs)
@@ -1085,14 +1084,14 @@ Les resultats sont stockes dans le `trip-store` via `updateStageLabel`.
 
 ```typescript
 export async function searchPlaces(query: string): Promise<GeocodeResult[]> {
-  const res = await fetch(`/api/geocode/search?q=${encodeURIComponent(query)}&limit=5`);
+  const res = await fetch(`/geocode/search?q=${encodeURIComponent(query)}&limit=5`);
   if (!res.ok) return [];
   const data = await res.json();
   return data.results;
 }
 
 export async function reverseGeocode(lat: number, lon: number): Promise<GeocodeResult | null> {
-  const res = await fetch(`/api/geocode/reverse?lat=${lat}&lon=${lon}`);
+  const res = await fetch(`/geocode/reverse?lat=${lat}&lon=${lon}`);
   if (!res.ok) return null;
   return res.json();
 }
@@ -1277,7 +1276,7 @@ export default defineConfig({
 
 - Fonctions utilitaires basees sur `page.route()` pour intercepter les appels API
 - Chaque mock retourne des donnees conformes au schema OpenAPI
-- Exemple : `mockCreateTrip(page)` intercepte `POST /api/trips` et retourne un
+- Exemple : `mockCreateTrip(page)` intercepte `POST /trips` et retourne un
   payload 202 avec un `tripId` fixe
 
 **Fichier :** `pwa/tests/fixtures/sse-helpers.ts`
