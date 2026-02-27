@@ -77,7 +77,6 @@ API engine, and a Next.js 16 Single Page Application (SPA) as the state manager 
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (API Platform with Next.js SPA)**
 
 ### Why Other Options Were Rejected

@@ -1,4 +1,3 @@
-<!-- markdownlint-disable MD024 -->
 # FEATURES SPECIFICATIONS
 
 Bike Trip Planner is an intelligent bikepacking trip generator designed to simplify logistical and safety planning. The application transforms a route intent (Komoot URL/GPX) into a detailed roadbook, anticipating the cyclist's needs (water, fatigue, safety, resupply) without requiring a database (local-first approach).

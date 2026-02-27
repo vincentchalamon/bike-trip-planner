@@ -68,7 +68,6 @@ The PHP backend compresses the spatial query using a decimated polyline, and uti
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Backend Orchestration with Spatial Decimation and Caching)**
 
 ### Why Other Options Were Rejected

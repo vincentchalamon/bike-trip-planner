@@ -74,7 +74,6 @@ Use a paid aggregator API to fetch live hotel data.
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (OSM Discovery + Heuristic Pricing + Deep Linking)**
 
 ### Why Other Options Were Rejected

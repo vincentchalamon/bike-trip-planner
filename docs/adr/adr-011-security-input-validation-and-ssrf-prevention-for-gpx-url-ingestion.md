@@ -75,7 +75,6 @@ strict API Platform DTO validation and a hardened `XMLReader` configuration that
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Strict Allowlisting, Scoped HTTP Clients, and Hardened XMLReader)**
 
 ### Why Other Options Were Rejected

@@ -74,7 +74,6 @@ Booting the entire Docker stack and driving the application solely through Cypre
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (PHPUnit 13 + Playwright)**
 
 ### Why Other Options Were Rejected

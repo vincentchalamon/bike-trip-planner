@@ -70,7 +70,6 @@ PDF.
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Gotenberg Microservice)**
 
 ### Why Other Options Were Rejected

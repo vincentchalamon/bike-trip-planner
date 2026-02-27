@@ -80,7 +80,6 @@ frontend container) to trigger Git hooks.
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (GNU Make + Husky)**
 
 ### Why Other Options Were Rejected

@@ -1,5 +1,3 @@
-<!-- markdownlint-disable MD024 -->
-<!-- markdownlint-disable MD036 -->
 # Plan de developpement API — Bike Trip Planner (Lot 1)
 
 ## Contexte

@@ -84,7 +84,6 @@ moment the accumulated distance exceeds the dynamic target.
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Deterministic Weighted Polyline Traversal)**
 
 ### Why Other Options Were Rejected
