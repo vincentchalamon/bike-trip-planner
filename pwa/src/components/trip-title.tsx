@@ -10,6 +10,7 @@ const FEMINIST_NAMES = [
   "Eileen Sheridan",
   "Marianne Martin",
   "Dervla Murphy",
+  "Reine Bestel",
 ];
 
 export function getRandomTripName(): string {
