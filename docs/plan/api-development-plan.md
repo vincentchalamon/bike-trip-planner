@@ -4,7 +4,7 @@
 
 ## Contexte
 
-L'infrastructure backend (Docker/FrankenPHP, Makefile, PHPStan Level 9, PHP-CS-Fixer,
+L'infrastructure backend (Docker/Caddy, Makefile, PHPStan Level 9, PHP-CS-Fixer,
 PHPUnit 13, Rector, Gotenberg) est configuree. Le fichier `api/src/Kernel.php` est le seul
 code PHP — toute la logique metier est a developper.
 

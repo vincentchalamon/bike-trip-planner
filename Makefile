@@ -5,16 +5,19 @@ help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
 ## --- 🐳 Docker Infrastructure ---
-start: ## Start the Docker environment (Detached)
+start-dev: ## Start the Docker environment (Detached) in development mode
 	docker compose up --wait
+
+start: start-prod ## Alias for start-prod
+
+start-prod: ## Start the Docker environment (Detached) in production mode
+	docker compose -f compose.prod.yaml up --wait
 
 stop: ## Stop the Docker environment
 	docker compose stop
 
-## --- 📦 Dependencies ---
-install: ## Install both PHP and Node dependencies
-	docker compose exec php composer install
-	docker compose exec pwa npm install
+clean: ## Clean the Docker environment
+	docker compose down --volumes --remove-orphans
 
 ## --- 🛡️ Quality Assurance & Linting ---
 php-cs-fixer: ## Run PHP CS Fixer

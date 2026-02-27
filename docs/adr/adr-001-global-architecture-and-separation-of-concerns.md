@@ -106,7 +106,7 @@ stripping out the Kubernetes/Helm configurations, and adapting it for a stateles
 
 ### 1.1 — Docker Environment Bootstrap
 
-We will use the FrankenPHP-based setup provided by the API Platform distribution.
+We will use the Caddy-based setup provided by the API Platform distribution.
 
 **Action:** Bootstrap from repository and clean up.
 
@@ -116,7 +116,7 @@ cd bike-trip-planner
 rm -rf helm/ # Remove Kubernetes charts
 ```
 
-The resulting `compose.yaml` provides a highly optimized Caddy/FrankenPHP server for the backend and a Node container
+The resulting `compose.yaml` provides a highly optimized Caddy server for the backend and a Node container
 for Next.js, ensuring HTTP/3 and native CORS configuration.
 
 ### 1.2 — Backend Implementation (Stateless API Platform)
@@ -260,7 +260,7 @@ Husky).
 
 ## Verification
 
-1. `docker compose up --wait` — successfully boots FrankenPHP and Node.js containers.
+1. `docker compose up --wait` — successfully boots PHP and Node.js containers.
 2. `curl -k https://localhost/docs.json` — returns the OpenAPI specification generated automatically by API Platform.
 3. `docker compose exec php vendor/bin/phpstan analyse -l 9 src/` — returns zero errors.
 4. `docker compose exec pwa npm run lint` — returns zero ESLint errors.
@@ -277,7 +277,7 @@ Husky).
   making the contract between PHP and Next.js unbreakable.
 * **Uncompromised Security:** API keys for OSM and Weather are safely isolated in the PHP backend.
 * **DX (Developer Experience):** The `api-platform/api-platform` setup provides a production-ready Docker
-  configuration (FrankenPHP) with built-in HTTPS and CORS out of the box.
+  configuration (Caddy) with built-in HTTPS and CORS out of the box.
 
 ### Negative
 
@@ -297,5 +297,5 @@ Husky).
 
 * [API Platform Documentation: State Providers & Processors](https://api-platform.com/docs/core/state-providers/)
 * [API Platform Documentation: Without Doctrine](https://www.google.com/search?q=https://api-platform.com/docs/core/data-providers/%23custom-state-provider)
-* [FrankenPHP: The Modern PHP App Server](https://frankenphp.dev/)
+* [Caddy: The Ultimate Server](https://caddyserver.com/)
 * [Zustand Documentation - Persist Middleware](https://docs.pmnd.rs/zustand/integrations/persisting-store-data)

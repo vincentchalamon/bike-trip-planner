@@ -1,0 +1,106 @@
+services:
+  php:
+    build:
+      context: ./api
+      dockerfile: .docker/php/Dockerfile
+      target: frankenphp_prod
+    restart: unless-stopped
+    depends_on:
+      - gotenberg
+      - redis
+    environment:
+      APP_ENV: prod
+      CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
+      CADDY_EXTRA_CONFIG: ${CADDY_EXTRA_CONFIG:-}
+      SERVER_NAME: ${SERVER_NAME:-localhost}
+      GOTENBERG_UPSTREAM: gotenberg:3000
+      PWA_UPSTREAM: pwa:3000
+      MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
+      MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
+      MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
+      MESSENGER_FAILED_DSN: redis://redis:6379/failed
+      REDIS_URL: redis://redis:6379
+      GOTENBERG_DSN: http://gotenberg:3000
+    tty: true
+    volumes:
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/20-app.prod.ini
+    healthcheck:
+      test: [ "CMD-SHELL", "symfony server:status | grep -q 'Listening'" ]
+      start_period: 5s
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  worker:
+    build:
+      context: ./api
+      dockerfile: .docker/php/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      APP_ENV: prod
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
+      MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
+      MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
+      MESSENGER_FAILED_DSN: redis://redis:6379/failed
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/20-app.prod.ini
+
+  pwa:
+    build:
+      context: ./pwa
+      dockerfile: .docker/pwa/Dockerfile
+      target: prod
+    restart: unless-stopped
+    depends_on:
+      - gotenberg
+      - php # Mercure dependency
+    tty: true
+    environment:
+      NODE_ENV: production
+    volumes:
+      - ./pwa/:/app
+      - .docker/pwa/:/app/docker/pwa
+      - pwa_node_modules:/app/node_modules
+      - pwa_next:/app/.next
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1" ]
+      start_period: 5s
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      timeout: 3s
+      retries: 5
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+    healthcheck:
+      test: curl -f http://localhost:3000 || exit 1
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  caddy_data: ~
+  caddy_config: ~
+  pwa_node_modules: ~
+  pwa_next: ~

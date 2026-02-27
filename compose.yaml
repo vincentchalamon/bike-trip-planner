@@ -1,16 +1,53 @@
 services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - gotenberg
+      - mercure
+      - php
+      - pwa
+    environment:
+      CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
+      CADDY_EXTRA_CONFIG: ${CADDY_EXTRA_CONFIG:-}
+      SERVER_NAME: ${SERVER_NAME:-localhost}
+      MERCURE_UPSTREAM: mercure:80
+      PWA_UPSTREAM: pwa:3000
+      PHP_UPSTREAM: php:8000
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+      - target: 443
+        published: 443
+        protocol: tcp
+      - target: 443
+        published: 443
+        protocol: udp
+    volumes:
+      - .docker/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
   php:
     image: esoledad/php:8.5
     working_dir: /app
     entrypoint: /app/docker/php/docker-entrypoint.sh
-    command: symfony server:start --allow-all-ip --port 443
+    command: symfony server:start --allow-all-ip --no-tls
+    expose:
+      - 8000
     user: root
     restart: unless-stopped
+    depends_on:
+      - gotenberg
+      - mercure
+      - redis
     environment:
+      APP_ENV: dev
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
-      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-example\.com|localhost}|php$$}
-      MERCURE_URL: https://mercure/.well-known/mercure
-      MERCURE_PUBLIC_URL: https://localhost:8443/.well-known/mercure
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
+      MERCURE_URL: http://mercure/.well-known/mercure
+      MERCURE_PUBLIC_URL: https://${SERVER_NAME:-localhost}/.well-known/mercure
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
@@ -23,30 +60,53 @@ services:
       - host.docker.internal:host-gateway
     tty: true
     volumes:
+      - .docker/php/:/app/docker/php
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
       - ./api/:/app
       - /app/var
       # If you develop on Mac or Windows you can remove the vendor/ directory
       #  from the bind-mount for better performance by enabling the next line:
       #- /app/vendor
-    ports:
-      # HTTP
-      - target: 80
-        published: 80
-        protocol: tcp
-      # HTTPS
-      - target: 443
-        published: 443
-        protocol: tcp
-      # HTTP/3
-      - target: 443
-        published: 443
-        protocol: udp
     healthcheck:
       test: [ "CMD-SHELL", "symfony server:status | grep -q 'Listening'" ]
-      start_period: 5s
       interval: 5s
       timeout: 3s
       retries: 3
+
+  worker:
+    image: esoledad/php:8.5
+    working_dir: /app
+    entrypoint: /app/docker/php/docker-entrypoint.sh
+    command: bin/console messenger:consume async --time-limit=3600 -vv
+    user: root
+    restart: unless-stopped
+    depends_on:
+      - mercure
+      - redis
+    environment:
+      APP_ENV: dev
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
+      MERCURE_URL: http://mercure/.well-known/mercure
+      MERCURE_PUBLIC_URL: https://${SERVER_NAME:-localhost}/.well-known/mercure
+      MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
+      MESSENGER_FAILED_DSN: redis://redis:6379/failed
+      REDIS_URL: redis://redis:6379
+      GOTENBERG_DSN: http://gotenberg:3000
+      # See https://xdebug.org/docs/all_settings#mode
+      XDEBUG_MODE: "${XDEBUG_MODE:-off}"
+    extra_hosts:
+      # Ensure that host.docker.internal is correctly defined on Linux
+      - host.docker.internal:host-gateway
+    volumes:
+      - .docker/php/:/app/docker/php
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
+      - ./api/:/app
+      - /app/var
+      # If you develop on Mac or Windows you can remove the vendor/ directory
+      #  from the bind-mount for better performance by enabling the next line:
+      #- /app/vendor
 
   pwa:
     image: node:25-alpine
@@ -57,95 +117,60 @@ services:
       - 3000
     user: root
     restart: unless-stopped
+    depends_on:
+      - gotenberg
+      - mercure
     tty: true
+    environment:
+      NODE_ENV: development
+      # Development usage only
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
     volumes:
       - ./pwa/:/app
+      - .docker/pwa/:/app/docker/pwa
       - pwa_node_modules:/app/node_modules
       - pwa_next:/app/.next
-    ports:
-      - target: 3000
-        published: 3000
-        protocol: tcp
     healthcheck:
-      test: curl -f http://localhost:3000 || exit 1
-      timeout: 5s
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1" ]
+      interval: 5s
+      timeout: 3s
       retries: 5
-      start_period: 60s
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
 
   gotenberg:
     image: gotenberg/gotenberg:8
     restart: unless-stopped
-    ports:
-      - target: 3000
-        published: 8000
-        protocol: tcp
     healthcheck:
       test: curl -f http://localhost:3000 || exit 1
-      timeout: 5s
+      interval: 5s
+      timeout: 3s
       retries: 5
-      start_period: 60s
 
   mercure:
     image: dunglas/mercure
     restart: unless-stopped
     environment:
+      # Force HTTP-only for internal Docker communication (Caddy handles external TLS)
+      SERVER_NAME: ":80"
       MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
-    ports:
-      - target: 80
-        published: 8080
-        protocol: tcp
-      - target: 443
-        published: 8443
-        protocol: tcp
+      MERCURE_EXTRA_DIRECTIVES: demo
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "https://localhost/healthz"]
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-
-  worker:
-    image: esoledad/php:8.5
-    working_dir: /app
-    entrypoint: /app/docker/php/docker-entrypoint.sh
-    command: bin/console messenger:consume async --time-limit=3600 -vv
-    user: root
-    restart: unless-stopped
-    environment:
-      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
-      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-example\.com|localhost}|php$$}
-      MERCURE_URL: https://mercure/.well-known/mercure
-      MERCURE_PUBLIC_URL: https://localhost/.well-known/mercure
-      MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
-      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
-      MESSENGER_FAILED_DSN: redis://redis:6379/failed
-      REDIS_URL: redis://redis:6379
-      GOTENBERG_DSN: http://gotenberg:3000
-      # See https://xdebug.org/docs/all_settings#mode
-      XDEBUG_MODE: "${XDEBUG_MODE:-off}"
-    extra_hosts:
-      # Ensure that host.docker.internal is correctly defined on Linux
-      - host.docker.internal:host-gateway
-    tty: true
-    volumes:
-      - ./api/:/app
-      - /app/var
-      # If you develop on Mac or Windows you can remove the vendor/ directory
-      #  from the bind-mount for better performance by enabling the next line:
-      #- /app/vendor
-
-  redis:
-    image: redis:8-alpine
-    restart: unless-stopped
-    ports:
-      - target: 6379
-        published: 6379
-        protocol: tcp
-    healthcheck:
-      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/healthz"]
+      interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 3
 
 volumes:
+  caddy_data: ~
+  caddy_config: ~
   pwa_node_modules: ~
   pwa_next: ~
