@@ -61,7 +61,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                         'dayNumber' => $stage->dayNumber,
                         'type' => AlertType::NUDGE->value,
                         'message' => \sprintf(
-                            'Aucun magasin de vélo détecté sur l\'étape %d. En cas de panne, la prochaine ville peut être loin.',
+                            'No bike shops detected on stage %d. In case of a breakdown, the next town may be far away.',
                             $stage->dayNumber,
                         ),
                     ];

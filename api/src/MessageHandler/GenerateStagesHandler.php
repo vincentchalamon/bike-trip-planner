@@ -57,7 +57,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
             }
 
             if (\count($stages) < 2) {
-                $this->publisher->publishValidationError($tripId, 'MIN_STAGES', 'Minimum 2 étapes requises.');
+                $this->publisher->publishValidationError($tripId, 'MIN_STAGES', 'A minimum of 2 steps is required.');
             }
 
             $this->tripStateManager->storeStages($tripId, $stages);

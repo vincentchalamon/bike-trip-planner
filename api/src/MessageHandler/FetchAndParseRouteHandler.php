@@ -53,7 +53,7 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
             $result = $fetcher->fetch($sourceUrl);
 
             if ([] === $result->tracks) {
-                $this->publisher->publishValidationError($tripId, 'EMPTY_ROUTE', 'Itinéraire vide.');
+                $this->publisher->publishValidationError($tripId, 'EMPTY_ROUTE', 'Empty route.');
 
                 return;
             }
@@ -61,7 +61,7 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
             $allPoints = array_merge(...$result->tracks);
 
             if ([] === $allPoints) {
-                $this->publisher->publishValidationError($tripId, 'EMPTY_ROUTE', 'Itinéraire vide.');
+                $this->publisher->publishValidationError($tripId, 'EMPTY_ROUTE', 'Empty route.');
 
                 return;
             }

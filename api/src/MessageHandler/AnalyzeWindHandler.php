@@ -71,7 +71,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                 $alert = new Alert(
                     type: AlertType::WARNING,
                     message: \sprintf(
-                        'Vent de face prévu sur %d/%d étapes (>25 km/h). Prévoyez plus de temps.',
+                        'Headwinds are expected for %d/%d of the stages (>25 km/h). Allow extra time.',
                         $headwindCount,
                         $stagesWithWeather,
                     ),
