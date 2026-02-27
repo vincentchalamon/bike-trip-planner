@@ -99,6 +99,7 @@ export function TripPlanner() {
     try {
       const { error, response } = await apiClient.PATCH("/trips/{id}", {
         params: { path: { id: tripId } },
+        headers: { "Content-Type": "application/merge-patch+json" },
         body: {
           startDate: newStart,
           endDate: newEnd,
@@ -147,6 +148,7 @@ export function TripPlanner() {
         "/trips/{tripId}/stages/{index}/move",
         {
           params: { path: { tripId, index: String(index) } },
+          headers: { "Content-Type": "application/merge-patch+json" },
           body: { toIndex },
         },
       );
@@ -205,6 +207,7 @@ export function TripPlanner() {
         "/trips/{tripId}/stages/{index}",
         {
           params: { path: { tripId, index: String(index) } },
+          headers: { "Content-Type": "application/merge-patch+json" },
           body,
         },
       );
