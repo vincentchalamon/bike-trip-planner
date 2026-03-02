@@ -50,7 +50,6 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
-
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -67,6 +66,7 @@ services:
       #- /app/vendor
     healthcheck:
       test: [ "CMD-SHELL", "symfony server:status | grep -q 'Listening'" ]
+      start_period: 10s
       interval: 5s
       timeout: 3s
       retries: 3
@@ -83,6 +83,7 @@ services:
     depends_on:
       - mercure
       - redis
+      - php
     environment:
       APP_ENV: dev
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
@@ -93,7 +94,6 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
-
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -132,6 +132,7 @@ services:
       - pwa_next:/app/.next
     healthcheck:
       test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1" ]
+      start_period: 10s
       interval: 5s
       timeout: 3s
       retries: 5

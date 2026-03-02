@@ -7,7 +7,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: undefined,
+  workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
     baseURL: "http://localhost:3000",
@@ -15,6 +15,14 @@ export default defineConfig({
     locale: "fr-FR",
     trace: "on-first-retry",
   },
+  webServer: process.env.CI
+    ? {
+        command: "NODE_ENV=production npm run build && npm run start",
+        url: "http://localhost:3000",
+        reuseExistingServer: false,
+        timeout: 120_000,
+      }
+    : undefined,
   projects: process.env.CI
     ? [
         { name: "chromium", use: { ...devices["Desktop Chrome"] } },

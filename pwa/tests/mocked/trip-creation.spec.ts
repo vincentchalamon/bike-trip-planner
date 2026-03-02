@@ -131,12 +131,14 @@ test.describe("Trip creation flow", () => {
       const el = document.querySelector(
         '[data-testid="magic-link-input"]',
       ) as HTMLInputElement;
-      const dt = new DataTransfer();
-      dt.setData("text", "https://www.komoot.com/fr-fr/tour/12345");
       const event = new ClipboardEvent("paste", {
-        clipboardData: dt,
         bubbles: true,
         cancelable: true,
+      });
+      Object.defineProperty(event, "clipboardData", {
+        value: {
+          getData: () => "https://www.komoot.com/fr-fr/tour/12345",
+        },
       });
       el.dispatchEvent(event);
     });

@@ -1,0 +1,14 @@
+# Docker Compose override for CI — exposes backend ports to the host
+# Usage: docker compose -f compose.yaml -f compose.ci.yml up -d php worker --wait
+services:
+  php:
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: test
+
+  worker:
+    environment:
+      APP_ENV: test
+    deploy:
+      replicas: 1

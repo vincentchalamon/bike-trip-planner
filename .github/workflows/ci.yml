@@ -189,6 +189,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+      - name: Start backend services
+        run: docker compose -f compose.yaml -f compose.ci.yml up -d php worker mercure redis --wait
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
@@ -205,6 +207,7 @@ jobs:
       - if: ${{ steps.npm-cache.outputs.cache-hit != 'true' }}
         name: List the state of node modules
         continue-on-error: true
+        working-directory: pwa
         run: npm list
       - name: Install dependencies
         working-directory: pwa
@@ -215,12 +218,19 @@ jobs:
       - name: Run Playwright tests
         working-directory: pwa
         run: npx playwright test
+        env:
+          API_BACKEND_ORIGIN: http://localhost:8000
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
           path: pwa/playwright-report/
           retention-days: 30
+      - name: Debug services
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs
 
   eslint:
     name: Eslint
@@ -242,6 +252,7 @@ jobs:
       - if: ${{ steps.npm-cache.outputs.cache-hit != 'true' }}
         name: List the state of node modules
         continue-on-error: true
+        working-directory: pwa
         run: npm list
       - name: Install dependencies
         working-directory: pwa
@@ -270,6 +281,7 @@ jobs:
       - if: ${{ steps.npm-cache.outputs.cache-hit != 'true' }}
         name: List the state of node modules
         continue-on-error: true
+        working-directory: pwa
         run: npm list
       - name: Install dependencies
         working-directory: pwa
