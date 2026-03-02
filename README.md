@@ -6,25 +6,27 @@ A local-first bikepacking trip planner. Paste a Komoot tour URL, get a structure
 
 ## What it does
 
-- **Magic Link ingestion** — Provide a Komoot tour or collection URL; the backend fetches the GPX, parses elevation data, and computes a full trip plan.
+- **Magic Link ingestion** — Provide a Komoot tour/collection URL or Google MyMaps link; the backend fetches the route, parses elevation data, and computes a full trip plan asynchronously.
 - **Pacing engine** — Distributes distance across days accounting for cumulative fatigue and elevation gain, with a configurable minimum daily threshold.
 - **Alert engine** — Rule-based system that flags dangerous passes, exposed ridges, remote segments with no services, and weather windows.
 - **Accommodation scanner** — Queries OpenStreetMap Overpass for bivouac spots, refuges, and gîtes near each stage end, with heuristic pricing.
-- **Local-first** — All trip data is stored in the browser's `localStorage`. No account required, no data leaves your machine unless you request a plan computation.
+- **Local-first** — Trip data lives in-memory during a session. No account required, no persistent cloud database — computation is on-demand.
 
 ## Architecture overview
 
 <!-- markdownlint-disable MD040 -->
 ```
-Browser (Next.js 16)          PHP Backend (API Platform 4.2)
-  localStorage (Zustand)  ←→   Stateless computation
-  Zod validation               GPX parsing + pacing engine
-  openapi-fetch (typed)        OSM Overpass + weather APIs
-                               ↓
-                          Headless Chromium via Twig
+Browser (Next.js 16)           PHP Backend (API Platform 4.2)
+  Zustand + Immer (in-memory)    Stateless computation
+  Zod validation                 GPX parsing + pacing engine
+  openapi-fetch (typed)          OSM Overpass + weather APIs
+  Mercure SSE (real-time)  ←─    Async workers (Symfony Messenger)
+                                 Redis cache + Mercure publisher
+                                 ↓
+                            Headless Chromium via Twig (PDF)
 ```
 
-The backend exposes a single stateless API: send a trip request, receive a computed trip response. No database. No sessions. The frontend orchestrates state, persistence, and presentation.
+The frontend sends a trip request via REST; the backend processes it asynchronously across multiple workers and pushes status updates via Mercure SSE. No database — Redis cache for transient state, filesystem cache for external API responses.
 
 Type safety is enforced end-to-end: PHP DTOs define the schema → API Platform exports an OpenAPI spec → `npm run typegen` generates TypeScript types → `openapi-fetch` provides type-safe API calls. A schema change on the backend intentionally causes a TypeScript compilation failure.
 
@@ -34,11 +36,12 @@ Type safety is enforced end-to-end: PHP DTOs define the schema → API Platform 
 |----------|--------------------------------------------------------|
 | Backend  | PHP 8.5, Symfony 8, API Platform 4.2, Caddy            |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript (strict) |
-| State    | Zustand + Immer, localStorage persistence              |
+| State    | Zustand + Immer (in-memory), Mercure SSE (real-time)    |
 | Styling  | Tailwind CSS                                           |
 | Testing  | PHPUnit 13 (backend), Playwright 1.58 (E2E)            |
 | Quality  | PHPStan level 9, PHP-CS-Fixer, ESLint, Prettier        |
-| Runtime  | Docker (Caddy, Node)                                   |
+| Async    | Symfony Messenger, Redis transport, 5 workers           |
+| Runtime  | Docker (Caddy, Mercure, Redis, Node)                   |
 
 ## Documentation
 

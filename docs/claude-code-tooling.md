@@ -2,7 +2,7 @@
 
 ## Context
 
-Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 frontend) with no code implemented yet. This document recommends the most useful Claude Code tools (MCP servers, hooks, skills) for this stack, ranked by priority.
+Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 frontend). This document lists the Claude Code tools (MCP servers, hooks, skills) configured for this project and recommends additional ones.
 
 ---
 
@@ -44,25 +44,14 @@ Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 f
 
 ---
 
-### 1.4 Apidog MCP Server ⭐ RECOMMENDED
+### 1.4 Apidog MCP Server (ALREADY INSTALLED)
 
 **Purpose:** Loads the backend's OpenAPI spec as context for Claude. Enables generating type-safe frontend code directly from the spec, validating DTO↔TypeScript consistency, and exploring endpoints.
 
 - **Source:** <https://docs.apidog.com/apidog-mcp-server>
-- **Installation:** Add to `.mcp.json` at the project root:
-
-  ```json
-  {
-    "mcpServers": {
-      "openapi-spec": {
-        "command": "npx",
-        "args": ["-y", "apidog-mcp-server@latest", "--oas=https://localhost/docs.json"]
-      }
-    }
-  }
-  ```
-
-- **Relevance to Bike Trip Planner:** The type contract (ADR-002) relies on the OpenAPI spec. Having the spec in the Claude context helps maintain backend↔frontend consistency.
+- **Status:** Configured in `.mcp.json` at the project root (`openapi-spec` server pointing to `https://localhost/docs.json`)
+- **Requirement:** The PHP backend must be running (`make start-dev`) for the server to fetch the spec
+- **Relevance:** The type contract (ADR-002) relies on the OpenAPI spec. Having the spec in the Claude context helps maintain backend↔frontend consistency.
 
 ---
 
@@ -108,7 +97,31 @@ Hooks are deterministic shell commands triggered at specific points in the Claud
 
 ---
 
-### 2.2 PostToolUse — Auto-format TS/TSX with Prettier ⭐ RECOMMENDED
+### 2.2 PostToolUse — Auto-refactor PHP with Rector ⭐ RECOMMENDED
+
+**Purpose:** Automatically applies Rector refactorings to every PHP file edited by Claude.
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *.php ]]; then make rector -- \"${FILE#*/api/}\" --quiet 2>/dev/null; fi; exit 0'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 2.3 PostToolUse — Auto-format TS/TSX with Prettier ⭐ RECOMMENDED
 
 **Purpose:** Automatically formats every TypeScript/TSX file edited by Claude.
 
@@ -132,7 +145,7 @@ Hooks are deterministic shell commands triggered at specific points in the Claud
 
 ---
 
-### 2.3 PreToolUse — Protect sensitive files ⭐ RECOMMENDED
+### 2.4 PreToolUse — Protect sensitive files ⭐ RECOMMENDED
 
 **Purpose:** Prevents Claude from modifying `.env`, `.env.local`, `compose.override.yml`, or generated files (`schema.d.ts`).
 
@@ -156,7 +169,7 @@ Hooks are deterministic shell commands triggered at specific points in the Claud
 
 ---
 
-### 2.4 SessionStart — Context reminder after compaction (OPTIONAL)
+### 2.5 SessionStart — Context reminder after compaction (OPTIONAL)
 
 **Purpose:** When context is compacted (long sessions), reinjects critical project reminders.
 
@@ -229,7 +242,7 @@ Run the project's quality assurance pipeline:
 
 ---
 
-### 3.3 Custom Skill `/typegen` (OPTIONAL)
+### 3.3 Custom Skill `/typegen` ⭐ RECOMMENDED
 
 **Purpose:** Regenerates TypeScript types from the backend's OpenAPI spec and verifies frontend compilation.
 
@@ -262,19 +275,20 @@ When backend DTOs change, run the type generation pipeline:
 
 ## 4. Summary by Priority
 
-| Priority | Tool                     | Type              | Status                               |
-|----------|--------------------------|-------------------|--------------------------------------|
-| ✅        | Playwright MCP           | MCP Server        | Already installed                    |
-| ✅        | Context7                 | MCP Server        | Already installed                    |
-| ⭐        | GitHub MCP               | MCP Server        | To install                           |
-| ⭐        | Auto-format PHP (hook)   | Hook PostToolUse  | To configure                         |
-| ⭐        | Auto-format TS (hook)    | Hook PostToolUse  | To configure                         |
-| ⭐        | File protection (hook)   | Hook PreToolUse   | To configure                         |
-| ⭐        | Skill `/qa`              | Skill custom      | To create                            |
-| 💡       | Apidog MCP (OpenAPI)     | MCP Server        | To install when backend exists       |
-| 💡       | Post-compaction reminder | Hook SessionStart | To configure                         |
-| 💡       | Skill `/typegen`         | Skill custom      | To create when pipeline exists       |
-| 💡       | Docker/Portainer MCP     | MCP Server        | If Docker debugging becomes frequent |
+| Priority | Tool                      | Type              | Status            |
+|----------|---------------------------|-------------------|-------------------|
+| ✅        | Playwright MCP            | MCP Server        | Installed         |
+| ✅        | Context7                  | MCP Server        | Installed         |
+| ✅        | Apidog MCP (OpenAPI)      | MCP Server        | Installed         |
+| ✅        | Auto-format PHP (hook)    | Hook PostToolUse  | Configured        |
+| ✅        | Auto-refactor PHP (hook)  | Hook PostToolUse  | Configured        |
+| ✅        | Auto-format TS (hook)     | Hook PostToolUse  | Configured        |
+| ✅        | File protection (hook)    | Hook PreToolUse   | Configured        |
+| ✅        | Skill `/qa`               | Skill custom      | Created           |
+| ✅        | Skill `/typegen`          | Skill custom      | Created           |
+| ⭐        | GitHub MCP                | MCP Server        | To install        |
+| 💡       | Post-compaction reminder  | Hook SessionStart | To configure      |
+| 💡       | Docker/Portainer MCP      | MCP Server        | Optional          |
 
 ---
 

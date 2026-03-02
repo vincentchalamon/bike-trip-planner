@@ -43,11 +43,11 @@ markdownlint: ## Run Markdownlint
 
 tsc: typescript-check ## Alias for "typescript-check"
 
-qa-php: php-cs-fixer rector phpstan ## Run PHPStan and PHP CS Fixer
+qa-php: php-cs-fixer rector phpstan ## Run PHP-CS-Fixer, Rector, and PHPStan
 
 qa-pwa: eslint prettier typescript-check ## Run ESLint, Prettier, and TypeScript Check
 
-qa-doc: markdownlint ## Run ESLint, Prettier, and TypeScript Check
+qa-doc: markdownlint ## Run Markdownlint
 
 qa: qa-php qa-pwa ## Run all QA tools across both stacks
 
