@@ -15,6 +15,5 @@ enum ComputationName: string
     case WEATHER = 'weather';
     case CALENDAR = 'calendar';
     case WIND = 'wind';
-    case RESUPPLY = 'resupply';
     case BIKE_SHOPS = 'bike_shops';
 }

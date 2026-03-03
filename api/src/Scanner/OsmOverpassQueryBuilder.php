@@ -20,7 +20,26 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         $polyline = $this->buildPolyline($decimatedPoints);
 
         return \sprintf(
-            '[out:json][timeout:25];(nwr["amenity"~"^(restaurant|cafe|bar|pharmacy|fast_food|marketplace)$"](around:%d,%s);nwr["shop"~"^(convenience|supermarket|bakery|butcher|pastry|deli|greengrocer|general|farm)$"](around:%d,%s);nwr["tourism"~"^(viewpoint|attraction)$"](around:%d,%s););out center 200;',
+            '[out:json][timeout:15];(nwr["amenity"~"^(restaurant|cafe|bar|pharmacy|fast_food|marketplace)$"](around:%d,%s);nwr["shop"~"^(convenience|supermarket|bakery|butcher|pastry|deli|greengrocer|general|farm)$"](around:%d,%s);nwr["tourism"~"^(viewpoint|attraction)$"](around:%d,%s););out center 200;',
+            self::AROUND_RADIUS_METERS,
+            $polyline,
+            self::AROUND_RADIUS_METERS,
+            $polyline,
+            self::AROUND_RADIUS_METERS,
+            $polyline,
+        );
+    }
+
+    /**
+     * @param list<list<Coordinate>> $stageGeometries
+     */
+    public function buildBatchPoiQuery(array $stageGeometries): string
+    {
+        $allPoints = array_merge(...$stageGeometries);
+        $polyline = $this->buildPolyline($allPoints);
+
+        return \sprintf(
+            '[out:json][timeout:15];(nwr["amenity"~"^(restaurant|cafe|bar|pharmacy|fast_food|marketplace)$"](around:%d,%s);nwr["shop"~"^(convenience|supermarket|bakery|butcher|pastry|deli|greengrocer|general|farm)$"](around:%d,%s);nwr["tourism"~"^(viewpoint|attraction)$"](around:%d,%s););out center 200;',
             self::AROUND_RADIUS_METERS,
             $polyline,
             self::AROUND_RADIUS_METERS,
@@ -38,7 +57,7 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         $polyline = $this->buildPolyline($decimatedPoints);
 
         return \sprintf(
-            '[out:json][timeout:25];(nwr["tourism"~"^(camp_site|hostel|hotel|motel|guest_house|chalet|alpine_hut)$"](around:%d,%s););out center 100;',
+            '[out:json][timeout:15];(nwr["tourism"~"^(camp_site|hostel|hotel|motel|guest_house|chalet|alpine_hut)$"](around:%d,%s););out center 100;',
             self::ACCOMMODATION_RADIUS_METERS,
             $polyline,
         );
@@ -52,7 +71,22 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         $polyline = $this->buildPolyline($decimatedPoints);
 
         return \sprintf(
-            '[out:json][timeout:25];(nwr["shop"="bicycle"](around:%d,%s););out center 50;',
+            '[out:json][timeout:15];(nwr["shop"="bicycle"](around:%d,%s););out center 50;',
+            self::AROUND_RADIUS_METERS,
+            $polyline,
+        );
+    }
+
+    /**
+     * @param list<list<Coordinate>> $stageGeometries
+     */
+    public function buildBatchBikeShopQuery(array $stageGeometries): string
+    {
+        $allPoints = array_merge(...$stageGeometries);
+        $polyline = $this->buildPolyline($allPoints);
+
+        return \sprintf(
+            '[out:json][timeout:15];(nwr["shop"="bicycle"](around:%d,%s););out center 50;',
             self::AROUND_RADIUS_METERS,
             $polyline,
         );

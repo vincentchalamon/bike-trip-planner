@@ -6,7 +6,6 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 
 return static function (ContainerConfigurator $containerConfigurator): void {
     $containerConfigurator->extension('framework', [
-        'secret' => '%env(APP_SECRET)%',
         'http_method_override' => false,
         'handle_all_throwables' => true,
         'trusted_proxies' => '%env(TRUSTED_PROXIES)%',
@@ -32,7 +31,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 ],
                 'overpass.client' => [
                     'base_uri' => 'https://overpass-api.de',
-                    'timeout' => 30,
+                    'timeout' => 15,
                 ],
                 'open_meteo.client' => [
                     'base_uri' => 'https://api.open-meteo.com',

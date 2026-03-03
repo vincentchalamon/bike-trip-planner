@@ -44,7 +44,11 @@ interface TripState {
     stageIndex: number,
     accs: AccommodationData[],
   ) => void;
-  updateStageAlerts: (stageIndex: number, alerts: AlertData[]) => void;
+  updateStageAlerts: (
+    stageIndex: number,
+    alerts: AlertData[],
+    source: string,
+  ) => void;
   updateStageLabel: (
     stageIndex: number,
     field: "startLabel" | "endLabel",
@@ -128,13 +132,14 @@ export const useTripStore = create<TripState>()(
         }
       }),
 
-    updateStageAlerts: (stageIndex, alerts) =>
+    updateStageAlerts: (stageIndex, alerts, source) =>
       set((state) => {
         if (state.stages[stageIndex]) {
-          const existing = state.stages[stageIndex].alerts;
-          const existingMessages = new Set(existing.map((a) => a.message));
-          const unique = alerts.filter((a) => !existingMessages.has(a.message));
-          state.stages[stageIndex].alerts = [...existing, ...unique];
+          const taggedAlerts = alerts.map((a) => ({ ...a, source }));
+          const kept = state.stages[stageIndex].alerts.filter(
+            (a) => a.source !== source,
+          );
+          state.stages[stageIndex].alerts = [...kept, ...taggedAlerts];
         }
       }),
 

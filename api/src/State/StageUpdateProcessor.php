@@ -7,6 +7,8 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
+use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
 use App\Engine\DistanceCalculator;
@@ -112,7 +114,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
     /**
      * Walks along the decimated route to split stages based on the requested distance.
      *
-     * @param list<\App\ApiResource\Stage> $stages
+     * @param list<Stage> $stages
      */
     private function applyDistanceChange(string $tripId, array &$stages, int $index, float $requestedKm): void
     {
@@ -121,9 +123,9 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
             return;
         }
 
-        /** @var list<\App\ApiResource\Model\Coordinate> $decimatedPoints */
+        /** @var list<Coordinate> $decimatedPoints */
         $decimatedPoints = array_map(
-            static fn (array $p): \App\ApiResource\Model\Coordinate => new \App\ApiResource\Model\Coordinate($p['lat'], $p['lon'], $p['ele']),
+            static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']),
             $rawPoints,
         );
 

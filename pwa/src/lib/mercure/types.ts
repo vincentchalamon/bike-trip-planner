@@ -64,9 +64,19 @@ export type MercureEvent =
         title: string | null;
       };
     }
-  | { type: "stages_computed"; data: { stages: StagePayload[] } }
+  | {
+      type: "stages_computed";
+      data: { stages: StagePayload[]; affectedIndices?: number[] };
+    }
   | { type: "weather_fetched"; data: { stages: WeatherPayload[] } }
-  | { type: "pois_scanned"; data: { stageIndex: number; pois: PoiPayload[] } }
+  | {
+      type: "pois_scanned";
+      data: {
+        stageIndex: number;
+        pois: PoiPayload[];
+        alerts?: AlertPayload[];
+      };
+    }
   | {
       type: "accommodations_found";
       data: { stageIndex: number; accommodations: AccommodationPayload[] };
@@ -84,12 +94,6 @@ export type MercureEvent =
   | {
       type: "wind_alerts";
       data: { alerts: AlertPayload[] };
-    }
-  | {
-      type: "resupply_nudges";
-      data: {
-        nudges: { stageIndex: number; message: string; distance: number }[];
-      };
     }
   | {
       type: "bike_shop_alerts";

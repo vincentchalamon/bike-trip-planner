@@ -259,6 +259,7 @@ export function TripPlanner() {
         toast.error(apiError.message);
       } else {
         setProcessing(true);
+        useTripStore.getState().setStages([]);
       }
     } catch {
       toast.error(t("errors.failedUpdatePacing"));

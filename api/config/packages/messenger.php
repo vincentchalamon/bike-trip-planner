@@ -6,7 +6,6 @@ use App\Message\AnalyzeTerrain;
 use App\Message\AnalyzeWind;
 use App\Message\CheckBikeShops;
 use App\Message\CheckCalendar;
-use App\Message\CheckResupply;
 use App\Message\FetchAndParseRoute;
 use App\Message\FetchWeather;
 use App\Message\GenerateStageGpx;
@@ -41,7 +40,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 FetchWeather::class => 'async',
                 CheckCalendar::class => 'async',
                 AnalyzeWind::class => 'async',
-                CheckResupply::class => 'async',
                 CheckBikeShops::class => 'async',
                 RecalculateStages::class => 'async',
             ],

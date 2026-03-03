@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Analyzer\AnalyzerRegistryInterface;
+use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\GpxWriter\GpxWriterInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Message\CheckBikeShops;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\Message\ScanPois;
@@ -82,7 +84,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         // Publish updated stages so the frontend refreshes immediately
         $this->publisher->publish($tripId, MercureEventType::STAGES_COMPUTED, [
             'stages' => array_map(
-                static fn (\App\ApiResource\Stage $s): array => [
+                static fn (Stage $s): array => [
                     'dayNumber' => $s->dayNumber,
                     'distance' => round($s->distance, 1),
                     'elevation' => (int) $s->elevation,
@@ -101,12 +103,14 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
                 ],
                 $stages,
             ),
+            'affectedIndices' => array_values($affectedIndices),
         ]);
 
-        // Dispatch POI/Accommodation scans for affected stages
+        // Dispatch POI/Accommodation/BikeShop scans for affected stages
         if ([] !== $affectedIndices) {
             $this->messageBus->dispatch(new ScanPois($tripId));
             $this->messageBus->dispatch(new ScanAccommodations($tripId));
+            $this->messageBus->dispatch(new CheckBikeShops($tripId));
         }
     }
 }

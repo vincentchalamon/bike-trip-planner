@@ -8,21 +8,16 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: "html",
+  reporter: process.env.CI
+    ? [["github"], ["json", { outputFile: "playwright-report.json" }]]
+    : "line",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "https://localhost",
     ignoreHTTPSErrors: true,
     locale: "fr-FR",
     trace: "on-first-retry",
+    screenshot: "only-on-failure",
   },
-  webServer: process.env.CI
-    ? {
-        command: "NODE_ENV=production npm run build && npm run start",
-        url: "http://localhost:3000",
-        reuseExistingServer: false,
-        timeout: 120_000,
-      }
-    : undefined,
   projects: process.env.CI
     ? [
         { name: "chromium", use: { ...devices["Desktop Chrome"] } },

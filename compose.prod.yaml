@@ -1,5 +1,6 @@
 services:
   php:
+    image: ${PHP_IMAGE:-bike-trip-planner-php:ci}
     build:
       context: ./
       dockerfile: .docker/php/Dockerfile
@@ -29,11 +30,14 @@ services:
       REDIS_URL: redis://redis:6379
     tty: true
     ports:
-      - target: 443
-        published: 443
+      - target: 80
+        published: ${HTTP_PORT:-80}
         protocol: tcp
       - target: 443
-        published: 443
+        published: ${HTTPS_PORT:-443}
+        protocol: tcp
+      - target: 443
+        published: ${HTTPS_PORT:-443}
         protocol: udp
     volumes:
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
@@ -45,6 +49,7 @@ services:
       retries: 3
 
   worker:
+    image: ${PHP_IMAGE:-bike-trip-planner-php:ci}
     build:
       context: ./
       dockerfile: .docker/php/Dockerfile
@@ -52,7 +57,7 @@ services:
     command: bin/console messenger:consume async --time-limit=3600 -vv
     restart: unless-stopped
     deploy:
-      replicas: 5
+      replicas: ${WORKER_REPLICAS:-5}
     depends_on:
       - php
       - redis
@@ -76,6 +81,7 @@ services:
       retries: 3
 
   pwa:
+    image: ${PWA_IMAGE:-bike-trip-planner-pwa:ci}
     build:
       context: ./
       dockerfile: .docker/pwa/Dockerfile
