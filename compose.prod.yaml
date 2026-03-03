@@ -1,7 +1,7 @@
 services:
   php:
     build:
-      context: ./api
+      context: ./
       dockerfile: .docker/php/Dockerfile
       target: frankenphp_prod
     restart: unless-stopped
@@ -11,7 +11,10 @@ services:
       APP_ENV: prod
       CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
       CADDY_EXTRA_CONFIG: ${CADDY_EXTRA_CONFIG:-}
-      SERVER_NAME: ${SERVER_NAME:-localhost}
+      # Serve HTTPS (self-signed for localhost) for browsers on :443,
+      # and plain HTTP on :80 for internal Docker services (workers -> Mercure).
+      # http://php is restricted to the Docker service hostname only.
+      SERVER_NAME: ${SERVER_NAME:-localhost}, http://php
       PWA_UPSTREAM: pwa:3000
       MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
@@ -24,26 +27,34 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
-
     tty: true
+    ports:
+      - target: 443
+        published: 443
+        protocol: tcp
+      - target: 443
+        published: 443
+        protocol: udp
     volumes:
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/20-app.prod.ini
     healthcheck:
-      test: [ "CMD-SHELL", "symfony server:status | grep -q 'Listening'" ]
-      start_period: 5s
+      test: curl --insecure --fail https://localhost/docs || exit 1
       interval: 5s
       timeout: 3s
       retries: 3
 
   worker:
     build:
-      context: ./api
+      context: ./
       dockerfile: .docker/php/Dockerfile
+      target: frankenphp_prod
+    command: bin/console messenger:consume async --time-limit=3600 -vv
     restart: unless-stopped
     deploy:
       replicas: 5
     depends_on:
+      - php
       - redis
     environment:
       APP_ENV: prod
@@ -58,10 +69,15 @@ services:
     volumes:
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/20-app.prod.ini
+    healthcheck:
+      test: pgrep -f messenger:consume || exit 1
+      interval: 5s
+      timeout: 3s
+      retries: 3
 
   pwa:
     build:
-      context: ./pwa
+      context: ./
       dockerfile: .docker/pwa/Dockerfile
       target: prod
     restart: unless-stopped

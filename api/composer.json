@@ -34,7 +34,8 @@
         "symfony/twig-bundle": "8.0.*",
         "symfony/uid": "8.0.*",
         "symfony/validator": "8.0.*",
-        "symfony/yaml": "8.0.*"
+        "symfony/yaml": "8.0.*",
+        "symplify/config-transformer": "^12.4"
     },
     "config": {
         "allow-plugins": {
@@ -110,7 +111,6 @@
         "roave/security-advisories": "dev-latest",
         "symfony/browser-kit": "8.0.*",
         "symfony/stopwatch": "8.0.*",
-        "symfony/web-profiler-bundle": "8.0.*",
-        "symplify/config-transformer": "^12.4.3"
+        "symfony/web-profiler-bundle": "8.0.*"
     }
 }

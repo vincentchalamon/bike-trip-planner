@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 	file \
 	gettext \
 	git \
+	procps \
 	zip \
 	&& rm -rf /var/lib/apt/lists/*
 
@@ -45,7 +46,7 @@ RUN set -eux; \
 ###> recipes ###
 ###> doctrine/doctrine-bundle ###
 RUN set -eux; \
-	install-php-extensions pdo_pgsql
+	install-php-extensions pdo_pgsql redis xmlreader
 ###< doctrine/doctrine-bundle ###
 ###< recipes ###
 
@@ -87,12 +88,12 @@ RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 COPY --link .docker/php/conf.d/20-app.prod.ini $PHP_INI_DIR/app.conf.d/
 
 # prevent the reinstallation of vendors at every changes in the source code
-COPY --link composer.* symfony.* ./
+COPY --link api/composer.* api/symfony.* ./
 RUN set -eux; \
 	composer install --no-cache --prefer-dist --no-dev --no-autoloader --no-scripts --no-progress
 
 # copy sources
-COPY --link . ./
+COPY --link api/. ./
 RUN rm -Rf .docker/php/
 
 RUN set -eux; \
@@ -101,4 +102,3 @@ RUN set -eux; \
 	composer dump-env prod; \
 	composer run-script --no-dev post-install-cmd; \
 	chmod +x bin/console; sync; \
-	cp public/assets/react.production.min.js public/bundles/apiplatform/react/react.production.min.js; \

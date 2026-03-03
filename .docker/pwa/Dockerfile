@@ -10,11 +10,6 @@ FROM node_upstream AS base
 
 WORKDIR /srv/app
 
-RUN npm install -g corepack@latest && \
-    corepack enable && \
-	corepack prepare --activate pnpm@latest && \
-	pnpm config -g set store-dir /.pnpm-store
-
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Delete the following line in case you want to enable telemetry during dev and build.
@@ -28,18 +23,16 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME localhost
 
-CMD ["sh", "-c", "pnpm install; pnpm dev"]
+CMD ["sh", "-c", "npm install; npm run dev"]
 
 
 FROM base AS builder
 
-COPY --link pnpm-lock.yaml ./
-RUN pnpm fetch --prod
+COPY --link pwa/package-lock.json ./
+COPY --link pwa/. .
 
-COPY --link . .
-
-RUN	pnpm install --frozen-lockfile --offline --prod && \
-	pnpm run build
+RUN	npm ci && \
+	npm run build
 
 
 # Production image, copy all the files and run next

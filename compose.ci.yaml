@@ -1,0 +1,28 @@
+# Docker Compose CI overlay for compose.prod.yaml
+# Usage: docker compose -f compose.prod.yaml -f compose.ci.yaml up -d php worker redis --no-build --wait
+services:
+  php:
+    image: bike-trip-planner-php:ci
+    environment:
+      SERVER_NAME: ":80"
+      APP_SECRET: "ci-e2e-secret-not-for-production"
+      TRUSTED_HOSTS: "^localhost|php$$"
+      MERCURE_URL: "http://localhost/.well-known/mercure"
+      MERCURE_PUBLIC_URL: "http://localhost/.well-known/mercure"
+    ports:
+      - "80:80"
+    healthcheck:
+      test: curl --fail http://localhost/docs || exit 1
+      start_period: 30s
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    image: bike-trip-planner-php:ci
+    environment:
+      APP_SECRET: "ci-e2e-secret-not-for-production"
+      MERCURE_URL: "http://php/.well-known/mercure"
+      MERCURE_PUBLIC_URL: "http://localhost/.well-known/mercure"
+    deploy:
+      replicas: 1
