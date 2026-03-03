@@ -11,6 +11,7 @@ use App\Engine\DistanceCalculator;
 use App\Enum\AlertType;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
 {
@@ -21,6 +22,7 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
     public function __construct(
         #[Autowire(service: 'app.engine_registry')]
         private ContainerInterface $engineRegistry,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -33,6 +35,9 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
+        /** @var string $locale */
+        $locale = $context['locale'] ?? 'en';
+
         $gapMeters = $this->engineRegistry
             ->get(DistanceCalculator::class)
             ->distanceBetween($stage->endPoint, $nextStage->startPoint);
@@ -40,11 +45,15 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
         if ($gapMeters > self::CRITICAL_THRESHOLD_METERS) {
             return [new Alert(
                 type: AlertType::CRITICAL,
-                message: \sprintf(
-                    'Discontinuité : %s km entre étape %d et %d.',
-                    number_format($gapMeters / 1000, 1),
-                    $stage->dayNumber,
-                    $nextStage->dayNumber,
+                message: $this->translator->trans(
+                    'alert.continuity.critical',
+                    [
+                        '%distance%' => number_format($gapMeters / 1000, 1),
+                        '%from%' => $stage->dayNumber,
+                        '%to%' => $nextStage->dayNumber,
+                    ],
+                    'alerts',
+                    $locale,
                 ),
                 lat: $stage->endPoint->lat,
                 lon: $stage->endPoint->lon,
@@ -54,11 +63,15 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
         if ($gapMeters > self::WARNING_THRESHOLD_METERS) {
             return [new Alert(
                 type: AlertType::WARNING,
-                message: \sprintf(
-                    'Écart de %dm entre étape %d et %d.',
-                    (int) $gapMeters,
-                    $stage->dayNumber,
-                    $nextStage->dayNumber,
+                message: $this->translator->trans(
+                    'alert.continuity.warning',
+                    [
+                        '%gap%' => (int) $gapMeters,
+                        '%from%' => $stage->dayNumber,
+                        '%to%' => $nextStage->dayNumber,
+                    ],
+                    'alerts',
+                    $locale,
                 ),
                 lat: $stage->endPoint->lat,
                 lon: $stage->endPoint->lon,

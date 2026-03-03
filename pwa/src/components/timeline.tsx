@@ -1,0 +1,211 @@
+"use client";
+
+import { useCallback, useMemo } from "react";
+import { useTranslations } from "next-intl";
+import { TimelineMarker } from "@/components/timeline-marker";
+import { StageCard } from "@/components/stage-card";
+import { AddStageButton } from "@/components/add-stage-button";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { StageData, AccommodationData } from "@/lib/validation/schemas";
+
+interface TimelineProps {
+  stages: StageData[];
+  startDate: string | null;
+  isProcessing?: boolean;
+  onDeleteStage: (index: number) => void;
+  onAddStage: (afterIndex: number) => void;
+  onDistanceChange?: (index: number, distance: number) => void;
+  onAddAccommodation: (stageIndex: number) => void;
+  onUpdateAccommodation: (
+    stageIndex: number,
+    accIndex: number,
+    data: Partial<AccommodationData>,
+  ) => void;
+  onRemoveAccommodation: (stageIndex: number, accIndex: number) => void;
+  newAccKey?: string | null;
+  onClearNewAcc?: () => void;
+}
+
+function formatDayDate(startDate: string | null, dayNumber: number): string {
+  const base = startDate ? new Date(startDate) : new Date();
+  const date = new Date(base);
+  date.setDate(date.getDate() + dayNumber - 1);
+  return date.toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+interface DayGroup {
+  dayNumber: number;
+  stages: { stage: StageData; originalIndex: number }[];
+}
+
+export function Timeline({
+  stages,
+  startDate,
+  isProcessing,
+  onDeleteStage,
+  onAddStage,
+  onDistanceChange,
+  onAddAccommodation,
+  onUpdateAccommodation,
+  onRemoveAccommodation,
+  newAccKey,
+  onClearNewAcc,
+}: TimelineProps) {
+  const MIN_KM = 5;
+  const tTimeline = useTranslations("timeline");
+
+  const canInsertStage = useCallback(
+    (afterIndex: number): boolean => {
+      // Sum remaining distance from afterIndex stage to the end
+      let remainingDistance = 0;
+      for (let i = afterIndex; i < stages.length; i++) {
+        remainingDistance += stages[i]?.distance ?? 0;
+      }
+      // After insertion: (stages from afterIndex to end) + 1 new stage
+      const stagesAfterInsertion = stages.length - afterIndex + 1;
+      return remainingDistance >= stagesAfterInsertion * MIN_KM;
+    },
+    [stages],
+  );
+
+  const dayGroups = useMemo(() => {
+    const groups: DayGroup[] = [];
+    for (let i = 0; i < stages.length; i++) {
+      const stage = stages[i]!;
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup && lastGroup.dayNumber === stage.dayNumber) {
+        lastGroup.stages.push({ stage, originalIndex: i });
+      } else {
+        groups.push({
+          dayNumber: stage.dayNumber,
+          stages: [{ stage, originalIndex: i }],
+        });
+      }
+    }
+    return groups;
+  }, [stages]);
+
+  if (stages.length === 0) {
+    if (!isProcessing) return null;
+    return (
+      <div className="relative" aria-label={tTimeline("loadingStages")}>
+        <div
+          className="absolute left-[7px] top-0 bottom-0 w-0.5 bg-brand/30"
+          aria-hidden="true"
+        />
+        <div className="flex items-start gap-0 mb-4">
+          <TimelineMarker />
+        </div>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-start mb-4">
+            <div className="w-4 shrink-0" aria-hidden="true" />
+            <div className="ml-6 md:ml-12 flex-1">
+              <Skeleton className="w-full md:max-w-[80%] h-32 rounded-xl" />
+            </div>
+          </div>
+        ))}
+        <div className="flex items-start">
+          <TimelineMarker />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative" role="list" aria-label={tTimeline("tripStages")}>
+      {/* Vertical line */}
+      <div
+        className="absolute left-[7px] top-0 bottom-0 w-0.5 bg-brand"
+        aria-hidden="true"
+      />
+
+      {/* Start marker */}
+      <div className="flex items-start gap-0 mb-4">
+        <TimelineMarker />
+      </div>
+
+      {dayGroups.map((group, groupIndex) => (
+        <div key={group.dayNumber}>
+          {/* Day header */}
+          <div className="flex items-center mb-4">
+            <div className="w-4 shrink-0" aria-hidden="true" />
+            <div className="ml-6 md:ml-12">
+              <h3 className="text-sm font-semibold text-muted-foreground">
+                {formatDayDate(startDate, group.dayNumber)}
+              </h3>
+            </div>
+          </div>
+
+          {/* Stages in this day */}
+          {group.stages.map(({ stage, originalIndex }) => (
+            <div key={stage.dayNumber + "-" + originalIndex} role="listitem">
+              <div className="flex items-start mb-4">
+                <div className="w-4 shrink-0" aria-hidden="true" />
+                <div className="ml-6 md:ml-12 flex-1">
+                  <StageCard
+                    stage={stage}
+                    stageIndex={originalIndex}
+                    isFirst={originalIndex === 0}
+                    isLast={originalIndex === stages.length - 1}
+                    canDelete={stages.length > 2}
+                    isProcessing={isProcessing}
+                    onDelete={() => onDeleteStage(originalIndex)}
+                    onDistanceChange={
+                      onDistanceChange
+                        ? (d) => onDistanceChange(originalIndex, d)
+                        : undefined
+                    }
+                    onAddAccommodation={() => onAddAccommodation(originalIndex)}
+                    onUpdateAccommodation={(accIdx, data) =>
+                      onUpdateAccommodation(originalIndex, accIdx, data)
+                    }
+                    onRemoveAccommodation={(accIdx) =>
+                      onRemoveAccommodation(originalIndex, accIdx)
+                    }
+                    newAccKey={newAccKey}
+                    stageOriginalIndex={originalIndex}
+                    onClearNewAcc={onClearNewAcc}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Add stage button between day groups */}
+          {groupIndex < dayGroups.length - 1 && (
+            <div className="flex items-center mb-4">
+              <TimelineMarker />
+              <div className="ml-6 md:ml-12 flex-1">
+                <AddStageButton
+                  afterIndex={
+                    group.stages[group.stages.length - 1]!.originalIndex
+                  }
+                  onClick={() =>
+                    onAddStage(
+                      group.stages[group.stages.length - 1]!.originalIndex,
+                    )
+                  }
+                  disabled={
+                    !canInsertStage(
+                      group.stages[group.stages.length - 1]!.originalIndex,
+                    )
+                  }
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* End marker */}
+      <div className="flex items-start">
+        <TimelineMarker />
+      </div>
+    </div>
+  );
+}

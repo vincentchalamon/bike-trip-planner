@@ -8,14 +8,21 @@ use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class LunchNudgeAnalyzer implements StageAnalyzerInterface
 {
     /** @var list<string> */
     private const array RESUPPLY_CATEGORIES = [
         'restaurant', 'cafe', 'bar', 'supermarket', 'convenience',
-        'bakery', 'fast_food', 'marketplace',
+        'bakery', 'fast_food', 'marketplace', 'butcher', 'pastry',
+        'deli', 'greengrocer', 'general', 'farm',
     ];
+
+    public function __construct(
+        private TranslatorInterface $translator,
+    ) {
+    }
 
     public function analyze(Stage $stage, array $context = []): array
     {
@@ -31,9 +38,12 @@ final readonly class LunchNudgeAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
+        /** @var string $locale */
+        $locale = $context['locale'] ?? 'en';
+
         return [new Alert(
             type: AlertType::NUDGE,
-            message: 'Aucun restaurant ou commerce alimentaire détecté sur cette étape. Prévoyez des provisions.',
+            message: $this->translator->trans('alert.lunch.nudge', [], 'alerts', $locale),
             lat: $stage->startPoint->lat,
             lon: $stage->startPoint->lon,
         )];

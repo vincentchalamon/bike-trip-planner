@@ -15,6 +15,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
@@ -30,6 +31,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripStateManager,
+        private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher);
     }
@@ -43,7 +45,9 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::WIND, function () use ($tripId, $stages): void {
+        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+
+        $this->executeWithTracking($tripId, ComputationName::WIND, function () use ($tripId, $stages, $locale): void {
             $alerts = [];
             $headwindCount = 0;
 
@@ -68,14 +72,13 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                 $stagesWithWeather > 0
                 && ($headwindCount / $stagesWithWeather) >= self::HEADWIND_RATIO_THRESHOLD
             ) {
-                $alert = new Alert(
-                    type: AlertType::WARNING,
-                    message: \sprintf(
-                        'Headwinds are expected for %d/%d of the stages (>25 km/h). Allow extra time.',
-                        $headwindCount,
-                        $stagesWithWeather,
-                    ),
+                $message = $this->translator->trans(
+                    'alert.wind.warning',
+                    ['%count%' => $headwindCount, '%total%' => $stagesWithWeather],
+                    'alerts',
+                    $locale,
                 );
+                $alert = new Alert(type: AlertType::WARNING, message: $message);
                 $alerts[] = ['type' => $alert->type->value, 'message' => $alert->message];
             }
 

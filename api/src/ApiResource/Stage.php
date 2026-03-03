@@ -105,6 +105,7 @@ final class Stage
         public Coordinate $endPoint,
         public array $geometry = [],
         public ?string $label = null,
+        public float $elevationLoss = 0.0,
     ) {
     }
 

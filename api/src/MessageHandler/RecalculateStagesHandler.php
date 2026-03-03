@@ -7,6 +7,7 @@ namespace App\MessageHandler;
 use App\Analyzer\AnalyzerRegistryInterface;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\GpxWriter\GpxWriterInterface;
+use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
@@ -14,6 +15,7 @@ use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
@@ -25,6 +27,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         private GpxWriterInterface $gpxWriter,
         private AnalyzerRegistryInterface $analyzerRegistry,
         private MessageBusInterface $messageBus,
+        private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher);
     }
@@ -44,6 +47,8 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
             $affectedIndices = array_keys($stages);
         }
 
+        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+
         foreach ($affectedIndices as $index) {
             if (!isset($stages[$index])) {
                 continue;
@@ -54,7 +59,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
             // Regenerate GPX
             $stage->gpxContent = $this->gpxWriter->generate(
                 $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
-                \sprintf('Étape %d', $stage->dayNumber),
+                $this->translator->trans('stage.label', ['%day%' => $stage->dayNumber], 'alerts', $locale),
             );
         }
 
@@ -62,7 +67,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         if ($message->checkContinuity) {
             $stageCount = \count($stages);
             for ($i = 0; $i < $stageCount; ++$i) {
-                $context = ['nextStage' => $stages[$i + 1] ?? null, 'tripDays' => $stageCount];
+                $context = ['nextStage' => $stages[$i + 1] ?? null, 'tripDays' => $stageCount, 'locale' => $locale];
                 $alerts = $this->analyzerRegistry->analyze($stages[$i], $context);
                 // Clear old alerts and re-add
                 $stages[$i]->alerts = [];
@@ -73,6 +78,30 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         }
 
         $this->tripStateManager->storeStages($tripId, $stages);
+
+        // Publish updated stages so the frontend refreshes immediately
+        $this->publisher->publish($tripId, MercureEventType::STAGES_COMPUTED, [
+            'stages' => array_map(
+                static fn (\App\ApiResource\Stage $s): array => [
+                    'dayNumber' => $s->dayNumber,
+                    'distance' => round($s->distance, 1),
+                    'elevation' => (int) $s->elevation,
+                    'elevationLoss' => (int) $s->elevationLoss,
+                    'startPoint' => [
+                        'lat' => $s->startPoint->lat,
+                        'lon' => $s->startPoint->lon,
+                        'ele' => $s->startPoint->ele,
+                    ],
+                    'endPoint' => [
+                        'lat' => $s->endPoint->lat,
+                        'lon' => $s->endPoint->lon,
+                        'ele' => $s->endPoint->ele,
+                    ],
+                    'label' => $s->label,
+                ],
+                $stages,
+            ),
+        ]);
 
         // Dispatch POI/Accommodation scans for affected stages
         if ([] !== $affectedIndices) {

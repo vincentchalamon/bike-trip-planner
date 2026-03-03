@@ -11,6 +11,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckResupply;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class CheckResupplyHandler extends AbstractTripMessageHandler
@@ -20,13 +21,15 @@ final readonly class CheckResupplyHandler extends AbstractTripMessageHandler
     /** @var list<string> */
     private const array RESUPPLY_CATEGORIES = [
         'restaurant', 'cafe', 'bar', 'supermarket', 'convenience',
-        'bakery', 'fast_food', 'marketplace',
+        'bakery', 'fast_food', 'marketplace', 'butcher', 'pastry',
+        'deli', 'greengrocer', 'general', 'farm',
     ];
 
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripStateManager,
+        private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher);
     }
@@ -40,7 +43,9 @@ final readonly class CheckResupplyHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::RESUPPLY, function () use ($tripId, $stages): void {
+        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+
+        $this->executeWithTracking($tripId, ComputationName::RESUPPLY, function () use ($tripId, $stages, $locale): void {
             $nudges = [];
             $distanceSinceLastResupply = 0.0;
 
@@ -63,10 +68,14 @@ final readonly class CheckResupplyHandler extends AbstractTripMessageHandler
                         $nudges[] = [
                             'stageIndex' => $i,
                             'distance' => round($distanceSinceLastResupply, 1),
-                            'message' => \sprintf(
-                                'No refueling points detected since %.0f km (stage %d).',
-                                $distanceSinceLastResupply,
-                                $stage->dayNumber,
+                            'message' => $this->translator->trans(
+                                'alert.resupply.nudge',
+                                [
+                                    '%distance%' => \sprintf('%.0f', $distanceSinceLastResupply),
+                                    '%stage%' => $stage->dayNumber,
+                                ],
+                                'alerts',
+                                $locale,
                             ),
                         ];
                         $distanceSinceLastResupply = 0.0; // Reset after nudge

@@ -85,10 +85,12 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
                 ->get(DistanceCalculator::class)
                 ->calculateTotalDistance($allPoints);
             $totalElevation = $this->engineRegistry->get(ElevationCalculator::class)->calculateTotalAscent($allPoints);
+            $totalElevationLoss = $this->engineRegistry->get(ElevationCalculator::class)->calculateTotalDescent($allPoints);
 
             $this->publisher->publish($tripId, MercureEventType::ROUTE_PARSED, [
                 'totalDistance' => round($totalDistance, 1),
                 'totalElevation' => (int) $totalElevation,
+                'totalElevationLoss' => (int) $totalElevationLoss,
                 'sourceType' => $result->sourceType->value,
                 'title' => $result->title,
             ]);

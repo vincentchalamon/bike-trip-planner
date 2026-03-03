@@ -57,4 +57,8 @@ interface TripRequestRepositoryInterface
     public function storeSourceType(string $tripId, string $sourceType): void;
 
     public function getSourceType(string $tripId): ?string;
+
+    public function storeLocale(string $tripId, string $locale): void;
+
+    public function getLocale(string $tripId): ?string;
 }

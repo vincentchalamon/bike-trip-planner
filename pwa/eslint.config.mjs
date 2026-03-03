@@ -24,6 +24,12 @@ const eslintConfig = defineConfig([
       "react-hooks/refs": "off",
     },
   },
+  {
+    files: ["tests/**/*.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

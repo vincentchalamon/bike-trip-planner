@@ -67,7 +67,6 @@ validation boundary using `Zod` (schema validation library) before hydrating the
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Unified Frontend Pipeline with Zustand + Zod)**
 
 ### Why Other Options Were Rejected

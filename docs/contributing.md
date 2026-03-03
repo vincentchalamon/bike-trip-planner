@@ -19,7 +19,6 @@ This boots multiple services in development mode:
 | `php`       | `https://localhost/docs`                    | API Platform backend        |
 | `pwa`       | `https://localhost`                         | Next.js frontend            |
 | `worker`    | Internal only                               | Async messages worker       |
-| `gotenberg` | Internal only                               | PDF generation microservice |
 | `mercure`   | `https://localhost/.well-known/mercure/ui/` | Server-push microservice    |
 | `redis`     | Internal only                               | Cache microservice          |
 | `caddy`     | Internal only                               | Web server microservice     |
@@ -109,9 +108,9 @@ TypeScript compilation will fail until types are regenerated — this is intenti
 **Key conventions:**
 
 - All API calls go through the `openapi-fetch` client — never use `fetch` directly
-- State lives in Zustand stores with `persist` middleware; never in component state for trip data
+- State lives in Zustand stores (in-memory, Immer middleware); never in component state for trip data
+- Computation results arrive via Mercure SSE events and are dispatched through `CustomEvent('__test_mercure_event')` in tests
 - Zod schemas in `src/lib/validation/` must stay manually aligned with PHP DTOs
-- When removing a field from the store, bump the Zustand `version` and add a `migrate` callback
 
 ### Architecture decisions
 
@@ -129,9 +128,10 @@ The `.claude/settings.json` file configures three hooks that run automatically:
 
 | Hook                 | Trigger                              | Effect                                                            |
 |----------------------|--------------------------------------|-------------------------------------------------------------------|
-| `PostToolUse` (PHP)  | Any `.php` file written/edited       | Runs `php-cs-fixer` on the file                                   |
-| `PostToolUse` (TS)   | Any `.ts`/`.tsx` file written/edited | Runs `prettier` on the file                                       |
-| `PreToolUse` (guard) | Any write/edit                       | Blocks edits to `.env`, `schema.d.ts`, `vendor/`, `node_modules/` |
+| `PostToolUse` (PHP CS Fixer) | Any `.php` file written/edited       | Runs `php-cs-fixer` on the file                                   |
+| `PostToolUse` (Rector)       | Any `.php` file written/edited       | Runs `rector` on the file                                         |
+| `PostToolUse` (Prettier)     | Any `.ts`/`.tsx` file written/edited | Runs `prettier` on the file                                       |
+| `PreToolUse` (guard)         | Any write/edit                       | Blocks edits to `.env`, `schema.d.ts`, `vendor/`, `node_modules/` |
 
 These hooks are project-scoped and apply to all contributors who use Claude Code on this project.
 
@@ -178,16 +178,19 @@ bike-trip-planner/
 │   │   ├── Osm/                  # Overpass API queries
 │   │   ├── Pricing/              # Accommodation heuristic pricing
 │   │   └── Analyzer/             # Alert engine (Chain of Responsibility)
-│   └── templates/                # Twig templates for PDF roadbook
+│   └── templates/                # Twig templates
 ├── pwa/                          # Next.js frontend
 │   ├── src/
 │   │   ├── app/                  # Next.js App Router pages
-│   │   ├── store/                # Zustand stores (localStorage persistence)
+│   │   ├── store/                # Zustand stores (in-memory, Immer)
 │   │   ├── lib/
 │   │   │   ├── api/              # Generated types (schema.d.ts) + openapi-fetch client
 │   │   │   └── validation/       # Zod schemas
 │   │   └── components/           # React components
 │   └── tests/                    # Playwright E2E tests
+│       ├── fixtures/             # Test fixtures, API mocks, SSE helpers
+│       ├── mocked/               # Deterministic tests (mocked API + SSE)
+│       └── integration/          # Smoke test against real backend
 ├── docs/
 │   ├── adr/                      # Architecture Decision Records
 │   ├── getting-started.md

@@ -8,7 +8,9 @@ use App\ApiResource\Model\Coordinate;
 
 final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
 {
-    private const int AROUND_RADIUS_METERS = 5000; // 5km around route
+    private const int AROUND_RADIUS_METERS = 2000;
+
+    private const int ACCOMMODATION_RADIUS_METERS = 5000;
 
     /**
      * @param list<Coordinate> $decimatedPoints
@@ -18,7 +20,7 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         $polyline = $this->buildPolyline($decimatedPoints);
 
         return \sprintf(
-            '[out:json][timeout:25];(nwr["amenity"~"^(restaurant|cafe|bar|supermarket|convenience|bakery|fast_food|marketplace)$"](around:%d,%s);nwr["shop"~"^(convenience|supermarket|bakery)$"](around:%d,%s);nwr["tourism"~"^(viewpoint|attraction)$"](around:%d,%s););out center 200;',
+            '[out:json][timeout:25];(nwr["amenity"~"^(restaurant|cafe|bar|pharmacy|fast_food|marketplace)$"](around:%d,%s);nwr["shop"~"^(convenience|supermarket|bakery|butcher|pastry|deli|greengrocer|general|farm)$"](around:%d,%s);nwr["tourism"~"^(viewpoint|attraction)$"](around:%d,%s););out center 200;',
             self::AROUND_RADIUS_METERS,
             $polyline,
             self::AROUND_RADIUS_METERS,
@@ -37,7 +39,7 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
 
         return \sprintf(
             '[out:json][timeout:25];(nwr["tourism"~"^(camp_site|hostel|hotel|motel|guest_house|chalet|alpine_hut)$"](around:%d,%s););out center 100;',
-            self::AROUND_RADIUS_METERS,
+            self::ACCOMMODATION_RADIUS_METERS,
             $polyline,
         );
     }

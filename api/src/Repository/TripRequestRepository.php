@@ -183,8 +183,26 @@ final readonly class TripRequestRepository implements TripRequestRepositoryInter
         return \sprintf('trip.%s.tracks_data', $tripId);
     }
 
+    public function storeLocale(string $tripId, string $locale): void
+    {
+        $this->set($this->localeKey($tripId), $locale);
+    }
+
+    public function getLocale(string $tripId): ?string
+    {
+        /** @var string|null $value */
+        $value = $this->get($this->localeKey($tripId));
+
+        return $value;
+    }
+
     private function titleKey(string $tripId): string
     {
         return \sprintf('trip.%s.title', $tripId);
+    }
+
+    private function localeKey(string $tripId): string
+    {
+        return \sprintf('trip.%s.locale', $tripId);
     }
 }

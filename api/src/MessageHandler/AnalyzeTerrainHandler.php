@@ -35,7 +35,9 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::TERRAIN, function () use ($tripId, $stages): void {
+        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+
+        $this->executeWithTracking($tripId, ComputationName::TERRAIN, function () use ($tripId, $stages, $locale): void {
             $stageCount = \count($stages);
 
             for ($i = 0; $i < $stageCount; ++$i) {
@@ -43,6 +45,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                 $context = [
                     'nextStage' => $stages[$i + 1] ?? null,
                     'tripDays' => $stageCount,
+                    'locale' => $locale,
                 ];
 
                 $alerts = $this->analyzerRegistry->analyze($stage, $context);

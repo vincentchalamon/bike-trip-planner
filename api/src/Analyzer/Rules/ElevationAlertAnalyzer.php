@@ -8,10 +8,16 @@ use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class ElevationAlertAnalyzer implements StageAnalyzerInterface
 {
     private const float THRESHOLD_METERS = 1200.0;
+
+    public function __construct(
+        private TranslatorInterface $translator,
+    ) {
+    }
 
     public function analyze(Stage $stage, array $context = []): array
     {
@@ -19,11 +25,16 @@ final readonly class ElevationAlertAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
+        /** @var string $locale */
+        $locale = $context['locale'] ?? 'en';
+
         return [new Alert(
             type: AlertType::WARNING,
-            message: \sprintf(
-                'Important dénivelé positif : %dm D+ sur cette étape.',
-                (int) $stage->elevation,
+            message: $this->translator->trans(
+                'alert.elevation.warning',
+                ['%elevation%' => (int) $stage->elevation],
+                'alerts',
+                $locale,
             ),
             lat: $stage->startPoint->lat,
             lon: $stage->startPoint->lon,

@@ -12,6 +12,7 @@
     "dayNumber",
     "distance",
     "elevation",
+    "elevationLoss",
     "startPoint",
     "endPoint",
     "geometry"
@@ -71,6 +72,9 @@
       "type": "number"
     },
     "elevation": {
+      "type": "number"
+    },
+    "elevationLoss": {
       "type": "number"
     },
     "startPoint": {

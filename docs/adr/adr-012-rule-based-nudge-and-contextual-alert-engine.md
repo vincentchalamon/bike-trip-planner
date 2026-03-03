@@ -78,7 +78,6 @@ class, automatically tagged and injected into an `AnalyzerRegistry` that iterate
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Tagged Iterator Pattern)**
 
 ### Why Other Options Were Rejected

@@ -49,17 +49,17 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         }
 
         if (\count($stages) <= 2) {
-            throw new UnprocessableEntityHttpException('Minimum 2 stages required. Unable to delete this stage.');
+            throw new UnprocessableEntityHttpException('Cannot delete stage: minimum 2 stages required.');
         }
 
         $sourceType = $this->tripStateManager->getSourceType($tripId);
 
         if ($sourceType === SourceType::KOMOOT_COLLECTION->value) {
-            // Collection: independent stages — just remove
+            // Single stage or collection: just remove
             array_splice($stages, $index, 1);
             $mergedIndex = null;
         } else {
-            // Continuous route: merge with adjacent stage
+            // Continuous route with 2+ stages: merge with adjacent stage
             [$stages, $mergedIndex] = $this->mergeWithAdjacent($stages, $index);
         }
 
@@ -73,11 +73,8 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         $affectedIndices = null !== $mergedIndex ? [$mergedIndex] : [];
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, true));
 
-        $tripRequest = $this->tripStateManager->getRequest($tripId);
-        if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
-            $this->messageBus->dispatch(new FetchWeather($tripId));
-            $this->messageBus->dispatch(new CheckCalendar($tripId));
-        }
+        $this->messageBus->dispatch(new FetchWeather($tripId));
+        $this->messageBus->dispatch(new CheckCalendar($tripId));
     }
 
     /**
@@ -92,16 +89,15 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
     {
         $isLast = $index === \count($stages) - 1;
 
+        $distanceCalculator = $this->engineRegistry->get(DistanceCalculator::class);
+
         if ($isLast) {
             // Merge deleted stage into previous: extend previous endPoint
             $previous = $stages[$index - 1];
             $deleted = $stages[$index];
             $previous->endPoint = $deleted->endPoint;
-            $previous->distance += $this->engineRegistry->get(DistanceCalculator::class)->distanceBetween(
-                $previous->startPoint,
-                $deleted->endPoint,
-            ) / 1000.0;
             $previous->geometry = array_merge($previous->geometry, $deleted->geometry);
+            $previous->distance = $distanceCalculator->calculateTotalDistance($previous->geometry);
             array_splice($stages, $index, 1);
 
             return [$stages, $index - 1];
@@ -111,11 +107,8 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         $next = $stages[$index + 1];
         $deleted = $stages[$index];
         $next->startPoint = $deleted->startPoint;
-        $next->distance += $this->engineRegistry->get(DistanceCalculator::class)->distanceBetween(
-            $deleted->startPoint,
-            $next->endPoint,
-        ) / 1000.0;
         $next->geometry = array_merge($deleted->geometry, $next->geometry);
+        $next->distance = $distanceCalculator->calculateTotalDistance($next->geometry);
         array_splice($stages, $index, 1);
 
         return [$stages, $index];

@@ -19,8 +19,7 @@ and parse these external inputs.
 This introduces two critical OWASP Top 10 security vulnerabilities:
 
 1. **Server-Side Request Forgery (SSRF):** If the backend blindly fetches any URL provided by the user, an attacker
-   could force the PHP server to make HTTP requests to internal Docker networks (e.g., exploiting the Gotenberg PDF
-   microservice on port 3000) or cloud provider metadata endpoints (e.g., AWS `169.254.169.254`).
+   could force the PHP server to make HTTP requests to internal Docker networks or cloud provider metadata endpoints (e.g., AWS `169.254.169.254`).
 2. **XML External Entities (XXE) and Denial of Service (DoS):** GPX files are standard XML documents. Malicious XML
    payloads (like the "Billion Laughs" attack) can exhaust server memory or read local environment files if the XML
    parser attempts to resolve external entities.
@@ -75,7 +74,6 @@ strict API Platform DTO validation and a hardened `XMLReader` configuration that
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Strict Allowlisting, Scoped HTTP Clients, and Hardened XMLReader)**
 
 ### Why Other Options Were Rejected

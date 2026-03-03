@@ -1,0 +1,123 @@
+{
+  "layout": {
+    "title": "Bike Trip Planner",
+    "description": "Plan your bikepacking trips with ease",
+    "skipToTimeline": "Skip to timeline"
+  },
+  "magicLink": {
+    "placeholder": "Enter your Komoot link here...",
+    "ariaLabel": "Komoot or Google My Maps URL",
+    "invalidUrl": "Please enter a valid URL."
+  },
+  "tripSummary": {
+    "totalDistance": "Total distance:",
+    "totalElevation": "Total elevation:",
+    "disclaimer": "Automatically detected data may contain errors."
+  },
+  "tripTitle": {
+    "fallback": "My Trip",
+    "placeholder": "Trip name",
+    "ariaLabel": "Trip title",
+    "suggestion": "Suggestion: {name}",
+    "apply": "Apply",
+    "dismissSuggestion": "Dismiss suggestion"
+  },
+  "stage": {
+    "day": "Day {dayNumber}",
+    "dayWithDate": "Day {dayNumber} — {date}",
+    "deleteStage": "Delete stage {dayNumber}",
+    "moveUp": "Move stage {dayNumber} up",
+    "moveDown": "Move stage {dayNumber} down",
+    "difficultyEasy": "Easy",
+    "difficultyMedium": "Medium",
+    "difficultyHard": "Hard",
+    "minStagesReached": "Minimum 2 stages required",
+    "downloadGpx": "Download GPX stage {dayNumber}",
+    "loadingAlerts": "Analyzing stage...",
+    "editDistance": "Edit distance",
+    "distanceLabel": "Distance (km)",
+    "saveDistance": "Save"
+  },
+  "stageLocations": {
+    "searchDeparture": "Search departure...",
+    "searchDepartureLabel": "Search stage departure",
+    "departure": "Stage {n} departure",
+    "searchArrival": "Search arrival...",
+    "searchArrivalLabel": "Search stage arrival",
+    "arrival": "Stage {n} arrival"
+  },
+  "timeline": {
+    "loadingStages": "Loading stages",
+    "tripStages": "Trip stages"
+  },
+  "calendar": {
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "collapse": "Collapse calendar",
+    "expand": "Expand calendar",
+    "ariaLabel": "Calendar"
+  },
+  "accommodation": {
+    "type_hotel": "Hotel",
+    "type_hostel": "Hostel",
+    "type_camp_site": "Campsite",
+    "type_chalet": "Chalet",
+    "type_guest_house": "Guest house",
+    "type_motel": "Motel",
+    "type_alpine_hut": "Alpine hut",
+    "type_other": "Other",
+    "hotel": "Hotel",
+    "gite": "Gite",
+    "camping": "Camping",
+    "other": "Other",
+    "namePlaceholder": "Name",
+    "nameLabel": "Accommodation name",
+    "typeLabel": "Accommodation type",
+    "priceMinPlaceholder": "Min",
+    "priceMaxPlaceholder": "Max",
+    "priceMinLabel": "Price min",
+    "priceMaxLabel": "Price max",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit accommodation",
+    "remove": "Remove accommodation",
+    "add": "Add accommodation",
+    "new": "New accommodation",
+    "urlPlaceholder": "Paste accommodation URL...",
+    "urlLabel": "Accommodation URL",
+    "scraping": "Loading...",
+    "scrapeFailed": "Could not extract data from URL",
+    "loading": "Searching for accommodations...",
+    "noAccommodation": "No accommodation detected nearby."
+  },
+  "addStage": {
+    "add": "Add stage",
+    "insufficientSpace": "Insufficient space to add a stage (minimum 5 km per stage)"
+  },
+  "pacing": {
+    "fatigue": "Accumulated fatigue index",
+    "fatigueTooltip": "Reduces distance by {value}% per day to compensate for accumulated fatigue.",
+    "fatigueError": "Must be between 1% and 50%",
+    "fatigueLabel": "Accumulated fatigue index",
+    "elevationPenalty": "Elevation index",
+    "elevationTooltip": "Reduces distance by {value}% per 100m of positive elevation gain.",
+    "elevationError": "Must be greater than 0",
+    "elevationLabel": "Elevation index"
+  },
+  "theme": {
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark",
+    "switchTo": "Switch to {label} theme"
+  },
+  "errors": {
+    "networkError": "Network error. Please check your connection.",
+    "unexpectedError": "An unexpected error occurred.",
+    "failedUpdateDates": "Failed to update dates.",
+    "failedDeleteStage": "Failed to delete stage.",
+    "failedMoveStage": "Failed to move stage.",
+    "failedAddStage": "Failed to add stage.",
+    "failedUpdateLocation": "Failed to update stage location.",
+    "failedUpdatePacing": "Failed to update pacing settings."
+  }
+}

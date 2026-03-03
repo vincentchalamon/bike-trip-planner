@@ -17,6 +17,7 @@ use App\Message\FetchAndParseRoute;
 use App\Message\FetchWeather;
 use App\Message\GenerateStages;
 use App\Repository\TripRequestRepositoryInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -31,6 +32,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         private ComputationTrackerInterface $computationTracker,
         private ComputationDependencyResolver $dependencyResolver,
         private IdempotencyCheckerInterface $idempotencyChecker,
+        private RequestStack $requestStack,
     ) {
     }
 
@@ -47,6 +49,10 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         if (null !== $data->endDate && null !== $data->startDate && $data->endDate <= $data->startDate) {
             throw new UnprocessableEntityHttpException('End date must be after start date.');
         }
+
+        // Refresh locale on each PATCH
+        $locale = $this->requestStack->getCurrentRequest()?->getPreferredLanguage(['en', 'fr']) ?? 'en';
+        $this->tripStateManager->storeLocale($id, $locale);
 
         // Provider (TripRequestProvider) already threw 404 if the trip doesn't exist;
         // the processor only runs when $data is a valid, non-null TripRequest.

@@ -20,6 +20,9 @@ final class StageRequest
 
     public ?string $label = null;
 
+    #[Assert\Positive]
+    public ?float $distance = null;
+
     #[Assert\PositiveOrZero]
     public ?int $toIndex = null;
 }

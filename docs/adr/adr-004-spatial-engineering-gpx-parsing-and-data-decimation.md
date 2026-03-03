@@ -69,7 +69,6 @@ to decimate the coordinates before JSON serialization.
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Stream Parsing + Data Decimation)**
 
 ### Why Other Options Were Rejected

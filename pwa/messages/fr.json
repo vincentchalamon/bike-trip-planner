@@ -1,0 +1,123 @@
+{
+  "layout": {
+    "title": "Planificateur de voyage vélo",
+    "description": "Planifiez vos voyages bikepacking facilement",
+    "skipToTimeline": "Aller à la timeline"
+  },
+  "magicLink": {
+    "placeholder": "Collez votre lien Komoot ici...",
+    "ariaLabel": "URL Komoot ou Google My Maps",
+    "invalidUrl": "Veuillez entrer une URL valide."
+  },
+  "tripSummary": {
+    "totalDistance": "Distance totale :",
+    "totalElevation": "Dénivelé total :",
+    "disclaimer": "Les données détectées automatiquement peuvent contenir des erreurs."
+  },
+  "tripTitle": {
+    "fallback": "Mon voyage",
+    "placeholder": "Nom du voyage",
+    "ariaLabel": "Titre du voyage",
+    "suggestion": "Suggestion : {name}",
+    "apply": "Appliquer",
+    "dismissSuggestion": "Fermer la suggestion"
+  },
+  "stage": {
+    "day": "Jour {dayNumber}",
+    "dayWithDate": "Jour {dayNumber} — {date}",
+    "deleteStage": "Supprimer l'étape {dayNumber}",
+    "moveUp": "Monter l'étape {dayNumber}",
+    "moveDown": "Descendre l'étape {dayNumber}",
+    "difficultyEasy": "Facile",
+    "difficultyMedium": "Moyen",
+    "difficultyHard": "Difficile",
+    "minStagesReached": "Minimum 2 étapes requises",
+    "downloadGpx": "Télécharger le GPX étape {dayNumber}",
+    "loadingAlerts": "Analyse de l'étape...",
+    "editDistance": "Modifier la distance",
+    "distanceLabel": "Distance (km)",
+    "saveDistance": "Enregistrer"
+  },
+  "stageLocations": {
+    "searchDeparture": "Rechercher un départ...",
+    "searchDepartureLabel": "Rechercher le départ de l'étape",
+    "departure": "Départ étape {n}",
+    "searchArrival": "Rechercher une arrivée...",
+    "searchArrivalLabel": "Rechercher l'arrivée de l'étape",
+    "arrival": "Arrivée étape {n}"
+  },
+  "timeline": {
+    "loadingStages": "Chargement des étapes",
+    "tripStages": "Étapes du voyage"
+  },
+  "calendar": {
+    "previousMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "collapse": "Réduire le calendrier",
+    "expand": "Développer le calendrier",
+    "ariaLabel": "Calendrier"
+  },
+  "accommodation": {
+    "type_hotel": "Hôtel",
+    "type_hostel": "Auberge",
+    "type_camp_site": "Camping",
+    "type_chalet": "Gîte",
+    "type_guest_house": "Chambre d'hôte",
+    "type_motel": "Motel",
+    "type_alpine_hut": "Refuge",
+    "type_other": "Autre",
+    "hotel": "Hôtel",
+    "gite": "Gîte",
+    "camping": "Camping",
+    "other": "Autre",
+    "namePlaceholder": "Nom",
+    "nameLabel": "Nom de l'hébergement",
+    "typeLabel": "Type d'hébergement",
+    "priceMinPlaceholder": "Min",
+    "priceMaxPlaceholder": "Max",
+    "priceMinLabel": "Prix min",
+    "priceMaxLabel": "Prix max",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Modifier l'hébergement",
+    "remove": "Supprimer l'hébergement",
+    "add": "Ajouter un hébergement",
+    "new": "Nouvel hébergement",
+    "urlPlaceholder": "Collez l'URL de l'hébergement...",
+    "urlLabel": "URL de l'hébergement",
+    "scraping": "Chargement...",
+    "scrapeFailed": "Impossible d'extraire les données de l'URL",
+    "loading": "Recherche d'hébergements...",
+    "noAccommodation": "Aucun hébergement détecté à proximité."
+  },
+  "addStage": {
+    "add": "Ajouter une étape",
+    "insufficientSpace": "Espace insuffisant pour ajouter une étape (minimum 5 km par étape)"
+  },
+  "pacing": {
+    "fatigue": "Indice de fatigue accumulée",
+    "fatigueTooltip": "Réduit la distance de {value}% par jour pour compenser la fatigue accumulée.",
+    "fatigueError": "Doit être entre 1% et 50%",
+    "fatigueLabel": "Indice de fatigue accumulée",
+    "elevationPenalty": "Indice de dénivelé",
+    "elevationTooltip": "Réduit la distance de {value}% par 100m de dénivelé positif.",
+    "elevationError": "Doit être supérieur à 0",
+    "elevationLabel": "Indice de dénivelé"
+  },
+  "theme": {
+    "system": "Système",
+    "light": "Clair",
+    "dark": "Sombre",
+    "switchTo": "Passer au thème {label}"
+  },
+  "errors": {
+    "networkError": "Erreur réseau. Vérifiez votre connexion.",
+    "unexpectedError": "Une erreur inattendue s'est produite.",
+    "failedUpdateDates": "Impossible de mettre à jour les dates.",
+    "failedDeleteStage": "Impossible de supprimer l'étape.",
+    "failedMoveStage": "Impossible de déplacer l'étape.",
+    "failedAddStage": "Impossible d'ajouter l'étape.",
+    "failedUpdateLocation": "Impossible de mettre à jour la localisation.",
+    "failedUpdatePacing": "Impossible de mettre à jour les réglages."
+  }
+}

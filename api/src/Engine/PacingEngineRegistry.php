@@ -111,6 +111,7 @@ final class PacingEngineRegistry implements EngineInterface, EngineRegistryAware
 
             $distance = $this->getEngine(DistanceCalculator::class)->calculateTotalDistance($stagePoints);
             $elevation = $this->getEngine(ElevationCalculator::class)->calculateTotalAscent($stagePoints);
+            $elevationLoss = $this->getEngine(ElevationCalculator::class)->calculateTotalDescent($stagePoints);
             $geometry = $this->getEngine(RouteSimplifier::class)->simplify($stagePoints);
 
             $stages[] = new Stage(
@@ -121,6 +122,7 @@ final class PacingEngineRegistry implements EngineInterface, EngineRegistryAware
                 startPoint: $stagePoints[0],
                 endPoint: $stagePoints[\count($stagePoints) - 1],
                 geometry: $geometry,
+                elevationLoss: $elevationLoss,
             );
 
             ++$dayNumber;
@@ -131,6 +133,7 @@ final class PacingEngineRegistry implements EngineInterface, EngineRegistryAware
             $lastStage = $stages[\count($stages) - 1];
             $lastStage->distance += $this->getEngine(DistanceCalculator::class)->calculateTotalDistance($remaining);
             $lastStage->elevation += $this->getEngine(ElevationCalculator::class)->calculateTotalAscent($remaining);
+            $lastStage->elevationLoss += $this->getEngine(ElevationCalculator::class)->calculateTotalDescent($remaining);
             $lastStage->endPoint = $remaining[\count($remaining) - 1];
         }
 

@@ -77,7 +77,6 @@ A minimalist, unopinionated state management library (Zustand) combined with imm
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Zustand + Immer + Persist)**
 
 ### Why Other Options Were Rejected

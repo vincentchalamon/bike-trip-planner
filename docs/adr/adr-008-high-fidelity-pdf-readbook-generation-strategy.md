@@ -1,6 +1,6 @@
 # ADR-008: High-Fidelity PDF Roadbook Generation Strategy
 
-**Status:** Accepted
+**Status:** Revoked - **This ADR has been revoked, PDF generation has been removed from the features.**
 
 **Date:** 2026-02-19
 
@@ -70,7 +70,6 @@ PDF.
 
 ## Decision Outcome
 
-<!-- markdownlint-disable MD036 -->
 **Chosen: Option C (Gotenberg Microservice)**
 
 ### Why Other Options Were Rejected
