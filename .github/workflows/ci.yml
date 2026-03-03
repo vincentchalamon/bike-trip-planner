@@ -192,7 +192,7 @@ jobs:
     name: Playwright
     runs-on: ubuntu-latest
     env:
-      COMPOSE_FILE: compose.prod.yaml:compose.ci.yaml
+      COMPOSE_FILE: compose.prod.yaml
       WORKER_REPLICAS: 1
     steps:
       - name: Checkout
@@ -206,7 +206,6 @@ jobs:
           load: true
           files: |
             compose.prod.yaml
-            compose.ci.yaml
           set: |
             php.cache-from=type=gha,scope=php
             php.cache-from=type=gha,scope=php-main
