@@ -168,28 +168,6 @@ function dispatchEvent(event: MercureEvent): void {
       store.updateStageAlerts(0, event.data.alerts, "wind");
       break;
 
-    case "resupply_nudges": {
-      const resupplyByStage = new Map<number, typeof event.data.nudges>();
-      for (const nudge of event.data.nudges) {
-        const existing = resupplyByStage.get(nudge.stageIndex) ?? [];
-        existing.push(nudge);
-        resupplyByStage.set(nudge.stageIndex, existing);
-      }
-      for (const [stageIndex, nudges] of resupplyByStage) {
-        store.updateStageAlerts(
-          stageIndex,
-          nudges.map((n) => ({
-            type: "nudge" as const,
-            message: n.message,
-            lat: null,
-            lon: null,
-          })),
-          "resupply",
-        );
-      }
-      break;
-    }
-
     case "bike_shop_alerts": {
       const bikeShopByStage = new Map<number, typeof event.data.alerts>();
       for (const alert of event.data.alerts) {

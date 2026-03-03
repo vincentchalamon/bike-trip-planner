@@ -34,7 +34,7 @@ final readonly class LunchNudgeAnalyzer implements StageAnalyzerInterface
             }
         }
 
-        if ($stage->distance < 20.0) {
+        if ($stage->distance < 40.0) {
             return [];
         }
 

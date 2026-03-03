@@ -89,12 +89,6 @@ export type MercureEvent =
       data: { alerts: AlertPayload[] };
     }
   | {
-      type: "resupply_nudges";
-      data: {
-        nudges: { stageIndex: number; message: string; distance: number }[];
-      };
-    }
-  | {
       type: "bike_shop_alerts";
       data: {
         alerts: {

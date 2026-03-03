@@ -15,7 +15,6 @@ enum MercureEventType: string
     case WEATHER_FETCHED = 'weather_fetched';
     case CALENDAR_ALERTS = 'calendar_alerts';
     case WIND_ALERTS = 'wind_alerts';
-    case RESUPPLY_NUDGES = 'resupply_nudges';
     case BIKE_SHOP_ALERTS = 'bike_shop_alerts';
     case VALIDATION_ERROR = 'validation_error';
     case COMPUTATION_ERROR = 'computation_error';

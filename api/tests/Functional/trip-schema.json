@@ -37,7 +37,6 @@
         "weather",
         "calendar",
         "wind",
-        "resupply",
         "bike_shops"
       ],
       "additionalProperties": false,
@@ -115,15 +114,6 @@
           ]
         },
         "wind": {
-          "type": "string",
-          "enum": [
-            "pending",
-            "running",
-            "done",
-            "failed"
-          ]
-        },
-        "resupply": {
           "type": "string",
           "enum": [
             "pending",

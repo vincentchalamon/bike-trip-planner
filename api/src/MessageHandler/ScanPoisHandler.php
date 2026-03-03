@@ -11,13 +11,11 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
-use App\Message\CheckResupply;
 use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class ScanPoisHandler extends AbstractTripMessageHandler
@@ -28,7 +26,6 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
-        private MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher);
     }
@@ -101,7 +98,6 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             }
 
             $this->tripStateManager->storeStages($tripId, $stages);
-            $this->messageBus->dispatch(new CheckResupply($tripId));
         });
     }
 
