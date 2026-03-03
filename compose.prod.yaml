@@ -1,5 +1,6 @@
 services:
   php:
+    image: ${PHP_IMAGE:-bike-trip-planner-php:ci}
     build:
       context: ./
       dockerfile: .docker/php/Dockerfile
@@ -48,6 +49,7 @@ services:
       retries: 3
 
   worker:
+    image: ${PHP_IMAGE:-bike-trip-planner-php:ci}
     build:
       context: ./
       dockerfile: .docker/php/Dockerfile
@@ -79,6 +81,7 @@ services:
       retries: 3
 
   pwa:
+    image: ${PWA_IMAGE:-bike-trip-planner-pwa:ci}
     build:
       context: ./
       dockerfile: .docker/pwa/Dockerfile
