@@ -15,12 +15,11 @@ use App\Message\AnalyzeWind;
 use App\Message\FetchWeather;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Weather\OpenMeteoProvider;
+use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
 
 #[AsMessageHandler]
 final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
@@ -31,7 +30,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private OpenMeteoProvider $weatherProvider,
         #[Autowire(service: 'cache.weather')]
-        private CacheInterface $weatherCache,
+        private CacheItemPoolInterface $weatherCache,
         private MessageBusInterface $messageBus,
         private LoggerInterface $logger,
     ) {
@@ -51,28 +50,22 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::WEATHER, function () use ($tripId, $stages, $locale): void {
+            // Phase 1: Check cache for each stage, collect misses
+            /** @var array<int, string> $cacheKeys */
+            $cacheKeys = [];
+            /** @var array<int, array{lat: float, lon: float}> $uncachedLocations */
+            $uncachedLocations = [];
+
             foreach ($stages as $i => $stage) {
                 $lat = $stage->startPoint->lat;
                 $lon = $stage->startPoint->lon;
                 $cacheKey = \sprintf('weather.%s.%s.%s.%d', $locale, round($lat, 2), round($lon, 2), $i);
+                $cacheKeys[$i] = $cacheKey;
 
-                try {
+                $cacheItem = $this->weatherCache->getItem($cacheKey);
+                if ($cacheItem->isHit()) {
                     /** @var array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int} $weatherData */
-                    $weatherData = $this->weatherCache->get($cacheKey, function (ItemInterface $item) use ($lat, $lon, $locale): array {
-                        $item->expiresAfter(10800); // 3 hours
-
-                        $forecast = $this->weatherProvider->fetchForecast($lat, $lon, $locale);
-
-                        return [
-                            'icon' => $forecast->icon,
-                            'description' => $forecast->description,
-                            'tempMin' => $forecast->tempMin,
-                            'tempMax' => $forecast->tempMax,
-                            'windSpeed' => $forecast->windSpeed,
-                            'windDirection' => $forecast->windDirection,
-                            'precipitationProbability' => $forecast->precipitationProbability,
-                        ];
-                    });
+                    $weatherData = $cacheItem->get();
 
                     $stage->weather = new WeatherForecast(
                         icon: $weatherData['icon'],
@@ -83,11 +76,39 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                         windDirection: $weatherData['windDirection'],
                         precipitationProbability: $weatherData['precipitationProbability'],
                     );
+                } else {
+                    $uncachedLocations[$i] = ['lat' => $lat, 'lon' => $lon];
+                }
+            }
+
+            // Phase 2: Batch fetch all uncached locations in a single API call
+            if ([] !== $uncachedLocations) {
+                $uncachedIndices = array_keys($uncachedLocations);
+                $locations = array_values($uncachedLocations);
+
+                try {
+                    $forecasts = $this->weatherProvider->fetchForecasts($locations, $locale);
+
+                    foreach ($forecasts as $idx => $forecast) {
+                        $stageIndex = $uncachedIndices[$idx];
+                        $stages[$stageIndex]->weather = $forecast;
+
+                        // Store in cache
+                        $cacheItem = $this->weatherCache->getItem($cacheKeys[$stageIndex]);
+                        $cacheItem->set([
+                            'icon' => $forecast->icon,
+                            'description' => $forecast->description,
+                            'tempMin' => $forecast->tempMin,
+                            'tempMax' => $forecast->tempMax,
+                            'windSpeed' => $forecast->windSpeed,
+                            'windDirection' => $forecast->windDirection,
+                            'precipitationProbability' => $forecast->precipitationProbability,
+                        ]);
+                        $cacheItem->expiresAfter(10800); // 3 hours
+                        $this->weatherCache->save($cacheItem);
+                    }
                 } catch (\Throwable $e) {
-                    $this->logger->warning('Weather fetch failed for stage.', [
-                        'stageIndex' => $i,
-                        'error' => $e->getMessage(),
-                    ]);
+                    $this->logger->warning('Batch weather fetch failed.', ['error' => $e->getMessage()]);
                 }
             }
 

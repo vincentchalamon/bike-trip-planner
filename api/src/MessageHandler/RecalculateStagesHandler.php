@@ -9,6 +9,7 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\GpxWriter\GpxWriterInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Message\CheckBikeShops;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\Message\ScanPois;
@@ -103,10 +104,11 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
             ),
         ]);
 
-        // Dispatch POI/Accommodation scans for affected stages
+        // Dispatch POI/Accommodation/BikeShop scans for affected stages
         if ([] !== $affectedIndices) {
             $this->messageBus->dispatch(new ScanPois($tripId));
             $this->messageBus->dispatch(new ScanAccommodations($tripId));
+            $this->messageBus->dispatch(new CheckBikeShops($tripId));
         }
     }
 }

@@ -70,7 +70,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             // Deduplicate + limit to 5 per stage BEFORE any scraping
             $retainedByStage = [];
             foreach ($candidatesByStage as $i => $candidates) {
-                $retainedByStage[$i] = \array_slice($this->deduplicate($candidates), 0, 5);
+                $retainedByStage[$i] = \array_slice($this->deduplicate($candidates), 0, 3);
             }
 
             // Async scraping: 2 waves of parallel HTTP requests
@@ -290,12 +290,13 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         $priceResponses = [];
         foreach ($needsPricePage as $item) {
             $pricePages = $this->metadataExtractor->discoverPricePagePaths($item['html'], $item['url']);
-            foreach ($pricePages as $pricePageUrl) {
+            // Limit to 1 price page per accommodation to reduce scraping time
+            foreach (\array_slice($pricePages, 0, 1) as $pricePageUrl) {
                 try {
                     $priceResponses[] = [
                         'stageIdx' => $item['stageIdx'],
                         'candidateIdx' => $item['candidateIdx'],
-                        'response' => $this->scraperClient->request('GET', $pricePageUrl, ['timeout' => 5]),
+                        'response' => $this->scraperClient->request('GET', $pricePageUrl, ['timeout' => 3]),
                     ];
                 } catch (\Throwable) {
                     // Skip malformed URLs

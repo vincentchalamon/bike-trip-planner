@@ -10,6 +10,7 @@ use App\GpxWriter\GpxWriterInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
+use App\Message\CheckBikeShops;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\GenerateStageGpx;
@@ -67,6 +68,7 @@ final readonly class GenerateStageGpxHandler extends AbstractTripMessageHandler
             $this->messageBus->dispatch(new AnalyzeTerrain($tripId));
             $this->messageBus->dispatch(new FetchWeather($tripId));
             $this->messageBus->dispatch(new CheckCalendar($tripId));
+            $this->messageBus->dispatch(new CheckBikeShops($tripId));
         });
     }
 }

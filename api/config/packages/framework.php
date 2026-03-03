@@ -32,7 +32,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 ],
                 'overpass.client' => [
                     'base_uri' => 'https://overpass-api.de',
-                    'timeout' => 30,
+                    'timeout' => 15,
                 ],
                 'open_meteo.client' => [
                     'base_uri' => 'https://api.open-meteo.com',

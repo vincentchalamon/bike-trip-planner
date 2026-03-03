@@ -52,6 +52,64 @@ final readonly class OpenMeteoProvider
         );
     }
 
+    /**
+     * Fetch forecasts for multiple locations in a single API call.
+     *
+     * @param list<array{lat: float, lon: float}> $locations
+     *
+     * @return list<WeatherForecast>
+     */
+    public function fetchForecasts(array $locations, string $locale = 'en'): array
+    {
+        if ([] === $locations) {
+            return [];
+        }
+
+        // Single location: delegate to existing method (API response format differs)
+        if (1 === \count($locations)) {
+            return [$this->fetchForecast($locations[0]['lat'], $locations[0]['lon'], $locale)];
+        }
+
+        $latitudes = implode(',', array_map(static fn (array $loc): string => (string) $loc['lat'], $locations));
+        $longitudes = implode(',', array_map(static fn (array $loc): string => (string) $loc['lon'], $locations));
+
+        $response = $this->httpClient->request('GET', '/v1/forecast', [
+            'query' => [
+                'latitude' => $latitudes,
+                'longitude' => $longitudes,
+                'daily' => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant',
+                'timezone' => 'auto',
+                'forecast_days' => 1,
+            ],
+        ]);
+
+        /** @var list<array{daily?: array{weather_code?: list<int>, temperature_2m_max?: list<float>, temperature_2m_min?: list<float>, precipitation_probability_max?: list<int>, wind_speed_10m_max?: list<float>, wind_direction_10m_dominant?: list<int>}}> $dataList */
+        $dataList = $response->toArray();
+
+        $forecasts = [];
+        foreach ($dataList as $data) {
+            $daily = $data['daily'] ?? [];
+            $weatherCode = ($daily['weather_code'] ?? [0])[0];
+            $tempMax = ($daily['temperature_2m_max'] ?? [0.0])[0];
+            $tempMin = ($daily['temperature_2m_min'] ?? [0.0])[0];
+            $precipProb = ($daily['precipitation_probability_max'] ?? [0])[0];
+            $windSpeed = ($daily['wind_speed_10m_max'] ?? [0.0])[0];
+            $windDeg = (int) ($daily['wind_direction_10m_dominant'] ?? [0])[0];
+
+            $forecasts[] = new WeatherForecast(
+                icon: $this->wmoToIcon($weatherCode),
+                description: $this->wmoToDescription($weatherCode, $locale),
+                tempMin: (float) $tempMin,
+                tempMax: (float) $tempMax,
+                windSpeed: (float) $windSpeed,
+                windDirection: $this->degToDirection($windDeg),
+                precipitationProbability: (int) $precipProb,
+            );
+        }
+
+        return $forecasts;
+    }
+
     private function wmoToIcon(int $code): string
     {
         return match (true) {

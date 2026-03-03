@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
@@ -51,15 +52,46 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::BIKE_SHOPS, function () use ($tripId, $stages, $locale): void {
+            // Single batched Overpass query for all stages
+            $stageGeometries = array_map(
+                static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
+                $stages,
+            );
+
+            $query = $this->queryBuilder->buildBatchBikeShopQuery($stageGeometries);
+            $result = $this->scanner->query($query);
+
+            /** @var list<array{lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
+            $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
+
+            // Parse bike shop locations
+            $bikeShopLocations = [];
+            foreach ($elements as $element) {
+                $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
+                $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
+
+                if (null === $lat || null === $lon) {
+                    continue;
+                }
+
+                $bikeShopLocations[] = ['lat' => (float) $lat, 'lon' => (float) $lon];
+            }
+
+            // Check each stage for nearby bike shops
             $stagesWithoutBikeShop = [];
-
             foreach ($stages as $i => $stage) {
-                $query = $this->queryBuilder->buildBikeShopQuery($stage->geometry ?: [$stage->startPoint, $stage->endPoint]);
-                $result = $this->scanner->query($query);
+                $hasNearby = false;
+                $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
+                $midpoint = $geometry[(int) (\count($geometry) / 2)];
 
-                $bikeShops = $result['elements'] ?? [];
+                foreach ($bikeShopLocations as $shop) {
+                    if ($this->haversineDistance($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']) < 2000.0) {
+                        $hasNearby = true;
+                        break;
+                    }
+                }
 
-                if ([] === $bikeShops) {
+                if (!$hasNearby) {
                     $stagesWithoutBikeShop[] = [
                         'stageIndex' => $i,
                         'dayNumber' => $stage->dayNumber,
@@ -78,5 +110,15 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                 'alerts' => $stagesWithoutBikeShop,
             ]);
         });
+    }
+
+    private function haversineDistance(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        $earthRadius = 6371000.0;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
+
+        return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 }

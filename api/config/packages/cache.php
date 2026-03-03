@@ -14,11 +14,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'default_lifetime' => 1800, // 30 minutes
                 ],
                 'cache.osm' => [
-                    'adapter' => 'cache.adapter.filesystem',
+                    'adapter' => 'cache.adapter.redis',
                     'default_lifetime' => 86400, // 24 hours
                 ],
                 'cache.weather' => [
-                    'adapter' => 'cache.adapter.filesystem',
+                    'adapter' => 'cache.adapter.redis',
                     'default_lifetime' => 10800, // 3 hours
                 ],
             ],
