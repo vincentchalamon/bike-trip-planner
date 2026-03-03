@@ -11,6 +11,7 @@ export const AlertSchema = z.object({
   message: z.string(),
   lat: z.number().nullable().optional(),
   lon: z.number().nullable().optional(),
+  source: z.string().optional(),
 });
 
 export const WeatherForecastSchema = z.object({

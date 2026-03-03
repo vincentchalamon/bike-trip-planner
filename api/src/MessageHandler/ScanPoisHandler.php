@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -116,27 +117,28 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
     {
         /** @var array<int, list<array{name: string, category: string, lat: float, lon: float}>> $result */
         $result = [];
-        foreach (array_keys($stages) as $i) {
-            $result[$i] = [];
-        }
-
-        // Pre-compute stage midpoints for fast assignment
-        $midpoints = [];
+        /** @var array<int, list<array{lat: float, lon: float}>> $stageGeometries */
+        $stageGeometries = [];
         foreach ($stages as $i => $stage) {
+            $result[$i] = [];
             $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
-            $mid = $geometry[(int) (\count($geometry) / 2)];
-            $midpoints[$i] = $mid;
+            $stageGeometries[$i] = array_map(
+                static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
+                $geometry,
+            );
         }
 
         foreach ($pois as $poi) {
             $closestStage = 0;
             $closestDistance = \PHP_FLOAT_MAX;
 
-            foreach ($midpoints as $i => $midpoint) {
-                $distance = $this->haversineDistance($poi['lat'], $poi['lon'], $midpoint->lat, $midpoint->lon);
-                if ($distance < $closestDistance) {
-                    $closestDistance = $distance;
-                    $closestStage = $i;
+            foreach ($stageGeometries as $i => $geometry) {
+                foreach ($geometry as $point) {
+                    $distance = $this->haversineDistance($poi['lat'], $poi['lon'], $point['lat'], $point['lon']);
+                    if ($distance < $closestDistance) {
+                        $closestDistance = $distance;
+                        $closestStage = $i;
+                    }
                 }
             }
 

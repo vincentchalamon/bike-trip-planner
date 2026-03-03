@@ -18,13 +18,25 @@ final class ElevationCalculator implements EngineInterface
     public function calculateTotalAscent(array $points): float
     {
         $totalAscent = 0.0;
+        $accumulatedGain = 0.0;
         $counter = \count($points);
 
         for ($i = 1; $i < $counter; ++$i) {
             $diff = $points[$i]->ele - $points[$i - 1]->ele;
-            if ($diff > self::NOISE_THRESHOLD_METERS) {
-                $totalAscent += $diff;
+            if ($diff > 0) {
+                $accumulatedGain += $diff;
+            } else {
+                if ($accumulatedGain > self::NOISE_THRESHOLD_METERS) {
+                    $totalAscent += $accumulatedGain;
+                }
+
+                $accumulatedGain = 0.0;
             }
+        }
+
+        // Flush final ascending segment
+        if ($accumulatedGain > self::NOISE_THRESHOLD_METERS) {
+            $totalAscent += $accumulatedGain;
         }
 
         return $totalAscent;
@@ -38,13 +50,25 @@ final class ElevationCalculator implements EngineInterface
     public function calculateTotalDescent(array $points): float
     {
         $totalDescent = 0.0;
+        $accumulatedLoss = 0.0;
         $counter = \count($points);
 
         for ($i = 1; $i < $counter; ++$i) {
             $diff = $points[$i - 1]->ele - $points[$i]->ele;
-            if ($diff > self::NOISE_THRESHOLD_METERS) {
-                $totalDescent += $diff;
+            if ($diff > 0) {
+                $accumulatedLoss += $diff;
+            } else {
+                if ($accumulatedLoss > self::NOISE_THRESHOLD_METERS) {
+                    $totalDescent += $accumulatedLoss;
+                }
+
+                $accumulatedLoss = 0.0;
             }
+        }
+
+        // Flush final descending segment
+        if ($accumulatedLoss > self::NOISE_THRESHOLD_METERS) {
+            $totalDescent += $accumulatedLoss;
         }
 
         return $totalDescent;

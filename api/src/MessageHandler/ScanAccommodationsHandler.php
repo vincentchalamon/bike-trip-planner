@@ -6,6 +6,7 @@ namespace App\MessageHandler;
 
 use App\Accommodation\AccommodationMetadataExtractor;
 use App\ApiResource\Model\Accommodation;
+use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Engine\PricingHeuristicEngine;
@@ -54,7 +55,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
 
         $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages): void {
             // Single Overpass query for all stage endpoints (instead of 1 per stage)
-            $endPoints = array_map(static fn (Stage $stage): \App\ApiResource\Model\Coordinate => $stage->endPoint, $stages);
+            $endPoints = array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stages);
             $query = $this->queryBuilder->buildAccommodationQuery($endPoints);
             $result = $this->scanner->query($query);
 
@@ -70,7 +71,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             // Deduplicate + limit to 5 per stage BEFORE any scraping
             $retainedByStage = [];
             foreach ($candidatesByStage as $i => $candidates) {
-                $retainedByStage[$i] = \array_slice($this->deduplicate($candidates), 0, 3);
+                $deduped = $this->deduplicate($candidates);
+                usort($deduped, static fn (array $a, array $b): int => $a['priceMin'] <=> $b['priceMin']);
+                $retainedByStage[$i] = \array_slice($deduped, 0, 3);
             }
 
             // Async scraping: 2 waves of parallel HTTP requests

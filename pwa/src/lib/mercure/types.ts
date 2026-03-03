@@ -64,7 +64,10 @@ export type MercureEvent =
         title: string | null;
       };
     }
-  | { type: "stages_computed"; data: { stages: StagePayload[] } }
+  | {
+      type: "stages_computed";
+      data: { stages: StagePayload[]; affectedIndices?: number[] };
+    }
   | { type: "weather_fetched"; data: { stages: WeatherPayload[] } }
   | { type: "pois_scanned"; data: { stageIndex: number; pois: PoiPayload[] } }
   | {
