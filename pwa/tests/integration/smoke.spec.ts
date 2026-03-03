@@ -1,7 +1,5 @@
 import { test, expect } from "@playwright/test";
 
-const backendOrigin = process.env.API_BACKEND_ORIGIN ?? "http://php:8000";
-
 test.describe("Integration smoke test", () => {
   test("backend accepts and processes a real Komoot tour", async ({ page }) => {
     test.slow();
@@ -9,30 +7,19 @@ test.describe("Integration smoke test", () => {
     let capturedTripId: string | null = null;
     let postStatus: number | null = null;
 
-    // Route API calls to the PHP backend and capture trip ID from response
-    const backend = new URL(backendOrigin);
+    // Intercept POST /trips to capture trip ID and status from the response
     await page.route(
-      (url) =>
-        url.pathname.startsWith("/trips") ||
-        url.pathname.startsWith("/geocode") ||
-        url.pathname.startsWith("/accommodations"),
+      (url) => url.pathname === "/trips",
       async (route) => {
-        const req = route.request();
-        const target = new URL(req.url());
-        target.protocol = backend.protocol;
-        target.hostname = backend.hostname;
-        target.port = backend.port;
-
-        // For POST /trips, intercept to capture trip ID and status
-        if (req.method() === "POST" && target.pathname === "/trips") {
-          const response = await route.fetch({ url: target.toString() });
+        if (route.request().method() === "POST") {
+          const response = await route.fetch();
           const body = await response.json();
           capturedTripId = body?.id ?? null;
           postStatus = response.status();
           return route.fulfill({ response });
         }
 
-        return route.continue({ url: target.toString() });
+        return route.continue();
       },
     );
 
