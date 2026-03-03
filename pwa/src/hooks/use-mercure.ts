@@ -122,6 +122,13 @@ function dispatchEvent(event: MercureEvent): void {
 
     case "pois_scanned":
       store.updateStagePois(event.data.stageIndex, event.data.pois);
+      if (event.data.alerts && event.data.alerts.length > 0) {
+        store.updateStageAlerts(
+          event.data.stageIndex,
+          event.data.alerts,
+          "pois",
+        );
+      }
       break;
 
     case "accommodations_found":

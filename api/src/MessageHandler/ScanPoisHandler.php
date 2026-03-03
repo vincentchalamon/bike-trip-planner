@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -16,16 +18,25 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 {
+    /** @var list<string> */
+    private const array RESUPPLY_CATEGORIES = [
+        'restaurant', 'cafe', 'bar', 'supermarket', 'convenience',
+        'bakery', 'fast_food', 'marketplace', 'butcher', 'pastry',
+        'deli', 'greengrocer', 'general', 'farm',
+    ];
+
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
+        private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher);
     }
@@ -39,7 +50,9 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages): void {
+        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+
+        $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale): void {
             // Single batched Overpass query for all stages
             $stageGeometries = array_map(
                 static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
@@ -91,14 +104,38 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     $pois[] = ['name' => $poi->name, 'category' => $poi->category];
                 }
 
-                $this->publisher->publish($tripId, MercureEventType::POIS_SCANNED, [
+                // Lunch nudge: flag long stages with no food POIs
+                $alerts = [];
+                if ($stage->distance >= 40.0 && !$this->hasResupplyPoi($stage)) {
+                    $alert = new Alert(
+                        type: AlertType::NUDGE,
+                        message: $this->translator->trans('alert.lunch.nudge', [], 'alerts', $locale),
+                        lat: $stage->startPoint->lat,
+                        lon: $stage->startPoint->lon,
+                    );
+                    $stage->addAlert($alert);
+                    $alerts[] = ['type' => 'nudge', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
+                }
+
+                $payload = [
                     'stageIndex' => $i,
                     'pois' => $pois,
-                ]);
+                ];
+
+                if ([] !== $alerts) {
+                    $payload['alerts'] = $alerts;
+                }
+
+                $this->publisher->publish($tripId, MercureEventType::POIS_SCANNED, $payload);
             }
 
             $this->tripStateManager->storeStages($tripId, $stages);
         });
+    }
+
+    private function hasResupplyPoi(Stage $stage): bool
+    {
+        return array_any($stage->pois, fn ($poi): bool => \in_array($poi->category, self::RESUPPLY_CATEGORIES, true));
     }
 
     /**

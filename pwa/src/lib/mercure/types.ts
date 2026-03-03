@@ -69,7 +69,14 @@ export type MercureEvent =
       data: { stages: StagePayload[]; affectedIndices?: number[] };
     }
   | { type: "weather_fetched"; data: { stages: WeatherPayload[] } }
-  | { type: "pois_scanned"; data: { stageIndex: number; pois: PoiPayload[] } }
+  | {
+      type: "pois_scanned";
+      data: {
+        stageIndex: number;
+        pois: PoiPayload[];
+        alerts?: AlertPayload[];
+      };
+    }
   | {
       type: "accommodations_found";
       data: { stageIndex: number; accommodations: AccommodationPayload[] };
