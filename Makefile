@@ -8,6 +8,11 @@ help: ## Show this help message
 start-dev: ## Start the Docker environment (Detached) in development mode
 	docker compose up --wait
 
+build: build-prod ## Alias for build-prod
+
+build-prod: ## Build the Docker environment in production mode
+	docker compose -f compose.prod.yaml build
+
 start: start-prod ## Alias for start-prod
 
 start-prod: ## Start the Docker environment (Detached) in production mode
