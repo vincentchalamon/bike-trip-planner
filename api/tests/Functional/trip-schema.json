@@ -30,7 +30,7 @@
       "required": [
         "route",
         "stages",
-        "stage_gpx",
+        "osm_scan",
         "pois",
         "accommodations",
         "terrain",
@@ -59,7 +59,7 @@
             "failed"
           ]
         },
-        "stage_gpx": {
+        "osm_scan": {
           "type": "string",
           "enum": [
             "pending",

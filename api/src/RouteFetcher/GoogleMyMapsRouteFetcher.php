@@ -8,6 +8,8 @@ use App\Enum\SourceType;
 use App\RouteParser\KmlRouteParser;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final readonly class GoogleMyMapsRouteFetcher implements RouteFetcherInterface
@@ -21,6 +23,8 @@ final readonly class GoogleMyMapsRouteFetcher implements RouteFetcherInterface
         private HttpClientInterface $googleMymapsClient,
         #[Autowire(service: 'app.route_parser_registry')]
         private ContainerInterface $routeParserRegistry,
+        #[Autowire(service: 'cache.route_fetch')]
+        private CacheInterface $routeCache,
     ) {
     }
 
@@ -44,27 +48,33 @@ final readonly class GoogleMyMapsRouteFetcher implements RouteFetcherInterface
         }
 
         $mapId = $matches[1];
-        $kmlUrl = \sprintf('/maps/d/%s/export?format=kml', $mapId);
+        $cacheKey = 'route_fetch.google_mymaps.'.preg_replace('/[^a-zA-Z0-9_.]/', '_', $mapId);
 
-        $response = $this->googleMymapsClient->request('GET', $kmlUrl);
+        return $this->routeCache->get($cacheKey, function (ItemInterface $item) use ($mapId): RouteFetchResult {
+            $item->expiresAfter(86400);
 
-        $statusCode = $response->getStatusCode();
-        if (200 !== $statusCode) {
-            throw new \RuntimeException(\sprintf('Google My Maps export returned HTTP %d.', $statusCode));
-        }
+            $kmlUrl = \sprintf('/maps/d/%s/export?format=kml', $mapId);
 
-        $kmlContent = $response->getContent();
-        $points = $this->routeParserRegistry->get(KmlRouteParser::class)->parse($kmlContent);
+            $response = $this->googleMymapsClient->request('GET', $kmlUrl);
 
-        if ([] === $points) {
-            throw new \RuntimeException('Google My Maps KML contains no track points.');
-        }
+            $statusCode = $response->getStatusCode();
+            if (200 !== $statusCode) {
+                throw new \RuntimeException(\sprintf('Google My Maps export returned HTTP %d.', $statusCode));
+            }
 
-        return new RouteFetchResult(
-            sourceType: SourceType::GOOGLE_MYMAPS,
-            tracks: [$points],
-            title: \sprintf('Google My Maps %s', $mapId),
-        );
+            $kmlContent = $response->getContent();
+            $points = $this->routeParserRegistry->get(KmlRouteParser::class)->parse($kmlContent);
+
+            if ([] === $points) {
+                throw new \RuntimeException('Google My Maps KML contains no track points.');
+            }
+
+            return new RouteFetchResult(
+                sourceType: SourceType::GOOGLE_MYMAPS,
+                tracks: [$points],
+                title: \sprintf('Google My Maps %s', $mapId),
+            );
+        });
     }
 
     private function resolveShortLink(string $shortUrl): string

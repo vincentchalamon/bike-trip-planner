@@ -12,6 +12,9 @@ import { StageMetadata } from "@/components/stage-metadata";
 import { AlertList } from "@/components/alert-list";
 import { AccommodationPanel } from "@/components/accommodation-panel";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
+import { useTripStore } from "@/store/trip-store";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://localhost";
 
 function formatCoords(point: { lat: number; lon: number }): string {
   const latDir = point.lat >= 0 ? "N" : "S";
@@ -74,8 +77,10 @@ export function StageCard({
   onClearNewAcc,
 }: StageCardProps) {
   const t = useTranslations("stage");
+  const tripId = useTripStore((s) => s.trip?.id);
   const [editingDistance, setEditingDistance] = useState(false);
   const [editValue, setEditValue] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   function startEditDistance() {
     setEditValue(
@@ -129,26 +134,34 @@ export function StageCard({
           <Button
             variant="ghost"
             size="sm"
-            className={`h-6 gap-1 text-muted-icon px-1.5 ${stage.gpxContent ? "cursor-pointer" : ""}`}
-            disabled={!stage.gpxContent}
-            onClick={() => {
-              if (!stage.gpxContent) return;
-              const blob = new Blob([stage.gpxContent], {
-                type: "application/gpx+xml",
-              });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `stage-${stage.dayNumber}.gpx`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
+            className="h-6 gap-1 text-muted-icon px-1.5 cursor-pointer"
+            disabled={!tripId || downloading}
+            onClick={async () => {
+              if (!tripId) return;
+              setDownloading(true);
+              try {
+                const res = await fetch(
+                  `${API_URL}/trips/${tripId}/stages/${stageIndex}.gpx`,
+                );
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `stage-${stage.dayNumber}.gpx`;
+                a.click();
+                URL.revokeObjectURL(url);
+              } finally {
+                setDownloading(false);
+              }
             }}
             aria-label={t("downloadGpx", { dayNumber: stage.dayNumber })}
             title={t("downloadGpx", { dayNumber: stage.dayNumber })}
           >
-            <Download className="h-3.5 w-3.5" />
+            {downloading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
             <span className="text-[10px] font-medium">GPX</span>
           </Button>
           {onDistanceChange && (

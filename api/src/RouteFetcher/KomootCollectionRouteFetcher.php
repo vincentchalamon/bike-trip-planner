@@ -6,6 +6,8 @@ namespace App\RouteFetcher;
 
 use App\Enum\SourceType;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final readonly class KomootCollectionRouteFetcher implements RouteFetcherInterface
@@ -16,6 +18,8 @@ final readonly class KomootCollectionRouteFetcher implements RouteFetcherInterfa
         #[Autowire(service: 'komoot.client')]
         private HttpClientInterface $komootClient,
         private KomootHtmlExtractor $htmlExtractor,
+        #[Autowire(service: 'cache.route_fetch')]
+        private CacheInterface $routeCache,
     ) {
     }
 
@@ -29,49 +33,59 @@ final readonly class KomootCollectionRouteFetcher implements RouteFetcherInterfa
         preg_match(self::PATTERN, $url, $matches);
         $collectionId = $matches[1];
 
-        // Fetch collection page to extract tour IDs
-        $response = $this->komootClient->request('GET', \sprintf('/collection/%s', $collectionId), [
-            'headers' => ['Accept' => 'text/html'],
-        ]);
+        $cacheKey = 'route_fetch.komoot_collection.'.$collectionId;
 
-        $statusCode = $response->getStatusCode();
+        return $this->routeCache->get($cacheKey, function (ItemInterface $item) use ($collectionId): RouteFetchResult {
+            $item->expiresAfter(86400);
 
-        if (200 !== $statusCode) {
-            throw new \RuntimeException(\sprintf('Komoot collection %s returned HTTP %d.', $collectionId, $statusCode));
-        }
-
-        $html = $response->getContent();
-        $collectionData = $this->htmlExtractor->extractCollectionTourIds($html);
-        $title = $collectionData['name'];
-        $tourIds = $collectionData['tourIds'];
-
-        // Fetch each tour's coordinates from its HTML page
-        $tracks = [];
-        foreach ($tourIds as $tourId) {
-            $tourResponse = $this->komootClient->request('GET', \sprintf('/tour/%s', $tourId), [
+            // Fetch collection page to extract tour IDs
+            $response = $this->komootClient->request('GET', \sprintf('/collection/%s', $collectionId), [
                 'headers' => ['Accept' => 'text/html'],
             ]);
 
-            if (200 !== $tourResponse->getStatusCode()) {
-                continue;
+            $statusCode = $response->getStatusCode();
+
+            if (200 !== $statusCode) {
+                throw new \RuntimeException(\sprintf('Komoot collection %s returned HTTP %d.', $collectionId, $statusCode));
             }
 
-            try {
-                $tourData = $this->htmlExtractor->extractTourData($tourResponse->getContent());
-                $tracks[] = $tourData['coordinates'];
-            } catch (\RuntimeException) {
-                continue;
+            $html = $response->getContent();
+            $collectionData = $this->htmlExtractor->extractCollectionTourIds($html);
+            $title = $collectionData['name'];
+            $tourIds = $collectionData['tourIds'];
+
+            // Fire all tour requests (non-blocking — Symfony HttpClient multiplexes concurrently)
+            $responses = [];
+            foreach ($tourIds as $tourId) {
+                $responses[$tourId] = $this->komootClient->request('GET', \sprintf('/tour/%s', $tourId), [
+                    'headers' => ['Accept' => 'text/html'],
+                ]);
             }
-        }
 
-        if ([] === $tracks) {
-            throw new \RuntimeException(\sprintf('Komoot collection %s yielded no valid tracks.', $collectionId));
-        }
+            // Collect results (HttpClient resolves responses concurrently on first access)
+            $tracks = [];
+            foreach ($responses as $response) {
+                if (200 !== $response->getStatusCode()) {
+                    continue;
+                }
 
-        return new RouteFetchResult(
-            sourceType: SourceType::KOMOOT_COLLECTION,
-            tracks: $tracks,
-            title: $title,
-        );
+                try {
+                    $tourData = $this->htmlExtractor->extractTourData($response->getContent());
+                    $tracks[] = $tourData['coordinates'];
+                } catch (\RuntimeException) {
+                    continue;
+                }
+            }
+
+            if ([] === $tracks) {
+                throw new \RuntimeException(\sprintf('Komoot collection %s yielded no valid tracks.', $collectionId));
+            }
+
+            return new RouteFetchResult(
+                sourceType: SourceType::KOMOOT_COLLECTION,
+                tracks: $tracks,
+                title: $title,
+            );
+        });
     }
 }

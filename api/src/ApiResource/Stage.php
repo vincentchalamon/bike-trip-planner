@@ -6,6 +6,7 @@ namespace App\ApiResource;
 
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
@@ -17,6 +18,7 @@ use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\WeatherForecast;
 use App\State\StageCreateProcessor;
 use App\State\StageDeleteProcessor;
+use App\State\StageGpxProvider;
 use App\State\StageMoveProcessor;
 use App\State\StageProvider;
 use App\State\StageUpdateProcessor;
@@ -26,6 +28,16 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
 #[ApiResource(
     shortName: 'Stage',
     operations: [
+        new Get(
+            uriTemplate: '/trips/{tripId}/stages/{index}.gpx',
+            outputFormats: ['gpx' => ['application/gpx+xml']],
+            uriVariables: [
+                'tripId' => new Link(fromClass: Stage::class),
+                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+            ],
+            openapi: new Operation(summary: 'Download a stage as GPX file.'),
+            provider: StageGpxProvider::class,
+        ),
         new Post(
             uriTemplate: '/trips/{tripId}/stages{._format}',
             uriVariables: [
@@ -80,8 +92,6 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
 final class Stage
 {
     public ?WeatherForecast $weather = null;
-
-    public ?string $gpxContent = null;
 
     /** @var Alert[] */
     public array $alerts = [];

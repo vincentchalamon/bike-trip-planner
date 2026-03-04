@@ -154,16 +154,6 @@ export function terrainAlertsEvent(): MercureEvent {
   };
 }
 
-export function stageGpxReadyEvent(stageIndex: number): MercureEvent {
-  return {
-    type: "stage_gpx_ready",
-    data: {
-      stageIndex,
-      gpxContent: `<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="44.7" lon="4.5"><ele>280</ele></trkpt></trkseg></trk></gpx>`,
-    },
-  };
-}
-
 export function tripCompleteEvent(): MercureEvent {
   return {
     type: "trip_complete",
@@ -171,6 +161,7 @@ export function tripCompleteEvent(): MercureEvent {
       computationStatus: {
         route: "done",
         stages: "done",
+        osm_scan: "done",
         weather: "done",
         terrain: "done",
         accommodations: "done",
@@ -208,9 +199,6 @@ export function fullTripEventSequence(): MercureEvent[] {
     accommodationsFoundEvent(0),
     accommodationsFoundEvent(1),
     terrainAlertsEvent(),
-    stageGpxReadyEvent(0),
-    stageGpxReadyEvent(1),
-    stageGpxReadyEvent(2),
     tripCompleteEvent(),
   ];
 }

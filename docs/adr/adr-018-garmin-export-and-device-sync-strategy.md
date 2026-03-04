@@ -37,7 +37,7 @@ Nouveau `FitWriter` backend générant le format binaire FIT via `pack()` natif 
 
 Structure du fichier :
 
-```
+```text
 Header (14 bytes)
 ├── FILE_ID     (type=course, manufacturer, product)
 ├── COURSE      (nom, sport=cycling)
@@ -91,10 +91,12 @@ Il n'existe aucun endpoint `POST` pour créer une route programmatiquement. Seul
 ### Phase 1 : GPX enrichi + FIT (téléchargement)
 
 Les deux formats sont complémentaires :
+
 - **GPX enrichi** (Option A) : compatibilité universelle, utile pour les GPS non-Garmin
 - **FIT** (Option B) : format natif Garmin, plus compact, Course Points typés
 
 Boutons de téléchargement :
+
 - Par étape : GPX + FIT dans la `stage-card`
 - Itinéraire global : GPX + FIT dans le `trip-summary`
 

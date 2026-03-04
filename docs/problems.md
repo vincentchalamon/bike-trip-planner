@@ -2,7 +2,7 @@
 
 ## Alertes de restaurant ou commerce alimentaire
 
-(Testé avec https://www.komoot.com/fr-fr/tour/2795080048)
+(Testé avec <https://www.komoot.com/fr-fr/tour/2795080048>)
 
 L'alerte suivante est affichée sur chaque étape :
 > Aucun restaurant ou commerce alimentaire détecté sur cette étape. Prévoyez des provisions.
@@ -13,7 +13,7 @@ Comportement attendu : détecter les restaurants ou commerces alimentaires sur c
 
 ## Dénivelés totaux
 
-(Testé avec https://www.komoot.com/fr-fr/tour/2795080048)
+(Testé avec <https://www.komoot.com/fr-fr/tour/2795080048>)
 
 Les dénivelés positif + négatif totaux ne semblent pas bon.
 Komoot indique un total de 610m positif + 610m négatif.
@@ -26,7 +26,7 @@ Comportement attendu : calculer les dénivelés positif et négatif totaux le pl
 
 ## Performances
 
-(Testé avec https://www.komoot.com/fr-fr/tour/2795080048)
+(Testé avec <https://www.komoot.com/fr-fr/tour/2795080048>)
 
 La détection, le calcul et l'affichage de certaines données prennent du temps. Par exemple : recherche d'hébergements, points d'intérêts, commerces, etc.
 

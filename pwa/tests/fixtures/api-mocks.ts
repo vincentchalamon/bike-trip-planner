@@ -138,6 +138,15 @@ export async function mockAllApis(
     });
   });
 
+  // GET /trips/{id}/stages/{index}.gpx — serve mock GPX
+  await page.route("**/trips/*/stages/*.gpx", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/gpx+xml",
+      body: `<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="44.7" lon="4.5"><ele>280</ele></trkpt></trkseg></trk></gpx>`,
+    }),
+  );
+
   // GET /.well-known/mercure — abort real SSE (we use __test_mercure_event)
   await page.route("**/.well-known/mercure*", (route) => route.abort());
 

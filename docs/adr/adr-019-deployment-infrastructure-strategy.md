@@ -51,6 +51,7 @@ Le déploiement en production transforme le projet d'un outil local mono-utilisa
 - **Absence d'isolation des données** : pas de séparation entre utilisateurs, pas de notion de propriété sur un trip
 
 L'authentification est un **prérequis de sécurité obligatoire avant toute mise en production**, indépendamment de toute autre fonctionnalité. Elle est également nécessaire pour :
+
 - Le stockage des tokens OAuth Garmin (ADR-018 Phase 2), par nature liés à un utilisateur
 - La persistance des trips en BDD, qui nécessite une relation `user → trip`
 - Le rate limiting par utilisateur (et non uniquement par IP)
@@ -212,7 +213,7 @@ C'est la seule infrastructure gratuite offrant suffisamment de ressources (24 GB
 
 ### Architecture d'infrastructure cible
 
-```
+```text
                         ┌─────────────────────────────────────┐
                         │           FreeDNS / Domaine          │
                         │     biketrip.mooo.com (A record)     │

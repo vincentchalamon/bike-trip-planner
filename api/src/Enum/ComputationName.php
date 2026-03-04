@@ -8,7 +8,7 @@ enum ComputationName: string
 {
     case ROUTE = 'route';
     case STAGES = 'stages';
-    case STAGE_GPX = 'stage_gpx';
+    case OSM_SCAN = 'osm_scan';
     case POIS = 'pois';
     case ACCOMMODATIONS = 'accommodations';
     case TERRAIN = 'terrain';

@@ -16,8 +16,13 @@ use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
-use App\Message\GenerateStageGpx;
+use App\Message\AnalyzeTerrain;
+use App\Message\CheckBikeShops;
+use App\Message\CheckCalendar;
+use App\Message\FetchWeather;
 use App\Message\GenerateStages;
+use App\Message\ScanAccommodations;
+use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -85,7 +90,12 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
                 ),
             ]);
 
-            $this->messageBus->dispatch(new GenerateStageGpx($tripId));
+            $this->messageBus->dispatch(new ScanPois($tripId));
+            $this->messageBus->dispatch(new ScanAccommodations($tripId));
+            $this->messageBus->dispatch(new AnalyzeTerrain($tripId));
+            $this->messageBus->dispatch(new FetchWeather($tripId));
+            $this->messageBus->dispatch(new CheckCalendar($tripId));
+            $this->messageBus->dispatch(new CheckBikeShops($tripId));
         });
     }
 

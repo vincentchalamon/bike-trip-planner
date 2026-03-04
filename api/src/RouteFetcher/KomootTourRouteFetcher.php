@@ -6,6 +6,8 @@ namespace App\RouteFetcher;
 
 use App\Enum\SourceType;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final readonly class KomootTourRouteFetcher implements RouteFetcherInterface
@@ -16,6 +18,8 @@ final readonly class KomootTourRouteFetcher implements RouteFetcherInterface
         #[Autowire(service: 'komoot.client')]
         private HttpClientInterface $komootClient,
         private KomootHtmlExtractor $htmlExtractor,
+        #[Autowire(service: 'cache.route_fetch')]
+        private CacheInterface $routeCache,
     ) {
     }
 
@@ -29,31 +33,37 @@ final readonly class KomootTourRouteFetcher implements RouteFetcherInterface
         preg_match(self::PATTERN, $url, $matches);
         $tourId = $matches[1];
 
-        $response = $this->komootClient->request('GET', \sprintf('/tour/%s', $tourId), [
-            'headers' => ['Accept' => 'text/html'],
-        ]);
+        $cacheKey = 'route_fetch.komoot_tour.'.$tourId;
 
-        $statusCode = $response->getStatusCode();
+        return $this->routeCache->get($cacheKey, function (ItemInterface $item) use ($tourId): RouteFetchResult {
+            $item->expiresAfter(86400);
 
-        if (404 === $statusCode) {
-            throw new \RuntimeException(\sprintf('Komoot tour %s not found (404).', $tourId));
-        }
+            $response = $this->komootClient->request('GET', \sprintf('/tour/%s', $tourId), [
+                'headers' => ['Accept' => 'text/html'],
+            ]);
 
-        if (403 === $statusCode) {
-            throw new \RuntimeException(\sprintf('Komoot tour %s is private or access denied (403).', $tourId));
-        }
+            $statusCode = $response->getStatusCode();
 
-        if (200 !== $statusCode) {
-            throw new \RuntimeException(\sprintf('Komoot tour %s returned HTTP %d.', $tourId, $statusCode));
-        }
+            if (404 === $statusCode) {
+                throw new \RuntimeException(\sprintf('Komoot tour %s not found (404).', $tourId));
+            }
 
-        $html = $response->getContent();
-        $tourData = $this->htmlExtractor->extractTourData($html);
+            if (403 === $statusCode) {
+                throw new \RuntimeException(\sprintf('Komoot tour %s is private or access denied (403).', $tourId));
+            }
 
-        return new RouteFetchResult(
-            sourceType: SourceType::KOMOOT_TOUR,
-            tracks: [$tourData['coordinates']],
-            title: $tourData['name'],
-        );
+            if (200 !== $statusCode) {
+                throw new \RuntimeException(\sprintf('Komoot tour %s returned HTTP %d.', $tourId, $statusCode));
+            }
+
+            $html = $response->getContent();
+            $tourData = $this->htmlExtractor->extractTourData($html);
+
+            return new RouteFetchResult(
+                sourceType: SourceType::KOMOOT_TOUR,
+                tracks: [$tourData['coordinates']],
+                title: $tourData['name'],
+            );
+        });
     }
 }

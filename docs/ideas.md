@@ -57,7 +57,7 @@ Lorsque des hébergements sont détectés près du `endPoint`, la suggestion d'�
 ## Distance entre l'hébergement et le `endPoint`
 
 Pour chaque hébergement détecté ou proposé, afficher la distance qui le sépare du `endPoint` de l'étape. Par exemple :
-> La Paille Haute - https://www.la-paille-haute.com/ (3 km)
+> La Paille Haute - <https://www.la-paille-haute.com/> (3 km)
 
 ## Sélectionner un hébergement
 
@@ -100,6 +100,7 @@ La visualisation de la difficulté est plus intuitive qu'un simple chiffre de D+
 Bouton "Ajouter un jour de repos" entre deux étapes. Le `startPoint` de l'étape suivante reste identique, les dates se décalent.
 
 Détections et suggestions automatiques :
+
 - Après N jours consécutifs (configurable, ex : tous les 3 jours)
 - Lorsque le `CalendarAlertAnalyzer` détecte un jour férié
 - Lorsque la météo prévoit des conditions défavorables (pluie forte, vent violent)
@@ -117,6 +118,7 @@ Permet de retrouver un trip après fermeture du navigateur. Les détails archite
 Historique d'actions sur le store Zustand (Ctrl+Z / Ctrl+Y). Compatible avec Immer (snapshots d'état immutables).
 
 Actions couvertes :
+
 - Modification de distance
 - Suppression/ajout d'étape
 - Modification de dates

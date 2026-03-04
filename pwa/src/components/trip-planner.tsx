@@ -185,7 +185,6 @@ export function TripPlanner() {
       alerts: [],
       pois: [],
       accommodations: [],
-      gpxContent: null,
     };
     const updatedStages = stages.map((s) => ({ ...s }));
     updatedStages.splice(afterIndex + 1, 0, placeholder);

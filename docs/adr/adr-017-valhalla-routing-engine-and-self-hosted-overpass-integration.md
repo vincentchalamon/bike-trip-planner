@@ -133,7 +133,7 @@ Three new services added to `compose.yaml`:
 
 #### PBF Source
 
-```
+```text
 https://download.geofabrik.de/europe/france/nord-pas-de-calais-latest.osm.pbf
 ```
 
