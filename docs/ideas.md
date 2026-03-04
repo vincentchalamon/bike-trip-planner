@@ -191,3 +191,7 @@ Ajouter un bouton "Envoyer sur mon GPS Garmin".
 Cf. [ADR 18](adr/adr-018-garmin-export-and-device-sync-strategy.md).
 
 **Prérequis** : Phase 1 + Persistance BDD + infrastructure de production (OAuth PKCE nécessite un callback URL publique HTTPS) + approbation au Garmin Developer Program.
+
+## Docker multi-arch
+
+Prévoir la possibilité de builder les images Docker en multi-arch, pour faciliter le déploiement sur la plupart des infrastructures.
