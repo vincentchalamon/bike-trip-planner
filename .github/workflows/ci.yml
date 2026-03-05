@@ -72,6 +72,17 @@ jobs:
         working-directory: api
         run: bin/console api:openapi:export --yaml | redocly lint /dev/stdin
 
+  hadolint:
+    name: Hadolint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.3.0
+        with:
+          recursive: true
+
   php-cs-fixer:
     name: PHP CS Fixer
     runs-on: ubuntu-latest
