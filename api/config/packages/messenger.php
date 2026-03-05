@@ -10,6 +10,7 @@ use App\Message\FetchAndParseRoute;
 use App\Message\FetchWeather;
 use App\Message\GenerateStages;
 use App\Message\ScanAllOsmData;
+use App\Message\RecalculateRouteSegment;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\Message\ScanPois;
@@ -41,6 +42,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 CheckCalendar::class => 'async',
                 AnalyzeWind::class => 'async',
                 CheckBikeShops::class => 'async',
+                RecalculateRouteSegment::class => 'async',
                 RecalculateStages::class => 'async',
             ],
         ],

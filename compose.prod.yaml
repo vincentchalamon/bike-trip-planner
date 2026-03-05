@@ -62,6 +62,7 @@ services:
       - overpass
       - php
       - redis
+      - valhalla
     environment:
       APP_ENV: prod
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
@@ -109,15 +110,16 @@ services:
     image: wiktorn/overpass-api:latest
     restart: unless-stopped
     volumes:
-      # Empty OSM bzip2 — Overpass starts instantly with an empty database.
-      # Real region data is provisioned via: bin/console app:overpass:provision (ADR-020)
-      - .docker/overpass/empty.osm.bz2:/data/osm/region.osm.bz2:ro
-      - .docker/overpass/fix-permissions.sh:/docker-entrypoint-initdb.d/fix-permissions.sh:ro
+      # Lille PBF stub — real road data for instant startup.
+      # Real region data provisioned via: bin/console app:overpass:provision (ADR-020)
+      - .docker/osm/lille-stub.osm.pbf:/data/osm/region.osm.pbf:ro
+      - .docker/osm/fix-permissions.sh:/docker-entrypoint-initdb.d/fix-permissions.sh:ro
       - overpass-data:/db
     environment:
       OVERPASS_META: "yes"
       OVERPASS_MODE: init
-      OVERPASS_PLANET_URL: file:///data/osm/region.osm.bz2
+      OVERPASS_PLANET_URL: file:///data/osm/region.osm.pbf
+      OVERPASS_PLANET_PREPROCESS: 'mv /db/planet.osm.bz2 /db/planet.osm.pbf && osmium cat -o /db/planet.osm.bz2 /db/planet.osm.pbf && rm /db/planet.osm.pbf'
       OVERPASS_USE_AREAS: "false"
       OVERPASS_RULES_LOAD: 10
     healthcheck:
@@ -126,6 +128,24 @@ services:
       timeout: 5s
       retries: 3
       start_period: 120s
+
+  valhalla:
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    restart: unless-stopped
+    volumes:
+      - .docker/osm/lille-stub.osm.pbf:/custom_files/lille-stub.osm.pbf
+      - valhalla-tiles:/custom_files
+    environment:
+      serve_tiles: "True"
+      build_elevation: "True"
+      build_admins: "True"
+      build_time_zones: "True"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8002/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 600s
 
   redis:
     image: redis:8-alpine
@@ -139,5 +159,6 @@ volumes:
   caddy_data: ~
   caddy_config: ~
   overpass-data: ~
+  valhalla-tiles: ~
   pwa_node_modules: ~
   pwa_next: ~

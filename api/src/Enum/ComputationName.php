@@ -16,4 +16,19 @@ enum ComputationName: string
     case CALENDAR = 'calendar';
     case WIND = 'wind';
     case BIKE_SHOPS = 'bike_shops';
+    case ROUTE_SEGMENT = 'route_segment';
+
+    /**
+     * Computations initialized at trip creation (the main pipeline).
+     * On-demand computations like ROUTE_SEGMENT are excluded.
+     *
+     * @return list<self>
+     */
+    public static function pipeline(): array
+    {
+        return array_values(array_filter(
+            self::cases(),
+            static fn (self $c): bool => self::ROUTE_SEGMENT !== $c,
+        ));
+    }
 }

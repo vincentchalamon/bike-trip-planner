@@ -46,6 +46,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'max_redirects' => 5,
                     'timeout' => 15,
                 ],
+                'routing.client' => [
+                    'base_uri' => 'http://valhalla:8002',
+                    'timeout' => 5,
+                ],
                 'nominatim.client' => [
                     'base_uri' => 'https://nominatim.openstreetmap.org',
                     'timeout' => 10,

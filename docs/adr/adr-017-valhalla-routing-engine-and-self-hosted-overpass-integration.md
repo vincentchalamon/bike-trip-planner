@@ -110,7 +110,7 @@ Three new services added to `compose.yaml`:
 
 | Service | Image | Role | Port | Depends on |
 |---|---|---|---|---|
-| — | `.docker/overpass/empty.osm.pbf` | Versioned 47-byte empty PBF stub bind-mounted into Overpass; real regions provisioned via `app:overpass:provision` (ADR-020) | — | — |
+| — | `.docker/osm/lille-stub.osm.pbf` | Shared ~18 KB PBF stub (Lille roads) bind-mounted into both Overpass and Valhalla; real regions provisioned via `app:overpass:provision` (ADR-020) | — | — |
 | `valhalla` | `ghcr.io/gis-ops/docker-valhalla/valhalla:latest` | Routing engine: builds tiles, serves route API | 8002 | `osm-download` |
 | `overpass` | `wiktorn/overpass-api:latest` | Overpass API: imports PBF, serves Overpass QL | 8003 | `osm-download` |
 
@@ -163,9 +163,9 @@ services:
     ports:
       - "8003:8003"
     volumes:
-      # Empty PBF stub (47 bytes) — Overpass starts instantly with an empty database.
-      # Real region data is provisioned via: bin/console app:overpass:provision (ADR-020)
-      - .docker/overpass/empty.osm.pbf:/data/osm/region.osm.pbf:ro
+      # Lille PBF stub — real road data for instant startup.
+      # Real region data provisioned via: bin/console app:overpass:provision (ADR-020)
+      - .docker/osm/lille-stub.osm.pbf:/data/osm/region.osm.pbf:ro
       - overpass-data:/db
     environment:
       - OVERPASS_META=yes

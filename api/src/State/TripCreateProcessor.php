@@ -43,7 +43,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $locale = $this->requestStack->getCurrentRequest()?->getPreferredLanguage(['en', 'fr']) ?? 'en';
         $this->tripStateManager->storeLocale($tripId, $locale);
 
-        $computations = ComputationName::cases();
+        $computations = ComputationName::pipeline();
         $this->computationTracker->initializeComputations($tripId, $computations);
 
         $this->messageBus->dispatch(new FetchAndParseRoute($tripId));

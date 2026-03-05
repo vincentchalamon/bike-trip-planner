@@ -201,3 +201,9 @@ Prévoir la possibilité de builder les images Docker en multi-arch, pour facili
 ## Détecter les points de charge
 
 Détecter la présence (ou l'absence) de points de charge VAE sur l'itinéraire ou à destination.
+
+## Générer un itinéraire
+
+Générer un itinéraire grâce à LLaMA 3B (plus adapté que 7B).
+Étudier la possibilité de charger le LLM à la demande.
+Étudier la mise en place d'un système de recommandations et d'optimisation de prompts adaptés.
