@@ -223,7 +223,7 @@ jobs:
           mcr.microsoft.com/playwright:v1.58.2-noble
           /bin/sh -c 'npm ci; npx playwright test'
       - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
+        if: failure()
         with:
           name: playwright-reports
           path: |
