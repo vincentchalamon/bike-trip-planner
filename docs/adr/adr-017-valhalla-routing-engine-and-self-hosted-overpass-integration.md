@@ -110,7 +110,7 @@ Three new services added to `compose.yaml`:
 
 | Service | Image | Role | Port | Depends on |
 |---|---|---|---|---|
-| `osm-download` | `alpine/curl` | Init container: downloads PBF from Geofabrik | — | — |
+| — | `.docker/overpass/empty.osm.pbf` | Versioned 47-byte empty PBF stub bind-mounted into Overpass; real regions provisioned via `app:overpass:provision` (ADR-020) | — | — |
 | `valhalla` | `ghcr.io/gis-ops/docker-valhalla/valhalla:latest` | Routing engine: builds tiles, serves route API | 8002 | `osm-download` |
 | `overpass` | `wiktorn/overpass-api:latest` | Overpass API: imports PBF, serves Overpass QL | 8003 | `osm-download` |
 
@@ -118,7 +118,7 @@ Three new services added to `compose.yaml`:
 
 | Volume | Contents | Size | Mounted by |
 |---|---|---|---|
-| `osm-pbf-data` | Nord-Pas-de-Calais PBF (~223 MB) | ~250 MB | `osm-download` (rw), `valhalla` (ro), `overpass` (ro) |
+| `osm-pbf-data` | PBF data (empty stub bind-mounted initially, provisioned regions after `app:overpass:provision`) | ~250 MB+ | `valhalla` (ro), `overpass` (ro) |
 | `valhalla-tiles` | Valhalla routing tiles + elevation data | ~2 GB | `valhalla` (rw) |
 | `overpass-data` | Overpass database | ~3 GB | `overpass` (rw) |
 
@@ -129,7 +129,7 @@ Three new services added to `compose.yaml`:
 | Disk | ~250 MB (PBF) | ~2 GB (tiles) | ~3 GB (DB) | ~5.25 GB |
 | RAM (import) | Negligible | ~2 GB (peak) | ~3 GB (peak) | ~5 GB peak |
 | RAM (runtime) | — | ~1-2 GB | ~2-3 GB | ~3-5 GB |
-| Import time | ~30s (download) | ~5-10 min (tiles) | ~20-25 min (DB) | ~35 min (first start) |
+| Import time | — (bind-mounted) | ~5-10 min (tiles) | ~20-25 min (DB, after provisioning) | ~35 min (after provisioning) |
 
 #### PBF Source
 
@@ -141,19 +141,6 @@ https://download.geofabrik.de/europe/france/nord-pas-de-calais-latest.osm.pbf
 
 ```yaml
 services:
-  osm-download:
-    image: alpine/curl
-    volumes:
-      - osm-pbf-data:/data
-    command: >
-      sh -c '
-        if [ ! -f /data/region.osm.pbf ]; then
-          curl -L -o /data/region.osm.pbf
-            https://download.geofabrik.de/europe/france/nord-pas-de-calais-latest.osm.pbf;
-        fi
-      '
-    restart: "no"
-
   valhalla:
     image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
     ports:
@@ -168,7 +155,7 @@ services:
       - build_admins=True
       - build_time_zones=True
     depends_on:
-      osm-download:
+      osm-init:
         condition: service_completed_successfully
 
   overpass:
@@ -176,19 +163,17 @@ services:
     ports:
       - "8003:8003"
     volumes:
-      - osm-pbf-data:/data/osm:ro
+      # Empty PBF stub (47 bytes) — Overpass starts instantly with an empty database.
+      # Real region data is provisioned via: bin/console app:overpass:provision (ADR-020)
+      - .docker/overpass/empty.osm.pbf:/data/osm/region.osm.pbf:ro
       - overpass-data:/db
     environment:
       - OVERPASS_META=yes
       - OVERPASS_MODE=init
       - OVERPASS_PLANET_URL=file:///data/osm/region.osm.pbf
       - OVERPASS_RULES_LOAD=10
-    depends_on:
-      osm-download:
-        condition: service_completed_successfully
 
 volumes:
-  osm-pbf-data:
   valhalla-tiles:
   overpass-data:
 ```

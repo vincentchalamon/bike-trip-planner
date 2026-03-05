@@ -59,6 +59,7 @@ services:
     deploy:
       replicas: ${WORKER_REPLICAS:-5}
     depends_on:
+      - overpass
       - php
       - redis
     environment:
@@ -104,6 +105,28 @@ services:
       timeout: 3s
       retries: 5
 
+  overpass:
+    image: wiktorn/overpass-api:latest
+    restart: unless-stopped
+    volumes:
+      # Empty OSM bzip2 — Overpass starts instantly with an empty database.
+      # Real region data is provisioned via: bin/console app:overpass:provision (ADR-020)
+      - .docker/overpass/empty.osm.bz2:/data/osm/region.osm.bz2:ro
+      - .docker/overpass/fix-permissions.sh:/docker-entrypoint-initdb.d/fix-permissions.sh:ro
+      - overpass-data:/db
+    environment:
+      OVERPASS_META: "yes"
+      OVERPASS_MODE: init
+      OVERPASS_PLANET_URL: file:///data/osm/region.osm.bz2
+      OVERPASS_USE_AREAS: "false"
+      OVERPASS_RULES_LOAD: 10
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost/api/status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+
   redis:
     image: redis:8-alpine
     restart: unless-stopped
@@ -115,5 +138,6 @@ services:
 volumes:
   caddy_data: ~
   caddy_config: ~
+  overpass-data: ~
   pwa_node_modules: ~
   pwa_next: ~
