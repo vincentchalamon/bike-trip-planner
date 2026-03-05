@@ -1,6 +1,6 @@
 # ADR-016: Performance Optimization Strategy for Async Computation Pipeline
 
-**Status:** Proposed
+**Status:** Accepted
 
 **Date:** 2026-03-03
 

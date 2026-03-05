@@ -1,6 +1,6 @@
 # ADR-017: Valhalla Routing Engine and Self-Hosted Overpass Integration
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-03-03
 - **Supersedes:** ADR-016 Option F (Self-hosted Overpass — deferred)
 
