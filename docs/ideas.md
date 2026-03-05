@@ -197,3 +197,7 @@ Cf. [ADR 18](adr/adr-018-garmin-export-and-device-sync-strategy.md).
 ## Docker multi-arch
 
 Prévoir la possibilité de builder les images Docker en multi-arch, pour faciliter le déploiement sur la plupart des infrastructures.
+
+## Détecter les points de charge
+
+Détecter la présence (ou l'absence) de points de charge VAE sur l'itinéraire ou à destination.
