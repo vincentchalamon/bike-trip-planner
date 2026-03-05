@@ -2,7 +2,7 @@
 
 
 # Versions
-FROM docker.io/node:25 AS node_upstream
+FROM docker.io/node:25@sha256:508d817af6ec83e38d24a3d7da7da34b7119085c1d213abf0b7a3fab5dac5bf1 AS node_upstream
 
 
 # Base stage for dev and build
@@ -13,26 +13,29 @@ WORKDIR /srv/app
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Delete the following line in case you want to enable telemetry during dev and build.
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 
 # Development image
-FROM base as dev
+FROM base AS dev
 
 EXPOSE 3000
-ENV PORT 3000
-ENV HOSTNAME localhost
+ENV PORT=3000
+ENV HOSTNAME=localhost
 
 CMD ["sh", "-c", "npm install; npm run dev"]
 
 
-FROM base AS builder
+FROM base AS deps
 
-COPY --link pwa/package-lock.json ./
+COPY --link pwa/package.json pwa/package-lock.json ./
+RUN npm ci
+
+
+FROM deps AS builder
+
 COPY --link pwa/. .
-
-RUN	npm ci && \
-	npm run build
+RUN npm run build
 
 
 # Production image, copy all the files and run next
@@ -40,9 +43,9 @@ FROM node_upstream AS prod
 
 WORKDIR /srv/app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 # Delete the following line in case you want to enable telemetry during runtime.
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs; \
 	adduser --system --uid 1001 nextjs
@@ -62,7 +65,7 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"]

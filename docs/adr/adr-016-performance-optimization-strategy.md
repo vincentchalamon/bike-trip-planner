@@ -1,6 +1,6 @@
 # ADR-016: Performance Optimization Strategy for Async Computation Pipeline
 
-**Status:** Proposed
+**Status:** Accepted
 
 **Date:** 2026-03-03
 
@@ -268,7 +268,7 @@ overpass:
 
 ## Decision Outcome
 
-**Chosen: Options A + B + C + D + E (all software optimizations). Option F deferred.**
+**Chosen: Options A + B + C + D + E + F (all options). Option F foundation implemented.**
 
 ### Implementation Order
 
@@ -279,17 +279,17 @@ overpass:
 | 3 | **B** — Unified Overpass + pre-fetch | Medium | -2s to -5s |
 | 4 | **D** — Route fetch caching | Low | -150ms to -3s (repeat) |
 | 5 | **C** — On-demand GPX | Medium | Worker efficiency |
-| 6 | **F** — Local Overpass (deferred) | Medium | -1s to -4s |
+| 6 | **F** — Local Overpass (foundation implemented) | Medium | -1s to -4s |
 
-### Why Option F Is Deferred
+### Option F: Foundation Implemented
 
-Option F (self-hosted Overpass) provides significant latency reduction but:
+Option F (self-hosted Overpass) foundation is now implemented:
 
-* Limits geographic scope to the imported region.
-* Adds infrastructure to maintain (data updates, disk monitoring).
-* Options A+B+E already reduce the critical path from ~7s to ~2.5s without geographic constraints.
+* **Docker infrastructure:** `osm-download` + `overpass` services with shared PBF volume (Nord-Pas-de-Calais).
+* **OsmScanner fallback:** Local-first query strategy with automatic fallback to public `overpass-api.de` when local is unavailable or returns empty results.
+* **Split HTTP clients:** `overpass.local.client` (local, 5s timeout) + `overpass.public.client` (public, 15s timeout).
 
-Option F should be reconsidered if the application specializes to a fixed region, or if Overpass API rate-limiting becomes a production issue.
+Routes within the imported region benefit from ~50-200ms local Overpass latency. Routes outside the region transparently fall back to the public API. See ADR-020 for the dynamic region provisioning system.
 
 ### Combined Impact
 
@@ -341,7 +341,7 @@ Dominant leaf: ScanAccommodations scraping (~1-3s after cache hit)
 ### Neutral
 
 * The existing `OsmScanner` cache (24h TTL, keyed by query hash) is the linchpin of Option B. Its correctness has been validated in production since ADR-005.
-* Option F remains a viable future optimization if geographic scope is constrained.
+* Option F foundation is implemented. See ADR-020 for dynamic region provisioning.
 
 ---
 

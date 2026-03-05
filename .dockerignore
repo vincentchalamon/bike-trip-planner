@@ -33,3 +33,10 @@ api/.env.*.local
 api/.env.local
 api/.env.local.php
 api/.env.test
+Makefile
+pwa/.next/
+pwa/node_modules/
+pwa/playwright-report/
+pwa/playwright.config.ts
+pwa/test-results/
+pwa/tests/

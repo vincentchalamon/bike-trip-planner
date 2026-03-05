@@ -3,6 +3,14 @@
     "openapi-spec": {
       "command": "npx",
       "args": ["-y", "apidog-mcp-server@latest", "--oas=https://localhost/docs.json"]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    },
+    "firefox-devtools": {
+      "command": "npx",
+      "args": ["-y", "@padenot/firefox-devtools-mcp"]
     }
   }
 }

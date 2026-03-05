@@ -1,6 +1,13 @@
 version: 2
 
 updates:
+  # Maintain Docker base image digests
+  - package-ecosystem: docker
+    directory: /.docker
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: github-actions
     directory: /
