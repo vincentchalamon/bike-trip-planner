@@ -45,7 +45,7 @@ final class TripUpdateTest extends ApiTestCase
 
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
-        $tracker->initializeComputations($tripId, ComputationName::cases());
+        $tracker->initializeComputations($tripId, ComputationName::pipeline());
 
         /** @var IdempotencyCheckerInterface $idempotencyChecker */
         $idempotencyChecker = $container->get(IdempotencyCheckerInterface::class);

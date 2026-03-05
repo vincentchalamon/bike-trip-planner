@@ -252,7 +252,7 @@ overpass:
 
 * `compose.yaml` — add `overpass` service
 * `api/config/packages/framework.php` — change `overpass.client` base_uri to `http://overpass:80`
-* New: `.docker/overpass/` — configuration and data update scripts
+* New: `.docker/osm/` — shared OSM data stub and scripts for Overpass + Valhalla
 
 ---
 

@@ -54,7 +54,7 @@ This ADR designs a **dynamic region provisioning system** that allows adding OSM
                │  (wiktorn/overpass-api)   │
                │                           │
                │  Starts with empty PBF    │
-               │  stub (.docker/overpass/) │
+               │  stub (.docker/osm/)      │
                │  Reimports after          │
                │  provisioning             │
                └──────────────────────────┘
@@ -75,17 +75,17 @@ This ADR designs a **dynamic region provisioning system** that allows adding OSM
 
 ### 20.0 — Empty PBF Stub for Instant Startup
 
-A **47-byte minimal valid PBF** file is committed at `.docker/overpass/empty.osm.pbf` (just an OSMHeader with `OsmSchema-V0.6` and `DenseNodes` required features, no data blocks). It is bind-mounted directly into the Overpass container — no init container needed.
+An **~18 KB PBF stub** with real Lille road data (~300m around Grand Place, 1074 nodes / 217 ways) is committed at `.docker/osm/lille-stub.osm.pbf`. It is shared by both Overpass and Valhalla via bind-mounts. Overpass converts PBF→BZ2 at startup via `OVERPASS_PLANET_PREPROCESS`; Valhalla builds 2 valid tiles from it.
 
 ```yaml
 overpass:
   volumes:
-    - .docker/overpass/empty.osm.pbf:/data/osm/region.osm.pbf:ro
+    - .docker/osm/lille-stub.osm.pbf:/data/osm/region.osm.pbf:ro
 ```
 
 **Startup flow:**
 
-1. Overpass reads the bind-mounted 47-byte stub → imports an empty database in ~10s
+1. Overpass reads the bind-mounted Lille stub → converts PBF→BZ2 via osmium → imports in ~15s
 2. `LocalOverpassStatusChecker` reports Overpass as ready
 3. `OsmScanner` queries local Overpass → empty results → falls back to public `overpass-api.de`
 4. Developer runs `app:overpass:provision` to download real regions when needed

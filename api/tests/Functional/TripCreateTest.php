@@ -132,7 +132,7 @@ final class TripCreateTest extends ApiTestCase
 
         // todo check response status code, json schema and response content
         $data = $response->toArray(false);
-        foreach (ComputationName::cases() as $computation) {
+        foreach (ComputationName::pipeline() as $computation) {
             $this->assertArrayHasKey($computation->value, $data['computationStatus']);
             $this->assertSame('pending', $data['computationStatus'][$computation->value]);
         }
