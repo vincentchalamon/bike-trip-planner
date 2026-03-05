@@ -2,7 +2,7 @@
 
 
 # Versions
-FROM docker.io/node:25 AS node_upstream
+FROM docker.io/node:25@sha256:508d817af6ec83e38d24a3d7da7da34b7119085c1d213abf0b7a3fab5dac5bf1 AS node_upstream
 
 
 # Base stage for dev and build
@@ -26,13 +26,16 @@ ENV HOSTNAME=localhost
 CMD ["sh", "-c", "npm install; npm run dev"]
 
 
-FROM base AS builder
+FROM base AS deps
 
-COPY --link pwa/package-lock.json ./
+COPY --link pwa/package.json pwa/package-lock.json ./
+RUN npm ci
+
+
+FROM deps AS builder
+
 COPY --link pwa/. .
-
-RUN	npm ci && \
-	npm run build
+RUN npm run build
 
 
 # Production image, copy all the files and run next

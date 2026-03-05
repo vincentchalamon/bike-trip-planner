@@ -216,7 +216,6 @@ jobs:
       - name: Build Docker images
         uses: docker/bake-action@v6
         with:
-          pull: true
           load: true
           files: |
             compose.prod.yaml
