@@ -81,7 +81,7 @@ jobs:
       - name: Run Hadolint
         uses: hadolint/hadolint-action@v3.3.0
         with:
-          recursive: true
+          dockerfile: .docker/**/Dockerfile
 
   php-cs-fixer:
     name: PHP CS Fixer
