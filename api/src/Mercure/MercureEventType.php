@@ -8,7 +8,6 @@ enum MercureEventType: string
 {
     case ROUTE_PARSED = 'route_parsed';
     case STAGES_COMPUTED = 'stages_computed';
-    case STAGE_GPX_READY = 'stage_gpx_ready';
     case POIS_SCANNED = 'pois_scanned';
     case ACCOMMODATIONS_FOUND = 'accommodations_found';
     case TERRAIN_ALERTS = 'terrain_alerts';

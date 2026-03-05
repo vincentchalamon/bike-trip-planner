@@ -54,9 +54,13 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         }
 
         $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages): void {
-            // Single Overpass query for all stage endpoints (instead of 1 per stage)
-            $endPoints = array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stages);
-            $query = $this->queryBuilder->buildAccommodationQuery($endPoints);
+            // Single Overpass query using decimated route points (shared cache key with ScanAllOsmDataHandler)
+            $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
+            $points = null !== $decimatedData
+                ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
+                : array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stages);
+
+            $query = $this->queryBuilder->buildAccommodationQuery($points);
             $result = $this->scanner->query($query);
 
             /** @var list<array{id?: int, type?: string, tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */

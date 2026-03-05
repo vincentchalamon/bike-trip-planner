@@ -7,7 +7,6 @@ namespace App\MessageHandler;
 use App\Analyzer\AnalyzerRegistryInterface;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\GpxWriter\GpxWriterInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBikeShops;
@@ -17,7 +16,6 @@ use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
@@ -26,10 +24,8 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripStateManager,
-        private GpxWriterInterface $gpxWriter,
         private AnalyzerRegistryInterface $analyzerRegistry,
         private MessageBusInterface $messageBus,
-        private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher);
     }
@@ -50,20 +46,6 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         }
 
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-
-        foreach ($affectedIndices as $index) {
-            if (!isset($stages[$index])) {
-                continue;
-            }
-
-            $stage = $stages[$index];
-
-            // Regenerate GPX
-            $stage->gpxContent = $this->gpxWriter->generate(
-                $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
-                $this->translator->trans('stage.label', ['%day%' => $stage->dayNumber], 'alerts', $locale),
-            );
-        }
 
         // Run continuity analysis if requested
         if ($message->checkContinuity) {

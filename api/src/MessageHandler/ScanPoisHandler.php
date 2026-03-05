@@ -53,13 +53,16 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale): void {
-            // Single batched Overpass query for all stages
-            $stageGeometries = array_map(
-                static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
-                $stages,
-            );
+            // Single Overpass query using decimated route points (shared cache key with ScanAllOsmDataHandler)
+            $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
+            $points = null !== $decimatedData
+                ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
+                : array_merge(...array_map(
+                    static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
+                    $stages,
+                ));
 
-            $query = $this->queryBuilder->buildBatchPoiQuery($stageGeometries);
+            $query = $this->queryBuilder->buildPoiQuery($points);
             $result = $this->scanner->query($query);
 
             /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */

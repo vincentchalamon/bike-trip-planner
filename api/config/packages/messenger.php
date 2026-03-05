@@ -8,8 +8,8 @@ use App\Message\CheckBikeShops;
 use App\Message\CheckCalendar;
 use App\Message\FetchAndParseRoute;
 use App\Message\FetchWeather;
-use App\Message\GenerateStageGpx;
 use App\Message\GenerateStages;
+use App\Message\ScanAllOsmData;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\Message\ScanPois;
@@ -33,7 +33,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             'routing' => [
                 FetchAndParseRoute::class => 'async',
                 GenerateStages::class => 'async',
-                GenerateStageGpx::class => 'async',
+                ScanAllOsmData::class => 'async',
                 ScanPois::class => 'async',
                 ScanAccommodations::class => 'async',
                 AnalyzeTerrain::class => 'async',

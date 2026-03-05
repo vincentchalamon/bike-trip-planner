@@ -106,10 +106,6 @@ export type MercureEvent =
         }[];
       };
     }
-  | {
-      type: "stage_gpx_ready";
-      data: { stageIndex: number; gpxContent: string };
-    }
   | { type: "validation_error"; data: { code: string; message: string } }
   | {
       type: "computation_error";

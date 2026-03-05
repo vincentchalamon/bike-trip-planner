@@ -24,8 +24,6 @@ final class StageResponse
 {
     public ?WeatherForecast $weather = null;
 
-    public ?string $gpxContent = null;
-
     /** @var Alert[] */
     public array $alerts = [];
 

@@ -58,7 +58,6 @@ export const StageDataSchema = z.object({
   alerts: z.array(AlertSchema),
   pois: z.array(PointOfInterestSchema),
   accommodations: z.array(AccommodationSchema),
-  gpxContent: z.string().nullable().optional(),
 });
 
 export const TripStateSchema = z.object({

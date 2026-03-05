@@ -59,7 +59,6 @@ function dispatchEvent(event: MercureEvent): void {
             alerts: [],
             pois: [],
             accommodations: [],
-            gpxContent: null,
           };
         });
         store.setStages(merged);
@@ -93,7 +92,6 @@ function dispatchEvent(event: MercureEvent): void {
             alerts: [],
             pois: [],
             accommodations: endMatch ? prev.accommodations : [],
-            gpxContent: null,
           };
         });
         store.setStages(stages);
@@ -196,10 +194,6 @@ function dispatchEvent(event: MercureEvent): void {
       }
       break;
     }
-
-    case "stage_gpx_ready":
-      store.updateStageGpx(event.data.stageIndex, event.data.gpxContent);
-      break;
 
     case "trip_complete":
       store.setComputationStatus(event.data.computationStatus);

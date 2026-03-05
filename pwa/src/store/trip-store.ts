@@ -68,7 +68,6 @@ interface TripState {
     elevationPenalty: number,
   ) => void;
   setComputationStatus: (status: Record<string, string>) => void;
-  updateStageGpx: (stageIndex: number, gpxContent: string) => void;
   deleteStage: (stageIndex: number) => void;
   clearTrip: () => void;
 }
@@ -192,13 +191,6 @@ export const useTripStore = create<TripState>()(
     setComputationStatus: (status) =>
       set((state) => {
         state.computationStatus = status;
-      }),
-
-    updateStageGpx: (stageIndex, gpxContent) =>
-      set((state) => {
-        if (state.stages[stageIndex]) {
-          state.stages[stageIndex].gpxContent = gpxContent;
-        }
       }),
 
     deleteStage: (stageIndex) =>
