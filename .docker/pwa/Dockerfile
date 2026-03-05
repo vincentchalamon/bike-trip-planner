@@ -13,15 +13,15 @@ WORKDIR /srv/app
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Delete the following line in case you want to enable telemetry during dev and build.
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 
 # Development image
 FROM base as dev
 
 EXPOSE 3000
-ENV PORT 3000
-ENV HOSTNAME localhost
+ENV PORT=3000
+ENV HOSTNAME=localhost
 
 CMD ["sh", "-c", "npm install; npm run dev"]
 
@@ -40,9 +40,9 @@ FROM node_upstream AS prod
 
 WORKDIR /srv/app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 # Delete the following line in case you want to enable telemetry during runtime.
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs; \
 	adduser --system --uid 1001 nextjs
@@ -62,7 +62,7 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"]
