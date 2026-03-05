@@ -86,30 +86,33 @@ jobs:
   php-cs-fixer:
     name: PHP CS Fixer
     runs-on: ubuntu-latest
-    container:
-      image: docker.io/esoledad/php:8.5
-      options: --user root
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Fix repository ownership
-        run: git config --global --add safe.directory $(pwd)
-      - name: Get Composer cache directory
-        working-directory: api
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-      - name: Cache dependencies
+      - name: Get PHP CS Fixer cache
         uses: actions/cache@v5
         with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-      - name: Install dependencies
-        working-directory: api
-        run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
+          path: api/.php-cs-fixer.cache
+          key: ${{ runner.OS }}-phpcsfixer-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.OS }}-phpcsfixer-
+      - name: Get API changed files
+        id: api-changed-files
+        uses: tj-actions/changed-files@v47
+        with:
+          files: api/**/*.php
+      - name: Get Extra Arguments for PHP-CS-Fixer
+        id: phpcs-intersection
+        run: |
+          CHANGED_FILES=$(echo "${{ steps.api-changed-files.outputs.all_changed_and_modified_files }}" | tr ' ' '\n')
+          if ! echo "${CHANGED_FILES}" | grep -qE "^api\/(\\.php-cs-fixer(\\.dist)?\\.php|composer\\.lock)$"; then EXTRA_ARGS=$(printf -- '--path-mode=intersection\n--\n%s' "${CHANGED_FILES}"); else EXTRA_ARGS=''; fi
+          echo "PHPCS_EXTRA_ARGS<<EOF" >> $GITHUB_ENV
+          echo "$EXTRA_ARGS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
       - name: Run PHP CS Fixer
-        working-directory: api
-        run: vendor/bin/php-cs-fixer fix --dry-run --diff --ansi
+        uses: docker://oskarstark/php-cs-fixer-ga
+        with:
+          args: --config=api/.php-cs-fixer.dist.php -v --dry-run --stop-on-violation --using-cache=no ${{ env.PHPCS_EXTRA_ARGS }}"
 
   markdown-lint:
     name: Markdown Lint
