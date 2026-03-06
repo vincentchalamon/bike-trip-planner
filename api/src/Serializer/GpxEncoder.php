@@ -6,15 +6,58 @@ namespace App\Serializer;
 
 use Symfony\Component\Serializer\Encoder\EncoderInterface;
 
-final class GpxEncoder implements EncoderInterface
+final readonly class GpxEncoder implements EncoderInterface
 {
+    /**
+     * @param array{trackName: string, points: list<array{lat: float, lon: float, ele: float}>, waypoints: list<array{lat: float, lon: float, name: string, symbol: string, type: string}>} $data
+     */
     public function encode(mixed $data, string $format, array $context = []): string
     {
-        if (!\is_string($data)) {
-            throw new \InvalidArgumentException('GpxEncoder expects a string (GPX XML content).');
+        if (!\is_array($data)) {
+            throw new \InvalidArgumentException('GpxEncoder expects an array.');
         }
 
-        return $data;
+        $xml = new \XMLWriter();
+        $xml->openMemory();
+        $xml->setIndent(true);
+        $xml->setIndentString('    ');
+
+        $xml->startDocument('1.0', 'UTF-8');
+        $xml->startElement('gpx');
+        $xml->writeAttribute('version', '1.1');
+        $xml->writeAttribute('creator', 'BikeTripPlanner');
+        $xml->writeAttribute('xmlns', 'http://www.topografix.com/GPX/1/1');
+
+        /** @var array{lat: float, lon: float, name: string, symbol: string, type: string} $waypoint */
+        foreach ($data['waypoints'] as $waypoint) {
+            $xml->startElement('wpt');
+            $xml->writeAttribute('lat', (string) $waypoint['lat']);
+            $xml->writeAttribute('lon', (string) $waypoint['lon']);
+            $xml->writeElement('name', $waypoint['name']);
+            $xml->writeElement('sym', $waypoint['symbol']);
+            $xml->writeElement('type', $waypoint['type']);
+            $xml->endElement(); // wpt
+        }
+
+        $xml->startElement('trk');
+        $xml->writeElement('name', $data['trackName']);
+
+        $xml->startElement('trkseg');
+
+        /** @var array{lat: float, lon: float, ele: float} $point */
+        foreach ($data['points'] as $point) {
+            $xml->startElement('trkpt');
+            $xml->writeAttribute('lat', (string) $point['lat']);
+            $xml->writeAttribute('lon', (string) $point['lon']);
+            $xml->writeElement('ele', (string) $point['ele']);
+            $xml->endElement(); // trkpt
+        }
+
+        $xml->endElement(); // trkseg
+        $xml->endElement(); // trk
+        $xml->endElement(); // gpx
+
+        return $xml->outputMemory();
     }
 
     public function supportsEncoding(string $format): bool

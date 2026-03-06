@@ -18,7 +18,6 @@ use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\WeatherForecast;
 use App\State\StageCreateProcessor;
 use App\State\StageDeleteProcessor;
-use App\State\StageGpxProvider;
 use App\State\StageMoveProcessor;
 use App\State\StageProvider;
 use App\State\StageUpdateProcessor;
@@ -29,14 +28,17 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
     shortName: 'Stage',
     operations: [
         new Get(
-            uriTemplate: '/trips/{tripId}/stages/{index}.gpx',
-            outputFormats: ['gpx' => ['application/gpx+xml']],
+            uriTemplate: '/trips/{tripId}/stages/{index}{._format}',
+            outputFormats: [
+                'gpx' => ['application/gpx+xml'],
+                'fit' => ['application/vnd.ant.fit'],
+            ],
             uriVariables: [
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            openapi: new Operation(summary: 'Download a stage as GPX file.'),
-            provider: StageGpxProvider::class,
+            openapi: new Operation(summary: 'Download a stage as GPX or FIT file.'),
+            provider: StageProvider::class,
         ),
         new Post(
             uriTemplate: '/trips/{tripId}/stages{._format}',

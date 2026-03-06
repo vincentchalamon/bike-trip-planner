@@ -59,10 +59,16 @@ services:
     deploy:
       replicas: ${WORKER_REPLICAS:-5}
     depends_on:
-      - overpass
-      - php
-      - redis
-      - valhalla
+      overpass:
+        condition: service_healthy
+        required: false
+      php:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      valhalla:
+        condition: service_healthy
+        required: false
     environment:
       APP_ENV: prod
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
@@ -109,16 +115,15 @@ services:
   overpass:
     image: wiktorn/overpass-api:latest
     restart: unless-stopped
+    profiles: ["routing"]
     volumes:
-      # Lille PBF stub — real road data for instant startup.
-      # Real region data provisioned via: bin/console app:overpass:provision (ADR-020)
-      - .docker/osm/lille-stub.osm.pbf:/data/osm/region.osm.pbf:ro
+      - .docker/osm/data/default.osm.pbf:/data/osm/default.osm.pbf:ro
       - .docker/osm/fix-permissions.sh:/docker-entrypoint-initdb.d/fix-permissions.sh:ro
       - overpass-data:/db
     environment:
       OVERPASS_META: "yes"
       OVERPASS_MODE: init
-      OVERPASS_PLANET_URL: file:///data/osm/region.osm.pbf
+      OVERPASS_PLANET_URL: file:///data/osm/default.osm.pbf
       OVERPASS_PLANET_PREPROCESS: 'mv /db/planet.osm.bz2 /db/planet.osm.pbf && osmium cat -o /db/planet.osm.bz2 /db/planet.osm.pbf && rm /db/planet.osm.pbf'
       OVERPASS_USE_AREAS: "false"
       OVERPASS_RULES_LOAD: 10
@@ -132,8 +137,9 @@ services:
   valhalla:
     image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
     restart: unless-stopped
+    profiles: ["routing"]
     volumes:
-      - .docker/osm/lille-stub.osm.pbf:/custom_files/lille-stub.osm.pbf
+      - .docker/osm/data/default.osm.pbf:/custom_files/default.osm.pbf
       - valhalla-tiles:/custom_files
     environment:
       serve_tiles: "True"
@@ -154,6 +160,16 @@ services:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       timeout: 3s
       retries: 5
+
+  provisioner:
+    build:
+      context: ./
+      dockerfile: .docker/provisioner/Dockerfile
+      target: prod
+    volumes:
+      - .docker/osm/data:/data
+    restart: "no"
+    profiles: ["provisioning"]
 
 volumes:
   caddy_data: ~
