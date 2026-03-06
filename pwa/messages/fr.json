@@ -33,6 +33,7 @@
     "difficultyHard": "Difficile",
     "minStagesReached": "Minimum 2 étapes requises",
     "downloadGpx": "Télécharger le GPX étape {dayNumber}",
+    "downloadFit": "Télécharger le FIT étape {dayNumber}",
     "loadingAlerts": "Analyse de l'étape...",
     "editDistance": "Modifier la distance",
     "distanceLabel": "Distance (km)",

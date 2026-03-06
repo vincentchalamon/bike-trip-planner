@@ -1,0 +1,14 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__.'/../vendor/autoload.php';
+
+use Provisioner\ProvisionCommand;
+use Symfony\Component\Console\Application;
+
+$app = new Application('OSM Provisioner');
+$app->addCommand(new ProvisionCommand());
+$app->setDefaultCommand('provision', true);
+$app->run();

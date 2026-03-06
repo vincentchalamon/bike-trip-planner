@@ -6,10 +6,8 @@ use Rector\Config\RectorConfig;
 use Rector\PHPUnit\Set\PHPUnitSetList;
 use Rector\Set\ValueObject\SetList;
 
-$rector = RectorConfig::configure()
+return RectorConfig::configure()
     ->withPaths([
-        __DIR__.'/config',
-        __DIR__.'/public',
         __DIR__.'/src',
         __DIR__.'/tests',
     ])
@@ -29,11 +27,3 @@ $rector = RectorConfig::configure()
     ->withAttributesSets()
     ->withComposerBased(phpunit: true, symfony: true)
 ;
-
-if (is_file(__DIR__.'/var/cache/dev/App_KernelDevDebugContainer.php')) {
-    $rector->withSymfonyContainerPhp(__DIR__.'/var/cache/dev/App_KernelDevDebugContainer.php');
-} elseif (is_file(__DIR__.'/var/cache/test/App_KernelDevDebugContainer.php')) {
-    $rector->withSymfonyContainerPhp(__DIR__.'/var/cache/test/App_KernelDevDebugContainer.php');
-}
-
-return $rector;

@@ -80,7 +80,7 @@ export function StageCard({
   const tripId = useTripStore((s) => s.trip?.id);
   const [editingDistance, setEditingDistance] = useState(false);
   const [editValue, setEditValue] = useState("");
-  const [downloading, setDownloading] = useState(false);
+  const [downloading, setDownloading] = useState<"gpx" | "fit" | false>(false);
 
   function startEditDistance() {
     setEditValue(
@@ -135,10 +135,10 @@ export function StageCard({
             variant="ghost"
             size="sm"
             className="h-6 gap-1 text-muted-icon px-1.5 cursor-pointer"
-            disabled={!tripId || downloading}
+            disabled={!tripId || !!downloading}
             onClick={async () => {
               if (!tripId) return;
-              setDownloading(true);
+              setDownloading("gpx");
               try {
                 const res = await fetch(
                   `${API_URL}/trips/${tripId}/stages/${stageIndex}.gpx`,
@@ -157,12 +157,45 @@ export function StageCard({
             aria-label={t("downloadGpx", { dayNumber: stage.dayNumber })}
             title={t("downloadGpx", { dayNumber: stage.dayNumber })}
           >
-            {downloading ? (
+            {downloading === "gpx" ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <Download className="h-3.5 w-3.5" />
             )}
             <span className="text-[10px] font-medium">GPX</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 gap-1 text-muted-icon px-1.5 cursor-pointer"
+            disabled={!tripId || !!downloading}
+            onClick={async () => {
+              if (!tripId) return;
+              setDownloading("fit");
+              try {
+                const res = await fetch(
+                  `${API_URL}/trips/${tripId}/stages/${stageIndex}.fit`,
+                );
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `stage-${stage.dayNumber}.fit`;
+                a.click();
+                URL.revokeObjectURL(url);
+              } finally {
+                setDownloading(false);
+              }
+            }}
+            aria-label={t("downloadFit", { dayNumber: stage.dayNumber })}
+            title={t("downloadFit", { dayNumber: stage.dayNumber })}
+          >
+            {downloading === "fit" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            <span className="text-[10px] font-medium">FIT</span>
           </Button>
           {onDistanceChange && (
             <Button

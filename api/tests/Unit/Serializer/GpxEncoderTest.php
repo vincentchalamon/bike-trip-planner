@@ -1,0 +1,106 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Unit\Serializer;
+
+use App\Serializer\GpxEncoder;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+
+final class GpxEncoderTest extends TestCase
+{
+    #[Test]
+    public function encodeProducesValidGpxXml(): void
+    {
+        $encoder = new GpxEncoder();
+        $xml = $encoder->encode($this->sampleData(), 'gpx');
+
+        $doc = new \DOMDocument();
+        self::assertTrue($doc->loadXML($xml));
+    }
+
+    #[Test]
+    public function encodeContainsWaypointsBeforeTrack(): void
+    {
+        $encoder = new GpxEncoder();
+        $xml = $encoder->encode($this->sampleData(), 'gpx');
+
+        $wptPos = strpos($xml, '<wpt');
+        $trkPos = strpos($xml, '<trk>');
+        self::assertNotFalse($wptPos);
+        self::assertNotFalse($trkPos);
+        self::assertLessThan($trkPos, $wptPos);
+    }
+
+    #[Test]
+    public function encodeContainsCorrectAttributes(): void
+    {
+        $encoder = new GpxEncoder();
+        $xml = $encoder->encode($this->sampleData(), 'gpx');
+
+        // Waypoint
+        self::assertStringContainsString('lat="50.629"', $xml);
+        self::assertStringContainsString('lon="3.057"', $xml);
+        self::assertStringContainsString('<name>Boulangerie</name>', $xml);
+        self::assertStringContainsString('<sym>Shopping Center</sym>', $xml);
+        self::assertStringContainsString('<type>bakery</type>', $xml);
+
+        // Track
+        self::assertStringContainsString('<name>Stage 1</name>', $xml);
+        self::assertStringContainsString('<ele>42</ele>', $xml);
+    }
+
+    #[Test]
+    public function encodeWithoutWaypointsProducesNoWptElements(): void
+    {
+        $encoder = new GpxEncoder();
+        $data = [
+            'trackName' => 'Stage 1',
+            'points' => [['lat' => 50.629, 'lon' => 3.057, 'ele' => 42.0]],
+            'waypoints' => [],
+        ];
+
+        $xml = $encoder->encode($data, 'gpx');
+
+        self::assertStringNotContainsString('<wpt', $xml);
+        self::assertStringContainsString('<trk>', $xml);
+    }
+
+    #[Test]
+    public function encodeWithNonArrayThrowsException(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $encoder = new GpxEncoder();
+        $encoder->encode('not an array', 'gpx'); // @phpstan-ignore argument.type
+    }
+
+    #[Test]
+    public function supportsGpxFormatOnly(): void
+    {
+        $encoder = new GpxEncoder();
+
+        self::assertTrue($encoder->supportsEncoding('gpx'));
+        self::assertFalse($encoder->supportsEncoding('json'));
+        self::assertFalse($encoder->supportsEncoding('fit'));
+    }
+
+    /**
+     * @return array{trackName: string, points: list<array{lat: float, lon: float, ele: float}>, waypoints: list<array{lat: float, lon: float, name: string, symbol: string, type: string}>}
+     */
+    private function sampleData(): array
+    {
+        return [
+            'trackName' => 'Stage 1',
+            'points' => [
+                ['lat' => 50.629, 'lon' => 3.057, 'ele' => 42.0],
+                ['lat' => 50.700, 'lon' => 3.100, 'ele' => 50.0],
+            ],
+            'waypoints' => [
+                ['lat' => 50.629, 'lon' => 3.057, 'name' => 'Boulangerie', 'symbol' => 'Shopping Center', 'type' => 'bakery'],
+                ['lat' => 50.638, 'lon' => 3.061, 'name' => 'Camping', 'symbol' => 'Campground', 'type' => 'camp_site'],
+            ],
+        ];
+    }
+}

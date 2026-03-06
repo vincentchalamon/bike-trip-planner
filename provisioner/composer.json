@@ -1,0 +1,50 @@
+{
+    "type": "project",
+    "license": "proprietary",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.5",
+        "symfony/console": "8.0.*",
+        "symfony/http-client": "8.0.*",
+        "symfony/process": "8.0.*"
+    },
+    "require-dev": {
+        "bamarni/composer-bin-plugin": "^1.9",
+        "ekino/phpstan-banned-code": "^3.0",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-symfony": "^2.0",
+        "phpunit/phpunit": "^13.0",
+        "rector/rector": "^2.3",
+        "roave/security-advisories": "dev-latest"
+    },
+    "config": {
+        "allow-plugins": {
+            "bamarni/composer-bin-plugin": true,
+            "phpstan/extension-installer": true
+        },
+        "bump-after-update": true,
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "Provisioner\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Provisioner\\Tests\\": "tests/"
+        }
+    },
+    "conflict": {
+        "symfony/symfony": "*"
+    },
+    "extra": {
+        "bamarni-bin": {
+            "bin-links": true,
+            "forward-command": true
+        }
+    }
+}

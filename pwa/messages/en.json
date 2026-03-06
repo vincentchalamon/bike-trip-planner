@@ -33,6 +33,7 @@
     "difficultyHard": "Hard",
     "minStagesReached": "Minimum 2 stages required",
     "downloadGpx": "Download GPX stage {dayNumber}",
+    "downloadFit": "Download FIT stage {dayNumber}",
     "loadingAlerts": "Analyzing stage...",
     "editDistance": "Edit distance",
     "distanceLabel": "Distance (km)",

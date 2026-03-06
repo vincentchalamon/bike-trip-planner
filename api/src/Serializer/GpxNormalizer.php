@@ -4,39 +4,28 @@ declare(strict_types=1);
 
 namespace App\Serializer;
 
-use App\ApiResource\Stage;
-use App\GpxWriter\GpxWriterInterface;
-use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
+use App\Serializer\Mapper\WaypointMapper;
 
-final readonly class GpxNormalizer implements NormalizerInterface
+final readonly class GpxNormalizer extends AbstractStageNormalizer
 {
-    public function __construct(
-        private GpxWriterInterface $gpxWriter,
-    ) {
+    protected function format(): string
+    {
+        return 'gpx';
     }
 
-    public function normalize(mixed $data, ?string $format = null, array $context = []): string
+    protected function nameKey(): string
     {
-        \assert($data instanceof Stage);
-
-        $label = $data->label ?? \sprintf('Stage %d', $data->dayNumber);
-
-        return $this->gpxWriter->generate(
-            $data->geometry ?: [$data->startPoint, $data->endPoint],
-            $label,
-        );
-    }
-
-    public function supportsNormalization(mixed $data, ?string $format = null, array $context = []): bool
-    {
-        return $data instanceof Stage && 'gpx' === $format;
+        return 'trackName';
     }
 
     /**
-     * @return array<class-string, bool>
+     * @return array{lat: float, lon: float, name: string, symbol: string, type: string}
      */
-    public function getSupportedTypes(?string $format): array
+    #[\Override]
+    protected function buildWaypointEntry(string $name, string $category, float $lat, float $lon): array
     {
-        return [Stage::class => 'gpx' === $format];
+        return parent::buildWaypointEntry($name, $category, $lat, $lon) + [
+            'symbol' => WaypointMapper::gpxSymbol($category),
+        ];
     }
 }

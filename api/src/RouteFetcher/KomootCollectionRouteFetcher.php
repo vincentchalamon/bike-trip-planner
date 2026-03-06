@@ -63,8 +63,9 @@ final readonly class KomootCollectionRouteFetcher implements RouteFetcherInterfa
             }
 
             // Collect results (HttpClient resolves responses concurrently on first access)
+            // Cache each tour individually so that subsequent per-tour requests hit cache (ADR-016 Option E)
             $tracks = [];
-            foreach ($responses as $response) {
+            foreach ($responses as $tourId => $response) {
                 if (200 !== $response->getStatusCode()) {
                     continue;
                 }
@@ -72,6 +73,18 @@ final readonly class KomootCollectionRouteFetcher implements RouteFetcherInterfa
                 try {
                     $tourData = $this->htmlExtractor->extractTourData($response->getContent());
                     $tracks[] = $tourData['coordinates'];
+
+                    // Warm per-tour cache (same key as KomootTourRouteFetcher)
+                    $tourCacheKey = 'route_fetch.komoot_tour.'.$tourId;
+                    $this->routeCache->get($tourCacheKey, static function (ItemInterface $tourItem) use ($tourData): RouteFetchResult {
+                        $tourItem->expiresAfter(86400);
+
+                        return new RouteFetchResult(
+                            sourceType: SourceType::KOMOOT_TOUR,
+                            tracks: [$tourData['coordinates']],
+                            title: $tourData['name'],
+                        );
+                    });
                 } catch (\RuntimeException) {
                     continue;
                 }
