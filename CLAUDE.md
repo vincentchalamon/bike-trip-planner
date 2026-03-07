@@ -45,6 +45,19 @@ cd pwa && npm run typegen
 
 Pre-commit hook runs `make qa` automatically; commit aborts on failure.
 
+## Git Conventions
+
+Commit messages **must** follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<optional scope>): <description>
+```
+
+- **Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+- **Scopes** (optional): subsystem or area, e.g. `feat(overpass):`, `fix(pacing):`, `chore(deps):`
+- **Description:** imperative mood, lowercase, no trailing period
+- Breaking changes: add `!` after type/scope, e.g. `feat!: remove legacy endpoint`
+
 ## Architecture
 
 ### Type Contract (Single Source of Truth)
