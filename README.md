@@ -2,6 +2,8 @@
 
 A local-first bikepacking trip planner. Paste a Komoot tour URL, get a structured day-by-day roadbook with pacing, elevation alerts, and accommodation suggestions — all without an account or cloud storage.
 
+<!-- Verified: Claude Code Review workflow -->
+
 ---
 
 ## What it does
