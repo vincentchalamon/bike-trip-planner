@@ -170,3 +170,4 @@ Include an **Auto-critique** section in the PR body listing what was verified.
 ## ADR Documentation
 
 Architecture Decision Records in `docs/adr/` document all major technical choices with context, alternatives considered, and rationale. Consult these before proposing architectural changes.
+
