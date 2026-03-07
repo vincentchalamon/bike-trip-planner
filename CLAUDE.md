@@ -111,6 +111,47 @@ Backend PHP DTOs define the schema → API Platform exports OpenAPI spec → `np
 - XMLReader hardened with `LIBXML_NONET` + `LIBXML_NOENT` (XXE prevention)
 - Upload limits: 15MB (Caddy + PHP), 128MB PHP memory limit
 
+## PR & Quality Standards
+
+Before every PR, follow this protocol:
+
+### 0. Code Quality Principles
+
+All code must follow these principles as much as possible:
+- **SOLID** — Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
+- **Law of Demeter** — Only talk to immediate collaborators; avoid deep chaining through objects
+- **Design patterns over quick & dirty** — Prefer well-known patterns (Strategy, Chain of Responsibility, etc.) to ad-hoc solutions
+- **Documented, tested, maintainable** — Unit tests, functional tests, E2E tests, and Diataxis-style documentation (tutorials, how-to, reference, explanation)
+
+If any of these principles cannot be followed in a specific case, **document the reason** in a code comment explaining why the deviation was necessary.
+
+### 1. Diff Analysis
+
+Run `git diff` and review all changes for:
+- Leftover `console.log`, `dump()`, `dd()`, or debug statements
+- Stale TODO/FIXME comments
+- Unintended technical debt
+
+### 2. Review Checklist
+
+- [ ] Code respects the project architecture (stateless backend, local-first frontend, DTO contract)
+- [ ] SOLID principles and Law of Demeter are followed (deviations documented)
+- [ ] Design patterns are used where appropriate (no unjustified quick & dirty)
+- [ ] Tests cover new/changed cases: unit (`make test-php`), E2E (`make test-e2e`)
+- [ ] Documentation (PHPDoc, JSDoc, Diataxis docs) is up to date for modified public APIs
+- [ ] Dependent tickets (if applicable) are accounted for
+
+### 3. PR Protocol
+
+1. Create the PR as **Draft**
+2. Wait for CI to pass: `gh pr checks --watch`
+3. Mark as **Ready for review**
+4. Assign @vincentchalamon as reviewer
+
+### 4. Auto-critique
+
+Include an **Auto-critique** section in the PR body listing what was verified.
+
 ## ADR Documentation
 
 Architecture Decision Records in `docs/adr/` document all major technical choices with context, alternatives considered, and rationale. Consult these before proposing architectural changes.
