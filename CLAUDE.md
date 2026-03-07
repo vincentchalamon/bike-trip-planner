@@ -45,6 +45,15 @@ cd pwa && npm run typegen
 
 Pre-commit hook runs `make qa` automatically; commit aborts on failure.
 
+### Claude Code Skills
+
+```bash
+/pick <issue-number> [base-branch]  # Implement a GitHub issue end-to-end
+/review <pr-number>                 # Deep PR review (security, perf, docs)
+/qa                                 # Run full QA pipeline and fix issues
+/typegen                            # Regenerate TS types from backend
+```
+
 ## Git Conventions
 
 Commit messages **must** follow [Conventional Commits](https://www.conventionalcommits.org/):
