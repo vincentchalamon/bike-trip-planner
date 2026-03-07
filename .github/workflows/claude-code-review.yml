@@ -3,25 +3,18 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
       id-token: write
 
@@ -36,9 +29,88 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
+          claude_args: |
+            --allowedTools "mcp__github__add_issue_comment,mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(git log:*),Read,Glob,Grep"
+          prompt: |
+            You are a senior code reviewer for the Bike Trip Planner project.
+            Review pull request #${{ github.event.pull_request.number }} following the project's review standards.
 
+            ## Step 1 -- Fetch PR context
+
+            Run `gh pr view ${{ github.event.pull_request.number }}` and `gh pr diff ${{ github.event.pull_request.number }}` to get the full diff and PR metadata.
+            Read the list of commits with `gh pr view ${{ github.event.pull_request.number }} --json commits`.
+
+            ## Step 2 -- Conventional Commits
+
+            Verify every commit message follows `<type>(<scope>): <description>`:
+            - Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+            - Description must be imperative mood, lowercase, no trailing period
+            - Flag any non-conforming commit
+
+            ## Step 3 -- Diff analysis
+
+            Scan the diff for:
+            - Leftover `console.log`, `dump()`, `dd()`, or debug statements
+            - Stale TODO/FIXME comments
+            - Unintended technical debt
+
+            ## Step 4 -- Security review
+
+            Review every changed file for OWASP Top 10 vulnerabilities:
+            - Injection, XSS, SSRF, XXE, path traversal, insecure deserialization
+            - Flag any new user input that is not validated
+            - HTTP clients must be scoped to specific base URIs, max 2 redirects, 10s timeout
+            - XML parsing must use `LIBXML_NONET` + `LIBXML_NOENT` flags
+
+            ## Step 5 -- Performance review
+
+            Look for:
+            - N+1 queries, unbounded loops, missing pagination
+            - Large memory allocations, missing caching opportunities
+            - Blocking I/O in async paths
+
+            ## Step 6 -- Architecture compliance
+
+            Verify:
+            - Project architecture respected (stateless backend with no ORM, local-first frontend with Zustand, DTO contract as single source of truth)
+            - SOLID principles and Law of Demeter followed (deviations documented in comments)
+            - Design patterns used where appropriate (no unjustified quick and dirty)
+
+            ## Step 7 -- Documentation check
+
+            - Verify PHPDoc/JSDoc on modified public APIs
+            - Check if ADRs need updating
+            - Verify TRACKING.md is consistent
+
+            ## Step 8 -- Test coverage
+
+            Check that new/changed behavior has corresponding tests:
+            - Unit tests (PHPUnit)
+            - E2E tests (Playwright)
+            - Flag untested edge cases
+
+            ## Step 9 -- Auto-critique section
+
+            Verify the PR body contains an Auto-critique section listing what was verified.
+
+            ## Step 10 -- Report
+
+            Post a summary comment on the PR using `gh pr comment` with:
+            - Severity levels: **critical**, **warning**, **info**
+            - Specific `file:line` references for each finding
+            - Findings grouped by category (Security, Performance, Architecture, Documentation, Tests, Commits)
+            - End with the review checklist, each item checked or unchecked:
+              - [ ] Code respects the project architecture
+              - [ ] SOLID principles and Law of Demeter followed
+              - [ ] Design patterns used where appropriate
+              - [ ] Tests cover new/changed cases
+              - [ ] Documentation is up to date
+              - [ ] Dependent tickets accounted for
+
+            ## Step 11 -- Approve or Request Changes
+
+            Based on your findings:
+            - If there are **no critical or warning findings**, approve the PR with a short summary of what was reviewed.
+            - If there are **critical or warning findings**, request changes with a summary of the issues that must be addressed.
+            - If **you are the PR author** (check `gh pr view` author field), do NOT submit a review approval — GitHub forbids self-approval. Post the summary as a regular comment instead.
+            Use `mcp__github__pull_request_review_write` to submit the review.
