@@ -1,3 +1,4 @@
+# Claude Code Review — automated PR review powered by Claude
 name: Claude Code Review
 
 on:
