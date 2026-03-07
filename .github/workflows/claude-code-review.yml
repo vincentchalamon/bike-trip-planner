@@ -30,7 +30,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
-            --allowedTools "mcp__github__add_issue_comment,mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(git log:*),Read,Glob,Grep"
+            --allowedTools "mcp__github__add_issue_comment,mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(git log:*),Read,Glob,Grep"
           prompt: |
             You are a senior code reviewer for the Bike Trip Planner project.
             Review pull request #${{ github.event.pull_request.number }} following the project's review standards.
@@ -110,7 +110,9 @@ jobs:
             ## Step 11 -- Approve or Request Changes
 
             Based on your findings:
-            - If there are **no critical or warning findings**, approve the PR with a short summary of what was reviewed.
-            - If there are **critical or warning findings**, request changes with a summary of the issues that must be addressed.
-            - If **you are the PR author** (check `gh pr view` author field), do NOT submit a review approval — GitHub forbids self-approval. Post the summary as a regular comment instead.
-            Use `mcp__github__pull_request_review_write` to submit the review.
+            - If there are **no critical or warning findings**, approve the PR:
+              `gh pr review ${{ github.event.pull_request.number }} --approve --body "APPROVE_MESSAGE"`
+            - If there are **critical or warning findings**, request changes:
+              `gh pr review ${{ github.event.pull_request.number }} --request-changes --body "CHANGES_MESSAGE"`
+            - If **you are the PR author** (check `gh pr view` author field), do NOT submit a review — GitHub forbids self-approval. Post the summary as a regular comment instead.
+            Use `gh pr review` to submit the formal review. Include a short summary of what was reviewed in the review body.
