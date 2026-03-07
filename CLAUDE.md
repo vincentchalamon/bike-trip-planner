@@ -31,16 +31,12 @@ Running specific tools inside containers:
 
 ```bash
 make phpstan
+make rector
 make phpunit
 make phpunit -- --filter=TestClassName
 make test-e2e
 make test-e2e -- tests/specific-test.spec.ts
-```
-
-When backend DTOs change, regenerate frontend types:
-
-```bash
-cd pwa && npm run typegen
+make typegen                # Regenerate TS types from backend OpenAPI spec
 ```
 
 Pre-commit hook runs `make qa` automatically; commit aborts on failure.
@@ -58,7 +54,7 @@ Pre-commit hook runs `make qa` automatically; commit aborts on failure.
 
 Commit messages **must** follow [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 <type>(<optional scope>): <description>
 ```
 
@@ -76,23 +72,31 @@ Backend PHP DTOs define the schema → API Platform exports OpenAPI spec → `np
 ### Directory Layout
 
 - `api/` — PHP backend (API Platform/Symfony)
+  - `src/Accommodation/` — Accommodation discovery, scraping, and pricing heuristics
+  - `src/Analyzer/` — Rule-based alert engine using Chain of Responsibility with Symfony tagged services (`#[AutoconfigureTag('app.stage_analyzer')]`)
   - `src/ApiResource/` — DTOs (TripRequest, TripResponse, Stage, Alert, Accommodation)
-  - `src/State/` — API Platform State Processors & Providers
-  - `src/Spatial/` — GPX parsing, decimation
-  - `src/Pacing/` — Stage generation
-  - `src/Osm/` — Overpass queries
-  - `src/Pricing/` — Heuristic accommodation pricing
+  - `src/ComputationTracker/` — Cache-based async computation state tracking (pending/running/done/failed)
+  - `src/Controller/` — HTTP controllers (AccommodationScraper, Geocode)
+  - `src/DependencyInjection/` — Symfony compiler passes for tagged service registries
+  - `src/Engine/` — Pluggable computation engines (auto-discovered via `#[AutoconfigureTag]`)
+  - `src/Enum/` — PHP enums (ComputationName, AlertType, SourceType)
+  - `src/Mercure/` — SSE event publisher
+  - `src/Message/` — Symfony Messenger message classes (async tasks)
+  - `src/MessageHandler/` — Async message handlers (Symfony Messenger)
+  - `src/Repository/` — In-memory cache repository for trip state
   - `src/RouteFetcher/` — URL fetchers (Komoot Tour, Komoot Collection, Google MyMaps)
   - `src/RouteParser/` — Route parsers (GPX, KML)
+  - `src/Routing/` — Pluggable routing providers (Valhalla)
+  - `src/Scanner/` — OSM Overpass scanning with local/public fallback and caching
+  - `src/Serializer/` — GPX/FIT normalizers, encoders, unified WaypointMapper
+  - `src/State/` — API Platform State Processors & Providers
+  - `src/Symfony/` — ObjectMapper transformers for DTO conversion
   - `src/Weather/` — Weather providers (OpenMeteo, OpenWeather)
-  - `src/Analyzer/` — Rule-based alert engine using Chain of Responsibility with Symfony tagged services (`#[AutoconfigureTag('app.stage_analyzer')]`)
-  - `src/Engine/` — Pluggable computation engines (auto-discovered via `#[AutoconfigureTag]`)
-  - `src/MessageHandler/` — Async message handlers (Symfony Messenger)
-  - `src/Mercure/` — SSE event publisher
   - `templates/` — Twig templates (PDF roadbook)
 - `pwa/` — Next.js frontend
   - `src/store/` — Zustand stores (in-memory, Immer middleware)
   - `src/lib/api/` — Generated types (`schema.d.ts`) and openapi-fetch client
+  - `src/lib/geocode/` — Place search and reverse geocoding client
   - `src/lib/mercure/` — Mercure SSE client and event types
   - `src/lib/validation/` — Zod schemas (manually aligned with PHP DTOs)
   - `tests/fixtures/` — Playwright fixtures, API mocks, SSE helpers, mock data
@@ -127,6 +131,7 @@ Before every PR, follow this protocol:
 ### 0. Code Quality Principles
 
 All code must follow these principles as much as possible:
+
 - **SOLID** — Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
 - **Law of Demeter** — Only talk to immediate collaborators; avoid deep chaining through objects
 - **Design patterns over quick & dirty** — Prefer well-known patterns (Strategy, Chain of Responsibility, etc.) to ad-hoc solutions
@@ -137,6 +142,7 @@ If any of these principles cannot be followed in a specific case, **document the
 ### 1. Diff Analysis
 
 Run `git diff` and review all changes for:
+
 - Leftover `console.log`, `dump()`, `dd()`, or debug statements
 - Stale TODO/FIXME comments
 - Unintended technical debt
