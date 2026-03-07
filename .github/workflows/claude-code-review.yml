@@ -109,10 +109,20 @@ jobs:
 
             ## Step 11 -- Approve or Request Changes
 
+            IMPORTANT: You MUST submit a formal GitHub review after posting the comment. This is a separate action from the comment.
+
             Based on your findings:
-            - If there are **no critical or warning findings**, approve the PR:
-              `gh pr review ${{ github.event.pull_request.number }} --approve --body "APPROVE_MESSAGE"`
-            - If there are **critical or warning findings**, request changes:
-              `gh pr review ${{ github.event.pull_request.number }} --request-changes --body "CHANGES_MESSAGE"`
+            - If there are **no critical or warning findings**, approve the PR.
+            - If there are **critical or warning findings**, request changes with a summary of the issues.
             - If **you are the PR author** (check `gh pr view` author field), do NOT submit a review — GitHub forbids self-approval. Post the summary as a regular comment instead.
-            Use `gh pr review` to submit the formal review. Include a short summary of what was reviewed in the review body.
+
+            To submit the formal review, use `mcp__github__pull_request_review_write` with:
+            - `owner`: "vincentchalamon"
+            - `repo`: "bike-trip-planner"
+            - `pull_number`: ${{ github.event.pull_request.number }}
+            - `event`: "APPROVE" or "REQUEST_CHANGES"
+            - `body`: a short summary of your review
+
+            If `mcp__github__pull_request_review_write` fails, fall back to:
+            `gh pr review ${{ github.event.pull_request.number }} --approve --body "SUMMARY"` or
+            `gh pr review ${{ github.event.pull_request.number }} --request-changes --body "SUMMARY"`
