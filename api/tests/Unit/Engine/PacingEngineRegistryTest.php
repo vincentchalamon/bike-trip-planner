@@ -85,22 +85,21 @@ final class PacingEngineRegistryTest extends TestCase
     #[Test]
     public function generateStagesRespectsFatigueFactor(): void
     {
-        $points = $this->createTrack(30);
+        // Use a long track (100 points, ~500km) to guarantee multi-stage output
+        $points = $this->createTrack(100);
 
         // High fatigue factor (0.95) → more even distribution
-        $stagesHigh = $this->engine->generateStages('trip-1', $points, 3, 300.0, 0.95);
+        $stagesHigh = $this->engine->generateStages('trip-1', $points, 3, 500.0, 0.95);
         // Low fatigue factor (0.7) → more uneven, earlier stages longer
-        $stagesLow = $this->engine->generateStages('trip-2', $points, 3, 300.0, 0.7);
+        $stagesLow = $this->engine->generateStages('trip-2', $points, 3, 500.0, 0.7);
 
-        $this->assertNotEmpty($stagesHigh);
-        $this->assertNotEmpty($stagesLow);
+        $this->assertGreaterThan(1, \count($stagesHigh));
+        $this->assertGreaterThan(1, \count($stagesLow));
 
         // With lower fatigue factor, first stage should be relatively longer
-        if (\count($stagesHigh) > 1 && \count($stagesLow) > 1) {
-            $ratioHigh = $stagesHigh[0]->distance / ($stagesHigh[0]->distance + $stagesHigh[1]->distance);
-            $ratioLow = $stagesLow[0]->distance / ($stagesLow[0]->distance + $stagesLow[1]->distance);
-            $this->assertGreaterThan($ratioHigh, $ratioLow);
-        }
+        $ratioHigh = $stagesHigh[0]->distance / ($stagesHigh[0]->distance + $stagesHigh[1]->distance);
+        $ratioLow = $stagesLow[0]->distance / ($stagesLow[0]->distance + $stagesLow[1]->distance);
+        $this->assertGreaterThan($ratioHigh, $ratioLow);
     }
 
     #[Test]

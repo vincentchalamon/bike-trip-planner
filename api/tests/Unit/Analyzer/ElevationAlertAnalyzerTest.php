@@ -30,7 +30,7 @@ final class ElevationAlertAnalyzerTest extends TestCase
     #[Test]
     public function noAlertBelowThreshold(): void
     {
-        $stage = $this->createStage(1200.0);
+        $stage = $this->createStage(800.0);
 
         $alerts = $this->analyzer->analyze($stage);
 
@@ -104,7 +104,9 @@ final class ElevationAlertAnalyzerTest extends TestCase
         $analyzer = new ElevationAlertAnalyzer($translator);
         $stage = $this->createStage(1500.0);
 
-        $analyzer->analyze($stage);
+        $alerts = $analyzer->analyze($stage);
+
+        $this->assertCount(1, $alerts);
     }
 
     #[Test]
