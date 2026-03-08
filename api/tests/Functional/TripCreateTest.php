@@ -41,7 +41,7 @@ final class TripCreateTest extends ApiTestCase
     #[Test]
     public function createTripWithKomootCollectionUrl(): void
     {
-        self::createClient()->request('POST', '/trips', [
+        $response = self::createClient()->request('POST', '/trips', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'sourceUrl' => 'https://www.komoot.com/collection/12345/my-collection',
@@ -50,13 +50,16 @@ final class TripCreateTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(202);
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertNotEmpty($data['id']);
+        $this->assertSame('Trip', $data['@type']);
     }
 
     #[Test]
     public function createTripWithLocalizedKomootUrl(): void
     {
-        self::createClient()->request('POST', '/trips', [
+        $response = self::createClient()->request('POST', '/trips', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'sourceUrl' => 'https://www.komoot.com/fr-fr/tour/123456789',
@@ -65,13 +68,16 @@ final class TripCreateTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(202);
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertNotEmpty($data['id']);
+        $this->assertSame('Trip', $data['@type']);
     }
 
     #[Test]
     public function createTripWithGoogleMyMapsUrl(): void
     {
-        self::createClient()->request('POST', '/trips', [
+        $response = self::createClient()->request('POST', '/trips', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'sourceUrl' => 'https://www.google.com/maps/d/viewer?mid=abc123',
@@ -80,13 +86,16 @@ final class TripCreateTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(202);
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertNotEmpty($data['id']);
+        $this->assertSame('Trip', $data['@type']);
     }
 
     #[Test]
     public function createTripWithMapsShortUrl(): void
     {
-        self::createClient()->request('POST', '/trips', [
+        $response = self::createClient()->request('POST', '/trips', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'sourceUrl' => 'https://maps.app.goo.gl/abc123xyz',
@@ -95,7 +104,10 @@ final class TripCreateTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(202);
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertNotEmpty($data['id']);
+        $this->assertSame('Trip', $data['@type']);
     }
 
     #[Test]
@@ -114,10 +126,10 @@ final class TripCreateTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(202);
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
-        // todo check response content
 
         $data = $response->toArray(false);
         $this->assertNotEmpty($data['id']);
+        $this->assertSame('Trip', $data['@type']);
     }
 
     #[Test]
@@ -130,8 +142,12 @@ final class TripCreateTest extends ApiTestCase
             ],
         ]);
 
-        // todo check response status code, json schema and response content
+        $this->assertResponseStatusCodeSame(202);
+        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
+
         $data = $response->toArray(false);
+        $this->assertNotEmpty($data['id']);
         foreach (ComputationName::pipeline() as $computation) {
             $this->assertArrayHasKey($computation->value, $data['computationStatus']);
             $this->assertSame('pending', $data['computationStatus'][$computation->value]);
@@ -141,7 +157,7 @@ final class TripCreateTest extends ApiTestCase
     #[Test]
     public function fetchAndParseRouteMessageDispatched(): void
     {
-        self::createClient()->request('POST', '/trips', [
+        $response = self::createClient()->request('POST', '/trips', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'sourceUrl' => 'https://www.komoot.com/tour/123456789',
@@ -151,7 +167,9 @@ final class TripCreateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertNotEmpty($data['id']);
 
         /** @var InMemoryTransport $transport */
         $transport = self::getContainer()->get('messenger.transport.async');
@@ -220,7 +238,7 @@ final class TripCreateTest extends ApiTestCase
     #[Test]
     public function acceptsInvalidUrlFormatOnCreate(): void
     {
-        self::createClient()->request('POST', '/trips', [
+        $response = self::createClient()->request('POST', '/trips', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'sourceUrl' => 'https://example.com/not-a-real-route',
@@ -232,7 +250,10 @@ final class TripCreateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertNotEmpty($data['id']);
+        $this->assertSame('Trip', $data['@type']);
     }
 
     /**
@@ -267,13 +288,16 @@ final class TripCreateTest extends ApiTestCase
     #[Test]
     public function createTripWithValidPayloads(array $payload): void
     {
-        self::createClient()->request('POST', '/trips', [
+        $response = self::createClient()->request('POST', '/trips', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => $payload,
         ]);
 
         $this->assertResponseStatusCodeSame(202);
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertNotEmpty($data['id']);
+        $this->assertSame('Trip', $data['@type']);
     }
 }
