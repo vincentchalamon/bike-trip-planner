@@ -1,2 +1,4 @@
+# Inherit root config, then override for GitHub templates.
 # PR template starts with ## Summary, not a top-level heading.
+extends: ../.markdownlint.yaml
 MD041: false
