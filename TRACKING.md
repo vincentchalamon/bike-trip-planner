@@ -1,129 +1,326 @@
 # Tracking
 
-## Dependency Graph
-
-```mermaid
-graph TD
-    %% Auth chain
-    75["#75 ADR Auth"] --> 76["#76 Auth Backend"]
-    76 --> 77["#77 Securisation Endpoints"]
-    76 --> 79["#79 Frontend Auth"]
-    76 --> 65["#65 Garmin Connect"]
-    77 --> 78["#78 Securisation Mercure"]
-    77 --> 80["#80 Partage Trip"]
-
-    %% Pacing/time chain
-    48["#48 Profil Cyclo"] --> 61["#61 Estimation Temps"]
-    61 --> 62["#62 Horaires Soleil"]
-
-    %% Map chain
-    30["#30 Carte Interactive"] --> 31["#31 Split View"]
-
-    %% Mobile chain
-    52["#52 Verrouillage Trips"] --> 69["#69 Scaffolding Capacitor"]
-    53["#53 Creation Trip URL"] --> 69
-    69 --> 51["#51 Consultation Mobile"]
-    70["#70 i18n Client"] --> 51
-    71["#71 URL API Direct"] --> 51
-    72["#72 Mode Hors-ligne"] --> 51
-    73["#73 CI APK Android"] --> 51
-    74["#74 ADR Mobile"] --> 51
-
-    %% Persistence meta-ticket
-    50["#50 Liste Trips"] --> 56["#56 Persistance BDD"]
-    45["#45 Duplication Trip"] --> 56
-    52 --> 56
-    42["#42 Bouton Partager"] --> 56
-    65 --> 56
-    76 --> 56
-    77 --> 56
-    80 --> 56
-    51 --> 56
-
-    %% Styles
-    classDef wave1 fill:#d4edda,stroke:#28a745
-    classDef wave2 fill:#fff3cd,stroke:#ffc107
-    classDef wave3 fill:#f8d7da,stroke:#dc3545
-
-    class 5,26,27,28,29,30,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,52,53,54,55,57,58,59,60,63,64,66,67,70,71,72,73,74,75 wave1
-    class 31,61,62,65,69,76,77,79 wave2
-    class 51,56,78,80 wave3
-```
-
-**Legende :** vert = Wave 1, jaune = Wave 2, rouge = Wave 3.
-
-> **Note :** Dependance circulaire #76 <-> #56 cassee volontairement : l'auth peut etre implementee avec sa propre table users sans attendre la persistance complete.
+> **Note :** Dépendance circulaire #76 <-> #56 cassée volontairement : l'auth peut être implémentée avec sa propre table users sans attendre la persistance complète.
 
 ---
 
-## Wave 1 — Fondations & Tickets Independants
+## Sprint 1 — Quick Wins Alertes
 
-Aucune dependance reelle. Maximisation du parallelisme.
+Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews rapides (~100-150 lignes/PR).
 
-| ID | Titre | Effort | Statut | Branche |
-|----|-------|--------|--------|---------|
-| #5 | Add unit tests | — | En attente | — |
-| #26 | Traduire la documentation en francais | S | En attente | — |
-| #27 | Ameliorer la presentation de la documentation | S | En attente | — |
-| #28 | Resumer les suggestions et detections | S | En attente | — |
-| #29 | Changer la licence (OpenCreative) | S | En attente | — |
-| #30 | Carte interactive avec trace et profil altimetrique | XL | En attente | — |
-| #32 | Onboarding guide (tour interactif) | S | En attente | — |
-| #33 | Raccourcis clavier + bouton Aide | M | En attente | — |
-| #34 | Timeline ravitaillement par etape | L | En attente | — |
-| #35 | Suggestion de points d'interet culturels | M | En attente | — |
-| #36 | Filtre des types d'hebergements | M | En attente | — |
-| #37 | Rayon de recherche des hebergements | M | En attente | — |
-| #38 | Distance entre l'hebergement et le endPoint | S | En attente | — |
-| #39 | Selectionner un hebergement | L | En attente | — |
-| #40 | Barre de progression segmentee du trip | M | En attente | — |
-| #41 | Badge de difficulte ameliore avec jauge visuelle | S | En attente | — |
-| #42 | Bouton Partager (infographie + texte + lien) | L | En attente | — |
-| #43 | Meteo etendue avec vent relatif et indice de confort | L | En attente | — |
-| #44 | Support multi-langue (fr/en) | L | En attente | — |
-| #45 | Duplication de trip | M | En attente | — |
-| #46 | Invalidation de messages Messenger | M | En attente | — |
-| #47 | Exporter au format texte | S | En attente | — |
-| #48 | Profil cyclo configurable + presets | M | En attente | — |
-| #49 | Panneau de configuration (sidebar) | M | En attente | — |
-| #50 | Liste des trips | L | En attente | — |
-| #52 | Verrouillage des trips passes | M | En attente | — |
-| #53 | Creation de trip via URL avec parametre link | S | En attente | — |
-| #54 | Correction des deniveles sous-estimes | M | En attente | — |
-| #55 | Insertion de jours de repos | M | En attente | — |
-| #57 | Undo/Redo | L | En attente | — |
-| #58 | Detection des points d'eau | M | En attente | — |
-| #59 | Budget recapitulatif | S | En attente | — |
-| #60 | Support de sources de routes supplementaires | L | En attente | — |
-| #63 | Detection des pentes raides | S | En attente | — |
-| #64 | Bouton de telechargement GPX global | S | En attente | — |
-| #66 | Detecter les points de charge VAE | S | En attente | — |
-| #67 | Generer un itineraire (LLaMA 3B) | XL | En attente | — |
-| #70 | i18n client-side pour compatibilite export statique | S | En attente | — |
-| #71 | Parametrer l'URL API pour acces direct backend | S | En attente | — |
-| #72 | Mode hors-ligne avec persistance des donnees trip | L | En attente | — |
-| #73 | CI GitHub Actions pour build APK Android | M | En attente | — |
-| #74 | ADR : strategie mobile Capacitor | S | En attente | — |
-| #75 | ADR : strategie d'authentification passwordless magic link | S | En attente | — |
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #88 | Alerte calendrier : dimanches | S | 1 | — |
+| 2 | #63 | Détection des pentes raides | S | 1 | — |
+| 3 | #66 | Détecter les points de charge VAE | S | 1 | — |
+| 4 | #58 | Détection des points d'eau | M | 1 | — |
+| 5 | #54 | Correction des dénivelés sous-estimés | M | 1 | — |
 
-## Wave 2 — Fonctionnalites Dependantes
+### Recette Sprint 1
 
-| ID | Titre | Effort | Depend de | Statut | Branche |
-|----|-------|--------|-----------|--------|---------|
-| #31 | Split view carte / timeline | M | #30 | En attente | — |
-| #61 | Estimation du temps de parcours | M | #48 | En attente | — |
-| #62 | Horaires lever/coucher de soleil + alerte arrivee nocturne | M | #61 | En attente | — |
-| #65 | Garmin Connect Courses API | L | #76 | En attente | — |
-| #69 | Scaffolding Capacitor et strategie dual build | M | #52, #53 | En attente | — |
-| #76 | Auth backend : JWT + magic link passwordless | L | #75 | En attente | — |
-| #77 | Securisation des endpoints API Platform (Trip, Stage) | M | #76 | En attente | — |
-| #79 | Frontend auth : store, intercepteur API, login, route guards | M | #76 | En attente | — |
+- **Tests E2E :** `tests/recette/sprint-01.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Alerte dimanche visible sur une étape tombant un dimanche
+  - [ ] Alerte pente raide visible sur une étape avec forte pente
+  - [ ] Alerte point de charge VAE visible (si VAE activé)
+  - [ ] Points d'eau détectés et affichés par étape
+  - [ ] Dénivelés corrigés cohérents avec la trace GPX
 
-## Wave 3 — Polissage & Tickets Complexes
+---
 
-| ID | Titre | Effort | Depend de | Statut | Branche |
-|----|-------|--------|-----------|--------|---------|
-| #51 | Consultation mobile hors ligne | XL | #69, #70, #71, #72, #73, #74 | En attente | — |
-| #56 | Persistance en base de donnees | XL | #50, #45, #52, #76, #77, #80, #42, #65, #51 | En attente | — |
-| #78 | Securisation Mercure (subscriber JWT, private updates) | M | #76, #77 | En attente | — |
-| #80 | Partage de trip en lecture seule (anonymous) | M | #76, #77 | En attente | — |
+## Sprint 2 — Alertes Frontend + UX Feedback
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #28 | Résumer les suggestions et détections | S | 1 | — |
+| 2 | #41 | Badge de difficulté avec jauge visuelle | S | 1 | — |
+| 3 | #40 | Barre de progression segmentée | M | 1 | — |
+
+### Recette Sprint 2
+
+- **Tests E2E :** `tests/recette/sprint-02.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Résumé des alertes visible dans le panneau trip
+  - [ ] Badge de difficulté avec jauge colorée par étape
+  - [ ] Barre de progression reflétant l'avancement du trip
+
+---
+
+## Sprint 3 — Hébergements
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #38 | Distance hébergement-endPoint | S | 1 | — |
+| 2 | #36 | Filtre types d'hébergements | M | 1 | — |
+| 3 | #37 | Rayon de recherche | M | 1 | — |
+| 4 | #39 | Sélectionner un hébergement | L | 2 | — |
+
+### Recette Sprint 3
+
+- **Tests E2E :** `tests/recette/sprint-03.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Distance hébergement-endPoint affichée
+  - [ ] Filtrage par type d'hébergement fonctionnel
+  - [ ] Modification du rayon de recherche + résultats mis à jour
+  - [ ] Sélection d'un hébergement → recalcul itinéraire (endPoint + startPoint étape suivante)
+  - [ ] Responsive : vérifier sur mobile
+
+---
+
+## Sprint 4 — Configuration & Profil
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #48 | Profil cyclo + presets | M | 1 | — |
+| 2 | #49 | Panneau configuration (sidebar) | M | 1 | #48 |
+| 3 | #55 | Insertion jours de repos | M | 1 | — |
+
+### Recette Sprint 4
+
+- **Tests E2E :** `tests/recette/sprint-04.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Presets cyclo sélectionnables (sportif, touring, etc.)
+  - [ ] Panneau de configuration accessible et fonctionnel
+  - [ ] Insertion d'un jour de repos → recalcul des étapes suivantes
+  - [ ] Responsive : sidebar sur mobile
+
+---
+
+## Sprint 5 — Météo & Temps
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #43 | Météo étendue vent + confort | L | 2 | — |
+| 2 | #61 | Estimation temps de parcours | M | 1 | #48 |
+| 3 | #62 | Horaires soleil + alerte nocturne | M | 1 | #61 |
+
+### Recette Sprint 5
+
+- **Tests E2E :** `tests/recette/sprint-05.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Vent relatif (face/dos) affiché par étape
+  - [ ] Indice de confort cycliste visible
+  - [ ] Estimation du temps de parcours cohérente avec le profil cyclo
+  - [ ] Horaires lever/coucher de soleil affichés
+  - [ ] Alerte arrivée nocturne si applicable
+
+---
+
+## Sprint 6 — Export (pré-auth)
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #47 | Exporter au format texte | S | 1 | — |
+| 2 | #64 | Téléchargement GPX global | S | 1 | — |
+| 3 | #59 | Budget récapitulatif | S | 1 | — |
+
+### Recette Sprint 6
+
+- **Tests E2E :** `tests/recette/sprint-06.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Export texte complet et formaté
+  - [ ] Téléchargement GPX global fonctionnel
+  - [ ] Budget récapitulatif avec totaux cohérents
+
+---
+
+## Sprint 7 — Carte Interactive
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #30 | Carte interactive + profil altimétrique | XL | 5 | — |
+| 2 | #31 | Split view carte / timeline | M | 1 | #30 |
+| 3 | #34 | Timeline ravitaillement | L | 2 | #58 |
+| 4 | #35 | Points d'intérêt culturels | M | 1 | — |
+
+### Recette Sprint 7
+
+- **Tests E2E :** `tests/recette/sprint-07.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Carte avec tracé coloré par étape
+  - [ ] Profil altimétrique interactif (survol → curseur sur carte)
+  - [ ] Synchronisation carte ↔ timeline
+  - [ ] Split view fonctionnel
+  - [ ] Timeline ravitaillement avec POI le long du tracé
+  - [ ] Mode sombre : tuiles sombres
+  - [ ] Responsive : carte sur mobile (tactile)
+
+---
+
+## Sprint 8 — UX & Onboarding
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #32 | Onboarding guide | S | 1 | — |
+| 2 | #33 | Raccourcis clavier + aide | M | 1 | — |
+| 3 | #57 | Undo/Redo | L | 2 | — |
+
+### Recette Sprint 8
+
+- **Tests E2E :** `tests/recette/sprint-08.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Onboarding guide affiché au premier lancement
+  - [ ] Raccourcis clavier fonctionnels (Ctrl+Z, Ctrl+Y, etc.)
+  - [ ] Bouton aide affichant la liste des raccourcis
+  - [ ] Undo/Redo sur les actions clés (suppression étape, modification distance)
+
+---
+
+## Sprint 9 — Sources de Routes & Infra Backend
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #60 | Sources routes supplémentaires | L | 3 | — |
+| 2 | #53 | Création trip via URL | S | 1 | — |
+| 3 | #46 | Invalidation messages Messenger | M | 1 | — |
+
+### Recette Sprint 9
+
+- **Tests E2E :** `tests/recette/sprint-09.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Upload GPX direct fonctionnel (drag & drop)
+  - [ ] Import depuis Strava/RideWithGPS (si implémenté)
+  - [ ] Création de trip via URL avec paramètre link
+  - [ ] Invalidation Messenger : pas de messages orphelins
+
+---
+
+## Sprint 10 — i18n & Documentation
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #44 | Support multi-langue (fr/en) | L | 3 | — |
+| 2 | #70 | i18n client-side export statique | S | 1 | #44 |
+| 3 | #26 | Traduire documentation en français | S | 1 | — |
+| 4 | #27 | Améliorer présentation documentation | S | 1 | — |
+| 5 | #29 | Changer la licence | S | 1 | — |
+
+### Recette Sprint 10
+
+- **Tests E2E :** `tests/recette/sprint-10.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Switcher fr/en fonctionnel
+  - [ ] Tous les textes traduits (pas de clés i18n visibles)
+  - [ ] Export statique compatible i18n
+  - [ ] Documentation en français complète
+  - [ ] Licence mise à jour
+
+---
+
+## Sprint 11 — Gestion des Trips (pré-persistance)
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #50 | Liste des trips | L | 2 | — |
+| 2 | #45 | Duplication de trip | M | 1 | — |
+| 3 | #52 | Verrouillage trips passés | M | 1 | — |
+
+### Recette Sprint 11
+
+- **Tests E2E :** `tests/recette/sprint-11.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Liste des trips paginée et filtrable
+  - [ ] Navigation liste → détail → retour
+  - [ ] Duplication de trip fonctionnelle
+  - [ ] Verrouillage automatique des trips passés (lecture seule)
+  - [ ] Responsive : liste sur mobile
+
+---
+
+## Sprint 12 — Auth & Sécurité
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #75 | ADR auth passwordless | S | 1 | — |
+| 2 | #76 | Auth backend JWT + magic link | L | 4 | #75 |
+| 3 | #79 | Frontend auth | M | 1 | #76 |
+| 4 | #77 | Sécurisation endpoints | M | 1 | #76 |
+| 5 | #78 | Sécurisation Mercure | M | 1 | #76, #77 |
+| 6 | #80 | Partage trip lecture seule | M | 1 | #76, #77 |
+| 7 | #42 | Bouton Partager | L | 2 | #80 |
+| 8 | #65 | Garmin Connect | L | 3 | #76 |
+
+### Recette Sprint 12
+
+- **Tests E2E :** `tests/recette/sprint-12.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Flux magic link complet : demande → email → clic → connecté
+  - [ ] Token expiré/utilisé → message d'erreur clair
+  - [ ] Endpoints sécurisés (401 sans JWT)
+  - [ ] Mercure : pas de fuite de données entre utilisateurs
+  - [ ] Partage en lecture seule fonctionnel (lien anonyme)
+  - [ ] Bouton Partager : infographie + texte + lien
+  - [ ] Garmin Connect : export course (si infra disponible)
+  - [ ] Mobile : flux auth sur Capacitor
+
+---
+
+## Sprint 13 — Mobile
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #74 | ADR mobile Capacitor | S | 1 | — |
+| 2 | #71 | URL API direct backend | S | 1 | — |
+| 3 | #69 | Scaffolding Capacitor | M | 1 | #52, #53 |
+| 4 | #72 | Mode hors-ligne | L | 2 | — |
+| 5 | #73 | CI APK Android | M | 1 | — |
+| 6 | #51 | Consultation mobile | XL | 5 | #69, #70, #71, #72, #73, #74 |
+
+### Recette Sprint 13
+
+- **Tests E2E :** `tests/recette/sprint-13.spec.ts`
+- **Checklist manuelle :**
+  - [ ] APK installable sur Android
+  - [ ] Mode hors-ligne : consultation des données en cache
+  - [ ] Bannière offline/online
+  - [ ] Navigation tactile fluide
+  - [ ] Retour en ligne : rafraîchissement automatique
+  - [ ] Test sur vrai appareil Android
+
+---
+
+## Sprint 14 — Persistance
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | #56 | Persistance BDD | XL | 5 | #50, #45, #52, #76, #77, #80, #42, #65, #51 |
+
+### Recette Sprint 14
+
+- **Tests E2E :** `tests/recette/sprint-14.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Trips persistés en PostgreSQL
+  - [ ] Fermer le navigateur → rouvrir → trip retrouvé
+  - [ ] Migrations Doctrine appliquées sans erreur
+  - [ ] Performances acceptables (liste de trips, chargement d'un trip)
+
+---
+
+## Hors Sprints
+
+| ID | Titre | Note |
+|----|-------|------|
+| #5 | Add unit tests | Continu, à chaque sprint |
+| #67 | Générer un itinéraire (LLaMA 3B) | R&D, pas prioritaire |
+
+---
+
+## Récapitulatif
+
+| Sprint | Thème | Tickets | PRs estimées |
+|--------|-------|---------|--------------|
+| 1 | Quick Wins Alertes | 5 | 5 |
+| 2 | Alertes Frontend + UX | 3 | 3 |
+| 3 | Hébergements | 4 | 5 |
+| 4 | Configuration & Profil | 3 | 3 |
+| 5 | Météo & Temps | 3 | 4 |
+| 6 | Export | 3 | 3 |
+| 7 | Carte Interactive | 4 | 9 |
+| 8 | UX & Onboarding | 3 | 4 |
+| 9 | Sources Routes & Infra | 3 | 5 |
+| 10 | i18n & Documentation | 5 | 7 |
+| 11 | Gestion Trips | 3 | 4 |
+| 12 | Auth & Sécurité | 8 | 14 |
+| 13 | Mobile | 6 | 11 |
+| 14 | Persistance | 1 | 5 |
+| **Total** | | **54** | **~82** |
