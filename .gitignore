@@ -1,5 +1,6 @@
 .agents/*
 .claude/settings.local.json
+.claude/worktrees/
 /.env
 openapi.*
 
