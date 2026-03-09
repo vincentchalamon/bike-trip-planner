@@ -18,6 +18,18 @@ interface UseEditableReturn {
   handleKeyDown: (e: React.KeyboardEvent) => void;
 }
 
+/**
+ * Manages inline editing state for a text value with keyboard support.
+ *
+ * Provides a controlled editing flow: click to start editing, Enter to confirm,
+ * Escape to cancel. The hook synchronizes with the external `value` prop when
+ * not in editing mode (without useEffect, using ref-based comparison). Empty or
+ * unchanged values are silently discarded on confirmation.
+ *
+ * @param options.value - The current display value (controlled externally)
+ * @param options.onChange - Callback invoked with the trimmed new value on confirmation
+ * @returns `{ isEditing, editValue, setEditValue }` state fields, handlers (`startEditing`, `stopEditing`, `cancel`, `handleKeyDown`), and an `inputRef` for focus management
+ */
 export function useEditable({
   value,
   onChange,

@@ -86,6 +86,28 @@ const initialState = {
   computationStatus: {},
 };
 
+/**
+ * Central Zustand store for all trip-related state (local-first, in-memory).
+ *
+ * Holds the trip identity, route metadata, stages, and per-stage derived data
+ * (weather, POIs, alerts, accommodations, labels). All mutations use Immer for
+ * immutable updates with mutable syntax.
+ *
+ * **Data flow:** The store is populated by two sources:
+ * 1. User actions (form submissions, inline edits, accommodation CRUD)
+ * 2. Mercure SSE events dispatched by {@link useMercure}'s `dispatchEvent()`
+ *
+ * **Alert merging:** `updateStageAlerts()` replaces alerts by `source` tag
+ * (e.g. "terrain", "calendar", "wind"), allowing incremental updates without
+ * losing alerts from other analyzers.
+ *
+ * **Side effects:** The store itself is side-effect-free. Reverse geocoding
+ * for stage labels is triggered by `dispatchEvent()` in `use-mercure.ts`,
+ * which calls `updateStageLabel()` asynchronously after resolution.
+ *
+ * **Lifecycle:** `clearTrip()` resets all state to initial values. There is
+ * no persistence layer — data lives only in memory for the current session.
+ */
 export const useTripStore = create<TripState>()(
   immer((set) => ({
     ...initialState,

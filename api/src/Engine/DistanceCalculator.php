@@ -8,6 +8,17 @@ use App\ApiResource\Model\Coordinate;
 use Location\Coordinate as GeoCoordinate;
 use Location\Distance\Vincenty;
 
+/**
+ * Geodesic distance calculator using the Vincenty inverse formula.
+ *
+ * Vincenty's formula computes the distance between two points on an oblate spheroid
+ * (WGS-84 ellipsoid), providing sub-millimeter accuracy compared to the ~0.3% error
+ * of the simpler Haversine formula. This precision matters for long bikepacking routes
+ * where cumulative error can reach several kilometers.
+ *
+ * All public methods accept {@see Coordinate} DTOs and return distances in kilometers
+ * (for track totals) or meters (for point-to-point measurements).
+ */
 final readonly class DistanceCalculator implements DistanceCalculatorInterface
 {
     public function __construct(

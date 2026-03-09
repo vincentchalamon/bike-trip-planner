@@ -68,6 +68,74 @@ make test-php -- --filter=MyTestClass
 make test-e2e -- tests/my-feature.spec.ts
 ```
 
+#### E2E testing architecture
+
+Playwright tests are split into two categories under `pwa/tests/`:
+
+| Directory       | Purpose                                    | Backend required? |
+|-----------------|--------------------------------------------|-------------------|
+| `mocked/`       | Deterministic tests with mocked API + SSE  | No                |
+| `integration/`  | Smoke test against the real backend        | Yes               |
+
+**Mocked tests** are the primary E2E strategy. They intercept all HTTP calls and inject Mercure events programmatically, making them fast, deterministic, and CI-friendly.
+
+##### Fixtures (`pwa/tests/fixtures/`)
+
+All mocked tests extend a custom Playwright fixture defined in `base.fixture.ts` that provides:
+
+| Fixture          | Description                                                              |
+|------------------|--------------------------------------------------------------------------|
+| `mockedPage`     | A `Page` with all API routes pre-mocked and navigated to `/`            |
+| `injectEvent`    | Injects a single Mercure SSE event into the page                         |
+| `injectSequence` | Injects an ordered sequence of events with configurable delay            |
+| `submitUrl`      | Fills the URL input and submits, waiting for the trip skeleton to appear |
+| `createFullTrip` | Shortcut: submits a URL then injects the full event sequence             |
+
+##### API mocking with `page.route()`
+
+`api-mocks.ts` registers Playwright route handlers for every backend endpoint (POST/PATCH/DELETE trips, stages, geocoding, accommodations, etc.). Each handler returns a static JSON response, and options allow simulating errors:
+
+```typescript
+// Example: create a test with a failing stage deletion
+test.use({ mockOptions: { deleteStageFail: true } });
+```
+
+The real Mercure SSE endpoint (`/.well-known/mercure`) is **aborted** via `page.route()` to prevent the frontend from opening a real EventSource connection.
+
+##### SSE injection via `CustomEvent`
+
+Since the real SSE connection is aborted, events are injected from test code through the browser's `CustomEvent` API:
+
+```typescript
+// sse-helpers.ts — injects a typed MercureEvent into the page
+await page.evaluate((evt) => {
+  window.dispatchEvent(
+    new CustomEvent("__test_mercure_event", { detail: evt }),
+  );
+}, event);
+```
+
+The `MercureClient` class in `src/lib/mercure/client.ts` listens for these custom events in addition to real SSE messages, enabling seamless test injection without any production code changes.
+
+##### Mock data (`mock-data.ts`)
+
+Provides factory functions for every Mercure event type (`routeParsedEvent()`, `stagesComputedEvent()`, `weatherFetchedEvent()`, etc.), assembled into a `fullTripEventSequence()` that simulates a complete trip computation lifecycle.
+
+##### Writing a new mocked E2E test
+
+```typescript
+import { test, expect } from "../fixtures/base.fixture";
+import { routeParsedEvent, stagesComputedEvent } from "../fixtures/mock-data";
+
+test("my feature works", async ({ mockedPage, submitUrl, injectEvent }) => {
+  await submitUrl();
+  await injectEvent(routeParsedEvent());
+  await injectEvent(stagesComputedEvent());
+  // Assert on the rendered page
+  await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible();
+});
+```
+
 ### 4. After changing backend DTOs, regenerate types
 
 ```bash

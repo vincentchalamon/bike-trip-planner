@@ -327,6 +327,16 @@ final readonly class FitEncoder implements EncoderInterface
         return (int) round($degrees / 180.0 * self::SEMICIRCLES_PER_180_DEGREES);
     }
 
+    /**
+     * Computes a CRC-16/ARC checksum as required by the FIT protocol.
+     *
+     * Uses the CRC-16/ARC variant (polynomial 0xA001, reflected) which is the
+     * standard checksum specified in the Garmin FIT SDK. The CRC is computed
+     * over the raw bytes using a pre-built 256-entry lookup table for O(n)
+     * performance, where n is the byte length of the data.
+     *
+     * @see https://developer.garmin.com/fit/protocol/ FIT File CRC
+     */
     private function crc16(string $data): int
     {
         $crc = 0;
@@ -341,6 +351,13 @@ final readonly class FitEncoder implements EncoderInterface
     }
 
     /**
+     * Builds and caches the CRC-16/ARC lookup table (256 entries).
+     *
+     * Each entry is computed by applying the reflected polynomial 0xA001
+     * bit-by-bit (8 iterations per byte value 0..255). The table is built
+     * once and cached in a static variable for reuse across multiple
+     * encode() calls within the same request.
+     *
      * @return list<int>
      */
     private function buildCrcTable(): array

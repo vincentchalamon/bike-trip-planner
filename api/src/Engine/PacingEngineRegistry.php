@@ -7,6 +7,21 @@ namespace App\Engine;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 
+/**
+ * Fatigue-aware pacing engine that splits a GPS track into daily stages.
+ *
+ * Uses a geometric series to distribute the total distance across N days,
+ * with a configurable fatigue factor (default 0.9) that reduces each successive
+ * day's target by 10%, and an elevation penalty that shortens stages proportionally
+ * to the cumulative ascent. A minimum threshold (30 km) prevents unrealistically
+ * short stages.
+ *
+ * Delegates distance measurement to {@see DistanceCalculatorInterface}, elevation
+ * computation to {@see ElevationCalculatorInterface}, and geometry simplification
+ * to {@see RouteSimplifierInterface}.
+ *
+ * @see docs/adr/adr-006-pacing-engine-and-dynamic-stage-generation-algorithm.md
+ */
 final readonly class PacingEngineRegistry implements PacingEngineInterface
 {
     private const float MINIMUM_STAGE_DISTANCE_KM = 30.0;
@@ -47,6 +62,21 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
     }
 
     /**
+     * Computes the target distance for each day using a fatigue-aware geometric series.
+     *
+     * Algorithm:
+     * 1. Calculate total ascent (D+) from the track points.
+     * 2. Derive an elevation penalty spread evenly across all days: penaltyPerDay = (D+ / elevationPenalty) / N.
+     * 3. Compute the base daily distance from the geometric series sum:
+     *    base = (totalDistance + penaltyPerDay * N) / sum(fatigueFactor^i, i=0..N-1)
+     *    This ensures the sum of all daily targets equals the total distance after penalty subtraction.
+     * 4. For each day n (0-indexed): target_n = base * fatigueFactor^n - penaltyPerDay
+     * 5. Clamp each target to the minimum stage distance (30 km).
+     *
+     * The fatigueFactor (default 0.9) models cumulative rider fatigue: day 1 is the longest,
+     * each subsequent day is ~10% shorter. The elevationPenalty (default 50) converts
+     * meters of ascent into equivalent flat kilometers (e.g. 1000m D+ ≈ 20 km penalty).
+     *
      * @param list<Coordinate> $points
      *
      * @return list<float> Target distances per day in km

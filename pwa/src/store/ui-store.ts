@@ -15,6 +15,18 @@ interface UiState {
   setError: (error: { type: string; message: string } | null) => void;
 }
 
+/**
+ * Zustand store for transient UI state (not tied to trip data).
+ *
+ * Tracks global UI concerns that are orthogonal to the trip model:
+ * - `isProcessing` — whether an async backend computation is in flight
+ * - `sseConnected` — whether the Mercure SSE connection is active
+ * - `expandedCalendar` — whether the date picker panel is open
+ * - `error` — global error banner state (type + message), or `null`
+ *
+ * This store is intentionally separate from {@link useTripStore} to avoid
+ * unnecessary re-renders of trip-dependent components when only UI flags change.
+ */
 export const useUiStore = create<UiState>()(
   immer((set) => ({
     isProcessing: false,
