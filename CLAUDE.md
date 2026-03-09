@@ -45,7 +45,7 @@ Pre-commit hook runs `make qa` automatically; commit aborts on failure.
 
 ```bash
 /pick <issue-number> [base-branch]  # Implement a GitHub issue end-to-end
-/review <pr-number>                 # Deep PR review (security, perf, docs)
+/code-review <pr-number>            # Code review a PR (multi-agent, inline comments)
 /qa                                 # Run full QA pipeline and fix issues
 /typegen                            # Regenerate TS types from backend
 ```
