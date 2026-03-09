@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Engine;
 
 use App\ApiResource\Model\Coordinate;
-use App\Engine\DistanceCalculator;
-use App\Engine\ElevationCalculator;
+use App\Engine\DistanceCalculatorInterface;
+use App\Engine\ElevationCalculatorInterface;
 use App\Engine\PacingEngineRegistry;
-use App\Engine\RouteSimplifier;
+use App\Engine\RouteSimplifierInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -19,10 +19,22 @@ final class PacingEngineRegistryTest extends TestCase
     #[\Override]
     protected function setUp(): void
     {
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
+            static fn (array $points): float => (\count($points) - 1) * 5.0,
+        );
+
+        $elevationCalculator = $this->createStub(ElevationCalculatorInterface::class);
+        $elevationCalculator->method('calculateTotalAscent')->willReturn(100.0);
+        $elevationCalculator->method('calculateTotalDescent')->willReturn(50.0);
+
+        $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
+        $routeSimplifier->method('simplify')->willReturnArgument(0);
+
         $this->engine = new PacingEngineRegistry(
-            new DistanceCalculator(),
-            new ElevationCalculator(),
-            new RouteSimplifier(),
+            $distanceCalculator,
+            $elevationCalculator,
+            $routeSimplifier,
         );
     }
 

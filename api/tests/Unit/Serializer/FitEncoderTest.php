@@ -4,18 +4,25 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Serializer;
 
-use App\Geo\HaversineDistance;
+use App\Geo\GeoDistanceInterface;
 use App\Serializer\FitEncoder;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 final class FitEncoderTest extends TestCase
 {
+    private FitEncoder $encoder;
+
+    #[\Override]
+    protected function setUp(): void
+    {
+        $this->encoder = new FitEncoder($this->createStub(GeoDistanceInterface::class));
+    }
+
     #[Test]
     public function encodeProducesValidFitHeader(): void
     {
-        $encoder = new FitEncoder(new HaversineDistance());
-        $data = $encoder->encode($this->sampleData(), 'fit');
+        $data = $this->encoder->encode($this->sampleData(), 'fit');
 
         // FIT header is 14 bytes
         self::assertGreaterThanOrEqual(14, \strlen($data));
@@ -30,8 +37,7 @@ final class FitEncoderTest extends TestCase
     #[Test]
     public function encodeEndsWithCrc16(): void
     {
-        $encoder = new FitEncoder(new HaversineDistance());
-        $data = $encoder->encode($this->sampleData(), 'fit');
+        $data = $this->encoder->encode($this->sampleData(), 'fit');
 
         // File must end with 2-byte CRC
         self::assertGreaterThanOrEqual(16, \strlen($data));
@@ -48,10 +54,8 @@ final class FitEncoderTest extends TestCase
     #[Test]
     public function encodeWithWaypointsProducesLargerOutput(): void
     {
-        $encoder = new FitEncoder(new HaversineDistance());
-
-        $dataWith = $encoder->encode($this->sampleDataWithWaypoints(), 'fit');
-        $dataWithout = $encoder->encode($this->sampleData(), 'fit');
+        $dataWith = $this->encoder->encode($this->sampleDataWithWaypoints(), 'fit');
+        $dataWithout = $this->encoder->encode($this->sampleData(), 'fit');
 
         self::assertGreaterThan(\strlen($dataWithout), \strlen($dataWith));
     }
@@ -59,8 +63,7 @@ final class FitEncoderTest extends TestCase
     #[Test]
     public function encodeDataSizeMatchesHeader(): void
     {
-        $encoder = new FitEncoder(new HaversineDistance());
-        $data = $encoder->encode($this->sampleData(), 'fit');
+        $data = $this->encoder->encode($this->sampleData(), 'fit');
 
         // Data size in header (bytes 4-7, little-endian uint32)
         $headerDataSize = unpack('V', substr($data, 4, 4));
@@ -74,7 +77,6 @@ final class FitEncoderTest extends TestCase
     #[Test]
     public function encodeWithMultiplePointsProducesValidOutput(): void
     {
-        $encoder = new FitEncoder(new HaversineDistance());
         $data = [
             'courseName' => 'Multi-point',
             'points' => [
@@ -85,7 +87,7 @@ final class FitEncoderTest extends TestCase
             'waypoints' => [],
         ];
 
-        $output = $encoder->encode($data, 'fit');
+        $output = $this->encoder->encode($data, 'fit');
 
         self::assertSame('.FIT', substr($output, 8, 4));
         self::assertGreaterThan(50, \strlen($output));
@@ -96,18 +98,15 @@ final class FitEncoderTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        $encoder = new FitEncoder(new HaversineDistance());
-        $encoder->encode('not an array', 'fit'); // @phpstan-ignore argument.type
+        $this->encoder->encode('not an array', 'fit'); // @phpstan-ignore argument.type
     }
 
     #[Test]
     public function supportsFitFormatOnly(): void
     {
-        $encoder = new FitEncoder(new HaversineDistance());
-
-        self::assertTrue($encoder->supportsEncoding('fit'));
-        self::assertFalse($encoder->supportsEncoding('gpx'));
-        self::assertFalse($encoder->supportsEncoding('json'));
+        self::assertTrue($this->encoder->supportsEncoding('fit'));
+        self::assertFalse($this->encoder->supportsEncoding('gpx'));
+        self::assertFalse($this->encoder->supportsEncoding('json'));
     }
 
     /**

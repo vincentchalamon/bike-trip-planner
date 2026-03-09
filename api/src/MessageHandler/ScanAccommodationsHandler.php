@@ -11,14 +11,14 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Engine\PricingHeuristicEngine;
 use App\Enum\ComputationName;
+use App\Geo\GeoDistanceInterface;
+use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
-use App\Geo\GeoDistanceInterface;
-use App\Geo\GeometryDistributorInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -29,6 +29,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandler
 {
     private const float DEDUP_DISTANCE_METERS = 200.0;
+
+    private const int MAX_CANDIDATES_PER_STAGE = 3;
 
     public function __construct(
         ComputationTrackerInterface $computationTracker,
@@ -76,12 +78,12 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>> $candidatesByStage */
             $candidatesByStage = $this->distributor->distributeByEndpoint($allCandidates, $stages);
 
-            // Deduplicate + limit to MAX_CANDIDATES_PER_STAGE per stage BEFORE any scraping
+            // Deduplicate + limit per stage BEFORE any scraping
             $retainedByStage = [];
             foreach ($candidatesByStage as $i => $candidates) {
                 $deduped = $this->deduplicate($candidates);
                 usort($deduped, static fn (array $a, array $b): int => $a['priceMin'] <=> $b['priceMin']);
-                $retainedByStage[$i] = \array_slice($deduped, 0, 3);
+                $retainedByStage[$i] = \array_slice($deduped, 0, self::MAX_CANDIDATES_PER_STAGE);
             }
 
             // Async scraping: 2 waves of parallel HTTP requests
