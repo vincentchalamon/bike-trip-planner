@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      issues: read
+      issues: write
       id-token: write
 
     steps:
@@ -30,7 +30,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
-            --allowedTools "mcp__github__add_issue_comment,mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(git log:*),Read,Glob,Grep"
+            --allowedTools "mcp__github__add_issue_comment,mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(gh api:*),Bash(git log:*),Read,Glob,Grep"
           prompt: |
             You are a senior code reviewer for the Bike Trip Planner project.
             Review pull request #${{ github.event.pull_request.number }} following the project's review standards.
@@ -93,7 +93,16 @@ jobs:
 
             Verify the PR body contains an Auto-critique section listing what was verified.
 
-            ## Step 10 -- Report
+            ## Step 10 -- Minimize previous review comments
+
+            Before posting any new comments, minimize all previous review comments from Claude on this PR:
+            1. Fetch all issue comments and filter for previous Claude reviews:
+               `gh api repos/vincentchalamon/bike-trip-planner/issues/${{ github.event.pull_request.number }}/comments --paginate --jq '.[] | select(.body | contains("### Code review") or contains("## Review")) | .node_id'`
+            2. For each node_id returned, minimize it:
+               `gh api graphql -f query='mutation { minimizeComment(input: {subjectId: "<NODE_ID>", classifier: OUTDATED}) { minimizedComment { isMinimized } } }'`
+            3. If no matching comments are found, skip this step silently.
+
+            ## Step 11 -- Report
 
             ### Inline comments with suggestions
 
@@ -116,7 +125,7 @@ jobs:
               - [ ] Documentation is up to date
               - [ ] Dependent tickets accounted for
 
-            ## Step 11 -- Approve or Request Changes
+            ## Step 12 -- Approve or Request Changes
 
             IMPORTANT: You MUST submit a formal GitHub review after posting the comment. This is a separate action from the comment.
 
