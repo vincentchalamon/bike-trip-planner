@@ -1,4 +1,10 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "alwaysThinkingEnabled": true,
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "openapi-spec"
+  ],
   "hooks": {
     "PreToolUse": [
       {
@@ -6,7 +12,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); for p in \".env\" \"schema.d.ts\" \"compose.override\" \"vendor/\" \"node_modules/\"; do if [[ \"$FILE\" == *\"$p\"* ]]; then echo \"Fichier protégé: $p\" >&2; exit 2; fi; done; exit 0'"
+            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); for p in \".env\" \"schema.d.ts\" \"compose.override\" \"vendor/\" \"node_modules/\" \".claude/\"; do if [[ \"$FILE\" == *\"$p\"* ]]; then echo \"Fichier protégé: $p\" >&2; exit 2; fi; done; exit 0'"
           }
         ]
       }
@@ -40,5 +46,48 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(curl:http://localhost*)",
+      "Bash(curl:https://localhost*)",
+      "Bash(diff:*)",
+      "Bash(echo:*)",
+      "Bash(find:*)",
+      "Bash(gh:*)",
+      "Bash(git:*)",
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(ls:*)",
+      "Bash(pwd)",
+      "Bash(tail:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(which:*)",
+      "Bash(make:*)",
+      "Bash(php:*)",
+      "Bash(npx markdownlint-cli2:*)",
+      "Bash(vendor/bin/php-cs-fixer:*)",
+      "Bash(vendor/bin/phpstan:*)",
+      "Bash(vendor/bin/phpunit:*)",
+      "Bash(symfony:*)",
+      "Bash(bin/console:*)",
+      "Bash(composer:*)",
+      "Bash(shellcheck:*)",
+      "Bash(docker compose:*)",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "deny": [
+      "Bash(rm:*)",
+      "Read(./.env)",
+      "Read(./api/config/secrets/*)",
+      "Read(./api/.env.local)",
+      "Read(./api/.env.local.php)",
+      "Read(./api/.env.*.local)",
+      "Read(./pwa/.env*)"
+    ],
+    "defaultMode": "acceptEdits"
   }
 }
