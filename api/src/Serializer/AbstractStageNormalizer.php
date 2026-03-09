@@ -12,7 +12,9 @@ abstract readonly class AbstractStageNormalizer implements NormalizerInterface
 {
     public function normalize(mixed $data, ?string $format = null, array $context = []): array
     {
-        \assert($data instanceof Stage);
+        if (!$data instanceof Stage) {
+            throw new \InvalidArgumentException(\sprintf('Expected instance of %s, got %s.', Stage::class, get_debug_type($data)));
+        }
 
         return [
             $this->nameKey() => $data->label ?? \sprintf('Stage %d', $data->dayNumber),

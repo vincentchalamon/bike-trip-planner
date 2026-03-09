@@ -10,11 +10,9 @@ use Location\Distance\Vincenty;
 
 final readonly class DistanceCalculator implements EngineInterface
 {
-    private Vincenty $vincenty;
-
-    public function __construct()
-    {
-        $this->vincenty = new Vincenty();
+    public function __construct(
+        private Vincenty $vincenty = new Vincenty(),
+    ) {
     }
 
     /**

@@ -11,7 +11,6 @@ use App\Engine\DistanceCalculator;
 use App\Enum\AlertType;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Container\ContainerInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ContinuityAnalyzerTest extends TestCase
@@ -21,18 +20,12 @@ final class ContinuityAnalyzerTest extends TestCase
     #[\Override]
     protected function setUp(): void
     {
-        $distanceCalculator = new DistanceCalculator();
-
-        $engineRegistry = $this->createStub(ContainerInterface::class);
-        $engineRegistry->method('get')
-            ->willReturn($distanceCalculator);
-
         $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturnCallback(
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        $this->analyzer = new ContinuityAnalyzer($engineRegistry, $translator);
+        $this->analyzer = new ContinuityAnalyzer(new DistanceCalculator(), $translator);
     }
 
     #[Test]

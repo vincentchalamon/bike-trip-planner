@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Serializer;
 
+use App\Geo\HaversineDistance;
 use App\Serializer\FitEncoder;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -13,7 +14,7 @@ final class FitEncoderTest extends TestCase
     #[Test]
     public function encodeProducesValidFitHeader(): void
     {
-        $encoder = new FitEncoder();
+        $encoder = new FitEncoder(new HaversineDistance());
         $data = $encoder->encode($this->sampleData(), 'fit');
 
         // FIT header is 14 bytes
@@ -29,7 +30,7 @@ final class FitEncoderTest extends TestCase
     #[Test]
     public function encodeEndsWithCrc16(): void
     {
-        $encoder = new FitEncoder();
+        $encoder = new FitEncoder(new HaversineDistance());
         $data = $encoder->encode($this->sampleData(), 'fit');
 
         // File must end with 2-byte CRC
@@ -47,7 +48,7 @@ final class FitEncoderTest extends TestCase
     #[Test]
     public function encodeWithWaypointsProducesLargerOutput(): void
     {
-        $encoder = new FitEncoder();
+        $encoder = new FitEncoder(new HaversineDistance());
 
         $dataWith = $encoder->encode($this->sampleDataWithWaypoints(), 'fit');
         $dataWithout = $encoder->encode($this->sampleData(), 'fit');
@@ -58,7 +59,7 @@ final class FitEncoderTest extends TestCase
     #[Test]
     public function encodeDataSizeMatchesHeader(): void
     {
-        $encoder = new FitEncoder();
+        $encoder = new FitEncoder(new HaversineDistance());
         $data = $encoder->encode($this->sampleData(), 'fit');
 
         // Data size in header (bytes 4-7, little-endian uint32)
@@ -73,7 +74,7 @@ final class FitEncoderTest extends TestCase
     #[Test]
     public function encodeWithMultiplePointsProducesValidOutput(): void
     {
-        $encoder = new FitEncoder();
+        $encoder = new FitEncoder(new HaversineDistance());
         $data = [
             'courseName' => 'Multi-point',
             'points' => [
@@ -95,14 +96,14 @@ final class FitEncoderTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        $encoder = new FitEncoder();
+        $encoder = new FitEncoder(new HaversineDistance());
         $encoder->encode('not an array', 'fit'); // @phpstan-ignore argument.type
     }
 
     #[Test]
     public function supportsFitFormatOnly(): void
     {
-        $encoder = new FitEncoder();
+        $encoder = new FitEncoder(new HaversineDistance());
 
         self::assertTrue($encoder->supportsEncoding('fit'));
         self::assertFalse($encoder->supportsEncoding('gpx'));

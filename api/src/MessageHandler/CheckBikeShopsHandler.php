@@ -9,6 +9,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
+use App\Geo\HaversineDistance;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBikeShops;
@@ -23,12 +24,15 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
 {
     private const int MINIMUM_DAYS_FOR_CHECK = 5;
 
+    private const float BIKE_SHOP_PROXIMITY_METERS = 2000.0;
+
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
+        private HaversineDistance $haversine,
         private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher);
@@ -89,7 +93,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                 $midpoint = $geometry[(int) (\count($geometry) / 2)];
 
                 foreach ($bikeShopLocations as $shop) {
-                    if ($this->haversineDistance($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']) < 2000.0) {
+                    if ($this->haversine->inMeters($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']) < self::BIKE_SHOP_PROXIMITY_METERS) {
                         $hasNearby = true;
                         break;
                     }
@@ -114,15 +118,5 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                 'alerts' => $stagesWithoutBikeShop,
             ]);
         });
-    }
-
-    private function haversineDistance(float $lat1, float $lon1, float $lat2, float $lon2): float
-    {
-        $earthRadius = 6371000.0;
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLon = deg2rad($lon2 - $lon1);
-        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
-
-        return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 }

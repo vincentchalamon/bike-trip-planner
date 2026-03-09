@@ -11,6 +11,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
+use App\Geo\GeometryBasedDistributor;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
@@ -23,6 +24,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 #[AsMessageHandler]
 final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 {
+    private const float LUNCH_NUDGE_DISTANCE_KM = 40.0;
+
     /** @var list<string> */
     private const array RESUPPLY_CATEGORIES = [
         'restaurant', 'cafe', 'bar', 'supermarket', 'convenience',
@@ -36,6 +39,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
+        private GeometryBasedDistributor $distributor,
         private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher);
@@ -90,8 +94,9 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                 ];
             }
 
-            // Distribute POIs to their nearest stage by geometry midpoint
-            $poisByStage = $this->distributePoisByStage($allPois, $stages);
+            // Distribute POIs to their nearest stage by geometry
+            /** @var array<int, list<array{name: string, category: string, lat: float, lon: float}>> $poisByStage */
+            $poisByStage = $this->distributor->distributeByGeometry($allPois, $stages);
 
             foreach ($stages as $i => $stage) {
                 $pois = [];
@@ -109,7 +114,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
                 // Lunch nudge: flag long stages with no food POIs
                 $alerts = [];
-                if ($stage->distance >= 40.0 && !$this->hasResupplyPoi($stage)) {
+                if ($stage->distance >= self::LUNCH_NUDGE_DISTANCE_KM && !$this->hasResupplyPoi($stage)) {
                     $alert = new Alert(
                         type: AlertType::NUDGE,
                         message: $this->translator->trans('alert.lunch.nudge', [], 'alerts', $locale),
@@ -139,58 +144,5 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
     private function hasResupplyPoi(Stage $stage): bool
     {
         return array_any($stage->pois, fn ($poi): bool => \in_array($poi->category, self::RESUPPLY_CATEGORIES, true));
-    }
-
-    /**
-     * Assign each POI to the stage whose geometry is closest.
-     *
-     * @param list<array{name: string, category: string, lat: float, lon: float}> $pois
-     * @param list<Stage>                                                         $stages
-     *
-     * @return array<int, list<array{name: string, category: string, lat: float, lon: float}>>
-     */
-    private function distributePoisByStage(array $pois, array $stages): array
-    {
-        /** @var array<int, list<array{name: string, category: string, lat: float, lon: float}>> $result */
-        $result = [];
-        /** @var array<int, list<array{lat: float, lon: float}>> $stageGeometries */
-        $stageGeometries = [];
-        foreach ($stages as $i => $stage) {
-            $result[$i] = [];
-            $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
-            $stageGeometries[$i] = array_map(
-                static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
-                $geometry,
-            );
-        }
-
-        foreach ($pois as $poi) {
-            $closestStage = 0;
-            $closestDistance = \PHP_FLOAT_MAX;
-
-            foreach ($stageGeometries as $i => $geometry) {
-                foreach ($geometry as $point) {
-                    $distance = $this->haversineDistance($poi['lat'], $poi['lon'], $point['lat'], $point['lon']);
-                    if ($distance < $closestDistance) {
-                        $closestDistance = $distance;
-                        $closestStage = $i;
-                    }
-                }
-            }
-
-            $result[$closestStage][] = $poi;
-        }
-
-        return $result;
-    }
-
-    private function haversineDistance(float $lat1, float $lon1, float $lat2, float $lon2): float
-    {
-        $earthRadius = 6371000.0;
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLon = deg2rad($lon2 - $lon1);
-        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
-
-        return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 }

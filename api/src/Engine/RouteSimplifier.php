@@ -12,11 +12,11 @@ final readonly class RouteSimplifier implements EngineInterface
 {
     private const float TOLERANCE_METERS = 20.0;
 
-    private Vincenty $vincenty;
+    private const float COINCIDENT_POINT_THRESHOLD = 0.001;
 
-    public function __construct()
-    {
-        $this->vincenty = new Vincenty();
+    public function __construct(
+        private Vincenty $vincenty = new Vincenty(),
+    ) {
     }
 
     /**
@@ -88,7 +88,7 @@ final readonly class RouteSimplifier implements EngineInterface
 
         $startToEnd = $this->vincenty->getDistance($geoStart, $geoEnd);
 
-        if ($startToEnd < 0.001) {
+        if ($startToEnd < self::COINCIDENT_POINT_THRESHOLD) {
             // Start and end are the same point
             return $this->vincenty->getDistance($geoStart, $geoPoint);
         }

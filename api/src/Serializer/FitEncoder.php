@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Serializer;
 
+use App\Geo\HaversineDistance;
 use App\Serializer\Mapper\WaypointMapper;
 use Symfony\Component\Serializer\Encoder\EncoderInterface;
 
@@ -14,6 +15,8 @@ use Symfony\Component\Serializer\Encoder\EncoderInterface;
  */
 final readonly class FitEncoder implements EncoderInterface
 {
+    private const float SEMICIRCLES_PER_180_DEGREES = 2_147_483_648.0; // 2^31
+
     // FIT protocol constants
     private const int FIT_HEADER_SIZE = 14;
 
@@ -63,6 +66,11 @@ final readonly class FitEncoder implements EncoderInterface
     // Sport type
     private const int SPORT_CYCLING = 2;
 
+    public function __construct(
+        private HaversineDistance $haversine,
+    ) {
+    }
+
     /**
      * @param array{courseName: string, points: list<array{lat: float, lon: float, ele: float}>, waypoints: list<array{lat: float, lon: float, name: string, type: string}>} $data
      */
@@ -94,7 +102,7 @@ final readonly class FitEncoder implements EncoderInterface
 
         foreach ($points as $point) {
             if (null !== $prevPoint) {
-                $cumulativeDistance += $this->haversineDistance($prevPoint, $point);
+                $cumulativeDistance += $this->haversine->inKilometers($prevPoint['lat'], $prevPoint['lon'], $point['lat'], $point['lon']);
             }
 
             if (!$recordDefinitionWritten) {
@@ -316,23 +324,7 @@ final readonly class FitEncoder implements EncoderInterface
 
     private function toSemicircles(float $degrees): int
     {
-        return (int) round($degrees / 180.0 * 2147483648.0); // 2^31
-    }
-
-    /**
-     * @param array{lat: float, lon: float, ele: float} $a
-     * @param array{lat: float, lon: float, ele: float} $b
-     */
-    private function haversineDistance(array $a, array $b): float
-    {
-        $R = 6371.0; // Earth radius in km
-        $dLat = deg2rad($b['lat'] - $a['lat']);
-        $dLon = deg2rad($b['lon'] - $a['lon']);
-        $sinLat = sin($dLat / 2);
-        $sinLon = sin($dLon / 2);
-        $h = $sinLat * $sinLat + cos(deg2rad($a['lat'])) * cos(deg2rad($b['lat'])) * $sinLon * $sinLon;
-
-        return 2.0 * $R * asin(sqrt($h));
+        return (int) round($degrees / 180.0 * self::SEMICIRCLES_PER_180_DEGREES);
     }
 
     private function crc16(string $data): int

@@ -9,8 +9,6 @@ use App\ApiResource\Model\Alert;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculator;
 use App\Enum\AlertType;
-use Psr\Container\ContainerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
@@ -20,8 +18,7 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
     private const float WARNING_THRESHOLD_METERS = 100.0;
 
     public function __construct(
-        #[Autowire(service: 'app.engine_registry')]
-        private ContainerInterface $engineRegistry,
+        private DistanceCalculator $distanceCalculator,
         private TranslatorInterface $translator,
     ) {
     }
@@ -38,9 +35,7 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
         /** @var string $locale */
         $locale = $context['locale'] ?? 'en';
 
-        $gapMeters = $this->engineRegistry
-            ->get(DistanceCalculator::class)
-            ->distanceBetween($stage->endPoint, $nextStage->startPoint);
+        $gapMeters = $this->distanceCalculator->distanceBetween($stage->endPoint, $nextStage->startPoint);
 
         if ($gapMeters > self::CRITICAL_THRESHOLD_METERS) {
             return [new Alert(
