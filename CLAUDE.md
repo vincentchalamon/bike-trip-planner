@@ -161,10 +161,9 @@ Run `git diff` and review all changes for:
 
 ### 3. PR Protocol
 
-1. Create the PR as **Draft**
-2. Wait for CI to pass: `gh pr checks --watch`
-3. Mark as **Ready for review**
-4. Assign @vincentchalamon as reviewer
+1. Create the PR as **Ready for review** (only use Draft if changes are still pending and not yet pushed)
+2. Assign @vincentchalamon as reviewer
+3. Wait for CI to pass: `gh pr checks --watch`
 
 ### 4. Auto-critique
 
