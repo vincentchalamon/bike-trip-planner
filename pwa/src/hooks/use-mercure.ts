@@ -12,6 +12,26 @@ const MERCURE_URL =
   process.env.NEXT_PUBLIC_MERCURE_URL ??
   "https://localhost/.well-known/mercure";
 
+/**
+ * Dispatches a Mercure SSE event to the appropriate Zustand store action.
+ *
+ * Acts as the central event router for all server-pushed computation results.
+ * Each event type maps to one or more store mutations in {@link useTripStore}
+ * or {@link useUiStore}. For `stages_computed` events, performs smart merging:
+ * partial updates only reset derived data (weather, POIs, labels) for affected
+ * stages, while full replacements preserve data for stages whose endpoints
+ * did not move. Stage labels are resolved asynchronously via reverse geocoding.
+ *
+ * Event types handled:
+ * - `route_parsed` — initial route metadata (distance, elevation, source)
+ * - `stages_computed` — stage geometry and pacing (partial or full)
+ * - `weather_fetched` — per-stage weather forecasts
+ * - `pois_scanned` — points of interest with optional alerts
+ * - `accommodations_found` — accommodation options per stage
+ * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` — alert categories
+ * - `trip_complete` — final computation status, stops processing spinner
+ * - `validation_error` / `computation_error` — error toasts and recovery
+ */
 function dispatchEvent(event: MercureEvent): void {
   const store = useTripStore.getState();
 
@@ -240,6 +260,19 @@ async function resolveStageLabels(
   await Promise.all(promises);
 }
 
+/**
+ * Subscribes to Mercure SSE events for a given trip.
+ *
+ * Opens a persistent SSE connection to the Mercure hub on mount, routing all
+ * incoming events through {@link dispatchEvent}. The connection is torn down
+ * on unmount or when the `tripId` changes. SSE connectivity state is tracked
+ * in {@link useUiStore} (`sseConnected`).
+ *
+ * In E2E tests, the real Mercure connection is aborted via `page.route()` and
+ * events are injected through `CustomEvent('__test_mercure_event')` instead.
+ *
+ * @param tripId - The trip identifier to subscribe to, or `null` to skip subscription
+ */
 export function useMercure(tripId: string | null): void {
   const clientRef = useRef<MercureClient | null>(null);
 
