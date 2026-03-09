@@ -76,7 +76,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>> $candidatesByStage */
             $candidatesByStage = $this->distributor->distributeByEndpoint($allCandidates, $stages);
 
-            // Deduplicate + limit to 3 per stage BEFORE any scraping
+            // Deduplicate + limit to MAX_CANDIDATES_PER_STAGE per stage BEFORE any scraping
             $retainedByStage = [];
             foreach ($candidatesByStage as $i => $candidates) {
                 $deduped = $this->deduplicate($candidates);
