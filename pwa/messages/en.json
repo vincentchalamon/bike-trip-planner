@@ -119,6 +119,7 @@
     "failedMoveStage": "Failed to move stage.",
     "failedAddStage": "Failed to add stage.",
     "failedUpdateLocation": "Failed to update stage location.",
-    "failedUpdatePacing": "Failed to update pacing settings."
+    "failedUpdatePacing": "Failed to update pacing settings.",
+    "retry": "Try again"
   }
 }

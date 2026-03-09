@@ -2,43 +2,31 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { X, Download, Loader2, Pencil, Check } from "lucide-react";
+import { X, Pencil, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { StageLocations } from "@/components/stage-locations";
 import { StageMetadata } from "@/components/stage-metadata";
 import { AlertList } from "@/components/alert-list";
 import { AccommodationPanel } from "@/components/accommodation-panel";
+import { StageDownloads } from "@/components/stage-downloads";
+import { StageDistanceEditor } from "@/components/stage-distance-editor";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 import { useTripStore } from "@/store/trip-store";
+import { getDifficulty, DIFFICULTY_COLORS } from "@/lib/constants";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://localhost";
+const difficultyLabelKeys = {
+  easy: "difficultyEasy",
+  medium: "difficultyMedium",
+  hard: "difficultyHard",
+} as const;
 
 function formatCoords(point: { lat: number; lon: number }): string {
   const latDir = point.lat >= 0 ? "N" : "S";
   const lonDir = point.lon >= 0 ? "E" : "W";
   return `${Math.abs(point.lat).toFixed(3)}°${latDir}, ${Math.abs(point.lon).toFixed(3)}°${lonDir}`;
 }
-
-function getDifficulty(
-  distance: number | null,
-  elevation: number | null,
-): "easy" | "medium" | "hard" {
-  const d = distance ?? 0;
-  const e = elevation ?? 0;
-  if (d < 60 && e < 800) return "easy";
-  if (d < 100 && e < 1500) return "medium";
-  return "hard";
-}
-
-const difficultyColors = {
-  easy: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  medium:
-    "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
-  hard: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-} as const;
 
 interface StageCardProps {
   stage: StageData;
@@ -79,31 +67,6 @@ export function StageCard({
   const t = useTranslations("stage");
   const tripId = useTripStore((s) => s.trip?.id);
   const [editingDistance, setEditingDistance] = useState(false);
-  const [editValue, setEditValue] = useState("");
-  const [downloading, setDownloading] = useState<"gpx" | "fit" | false>(false);
-
-  function startEditDistance() {
-    setEditValue(
-      stage.distance !== null ? String(Math.round(stage.distance)) : "",
-    );
-    setEditingDistance(true);
-  }
-
-  function commitDistance() {
-    const km = parseFloat(editValue);
-    if (!isNaN(km) && km > 0 && onDistanceChange) {
-      onDistanceChange(km);
-    }
-    setEditingDistance(false);
-  }
-
-  function handleDistanceKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
-      commitDistance();
-    } else if (e.key === "Escape") {
-      setEditingDistance(false);
-    }
-  }
 
   return (
     <Card
@@ -118,11 +81,7 @@ export function StageCard({
           className="absolute top-3 right-3 h-6 w-6 text-muted-icon"
           onClick={onDelete}
           disabled={!canDelete}
-          title={
-            !canDelete
-              ? t("minStagesReached" as Parameters<typeof t>[0])
-              : undefined
-          }
+          title={!canDelete ? t("minStagesReached") : undefined}
           aria-label={t("deleteStage", { dayNumber: stage.dayNumber })}
           data-testid={`delete-stage-${stage.dayNumber}`}
         >
@@ -131,80 +90,19 @@ export function StageCard({
 
         {/* Action buttons */}
         <div className="absolute top-3 right-10 flex gap-0.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 gap-1 text-muted-icon px-1.5 cursor-pointer"
-            disabled={!tripId || !!downloading}
-            onClick={async () => {
-              if (!tripId) return;
-              setDownloading("gpx");
-              try {
-                const res = await fetch(
-                  `${API_URL}/trips/${tripId}/stages/${stageIndex}.gpx`,
-                );
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `stage-${stage.dayNumber}.gpx`;
-                a.click();
-                URL.revokeObjectURL(url);
-              } finally {
-                setDownloading(false);
-              }
-            }}
-            aria-label={t("downloadGpx", { dayNumber: stage.dayNumber })}
-            title={t("downloadGpx", { dayNumber: stage.dayNumber })}
-          >
-            {downloading === "gpx" ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Download className="h-3.5 w-3.5" />
-            )}
-            <span className="text-[10px] font-medium">GPX</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 gap-1 text-muted-icon px-1.5 cursor-pointer"
-            disabled={!tripId || !!downloading}
-            onClick={async () => {
-              if (!tripId) return;
-              setDownloading("fit");
-              try {
-                const res = await fetch(
-                  `${API_URL}/trips/${tripId}/stages/${stageIndex}.fit`,
-                );
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `stage-${stage.dayNumber}.fit`;
-                a.click();
-                URL.revokeObjectURL(url);
-              } finally {
-                setDownloading(false);
-              }
-            }}
-            aria-label={t("downloadFit", { dayNumber: stage.dayNumber })}
-            title={t("downloadFit", { dayNumber: stage.dayNumber })}
-          >
-            {downloading === "fit" ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Download className="h-3.5 w-3.5" />
-            )}
-            <span className="text-[10px] font-medium">FIT</span>
-          </Button>
+          <StageDownloads
+            tripId={tripId}
+            stageIndex={stageIndex}
+            dayNumber={stage.dayNumber}
+          />
           {onDistanceChange && (
             <Button
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-icon cursor-pointer"
-              onClick={startEditDistance}
-              aria-label={t("editDistance" as Parameters<typeof t>[0])}
-              title={t("editDistance" as Parameters<typeof t>[0])}
+              onClick={() => setEditingDistance(true)}
+              aria-label={t("editDistance")}
+              title={t("editDistance")}
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
@@ -221,28 +119,14 @@ export function StageCard({
         {/* Metadata + difficulty + edit distance */}
         <div className="mt-3 flex items-center gap-3 flex-wrap">
           {editingDistance ? (
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onKeyDown={handleDistanceKeyDown}
-                className="h-7 w-20 text-sm"
-                min={1}
-                aria-label={t("distanceLabel" as Parameters<typeof t>[0])}
-                autoFocus
-              />
-              <span className="text-sm text-muted-foreground">km</span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7 cursor-pointer"
-                onClick={commitDistance}
-                aria-label={t("saveDistance" as Parameters<typeof t>[0])}
-              >
-                <Check className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+            <StageDistanceEditor
+              initialDistance={stage.distance}
+              onCommit={(km) => {
+                onDistanceChange?.(km);
+                setEditingDistance(false);
+              }}
+              onCancel={() => setEditingDistance(false)}
+            />
           ) : (
             <>
               <StageMetadata
@@ -254,12 +138,12 @@ export function StageCard({
               />
               {stage.distance !== null && (
                 <span
-                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${difficultyColors[getDifficulty(stage.distance, stage.elevation)]}`}
+                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[getDifficulty(stage.distance, stage.elevation)]}`}
                 >
                   {t(
-                    `difficulty${getDifficulty(stage.distance, stage.elevation).charAt(0).toUpperCase()}${getDifficulty(stage.distance, stage.elevation).slice(1)}` as Parameters<
-                      typeof t
-                    >[0],
+                    difficultyLabelKeys[
+                      getDifficulty(stage.distance, stage.elevation)
+                    ],
                   )}
                 </span>
               )}
@@ -276,7 +160,7 @@ export function StageCard({
         {isProcessing && stage.alerts.length === 0 && (
           <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            <span>{t("loadingAlerts" as Parameters<typeof t>[0])}</span>
+            <span>{t("loadingAlerts")}</span>
           </div>
         )}
 

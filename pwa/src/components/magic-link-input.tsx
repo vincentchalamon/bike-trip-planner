@@ -5,15 +5,7 @@ import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-
-function isValidUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
-  } catch {
-    return false;
-  }
-}
+import { isValidUrl } from "@/lib/validation/url";
 
 interface MagicLinkInputProps {
   onSubmit: (url: string) => Promise<void>;
