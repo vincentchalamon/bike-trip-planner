@@ -28,7 +28,7 @@ interface UseEditableReturn {
  *
  * @param options.value - The current display value (controlled externally)
  * @param options.onChange - Callback invoked with the trimmed new value on confirmation
- * @returns Editing state, handlers (`startEditing`, `stopEditing`, `cancel`, `handleKeyDown`), and an `inputRef` for focus management
+ * @returns `{ isEditing, editValue, setEditValue }` state fields, handlers (`startEditing`, `stopEditing`, `cancel`, `handleKeyDown`), and an `inputRef` for focus management
  */
 export function useEditable({
   value,
