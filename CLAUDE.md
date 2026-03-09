@@ -198,6 +198,7 @@ All code review comments (CI workflow, `/code-review`, `/review`) follow [Conven
 ### Review Body
 
 The review submission body contains only PR-level findings:
+
 - Concise summary (1-3 sentences)
 - PR title conventional commit check (if issue found)
 - Review checklist (checked/unchecked items)
