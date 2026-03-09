@@ -95,6 +95,15 @@ jobs:
 
             ## Step 10 -- Report
 
+            ### Inline comments with suggestions
+
+            For every finding that involves a code change, post an **inline review comment** on the relevant line(s) using `mcp__github__add_comment_to_pending_review`.
+            - ALWAYS include a concrete fix using a GitHub suggestion block (` ```suggestion `), so the author can apply the fix in one click.
+            - ALWAYS propose a solution — never just point out a problem without suggesting how to fix it.
+            - Keep the suggestion minimal: only change what is necessary.
+
+            ### Summary comment
+
             Post a summary comment on the PR using `gh pr comment` with:
             - Severity levels: **critical**, **warning**, **info**
             - Specific `file:line` references for each finding
