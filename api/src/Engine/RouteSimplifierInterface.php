@@ -6,7 +6,7 @@ namespace App\Engine;
 
 use App\ApiResource\Model\Coordinate;
 
-interface RouteSimplifierInterface extends EngineInterface
+interface RouteSimplifierInterface
 {
     /**
      * Simplifies a track using Douglas-Peucker algorithm preserving elevation.

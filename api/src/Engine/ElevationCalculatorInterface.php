@@ -6,7 +6,7 @@ namespace App\Engine;
 
 use App\ApiResource\Model\Coordinate;
 
-interface ElevationCalculatorInterface extends EngineInterface
+interface ElevationCalculatorInterface
 {
     /**
      * Calculates total ascent (D+) in meters, filtering noise below the threshold.

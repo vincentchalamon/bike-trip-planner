@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Engine;
 
 // DIP: no interface — single consumer, single implementation. Extract when a second consumer arises.
-final readonly class PricingHeuristicEngine implements EngineInterface
+final readonly class PricingHeuristicEngine
 {
     /** @var array<string, array{min: float, max: float}> */
     private const array PRICE_BRACKETS = [

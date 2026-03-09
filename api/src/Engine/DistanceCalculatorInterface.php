@@ -6,7 +6,7 @@ namespace App\Engine;
 
 use App\ApiResource\Model\Coordinate;
 
-interface DistanceCalculatorInterface extends EngineInterface
+interface DistanceCalculatorInterface
 {
     /**
      * Calculates the total distance of a track in kilometers.
