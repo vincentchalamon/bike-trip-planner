@@ -119,6 +119,7 @@
     "failedMoveStage": "Impossible de déplacer l'étape.",
     "failedAddStage": "Impossible d'ajouter l'étape.",
     "failedUpdateLocation": "Impossible de mettre à jour la localisation.",
-    "failedUpdatePacing": "Impossible de mettre à jour les réglages."
+    "failedUpdatePacing": "Impossible de mettre à jour les réglages.",
+    "retry": "Réessayer"
   }
 }

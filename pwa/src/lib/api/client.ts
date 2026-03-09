@@ -1,5 +1,6 @@
 import createClient from "openapi-fetch";
 import type { paths } from "./schema";
+import { API_URL } from "@/lib/constants";
 
 function getBrowserLocale(): string {
   if (typeof navigator !== "undefined") {
@@ -22,16 +23,30 @@ export interface ApiError {
   violations?: { propertyPath: string; message: string }[];
 }
 
-export function parseApiError(status: number, body: unknown): ApiError {
-  if (
-    status === 422 &&
-    body &&
+interface ViolationBody {
+  violations?: { propertyPath: string; message: string }[];
+}
+
+interface DetailBody {
+  detail?: string;
+}
+
+function hasViolations(body: unknown): body is ViolationBody {
+  return (
+    body !== null &&
     typeof body === "object" &&
-    "violations" in body
-  ) {
-    const violations =
-      (body as { violations?: { propertyPath: string; message: string }[] })
-        .violations ?? [];
+    "violations" in body &&
+    Array.isArray((body as ViolationBody).violations)
+  );
+}
+
+function hasDetail(body: unknown): body is DetailBody {
+  return body !== null && typeof body === "object" && "detail" in body;
+}
+
+export function parseApiError(status: number, body: unknown): ApiError {
+  if (status === 422 && hasViolations(body)) {
+    const violations = body.violations ?? [];
     return {
       type: "validation",
       message:
@@ -41,10 +56,7 @@ export function parseApiError(status: number, body: unknown): ApiError {
   }
 
   if (status === 400) {
-    const detail =
-      body && typeof body === "object" && "detail" in body
-        ? (body as { detail?: string }).detail
-        : undefined;
+    const detail = hasDetail(body) ? body.detail : undefined;
     return {
       type: "bad_request",
       message: detail ?? "Bad request",
@@ -66,4 +78,41 @@ export function parseApiError(status: number, body: unknown): ApiError {
 
 export function isNetworkError(error: unknown): error is TypeError {
   return error instanceof TypeError && error.message === "Failed to fetch";
+}
+
+export interface ScrapedData {
+  name: string | null;
+  type: string | null;
+  priceMin: number | null;
+  priceMax: number | null;
+}
+
+export async function scrapeAccommodation(
+  url: string,
+): Promise<ScrapedData | null> {
+  const res = await fetch("/accommodations/scrape", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) return null;
+  return res.json() as Promise<ScrapedData>;
+}
+
+export async function downloadStageFile(
+  tripId: string,
+  stageIndex: number,
+  format: "gpx" | "fit",
+  dayNumber: number,
+): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/trips/${tripId}/stages/${stageIndex}.${format}`,
+  );
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `stage-${dayNumber}.${format}`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
