@@ -117,7 +117,7 @@ export async function downloadStageFile(
     `${API_URL}/trips/${tripId}/stages/${stageIndex}.${format}`,
   );
   if (!res.ok) {
-    throw new Error(`Download failed: ${res.status} ${res.statusText}`);
+    throw new Error(`Download failed with status ${res.status}`);
   }
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);

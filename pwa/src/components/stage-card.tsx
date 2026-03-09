@@ -67,6 +67,7 @@ export function StageCard({
   const t = useTranslations("stage");
   const tripId = useTripStore((s) => s.trip?.id);
   const [editingDistance, setEditingDistance] = useState(false);
+  const difficulty = getDifficulty(stage.distance, stage.elevation);
 
   return (
     <Card
@@ -136,20 +137,13 @@ export function StageCard({
                 weather={stage.weather}
                 isProcessing={isProcessing}
               />
-              {stage.distance !== null &&
-                (() => {
-                  const difficulty = getDifficulty(
-                    stage.distance,
-                    stage.elevation,
-                  );
-                  return (
-                    <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[difficulty]}`}
-                    >
-                      {t(difficultyLabelKeys[difficulty])}
-                    </span>
-                  );
-                })()}
+              {stage.distance !== null && (
+                <span
+                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[difficulty]}`}
+                >
+                  {t(difficultyLabelKeys[difficulty])}
+                </span>
+              )}
             </>
           )}
         </div>
