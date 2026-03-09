@@ -45,7 +45,7 @@ Pre-commit hook runs `make qa` automatically; commit aborts on failure.
 
 ```bash
 /pick <issue-number> [base-branch]  # Implement a GitHub issue end-to-end
-/review <pr-number>                 # Deep PR review (security, perf, docs)
+/code-review <pr-number>            # Code review a PR (multi-agent, inline comments)
 /qa                                 # Run full QA pipeline and fix issues
 /typegen                            # Regenerate TS types from backend
 ```
@@ -161,14 +161,53 @@ Run `git diff` and review all changes for:
 
 ### 3. PR Protocol
 
-1. Create the PR as **Draft**
-2. Wait for CI to pass: `gh pr checks --watch`
-3. Mark as **Ready for review**
-4. Assign @vincentchalamon as reviewer
+1. Create the PR as **Ready for review** (only use Draft if changes are still pending and not yet pushed)
+2. Assign @vincentchalamon as reviewer
+3. Wait for CI to pass: `gh pr checks --watch`
 
 ### 4. Auto-critique
 
 Include an **Auto-critique** section in the PR body listing what was verified.
+
+## Review Comment Format
+
+All code review comments (CI workflow, `/code-review`, `/review`) follow [Conventional Comments](https://conventionalcomments.org/):
+
+```text
+<label> (<decoration>): <subject>
+
+<body>
+```
+
+### Labels
+
+| Severity | Label |
+|----------|-------|
+| Critical (blocking) | `issue (blocking): <subject>` |
+| Warning | `issue: <subject>` |
+| Info / suggestion | `suggestion (non-blocking): <subject>` |
+| Nitpick | `nitpick (non-blocking): <subject>` |
+| Positive feedback | `praise: <subject>` |
+
+### Inline Comments
+
+- Each code-level finding gets its own **inline thread** on the relevant line(s)
+- ALWAYS include a concrete fix using a GitHub ` ```suggestion ` block when applicable
+- Keep suggestions minimal: only change what is necessary
+
+### Review Body
+
+The review submission body contains only PR-level findings:
+
+- Concise summary (1-3 sentences)
+- PR title conventional commit check (if issue found)
+- Review checklist (checked/unchecked items)
+- Count of inline comments posted
+- Footer: "Generated with [Claude Code](https://claude.ai/code)"
+
+### Conventional Commits on PRs
+
+Since PRs are **squash-merged**, only the **PR title** must follow Conventional Commits format. Do NOT check individual commit messages.
 
 ## ADR Documentation
 

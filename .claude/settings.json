@@ -12,7 +12,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); for p in \".env\" \"schema.d.ts\" \"compose.override\" \"vendor/\" \"node_modules/\" \".claude/skills/\" \".claude/settings.json\" \".claude/settings.local.json\"; do if [[ \"$FILE\" == *\"$p\"* ]]; then echo \"Fichier protégé: $p\" >&2; exit 2; fi; done; exit 0'"
+            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); for p in \".env\" \"schema.d.ts\" \"compose.override\" \"vendor/\" \"node_modules/\" \".claude/settings.json\" \".claude/settings.local.json\"; do if [[ \"$FILE\" == *\"$p\"* ]]; then echo \"Fichier protégé: $p\" >&2; exit 2; fi; done; exit 0'"
           }
         ]
       }

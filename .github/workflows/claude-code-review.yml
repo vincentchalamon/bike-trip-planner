@@ -30,22 +30,25 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
-            --allowedTools "mcp__github__add_issue_comment,mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(gh api:*),Bash(git log:*),Read,Glob,Grep"
+            --allowedTools "mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,mcp__github__pull_request_read,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api:*),Bash(git log:*),Read,Glob,Grep"
           prompt: |
             You are a senior code reviewer for the Bike Trip Planner project.
             Review pull request #${{ github.event.pull_request.number }} following the project's review standards.
+
+            Use the **Review Comment Format** section in CLAUDE.md for all comments (Conventional Comments labels, inline threads, review body structure).
 
             ## Step 1 -- Fetch PR context
 
             Run `gh pr view ${{ github.event.pull_request.number }}` and `gh pr diff ${{ github.event.pull_request.number }}` to get the full diff and PR metadata.
             Read the list of commits with `gh pr view ${{ github.event.pull_request.number }} --json commits`.
 
-            ## Step 2 -- Conventional Commits
+            ## Step 2 -- Conventional Commits (PR title only)
 
-            Verify every commit message follows `<type>(<scope>): <description>`:
+            Verify the **PR title** follows `<type>(<scope>): <description>`:
             - Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
             - Description must be imperative mood, lowercase, no trailing period
-            - Flag any non-conforming commit
+            - Do NOT check individual commit messages (commits are squashed on merge)
+            - If the PR title is non-conforming, include it as a finding in the review body
 
             ## Step 3 -- Diff analysis
 
@@ -93,54 +96,82 @@ jobs:
 
             Verify the PR body contains an Auto-critique section listing what was verified.
 
-            ## Step 10 -- Minimize previous review comments
+            ## Step 10 -- Minimize previous reviews
 
             Before posting any new comments, minimize all previous review comments from Claude on this PR:
-            1. Fetch all issue comments and filter for previous Claude reviews:
+
+            1. Minimize previous issue comments (old format):
                `gh api repos/vincentchalamon/bike-trip-planner/issues/${{ github.event.pull_request.number }}/comments --paginate --jq '.[] | select(.body | contains("### Code review") or contains("## Review")) | .node_id'`
-            2. For each node_id returned, minimize it:
+
+            2. Minimize previous review submissions:
+               `gh api repos/vincentchalamon/bike-trip-planner/pulls/${{ github.event.pull_request.number }}/reviews --paginate --jq '.[] | select(.user.login == "github-actions[bot]" or .user.type == "Bot") | .node_id'`
+
+            3. For each node_id returned from either query, minimize it:
                `gh api graphql -f query='mutation { minimizeComment(input: {subjectId: "<NODE_ID>", classifier: OUTDATED}) { minimizedComment { isMinimized } } }'`
-            3. If no matching comments are found, skip this step silently.
 
-            ## Step 11 -- Report
+            4. If no matching comments are found, skip this step silently.
 
-            ### Inline comments with suggestions
+            ## Step 11 -- Post review with inline comments
 
-            For every finding that involves a code change, post an **inline review comment** on the relevant line(s) using `mcp__github__add_comment_to_pending_review`.
-            - ALWAYS include a concrete fix using a GitHub suggestion block (` ```suggestion `), so the author can apply the fix in one click.
-            - ALWAYS propose a solution — never just point out a problem without suggesting how to fix it.
-            - Keep the suggestion minimal: only change what is necessary.
+            Follow this sequence precisely:
 
-            ### Summary comment
+            ### A. Check self-review
 
-            Post a summary comment on the PR using `gh pr comment` with:
-            - Severity levels: **critical**, **warning**, **info**
-            - Specific `file:line` references for each finding
-            - Findings grouped by category (Security, Performance, Architecture, Documentation, Tests, Commits)
-            - End with the review checklist, each item checked or unchecked:
-              - [ ] Code respects the project architecture
-              - [ ] SOLID principles and Law of Demeter followed
-              - [ ] Design patterns used where appropriate
-              - [ ] Tests cover new/changed cases
-              - [ ] Documentation is up to date
-              - [ ] Dependent tickets accounted for
+            Check `gh pr view ${{ github.event.pull_request.number }} --json author` — if you are the PR author, GitHub forbids self-approval. In that case, use `event: "COMMENT"` instead of `APPROVE` or `REQUEST_CHANGES`.
 
-            ## Step 12 -- Approve or Request Changes
-
-            IMPORTANT: You MUST submit a formal GitHub review after posting the comment. This is a separate action from the comment.
+            ### B. Determine review event
 
             Based on your findings:
-            - If there are **no critical or warning findings**, approve the PR.
-            - If there are **critical or warning findings**, request changes with a summary of the issues.
-            - If **you are the PR author** (check `gh pr view` author field), do NOT submit a review — GitHub forbids self-approval. Post the summary as a regular comment instead.
+            - **No critical or warning findings** → `APPROVE`
+            - **Any critical or warning findings** → `REQUEST_CHANGES`
+            - **Self-review** → `COMMENT` (always)
 
-            To submit the formal review, use `mcp__github__pull_request_review_write` with:
+            ### C. Create pending review
+
+            Use `mcp__github__pull_request_review_write` with:
             - `owner`: "vincentchalamon"
             - `repo`: "bike-trip-planner"
             - `pull_number`: ${{ github.event.pull_request.number }}
-            - `event`: "APPROVE" or "REQUEST_CHANGES"
-            - `body`: a short summary of your review
+            - `event`: "PENDING"
+            - `body`: "" (empty — body will be set on submit)
 
-            If `mcp__github__pull_request_review_write` fails, fall back to:
-            `gh pr review ${{ github.event.pull_request.number }} --approve --body "SUMMARY"` or
-            `gh pr review ${{ github.event.pull_request.number }} --request-changes --body "SUMMARY"`
+            ### D. Post inline comments
+
+            For each code-level finding, post an inline comment using `mcp__github__add_comment_to_pending_review` in **Conventional Comments** format:
+
+            ```
+            <label> (<decoration>): <subject>
+
+            ```suggestion
+            <fixed code>
+            ```
+            ```
+
+            Rules:
+            - ALWAYS include a concrete fix using a GitHub `suggestion` block when the finding involves a code change
+            - ALWAYS propose a solution — never just point out a problem
+            - Keep suggestions minimal: only change what is necessary
+            - Use `subjectType: "FILE"` as fallback if the exact diff line is not determinable
+            - If there are more than 15 code-level findings, post the 15 most important as inline comments and summarize the rest in the review body
+
+            ### E. Submit the review
+
+            Use `mcp__github__pull_request_review_write` with:
+            - `owner`: "vincentchalamon"
+            - `repo`: "bike-trip-planner"
+            - `pull_number`: ${{ github.event.pull_request.number }}
+            - `event`: the event determined in step B
+            - `body`: structured review body containing:
+              1. **Summary** — 1-3 sentences describing the overall quality
+              2. **PR title check** — flag if the PR title does not follow Conventional Commits (only if there is an issue)
+              3. **Review checklist**:
+                 - [ ] Code respects the project architecture
+                 - [ ] SOLID principles and Law of Demeter followed
+                 - [ ] Design patterns used where appropriate
+                 - [ ] Tests cover new/changed cases
+                 - [ ] Documentation is up to date
+                 - [ ] Dependent tickets accounted for
+              4. **Inline comments** — "Posted N inline comments." (or "No inline comments." if none)
+              5. **Footer** — "Generated with [Claude Code](https://claude.ai/code)"
+
+            If `mcp__github__pull_request_review_write` fails on submit, retry once with `event: "COMMENT"` as fallback.
