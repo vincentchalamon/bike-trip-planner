@@ -49,9 +49,18 @@ jobs:
       - name: Install dependencies
         working-directory: ${{ matrix.project }}
         run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
-      - name: Run PHPUnit
+      - name: Run PHPUnit with coverage
         working-directory: ${{ matrix.project }}
-        run: vendor/bin/phpunit
+        env:
+          XDEBUG_MODE: coverage
+        run: vendor/bin/phpunit --coverage-clover coverage/clover.xml
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ matrix.project }}
+          path: ${{ matrix.project }}/coverage/clover.xml
+          retention-days: 7
 
   openapi-lint:
     name: OpenAPI Lint

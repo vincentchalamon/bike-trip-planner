@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision
+.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision coverage coverage-ci
 
 help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -87,6 +87,14 @@ test-e2e: ## Run Playwright End-to-End tests
 	@docker compose exec pwa npx playwright test
 
 playwright: test-e2e ## Alias for "test-e2e"
+
+coverage: ## Run PHPUnit with coverage (HTML report)
+	@docker compose exec -e XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-html coverage/api
+	@docker compose --profile provisioning run -e XDEBUG_MODE=coverage --entrypoint "" provisioner vendor/bin/phpunit --coverage-html coverage/provisioner
+
+coverage-ci: ## Run PHPUnit with coverage (Clover XML for CI)
+	@docker compose exec -e XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-clover coverage/api/clover.xml
+	@docker compose --profile provisioning run -e XDEBUG_MODE=coverage --entrypoint "" provisioner vendor/bin/phpunit --coverage-clover coverage/provisioner/clover.xml
 
 test: qa test-php test-e2e openapi-lint security-check ## Run full test suite (Requires QA to pass first)
 
