@@ -87,6 +87,10 @@ export interface ScrapedData {
   priceMax: number | null;
 }
 
+/**
+ * Scrape accommodation metadata from the given URL via the backend proxy.
+ * @returns Scraped data, or `null` when the URL is unsupported or the request fails.
+ */
 export async function scrapeAccommodation(
   url: string,
 ): Promise<ScrapedData | null> {
@@ -99,6 +103,10 @@ export async function scrapeAccommodation(
   return res.json() as Promise<ScrapedData>;
 }
 
+/**
+ * Download a stage file (GPX or FIT) and trigger a browser save dialog.
+ * @throws {Error} When the server responds with a non-2xx status.
+ */
 export async function downloadStageFile(
   tripId: string,
   stageIndex: number,

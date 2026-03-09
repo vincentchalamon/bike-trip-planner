@@ -7,7 +7,7 @@ import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useMercure } from "@/hooks/use-mercure";
 import { apiClient, parseApiError, isNetworkError } from "@/lib/api/client";
-import { getRandomTripName } from "@/components/trip-title";
+import { getRandomTripName } from "@/lib/trip-utils";
 import type { AccommodationData, StageData } from "@/lib/validation/schemas";
 
 export function useTripPlanner() {

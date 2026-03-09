@@ -136,17 +136,20 @@ export function StageCard({
                 weather={stage.weather}
                 isProcessing={isProcessing}
               />
-              {stage.distance !== null && (
-                <span
-                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[getDifficulty(stage.distance, stage.elevation)]}`}
-                >
-                  {t(
-                    difficultyLabelKeys[
-                      getDifficulty(stage.distance, stage.elevation)
-                    ],
-                  )}
-                </span>
-              )}
+              {stage.distance !== null &&
+                (() => {
+                  const difficulty = getDifficulty(
+                    stage.distance,
+                    stage.elevation,
+                  );
+                  return (
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[difficulty]}`}
+                    >
+                      {t(difficultyLabelKeys[difficulty])}
+                    </span>
+                  );
+                })()}
             </>
           )}
         </div>
