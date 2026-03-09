@@ -14,6 +14,9 @@ use App\ApiResource\Model\Coordinate;
  * @internal
  *
  * @see https://support.komoot.com/hc/en-us/articles/7464746034458-Komoot-API
+ *
+ * DIP: no interface — single consumer, single implementation. Extract when a second consumer arises.
+ * LoD: deep chaining inherent to Komoot's nested HAL+JSON structure; validated at each level.
  */
 final readonly class KomootHtmlExtractor
 {

@@ -8,14 +8,12 @@ use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Stage;
-use App\Engine\DistanceCalculator;
+use App\Engine\DistanceCalculatorInterface;
 use App\Enum\SourceType;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
-use Psr\Container\ContainerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -28,8 +26,7 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
-        #[Autowire(service: 'app.engine_registry')]
-        private ContainerInterface $engineRegistry,
+        private DistanceCalculatorInterface $distanceCalculator,
     ) {
     }
 
@@ -89,15 +86,13 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
     {
         $isLast = $index === \count($stages) - 1;
 
-        $distanceCalculator = $this->engineRegistry->get(DistanceCalculator::class);
-
         if ($isLast) {
             // Merge deleted stage into previous: extend previous endPoint
             $previous = $stages[$index - 1];
             $deleted = $stages[$index];
             $previous->endPoint = $deleted->endPoint;
             $previous->geometry = array_merge($previous->geometry, $deleted->geometry);
-            $previous->distance = $distanceCalculator->calculateTotalDistance($previous->geometry);
+            $previous->distance = $this->distanceCalculator->calculateTotalDistance($previous->geometry);
             array_splice($stages, $index, 1);
 
             return [$stages, $index - 1];
@@ -108,7 +103,7 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         $deleted = $stages[$index];
         $next->startPoint = $deleted->startPoint;
         $next->geometry = array_merge($deleted->geometry, $next->geometry);
-        $next->distance = $distanceCalculator->calculateTotalDistance($next->geometry);
+        $next->distance = $this->distanceCalculator->calculateTotalDistance($next->geometry);
         array_splice($stages, $index, 1);
 
         return [$stages, $index];

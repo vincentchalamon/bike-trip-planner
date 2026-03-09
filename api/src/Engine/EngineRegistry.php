@@ -19,11 +19,6 @@ final readonly class EngineRegistry implements ContainerInterface
         #[AutowireDecorated]
         private ServiceCollectionInterface $engineRegistry,
     ) {
-        foreach ($this->engineRegistry as $engine) {
-            if ($engine instanceof EngineRegistryAwareInterface) {
-                $engine->setEngineRegistry($this);
-            }
-        }
     }
 
     /**

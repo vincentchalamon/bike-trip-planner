@@ -8,10 +8,10 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\Engine\DistanceCalculator;
-use App\Engine\ElevationCalculator;
+use App\Engine\DistanceCalculatorInterface;
+use App\Engine\ElevationCalculatorInterface;
 use App\Engine\PacingEngineRegistry;
-use App\Engine\RouteSimplifier;
+use App\Engine\RouteSimplifierInterface;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Mercure\MercureEventType;
@@ -24,8 +24,6 @@ use App\Message\GenerateStages;
 use App\Message\ScanAccommodations;
 use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
-use Psr\Container\ContainerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -36,8 +34,10 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripStateManager,
-        #[Autowire(service: 'app.engine_registry')]
-        private ContainerInterface $engineRegistry,
+        private DistanceCalculatorInterface $distanceCalculator,
+        private ElevationCalculatorInterface $elevationCalculator,
+        private RouteSimplifierInterface $routeSimplifier,
+        private PacingEngineRegistry $pacingEngine,
         private MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher);
@@ -120,12 +120,10 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
                 continue;
             }
 
-            $distance = $this->engineRegistry
-                ->get(DistanceCalculator::class)
-                ->calculateTotalDistance($points);
-            $elevation = $this->engineRegistry->get(ElevationCalculator::class)->calculateTotalAscent($points);
-            $elevationLoss = $this->engineRegistry->get(ElevationCalculator::class)->calculateTotalDescent($points);
-            $geometry = $this->engineRegistry->get(RouteSimplifier::class)->simplify($points);
+            $distance = $this->distanceCalculator->calculateTotalDistance($points);
+            $elevation = $this->elevationCalculator->calculateTotalAscent($points);
+            $elevationLoss = $this->elevationCalculator->calculateTotalDescent($points);
+            $geometry = $this->routeSimplifier->simplify($points);
 
             $stages[] = new Stage(
                 tripId: $tripId,
@@ -163,9 +161,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
             ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $allPointsData)
             : $decimatedPoints;
 
-        $totalDistance = $this->engineRegistry
-            ->get(DistanceCalculator::class)
-            ->calculateTotalDistance($allPoints);
+        $totalDistance = $this->distanceCalculator->calculateTotalDistance($allPoints);
 
         if ($request->endDate instanceof \DateTimeImmutable && $request->startDate instanceof \DateTimeImmutable) {
             $numberOfDays = (int) $request->startDate->diff($request->endDate)->days + 1;
@@ -174,15 +170,13 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
             $numberOfDays = max(1, $numberOfDays);
         }
 
-        return $this->engineRegistry
-            ->get(PacingEngineRegistry::class)
-            ->generateStages(
-                $tripId,
-                $decimatedPoints,
-                $numberOfDays,
-                $totalDistance,
-                $request->fatigueFactor,
-                $request->elevationPenalty,
-            );
+        return $this->pacingEngine->generateStages(
+            $tripId,
+            $decimatedPoints,
+            $numberOfDays,
+            $totalDistance,
+            $request->fatigueFactor,
+            $request->elevationPenalty,
+        );
     }
 }

@@ -7,7 +7,7 @@ namespace App\Analyzer\Rules;
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Stage;
-use App\Engine\DistanceCalculator;
+use App\Engine\DistanceCalculatorInterface;
 use App\Enum\AlertType;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -18,7 +18,7 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
     private const float WARNING_THRESHOLD_METERS = 100.0;
 
     public function __construct(
-        private DistanceCalculator $distanceCalculator,
+        private DistanceCalculatorInterface $distanceCalculator,
         private TranslatorInterface $translator,
     ) {
     }

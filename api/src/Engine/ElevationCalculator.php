@@ -6,7 +6,7 @@ namespace App\Engine;
 
 use App\ApiResource\Model\Coordinate;
 
-final class ElevationCalculator implements EngineInterface
+final class ElevationCalculator implements ElevationCalculatorInterface
 {
     private const float NOISE_THRESHOLD_METERS = 3.0;
 

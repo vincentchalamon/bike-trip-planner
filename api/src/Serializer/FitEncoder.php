@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Serializer;
 
-use App\Geo\HaversineDistance;
+use App\Geo\GeoDistanceInterface;
 use App\Serializer\Mapper\WaypointMapper;
 use Symfony\Component\Serializer\Encoder\EncoderInterface;
 
@@ -67,7 +67,7 @@ final readonly class FitEncoder implements EncoderInterface
     private const int SPORT_CYCLING = 2;
 
     public function __construct(
-        private HaversineDistance $haversine,
+        private GeoDistanceInterface $haversine,
     ) {
     }
 

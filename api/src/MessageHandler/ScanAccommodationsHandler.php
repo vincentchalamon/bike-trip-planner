@@ -11,19 +11,20 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Engine\PricingHeuristicEngine;
 use App\Enum\ComputationName;
-use App\Geo\GeometryBasedDistributor;
-use App\Geo\HaversineDistance;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
+use App\Geo\GeoDistanceInterface;
+use App\Geo\GeometryDistributorInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+// @todo #89 SRP: extract OsmAccommodationParser, AccommodationDeduplicator, AccommodationScraper
 #[AsMessageHandler]
 final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandler
 {
@@ -36,8 +37,8 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
         private PricingHeuristicEngine $pricingEngine,
-        private HaversineDistance $haversine,
-        private GeometryBasedDistributor $distributor,
+        private GeoDistanceInterface $haversine,
+        private GeometryDistributorInterface $distributor,
         private AccommodationMetadataExtractor $metadataExtractor,
         #[Autowire(service: 'accommodation_scraper.client')]
         private HttpClientInterface $scraperClient,

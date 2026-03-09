@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Accommodation;
 
+// DIP: no interface — single consumer, single implementation. Extract when a second consumer arises.
 final class AccommodationMetadataExtractor
 {
     private const array TYPE_MAP = [

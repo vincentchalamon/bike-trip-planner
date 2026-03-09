@@ -7,12 +7,10 @@ namespace App\Tests\Unit\Engine;
 use App\ApiResource\Model\Coordinate;
 use App\Engine\DistanceCalculator;
 use App\Engine\ElevationCalculator;
-use App\Engine\EngineInterface;
 use App\Engine\PacingEngineRegistry;
 use App\Engine\RouteSimplifier;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Container\ContainerInterface;
 
 final class PacingEngineRegistryTest extends TestCase
 {
@@ -21,20 +19,11 @@ final class PacingEngineRegistryTest extends TestCase
     #[\Override]
     protected function setUp(): void
     {
-        $this->engine = new PacingEngineRegistry();
-
-        $engines = [
-            DistanceCalculator::class => new DistanceCalculator(),
-            ElevationCalculator::class => new ElevationCalculator(),
-            RouteSimplifier::class => new RouteSimplifier(),
-        ];
-
-        $registry = $this->createStub(ContainerInterface::class);
-        $registry->method('get')->willReturnCallback(
-            static fn (string $id): EngineInterface => $engines[$id] ?? throw new \InvalidArgumentException(sprintf('Engine %s not found', $id)),
+        $this->engine = new PacingEngineRegistry(
+            new DistanceCalculator(),
+            new ElevationCalculator(),
+            new RouteSimplifier(),
         );
-
-        $this->engine->setEngineRegistry($registry);
     }
 
     #[Test]

@@ -8,7 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use Location\Coordinate as GeoCoordinate;
 use Location\Distance\Vincenty;
 
-final readonly class RouteSimplifier implements EngineInterface
+final readonly class RouteSimplifier implements RouteSimplifierInterface
 {
     private const float TOLERANCE_METERS = 20.0;
 

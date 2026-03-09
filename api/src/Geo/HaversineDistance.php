@@ -8,7 +8,7 @@ namespace App\Geo;
  * Computes the great-circle distance between two geographic coordinates
  * using the Haversine formula.
  */
-final readonly class HaversineDistance
+final readonly class HaversineDistance implements GeoDistanceInterface
 {
     private const float EARTH_RADIUS_METERS = 6_371_000.0;
 

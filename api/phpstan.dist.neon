@@ -50,5 +50,3 @@ parameters:
     ignoreErrors:
         - path: src/Engine/EngineRegistry.php
           identifier: return.type
-        - path: src/Engine/EngineRegistryAwareTrait.php
-          identifier: return.type

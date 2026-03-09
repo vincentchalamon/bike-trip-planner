@@ -9,7 +9,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
-use App\Geo\HaversineDistance;
+use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBikeShops;
@@ -32,7 +32,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
-        private HaversineDistance $haversine,
+        private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher);

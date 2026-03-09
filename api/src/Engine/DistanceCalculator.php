@@ -8,7 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use Location\Coordinate as GeoCoordinate;
 use Location\Distance\Vincenty;
 
-final readonly class DistanceCalculator implements EngineInterface
+final readonly class DistanceCalculator implements DistanceCalculatorInterface
 {
     public function __construct(
         private Vincenty $vincenty = new Vincenty(),

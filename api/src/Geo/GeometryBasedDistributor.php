@@ -12,10 +12,10 @@ use App\ApiResource\Stage;
  *
  * Each item must have at least 'lat' and 'lon' float keys.
  */
-final readonly class GeometryBasedDistributor
+final readonly class GeometryBasedDistributor implements GeometryDistributorInterface
 {
     public function __construct(
-        private HaversineDistance $haversine,
+        private GeoDistanceInterface $haversine,
     ) {
     }
 

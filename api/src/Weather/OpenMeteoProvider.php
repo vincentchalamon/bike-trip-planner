@@ -9,7 +9,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
-final readonly class OpenMeteoProvider
+final readonly class OpenMeteoProvider implements WeatherProviderInterface
 {
     public function __construct(
         #[Autowire(service: 'open_meteo.client')]
@@ -86,6 +86,7 @@ final readonly class OpenMeteoProvider
         /** @var list<array{daily?: array{weather_code?: list<int>, temperature_2m_max?: list<float>, temperature_2m_min?: list<float>, precipitation_probability_max?: list<int>, wind_speed_10m_max?: list<float>, wind_direction_10m_dominant?: list<int>}}> $dataList */
         $dataList = $response->toArray();
 
+        // @todo #89 SRP: extract parseForecastData() to eliminate duplication with fetchForecast()
         $forecasts = [];
         foreach ($dataList as $data) {
             $daily = $data['daily'] ?? [];

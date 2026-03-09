@@ -11,12 +11,12 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
-use App\Geo\GeometryBasedDistributor;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
+use App\Geo\GeometryDistributorInterface;
 use App\Scanner\ScannerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -39,7 +39,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
-        private GeometryBasedDistributor $distributor,
+        private GeometryDistributorInterface $distributor,
         private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher);
