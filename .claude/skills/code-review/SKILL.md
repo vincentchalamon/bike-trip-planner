@@ -2,11 +2,13 @@
 name: code-review
 description: Code review a pull request
 argument-hint: <pr-number>
-allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), Bash(gh pr comment:*), Bash(gh pr diff:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh api:*)
+allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), Bash(gh pr diff:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh api:*), mcp__github__add_comment_to_pending_review, mcp__github__pull_request_review_write, mcp__github__pull_request_read, Read, Glob, Grep
 disable-model-invocation: false
 ---
 
 Provide a code review for the given pull request.
+
+Use the **Review Comment Format** section in CLAUDE.md for all comments (Conventional Comments labels, inline threads, review body structure).
 
 To do this, follow these steps precisely:
 
@@ -17,7 +19,7 @@ To do this, follow these steps precisely:
 3. Use a Haiku agent to view the pull request, and ask the agent to return a summary of the change
 4. Then, launch 5 parallel Sonnet agents to independently code review the change. The agents should do the following, then return a list of issues and the reason each issue was flagged (eg. CLAUDE.md
    adherence, bug, historical git context, etc.):
-   a. Agent #1: Audit the changes to make sure they compily with the CLAUDE.md. Note that CLAUDE.md is guidance for Claude as it writes code, so not all instructions will be applicable during code
+   a. Agent #1: Audit the changes to make sure they comply with the CLAUDE.md. Note that CLAUDE.md is guidance for Claude as it writes code, so not all instructions will be applicable during code
    review.
    b. Agent #2: Read the file changes in the pull request, then do a shallow scan for obvious bugs. Avoid reading extra context beyond the changes, focusing just on the changes themselves. Focus on
    large bugs, and avoid small issues and nitpicks. Ignore likely false positives.
@@ -37,16 +39,57 @@ To do this, follow these steps precisely:
    e. 100: Absolutely certain. The agent double checked the issue, and confirmed that it is definitely a real issue, that will happen frequently in practice. The evidence directly confirms this.
 6. Filter out any issues with a score less than 80. If there are no issues that meet this criteria, do not proceed.
 7. Use a Haiku agent to repeat the eligibility check from #1, to make sure that the pull request is still eligible for code review.
-8. Before posting your comment, minimize any previous code review comments from Claude on this PR:
-   a. Fetch all issue comments and filter for previous Claude reviews: `gh api repos/{owner}/{repo}/issues/{pr_number}/comments --paginate --jq '.[] | select(.body | contains("### Code review") and
-  contains("Generated with [Claude Code]")) | .node_id'`
-   b. For each node_id returned, minimize it using the GraphQL API: `gh api graphql -f query='mutation { minimizeComment(input: {subjectId: "<NODE_ID>", classifier: OUTDATED}) { minimizedComment {
-  isMinimized } } }'`
-   c. If no matching comments are found, skip this step silently
-9. Finally, use the gh bash command to comment back on the pull request with the result. When writing your comment, keep in mind to:
-   a. Keep your output brief
-   b. Avoid emojis
-   c. Link and cite relevant code, files, and URLs
+8. Before posting your review, minimize any previous review comments from Claude on this PR:
+   a. Minimize previous issue comments (old format):
+      `gh api repos/{owner}/{repo}/issues/{pr_number}/comments --paginate --jq '.[] | select(.body | contains("### Code review") or contains("## Review")) | .node_id'`
+   b. Minimize previous review submissions:
+      `gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews --paginate --jq '.[] | select(.user.login == "github-actions[bot]" or .user.type == "Bot") | .node_id'`
+   c. For each node_id returned from either query, minimize it using the GraphQL API:
+      `gh api graphql -f query='mutation { minimizeComment(input: {subjectId: "<NODE_ID>", classifier: OUTDATED}) { minimizedComment { isMinimized } } }'`
+   d. If no matching comments are found, skip this step silently
+9. Post the review using the pending review workflow:
+
+   ### A. Check self-review
+
+   Check `gh pr view <pr-number> --json author` — if you are the PR author, use `event: "COMMENT"` instead of `APPROVE` or `REQUEST_CHANGES`.
+
+   ### B. Determine review event
+
+   - **No critical or warning findings** → `APPROVE`
+   - **Any critical or warning findings** → `REQUEST_CHANGES`
+   - **Self-review** → `COMMENT` (always)
+
+   ### C. Create pending review
+
+   Use `mcp__github__pull_request_review_write` with `event: "PENDING"` and `body: ""`.
+
+   ### D. Post inline comments
+
+   For each finding with confidence >= 80, post an inline comment using `mcp__github__add_comment_to_pending_review` in **Conventional Comments** format with `suggestion` blocks for code changes.
+
+   Rules:
+   - ALWAYS include a concrete fix using a GitHub `suggestion` block when the finding involves a code change
+   - ALWAYS propose a solution — never just point out a problem
+   - Keep suggestions minimal: only change what is necessary
+   - Use `subjectType: "FILE"` as fallback if the exact diff line is not determinable
+   - If there are more than 15 findings, post the 15 most important as inline comments and summarize the rest in the review body
+   - When linking to code in the review body, use the full git SHA format: `https://github.com/{owner}/{repo}/blob/{full_sha}/{path}#L{start}-L{end}`
+
+   ### E. Submit the review
+
+   Use `mcp__github__pull_request_review_write` with:
+   - `event`: the event determined in step B
+   - `body`: structured review body containing:
+     1. **Summary** — 1-3 sentences describing the overall quality
+     2. **Inline comments** — "Posted N inline comment(s)." (or "No inline comments." if none)
+     3. **Footer**:
+        ```
+        Generated with [Claude Code](https://claude.ai/code)
+
+        If this code review was useful, please react with a thumbs up. Otherwise, react with a thumbs down.
+        ```
+
+   If `mcp__github__pull_request_review_write` fails on submit, retry once with `event: "COMMENT"` as fallback.
 
 Examples of false positives, for steps 4 and 5:
 
@@ -63,46 +106,9 @@ Examples of false positives, for steps 4 and 5:
 Notes:
 
 - Do not check build signal or attempt to build or typecheck the app. These will run separately, and are not relevant to your code review.
-- Use `gh` to interact with Github (eg. to fetch a pull request, or to create inline comments), rather than web fetch
+- Use `gh` to interact with Github (eg. to fetch a pull request), rather than web fetch
 - Make a todo list first
 - You must cite and link each bug (eg. if referring to a CLAUDE.md, you must link it)
-- For your final comment, follow the following format precisely (assuming for this example that you found 3 issues):
-
-  ---
-
-### Code review
-
-Found 3 issues:
-
-1. <brief description of bug> (CLAUDE.md says "<...>")
-
-  <link to file and line with full sha1 + line range for context, note that you MUST provide the full sha and not use bash here, eg.
-  https://github.com/anthropics/claude-code/blob/1d54823877c4de72b2316a64032a54afc404e619/README.md#L13-L17>
-
-2. <brief description of bug> (some/other/CLAUDE.md says "<...>")
-
-  <link to file and line with full sha1 + line range for context>
-
-3. <brief description of bug> (bug due to <file and code snippet>)
-
-  <link to file and line with full sha1 + line range for context>
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-<sub>- If this code review was useful, please react with 👍. Otherwise, react with 👎.</sub>
-
----
-
-- Or, if you found no issues:
-
-  ---
-
-### Code review
-
-No issues found. Checked for bugs and CLAUDE.md compliance.
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
 - When linking to code, follow the following format precisely, otherwise the Markdown preview won't render correctly:
   https://github.com/anthropics/claude-cli-internal/blob/c21d3c10bc8e898b7ac1a2d745bdc9bc4e423afe/package.json#L10-L15
     - Requires full git sha

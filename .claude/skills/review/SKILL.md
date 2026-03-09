@@ -15,12 +15,13 @@ Execute these review steps and produce a structured report:
 
 Run `gh pr view <pr-number>` and `gh pr diff <pr-number>` to get the full diff and PR metadata. Read the list of commits with `gh pr view <pr-number> --json commits`.
 
-## Step 2 -- Conventional Commits
+## Step 2 -- Conventional Commits (PR title only)
 
-Verify every commit message follows `<type>(<scope>): <description>`:
+Verify the **PR title** follows `<type>(<scope>): <description>`:
 - Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
 - Description must be imperative mood, lowercase, no trailing period
-- Flag any non-conforming commit
+- Do NOT check individual commit messages (commits are squashed on merge)
+- Flag if the PR title is non-conforming
 
 ## Step 3 -- Diff analysis
 
@@ -70,8 +71,10 @@ Verify the PR body contains an Auto-critique section listing what was verified.
 
 ## Step 10 -- Report
 
+Use the **Review Comment Format** section in CLAUDE.md for all findings (Conventional Comments labels).
+
 Produce a structured review report with:
-- Severity levels: **critical**, **warning**, **info**
+- Findings use Conventional Comments labels: `issue (blocking)`, `issue`, `suggestion (non-blocking)`, `nitpick (non-blocking)`, `praise`
 - Specific `file:line` references for each finding
 - Findings grouped by category (Security, Performance, Architecture, Documentation, Tests, Commits)
 - End with the CLAUDE.md review checklist, each item checked or unchecked based on findings:

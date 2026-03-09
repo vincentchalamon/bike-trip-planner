@@ -170,6 +170,45 @@ Run `git diff` and review all changes for:
 
 Include an **Auto-critique** section in the PR body listing what was verified.
 
+## Review Comment Format
+
+All code review comments (CI workflow, `/code-review`, `/review`) follow [Conventional Comments](https://conventionalcomments.org/):
+
+```text
+<label> (<decoration>): <subject>
+
+<body>
+```
+
+### Labels
+
+| Severity | Label |
+|----------|-------|
+| Critical (blocking) | `issue (blocking): <subject>` |
+| Warning | `issue: <subject>` |
+| Info / suggestion | `suggestion (non-blocking): <subject>` |
+| Nitpick | `nitpick (non-blocking): <subject>` |
+| Positive feedback | `praise: <subject>` |
+
+### Inline Comments
+
+- Each code-level finding gets its own **inline thread** on the relevant line(s)
+- ALWAYS include a concrete fix using a GitHub ` ```suggestion ` block when applicable
+- Keep suggestions minimal: only change what is necessary
+
+### Review Body
+
+The review submission body contains only PR-level findings:
+- Concise summary (1-3 sentences)
+- PR title conventional commit check (if issue found)
+- Review checklist (checked/unchecked items)
+- Count of inline comments posted
+- Footer: "Generated with [Claude Code](https://claude.ai/code)"
+
+### Conventional Commits on PRs
+
+Since PRs are **squash-merged**, only the **PR title** must follow Conventional Commits format. Do NOT check individual commit messages.
+
 ## ADR Documentation
 
 Architecture Decision Records in `docs/adr/` document all major technical choices with context, alternatives considered, and rationale. Consult these before proposing architectural changes.
