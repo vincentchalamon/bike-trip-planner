@@ -10,3 +10,5 @@ compose.override.yml
 
 .docker/osm/data/*
 !.docker/osm/data/.gitkeep
+
+coverage/
