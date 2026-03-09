@@ -7,7 +7,7 @@ namespace App\Engine;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 
-final readonly class PacingEngineRegistry
+final readonly class PacingEngineRegistry implements PacingEngineInterface
 {
     private const float MINIMUM_STAGE_DISTANCE_KM = 30.0;
 

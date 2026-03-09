@@ -10,7 +10,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
-use App\Engine\PacingEngineRegistry;
+use App\Engine\PacingEngineInterface;
 use App\Engine\RouteSimplifierInterface;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
@@ -37,7 +37,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         private DistanceCalculatorInterface $distanceCalculator,
         private ElevationCalculatorInterface $elevationCalculator,
         private RouteSimplifierInterface $routeSimplifier,
-        private PacingEngineRegistry $pacingEngine,
+        private PacingEngineInterface $pacingEngine,
         private MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher);
