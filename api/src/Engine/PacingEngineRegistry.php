@@ -20,7 +20,7 @@ use App\ApiResource\Stage;
  * computation to {@see ElevationCalculatorInterface}, and geometry simplification
  * to {@see RouteSimplifierInterface}.
  *
- * @see docs/adr/adr-009-quality-assurance-and-automated-testing-strategy.md
+ * @see docs/adr/adr-006-pacing-engine-and-dynamic-stage-generation-algorithm.md
  */
 final readonly class PacingEngineRegistry implements PacingEngineInterface
 {

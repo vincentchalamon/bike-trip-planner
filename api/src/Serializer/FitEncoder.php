@@ -335,7 +335,7 @@ final readonly class FitEncoder implements EncoderInterface
      * over the raw bytes using a pre-built 256-entry lookup table for O(n)
      * performance, where n is the byte length of the data.
      *
-     * @see https://developer.garmin.com/fit/protocol/ §FIT File CRC
+     * @link https://developer.garmin.com/fit/protocol/ FIT File CRC
      */
     private function crc16(string $data): int
     {
