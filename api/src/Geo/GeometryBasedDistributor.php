@@ -29,6 +29,10 @@ final readonly class GeometryBasedDistributor
      */
     public function distributeByEndpoint(array $items, array $stages): array
     {
+        if ([] === $stages) {
+            return [];
+        }
+
         $result = [];
         foreach (array_keys($stages) as $i) {
             $result[$i] = [];
@@ -67,6 +71,10 @@ final readonly class GeometryBasedDistributor
      */
     public function distributeByGeometry(array $items, array $stages): array
     {
+        if ([] === $stages) {
+            return [];
+        }
+
         $result = [];
         /** @var array<int, list<array{lat: float, lon: float}>> $stageGeometries */
         $stageGeometries = [];

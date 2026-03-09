@@ -117,6 +117,26 @@ final class GeometryBasedDistributorTest extends TestCase
     }
 
     #[Test]
+    public function distributeByEndpointWithEmptyStages(): void
+    {
+        $items = [['lat' => 45.0, 'lon' => 5.0]];
+
+        $result = $this->distributor->distributeByEndpoint($items, []);
+
+        $this->assertSame([], $result);
+    }
+
+    #[Test]
+    public function distributeByGeometryWithEmptyStages(): void
+    {
+        $items = [['lat' => 45.0, 'lon' => 5.0]];
+
+        $result = $this->distributor->distributeByGeometry($items, []);
+
+        $this->assertSame([], $result);
+    }
+
+    #[Test]
     public function distributeByEndpointInitializesAllStageKeys(): void
     {
         $stages = [
