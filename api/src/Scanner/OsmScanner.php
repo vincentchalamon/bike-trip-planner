@@ -28,7 +28,7 @@ final readonly class OsmScanner implements ScannerInterface
         private HttpClientInterface $publicClient,
         #[Autowire(service: 'cache.osm')]
         private CacheInterface $osmCache,
-        private LocalOverpassStatusChecker $statusChecker,
+        private OverpassStatusCheckerInterface $statusChecker,
         private LoggerInterface $logger,
     ) {
     }

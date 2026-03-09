@@ -7,9 +7,9 @@ namespace App\MessageHandler;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
-use App\Engine\DistanceCalculator;
-use App\Engine\ElevationCalculator;
-use App\Engine\RouteSimplifier;
+use App\Engine\DistanceCalculatorInterface;
+use App\Engine\ElevationCalculatorInterface;
+use App\Engine\RouteSimplifierInterface;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -18,8 +18,6 @@ use App\Message\GenerateStages;
 use App\Message\ScanAllOsmData;
 use App\Repository\TripRequestRepositoryInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
-use Psr\Container\ContainerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -31,8 +29,9 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
         TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripStateManager,
         private RouteFetcherRegistryInterface $routeFetcherRegistry,
-        #[Autowire(service: 'app.engine_registry')]
-        private ContainerInterface $engineRegistry,
+        private DistanceCalculatorInterface $distanceCalculator,
+        private ElevationCalculatorInterface $elevationCalculator,
+        private RouteSimplifierInterface $routeSimplifier,
         private MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher);
@@ -76,17 +75,15 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
             $this->tripStateManager->storeTitle($tripId, $result->title);
 
             // Store decimated points (full route for pacing) for single-track sources
-            $decimated = $this->engineRegistry->get(RouteSimplifier::class)->simplify($allPoints);
+            $decimated = $this->routeSimplifier->simplify($allPoints);
             $this->tripStateManager->storeDecimatedPoints($tripId, array_map(
-                static fn ($c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
+                static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
                 $decimated,
             ));
 
-            $totalDistance = $this->engineRegistry
-                ->get(DistanceCalculator::class)
-                ->calculateTotalDistance($allPoints);
-            $totalElevation = $this->engineRegistry->get(ElevationCalculator::class)->calculateTotalAscent($allPoints);
-            $totalElevationLoss = $this->engineRegistry->get(ElevationCalculator::class)->calculateTotalDescent($allPoints);
+            $totalDistance = $this->distanceCalculator->calculateTotalDistance($allPoints);
+            $totalElevation = $this->elevationCalculator->calculateTotalAscent($allPoints);
+            $totalElevationLoss = $this->elevationCalculator->calculateTotalDescent($allPoints);
 
             $this->publisher->publish($tripId, MercureEventType::ROUTE_PARSED, [
                 'totalDistance' => round($totalDistance, 1),

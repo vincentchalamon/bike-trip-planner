@@ -12,7 +12,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * Checks whether the local Overpass instance is ready to serve queries.
  * Caches the result in-memory for 30 seconds to avoid hammering the endpoint.
  */
-final class LocalOverpassStatusChecker
+final class LocalOverpassStatusChecker implements OverpassStatusCheckerInterface
 {
     private const int CACHE_TTL = 30;
 

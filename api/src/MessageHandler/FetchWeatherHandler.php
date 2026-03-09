@@ -14,7 +14,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
 use App\Message\FetchWeather;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Weather\OpenMeteoProvider;
+use App\Weather\WeatherProviderInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -28,7 +28,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripStateManager,
-        private OpenMeteoProvider $weatherProvider,
+        private WeatherProviderInterface $weatherProvider,
         #[Autowire(service: 'cache.weather')]
         private CacheItemPoolInterface $weatherCache,
         private MessageBusInterface $messageBus,

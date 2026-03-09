@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Engine;
 
 use App\ApiResource\Model\Coordinate;
-use App\Engine\DistanceCalculator;
-use App\Engine\ElevationCalculator;
-use App\Engine\EngineInterface;
+use App\Engine\DistanceCalculatorInterface;
+use App\Engine\ElevationCalculatorInterface;
 use App\Engine\PacingEngineRegistry;
-use App\Engine\RouteSimplifier;
+use App\Engine\RouteSimplifierInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Container\ContainerInterface;
 
 final class PacingEngineRegistryTest extends TestCase
 {
@@ -21,20 +19,23 @@ final class PacingEngineRegistryTest extends TestCase
     #[\Override]
     protected function setUp(): void
     {
-        $this->engine = new PacingEngineRegistry();
-
-        $engines = [
-            DistanceCalculator::class => new DistanceCalculator(),
-            ElevationCalculator::class => new ElevationCalculator(),
-            RouteSimplifier::class => new RouteSimplifier(),
-        ];
-
-        $registry = $this->createStub(ContainerInterface::class);
-        $registry->method('get')->willReturnCallback(
-            static fn (string $id): EngineInterface => $engines[$id] ?? throw new \InvalidArgumentException(sprintf('Engine %s not found', $id)),
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
+            static fn (array $points): float => (\count($points) - 1) * 5.0,
         );
 
-        $this->engine->setEngineRegistry($registry);
+        $elevationCalculator = $this->createStub(ElevationCalculatorInterface::class);
+        $elevationCalculator->method('calculateTotalAscent')->willReturn(100.0);
+        $elevationCalculator->method('calculateTotalDescent')->willReturn(50.0);
+
+        $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
+        $routeSimplifier->method('simplify')->willReturnArgument(0);
+
+        $this->engine = new PacingEngineRegistry(
+            $distanceCalculator,
+            $elevationCalculator,
+            $routeSimplifier,
+        );
     }
 
     #[Test]

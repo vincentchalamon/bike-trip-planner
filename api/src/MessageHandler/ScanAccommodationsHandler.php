@@ -11,22 +11,26 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Engine\PricingHeuristicEngine;
 use App\Enum\ComputationName;
+use App\Geo\GeoDistanceInterface;
+use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
-use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+// @todo #89 SRP: extract OsmAccommodationParser, AccommodationDeduplicator, AccommodationScraper
 #[AsMessageHandler]
 final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandler
 {
     private const float DEDUP_DISTANCE_METERS = 200.0;
+
+    private const int MAX_CANDIDATES_PER_STAGE = 3;
 
     public function __construct(
         ComputationTrackerInterface $computationTracker,
@@ -34,8 +38,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
-        #[Autowire(service: 'app.engine_registry')]
-        private ContainerInterface $engineRegistry,
+        private PricingHeuristicEngine $pricingEngine,
+        private GeoDistanceInterface $haversine,
+        private GeometryDistributorInterface $distributor,
         private AccommodationMetadataExtractor $metadataExtractor,
         #[Autowire(service: 'accommodation_scraper.client')]
         private HttpClientInterface $scraperClient,
@@ -70,14 +75,15 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             $allCandidates = $this->parseOsmElements($elements);
 
             // Distribute candidates to their nearest stage endpoint
-            $candidatesByStage = $this->distributeCandidatesByStage($allCandidates, $stages);
+            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>> $candidatesByStage */
+            $candidatesByStage = $this->distributor->distributeByEndpoint($allCandidates, $stages);
 
-            // Deduplicate + limit to 5 per stage BEFORE any scraping
+            // Deduplicate + limit per stage BEFORE any scraping
             $retainedByStage = [];
             foreach ($candidatesByStage as $i => $candidates) {
                 $deduped = $this->deduplicate($candidates);
                 usort($deduped, static fn (array $a, array $b): int => $a['priceMin'] <=> $b['priceMin']);
-                $retainedByStage[$i] = \array_slice($deduped, 0, 3);
+                $retainedByStage[$i] = \array_slice($deduped, 0, self::MAX_CANDIDATES_PER_STAGE);
             }
 
             // Async scraping: 2 waves of parallel HTTP requests
@@ -150,9 +156,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             $type = $tags['tourism'] ?? 'hotel';
             $name = $tags['name'] ?? $type;
             $tagCount = \count($tags);
-            $pricing = $this->engineRegistry
-                ->get(PricingHeuristicEngine::class)
-                ->estimatePrice($type, $tags);
+            $pricing = $this->pricingEngine->estimatePrice($type, $tags);
 
             $candidates[] = [
                 'name' => $name,
@@ -169,45 +173,6 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         }
 
         return $candidates;
-    }
-
-    /**
-     * Assign each candidate to the stage whose endPoint is closest.
-     *
-     * @param list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}> $candidates
-     * @param list<Stage>                                                                                                                                                     $stages
-     *
-     * @return array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>>
-     */
-    private function distributeCandidatesByStage(array $candidates, array $stages): array
-    {
-        /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>> $result */
-        $result = [];
-        foreach (array_keys($stages) as $i) {
-            $result[$i] = [];
-        }
-
-        foreach ($candidates as $candidate) {
-            $closestStage = 0;
-            $closestDistance = \PHP_FLOAT_MAX;
-
-            foreach ($stages as $i => $stage) {
-                $distance = $this->haversineDistance(
-                    $candidate['lat'],
-                    $candidate['lon'],
-                    $stage->endPoint->lat,
-                    $stage->endPoint->lon,
-                );
-                if ($distance < $closestDistance) {
-                    $closestDistance = $distance;
-                    $closestStage = $i;
-                }
-            }
-
-            $result[$closestStage][] = $candidate;
-        }
-
-        return $result;
     }
 
     /**
@@ -355,7 +320,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
 
             foreach ($kept as $existing) {
                 $existingNormalized = mb_strtolower(trim($existing['name']));
-                if ($normalizedName === $existingNormalized && $this->haversineDistance($candidate['lat'], $candidate['lon'], $existing['lat'], $existing['lon']) < self::DEDUP_DISTANCE_METERS) {
+                if ($normalizedName === $existingNormalized && $this->haversine->inMeters($candidate['lat'], $candidate['lon'], $existing['lat'], $existing['lon']) < self::DEDUP_DISTANCE_METERS) {
                     $isDuplicate = true;
                     break;
                 }
@@ -367,15 +332,5 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         }
 
         return $kept;
-    }
-
-    private function haversineDistance(float $lat1, float $lon1, float $lat2, float $lon2): float
-    {
-        $earthRadius = 6371000.0;
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLon = deg2rad($lon2 - $lon1);
-        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
-
-        return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 }

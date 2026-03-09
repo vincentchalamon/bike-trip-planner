@@ -7,11 +7,16 @@ namespace App\Engine;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 
-final class PacingEngineRegistry implements EngineInterface, EngineRegistryAwareInterface
+final readonly class PacingEngineRegistry implements PacingEngineInterface
 {
-    use EngineRegistryAwareTrait;
-
     private const float MINIMUM_STAGE_DISTANCE_KM = 30.0;
+
+    public function __construct(
+        private DistanceCalculatorInterface $distanceCalculator,
+        private ElevationCalculatorInterface $elevationCalculator,
+        private RouteSimplifierInterface $routeSimplifier,
+    ) {
+    }
 
     /**
      * Generates stages from a decimated track using a fatigue-aware pacing formula.
@@ -53,7 +58,7 @@ final class PacingEngineRegistry implements EngineInterface, EngineRegistryAware
         float $fatigueFactor,
         float $elevationPenalty,
     ): array {
-        $elevation = $this->getEngine(ElevationCalculator::class)->calculateTotalAscent($points);
+        $elevation = $this->elevationCalculator->calculateTotalAscent($points);
 
         // Base target from total distance (to be adjusted by fatigue)
         // Sum of geometric series: base * (1 + f + f^2 + ... + f^(n-1)) = totalDistance
@@ -109,10 +114,10 @@ final class PacingEngineRegistry implements EngineInterface, EngineRegistryAware
                 continue;
             }
 
-            $distance = $this->getEngine(DistanceCalculator::class)->calculateTotalDistance($stagePoints);
-            $elevation = $this->getEngine(ElevationCalculator::class)->calculateTotalAscent($stagePoints);
-            $elevationLoss = $this->getEngine(ElevationCalculator::class)->calculateTotalDescent($stagePoints);
-            $geometry = $this->getEngine(RouteSimplifier::class)->simplify($stagePoints);
+            $distance = $this->distanceCalculator->calculateTotalDistance($stagePoints);
+            $elevation = $this->elevationCalculator->calculateTotalAscent($stagePoints);
+            $elevationLoss = $this->elevationCalculator->calculateTotalDescent($stagePoints);
+            $geometry = $this->routeSimplifier->simplify($stagePoints);
 
             $stages[] = new Stage(
                 tripId: $tripId,
@@ -129,11 +134,12 @@ final class PacingEngineRegistry implements EngineInterface, EngineRegistryAware
         }
 
         // If there are remaining points, add them to the last stage
+        // @todo #89 SRP: split into PacingTargetCalculator + RouteSlicer + StageAssembler
         if ([] !== $remaining && [] !== $stages) {
             $lastStage = $stages[\count($stages) - 1];
-            $lastStage->distance += $this->getEngine(DistanceCalculator::class)->calculateTotalDistance($remaining);
-            $lastStage->elevation += $this->getEngine(ElevationCalculator::class)->calculateTotalAscent($remaining);
-            $lastStage->elevationLoss += $this->getEngine(ElevationCalculator::class)->calculateTotalDescent($remaining);
+            $lastStage->distance += $this->distanceCalculator->calculateTotalDistance($remaining);
+            $lastStage->elevation += $this->elevationCalculator->calculateTotalAscent($remaining);
+            $lastStage->elevationLoss += $this->elevationCalculator->calculateTotalDescent($remaining);
             $lastStage->endPoint = $remaining[\count($remaining) - 1];
         }
 
@@ -153,7 +159,7 @@ final class PacingEngineRegistry implements EngineInterface, EngineRegistryAware
         $counter = \count($points);
 
         for ($i = 1; $i < $counter; ++$i) {
-            $segment = $this->getEngine(DistanceCalculator::class)->calculateTotalDistance([$points[$i - 1], $points[$i]]);
+            $segment = $this->distanceCalculator->calculateTotalDistance([$points[$i - 1], $points[$i]]);
             $accumulated += $segment;
 
             if ($accumulated >= $targetKm) {

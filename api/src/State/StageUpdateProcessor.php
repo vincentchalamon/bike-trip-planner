@@ -11,15 +11,13 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
-use App\Engine\DistanceCalculator;
-use App\Engine\ElevationCalculator;
-use App\Engine\RouteSimplifier;
+use App\Engine\DistanceCalculatorInterface;
+use App\Engine\ElevationCalculatorInterface;
+use App\Engine\RouteSimplifierInterface;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
-use Psr\Container\ContainerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\ObjectMapper\ObjectMapperInterface;
@@ -32,8 +30,9 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
-        #[Autowire(service: 'app.engine_registry')]
-        private ContainerInterface $engineRegistry,
+        private DistanceCalculatorInterface $distanceCalculator,
+        private ElevationCalculatorInterface $elevationCalculator,
+        private RouteSimplifierInterface $routeSimplifier,
         private ObjectMapperInterface $objectMapper,
     ) {
     }
@@ -90,7 +89,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
         }
 
         if ($pointsChanged) {
-            $stage->distance = $this->engineRegistry->get(DistanceCalculator::class)->distanceBetween(
+            $stage->distance = $this->distanceCalculator->distanceBetween(
                 $stage->startPoint,
                 $stage->endPoint,
             ) / 1000.0;
@@ -129,37 +128,28 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
             $rawPoints,
         );
 
-        /** @var DistanceCalculator $distCalc */
-        $distCalc = $this->engineRegistry->get(DistanceCalculator::class);
-
-        /** @var ElevationCalculator $eleCalc */
-        $eleCalc = $this->engineRegistry->get(ElevationCalculator::class);
-
-        /** @var RouteSimplifier $simplifier */
-        $simplifier = $this->engineRegistry->get(RouteSimplifier::class);
-
         // Find where the current stage starts in the decimated points
-        $startIdx = $distCalc->findClosestIndex($decimatedPoints, $stages[$index]->startPoint);
+        $startIdx = $this->distanceCalculator->findClosestIndex($decimatedPoints, $stages[$index]->startPoint);
 
         // Split at the requested distance
-        [$stagePoints, $remaining] = $distCalc->splitAtDistance($decimatedPoints, $startIdx, $requestedKm);
+        [$stagePoints, $remaining] = $this->distanceCalculator->splitAtDistance($decimatedPoints, $startIdx, $requestedKm);
 
         if (\count($stagePoints) < 2) {
             return;
         }
 
         // Update current stage
-        $stages[$index]->distance = $distCalc->calculateTotalDistance($stagePoints);
-        $stages[$index]->elevation = $eleCalc->calculateTotalAscent($stagePoints);
-        $stages[$index]->elevationLoss = $eleCalc->calculateTotalDescent($stagePoints);
+        $stages[$index]->distance = $this->distanceCalculator->calculateTotalDistance($stagePoints);
+        $stages[$index]->elevation = $this->elevationCalculator->calculateTotalAscent($stagePoints);
+        $stages[$index]->elevationLoss = $this->elevationCalculator->calculateTotalDescent($stagePoints);
         $stages[$index]->endPoint = $stagePoints[\count($stagePoints) - 1];
-        $stages[$index]->geometry = $simplifier->simplify($stagePoints);
+        $stages[$index]->geometry = $this->routeSimplifier->simplify($stagePoints);
 
         // Redistribute remaining points among subsequent stages
         $remainingStageCount = \count($stages) - $index - 1;
         if ($remainingStageCount > 0 && [] !== $remaining) {
             // Evenly split remaining distance among subsequent stages
-            $remainingDistance = $distCalc->calculateTotalDistance($remaining);
+            $remainingDistance = $this->distanceCalculator->calculateTotalDistance($remaining);
             $targetPerStage = $remainingDistance / $remainingStageCount;
 
             $currentRemaining = $remaining;
@@ -170,7 +160,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
                     $slicePoints = $currentRemaining;
                     $currentRemaining = [];
                 } else {
-                    [$slicePoints, $currentRemaining] = $distCalc->splitAtDistance($currentRemaining, 0, $targetPerStage);
+                    [$slicePoints, $currentRemaining] = $this->distanceCalculator->splitAtDistance($currentRemaining, 0, $targetPerStage);
                 }
 
                 if (\count($slicePoints) < 2) {
@@ -179,10 +169,10 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
 
                 $stages[$i]->startPoint = $slicePoints[0];
                 $stages[$i]->endPoint = $slicePoints[\count($slicePoints) - 1];
-                $stages[$i]->distance = $distCalc->calculateTotalDistance($slicePoints);
-                $stages[$i]->elevation = $eleCalc->calculateTotalAscent($slicePoints);
-                $stages[$i]->elevationLoss = $eleCalc->calculateTotalDescent($slicePoints);
-                $stages[$i]->geometry = $simplifier->simplify($slicePoints);
+                $stages[$i]->distance = $this->distanceCalculator->calculateTotalDistance($slicePoints);
+                $stages[$i]->elevation = $this->elevationCalculator->calculateTotalAscent($slicePoints);
+                $stages[$i]->elevationLoss = $this->elevationCalculator->calculateTotalDescent($slicePoints);
+                $stages[$i]->geometry = $this->routeSimplifier->simplify($slicePoints);
             }
         } elseif (isset($stages[$index + 1])) {
             // No remaining points: next stage starts at our new endpoint

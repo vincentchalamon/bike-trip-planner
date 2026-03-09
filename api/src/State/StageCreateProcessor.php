@@ -10,13 +10,11 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
-use App\Engine\DistanceCalculator;
+use App\Engine\DistanceCalculatorInterface;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
-use Psr\Container\ContainerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\ObjectMapper\ObjectMapperInterface;
@@ -29,8 +27,7 @@ final readonly class StageCreateProcessor implements ProcessorInterface
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
-        #[Autowire(service: 'app.engine_registry')]
-        private ContainerInterface $engineRegistry,
+        private DistanceCalculatorInterface $distanceCalculator,
         private ObjectMapperInterface $objectMapper,
     ) {
     }
@@ -56,8 +53,7 @@ final readonly class StageCreateProcessor implements ProcessorInterface
             throw new UnprocessableEntityHttpException(\sprintf('Position %d is out of bounds (0-%d).', $position, \count($stages)));
         }
 
-        $distance = $this->engineRegistry
-                ->get(DistanceCalculator::class)
+        $distance = $this->distanceCalculator
                 ->distanceBetween($data->startPoint, $data->endPoint) / 1000.0;
 
         $newStage = new Stage(

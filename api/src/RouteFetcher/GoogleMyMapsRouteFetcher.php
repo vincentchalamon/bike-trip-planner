@@ -6,7 +6,7 @@ namespace App\RouteFetcher;
 
 use App\Enum\SourceType;
 use App\RouteParser\KmlRouteParser;
-use Psr\Container\ContainerInterface;
+use App\RouteParser\RouteParserInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
@@ -21,8 +21,8 @@ final readonly class GoogleMyMapsRouteFetcher implements RouteFetcherInterface
     public function __construct(
         #[Autowire(service: 'google_mymaps.client')]
         private HttpClientInterface $googleMymapsClient,
-        #[Autowire(service: 'app.route_parser_registry')]
-        private ContainerInterface $routeParserRegistry,
+        #[Autowire(service: KmlRouteParser::class)]
+        private RouteParserInterface $kmlParser,
         #[Autowire(service: 'cache.route_fetch')]
         private CacheInterface $routeCache,
     ) {
@@ -63,7 +63,7 @@ final readonly class GoogleMyMapsRouteFetcher implements RouteFetcherInterface
             }
 
             $kmlContent = $response->getContent();
-            $points = $this->routeParserRegistry->get(KmlRouteParser::class)->parse($kmlContent);
+            $points = $this->kmlParser->parse($kmlContent);
 
             if ([] === $points) {
                 throw new \RuntimeException('Google My Maps KML contains no track points.');
