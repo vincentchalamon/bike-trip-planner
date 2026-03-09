@@ -71,7 +71,7 @@ final class StageUpdateTest extends ApiTestCase
         self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
+        $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
             'json' => [
                 'label' => 'Grenoble → Briançon',
@@ -81,7 +81,9 @@ final class StageUpdateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertSame('StageResponse', $data['@type']);
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
@@ -97,7 +99,7 @@ final class StageUpdateTest extends ApiTestCase
         self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
+        $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
             'json' => [
                 'startPoint' => ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
@@ -107,7 +109,9 @@ final class StageUpdateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertSame('StageResponse', $data['@type']);
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
@@ -124,7 +128,7 @@ final class StageUpdateTest extends ApiTestCase
         self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/1', [
+        $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/1', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
             'json' => [
                 'endPoint' => ['lat' => 44.0, 'lon' => 6.0, 'ele' => 1200.0],
@@ -134,7 +138,9 @@ final class StageUpdateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertSame('StageResponse', $data['@type']);
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
@@ -156,7 +162,7 @@ final class StageUpdateTest extends ApiTestCase
         $this->assertNotNull($stagesBefore);
         $distanceBefore = $stagesBefore[0]->distance;
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
+        $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
             'json' => [
                 'endPoint' => ['lat' => 48.0, 'lon' => 8.0],
@@ -166,7 +172,9 @@ final class StageUpdateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertSame('StageResponse', $data['@type']);
 
         $stagesAfter = $repo->getStages(self::TRIP_ID);
         $this->assertNotNull($stagesAfter);
@@ -179,7 +187,7 @@ final class StageUpdateTest extends ApiTestCase
         self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
+        $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
             'json' => [
                 'label' => 'Updated label',
@@ -189,7 +197,9 @@ final class StageUpdateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertSame('StageResponse', $data['@type']);
 
         /** @var InMemoryTransport $transport */
         $transport = self::getContainer()->get('messenger.transport.async');

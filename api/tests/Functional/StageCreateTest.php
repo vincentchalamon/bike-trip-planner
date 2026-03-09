@@ -70,7 +70,7 @@ final class StageCreateTest extends ApiTestCase
         self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0, 'ele' => 200.0],
@@ -81,7 +81,9 @@ final class StageCreateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertSame('StageResponse', $data['@type']);
     }
 
     #[Test]
@@ -90,7 +92,7 @@ final class StageCreateTest extends ApiTestCase
         self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'position' => 1,
@@ -102,7 +104,10 @@ final class StageCreateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertSame('StageResponse', $data['@type']);
+        $this->assertSame(2, $data['dayNumber']);
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
@@ -121,7 +126,7 @@ final class StageCreateTest extends ApiTestCase
         self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'position' => 0,
@@ -133,7 +138,10 @@ final class StageCreateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertSame('StageResponse', $data['@type']);
+        $this->assertSame(1, $data['dayNumber']);
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
@@ -152,7 +160,7 @@ final class StageCreateTest extends ApiTestCase
         self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0],
@@ -164,7 +172,9 @@ final class StageCreateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertSame('StageResponse', $data['@type']);
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
@@ -181,7 +191,7 @@ final class StageCreateTest extends ApiTestCase
         self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 2);
 
-        self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0],
@@ -192,7 +202,9 @@ final class StageCreateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertSame('StageResponse', $data['@type']);
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
@@ -318,7 +330,7 @@ final class StageCreateTest extends ApiTestCase
         self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0],
@@ -329,7 +341,9 @@ final class StageCreateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertSame('StageResponse', $data['@type']);
 
         /** @var InMemoryTransport $transport */
         $transport = self::getContainer()->get('messenger.transport.async');
@@ -349,7 +363,7 @@ final class StageCreateTest extends ApiTestCase
         self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 3);
 
-        self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
             'headers' => ['Content-Type' => 'application/ld+json'],
             'json' => [
                 'position' => 1,
@@ -361,7 +375,10 @@ final class StageCreateTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(202);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/stage-schema.json'));
-        // todo check response content
+
+        $data = $response->toArray(false);
+        $this->assertSame('StageResponse', $data['@type']);
+        $this->assertSame(2, $data['dayNumber']);
 
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
