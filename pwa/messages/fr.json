@@ -121,6 +121,7 @@
     "failedAddStage": "Impossible d'ajouter l'étape.",
     "failedUpdateLocation": "Impossible de mettre à jour la localisation.",
     "failedUpdatePacing": "Impossible de mettre à jour les réglages.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "tripPlannerError": "Une erreur est survenue lors du chargement du planificateur."
   }
 }

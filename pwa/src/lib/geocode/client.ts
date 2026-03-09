@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/api/client";
+
 export interface GeocodeResult {
   name: string;
   displayName: string;
@@ -7,7 +9,7 @@ export interface GeocodeResult {
 }
 
 export async function searchPlaces(query: string): Promise<GeocodeResult[]> {
-  const res = await fetch(
+  const res = await apiFetch(
     `/geocode/search?q=${encodeURIComponent(query)}&limit=5`,
   );
   if (!res.ok) return [];
@@ -19,7 +21,7 @@ export async function reverseGeocode(
   lat: number,
   lon: number,
 ): Promise<GeocodeResult | null> {
-  const res = await fetch(`/geocode/reverse?lat=${lat}&lon=${lon}`);
+  const res = await apiFetch(`/geocode/reverse?lat=${lat}&lon=${lon}`);
   if (!res.ok) return null;
   const data = (await res.json()) as { results: GeocodeResult[] };
   return data.results[0] ?? null;

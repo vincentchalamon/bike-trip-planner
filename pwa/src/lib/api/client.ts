@@ -9,6 +9,19 @@ function getBrowserLocale(): string {
   return "fr";
 }
 
+export async function apiFetch(
+  input: string,
+  init?: RequestInit,
+): Promise<Response> {
+  return fetch(input, {
+    ...init,
+    headers: {
+      "Accept-Language": getBrowserLocale(),
+      ...init?.headers,
+    },
+  });
+}
+
 export const apiClient = createClient<paths>({
   headers: {
     "Content-Type": "application/ld+json",
@@ -94,7 +107,7 @@ export interface ScrapedData {
 export async function scrapeAccommodation(
   url: string,
 ): Promise<ScrapedData | null> {
-  const res = await fetch("/accommodations/scrape", {
+  const res = await apiFetch("/accommodations/scrape", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url }),
@@ -113,7 +126,7 @@ export async function downloadStageFile(
   format: "gpx" | "fit",
   dayNumber: number,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${API_URL}/trips/${tripId}/stages/${stageIndex}.${format}`,
   );
   if (!res.ok) {
