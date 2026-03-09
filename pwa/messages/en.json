@@ -34,6 +34,7 @@
     "minStagesReached": "Minimum 2 stages required",
     "downloadGpx": "Download GPX stage {dayNumber}",
     "downloadFit": "Download FIT stage {dayNumber}",
+    "downloadFailed": "Download failed. Please try again.",
     "loadingAlerts": "Analyzing stage...",
     "editDistance": "Edit distance",
     "distanceLabel": "Distance (km)",

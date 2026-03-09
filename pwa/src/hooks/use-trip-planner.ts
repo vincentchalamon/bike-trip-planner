@@ -10,7 +10,7 @@ import { apiClient, parseApiError, isNetworkError } from "@/lib/api/client";
 import { getRandomTripName } from "@/components/trip-title";
 import type { AccommodationData, StageData } from "@/lib/validation/schemas";
 
-export function useTripActions() {
+export function useTripPlanner() {
   const t = useTranslations();
   const trip = useTripStore((s) => s.trip);
   const totalDistance = useTripStore((s) => s.totalDistance);

@@ -7,7 +7,7 @@ import { TripHeader } from "@/components/trip-header";
 import { PacingSettings } from "@/components/pacing-settings";
 import { Timeline } from "@/components/timeline";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useTripActions } from "@/hooks/use-trip-actions";
+import { useTripPlanner } from "@/hooks/use-trip-planner";
 
 export function TripPlanner() {
   const t = useTranslations();
@@ -36,7 +36,7 @@ export function TripPlanner() {
     handlePacingChange,
     handleAddAccommodation,
     clearNewAccKey,
-  } = useTripActions();
+  } = useTripPlanner();
 
   return (
     <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative">

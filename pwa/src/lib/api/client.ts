@@ -108,11 +108,16 @@ export async function downloadStageFile(
   const res = await fetch(
     `${API_URL}/trips/${tripId}/stages/${stageIndex}.${format}`,
   );
+  if (!res.ok) {
+    throw new Error(`Download failed: ${res.status} ${res.statusText}`);
+  }
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = `stage-${dayNumber}.${format}`;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }

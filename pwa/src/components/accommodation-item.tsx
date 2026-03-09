@@ -30,6 +30,17 @@ const typeIcons: Record<string, React.ElementType> = {
   alpine_hut: MapPin,
 };
 
+const typeLabelKeys = {
+  hotel: "type_hotel",
+  hostel: "type_hostel",
+  camp_site: "type_camp_site",
+  chalet: "type_chalet",
+  guest_house: "type_guest_house",
+  motel: "type_motel",
+  alpine_hut: "type_alpine_hut",
+  other: "type_other",
+} as const;
+
 function formatPrice(acc: AccommodationData): string | null {
   const min = Number(acc.estimatedPriceMin);
   const max = Number(acc.estimatedPriceMax);
@@ -109,16 +120,6 @@ export function AccommodationItem({
   }
 
   const TypeIcon = typeIcons[accommodation.type] ?? MapPin;
-  const typeLabelKeys = {
-    hotel: "type_hotel",
-    hostel: "type_hostel",
-    camp_site: "type_camp_site",
-    chalet: "type_chalet",
-    guest_house: "type_guest_house",
-    motel: "type_motel",
-    alpine_hut: "type_alpine_hut",
-    other: "type_other",
-  } as const;
   const typeKey =
     typeLabelKeys[accommodation.type as keyof typeof typeLabelKeys] ??
     "type_other";

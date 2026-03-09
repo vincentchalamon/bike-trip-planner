@@ -19,7 +19,11 @@ export default function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="text-center space-y-4 max-w-md">
         <h2 className="text-2xl font-semibold">{t("unexpectedError")}</h2>
-        <p className="text-muted-foreground">{error.message}</p>
+        <p className="text-muted-foreground">
+          {process.env.NODE_ENV === "development"
+            ? error.message
+            : t("unexpectedError")}
+        </p>
         <button
           onClick={reset}
           className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"

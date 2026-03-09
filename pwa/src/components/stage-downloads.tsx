@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { downloadStageFile } from "@/lib/api/client";
@@ -25,6 +26,8 @@ export function StageDownloads({
     setDownloading(format);
     try {
       await downloadStageFile(tripId, stageIndex, format, dayNumber);
+    } catch {
+      toast.error(t("downloadFailed"));
     } finally {
       setDownloading(false);
     }
