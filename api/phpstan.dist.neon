@@ -47,6 +47,4 @@ parameters:
             # enable detection of shell execution by backticks
             - type: Expr_ShellExec
               functions: null
-    ignoreErrors:
-        - path: src/Engine/EngineRegistry.php
-          identifier: return.type
+    ignoreErrors: []

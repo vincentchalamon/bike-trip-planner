@@ -14,6 +14,5 @@ class Kernel extends BaseKernel
     protected function build(ContainerBuilder $container): void
     {
         $container->addCompilerPass(new RegistryCompilerPass('app.route_parser'));
-        $container->addCompilerPass(new RegistryCompilerPass('app.engine'));
     }
 }
