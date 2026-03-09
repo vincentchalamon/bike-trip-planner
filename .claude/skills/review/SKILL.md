@@ -26,7 +26,8 @@ Verify every commit message follows `<type>(<scope>): <description>`:
 
 Scan the diff for:
 - Leftover `console.log`, `dump()`, `dd()`, or debug statements
-- Stale TODO/FIXME comments
+- Stale TODO/FIXME comments (must be resolved or tracked in a ticket)
+- Dead code: unused methods, unreachable branches, orphaned imports
 - Unintended technical debt
 
 ## Step 4 -- Security review
@@ -77,6 +78,8 @@ Produce a structured review report with:
   - [ ] Code respects the project architecture
   - [ ] SOLID principles and Law of Demeter followed
   - [ ] Design patterns used where appropriate
+  - [ ] No dead code (unused methods, unreachable branches, orphaned imports)
+  - [ ] No lingering TODO/FIXME comments
   - [ ] Tests cover new/changed cases
   - [ ] Documentation is up to date
   - [ ] Dependent tickets accounted for

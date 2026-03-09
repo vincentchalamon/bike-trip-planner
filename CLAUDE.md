@@ -145,6 +145,7 @@ Run `git diff` and review all changes for:
 
 - Leftover `console.log`, `dump()`, `dd()`, or debug statements
 - Stale TODO/FIXME comments
+- Dead code (unused methods, unreachable branches, orphaned imports)
 - Unintended technical debt
 
 ### 2. Review Checklist
@@ -153,6 +154,8 @@ Run `git diff` and review all changes for:
 - [ ] SOLID principles and Law of Demeter are followed (deviations documented)
 - [ ] Design patterns are used where appropriate (no unjustified quick & dirty)
 - [ ] Tests cover new/changed cases: unit (`make test-php`), E2E (`make test-e2e`)
+- [ ] No dead code (unused methods, unreachable branches, orphaned imports)
+- [ ] No lingering TODO/FIXME comments (resolve or create a ticket)
 - [ ] Documentation (PHPDoc, JSDoc, Diataxis docs) is up to date for modified public APIs
 - [ ] Dependent tickets (if applicable) are accounted for
 

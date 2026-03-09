@@ -17,7 +17,8 @@
 ## Auto-critique
 
 - [ ] No leftover `console.log`, `dump()`, `dd()`, or debug statements
-- [ ] No stale TODO/FIXME comments
+- [ ] No stale TODO/FIXME comments (resolved or tracked in a ticket)
+- [ ] No dead code (unused methods, unreachable branches, orphaned imports)
 - [ ] Code respects the project architecture (stateless backend, local-first frontend, DTO contract)
 - [ ] SOLID principles and Law of Demeter are followed
 - [ ] Documentation (PHPDoc, JSDoc) is up to date for modified public APIs
