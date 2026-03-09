@@ -96,22 +96,7 @@ jobs:
 
             Verify the PR body contains an Auto-critique section listing what was verified.
 
-            ## Step 10 -- Minimize previous reviews
-
-            Before posting any new comments, minimize all previous review comments from Claude on this PR:
-
-            1. Minimize previous issue comments (old format):
-               `gh api repos/vincentchalamon/bike-trip-planner/issues/${{ github.event.pull_request.number }}/comments --paginate --jq '.[] | select(.body | contains("### Code review") or contains("## Review")) | .node_id'`
-
-            2. Minimize previous review submissions:
-               `gh api repos/vincentchalamon/bike-trip-planner/pulls/${{ github.event.pull_request.number }}/reviews --paginate --jq '.[] | select(.user.login == "github-actions[bot]" or .user.type == "Bot") | .node_id'`
-
-            3. For each node_id returned from either query, minimize it:
-               `gh api graphql -f query='mutation { minimizeComment(input: {subjectId: "<NODE_ID>", classifier: OUTDATED}) { minimizedComment { isMinimized } } }'`
-
-            4. If no matching comments are found, skip this step silently.
-
-            ## Step 11 -- Post review with inline comments
+            ## Step 10 -- Post review with inline comments
 
             Follow this sequence precisely:
 
