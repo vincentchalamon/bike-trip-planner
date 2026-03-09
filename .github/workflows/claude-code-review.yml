@@ -96,20 +96,48 @@ jobs:
 
             Verify the PR body contains an Auto-critique section listing what was verified.
 
-            ## Step 10 -- Minimize previous reviews
+            ## Step 10 -- Resolve addressed review threads
 
-            Before posting any new comments, minimize all previous review comments from Claude on this PR:
+            Before posting new comments, check if previous review threads have been addressed by the latest push:
 
-            1. Minimize previous issue comments (old format):
-               `gh api repos/vincentchalamon/bike-trip-planner/issues/${{ github.event.pull_request.number }}/comments --paginate --jq '.[] | select(.body | contains("### Code review") or contains("## Review")) | .node_id'`
+            1. Fetch all unresolved review threads using GraphQL:
+               ```
+               gh api graphql -f query='
+               query {
+                 repository(owner: "vincentchalamon", name: "bike-trip-planner") {
+                   pullRequest(number: ${{ github.event.pull_request.number }}) {
+                     reviewThreads(first: 100) {
+                       nodes {
+                         id
+                         isResolved
+                         isOutdated
+                         path
+                         line
+                         comments(first: 1) {
+                           nodes {
+                             body
+                             author { login }
+                           }
+                         }
+                       }
+                     }
+                   }
+                 }
+               }'
+               ```
 
-            2. Minimize previous review submissions:
-               `gh api repos/vincentchalamon/bike-trip-planner/pulls/${{ github.event.pull_request.number }}/reviews --paginate --jq '.[] | select(.user.login == "github-actions[bot]" or .user.type == "Bot") | .node_id'`
+            2. Filter threads to only keep those where the first comment author is a bot (e.g. `claude[bot]`, `github-actions[bot]`). **Never resolve threads opened by a human** — only the person who opened a thread is responsible for closing it.
 
-            3. For each node_id returned from either query, minimize it:
-               `gh api graphql -f query='mutation { minimizeComment(input: {subjectId: "<NODE_ID>", classifier: OUTDATED}) { minimizedComment { isMinimized } } }'`
+            3. For each **unresolved bot-authored** thread, read the comment body and the file path/line, then check the current diff and source code to determine if the issue has been fixed.
 
-            4. If no matching comments are found, skip this step silently.
+            4. If the issue is **clearly fixed** in the current code, resolve the thread:
+               ```
+               gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "<THREAD_ID>"}) { thread { isResolved } } }'
+               ```
+
+            5. If the issue is **NOT fixed** or you are **unsure**, leave the thread open — do not resolve it.
+
+            6. Include in the review body a summary of resolved threads (e.g. "Resolved N previously open threads that were addressed.").
 
             ## Step 11 -- Post review with inline comments
 

@@ -16,6 +16,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AccommodationData } from "@/lib/validation/schemas";
+import { scrapeAccommodation } from "@/lib/api/client";
+import { isValidHttpsUrl } from "@/lib/validation/url";
+import { SCRAPE_DEBOUNCE_MS } from "@/lib/constants";
 
 const typeIcons: Record<string, React.ElementType> = {
   hotel: Hotel,
@@ -26,6 +29,17 @@ const typeIcons: Record<string, React.ElementType> = {
   camp_site: Tent,
   alpine_hut: MapPin,
 };
+
+const typeLabelKeys = {
+  hotel: "type_hotel",
+  hostel: "type_hostel",
+  camp_site: "type_camp_site",
+  chalet: "type_chalet",
+  guest_house: "type_guest_house",
+  motel: "type_motel",
+  alpine_hut: "type_alpine_hut",
+  other: "type_other",
+} as const;
 
 function formatPrice(acc: AccommodationData): string | null {
   const min = Number(acc.estimatedPriceMin);
@@ -44,32 +58,6 @@ function formatPrice(acc: AccommodationData): string | null {
     return fmt.format(max);
   }
   return `${fmt.format(min)} – ${fmt.format(max)}`;
-}
-
-interface ScrapedData {
-  name: string | null;
-  type: string | null;
-  priceMin: number | null;
-  priceMax: number | null;
-}
-
-async function scrapeUrl(url: string): Promise<ScrapedData | null> {
-  const res = await fetch("/accommodations/scrape", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }),
-  });
-  if (!res.ok) return null;
-  return res.json() as Promise<ScrapedData>;
-}
-
-function isValidUrl(value: string): boolean {
-  try {
-    const u = new URL(value);
-    return u.protocol === "https:";
-  } catch {
-    return false;
-  }
 }
 
 interface AccommodationItemProps {
@@ -108,10 +96,10 @@ export function AccommodationItem({
   }, [initialEditing]);
 
   const handleScrape = useCallback(async (url: string) => {
-    if (!isValidUrl(url)) return;
+    if (!isValidHttpsUrl(url)) return;
     setIsScraping(true);
     try {
-      const data = await scrapeUrl(url);
+      const data = await scrapeAccommodation(url);
       if (data) {
         if (data.name) setEditName(data.name);
         if (data.type) setEditType(data.type);
@@ -128,11 +116,14 @@ export function AccommodationItem({
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       void handleScrape(value);
-    }, 500);
+    }, SCRAPE_DEBOUNCE_MS);
   }
 
   const TypeIcon = typeIcons[accommodation.type] ?? MapPin;
-  const typeLabel = t(`type_${accommodation.type}` as Parameters<typeof t>[0]);
+  const typeKey =
+    typeLabelKeys[accommodation.type as keyof typeof typeLabelKeys] ??
+    "type_other";
+  const typeLabel = t(typeKey);
 
   function startEditing() {
     setEditUrl(accommodation.url ?? "");
