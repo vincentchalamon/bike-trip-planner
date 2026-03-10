@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision coverage coverage-ci gitbutler-setup
+.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision coverage coverage-ci
 
 help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -13,7 +13,7 @@ install: ## Install dependencies
 ensure-default-pbf: ## Ensure default.osm.pbf exists (copies Lille stub if missing)
 	@test -f .docker/osm/data/default.osm.pbf || cp .docker/osm/lille-stub.osm.pbf .docker/osm/data/default.osm.pbf
 
-start-dev: ensure-default-pbf gitbutler-setup ## Start the Docker environment (Detached) in development mode
+start-dev: ensure-default-pbf ## Start the Docker environment (Detached) in development mode
 	@docker compose up --wait
 
 build: build-prod ## Alias for build-prod
@@ -113,20 +113,6 @@ php-shell: ## Open a bash shell inside the PHP container
 
 pwa-shell: ## Open a bash shell inside the Next.js container
 	@docker compose exec pwa ash
-
-gitbutler-setup: ## Sync GitButler prompt templates and install hooks
-	@.githooks/sync-gitbutler-templates.sh
-	@for hook in post-merge post-checkout post-rewrite; do \
-		src=".githooks/$$hook"; \
-		dst=".git/hooks/$$hook"; \
-		dst_user=".git/hooks/$${hook}-user"; \
-		if [ -f "$$dst" ] && grep -q "GITBUTLER_MANAGED_HOOK" "$$dst"; then \
-			cp "$$src" "$$dst_user" && chmod +x "$$dst_user"; \
-		else \
-			cp "$$src" "$$dst" && chmod +x "$$dst"; \
-		fi; \
-	done
-	@echo "GitButler templates synced and hooks installed."
 
 ## --- 💻 Tooling ---
 openapigen: ## Generate OpenAPI
