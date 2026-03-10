@@ -141,6 +141,10 @@ jobs:
 
             ## Step 11 -- Post review with inline comments
 
+            **IMPORTANT: You MUST always submit a review, even when there are zero findings.**
+            If all previous threads are resolved and there are no new findings, submit an APPROVE review.
+            Never skip the review submission — a re-review with no output is confusing for the PR author.
+
             Follow this sequence precisely:
 
             ### A. Check self-review
@@ -191,15 +195,19 @@ jobs:
             - `event`: the event determined in step B
             - `body`: structured review body containing:
               1. **Summary** — 1-3 sentences describing the overall quality
-              2. **PR title check** — flag if the PR title does not follow Conventional Commits (only if there is an issue)
-              3. **Review checklist**:
+              2. **Resolved threads** — "Resolved N previously open threads." (only include this line if threads were resolved in Step 10)
+              3. **PR title check** — flag if the PR title does not follow Conventional Commits (only if there is an issue)
+              4. **Review checklist**:
                  - [ ] Code respects the project architecture
                  - [ ] SOLID principles and Law of Demeter followed
                  - [ ] Design patterns used where appropriate
                  - [ ] Tests cover new/changed cases
                  - [ ] Documentation is up to date
                  - [ ] Dependent tickets accounted for
-              4. **Inline comments** — "Posted N inline comments." (or "No inline comments." if none)
-              5. **Footer** — "Generated with [Claude Code](https://claude.ai/code)"
+              5. **Inline comments** — "Posted N inline comments." (or "No inline comments." if none)
+              6. **Footer** — "Generated with [Claude Code](https://claude.ai/code)"
+
+            **IMPORTANT: This step is NOT optional.** You must ALWAYS reach this step and submit the review.
+            If you created a PENDING review, you MUST submit it — an unsubmitted pending review is invisible on GitHub.
 
             If `mcp__github__pull_request_review_write` fails on submit, retry once with `event: "COMMENT"` as fallback.
