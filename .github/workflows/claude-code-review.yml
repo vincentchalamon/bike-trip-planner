@@ -13,6 +13,7 @@ jobs:
     if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       pull-requests: write
       issues: write
@@ -43,7 +44,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
-            --allowedTools "mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,mcp__github__pull_request_read,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api:*),Bash(git log:*),Read,Glob,Grep"
+            --allowedTools "mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,mcp__github__pull_request_read,mcp__github__get_file_contents,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api:*),Bash(git log:*),Read,Glob,Grep"
           prompt: |
             You are a senior code reviewer for the Bike Trip Planner project.
             Review pull request #${{ github.event.pull_request.number }} following the project's review standards.
@@ -226,3 +227,26 @@ jobs:
             If you created a PENDING review, you MUST submit it — an unsubmitted pending review is invisible on GitHub.
 
             If `submit_pending` fails, retry once with `method: "create"`, `event: "COMMENT"` as fallback (this creates and submits in one call).
+
+      - name: Upload Claude execution log
+        if: always() && steps.check-self.outputs.skip != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: claude-review-execution
+          path: ${{ steps.claude-review.outputs.execution_file }}
+          retention-days: 7
+
+      - name: Check for permission denials
+        if: always() && steps.check-self.outputs.skip != 'true'
+        run: |
+          EXEC_FILE="${{ steps.claude-review.outputs.execution_file }}"
+          if [ -f "$EXEC_FILE" ]; then
+            if grep -q 'permission_denial' "$EXEC_FILE"; then
+              echo "::error::Claude encountered permission denials. See uploaded artifact."
+              grep 'permission_denial' "$EXEC_FILE"
+              exit 1
+            fi
+            echo "No permission denials found."
+          else
+            echo "::warning::Execution file not found at $EXEC_FILE"
+          fi
