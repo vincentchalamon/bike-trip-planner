@@ -3,8 +3,6 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
-    paths-ignore:
-      - '.github/workflows/claude-code-review.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -21,12 +19,25 @@ jobs:
       id-token: write
 
     steps:
+      - name: Check if workflow file changed
+        id: check-self
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/files" --jq '.[].filename' | grep -q '^\.github/workflows/claude-code-review\.yml$'; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping code review: the workflow file itself (claude-code-review.yml) was modified in this PR."
+          fi
+
       - name: Checkout repository
+        if: steps.check-self.outputs.skip != 'true'
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
       - name: Run Claude Code Review
+        if: steps.check-self.outputs.skip != 'true'
         id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
