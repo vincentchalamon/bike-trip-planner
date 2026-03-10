@@ -168,6 +168,42 @@ final class PacingEngineRegistryTest extends TestCase
         }
     }
 
+    #[Test]
+    public function generateStagesUsesRawPointsForElevation(): void
+    {
+        // Create distinct elevation calculators to verify which points are used
+        $elevationCalculator = $this->createStub(ElevationCalculatorInterface::class);
+
+        // Raw points have 10 points → calculateTotalAscent called with 10-element arrays
+        // Decimated points have 5 points → calculateTotalAscent called with 5-element arrays
+        $elevationCalculator->method('calculateTotalAscent')->willReturnCallback(
+            static fn (array $points): float => \count($points) >= 8 ? 500.0 : 100.0,
+        );
+        $elevationCalculator->method('calculateTotalDescent')->willReturnCallback(
+            static fn (array $points): float => \count($points) >= 8 ? 400.0 : 50.0,
+        );
+
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
+            static fn (array $points): float => (\count($points) - 1) * 5.0,
+        );
+
+        $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
+        $routeSimplifier->method('simplify')->willReturnArgument(0);
+
+        $engine = new PacingEngineRegistry($distanceCalculator, $elevationCalculator, $routeSimplifier);
+
+        $decimatedPoints = $this->createTrack(5);
+        $rawPoints = $this->createTrack(10);
+
+        $stages = $engine->generateStages('trip-1', $decimatedPoints, 1, 100.0, rawPoints: $rawPoints);
+
+        $this->assertCount(1, $stages);
+        // Should use raw points (10 elements) → 500.0 ascent, not 100.0 from decimated
+        $this->assertSame(500.0, $stages[0]->elevation);
+        $this->assertSame(400.0, $stages[0]->elevationLoss);
+    }
+
     /**
      * @return list<Coordinate>
      */
