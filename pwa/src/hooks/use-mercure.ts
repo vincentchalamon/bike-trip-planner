@@ -237,6 +237,28 @@ function dispatchEvent(event: MercureEvent): void {
       break;
     }
 
+    case "water_point_alerts": {
+      const waterByStage = new Map<number, typeof event.data.alerts>();
+      for (const alert of event.data.alerts) {
+        const existing = waterByStage.get(alert.stageIndex) ?? [];
+        existing.push(alert);
+        waterByStage.set(alert.stageIndex, existing);
+      }
+      for (const [stageIndex, alerts] of waterByStage) {
+        store.updateStageAlerts(
+          stageIndex,
+          alerts.map((a) => ({
+            type: a.type as "nudge",
+            message: a.message,
+            lat: null,
+            lon: null,
+          })),
+          "water_point",
+        );
+      }
+      break;
+    }
+
     case "trip_complete":
       store.setComputationStatus(event.data.computationStatus);
       useUiStore.getState().setProcessing(false);

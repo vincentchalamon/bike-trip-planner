@@ -106,6 +106,26 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         );
     }
 
+    /**
+     * @param list<Coordinate> $decimatedPoints
+     */
+    public function buildWaterPointQuery(array $decimatedPoints): string
+    {
+        $polyline = $this->buildPolyline($decimatedPoints);
+
+        return \sprintf(
+            '[out:json][timeout:15];(nwr["amenity"="drinking_water"](around:%d,%s);nwr["amenity"="water_point"](around:%d,%s);nwr["man_made"="water_tap"](around:%d,%s);nwr["landuse"="cemetery"](around:%d,%s););out center 200;',
+            self::AROUND_RADIUS_METERS,
+            $polyline,
+            self::AROUND_RADIUS_METERS,
+            $polyline,
+            self::AROUND_RADIUS_METERS,
+            $polyline,
+            self::AROUND_RADIUS_METERS,
+            $polyline,
+        );
+    }
+
     /** @param list<Coordinate> $points */
     private function buildPolyline(array $points): string
     {
