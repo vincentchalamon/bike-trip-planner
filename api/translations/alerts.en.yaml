@@ -8,6 +8,8 @@ alert.traffic.critical: "%count% segment(s) on main road (primary/secondary) wit
 alert.bike_shop.nudge: "No bike shops detected on stage %stage%. In case of a breakdown, the next town may be far away."
 alert.calendar.nudge: "Stage %stage% coincides with a public holiday (%holiday%). Some businesses may be closed."
 alert.calendar.fallback: "Public holiday"
+alert.calendar.sunday_nudge: "Stage %stage% falls on a Sunday. Some businesses may be closed, especially in the afternoon."
+alert.steep_gradient.warning: "Steep climb detected: %gradient%% gradient over %distance%m. Tough with a loaded bike."
 alert.wind.warning: "Headwinds expected for %count%/%total% stages (>25 km/h). Allow extra time."
 stage.label: "Stage %day%"
 weather.clear_sky: "Clear sky"

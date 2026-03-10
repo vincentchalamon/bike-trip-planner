@@ -49,9 +49,10 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
 
             foreach ($stages as $i => $stage) {
                 $stageDate = $startDate->modify(\sprintf('+%d days', $i));
+                $isHoliday = $holidays->isHoliday($stageDate);
+                $isSunday = '7' === $stageDate->format('N');
 
-                if ($holidays->isHoliday($stageDate)) {
-                    // Find the matching holiday name by iterating
+                if ($isHoliday) {
                     $holidayName = null;
                     foreach ($holidays->getHolidays() as $holiday) {
                         if ($holiday->format('Y-m-d') === $stageDate->format('Y-m-d')) {
@@ -63,6 +64,7 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                     $fallback = $this->translator->trans('alert.calendar.fallback', [], 'alerts', $locale);
                     $nudges[] = [
                         'stageIndex' => $i,
+                        'type' => 'holiday',
                         'date' => $stageDate->format('Y-m-d'),
                         'holiday' => $holidayName ?? $fallback,
                         'message' => $this->translator->trans(
@@ -71,6 +73,18 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                                 '%stage%' => $stage->dayNumber,
                                 '%holiday%' => $holidayName ?? $fallback,
                             ],
+                            'alerts',
+                            $locale,
+                        ),
+                    ];
+                } elseif ($isSunday) {
+                    $nudges[] = [
+                        'stageIndex' => $i,
+                        'type' => 'sunday',
+                        'date' => $stageDate->format('Y-m-d'),
+                        'message' => $this->translator->trans(
+                            'alert.calendar.sunday_nudge',
+                            ['%stage%' => $stage->dayNumber],
                             'alerts',
                             $locale,
                         ),

@@ -88,7 +88,7 @@ export type MercureEvent =
   | {
       type: "calendar_alerts";
       data: {
-        nudges: { stageIndex: number; message: string; date: string }[];
+        nudges: { stageIndex: number; type: "holiday" | "sunday"; message: string; date: string }[];
       };
     }
   | {
