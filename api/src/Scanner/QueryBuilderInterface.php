@@ -44,4 +44,9 @@ interface QueryBuilderInterface
      * @param list<Coordinate> $decimatedPoints
      */
     public function buildChargingPointQuery(array $decimatedPoints): string;
+
+    /**
+     * @param list<Coordinate> $decimatedPoints
+     */
+    public function buildWaterPointQuery(array $decimatedPoints): string;
 }

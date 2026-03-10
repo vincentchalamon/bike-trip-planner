@@ -20,6 +20,7 @@ use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
 use App\Message\CheckCalendar;
 use App\Message\CheckChargingPoints;
+use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
 use App\Message\GenerateStages;
 use App\Message\ScanAccommodations;
@@ -98,6 +99,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
             $this->messageBus->dispatch(new CheckCalendar($tripId));
             $this->messageBus->dispatch(new CheckBikeShops($tripId));
             $this->messageBus->dispatch(new CheckChargingPoints($tripId));
+            $this->messageBus->dispatch(new CheckWaterPoints($tripId));
         });
     }
 

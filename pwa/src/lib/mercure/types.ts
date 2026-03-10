@@ -122,6 +122,25 @@ export type MercureEvent =
         }[];
       };
     }
+  | {
+      type: "water_point_alerts";
+      data: {
+        alerts: {
+          stageIndex: number;
+          type: string;
+          message: string;
+          dayNumber: number;
+        }[];
+        waterPointsByStage: {
+          stageIndex: number;
+          waterPoints: {
+            lat: number;
+            lon: number;
+            distanceFromStart: number;
+          }[];
+        }[];
+      };
+    }
   | { type: "validation_error"; data: { code: string; message: string } }
   | {
       type: "computation_error";

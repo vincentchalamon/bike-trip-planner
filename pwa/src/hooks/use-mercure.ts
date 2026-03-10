@@ -28,7 +28,7 @@ const MERCURE_URL =
  * - `weather_fetched` — per-stage weather forecasts
  * - `pois_scanned` — points of interest with optional alerts
  * - `accommodations_found` — accommodation options per stage
- * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` / `charging_point_alerts` — alert categories
+ * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` / `charging_point_alerts` / `water_point_alerts` — alert categories
  * - `trip_complete` — final computation status, stops processing spinner
  * - `validation_error` / `computation_error` — error toasts and recovery
  */
@@ -232,6 +232,29 @@ function dispatchEvent(event: MercureEvent): void {
             lon: null,
           })),
           "charging_point",
+        );
+      }
+      break;
+    }
+
+    case "water_point_alerts": {
+      // Note: event.data.waterPointsByStage is available but not yet consumed — reserved for future map layer display
+      const waterByStage = new Map<number, typeof event.data.alerts>();
+      for (const alert of event.data.alerts) {
+        const existing = waterByStage.get(alert.stageIndex) ?? [];
+        existing.push(alert);
+        waterByStage.set(alert.stageIndex, existing);
+      }
+      for (const [stageIndex, alerts] of waterByStage) {
+        store.updateStageAlerts(
+          stageIndex,
+          alerts.map((a) => ({
+            type: a.type as "nudge",
+            message: a.message,
+            lat: null,
+            lon: null,
+          })),
+          "water_point",
         );
       }
       break;
