@@ -85,7 +85,6 @@ For each branch that passed Phase 2, create a PR:
    - Title: Conventional Commit format matching the issue type
    - Body: summary + Auto-critique section per CLAUDE.md
    - Base branch: `main` (or `feature/<dep-number>` for dependent issues)
-   - Assign reviewer: `gh pr edit --add-reviewer vincentchalamon`
 3. Run `gh pr checks --watch` to wait for CI (run multiple watches in parallel if possible)
 
 If CI fails, read logs, fix, push, and re-check (up to 2 attempts).
