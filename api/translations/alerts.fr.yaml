@@ -8,6 +8,8 @@ alert.traffic.critical: "%count% segment(s) sur route principale (primary/second
 alert.bike_shop.nudge: "Aucun atelier vélo détecté sur l'étape %stage%. En cas de panne, la prochaine ville peut être loin."
 alert.calendar.nudge: "L'étape %stage% coïncide avec un jour férié (%holiday%). Certains commerces peuvent être fermés."
 alert.calendar.fallback: "Jour férié"
+alert.calendar.sunday_nudge: "L'étape %stage% tombe un dimanche : certains commerces peuvent être fermés, notamment l'après-midi."
+alert.steep_gradient.warning: "Montée raide détectée : %gradient%% de pente sur %distance%m. Difficile avec un vélo chargé."
 alert.wind.warning: "Vents de face attendus pour %count%/%total% étapes (>25 km/h). Prévoyez du temps supplémentaire."
 stage.label: "Étape %day%"
 weather.clear_sky: "Ciel dégagé"
