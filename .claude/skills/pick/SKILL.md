@@ -52,7 +52,6 @@ Fix anything found, commit, and push.
 - Push the branch: `git push -u origin feature/<issue-number>`
 - Create the PR: `gh pr create --fill --base <base-branch>`
 - The PR body must include an **Auto-critique** section per CLAUDE.md
-- Assign reviewer: `gh pr edit --add-reviewer vincentchalamon`
 
 ## Step 9 -- Wait for CI
 
