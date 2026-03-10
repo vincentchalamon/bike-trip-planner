@@ -6,5 +6,5 @@ DST="$REPO_ROOT/.git/gitbutler/prompt-templates"
 
 if [ -d "$SRC" ]; then
     mkdir -p "$DST"
-    cp "$SRC"/*.md "$DST/" 2>/dev/null
+    find "$SRC" -maxdepth 1 -name '*.md' -exec cp {} "$DST/" \;
 fi
