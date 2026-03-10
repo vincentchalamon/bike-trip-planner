@@ -1,6 +1,7 @@
 .agents/*
 .claude/settings.local.json
 .claude/worktrees/
+.mcp.json
 /.env
 openapi.*
 
