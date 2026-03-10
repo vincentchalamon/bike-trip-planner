@@ -44,7 +44,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
-            --allowedTools "mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,mcp__github__pull_request_read,mcp__github__get_file_contents,mcp__github__update_pull_request,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api:*),Bash(git log:*),Read,Glob,Grep"
+            --allowedTools "mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,mcp__github__pull_request_read,mcp__github__get_pull_request,mcp__github__get_pull_request_diff,mcp__github__create_pending_pull_request_review,mcp__github__create_and_submit_pull_request_review,mcp__github__get_file_contents,mcp__github__update_pull_request,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api:*),Bash(git log:*),Read,Glob,Grep"
           prompt: |
             You are a senior code reviewer for the Bike Trip Planner project.
             Review pull request #${{ github.event.pull_request.number }} following the project's review standards.
@@ -190,13 +190,12 @@ jobs:
 
             ### C. Create pending review
 
-            Use `mcp__github__pull_request_review_write` with:
-            - `method`: "create"
+            Use `mcp__github__create_pending_pull_request_review` with:
             - `owner`: "vincentchalamon"
             - `repo`: "bike-trip-planner"
             - `pullNumber`: ${{ github.event.pull_request.number }}
-            - Do NOT pass `event` — omitting it creates a pending (draft) review
-            - Do NOT pass `body` — it will be set on submit
+
+            If that tool is not available, use `mcp__github__pull_request_review_write` with `method: "create"` as fallback.
 
             ### D. Post inline comments
 
@@ -219,8 +218,7 @@ jobs:
 
             ### E. Submit the review
 
-            Use `mcp__github__pull_request_review_write` with:
-            - `method`: "submit_pending"
+            Use `mcp__github__create_and_submit_pull_request_review` or `mcp__github__pull_request_review_write` (with `method: "submit_pending"`) with:
             - `owner`: "vincentchalamon"
             - `repo`: "bike-trip-planner"
             - `pullNumber`: ${{ github.event.pull_request.number }}
@@ -242,7 +240,7 @@ jobs:
             **IMPORTANT: This step is NOT optional.** You must ALWAYS reach this step and submit the review.
             If you created a PENDING review, you MUST submit it — an unsubmitted pending review is invisible on GitHub.
 
-            If `submit_pending` fails, retry once with `method: "create"`, `event: "COMMENT"` as fallback (this creates and submits in one call).
+            If `submit_pending` fails, retry once with `mcp__github__create_and_submit_pull_request_review` (or `method: "create"`, `event: "COMMENT"` as fallback) — this creates and submits in one call.
 
       - name: Upload Claude execution log
         if: always() && steps.check-self.outputs.skip != 'true'
