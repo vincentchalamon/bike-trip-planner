@@ -61,7 +61,7 @@ To do this, follow these steps precisely:
 
    ### C. Create pending review
 
-   Use `mcp__github__pull_request_review_write` with `event: "PENDING"` and `body: ""`.
+   Use `mcp__github__pull_request_review_write` with `method: "create"`. Do NOT pass `event` (omitting it creates a pending review). Do NOT pass `body` (it will be set on submit).
 
    ### D. Post inline comments
 
@@ -78,6 +78,7 @@ To do this, follow these steps precisely:
    ### E. Submit the review
 
    Use `mcp__github__pull_request_review_write` with:
+   - `method`: "submit_pending"
    - `event`: the event determined in step B
    - `body`: structured review body containing:
      1. **Summary** — 1-3 sentences describing the overall quality
@@ -89,7 +90,7 @@ To do this, follow these steps precisely:
         If this code review was useful, please react with a thumbs up. Otherwise, react with a thumbs down.
         ```
 
-   If `mcp__github__pull_request_review_write` fails on submit, retry once with `event: "COMMENT"` as fallback.
+   If `submit_pending` fails, retry once with `method: "create"`, `event: "COMMENT"` as fallback (this creates and submits in one call).
 
 Examples of false positives, for steps 4 and 5:
 
