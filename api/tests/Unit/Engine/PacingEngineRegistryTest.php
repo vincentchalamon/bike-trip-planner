@@ -174,8 +174,7 @@ final class PacingEngineRegistryTest extends TestCase
         // Create distinct elevation calculators to verify which points are used
         $elevationCalculator = $this->createStub(ElevationCalculatorInterface::class);
 
-        // Raw points have 10 points → calculateTotalAscent called with 10-element arrays
-        // Decimated points have 5 points → calculateTotalAscent called with 5-element arrays
+        // Threshold 8 discriminates raw (10 points) from decimated (5 points)
         $elevationCalculator->method('calculateTotalAscent')->willReturnCallback(
             static fn (array $points): float => \count($points) >= 8 ? 500.0 : 100.0,
         );
@@ -202,6 +201,42 @@ final class PacingEngineRegistryTest extends TestCase
         // Should use raw points (10 elements) → 500.0 ascent, not 100.0 from decimated
         $this->assertSame(500.0, $stages[0]->elevation);
         $this->assertSame(400.0, $stages[0]->elevationLoss);
+    }
+
+    #[Test]
+    public function generateStagesAbsorbsRemainingWithRawPoints(): void
+    {
+        $elevationCalculator = $this->createStub(ElevationCalculatorInterface::class);
+        // Threshold 8 discriminates raw (10 points) from decimated (5 points)
+        $elevationCalculator->method('calculateTotalAscent')->willReturnCallback(
+            static fn (array $points): float => \count($points) >= 8 ? 500.0 : 100.0,
+        );
+        $elevationCalculator->method('calculateTotalDescent')->willReturnCallback(
+            static fn (array $points): float => \count($points) >= 8 ? 400.0 : 50.0,
+        );
+
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
+            static fn (array $points): float => (\count($points) - 1) * 5.0,
+        );
+
+        $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
+        $routeSimplifier->method('simplify')->willReturnArgument(0);
+
+        $engine = new PacingEngineRegistry($distanceCalculator, $elevationCalculator, $routeSimplifier);
+
+        $decimatedPoints = $this->createTrack(20);
+        $rawPoints = $this->createTrack(40);
+
+        // 2 days with many points → last stage absorbs remaining tail
+        $stages = $engine->generateStages('trip-1', $decimatedPoints, 2, 200.0, rawPoints: $rawPoints);
+
+        $this->assertNotEmpty($stages);
+
+        $lastStage = $stages[\count($stages) - 1];
+        // Last stage should end at the last point of the track
+        $lastDecimated = $decimatedPoints[\count($decimatedPoints) - 1];
+        $this->assertEqualsWithDelta($lastDecimated->lat, $lastStage->endPoint->lat, 0.001);
     }
 
     /**
