@@ -173,7 +173,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         }
 
         // Pass raw points for accurate elevation calculation (decimated points lose altitude detail)
-        $rawPoints = $allPoints !== $decimatedPoints ? $allPoints : null;
+        $rawPoints = null !== $allPointsData ? $allPoints : null;
 
         return $this->pacingEngine->generateStages(
             $tripId,

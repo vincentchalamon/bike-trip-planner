@@ -40,7 +40,7 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
      * Minimum stage distance: 30km
      *
      * @param list<Coordinate>      $points    Decimated track points (geometry + splitting)
-     * @param list<Coordinate>|null $rawPoints Full-resolution points for accurate elevation calculation
+     * @param list<Coordinate>|null $rawPoints Full-resolution points for accurate elevation calculation (falls back to $points when null)
      *
      * @return list<Stage>
      */
@@ -136,6 +136,8 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
 
             // Last stage gets all remaining points
             $isLastDay = $i === \count($targets) - 1;
+
+            $stageRawPoints = null;
 
             if ($isLastDay) {
                 $stagePoints = $remaining;
