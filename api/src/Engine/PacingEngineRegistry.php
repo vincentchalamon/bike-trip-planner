@@ -157,8 +157,10 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
             if (\count($stagePoints) < 2) {
                 // Absorb into remaining
                 $remaining = array_merge($stagePoints, $remaining);
-                if (null !== $stageRawPoints && null !== $remainingRaw) {
-                    $remainingRaw = array_merge($stageRawPoints, $remainingRaw);
+                if (null !== $stageRawPoints) {
+                    $remainingRaw = null !== $remainingRaw
+                        ? array_merge($stageRawPoints, $remainingRaw)
+                        : $stageRawPoints;
                 }
 
                 continue;
