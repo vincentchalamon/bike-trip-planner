@@ -3,6 +3,8 @@ name: Pick Issue
 emoji: 🎯
 ---
 
+# Pick Issue
+
 Implement GitHub issue #<ISSUE_NUMBER> end-to-end.
 
 Execute these steps in order:
@@ -22,6 +24,7 @@ Run `make test`. Fix any failures until the suite passes.
 ## Step 4 — Self-review
 
 Run `git diff` to review all changes. Look for:
+
 - Leftover `console.log`, `dump()`, `dd()`, or debug statements
 - Stale TODO/FIXME comments
 - Dead code (unused methods, unreachable branches, orphaned imports)
