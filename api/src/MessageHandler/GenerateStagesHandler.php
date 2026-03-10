@@ -174,6 +174,11 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
             $numberOfDays = max(1, $numberOfDays);
         }
 
+        // Pass raw points for accurate elevation calculation (decimated points lose altitude detail).
+        // rawPoints is null when no full-resolution data was loaded (e.g. routing-only trips),
+        // in which case the pacing engine falls back to decimated points.
+        $rawPoints = null !== $allPointsData ? $allPoints : null;
+
         return $this->pacingEngine->generateStages(
             $tripId,
             $decimatedPoints,
@@ -181,6 +186,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
             $totalDistance,
             $request->fatigueFactor,
             $request->elevationPenalty,
+            $rawPoints,
         );
     }
 }

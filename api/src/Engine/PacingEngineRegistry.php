@@ -39,7 +39,8 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
      * Formula: Dn = base * fatigueFactor^(n-1) - (D+ / elevationPenalty)
      * Minimum stage distance: 30km
      *
-     * @param list<Coordinate> $points Decimated track points
+     * @param list<Coordinate>      $points    Decimated track points (geometry + splitting)
+     * @param list<Coordinate>|null $rawPoints Full-resolution points for accurate elevation calculation (falls back to $points when null)
      *
      * @return list<Stage>
      */
@@ -50,15 +51,18 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
         float $totalDistanceKm,
         float $fatigueFactor = 0.9,
         float $elevationPenalty = 50.0,
+        ?array $rawPoints = null,
     ): array {
         if ([] === $points || $numberOfDays <= 0) {
             return [];
         }
 
-        // Compute target distances for each day
-        $targets = $this->computeTargetDistances($numberOfDays, $totalDistanceKm, $points, $fatigueFactor, $elevationPenalty);
+        $elevationPoints = $rawPoints ?? $points;
 
-        return $this->sliceIntoStages($tripId, $points, $targets);
+        // Compute target distances for each day using raw points for accurate elevation
+        $targets = $this->computeTargetDistances($numberOfDays, $totalDistanceKm, $elevationPoints, $fatigueFactor, $elevationPenalty);
+
+        return $this->sliceIntoStages($tripId, $points, $targets, $rawPoints);
     }
 
     /**
@@ -112,15 +116,17 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
     }
 
     /**
-     * @param list<Coordinate> $points
-     * @param list<float>      $targets
+     * @param list<Coordinate>      $points    Decimated points for geometry/splitting
+     * @param list<float>           $targets   Target distances per day in km
+     * @param list<Coordinate>|null $rawPoints Raw points for accurate elevation calculation
      *
      * @return list<Stage>
      */
-    private function sliceIntoStages(string $tripId, array $points, array $targets): array
+    private function sliceIntoStages(string $tripId, array $points, array $targets, ?array $rawPoints = null): array
     {
         $stages = [];
         $remaining = $points;
+        $remainingRaw = $rawPoints;
         $dayNumber = 1;
 
         foreach ($targets as $i => $targetKm) {
@@ -131,22 +137,40 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
             // Last stage gets all remaining points
             $isLastDay = $i === \count($targets) - 1;
 
+            $stageRawPoints = null;
+
             if ($isLastDay) {
                 $stagePoints = $remaining;
+                $stageRawPoints = $remainingRaw;
                 $remaining = [];
+                $remainingRaw = null;
             } else {
                 [$stagePoints, $remaining] = $this->splitAtDistance($remaining, $targetKm);
+
+                if (null !== $remainingRaw) {
+                    [$stageRawPoints, $remainingRaw] = $this->splitAtDistance($remainingRaw, $targetKm);
+                } else {
+                    $stageRawPoints = null;
+                }
             }
 
             if (\count($stagePoints) < 2) {
                 // Absorb into remaining
                 $remaining = array_merge($stagePoints, $remaining);
+                if (null !== $stageRawPoints) {
+                    $remainingRaw = null !== $remainingRaw
+                        ? array_merge($stageRawPoints, $remainingRaw)
+                        : $stageRawPoints;
+                }
+
                 continue;
             }
 
+            $elevationSource = $stageRawPoints ?? $stagePoints;
+
             $distance = $this->distanceCalculator->calculateTotalDistance($stagePoints);
-            $elevation = $this->elevationCalculator->calculateTotalAscent($stagePoints);
-            $elevationLoss = $this->elevationCalculator->calculateTotalDescent($stagePoints);
+            $elevation = $this->elevationCalculator->calculateTotalAscent($elevationSource);
+            $elevationLoss = $this->elevationCalculator->calculateTotalDescent($elevationSource);
             $geometry = $this->routeSimplifier->simplify($stagePoints);
 
             $stages[] = new Stage(
@@ -167,9 +191,10 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
         // @todo #89 SRP: split into PacingTargetCalculator + RouteSlicer + StageAssembler
         if ([] !== $remaining && [] !== $stages) {
             $lastStage = $stages[\count($stages) - 1];
+            $remainingElevationSource = $remainingRaw ?? $remaining;
             $lastStage->distance += $this->distanceCalculator->calculateTotalDistance($remaining);
-            $lastStage->elevation += $this->elevationCalculator->calculateTotalAscent($remaining);
-            $lastStage->elevationLoss += $this->elevationCalculator->calculateTotalDescent($remaining);
+            $lastStage->elevation += $this->elevationCalculator->calculateTotalAscent($remainingElevationSource);
+            $lastStage->elevationLoss += $this->elevationCalculator->calculateTotalDescent($remainingElevationSource);
             $lastStage->endPoint = $remaining[\count($remaining) - 1];
         }
 

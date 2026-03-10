@@ -12,7 +12,8 @@ interface PacingEngineInterface
     /**
      * Generates stages from a decimated track using a fatigue-aware pacing formula.
      *
-     * @param list<Coordinate> $points Decimated track points
+     * @param list<Coordinate>      $points    Decimated track points (geometry + splitting)
+     * @param list<Coordinate>|null $rawPoints Full-resolution points for accurate elevation calculation (falls back to $points when null)
      *
      * @return list<Stage>
      */
@@ -23,5 +24,6 @@ interface PacingEngineInterface
         float $totalDistanceKm,
         float $fatigueFactor = 0.9,
         float $elevationPenalty = 50.0,
+        ?array $rawPoints = null,
     ): array;
 }
