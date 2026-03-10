@@ -23,3 +23,6 @@
 - [ ] SOLID principles and Law of Demeter are followed
 - [ ] Documentation (PHPDoc, JSDoc) is up to date for modified public APIs
 - [ ] If backend DTOs changed: `schema.d.ts` is regenerated (`make typegen`)
+
+<!-- claude-review-start -->
+<!-- claude-review-end -->

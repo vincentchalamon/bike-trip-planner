@@ -44,7 +44,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
-            --allowedTools "mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,mcp__github__pull_request_read,mcp__github__get_file_contents,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api:*),Bash(git log:*),Read,Glob,Grep"
+            --allowedTools "mcp__github__add_comment_to_pending_review,mcp__github__pull_request_review_write,mcp__github__pull_request_read,mcp__github__get_file_contents,mcp__github__update_pull_request,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api:*),Bash(git log:*),Read,Glob,Grep"
           prompt: |
             You are a senior code reviewer for the Bike Trip Planner project.
             Review pull request #${{ github.event.pull_request.number }} following the project's review standards.
@@ -106,9 +106,25 @@ jobs:
             - E2E tests (Playwright)
             - Flag untested edge cases
 
-            ## Step 9 -- Auto-critique section
+            ## Step 9 -- Update PR body with auto-generated review section
 
-            Verify the PR body contains an Auto-critique section listing what was verified.
+            After completing your analysis (Steps 2-8), update the PR body with an auto-generated section.
+
+            1. Read the current PR body with `gh pr view ${{ github.event.pull_request.number }} --json body --jq .body`
+            2. Build the auto-generated section:
+               - Review summary (number of findings by severity)
+               - Review checklist status (checked/unchecked per analysis)
+               - Commit SHA reviewed
+            3. Wrap between delimiters:
+               ```
+               <!-- claude-review-start -->
+               ## Claude Review
+               ... content ...
+               <!-- claude-review-end -->
+               ```
+            4. If `<!-- claude-review-start -->` already exists, replace everything between start/end markers.
+               Otherwise, append at the end of the body.
+            5. Update via `mcp__github__update_pull_request` with the full updated body.
 
             ## Step 10 -- Resolve addressed review threads
 
