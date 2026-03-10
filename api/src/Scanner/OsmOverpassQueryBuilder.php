@@ -114,7 +114,7 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         $polyline = $this->buildPolyline($decimatedPoints);
 
         return \sprintf(
-            '[out:json][timeout:15];(nwr["amenity"="drinking_water"](around:%d,%s);nwr["amenity"="water_point"](around:%d,%s);nwr["man_made"="water_tap"](around:%d,%s);nwr["natural"="spring"](around:%d,%s););out center 2000;',
+            '[out:json][timeout:15];(nwr["amenity"="drinking_water"](around:%d,%s);nwr["amenity"="water_point"](around:%d,%s);nwr["man_made"="water_tap"](around:%d,%s);nwr["natural"="spring"](around:%d,%s););out center 500;',
             self::AROUND_RADIUS_METERS,
             $polyline,
             self::AROUND_RADIUS_METERS,
