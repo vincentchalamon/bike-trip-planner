@@ -6,6 +6,7 @@ alert.surface.warning: "Section non-pavée de %length%m détectée (%surface%). 
 alert.surface.fallback: "surface non-asphaltée"
 alert.traffic.critical: "%count% segment(s) sur route principale (primary/secondary) sans piste cyclable détecté(s)."
 alert.bike_shop.nudge: "Aucun atelier vélo détecté sur l'étape %stage%. En cas de panne, la prochaine ville peut être loin."
+alert.charging_point.nudge: "Aucun point de charge VAE détecté à proximité de la fin de l'étape %stage%. Anticipez la gestion de votre batterie."
 alert.calendar.nudge: "L'étape %stage% coïncide avec un jour férié (%holiday%). Certains commerces peuvent être fermés."
 alert.calendar.fallback: "Jour férié"
 alert.calendar.sunday_nudge: "L'étape %stage% tombe un dimanche : certains commerces peuvent être fermés, notamment l'après-midi."

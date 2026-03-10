@@ -39,4 +39,9 @@ interface QueryBuilderInterface
      * @param list<list<Coordinate>> $stageGeometries geometry points per stage
      */
     public function buildBatchBikeShopQuery(array $stageGeometries): string;
+
+    /**
+     * @param list<Coordinate> $decimatedPoints
+     */
+    public function buildChargingPointQuery(array $decimatedPoints): string;
 }

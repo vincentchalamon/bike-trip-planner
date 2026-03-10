@@ -130,6 +130,20 @@ final class OsmOverpassQueryBuilderTest extends TestCase
     }
 
     #[Test]
+    public function buildChargingPointQuery(): void
+    {
+        $points = [new Coordinate(45.0, 5.0)];
+
+        $query = $this->builder->buildChargingPointQuery($points);
+
+        $this->assertStringContainsString('[out:json][timeout:15]', $query);
+        $this->assertStringContainsString('"amenity"="charging_station"', $query);
+        $this->assertStringContainsString('"bicycle"="yes"', $query);
+        $this->assertStringContainsString('around:2000', $query);
+        $this->assertStringContainsString('out center 50', $query);
+    }
+
+    #[Test]
     public function buildBatchBikeShopQueryMergesAllStages(): void
     {
         $stage1 = [new Coordinate(45.0, 5.0)];
