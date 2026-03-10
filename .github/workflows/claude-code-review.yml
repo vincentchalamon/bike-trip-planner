@@ -174,11 +174,12 @@ jobs:
             ### C. Create pending review
 
             Use `mcp__github__pull_request_review_write` with:
+            - `method`: "create"
             - `owner`: "vincentchalamon"
             - `repo`: "bike-trip-planner"
-            - `pull_number`: ${{ github.event.pull_request.number }}
-            - `event`: "PENDING"
-            - `body`: "" (empty — body will be set on submit)
+            - `pullNumber`: ${{ github.event.pull_request.number }}
+            - Do NOT pass `event` — omitting it creates a pending (draft) review
+            - Do NOT pass `body` — it will be set on submit
 
             ### D. Post inline comments
 
@@ -202,9 +203,10 @@ jobs:
             ### E. Submit the review
 
             Use `mcp__github__pull_request_review_write` with:
+            - `method`: "submit_pending"
             - `owner`: "vincentchalamon"
             - `repo`: "bike-trip-planner"
-            - `pull_number`: ${{ github.event.pull_request.number }}
+            - `pullNumber`: ${{ github.event.pull_request.number }}
             - `event`: the event determined in step B
             - `body`: structured review body containing:
               1. **Summary** — 1-3 sentences describing the overall quality
@@ -223,4 +225,4 @@ jobs:
             **IMPORTANT: This step is NOT optional.** You must ALWAYS reach this step and submit the review.
             If you created a PENDING review, you MUST submit it — an unsubmitted pending review is invisible on GitHub.
 
-            If `mcp__github__pull_request_review_write` fails on submit, retry once with `event: "COMMENT"` as fallback.
+            If `submit_pending` fails, retry once with `method: "create"`, `event: "COMMENT"` as fallback (this creates and submits in one call).
