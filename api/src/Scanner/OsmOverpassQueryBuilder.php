@@ -92,6 +92,20 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         );
     }
 
+    /**
+     * @param list<Coordinate> $decimatedPoints
+     */
+    public function buildChargingPointQuery(array $decimatedPoints): string
+    {
+        $polyline = $this->buildPolyline($decimatedPoints);
+
+        return \sprintf(
+            '[out:json][timeout:15];(nwr["amenity"="charging_station"]["bicycle"="yes"](around:%d,%s););out center 50;',
+            self::AROUND_RADIUS_METERS,
+            $polyline,
+        );
+    }
+
     /** @param list<Coordinate> $points */
     private function buildPolyline(array $points): string
     {

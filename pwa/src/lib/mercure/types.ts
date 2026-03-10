@@ -88,7 +88,12 @@ export type MercureEvent =
   | {
       type: "calendar_alerts";
       data: {
-        nudges: { stageIndex: number; type: "holiday" | "sunday"; message: string; date: string }[];
+        nudges: {
+          stageIndex: number;
+          type: "holiday" | "sunday";
+          message: string;
+          date: string;
+        }[];
       };
     }
   | {
@@ -97,6 +102,17 @@ export type MercureEvent =
     }
   | {
       type: "bike_shop_alerts";
+      data: {
+        alerts: {
+          stageIndex: number;
+          type: string;
+          message: string;
+          dayNumber: number;
+        }[];
+      };
+    }
+  | {
+      type: "charging_point_alerts";
       data: {
         alerts: {
           stageIndex: number;
