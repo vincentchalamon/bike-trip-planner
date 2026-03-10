@@ -65,7 +65,10 @@
       "Bash(shellcheck:*)",
       "Bash(docker compose:*)",
       "WebSearch",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "mcp__github__pull_request_read",
+      "mcp__github__pull_request_review_write",
+      "mcp__github__add_comment_to_pending_review"
     ],
     "deny": [
       "Bash(rm:*)",
