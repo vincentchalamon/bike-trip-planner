@@ -242,6 +242,43 @@ final class PacingEngineRegistryTest extends TestCase
         $this->assertSame(400.0, $lastStage->elevationLoss);
     }
 
+    #[Test]
+    public function generateStagesPreservesRawPointsWhenLastDayAbsorbedDueToTooFewPoints(): void
+    {
+        $elevationCalculator = $this->createStub(ElevationCalculatorInterface::class);
+        // Threshold 8 discriminates raw (20 points) from decimated (<8 points)
+        $elevationCalculator->method('calculateTotalAscent')->willReturnCallback(
+            static fn (array $points): float => \count($points) >= 8 ? 500.0 : 100.0,
+        );
+        $elevationCalculator->method('calculateTotalDescent')->willReturnCallback(
+            static fn (array $points): float => \count($points) >= 8 ? 400.0 : 50.0,
+        );
+
+        // Each segment = 60km, so day 1 target (~55km) splits after 1st segment,
+        // leaving 1 decimated point for day 2 (isLastDay) → triggers count < 2 guard
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('calculateTotalDistance')->willReturnCallback(
+            static fn (array $points): float => (\count($points) - 1) * 60.0,
+        );
+
+        $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
+        $routeSimplifier->method('simplify')->willReturnArgument(0);
+
+        $engine = new PacingEngineRegistry($distanceCalculator, $elevationCalculator, $routeSimplifier);
+
+        // 3 decimated points → day 1 gets [0,1], day 2 (last) gets [1] → count < 2 → absorbed
+        $decimatedPoints = $this->createTrack(3);
+        $rawPoints = $this->createTrack(20);
+
+        $stages = $engine->generateStages('trip-1', $decimatedPoints, 2, 120.0, rawPoints: $rawPoints);
+
+        $this->assertNotEmpty($stages);
+        // The single last-day point was absorbed into day 1's post-loop block.
+        // Elevation must come from raw points (>= 8 → 500.0), not decimated.
+        $lastStage = $stages[\count($stages) - 1];
+        $this->assertGreaterThanOrEqual(500.0, $lastStage->elevation);
+    }
+
     /**
      * @return list<Coordinate>
      */
