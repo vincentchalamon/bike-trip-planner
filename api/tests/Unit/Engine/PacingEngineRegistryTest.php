@@ -237,6 +237,9 @@ final class PacingEngineRegistryTest extends TestCase
         // Last stage should end at the last point of the track
         $lastDecimated = $decimatedPoints[\count($decimatedPoints) - 1];
         $this->assertEqualsWithDelta($lastDecimated->lat, $lastStage->endPoint->lat, 0.001);
+        // Last stage elevation should use raw points (>=8 → 500.0), not decimated (<8 → 100.0)
+        $this->assertSame(500.0, $lastStage->elevation);
+        $this->assertSame(400.0, $lastStage->elevationLoss);
     }
 
     /**
