@@ -19,11 +19,11 @@ jobs:
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      pull-requests: read
-      issues: read
+      contents: write         # was: read — needed for git push
+      pull-requests: write    # was: read — needed for PR creation/comments
+      issues: write           # was: read — needed for issue comments
       id-token: write
-      actions: read # Required for Claude to read CI results on PRs
+      actions: read           # Required for Claude to read CI results on PRs
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -47,4 +47,29 @@ jobs:
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
           # claude_args: '--allowed-tools Bash(gh pr:*)'
+
+      - name: Upload Claude execution log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: claude-execution
+          path: ${{ steps.claude.outputs.execution_file }}
+          retention-days: 7
+
+      - name: Check for permission denials
+        if: always()
+        env:
+          EXEC_FILE: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          if [ -f "$EXEC_FILE" ]; then
+            DENIAL_COUNT=$(jq '.[- 1].permission_denials | length' "$EXEC_FILE" 2>/dev/null || echo 0)
+            if [ "$DENIAL_COUNT" -gt 0 ]; then
+              echo "::error::Claude encountered $DENIAL_COUNT permission denial(s). See uploaded artifact."
+              jq '.[- 1].permission_denials' "$EXEC_FILE"
+              exit 1
+            fi
+            echo "No permission denials found."
+          else
+            echo "::warning::Execution file not found at $EXEC_FILE"
+          fi
 
