@@ -8,6 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 
 interface PacingSettingsProps {
   fatigueFactor: number;
@@ -145,12 +146,11 @@ export function PacingSettings({
             </TooltipTrigger>
             <TooltipContent>{t("ebikeModeTooltip")}</TooltipContent>
           </Tooltip>
-          <input
+          <Switch
             id="ebike-mode"
-            type="checkbox"
+            size="sm"
             checked={ebikeMode}
-            onChange={(e) => onEbikeModeChange(e.target.checked)}
-            className="accent-primary h-4 w-4"
+            onCheckedChange={onEbikeModeChange}
             aria-label={t("ebikeModeLabel")}
           />
         </div>
