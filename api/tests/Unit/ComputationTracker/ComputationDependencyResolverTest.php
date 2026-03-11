@@ -138,6 +138,20 @@ final class ComputationDependencyResolverTest extends TestCase
     }
 
     #[Test]
+    public function ebikeModeChangeReturnsTerrain(): void
+    {
+        $old = $this->createRequest('https://www.komoot.com/tour/123');
+        $new = $this->createRequest('https://www.komoot.com/tour/123');
+        $old->ebikeMode = false;
+        $new->ebikeMode = true;
+
+        $result = $this->resolver->resolve($old, $new);
+
+        $this->assertContains(ComputationName::TERRAIN, $result);
+        $this->assertNotContains(ComputationName::STAGES, $result);
+    }
+
+    #[Test]
     public function bothNullDatesAreEqual(): void
     {
         $old = $this->createRequest('https://www.komoot.com/tour/123');
