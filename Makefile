@@ -127,5 +127,7 @@ cache-pool-clear: ## Clear API cache pool
 
 cache-clear: cache-pool-clear ## Alias for cache-pool-clear
 
-flush-queue: ## Flush Messenger queues and trip state cache (dev only)
-	@docker compose exec php bin/console app:flush-dev-queue
+flush-queue: ## Stop workers, clear all Messenger queues, and purge trip state cache
+	@docker compose exec php bin/console messenger:stop-workers
+	@docker compose exec php bin/console messenger:clear --all
+	@docker compose exec php bin/console cache:pool:clear trip_state
