@@ -60,9 +60,6 @@ final class MessengerClearCommand extends Command
         $availableTransports = array_keys($this->receiverLocator->getProvidedServices());
 
         if ([] === $availableTransports) {
-            $io = new SymfonyStyle($input, $output);
-            $io->error('No Messenger transports are configured.');
-
             return;
         }
 
