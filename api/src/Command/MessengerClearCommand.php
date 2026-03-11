@@ -18,7 +18,7 @@ use Symfony\Component\Messenger\Transport\Receiver\ReceiverInterface;
 use Symfony\Contracts\Service\ServiceProviderInterface;
 
 #[AsCommand(
-    name: 'messenger:clear',
+    name: 'app:messenger:clear',
     description: 'Clear messages from one or more Messenger transports',
 )]
 final class MessengerClearCommand extends Command
@@ -67,6 +67,8 @@ final class MessengerClearCommand extends Command
         $transports = $input->getArgument('transports');
         $all = $input->getOption('all');
 
+        $availableNames = array_keys($this->receiverLocator->getProvidedServices());
+
         if ($all && [] !== $transports) {
             $io->error('You cannot combine --all with explicit transport names.');
 
@@ -74,7 +76,7 @@ final class MessengerClearCommand extends Command
         }
 
         if ($all) {
-            $transports = array_keys($this->receiverLocator->getProvidedServices());
+            $transports = $availableNames;
         }
 
         if ([] === $transports) {
@@ -85,7 +87,7 @@ final class MessengerClearCommand extends Command
 
         foreach ($transports as $name) {
             if (!$this->receiverLocator->has($name)) {
-                $io->error(\sprintf('Unknown transport "%s". Available: %s', $name, implode(', ', array_keys($this->receiverLocator->getProvidedServices()))));
+                $io->error(\sprintf('Unknown transport "%s". Available: %s', $name, implode(', ', $availableNames)));
 
                 return Command::FAILURE;
             }
