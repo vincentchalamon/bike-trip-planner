@@ -126,3 +126,10 @@ cache-pool-clear: ## Clear API cache pool
 	@docker compose exec php bin/console cache:pool:clear --all
 
 cache-clear: cache-pool-clear ## Alias for cache-pool-clear
+
+flush-queue: ## Stop workers, clear all Messenger queues, and purge trip state cache
+	@docker compose exec php bin/console messenger:stop-workers
+	@# Workers receive a stop signal and finish their current message before exiting.
+	@# Redis visibility timeouts prevent double-processing of in-flight messages.
+	@docker compose exec php bin/console app:messenger:clear --all
+	@docker compose exec php bin/console cache:pool:clear trip_state
