@@ -51,6 +51,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                     'ebikeMode' => $ebikeMode,
                 ];
 
+                $stage->alerts = [];
                 $alerts = $this->analyzerRegistry->analyze($stage, $context);
                 foreach ($alerts as $alert) {
                     $stage->addAlert($alert);

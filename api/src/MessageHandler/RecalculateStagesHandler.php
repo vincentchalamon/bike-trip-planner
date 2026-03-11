@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use App\Analyzer\AnalyzerRegistryInterface;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mercure\MercureEventType;
@@ -25,7 +24,6 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripStateManager,
-        private AnalyzerRegistryInterface $analyzerRegistry,
         private MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher);
@@ -44,24 +42,6 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         // If empty, recalculate all stages (e.g. after a move)
         if ([] === $affectedIndices) {
             $affectedIndices = array_keys($stages);
-        }
-
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-        $request = $this->tripStateManager->getRequest($tripId);
-        $ebikeMode = $request instanceof \App\ApiResource\TripRequest && $request->ebikeMode;
-
-        // Run continuity analysis if requested
-        if ($message->checkContinuity) {
-            $stageCount = \count($stages);
-            for ($i = 0; $i < $stageCount; ++$i) {
-                $context = ['nextStage' => $stages[$i + 1] ?? null, 'tripDays' => $stageCount, 'locale' => $locale, 'ebikeMode' => $ebikeMode];
-                $alerts = $this->analyzerRegistry->analyze($stages[$i], $context);
-                // Clear old alerts and re-add
-                $stages[$i]->alerts = [];
-                foreach ($alerts as $alert) {
-                    $stages[$i]->addAlert($alert);
-                }
-            }
         }
 
         $this->tripStateManager->storeStages($tripId, $stages);
