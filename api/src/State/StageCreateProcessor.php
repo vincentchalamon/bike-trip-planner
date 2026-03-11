@@ -72,7 +72,7 @@ final readonly class StageCreateProcessor implements ProcessorInterface
 
         $this->tripStateManager->storeStages($tripId, $stages);
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, [$position], true));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, [$position]));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {

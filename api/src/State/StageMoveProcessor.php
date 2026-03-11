@@ -73,7 +73,7 @@ final readonly class StageMoveProcessor implements ProcessorInterface
         $this->tripStateManager->storeStages($tripId, $stages);
 
         // Dispatch continuity check for all stages; weather/calendar for all stages
-        $this->messageBus->dispatch(new RecalculateStages($tripId, [], true));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, []));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
