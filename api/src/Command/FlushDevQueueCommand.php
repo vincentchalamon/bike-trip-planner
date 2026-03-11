@@ -40,18 +40,19 @@ final class FlushDevQueueCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         if ('dev' !== $this->env) {
-            throw new \LogicException(\sprintf(
-                'The "%s" command can only be run in the dev environment (current: %s).',
-                $this->getName() ?? 'app:flush-dev-queue',
-                $this->env,
-            ));
+            throw new \LogicException(\sprintf('The "%s" command can only be run in the dev environment (current: %s).', $this->getName() ?? 'app:flush-dev-queue', $this->env));
         }
 
         $application = $this->getApplication();
         if ($application instanceof Application) {
             $this->stopWorkers($application, $output, $io);
+        } else {
+            $io->note('Could not stop Messenger workers: command has no Application context. Drain may race active workers.');
         }
 
+        // Note: workers may still be processing their current message; Redis visibility
+        // timeouts prevent double-processing, but the queue may not be fully drained
+        // until in-flight messages are ACKed/NACKed.
         $asyncCount = $this->drainTransport($this->asyncTransport);
         $io->success(\sprintf('Async queue flushed: %d message(s) removed.', $asyncCount));
 
@@ -79,12 +80,13 @@ final class FlushDevQueueCommand extends Command
         $count = 0;
 
         do {
-            $envelopes = $transport->get();
-            foreach ($envelopes as $envelope) {
+            $fetched = 0;
+            foreach ($transport->get() as $envelope) {
                 $transport->reject($envelope);
                 ++$count;
+                ++$fetched;
             }
-        } while ([] !== $envelopes);
+        } while ($fetched > 0);
 
         return $count;
     }
