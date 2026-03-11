@@ -52,6 +52,14 @@ jobs:
 
             Use the **Review Comment Format** section in CLAUDE.md for all comments (Conventional Comments labels, inline threads, review body structure).
 
+            ## Step 0 -- Dependency awareness
+
+            Before reviewing code, establish the project's dependency versions:
+
+            1. Read `api/composer.json` and `pwa/package.json` to identify exact framework versions.
+            2. Note that this project uses cutting-edge frameworks that may differ significantly from your training data.
+            3. Follow the **API Verification Guardrail** in CLAUDE.md for any claims about API existence.
+
             ## Step 1 -- Fetch PR context
 
             Run `gh pr view ${{ github.event.pull_request.number }}` and `gh pr diff ${{ github.event.pull_request.number }}` to get the full diff and PR metadata.

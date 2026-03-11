@@ -2,7 +2,7 @@
 name: code-review
 description: Code review a pull request
 argument-hint: <pr-number>
-allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), Bash(gh pr diff:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh api:*), mcp__github__add_comment_to_pending_review, mcp__github__pull_request_review_write, mcp__github__pull_request_read, Read, Glob, Grep
+allowed-tools: Bash(gh issue view:*), Bash(gh search:*), Bash(gh issue list:*), Bash(gh pr diff:*), Bash(gh pr view:*), Bash(gh pr list:*), Bash(gh api:*), mcp__github__add_comment_to_pending_review, mcp__github__pull_request_review_write, mcp__github__pull_request_read, mcp__context7__resolve-library-id, mcp__context7__query-docs, Read, Glob, Grep
 disable-model-invocation: false
 ---
 
@@ -22,7 +22,10 @@ To do this, follow these steps precisely:
    a. Agent #1: Audit the changes to make sure they comply with the CLAUDE.md. Note that CLAUDE.md is guidance for Claude as it writes code, so not all instructions will be applicable during code
    review.
    b. Agent #2: Read the file changes in the pull request, then do a shallow scan for obvious bugs. Avoid reading extra context beyond the changes, focusing just on the changes themselves. Focus on
-   large bugs, and avoid small issues and nitpicks. Ignore likely false positives.
+   large bugs, and avoid small issues and nitpicks. Ignore likely false positives. Before claiming any API does not exist or was renamed, the agent MUST verify using these methods in order of reliability:
+   (1) Read the actual vendor source file (e.g. `api/vendor/symfony/console/Application.php`) — this is the ground truth.
+   (2) Query context7 (`mcp__context7__resolve-library-id` then `mcp__context7__query-docs`) for current documentation.
+   If neither verification method is possible, do NOT flag the issue.
    c. Agent #3: Read the git blame and history of the code modified, to identify any bugs in light of that historical context
    d. Agent #4: Read previous pull requests that touched these files, and check for any comments on those pull requests that may also apply to the current pull request.
    e. Agent #5: Read code comments in the modified files, and make sure the changes in the pull request comply with any guidance in the comments.
@@ -103,6 +106,7 @@ Examples of false positives, for steps 4 and 5:
 - Issues that are called out in CLAUDE.md, but explicitly silenced in the code (eg. due to a lint ignore comment)
 - Changes in functionality that are likely intentional or are directly related to the broader change
 - Real issues, but on lines that the user did not modify in their pull request
+- API existence claims based on training data alone — this project uses cutting-edge frameworks (Symfony 8, Next.js 16, PHP 8.5) where APIs may have changed. Never claim an API "does not exist" without verifying against vendor source or context7 documentation
 
 Notes:
 

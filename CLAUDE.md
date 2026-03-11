@@ -208,6 +208,16 @@ The review submission body contains only PR-level findings:
 
 Since PRs are **squash-merged**, only the **PR title** must follow Conventional Commits format. Do NOT check individual commit messages.
 
+### API Verification Guardrail
+
+This project uses cutting-edge framework versions (Symfony 8, PHP 8.5, Next.js 16, React 19) that have breaking changes compared to earlier versions in Claude's training data.
+
+**Rules for code reviewers:**
+
+- NEVER claim a method, class, or function "does not exist" or "was removed" based on training knowledge alone
+- ALWAYS verify against actual vendor source code (`api/vendor/`, `pwa/node_modules/`) or up-to-date documentation (context7 MCP) before making API existence claims
+- If verification is not possible, downgrade the finding to `suggestion (non-blocking)` and explicitly state that verification was not possible for the framework version used
+
 ## ADR Documentation
 
 Architecture Decision Records in `docs/adr/` document all major technical choices with context, alternatives considered, and rationale. Consult these before proposing architectural changes.
