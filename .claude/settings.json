@@ -87,6 +87,6 @@
       "Read(./api/.env.*.local)",
       "Read(./pwa/.env*)"
     ],
-    "defaultMode": "acceptEdits"
+    "defaultMode": "plan"
   }
 }
