@@ -160,8 +160,9 @@ export const useTripStore = create<TripState>()(
       set((state) => {
         if (state.stages[stageIndex]) {
           const taggedAlerts = alerts.map((a) => ({ ...a, source }));
+          const newMessages = new Set(taggedAlerts.map((a) => a.message));
           const kept = state.stages[stageIndex].alerts.filter(
-            (a) => a.source !== source,
+            (a) => a.source !== source && !newMessages.has(a.message),
           );
           state.stages[stageIndex].alerts = [...kept, ...taggedAlerts];
         }
