@@ -36,8 +36,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         }
 
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-        $request = $this->tripStateManager->getRequest($tripId);
-        $ebikeMode = $request instanceof \App\ApiResource\TripRequest && $request->ebikeMode;
+        $ebikeMode = (bool) $this->tripStateManager->getRequest($tripId)?->ebikeMode;
 
         $this->executeWithTracking($tripId, ComputationName::TERRAIN, function () use ($tripId, $stages, $locale, $ebikeMode): void {
             $stageCount = \count($stages);

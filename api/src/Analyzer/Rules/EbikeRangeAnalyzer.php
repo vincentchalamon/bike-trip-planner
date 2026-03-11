@@ -27,7 +27,7 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
-        $effectiveRange = self::BASE_RANGE_KM - ($stage->elevation / self::ELEVATION_PENALTY_DIVISOR);
+        $effectiveRange = max(0.0, self::BASE_RANGE_KM - ($stage->elevation / self::ELEVATION_PENALTY_DIVISOR));
 
         if ($stage->distance <= $effectiveRange) {
             return [];
@@ -48,8 +48,6 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
                 'alerts',
                 $locale,
             ),
-            lat: $stage->startPoint->lat,
-            lon: $stage->startPoint->lon,
         )];
     }
 

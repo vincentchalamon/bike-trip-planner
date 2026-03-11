@@ -231,8 +231,12 @@ export function useTripPlanner() {
     }
   }
 
-  async function handlePacingChange(newFatigue: number, newElevation: number) {
-    updatePacingSettings(newFatigue, newElevation);
+  async function patchPacingSettings(
+    newFatigue: number,
+    newElevation: number,
+    newEbikeMode: boolean,
+    clearStages: boolean,
+  ) {
     if (!tripId) return;
 
     try {
@@ -242,33 +246,6 @@ export function useTripPlanner() {
         body: {
           fatigueFactor: newFatigue,
           elevationPenalty: newElevation,
-          ebikeMode,
-        },
-      });
-
-      if (error) {
-        const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
-      } else {
-        setProcessing(true);
-        useTripStore.getState().setStages([]);
-      }
-    } catch {
-      toast.error(t("errors.failedUpdatePacing"));
-    }
-  }
-
-  async function handleEbikeModeChange(newEbikeMode: boolean) {
-    setEbikeMode(newEbikeMode);
-    if (!tripId) return;
-
-    try {
-      const { error, response } = await apiClient.PATCH("/trips/{id}", {
-        params: { path: { id: tripId } },
-        headers: { "Content-Type": "application/merge-patch+json" },
-        body: {
-          fatigueFactor,
-          elevationPenalty,
           ebikeMode: newEbikeMode,
         },
       });
@@ -278,10 +255,28 @@ export function useTripPlanner() {
         toast.error(apiError.message);
       } else {
         setProcessing(true);
+        if (clearStages) {
+          useTripStore.getState().setStages([]);
+        }
       }
     } catch {
       toast.error(t("errors.failedUpdatePacing"));
     }
+  }
+
+  async function handlePacingChange(newFatigue: number, newElevation: number) {
+    updatePacingSettings(newFatigue, newElevation);
+    await patchPacingSettings(newFatigue, newElevation, ebikeMode, true);
+  }
+
+  async function handleEbikeModeChange(newEbikeMode: boolean) {
+    setEbikeMode(newEbikeMode);
+    await patchPacingSettings(
+      fatigueFactor,
+      elevationPenalty,
+      newEbikeMode,
+      false,
+    );
   }
 
   function handleAddAccommodation(stageIndex: number) {

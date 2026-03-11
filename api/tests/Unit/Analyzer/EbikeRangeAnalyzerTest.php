@@ -82,6 +82,18 @@ final class EbikeRangeAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function effectiveRangeClampedToZeroOnExtremeElevation(): void
+    {
+        // effectiveRange = max(0, 80 - (2500 / 25)) = max(0, -20) = 0 km
+        $stage = $this->createStage(distance: 30.0, elevation: 2500.0);
+
+        $alerts = $this->analyzer->analyze($stage, ['ebikeMode' => true]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertStringContainsString('"%range%":0', $alerts[0]->message);
+    }
+
+    #[Test]
     public function priority(): void
     {
         $this->assertSame(20, EbikeRangeAnalyzer::getPriority());
