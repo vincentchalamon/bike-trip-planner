@@ -17,6 +17,12 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Transport\Receiver\ReceiverInterface;
 use Symfony\Contracts\Service\ServiceProviderInterface;
 
+/**
+ * Drains one or more Symfony Messenger transports by rejecting all pending envelopes.
+ *
+ * Intended for development/maintenance use only. Run via `make flush-queue` to ensure
+ * workers are signalled first and the trip-state cache is cleared afterwards.
+ */
 #[AsCommand(
     name: 'app:messenger:clear',
     description: 'Clear messages from one or more Messenger transports',
@@ -79,6 +85,12 @@ final class MessengerClearCommand extends Command
 
         if ($all && [] !== $transports) {
             $io->error('You cannot combine --all with explicit transport names.');
+
+            return Command::FAILURE;
+        }
+
+        if ([] === $availableNames) {
+            $io->error('No Messenger transports are configured.');
 
             return Command::FAILURE;
         }

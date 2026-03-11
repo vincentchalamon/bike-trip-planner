@@ -179,6 +179,18 @@ final class MessengerClearCommandTest extends TestCase
         $this->assertStringContainsString('cannot combine --all', $tester->getDisplay());
     }
 
+    #[Test]
+    public function errorsWhenNoTransportsConfiguredInInteractiveMode(): void
+    {
+        $command = new MessengerClearCommand($this->createReceiverLocator([]));
+
+        $tester = new CommandTester($command);
+        $exitCode = $tester->execute([]);
+
+        $this->assertSame(Command::FAILURE, $exitCode);
+        $this->assertStringContainsString('No Messenger transports are configured.', $tester->getDisplay());
+    }
+
     /**
      * @param array<string, ReceiverInterface> $transports
      *
