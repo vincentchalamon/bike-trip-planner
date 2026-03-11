@@ -33,7 +33,9 @@ export function useTripPlanner() {
   const deleteStage = useTripStore((s) => s.deleteStage);
   const fatigueFactor = useTripStore((s) => s.fatigueFactor);
   const elevationPenalty = useTripStore((s) => s.elevationPenalty);
+  const ebikeMode = useTripStore((s) => s.ebikeMode);
   const updatePacingSettings = useTripStore((s) => s.updatePacingSettings);
+  const setEbikeMode = useTripStore((s) => s.setEbikeMode);
   const isProcessing = useUiStore((s) => s.isProcessing);
   const setProcessing = useUiStore((s) => s.setProcessing);
 
@@ -53,6 +55,7 @@ export function useTripPlanner() {
           sourceUrl,
           fatigueFactor,
           elevationPenalty,
+          ebikeMode,
           startDate: startDate ?? today,
         },
       });
@@ -99,6 +102,7 @@ export function useTripPlanner() {
           endDate: newEnd,
           fatigueFactor,
           elevationPenalty,
+          ebikeMode,
         },
       });
 
@@ -227,8 +231,12 @@ export function useTripPlanner() {
     }
   }
 
-  async function handlePacingChange(newFatigue: number, newElevation: number) {
-    updatePacingSettings(newFatigue, newElevation);
+  async function patchPacingSettings(
+    newFatigue: number,
+    newElevation: number,
+    newEbikeMode: boolean,
+    clearStages: boolean,
+  ) {
     if (!tripId) return;
 
     try {
@@ -238,6 +246,7 @@ export function useTripPlanner() {
         body: {
           fatigueFactor: newFatigue,
           elevationPenalty: newElevation,
+          ebikeMode: newEbikeMode,
         },
       });
 
@@ -246,11 +255,28 @@ export function useTripPlanner() {
         toast.error(apiError.message);
       } else {
         setProcessing(true);
-        useTripStore.getState().setStages([]);
+        if (clearStages) {
+          useTripStore.getState().setStages([]);
+        }
       }
     } catch {
       toast.error(t("errors.failedUpdatePacing"));
     }
+  }
+
+  async function handlePacingChange(newFatigue: number, newElevation: number) {
+    updatePacingSettings(newFatigue, newElevation);
+    await patchPacingSettings(newFatigue, newElevation, ebikeMode, true);
+  }
+
+  async function handleEbikeModeChange(newEbikeMode: boolean) {
+    setEbikeMode(newEbikeMode);
+    await patchPacingSettings(
+      fatigueFactor,
+      elevationPenalty,
+      newEbikeMode,
+      false,
+    );
   }
 
   function handleAddAccommodation(stageIndex: number) {
@@ -287,6 +313,7 @@ export function useTripPlanner() {
     isWeatherLoading,
     fatigueFactor,
     elevationPenalty,
+    ebikeMode,
     updateTitle,
     updateLocalAccommodation,
     removeLocalAccommodation,
@@ -296,6 +323,7 @@ export function useTripPlanner() {
     handleAddStage,
     handleDistanceChange,
     handlePacingChange,
+    handleEbikeModeChange,
     handleAddAccommodation,
     clearNewAccKey: () => setNewAccKey(null),
   };

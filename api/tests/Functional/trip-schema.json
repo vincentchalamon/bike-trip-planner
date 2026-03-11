@@ -38,7 +38,6 @@
         "calendar",
         "wind",
         "bike_shops",
-        "charging_points",
         "water_points"
       ],
       "additionalProperties": false,
@@ -125,15 +124,6 @@
           ]
         },
         "bike_shops": {
-          "type": "string",
-          "enum": [
-            "pending",
-            "running",
-            "done",
-            "failed"
-          ]
-        },
-        "charging_points": {
           "type": "string",
           "enum": [
             "pending",

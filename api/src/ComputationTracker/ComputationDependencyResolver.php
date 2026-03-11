@@ -16,6 +16,7 @@ final class ComputationDependencyResolver
         'fatigueFactor' => [ComputationName::STAGES],   // cascade subtree
         'elevationPenalty' => [ComputationName::STAGES], // cascade subtree
         'startDate' => [ComputationName::WEATHER, ComputationName::CALENDAR],
+        'ebikeMode' => [ComputationName::TERRAIN],      // re-analyze only
     ];
 
     /**
@@ -53,6 +54,7 @@ final class ComputationDependencyResolver
             'endDate' => $old->endDate?->format('Y-m-d') !== $new->endDate?->format('Y-m-d'),
             'fatigueFactor' => $old->fatigueFactor !== $new->fatigueFactor,
             'elevationPenalty' => $old->elevationPenalty !== $new->elevationPenalty,
+            'ebikeMode' => $old->ebikeMode !== $new->ebikeMode,
             default => false,
         };
     }

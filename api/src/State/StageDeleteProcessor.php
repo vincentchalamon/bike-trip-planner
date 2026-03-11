@@ -68,7 +68,7 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         $this->tripStateManager->storeStages($tripId, $stages);
 
         $affectedIndices = null !== $mergedIndex ? [$mergedIndex] : [];
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, true));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices));
 
         $this->messageBus->dispatch(new FetchWeather($tripId));
         $this->messageBus->dispatch(new CheckCalendar($tripId));

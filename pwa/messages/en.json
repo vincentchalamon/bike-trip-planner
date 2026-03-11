@@ -104,7 +104,10 @@
     "elevationPenalty": "Elevation index",
     "elevationTooltip": "Reduces distance by {value}% per 100m of positive elevation gain.",
     "elevationError": "Must be greater than 0",
-    "elevationLabel": "Elevation index"
+    "elevationLabel": "Elevation index",
+    "ebikeMode": "E-bike mode",
+    "ebikeModeTooltip": "Enable range alerts for e-bike stages (80 km base range, adjusted for elevation).",
+    "ebikeModeLabel": "E-bike mode"
   },
   "theme": {
     "system": "System",

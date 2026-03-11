@@ -389,6 +389,8 @@ export interface components {
             fatigueFactor: number;
             /** @default 50 */
             elevationPenalty: number;
+            /** @default false */
+            ebikeMode: boolean;
         };
         "Trip.TripRequest.jsonMergePatch": {
             /** Format: uri */
@@ -401,6 +403,8 @@ export interface components {
             fatigueFactor: number;
             /** @default 50 */
             elevationPenalty: number;
+            /** @default false */
+            ebikeMode: boolean;
         };
         "Trip.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;

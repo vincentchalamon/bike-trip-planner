@@ -77,7 +77,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
 
             // Recalculate all affected stages (current and subsequent)
             $affected = range($index, \count($stages) - 1);
-            $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, true));
+            $this->messageBus->dispatch(new RecalculateStages($tripId, $affected));
 
             $tripRequest = $this->tripStateManager->getRequest($tripId);
             if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
@@ -99,7 +99,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
         $stages[$index] = $stage;
         $this->tripStateManager->storeStages($tripId, $stages);
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, [$index], true));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, [$index]));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {

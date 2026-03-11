@@ -12,6 +12,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationDependencyResolver;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
+use App\Message\AnalyzeTerrain;
 use App\Message\CheckCalendar;
 use App\Message\FetchAndParseRoute;
 use App\Message\FetchWeather;
@@ -94,6 +95,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         match ($computation) {
             ComputationName::ROUTE => $this->messageBus->dispatch(new FetchAndParseRoute($tripId)),
             ComputationName::STAGES => $this->messageBus->dispatch(new GenerateStages($tripId)),
+            ComputationName::TERRAIN => $this->messageBus->dispatch(new AnalyzeTerrain($tripId)),
             ComputationName::WEATHER => $this->messageBus->dispatch(new FetchWeather($tripId)),
             ComputationName::CALENDAR => $this->messageBus->dispatch(new CheckCalendar($tripId)),
             // These computations are cascaded internally by their parent handlers,

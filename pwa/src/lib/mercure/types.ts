@@ -112,17 +112,6 @@ export type MercureEvent =
       };
     }
   | {
-      type: "charging_point_alerts";
-      data: {
-        alerts: {
-          stageIndex: number;
-          type: string;
-          message: string;
-          dayNumber: number;
-        }[];
-      };
-    }
-  | {
       type: "water_point_alerts";
       data: {
         alerts: {

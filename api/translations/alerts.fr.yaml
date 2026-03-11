@@ -6,7 +6,7 @@ alert.surface.warning: "Section non-pavée de %length%m détectée (%surface%). 
 alert.surface.fallback: "surface non-asphaltée"
 alert.traffic.critical: "%count% segment(s) sur route principale (primary/secondary) sans piste cyclable détecté(s)."
 alert.bike_shop.nudge: "Aucun atelier vélo détecté sur l'étape %stage%. En cas de panne, la prochaine ville peut être loin."
-alert.charging_point.nudge: "Aucun point de charge VAE détecté à proximité de la fin de l'étape %stage%. Anticipez la gestion de votre batterie."
+alert.ebike_range.warning: "L'étape %stage% (%distance% km) dépasse l'autonomie estimée du VAE (%range% km). Prévoyez un arrêt recharge ou gérez votre batterie en conséquence."
 alert.water_point.nudge: "Tronçon de plus de 30 km sans point d'eau détecté sur l'étape %stage%. Prévoyez suffisamment d'eau."
 alert.calendar.nudge: "L'étape %stage% coïncide avec un jour férié (%holiday%). Certains commerces peuvent être fermés."
 alert.calendar.fallback: "Jour férié"

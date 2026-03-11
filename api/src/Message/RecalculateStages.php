@@ -12,7 +12,6 @@ final readonly class RecalculateStages
     public function __construct(
         public string $tripId,
         public array $affectedIndices,
-        public bool $checkContinuity = true,
     ) {
     }
 }
