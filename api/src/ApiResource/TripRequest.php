@@ -41,4 +41,6 @@ final class TripRequest
     // Elevation penalty (50 = -1km par 50m D+), configurable by the user
     #[Assert\Positive]
     public float $elevationPenalty = 50.0;
+
+    public bool $ebikeMode = false;
 }

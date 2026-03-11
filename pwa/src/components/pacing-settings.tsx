@@ -12,7 +12,9 @@ import {
 interface PacingSettingsProps {
   fatigueFactor: number;
   elevationPenalty: number;
+  ebikeMode: boolean;
   onUpdate: (fatigueFactor: number, elevationPenalty: number) => void;
+  onEbikeModeChange: (ebikeMode: boolean) => void;
 }
 
 function toFatiguePercent(factor: number): number {
@@ -34,7 +36,9 @@ function fromElevationPercent(percent: number): number {
 export function PacingSettings({
   fatigueFactor,
   elevationPenalty,
+  ebikeMode,
   onUpdate,
+  onEbikeModeChange,
 }: PacingSettingsProps) {
   const t = useTranslations("pacing");
   const fatiguePercent = toFatiguePercent(fatigueFactor);
@@ -122,6 +126,33 @@ export function PacingSettings({
           <span className="text-muted-foreground tabular-nums w-8 text-right">
             {elevationPercent}%
           </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="ebike-mode"
+            className="text-muted-foreground whitespace-nowrap"
+          >
+            {t("ebikeMode")}
+          </label>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="text-muted-foreground cursor-help"
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t("ebikeModeTooltip")}</TooltipContent>
+          </Tooltip>
+          <input
+            id="ebike-mode"
+            type="checkbox"
+            checked={ebikeMode}
+            onChange={(e) => onEbikeModeChange(e.target.checked)}
+            className="accent-primary h-4 w-4"
+            aria-label={t("ebikeModeLabel")}
+          />
         </div>
       </div>
     </TooltipProvider>

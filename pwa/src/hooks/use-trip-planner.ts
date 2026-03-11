@@ -33,7 +33,9 @@ export function useTripPlanner() {
   const deleteStage = useTripStore((s) => s.deleteStage);
   const fatigueFactor = useTripStore((s) => s.fatigueFactor);
   const elevationPenalty = useTripStore((s) => s.elevationPenalty);
+  const ebikeMode = useTripStore((s) => s.ebikeMode);
   const updatePacingSettings = useTripStore((s) => s.updatePacingSettings);
+  const setEbikeMode = useTripStore((s) => s.setEbikeMode);
   const isProcessing = useUiStore((s) => s.isProcessing);
   const setProcessing = useUiStore((s) => s.setProcessing);
 
@@ -53,6 +55,7 @@ export function useTripPlanner() {
           sourceUrl,
           fatigueFactor,
           elevationPenalty,
+          ebikeMode,
           startDate: startDate ?? today,
         },
       });
@@ -99,6 +102,7 @@ export function useTripPlanner() {
           endDate: newEnd,
           fatigueFactor,
           elevationPenalty,
+          ebikeMode,
         },
       });
 
@@ -238,6 +242,7 @@ export function useTripPlanner() {
         body: {
           fatigueFactor: newFatigue,
           elevationPenalty: newElevation,
+          ebikeMode,
         },
       });
 
@@ -247,6 +252,32 @@ export function useTripPlanner() {
       } else {
         setProcessing(true);
         useTripStore.getState().setStages([]);
+      }
+    } catch {
+      toast.error(t("errors.failedUpdatePacing"));
+    }
+  }
+
+  async function handleEbikeModeChange(newEbikeMode: boolean) {
+    setEbikeMode(newEbikeMode);
+    if (!tripId) return;
+
+    try {
+      const { error, response } = await apiClient.PATCH("/trips/{id}", {
+        params: { path: { id: tripId } },
+        headers: { "Content-Type": "application/merge-patch+json" },
+        body: {
+          fatigueFactor,
+          elevationPenalty,
+          ebikeMode: newEbikeMode,
+        },
+      });
+
+      if (error) {
+        const apiError = parseApiError(response.status, error);
+        toast.error(apiError.message);
+      } else {
+        setProcessing(true);
       }
     } catch {
       toast.error(t("errors.failedUpdatePacing"));
@@ -287,6 +318,7 @@ export function useTripPlanner() {
     isWeatherLoading,
     fatigueFactor,
     elevationPenalty,
+    ebikeMode,
     updateTitle,
     updateLocalAccommodation,
     removeLocalAccommodation,
@@ -296,6 +328,7 @@ export function useTripPlanner() {
     handleAddStage,
     handleDistanceChange,
     handlePacingChange,
+    handleEbikeModeChange,
     handleAddAccommodation,
     clearNewAccKey: () => setNewAccKey(null),
   };

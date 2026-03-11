@@ -6,7 +6,7 @@ alert.surface.warning: "Unpaved section of %length%m detected (%surface%). Check
 alert.surface.fallback: "non-asphalt surface"
 alert.traffic.critical: "%count% segment(s) on main road (primary/secondary) without bike lane detected."
 alert.bike_shop.nudge: "No bike shops detected on stage %stage%. In case of a breakdown, the next town may be far away."
-alert.charging_point.nudge: "No e-bike charging point detected near the end of stage %stage%. Plan battery management accordingly."
+alert.ebike_range.warning: "Stage %stage% (%distance% km) exceeds estimated e-bike range (%range% km). Plan a charging stop or manage battery accordingly."
 alert.water_point.nudge: "Stretch of over 30 km without a detected water point on stage %stage%. Carry enough water."
 alert.calendar.nudge: "Stage %stage% coincides with a public holiday (%holiday%). Some businesses may be closed."
 alert.calendar.fallback: "Public holiday"

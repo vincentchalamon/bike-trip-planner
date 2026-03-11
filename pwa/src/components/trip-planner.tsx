@@ -25,6 +25,7 @@ export function TripPlanner() {
     isWeatherLoading,
     fatigueFactor,
     elevationPenalty,
+    ebikeMode,
     updateTitle,
     updateLocalAccommodation,
     removeLocalAccommodation,
@@ -34,6 +35,7 @@ export function TripPlanner() {
     handleAddStage,
     handleDistanceChange,
     handlePacingChange,
+    handleEbikeModeChange,
     handleAddAccommodation,
     clearNewAccKey,
   } = useTripPlanner();
@@ -86,7 +88,9 @@ export function TripPlanner() {
             <PacingSettings
               fatigueFactor={fatigueFactor}
               elevationPenalty={elevationPenalty}
+              ebikeMode={ebikeMode}
               onUpdate={handlePacingChange}
+              onEbikeModeChange={handleEbikeModeChange}
             />
           </TripHeader>
 

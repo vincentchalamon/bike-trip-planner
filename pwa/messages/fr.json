@@ -104,7 +104,10 @@
     "elevationPenalty": "Indice de dénivelé",
     "elevationTooltip": "Réduit la distance de {value}% par 100m de dénivelé positif.",
     "elevationError": "Doit être supérieur à 0",
-    "elevationLabel": "Indice de dénivelé"
+    "elevationLabel": "Indice de dénivelé",
+    "ebikeMode": "Mode VAE",
+    "ebikeModeTooltip": "Active les alertes d'autonomie pour les étapes en VAE (80 km de base, ajusté selon le dénivelé).",
+    "ebikeModeLabel": "Mode VAE"
   },
   "theme": {
     "system": "Système",
