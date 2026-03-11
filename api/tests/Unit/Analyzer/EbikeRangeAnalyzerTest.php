@@ -94,6 +94,16 @@ final class EbikeRangeAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function noAlertWhenEbikeModeAbsentFromContext(): void
+    {
+        $stage = $this->createStage(distance: 100.0, elevation: 0.0);
+
+        $alerts = $this->analyzer->analyze($stage, []);
+
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
     public function priority(): void
     {
         $this->assertSame(20, EbikeRangeAnalyzer::getPriority());
