@@ -9,6 +9,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
@@ -46,12 +47,14 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         }
 
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+        $request = $this->tripStateManager->getRequest($tripId);
+        $ebikeMode = $request instanceof \App\ApiResource\TripRequest && $request->ebikeMode;
 
         // Run continuity analysis if requested
         if ($message->checkContinuity) {
             $stageCount = \count($stages);
             for ($i = 0; $i < $stageCount; ++$i) {
-                $context = ['nextStage' => $stages[$i + 1] ?? null, 'tripDays' => $stageCount, 'locale' => $locale];
+                $context = ['nextStage' => $stages[$i + 1] ?? null, 'tripDays' => $stageCount, 'locale' => $locale, 'ebikeMode' => $ebikeMode];
                 $alerts = $this->analyzerRegistry->analyze($stages[$i], $context);
                 // Clear old alerts and re-add
                 $stages[$i]->alerts = [];
@@ -93,6 +96,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
             $this->messageBus->dispatch(new ScanPois($tripId));
             $this->messageBus->dispatch(new ScanAccommodations($tripId));
             $this->messageBus->dispatch(new CheckBikeShops($tripId));
+            $this->messageBus->dispatch(new AnalyzeTerrain($tripId));
         }
     }
 }
