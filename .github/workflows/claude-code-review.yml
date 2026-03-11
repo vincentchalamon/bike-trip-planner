@@ -45,7 +45,7 @@ jobs:
           allowed_bots: "claude[bot]"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
-            --allowedTools "mcp__github__*,Bash(*),Read,Glob,Grep,Write"
+            --allowedTools "mcp__github__*,mcp__github_inline_comment__*,Bash(*),Read,Glob,Grep,Write"
           prompt: |
             You are a senior code reviewer for the Bike Trip Planner project.
             Review pull request #${{ github.event.pull_request.number }} following the project's review standards.
