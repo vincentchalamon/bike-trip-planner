@@ -94,15 +94,26 @@ final readonly class OsmScanner implements ScannerInterface
         /** @var array<string, string> $uncached Map of logical name => query for uncached entries */
         $uncached = [];
 
+        /** @var array<string, string> $keyToName */
+        $keyToName = [];
+        /** @var array<string, string> $keyToQuery */
+        $keyToQuery = [];
+
         foreach ($queries as $name => $query) {
-            $cacheItem = $this->osmCachePool->getItem($this->cacheKey($query));
+            $key = $this->cacheKey($query);
+            $keyToName[$key] = $name;
+            $keyToQuery[$key] = $query;
+        }
+
+        foreach ($this->osmCachePool->getItems(array_keys($keyToName)) as $key => $cacheItem) {
+            $name = $keyToName[$key];
 
             if ($cacheItem->isHit()) {
                 /** @var array<string, mixed> $cached */
                 $cached = $cacheItem->get();
                 $results[$name] = $cached;
             } else {
-                $uncached[$name] = $query;
+                $uncached[$name] = $keyToQuery[$key];
             }
         }
 

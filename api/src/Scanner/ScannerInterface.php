@@ -15,13 +15,13 @@ interface ScannerInterface
     public function query(string $query): array;
 
     /**
-     * Executes multiple Overpass QL queries concurrently with cache lookup and two-wave
-     * fallback (local → public). Cached results are returned immediately; uncached queries
-     * are fired in parallel.
+     * Executes multiple queries concurrently with cache lookup and graceful degradation.
+     * Cached results are returned immediately; uncached queries are fired in parallel.
+     * Implementations may use fallback strategies for unavailable data sources.
      *
-     * @param array<string, string> $queries Map of logical name => Overpass QL query
+     * @param array<string, string> $queries Map of logical name => query string
      *
-     * @return array<string, array<string, mixed>> Map of logical name => parsed JSON result
+     * @return array<string, array<string, mixed>> Map of logical name => parsed result (empty array on failure)
      */
     public function queryBatch(array $queries): array;
 }

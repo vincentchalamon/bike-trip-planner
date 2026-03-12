@@ -210,6 +210,42 @@ final class OsmScannerTest extends TestCase
     }
 
     #[Test]
+    public function queryBatchMixedCacheHitAndMissUsesHttpOnlyForMisses(): void
+    {
+        $httpCallCount = 0;
+        $localClient = new MockHttpClient(function () use (&$httpCallCount): MockResponse {
+            ++$httpCallCount;
+
+            return new MockResponse(json_encode(['elements' => [['id' => 99]]], \JSON_THROW_ON_ERROR));
+        }, 'http://overpass-local');
+
+        $publicClient = new MockHttpClient([], 'http://overpass-public');
+
+        $cachedResult = ['elements' => [['id' => 1]]];
+        $cachePool = $this->createCachePool([
+            $this->cacheKey(self::QUERY_A) => $cachedResult,
+        ]);
+
+        $scanner = new OsmScanner(
+            $localClient,
+            $publicClient,
+            $this->createPassthroughCache(),
+            $cachePool,
+            $this->createStatusChecker(true),
+            new NullLogger(),
+        );
+
+        $results = $scanner->queryBatch([
+            'a' => self::QUERY_A, // cache hit
+            'b' => self::QUERY_B, // cache miss → local HTTP
+        ]);
+
+        $this->assertSame($cachedResult, $results['a']);
+        $this->assertSame([['id' => 99]], $results['b']['elements']);
+        $this->assertSame(1, $httpCallCount); // only one HTTP call for the miss
+    }
+
+    #[Test]
     public function cacheKeyAlignmentBetweenQueryAndQueryBatch(): void
     {
         $query = self::QUERY_A;
@@ -273,19 +309,33 @@ final class OsmScannerTest extends TestCase
     private function createCachePool(array $entries = []): CacheItemPoolInterface
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
-        $pool->method('getItem')
-            ->willReturnCallback(function (string $key) use ($entries): CacheItemInterface {
-                $item = $this->createStub(CacheItemInterface::class);
 
-                if (isset($entries[$key])) {
-                    $item->method('isHit')->willReturn(true);
-                    $item->method('get')->willReturn($entries[$key]);
-                } else {
-                    $item->method('isHit')->willReturn(false);
-                    $item->method('get')->willReturn(null);
+        $createItem = function (string $key) use ($entries): CacheItemInterface {
+            $item = $this->createStub(CacheItemInterface::class);
+            $item->method('getKey')->willReturn($key);
+
+            if (isset($entries[$key])) {
+                $item->method('isHit')->willReturn(true);
+                $item->method('get')->willReturn($entries[$key]);
+            } else {
+                $item->method('isHit')->willReturn(false);
+                $item->method('get')->willReturn(null);
+                $item->method('set')->willReturnSelf();
+                $item->method('expiresAfter')->willReturnSelf();
+            }
+
+            return $item;
+        };
+
+        $pool->method('getItem')->willReturnCallback($createItem);
+        $pool->method('getItems')
+            ->willReturnCallback(function (array $keys) use ($createItem): iterable {
+                $items = [];
+                foreach ($keys as $key) {
+                    $items[$key] = $createItem($key);
                 }
 
-                return $item;
+                return $items;
             });
         $pool->method('save')->willReturn(true);
 
@@ -300,16 +350,27 @@ final class OsmScannerTest extends TestCase
     private function createEmptyCachePool(array &$storedKeys = []): CacheItemPoolInterface
     {
         $pool = $this->createStub(CacheItemPoolInterface::class);
-        $pool->method('getItem')
-            ->willReturnCallback(function (string $key): CacheItemInterface {
-                $item = $this->createStub(CacheItemInterface::class);
-                $item->method('isHit')->willReturn(false);
-                $item->method('get')->willReturn(null);
-                $item->method('getKey')->willReturn($key);
-                $item->method('set')->willReturnSelf();
-                $item->method('expiresAfter')->willReturnSelf();
 
-                return $item;
+        $createItem = function (string $key): CacheItemInterface {
+            $item = $this->createStub(CacheItemInterface::class);
+            $item->method('isHit')->willReturn(false);
+            $item->method('get')->willReturn(null);
+            $item->method('getKey')->willReturn($key);
+            $item->method('set')->willReturnSelf();
+            $item->method('expiresAfter')->willReturnSelf();
+
+            return $item;
+        };
+
+        $pool->method('getItem')->willReturnCallback($createItem);
+        $pool->method('getItems')
+            ->willReturnCallback(function (array $keys) use ($createItem): iterable {
+                $items = [];
+                foreach ($keys as $key) {
+                    $items[$key] = $createItem($key);
+                }
+
+                return $items;
             });
         $pool->method('save')
             ->willReturnCallback(function (CacheItemInterface $item) use (&$storedKeys): bool {
