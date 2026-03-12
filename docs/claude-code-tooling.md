@@ -67,33 +67,9 @@ Hooks are deterministic shell commands triggered at specific points in the Claud
 **Examples (20+):** <https://aiorg.dev/blog/claude-code-hooks>
 **Anthropic Blog:** <https://claude.com/blog/how-to-configure-hooks>
 
-### 2.1 PostToolUse — Auto-format PHP with PHP-CS-Fixer ⭐ RECOMMENDED
+### 2.1 PostToolUse — Auto-format/refactor on write ⭐ RECOMMENDED
 
-**Purpose:** Automatically formats every PHP file edited by Claude, ensuring PSR-12/Symfony compliance without manual intervention.
-
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *.php ]]; then make php-cs-fixer -- \"${FILE#*/api/}\" --quiet 2>/dev/null; fi; exit 0'"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
----
-
-### 2.2 PostToolUse — Auto-refactor PHP with Rector ⭐ RECOMMENDED
-
-**Purpose:** Automatically applies Rector refactorings to every PHP file edited by Claude.
+**Purpose:** A single hook that automatically formats and refactors files edited by Claude: PHP-CS-Fixer + Rector for `.php` files, Prettier for `.ts`/`.tsx` files.
 
 ```json
 {
@@ -104,31 +80,7 @@ Hooks are deterministic shell commands triggered at specific points in the Claud
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *.php ]]; then make rector -- \"${FILE#*/api/}\" --quiet 2>/dev/null; fi; exit 0'"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
----
-
-### 2.3 PostToolUse — Auto-format TS/TSX with Prettier ⭐ RECOMMENDED
-
-**Purpose:** Automatically formats every TypeScript/TSX file edited by Claude.
-
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx ]]; then make prettier -- --write \"${FILE#*/pwa/}\" 2>/dev/null; fi; exit 0'"
+            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *\"/.claude/worktrees/\"* ]]; then exit 0; fi; if [[ \"$FILE\" == *.php ]]; then make php-cs-fixer -- \"${FILE#*/api/}\" --quiet 2>/dev/null; make rector -- \"${FILE#*/api/}\" --quiet 2>/dev/null; elif [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx ]]; then make prettier -- --write . \"${FILE#*/pwa/}\" 2>/dev/null; fi; exit 0'"
           }
         ]
       }
@@ -203,35 +155,7 @@ Skills are `.claude/skills/<name>/SKILL.md` files in the project. They add `/nam
 
 ---
 
-### 3.2 Skill `/code-review` (ALREADY INSTALLED) ⭐
-
-**Purpose:** Multi-agent code review with 5 parallel reviewers, confidence scoring, and inline comments in Conventional Comments format.
-
-- **Location:** `.claude/skills/code-review/SKILL.md`
-- **Usage:** `/code-review <pr-number>`
-- **Also runs automatically** on every PR via the `claude-code-review.yml` workflow (see §6)
-
----
-
-### 3.3 Skill `/qa` (ALREADY INSTALLED) ⭐
-
-**Purpose:** Runs the full QA pipeline (`make qa`), parses output, and proposes fixes for each issue.
-
-- **Location:** `.claude/skills/qa/SKILL.md`
-- **Usage:** `/qa`
-
----
-
-### 3.4 Skill `/typegen` (ALREADY INSTALLED) ⭐
-
-**Purpose:** Regenerates TypeScript types from the backend OpenAPI spec and verifies frontend compilation.
-
-- **Location:** `.claude/skills/typegen/SKILL.md`
-- **Usage:** `/typegen`
-
----
-
-### 3.5 Skill `/sprint` (ALREADY INSTALLED) ⭐
+### 3.2 Skill `/sprint` (ALREADY INSTALLED) ⭐
 
 **Purpose:** Implements all issues from a sprint in parallel using worktree agents, with dependency-aware ordering and CI monitoring.
 
@@ -257,31 +181,26 @@ The `pick` job reproduces the `/pick` skill workflow in CI (without Docker). It 
 
 ### 4.2 `claude-code-review.yml` — Automated PR review
 
-Triggers automatically on every PR (open, sync, reopen, ready for review). Performs a multi-step code review following the same Conventional Comments format as the `/code-review` skill, including security, performance, architecture, and test coverage checks.
+Triggers automatically on every PR (open, sync, reopen, ready for review). Performs a multi-step code review in Conventional Comments format, including security, performance, architecture, and test coverage checks.
 
 ---
 
 ## 5. Summary by Priority
 
-| Priority | Tool                      | Type              | Status            |
-|----------|---------------------------|-------------------|-------------------|
-| ✅        | Playwright MCP            | MCP Server        | Installed         |
-| ✅        | Context7                  | MCP Server        | Installed         |
-| ✅        | GitHub MCP                | MCP Server        | Installed         |
-| ✅        | Apidog MCP (OpenAPI)      | MCP Server        | Installed         |
-| ✅        | Auto-format PHP (hook)    | Hook PostToolUse  | Configured        |
-| ✅        | Auto-refactor PHP (hook)  | Hook PostToolUse  | Configured        |
-| ✅        | Auto-format TS (hook)     | Hook PostToolUse  | Configured        |
-| ✅        | File protection (hook)    | Hook PreToolUse   | Configured        |
-| ✅        | Skill `/pick`             | Skill custom      | Installed         |
-| ✅        | Skill `/code-review`      | Skill custom      | Installed         |
-| ✅        | Skill `/qa`               | Skill custom      | Installed         |
-| ✅        | Skill `/typegen`          | Skill custom      | Installed         |
-| ✅        | Skill `/sprint`           | Skill custom      | Installed         |
-| ✅        | `@claude pick` workflow   | GitHub Actions    | Configured        |
-| ✅        | Automated code review     | GitHub Actions    | Configured        |
-| 💡       | Post-compaction reminder  | Hook SessionStart | Optional          |
-| 💡       | Docker/Portainer MCP      | MCP Server        | Optional          |
+| Priority | Tool                            | Type              | Status            |
+|----------|---------------------------------|-------------------|-------------------|
+| ✅        | Playwright MCP                  | MCP Server        | Installed         |
+| ✅        | Context7                        | MCP Server        | Installed         |
+| ✅        | GitHub MCP                      | MCP Server        | Installed         |
+| ✅        | Apidog MCP (OpenAPI)            | MCP Server        | Installed         |
+| ✅        | Auto-format/refactor (hook)     | Hook PostToolUse  | Configured        |
+| ✅        | File protection (hook)          | Hook PreToolUse   | Configured        |
+| ✅        | Skill `/pick`                   | Skill custom      | Installed         |
+| ✅        | Skill `/sprint`                 | Skill custom      | Installed         |
+| ✅        | `@claude pick` workflow         | GitHub Actions    | Configured        |
+| ✅        | Automated code review           | GitHub Actions    | Configured        |
+| 💡       | Post-compaction reminder        | Hook SessionStart | Optional          |
+| 💡       | Docker/Portainer MCP            | MCP Server        | Optional          |
 
 ---
 

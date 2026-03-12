@@ -205,15 +205,12 @@ These hooks are project-scoped and apply to all contributors who use Claude Code
 
 ### Skills (slash commands)
 
-Five custom skills are available in Claude Code:
+Two custom skills are available in Claude Code:
 
-| Command                              | Description                                                                         |
-|--------------------------------------|-------------------------------------------------------------------------------------|
-| `/pick <issue-number> [base-branch]` | Implements a GitHub issue end-to-end (branch, code, test, PR, CI monitoring)        |
-| `/code-review <pr-number>`           | Multi-agent code review with inline comments (Conventional Comments format)         |
-| `/qa`                                | Runs `make qa`, parses output, and proposes fixes for each issue                    |
-| `/typegen`                           | Regenerates TypeScript types from the backend OpenAPI spec and verifies compilation |
-| `/sprint <sprint-number>`            | Implements all sprint issues in parallel via worktree agents                        |
+| Command                              | Description                                                                  |
+|--------------------------------------|------------------------------------------------------------------------------|
+| `/pick <issue-number> [base-branch]` | Implements a GitHub issue end-to-end (branch, code, test, PR, CI monitoring) |
+| `/sprint <sprint-number>`            | Implements all sprint issues in parallel via worktree agents                 |
 
 ### GitHub automation
 
@@ -285,7 +282,7 @@ bike-trip-planner/
 │       └── claude-code-review.yml  # Automated PR code review
 ├── .claude/
 │   ├── settings.json             # Hooks (auto-formatting, file protection)
-│   └── skills/                   # Custom slash commands (pick, code-review, qa, typegen, sprint)
+│   └── skills/                   # Custom slash commands (pick, sprint)
 └── .mcp.json                     # MCP server config (Apidog OpenAPI)
 ```
 
