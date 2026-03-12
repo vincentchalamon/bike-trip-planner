@@ -114,6 +114,8 @@ jobs:
 
             Repeat up to 3 times. If still failing after 3 attempts, comment on the PR explaining the remaining failures.
 
+            **IMPORTANT: NEVER close and reopen the PR to re-trigger CI. Pushing commits automatically re-triggers all CI checks via the `synchronize` event. Closing/reopening creates noise in the PR timeline and triggers unnecessary workflow re-runs.**
+
             ## Step 8 — Report
 
             Comment on issue #${{ github.event.issue.number }} with the PR URL.
