@@ -37,10 +37,7 @@ export function StageProgressBar() {
   const activeDayNumber = useUiStore((s) => s.activeDayNumber);
   const setActiveDayNumber = useUiStore((s) => s.setActiveDayNumber);
 
-  const dayDistances = useMemo(
-    () => buildDayDistances(stages),
-    [stages],
-  );
+  const dayDistances = useMemo(() => buildDayDistances(stages), [stages]);
 
   const totalDistance = useMemo(
     () => Array.from(dayDistances.values()).reduce((sum, d) => sum + d, 0),
@@ -98,9 +95,7 @@ export function StageProgressBar() {
             style={{ width: `${widthPct}%` }}
             className={[
               "h-full transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand",
-              isActive
-                ? "bg-brand"
-                : "bg-brand/30 hover:bg-brand/60",
+              isActive ? "bg-brand" : "bg-brand/30 hover:bg-brand/60",
               isFirst ? "rounded-l-full" : "",
               isLast ? "rounded-r-full" : "",
             ]

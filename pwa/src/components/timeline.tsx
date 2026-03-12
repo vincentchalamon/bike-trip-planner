@@ -162,11 +162,7 @@ export function Timeline({
   }
 
   return (
-    <div
-      className="relative"
-      role="list"
-      aria-label={tTimeline("tripStages")}
-    >
+    <div className="relative" role="list" aria-label={tTimeline("tripStages")}>
       {/* Vertical line */}
       <div
         className="absolute left-[7px] top-0 bottom-0 w-0.5 bg-brand"

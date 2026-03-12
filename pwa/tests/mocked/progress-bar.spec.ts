@@ -15,15 +15,9 @@ test.describe("Stage progress bar", () => {
     await createFullTrip();
     await expect(mockedPage.getByTestId("stage-progress-bar")).toBeVisible();
     // 3 stages → 3 segments (one per unique dayNumber)
-    await expect(
-      mockedPage.getByTestId("progress-segment-1"),
-    ).toBeVisible();
-    await expect(
-      mockedPage.getByTestId("progress-segment-2"),
-    ).toBeVisible();
-    await expect(
-      mockedPage.getByTestId("progress-segment-3"),
-    ).toBeVisible();
+    await expect(mockedPage.getByTestId("progress-segment-1")).toBeVisible();
+    await expect(mockedPage.getByTestId("progress-segment-2")).toBeVisible();
+    await expect(mockedPage.getByTestId("progress-segment-3")).toBeVisible();
   });
 
   test("segments carry accessible labels with distance", async ({
