@@ -111,43 +111,43 @@ export function DifficultyGauge({
       <TooltipTrigger asChild>
         <div
           className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full cursor-default select-none ${DIFFICULTY_COLORS[difficulty]}`}
-            aria-label={`${t(difficultyLabelKeys[difficulty])} — ${t("gaugeDistanceLabel", { value: Math.round(distance) })}, ${t("gaugeElevationLabel", { value: Math.round(elevation) })}`}
-          >
-            {/* Difficulty dot */}
-            <span
-              className={`h-1.5 w-1.5 rounded-full shrink-0 ${difficultyDotClasses[difficulty]}`}
+          aria-label={`${t(difficultyLabelKeys[difficulty])} — ${t("gaugeDistanceLabel", { value: Math.round(distance) })}, ${t("gaugeElevationLabel", { value: Math.round(elevation) })}`}
+        >
+          {/* Difficulty dot */}
+          <span
+            className={`h-1.5 w-1.5 rounded-full shrink-0 ${difficultyDotClasses[difficulty]}`}
+          />
+
+          {/* Label */}
+          <span className="text-xs font-medium">
+            {t(difficultyLabelKeys[difficulty])}
+          </span>
+
+          {/* Mini stacked bar gauges */}
+          <div className="flex flex-col gap-0.5 shrink-0">
+            <SegmentBar
+              score={distanceScore}
+              label={t("gaugeDistanceLabel", {
+                value: Math.round(distance),
+              })}
+              colorClass="bg-sky-500"
             />
-
-            {/* Label */}
-            <span className="text-xs font-medium">
-              {t(difficultyLabelKeys[difficulty])}
-            </span>
-
-            {/* Mini stacked bar gauges */}
-            <div className="flex flex-col gap-0.5 shrink-0">
+            <SegmentBar
+              score={elevationScore}
+              label={t("gaugeElevationLabel", {
+                value: Math.round(elevation),
+              })}
+              colorClass="bg-orange-500"
+            />
+            {hasSurfaceDifficulty && (
               <SegmentBar
-                score={distanceScore}
-                label={t("gaugeDistanceLabel", {
-                  value: Math.round(distance),
-                })}
-                colorClass="bg-sky-500"
+                score={surfaceScore}
+                label={t("gaugeSurfaceLabel")}
+                colorClass="bg-amber-700"
               />
-              <SegmentBar
-                score={elevationScore}
-                label={t("gaugeElevationLabel", {
-                  value: Math.round(elevation),
-                })}
-                colorClass="bg-orange-500"
-              />
-              {hasSurfaceDifficulty && (
-                <SegmentBar
-                  score={surfaceScore}
-                  label={t("gaugeSurfaceLabel")}
-                  colorClass="bg-amber-700"
-                />
-              )}
-            </div>
+            )}
           </div>
+        </div>
       </TooltipTrigger>
 
       <TooltipContent side="bottom" className="text-xs space-y-1 max-w-48">
