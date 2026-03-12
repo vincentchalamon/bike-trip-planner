@@ -62,4 +62,5 @@ Run `gh pr checks --watch`. If CI fails, read the logs, fix the issues, push, an
 ## Step 10 -- Finalize
 
 - If TRACKING.md exists, update the row for this issue: change status to "En cours" and branch to `feature/<issue-number>`. Commit and push.
+- Remove the worktree: `git worktree remove .claude/worktrees/feature-<issue-number>`
 - Report the PR URL to the user.
