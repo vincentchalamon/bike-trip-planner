@@ -6,8 +6,55 @@ namespace App\RouteParser;
 
 use App\ApiResource\Model\Coordinate;
 
-final class GpxStreamRouteParser implements RouteParserInterface
+final class GpxStreamRouteParser implements GpxRouteParserInterface
 {
+    /**
+     * Extracts the first track name from a GPX string.
+     * Uses XMLReader for O(constant) memory usage.
+     */
+    public function extractTitle(string $content): ?string
+    {
+        $previous = libxml_use_internal_errors(true);
+
+        $reader = new \XMLReader();
+
+        if (!$reader->XML($content, null, \LIBXML_NONET | \LIBXML_NOENT)) {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+
+            return null;
+        }
+
+        $inTrk = false;
+        $inName = false;
+
+        while ($reader->read()) {
+            if (\XMLReader::ELEMENT === $reader->nodeType && 'trk' === $reader->localName) {
+                $inTrk = true;
+            } elseif ($inTrk && \XMLReader::ELEMENT === $reader->nodeType && 'name' === $reader->localName) {
+                $inName = true;
+            } elseif ($inName && \XMLReader::TEXT === $reader->nodeType) {
+                $title = trim($reader->value);
+                $reader->close();
+                libxml_clear_errors();
+                libxml_use_internal_errors($previous);
+
+                return '' !== $title ? $title : null;
+            } elseif (\XMLReader::END_ELEMENT === $reader->nodeType && 'name' === $reader->localName) {
+                $inName = false;
+            } elseif (\XMLReader::ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
+                // Stop searching once we reach track points (name comes before trkpt)
+                break;
+            }
+        }
+
+        $reader->close();
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        return null;
+    }
+
     /**
      * Parses a GPX string and returns all track points.
      * Uses XMLReader for O(constant) memory usage.
@@ -19,11 +66,16 @@ final class GpxStreamRouteParser implements RouteParserInterface
     {
         $points = [];
 
+        $previous = libxml_use_internal_errors(true);
+
         $reader = new \XMLReader();
 
         $options = \LIBXML_NONET | \LIBXML_NOENT;
 
         if (!$reader->XML($content, null, $options)) {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+
             throw new \RuntimeException('Failed to initialize XMLReader for GPX content.');
         }
 
@@ -32,8 +84,6 @@ final class GpxStreamRouteParser implements RouteParserInterface
         $lon = 0.0;
         $ele = 0.0;
         $inEle = false;
-
-        libxml_use_internal_errors(true);
 
         while ($reader->read()) {
             if (\XMLReader::ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
@@ -62,6 +112,7 @@ final class GpxStreamRouteParser implements RouteParserInterface
 
         $reader->close();
         libxml_clear_errors();
+        libxml_use_internal_errors($previous);
 
         return $points;
     }

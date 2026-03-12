@@ -9,6 +9,9 @@
     "ariaLabel": "URL Komoot ou Google My Maps",
     "invalidUrl": "Veuillez entrer une URL valide."
   },
+  "gpxUpload": {
+    "ariaLabel": "Importer un fichier GPX"
+  },
   "tripSummary": {
     "totalDistance": "Distance totale :",
     "totalElevation": "Dénivelé total :",
@@ -124,6 +127,7 @@
     "failedAddStage": "Impossible d'ajouter l'étape.",
     "failedUpdateLocation": "Impossible de mettre à jour la localisation.",
     "failedUpdatePacing": "Impossible de mettre à jour les réglages.",
+    "gpxUploadFailed": "Impossible d'importer le fichier GPX. Vérifiez le fichier et réessayez.",
     "retry": "Réessayer",
     "tripPlannerError": "Une erreur est survenue lors du chargement du planificateur."
   }

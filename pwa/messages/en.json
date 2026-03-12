@@ -9,6 +9,9 @@
     "ariaLabel": "Komoot or Google My Maps URL",
     "invalidUrl": "Please enter a valid URL."
   },
+  "gpxUpload": {
+    "ariaLabel": "Upload GPX file"
+  },
   "tripSummary": {
     "totalDistance": "Total distance:",
     "totalElevation": "Total elevation:",
@@ -124,6 +127,7 @@
     "failedAddStage": "Failed to add stage.",
     "failedUpdateLocation": "Failed to update stage location.",
     "failedUpdatePacing": "Failed to update pacing settings.",
+    "gpxUploadFailed": "Failed to upload GPX file. Please check the file and try again.",
     "retry": "Try again",
     "tripPlannerError": "Something went wrong while loading the trip planner."
   }

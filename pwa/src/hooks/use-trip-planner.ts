@@ -6,7 +6,12 @@ import { useTranslations } from "next-intl";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useMercure } from "@/hooks/use-mercure";
-import { apiClient, parseApiError, isNetworkError } from "@/lib/api/client";
+import {
+  apiClient,
+  parseApiError,
+  isNetworkError,
+  uploadGpxFile,
+} from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
 import type { AccommodationData, StageData } from "@/lib/validation/schemas";
 
@@ -49,7 +54,7 @@ export function useTripPlanner() {
     setProcessing(true);
 
     try {
-      const today = new Date().toISOString().split("T")[0] ?? null;
+      const today = new Date().toISOString().split("T")[0]!;
       const { data, error, response } = await apiClient.POST("/trips", {
         body: {
           sourceUrl,
@@ -67,7 +72,7 @@ export function useTripPlanner() {
         return;
       }
 
-      if (!startDate && today) {
+      if (!startDate) {
         updateDates(today, null);
       }
 
@@ -75,6 +80,44 @@ export function useTripPlanner() {
         id: data.id ?? "",
         title: getRandomTripName(),
         sourceUrl,
+      });
+    } catch (err) {
+      if (isNetworkError(err)) {
+        toast.error(t("errors.networkError"));
+      } else {
+        toast.error(t("errors.unexpectedError"));
+      }
+      setProcessing(false);
+    }
+  }
+
+  async function handleGpxUpload(file: File) {
+    clearTrip();
+    setProcessing(true);
+
+    try {
+      const today = new Date().toISOString().split("T")[0]!;
+      const { data, error } = await uploadGpxFile(file, {
+        fatigueFactor,
+        elevationPenalty,
+        ebikeMode,
+        startDate: startDate ?? today,
+      });
+
+      if (error || !data) {
+        toast.error(t("errors.gpxUploadFailed"));
+        setProcessing(false);
+        return;
+      }
+
+      if (!startDate) {
+        updateDates(today, null);
+      }
+
+      setTrip({
+        id: data.id,
+        title: data.title ?? file.name.replace(/\.gpx$/i, ""),
+        sourceUrl: "",
       });
     } catch (err) {
       if (isNetworkError(err)) {
@@ -318,6 +361,7 @@ export function useTripPlanner() {
     updateLocalAccommodation,
     removeLocalAccommodation,
     handleMagicLink,
+    handleGpxUpload,
     handleDatesChange,
     handleDeleteStage,
     handleAddStage,

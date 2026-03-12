@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { MagicLinkInput } from "@/components/magic-link-input";
+import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { TripSummary } from "@/components/trip-summary";
 import { TripHeader } from "@/components/trip-header";
 import { PacingSettings } from "@/components/pacing-settings";
@@ -30,6 +31,7 @@ export function TripPlanner() {
     updateLocalAccommodation,
     removeLocalAccommodation,
     handleMagicLink,
+    handleGpxUpload,
     handleDatesChange,
     handleDeleteStage,
     handleAddStage,
@@ -50,7 +52,7 @@ export function TripPlanner() {
         {t("layout.skipToTimeline")}
       </a>
 
-      {/* Toolbar: magic link + buttons */}
+      {/* Toolbar: magic link + GPX upload + buttons */}
       <div className="flex items-center gap-2">
         <div className="flex-1 min-w-0">
           <MagicLinkInput
@@ -59,6 +61,7 @@ export function TripPlanner() {
             disabled={false}
           />
         </div>
+        <GpxUploadButton onUpload={handleGpxUpload} disabled={isProcessing} />
         <ThemeToggle />
       </div>
 

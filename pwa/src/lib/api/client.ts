@@ -1,5 +1,5 @@
 import createClient from "openapi-fetch";
-import type { paths } from "./schema";
+import type { operations, paths } from "./schema";
 import { API_URL } from "@/lib/constants";
 
 function getBrowserLocale(): string {
@@ -114,6 +114,58 @@ export async function scrapeAccommodation(
   });
   if (!res.ok) return null;
   return res.json() as Promise<ScrapedData>;
+}
+
+/**
+ * Response type for GPX upload, derived from the OpenAPI specification.
+ * Single source of truth: backend DTO -> OpenAPI spec -> typegen -> this type.
+ */
+export type GpxUploadResponse =
+  operations["gpxUpload"]["responses"]["202"]["content"]["application/json"];
+
+/**
+ * Upload a GPX file to create a new trip.
+ * The backend parses the GPX synchronously and dispatches async computations.
+ */
+export async function uploadGpxFile(
+  file: File,
+  options?: {
+    startDate?: string | null;
+    fatigueFactor?: number;
+    elevationPenalty?: number;
+    ebikeMode?: boolean;
+  },
+): Promise<{ data: GpxUploadResponse | null; error: string | null }> {
+  const formData = new FormData();
+  formData.append("gpxFile", file);
+
+  if (options?.startDate) {
+    formData.append("startDate", options.startDate);
+  }
+  if (options?.fatigueFactor !== undefined) {
+    formData.append("fatigueFactor", String(options.fatigueFactor));
+  }
+  if (options?.elevationPenalty !== undefined) {
+    formData.append("elevationPenalty", String(options.elevationPenalty));
+  }
+  if (options?.ebikeMode !== undefined) {
+    formData.append("ebikeMode", String(options.ebikeMode));
+  }
+
+  const res = await apiFetch("/trips/gpx-upload", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    return { data: null, error: body?.error ?? "Upload failed" };
+  }
+
+  const data = (await res.json()) as GpxUploadResponse;
+  return { data, error: null };
 }
 
 /**
