@@ -4,10 +4,9 @@ import { useTranslations } from "next-intl";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DIFFICULTY_THRESHOLDS } from "@/lib/constants";
+import { DIFFICULTY_COLORS, DIFFICULTY_THRESHOLDS } from "@/lib/constants";
 import type { Difficulty } from "@/lib/constants";
 import type { AlertData } from "@/lib/validation/schemas";
 
@@ -81,13 +80,6 @@ interface DifficultyGaugeProps {
   alerts: AlertData[];
 }
 
-const difficultyBadgeClasses: Record<Difficulty, string> = {
-  easy: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  medium:
-    "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
-  hard: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-};
-
 const difficultyDotClasses: Record<Difficulty, string> = {
   easy: "bg-green-500",
   medium: "bg-orange-500",
@@ -115,11 +107,10 @@ export function DifficultyGauge({
   const hasSurfaceDifficulty = surfaceScore > 0;
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div
-            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full cursor-default select-none ${difficultyBadgeClasses[difficulty]}`}
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full cursor-default select-none ${DIFFICULTY_COLORS[difficulty]}`}
             aria-label={`${t(difficultyLabelKeys[difficulty])} — ${t("gaugeDistanceLabel", { value: Math.round(distance) })}, ${t("gaugeElevationLabel", { value: Math.round(elevation) })}`}
           >
             {/* Difficulty dot */}
@@ -157,25 +148,24 @@ export function DifficultyGauge({
               )}
             </div>
           </div>
-        </TooltipTrigger>
+      </TooltipTrigger>
 
-        <TooltipContent side="bottom" className="text-xs space-y-1 max-w-48">
-          <p className="font-semibold mb-1">
-            {t(difficultyLabelKeys[difficulty])}
-          </p>
-          <p>
-            {t("gaugeDistanceLabel", { value: Math.round(distance) })}
-            {" — "}
-            {distanceScore}%
-          </p>
-          <p>
-            {t("gaugeElevationLabel", { value: Math.round(elevation) })}
-            {" — "}
-            {elevationScore}%
-          </p>
-          {hasSurfaceDifficulty && <p>{t("gaugeSurfaceLabel")}</p>}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+      <TooltipContent side="bottom" className="text-xs space-y-1 max-w-48">
+        <p className="font-semibold mb-1">
+          {t(difficultyLabelKeys[difficulty])}
+        </p>
+        <p>
+          {t("gaugeDistanceLabel", { value: Math.round(distance) })}
+          {" — "}
+          {distanceScore}%
+        </p>
+        <p>
+          {t("gaugeElevationLabel", { value: Math.round(elevation) })}
+          {" — "}
+          {elevationScore}%
+        </p>
+        {hasSurfaceDifficulty && <p>{t("gaugeSurfaceLabel")}</p>}
+      </TooltipContent>
+    </Tooltip>
   );
 }
