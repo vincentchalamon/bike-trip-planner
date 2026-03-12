@@ -144,6 +144,33 @@ final class OsmOverpassQueryBuilderTest extends TestCase
     }
 
     #[Test]
+    public function buildWaysQueryContainsHighwayFilter(): void
+    {
+        $points = [new Coordinate(45.0, 5.0)];
+
+        $query = $this->builder->buildWaysQuery($points);
+
+        $this->assertStringContainsString('[out:json][timeout:25]', $query);
+        $this->assertStringContainsString('way["highway"]', $query);
+        $this->assertStringContainsString('around:100', $query);
+        $this->assertStringContainsString('out tags geom qt', $query);
+    }
+
+    #[Test]
+    public function buildWaysQueryContainsPolyline(): void
+    {
+        $points = [
+            new Coordinate(45.0, 5.0),
+            new Coordinate(45.1, 5.1),
+        ];
+
+        $query = $this->builder->buildWaysQuery($points);
+
+        $this->assertStringContainsString('45.000000,5.000000', $query);
+        $this->assertStringContainsString('45.100000,5.100000', $query);
+    }
+
+    #[Test]
     public function buildBatchBikeShopQueryMergesAllStages(): void
     {
         $stage1 = [new Coordinate(45.0, 5.0)];

@@ -12,6 +12,8 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
 
     private const int ACCOMMODATION_RADIUS_METERS = 5000;
 
+    private const int WAYS_RADIUS_METERS = 100;
+
     /**
      * @param list<Coordinate> $decimatedPoints
      */
@@ -88,6 +90,20 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         return \sprintf(
             '[out:json][timeout:15];(nwr["shop"="bicycle"](around:%d,%s););out center 50;',
             self::AROUND_RADIUS_METERS,
+            $polyline,
+        );
+    }
+
+    /**
+     * @param list<Coordinate> $decimatedPoints
+     */
+    public function buildWaysQuery(array $decimatedPoints): string
+    {
+        $polyline = $this->buildPolyline($decimatedPoints);
+
+        return \sprintf(
+            '[out:json][timeout:25];way["highway"](around:%d,%s);out tags geom qt;',
+            self::WAYS_RADIUS_METERS,
             $polyline,
         );
     }

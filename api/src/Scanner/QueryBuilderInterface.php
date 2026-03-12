@@ -41,6 +41,16 @@ interface QueryBuilderInterface
     public function buildBatchBikeShopQuery(array $stageGeometries): string;
 
     /**
+     * Queries road/path ways along the route with surface and highway tags.
+     *
+     * Returns ways with their tags and geometry, used by terrain analyzers
+     * to detect unpaved surfaces and dangerous traffic conditions.
+     *
+     * @param list<Coordinate> $decimatedPoints
+     */
+    public function buildWaysQuery(array $decimatedPoints): string;
+
+    /**
      * Queries cemeteries as a proxy for potable water.
      *
      * In France, cemeteries are legally required to provide a water tap on-site,
