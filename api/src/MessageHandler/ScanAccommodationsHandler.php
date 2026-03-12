@@ -105,7 +105,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                 $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
                 foreach ($retainedByStage[$i] ?? [] as $raw) {
                     $possibleClosed = false;
-                    if (null !== $stageDate) {
+                    if ($stageDate instanceof \DateTimeImmutable) {
                         $possibleClosed = false === $this->seasonalityChecker->isLikelyOpen($stageDate, $raw['tags'] ?? []);
                     }
 
