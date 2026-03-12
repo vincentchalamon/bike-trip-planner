@@ -4,6 +4,7 @@ alert.continuity.critical: "Discontinuity: %distance% km between stage %from% an
 alert.continuity.warning: "Gap of %gap%m between stage %from% and %to%."
 alert.surface.warning: "Unpaved section of %length%m detected (%surface%). Check bike suitability."
 alert.surface.fallback: "non-asphalt surface"
+alert.surface.missing_data: "Incomplete surface data: %percent%% of the route has no documented surface in OSM."
 alert.traffic.critical: "%count% segment(s) on main road (primary/secondary) without bike lane detected."
 alert.bike_shop.nudge: "No bike shops detected on stage %stage%. In case of a breakdown, the next town may be far away."
 alert.bike_shop.no_repair_nudge: "Bike shop near stage %stage%, but no confirmed repair service."

@@ -4,6 +4,7 @@ alert.continuity.critical: "Discontinuité : %distance% km entre étape %from% e
 alert.continuity.warning: "Écart de %gap%m entre étape %from% et %to%."
 alert.surface.warning: "Section non-pavée de %length%m détectée (%surface%). Vérifiez si votre vélo est adapté."
 alert.surface.fallback: "surface non-asphaltée"
+alert.surface.missing_data: "Données de surface incomplètes : %percent%% du tracé n'a pas de revêtement documenté dans OSM."
 alert.traffic.critical: "%count% segment(s) sur route principale (primary/secondary) sans piste cyclable détecté(s)."
 alert.bike_shop.nudge: "Aucun atelier vélo détecté sur l'étape %stage%. En cas de panne, la prochaine ville peut être loin."
 alert.bike_shop.no_repair_nudge: "Magasin vélo à proximité de l'étape %stage%, mais sans service de réparation confirmé."
