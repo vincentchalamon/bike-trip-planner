@@ -96,7 +96,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                         'dayNumber' => $stage->dayNumber,
                         'type' => AlertType::NUDGE->value,
                         'message' => $this->translator->trans(
-                            'alert.water_point.nudge',
+                            'alert.cemetery.nudge',
                             ['%stage%' => $stage->dayNumber],
                             'alerts',
                             $locale,
