@@ -151,7 +151,7 @@ final class OsmOverpassQueryBuilderTest extends TestCase
         $query = $this->builder->buildWaysQuery($points);
 
         $this->assertStringContainsString('[out:json][timeout:25]', $query);
-        $this->assertStringContainsString('way["highway"]', $query);
+        $this->assertStringContainsString('way["highway"~"^(primary|secondary|tertiary|unclassified|residential|living_street|service|track|path|cycleway|footway|bridleway)$"]', $query);
         $this->assertStringContainsString('around:100', $query);
         $this->assertStringContainsString('out tags geom qt', $query);
     }

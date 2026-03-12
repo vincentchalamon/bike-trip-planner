@@ -102,7 +102,7 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         $polyline = $this->buildPolyline($decimatedPoints);
 
         return \sprintf(
-            '[out:json][timeout:25];way["highway"](around:%d,%s);out tags geom qt;',
+            '[out:json][timeout:25];way["highway"~"^(primary|secondary|tertiary|unclassified|residential|living_street|service|track|path|cycleway|footway|bridleway)$"](around:%d,%s);out tags geom qt;',
             self::WAYS_RADIUS_METERS,
             $polyline,
         );

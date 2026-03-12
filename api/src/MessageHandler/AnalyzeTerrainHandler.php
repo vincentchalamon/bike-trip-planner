@@ -41,7 +41,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         $tripId = $message->tripId;
         $stages = $this->tripStateManager->getStages($tripId);
 
-        if (null === $stages) {
+        if (null === $stages || [] === $stages) {
             return;
         }
 
@@ -158,7 +158,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
     }
 
     /**
-     * Returns the midpoint of a way geometry.
+     * Returns the geometric centroid of a way geometry.
      *
      * @param list<array{lat: float, lon: float}> $geometry
      *
@@ -170,8 +170,9 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
             return null;
         }
 
-        $midIndex = (int) ((\count($geometry) - 1) / 2);
+        $lat = array_sum(array_column($geometry, 'lat')) / \count($geometry);
+        $lon = array_sum(array_column($geometry, 'lon')) / \count($geometry);
 
-        return ['lat' => $geometry[$midIndex]['lat'], 'lon' => $geometry[$midIndex]['lon']];
+        return ['lat' => $lat, 'lon' => $lon];
     }
 }
