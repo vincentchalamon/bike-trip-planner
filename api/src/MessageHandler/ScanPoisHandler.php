@@ -8,6 +8,7 @@ use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Stage;
+use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Engine\FixedSchedule;
 use App\Engine\RiderTimeEstimatorInterface;
@@ -61,7 +62,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
         $request = $this->tripStateManager->getRequest($tripId);
-        $departureHour = null !== $request ? $request->departureHour : 8;
+        $departureHour = $request instanceof TripRequest ? $request->departureHour : 8;
 
         $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour): void {
             // Single Overpass query using decimated route points (shared cache key with ScanAllOsmDataHandler)
