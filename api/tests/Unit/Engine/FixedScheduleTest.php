@@ -134,7 +134,7 @@ final class FixedScheduleTest extends TestCase
     }
 
     /**
-     * @return list<array{float, bool}>
+     * @return array<string, array{float, bool}>
      */
     public static function provideSupermarketHours(): array
     {

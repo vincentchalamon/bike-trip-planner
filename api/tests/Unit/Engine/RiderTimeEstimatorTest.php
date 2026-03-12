@@ -69,7 +69,7 @@ final class RiderTimeEstimatorTest extends TestCase
     }
 
     /**
-     * @return list<array{float, float, int, float}>
+     * @return array<string, array{float, float, int, float}>
      */
     public static function provideEstimateTimeAtDistanceCases(): array
     {

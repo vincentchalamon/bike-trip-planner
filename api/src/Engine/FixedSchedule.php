@@ -72,12 +72,6 @@ final readonly class FixedSchedule
             return true;
         }
 
-        foreach ($this->slots as $slot) {
-            if ($decimalHour >= $slot['open'] && $decimalHour <= $slot['close']) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($this->slots, fn (array $slot): bool => $decimalHour >= $slot['open'] && $decimalHour <= $slot['close']);
     }
 }
