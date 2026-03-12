@@ -39,11 +39,10 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
         /** @var string $locale */
         $locale = $context['locale'] ?? 'en';
 
-        $alerts = [];
-
-        $alerts = [...$alerts, ...$this->detectUnpavedSections($osmWays, $stage, $locale)];
-
-        return [...$alerts, ...$this->detectMissingSurfaceData($osmWays, $stage, $locale)];
+        return [
+            ...$this->detectUnpavedSections($osmWays, $stage, $locale),
+            ...$this->detectMissingSurfaceData($osmWays, $stage, $locale),
+        ];
     }
 
     public static function getPriority(): int
