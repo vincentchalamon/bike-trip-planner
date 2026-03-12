@@ -52,6 +52,8 @@ jobs:
 
             Use the **Review Comment Format** section in CLAUDE.md for all comments (Conventional Comments labels, inline threads, review body structure).
 
+            **IMPORTANT: Do NOT post nitpick comments.** Only flag issues that impact: correctness, security, performance, architecture, maintainability (dead code/orphaned imports), test coverage, or debug leftovers. Minor style preferences, naming suggestions, missing documentation, and trivial formatting must be ignored — the project's linters and formatters handle those.
+
             ## Step 0 -- Dependency awareness
 
             Before reviewing code, establish the project's dependency versions:
@@ -78,7 +80,7 @@ jobs:
             Scan the diff for:
             - Leftover `console.log`, `dump()`, `dd()`, or debug statements
             - Stale TODO/FIXME comments
-            - Unintended technical debt
+            - Significant unintended technical debt
 
             ## Step 4 -- Security review
 
