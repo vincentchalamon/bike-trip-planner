@@ -180,7 +180,29 @@ jobs:
 
             6. Include in the review body a summary of resolved threads (e.g. "Resolved N previously open threads that were addressed.").
 
-            ## Step 11 -- Post review with inline comments
+            ## Step 11 -- Dismiss previous bot reviews
+
+            Before posting the new review, dismiss and minimize previous bot-authored reviews to declutter the PR:
+
+            1. Fetch all reviews authored by bots:
+               ```
+               gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews --paginate --jq '.[] | select(.user.login == "claude[bot]" or .user.login == "github-actions[bot]" or .user.type == "Bot") | {node_id: .node_id, state: .state}'
+               ```
+
+            2. For each review with state `APPROVED` or `CHANGES_REQUESTED`, dismiss it:
+               ```
+               gh api graphql -f query='mutation { dismissPullRequestReview(input: {pullRequestReviewId: "<NODE_ID>", message: "Superseded by new review."}) { pullRequestReview { state } } }'
+               ```
+
+            3. For each review (all states including `COMMENTED`), minimize it:
+               ```
+               gh api graphql -f query='mutation { minimizeComment(input: {subjectId: "<NODE_ID>", classifier: OUTDATED}) { minimizedComment { isMinimized } } }'
+               ```
+
+            4. **Never dismiss or minimize reviews authored by humans.** Only process reviews matching the bot filter.
+            5. If no previous bot reviews exist, skip silently.
+
+            ## Step 12 -- Post review with inline comments
 
             **IMPORTANT: You MUST always submit a review, even when there are zero findings.**
             If all previous threads are resolved and there are no new findings, submit an APPROVE review.
