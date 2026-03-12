@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+  <trk>
+    <name>Continuity Gap Test</name>
+    <!-- First segment -->
+    <trkseg>
+      <trkpt lat="45.000" lon="5.000"><ele>200</ele></trkpt>
+      <trkpt lat="45.005" lon="5.000"><ele>210</ele></trkpt>
+      <trkpt lat="45.010" lon="5.000"><ele>220</ele></trkpt>
+    </trkseg>
+    <!-- Second segment: starts >500m away (0.01° lat ~1.1km gap) -->
+    <trkseg>
+      <trkpt lat="45.020" lon="5.000"><ele>230</ele></trkpt>
+      <trkpt lat="45.025" lon="5.000"><ele>240</ele></trkpt>
+      <trkpt lat="45.030" lon="5.000"><ele>250</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+  <trk>
+    <name>E-bike Out of Range Test</name>
+    <trkseg>
+      <!-- ~85km track with 500m D+. Each segment ~0.01° lat = ~1.11km.
+           77 segments * 1.11km = ~85.5km. Elevation: +6.5m per segment = ~500m total. -->
+      <trkpt lat="45.000" lon="5.000"><ele>200</ele></trkpt>
+      <trkpt lat="45.010" lon="5.000"><ele>206.5</ele></trkpt>
+      <trkpt lat="45.020" lon="5.000"><ele>213</ele></trkpt>
+      <trkpt lat="45.030" lon="5.000"><ele>219.5</ele></trkpt>
+      <trkpt lat="45.040" lon="5.000"><ele>226</ele></trkpt>
+      <trkpt lat="45.050" lon="5.000"><ele>232.5</ele></trkpt>
+      <trkpt lat="45.060" lon="5.000"><ele>239</ele></trkpt>
+      <trkpt lat="45.070" lon="5.000"><ele>245.5</ele></trkpt>
+      <trkpt lat="45.080" lon="5.000"><ele>252</ele></trkpt>
+      <trkpt lat="45.090" lon="5.000"><ele>258.5</ele></trkpt>
+      <trkpt lat="45.100" lon="5.000"><ele>265</ele></trkpt>
+      <trkpt lat="45.110" lon="5.000"><ele>271.5</ele></trkpt>
+      <trkpt lat="45.120" lon="5.000"><ele>278</ele></trkpt>
+      <trkpt lat="45.130" lon="5.000"><ele>284.5</ele></trkpt>
+      <trkpt lat="45.140" lon="5.000"><ele>291</ele></trkpt>
+      <trkpt lat="45.150" lon="5.000"><ele>297.5</ele></trkpt>
+      <trkpt lat="45.160" lon="5.000"><ele>304</ele></trkpt>
+      <trkpt lat="45.170" lon="5.000"><ele>310.5</ele></trkpt>
+      <trkpt lat="45.180" lon="5.000"><ele>317</ele></trkpt>
+      <trkpt lat="45.190" lon="5.000"><ele>323.5</ele></trkpt>
+      <trkpt lat="45.200" lon="5.000"><ele>330</ele></trkpt>
+      <trkpt lat="45.210" lon="5.000"><ele>336.5</ele></trkpt>
+      <trkpt lat="45.220" lon="5.000"><ele>343</ele></trkpt>
+      <trkpt lat="45.230" lon="5.000"><ele>349.5</ele></trkpt>
+      <trkpt lat="45.240" lon="5.000"><ele>356</ele></trkpt>
+      <trkpt lat="45.250" lon="5.000"><ele>362.5</ele></trkpt>
+      <trkpt lat="45.260" lon="5.000"><ele>369</ele></trkpt>
+      <trkpt lat="45.270" lon="5.000"><ele>375.5</ele></trkpt>
+      <trkpt lat="45.280" lon="5.000"><ele>382</ele></trkpt>
+      <trkpt lat="45.290" lon="5.000"><ele>388.5</ele></trkpt>
+      <trkpt lat="45.300" lon="5.000"><ele>395</ele></trkpt>
+      <trkpt lat="45.310" lon="5.000"><ele>401.5</ele></trkpt>
+      <trkpt lat="45.320" lon="5.000"><ele>408</ele></trkpt>
+      <trkpt lat="45.330" lon="5.000"><ele>414.5</ele></trkpt>
+      <trkpt lat="45.340" lon="5.000"><ele>421</ele></trkpt>
+      <trkpt lat="45.350" lon="5.000"><ele>427.5</ele></trkpt>
+      <trkpt lat="45.360" lon="5.000"><ele>434</ele></trkpt>
+      <trkpt lat="45.370" lon="5.000"><ele>440.5</ele></trkpt>
+      <trkpt lat="45.380" lon="5.000"><ele>447</ele></trkpt>
+      <trkpt lat="45.390" lon="5.000"><ele>453.5</ele></trkpt>
+      <trkpt lat="45.400" lon="5.000"><ele>460</ele></trkpt>
+      <trkpt lat="45.410" lon="5.000"><ele>466.5</ele></trkpt>
+      <trkpt lat="45.420" lon="5.000"><ele>473</ele></trkpt>
+      <trkpt lat="45.430" lon="5.000"><ele>479.5</ele></trkpt>
+      <trkpt lat="45.440" lon="5.000"><ele>486</ele></trkpt>
+      <trkpt lat="45.450" lon="5.000"><ele>492.5</ele></trkpt>
+      <trkpt lat="45.460" lon="5.000"><ele>499</ele></trkpt>
+      <trkpt lat="45.470" lon="5.000"><ele>505.5</ele></trkpt>
+      <trkpt lat="45.480" lon="5.000"><ele>512</ele></trkpt>
+      <trkpt lat="45.490" lon="5.000"><ele>518.5</ele></trkpt>
+      <trkpt lat="45.500" lon="5.000"><ele>525</ele></trkpt>
+      <trkpt lat="45.510" lon="5.000"><ele>531.5</ele></trkpt>
+      <trkpt lat="45.520" lon="5.000"><ele>538</ele></trkpt>
+      <trkpt lat="45.530" lon="5.000"><ele>544.5</ele></trkpt>
+      <trkpt lat="45.540" lon="5.000"><ele>551</ele></trkpt>
+      <trkpt lat="45.550" lon="5.000"><ele>557.5</ele></trkpt>
+      <trkpt lat="45.560" lon="5.000"><ele>564</ele></trkpt>
+      <trkpt lat="45.570" lon="5.000"><ele>570.5</ele></trkpt>
+      <trkpt lat="45.580" lon="5.000"><ele>577</ele></trkpt>
+      <trkpt lat="45.590" lon="5.000"><ele>583.5</ele></trkpt>
+      <trkpt lat="45.600" lon="5.000"><ele>590</ele></trkpt>
+      <trkpt lat="45.610" lon="5.000"><ele>596.5</ele></trkpt>
+      <trkpt lat="45.620" lon="5.000"><ele>603</ele></trkpt>
+      <trkpt lat="45.630" lon="5.000"><ele>609.5</ele></trkpt>
+      <trkpt lat="45.640" lon="5.000"><ele>616</ele></trkpt>
+      <trkpt lat="45.650" lon="5.000"><ele>622.5</ele></trkpt>
+      <trkpt lat="45.660" lon="5.000"><ele>629</ele></trkpt>
+      <trkpt lat="45.670" lon="5.000"><ele>635.5</ele></trkpt>
+      <trkpt lat="45.680" lon="5.000"><ele>642</ele></trkpt>
+      <trkpt lat="45.690" lon="5.000"><ele>648.5</ele></trkpt>
+      <trkpt lat="45.700" lon="5.000"><ele>655</ele></trkpt>
+      <trkpt lat="45.710" lon="5.000"><ele>661.5</ele></trkpt>
+      <trkpt lat="45.720" lon="5.000"><ele>668</ele></trkpt>
+      <trkpt lat="45.730" lon="5.000"><ele>674.5</ele></trkpt>
+      <trkpt lat="45.740" lon="5.000"><ele>681</ele></trkpt>
+      <trkpt lat="45.750" lon="5.000"><ele>687.5</ele></trkpt>
+      <trkpt lat="45.760" lon="5.000"><ele>694</ele></trkpt>
+      <trkpt lat="45.770" lon="5.000"><ele>700</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

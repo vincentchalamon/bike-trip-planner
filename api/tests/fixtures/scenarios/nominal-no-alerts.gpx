@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+  <trk>
+    <name>Nominal No Alerts Test</name>
+    <trkseg>
+      <!-- ~10km flat trace. Each 0.01° lat ~1.11km, 9 segments = ~10km.
+           Gentle elevation: +10m total. -->
+      <trkpt lat="45.000" lon="5.000"><ele>200</ele></trkpt>
+      <trkpt lat="45.010" lon="5.000"><ele>201</ele></trkpt>
+      <trkpt lat="45.020" lon="5.000"><ele>202</ele></trkpt>
+      <trkpt lat="45.030" lon="5.000"><ele>203</ele></trkpt>
+      <trkpt lat="45.040" lon="5.000"><ele>204</ele></trkpt>
+      <trkpt lat="45.050" lon="5.000"><ele>205</ele></trkpt>
+      <trkpt lat="45.060" lon="5.000"><ele>206</ele></trkpt>
+      <trkpt lat="45.070" lon="5.000"><ele>207</ele></trkpt>
+      <trkpt lat="45.080" lon="5.000"><ele>208</ele></trkpt>
+      <trkpt lat="45.090" lon="5.000"><ele>210</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>
