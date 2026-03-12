@@ -191,11 +191,14 @@ final class OsmScannerTest extends TestCase
 
         $publicClient = new MockHttpClient(fn (): MockResponse => new MockResponse('Server Error', ['http_code' => 500]), 'http://overpass-public');
 
+        $storedKeys = [];
+        $cachePool = $this->createEmptyCachePool($storedKeys);
+
         $scanner = new OsmScanner(
             $localClient,
             $publicClient,
             $this->createPassthroughCache(),
-            $this->createEmptyCachePool(),
+            $cachePool,
             $this->createStatusChecker(true),
             new NullLogger(),
         );
@@ -207,6 +210,8 @@ final class OsmScannerTest extends TestCase
         // Failed query returns empty array (consistent with query() graceful degradation)
         $this->assertArrayHasKey('a', $results);
         $this->assertSame([], $results['a']);
+        // Transient HTTP failure must NOT be written to the cache
+        $this->assertEmpty($storedKeys, 'A transient HTTP failure must not be written to the cache.');
     }
 
     #[Test]

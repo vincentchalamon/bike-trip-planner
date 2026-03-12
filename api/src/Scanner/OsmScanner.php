@@ -121,20 +121,29 @@ final readonly class OsmScanner implements ScannerInterface
             return $results;
         }
 
-        $needsPublic = $this->statusChecker->isReady() ? $this->executeWave($this->localClient, $uncached, $results) : $uncached;
+        if ($this->statusChecker->isReady()) {
+            [$localEmpties, $localFailures] = $this->executeWave($this->localClient, $uncached, $results);
+            $needsPublic = array_merge($localEmpties, $localFailures);
+        } else {
+            $needsPublic = $uncached;
+        }
 
         if ([] === $needsPublic) {
             return $results;
         }
 
         // Phase 3 (Wave 2): Fire remaining queries on public client concurrently
-        $stillMissing = $this->executeWave($this->publicClient, $needsPublic, $results);
+        [$publicEmpties, $publicFailures] = $this->executeWave($this->publicClient, $needsPublic, $results);
 
-        // Graceful degradation: queries that failed on both waves return empty.
-        // Cache the empty result so repeated computations for the same area skip the HTTP waves.
-        foreach ($stillMissing as $name => $query) {
+        // Genuine empty results (no OSM data in this area): cache [] to honour the 24 h TTL contract.
+        foreach ($publicEmpties as $name => $query) {
             $results[$name] = [];
             $this->cacheResult($query, []);
+        }
+
+        // Transient HTTP failures: return [] gracefully but do NOT cache — the error may be temporary.
+        foreach ($publicFailures as $name => $query) {
+            $results[$name] = [];
         }
 
         return $results;
@@ -142,12 +151,17 @@ final readonly class OsmScanner implements ScannerInterface
 
     /**
      * Fires a batch of queries concurrently on a given HTTP client, collecting results.
-     * Returns queries that yielded empty results or failed (for fallback to next wave).
+     *
+     * Returns two arrays to allow the caller to distinguish the outcomes:
+     * - empties: queries that returned a successful HTTP response with no elements (genuine absence of OSM data)
+     * - failures: queries that threw an exception (transient HTTP error, timeout, etc.)
+     *
+     * Only entries in "empties" are safe to cache long-term; "failures" must not be cached.
      *
      * @param array<string, string>               $queries Map of logical name => query
      * @param array<string, array<string, mixed>> $results Collected results (modified by reference)
      *
-     * @return array<string, string> Queries that need fallback (empty result or failure)
+     * @return array{array<string, string>, array<string, string>} [empties, failures]
      */
     private function executeWave(HttpClientInterface $client, array $queries, array &$results): array
     {
@@ -160,8 +174,10 @@ final readonly class OsmScanner implements ScannerInterface
             ]);
         }
 
-        /** @var array<string, string> $needsFallback */
-        $needsFallback = [];
+        /** @var array<string, string> $empties */
+        $empties = [];
+        /** @var array<string, string> $failures */
+        $failures = [];
 
         foreach ($responses as $name => $response) {
             try {
@@ -175,18 +191,18 @@ final readonly class OsmScanner implements ScannerInterface
                     $this->logger->info('Overpass returned empty results for "{name}", falling back.', [
                         'name' => $name,
                     ]);
-                    $needsFallback[$name] = $queries[$name];
+                    $empties[$name] = $queries[$name];
                 }
             } catch (\Throwable $throwable) {
                 $this->logger->warning('Overpass query "{name}" failed, falling back.', [
                     'name' => $name,
                     'error' => $throwable->getMessage(),
                 ]);
-                $needsFallback[$name] = $queries[$name];
+                $failures[$name] = $queries[$name];
             }
         }
 
-        return $needsFallback;
+        return [$empties, $failures];
     }
 
     /**
