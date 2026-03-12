@@ -75,7 +75,7 @@ test.describe("Alerts summary panel", () => {
     await expect(panel.getByText("Curiosité locale à proximité")).toBeVisible();
   });
 
-  test("shows only alerts section when no nudges", async ({
+  test("shows both sections when both alert types are present", async ({
     submitUrl,
     injectSequence,
     mockedPage,
@@ -91,7 +91,7 @@ test.describe("Alerts summary panel", () => {
     const panel = mockedPage.getByTestId("alerts-summary-panel");
     await expect(panel).toBeVisible();
 
-    // terrainAlertsEvent has a warning on stage 0 and nudge on stage 1
+    // terrainAlertsEvent has a warning on stage 0 and a nudge on stage 1 → both sections visible
     await expect(panel.getByText("Alertes")).toBeVisible();
     await expect(panel.getByText("Suggestions et détections")).toBeVisible();
   });

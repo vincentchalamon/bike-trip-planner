@@ -3,11 +3,7 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { AlertBadge } from "@/components/alert-badge";
-import type { AlertData, StageData } from "@/lib/validation/schemas";
-
-interface AlertWithStage extends AlertData {
-  dayNumber: number;
-}
+import type { StageData } from "@/lib/validation/schemas";
 
 interface AlertsSummaryPanelProps {
   stages: StageData[];
@@ -17,9 +13,7 @@ export function AlertsSummaryPanel({ stages }: AlertsSummaryPanelProps) {
   const t = useTranslations("alertsSummary");
 
   const { alerts, suggestions } = useMemo(() => {
-    const all: AlertWithStage[] = stages.flatMap((stage) =>
-      stage.alerts.map((alert) => ({ ...alert, dayNumber: stage.dayNumber })),
-    );
+    const all = stages.flatMap((stage) => stage.alerts);
 
     const deduped = all.filter(
       (alert, index, arr) =>
