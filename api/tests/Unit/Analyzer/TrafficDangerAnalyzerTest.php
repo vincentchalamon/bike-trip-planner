@@ -70,7 +70,7 @@ final class TrafficDangerAnalyzerTest extends TestCase
 
         $alerts = $this->analyzer->analyze($stage, [
             'osmWays' => [
-                ['highway' => 'primary', 'cycleway' => 'lane'],
+                ['highway' => 'primary', 'cycleway' => 'lane', 'length' => 600.0],
             ],
         ]);
 
@@ -84,7 +84,7 @@ final class TrafficDangerAnalyzerTest extends TestCase
 
         $alerts = $this->analyzer->analyze($stage, [
             'osmWays' => [
-                ['highway' => 'primary', 'cycleway:right' => 'track'],
+                ['highway' => 'primary', 'cycleway:right' => 'track', 'length' => 600.0],
             ],
         ]);
 
@@ -98,7 +98,63 @@ final class TrafficDangerAnalyzerTest extends TestCase
 
         $alerts = $this->analyzer->analyze($stage, [
             'osmWays' => [
-                ['highway' => 'secondary', 'cycleway:left' => 'lane'],
+                ['highway' => 'secondary', 'cycleway:left' => 'lane', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
+    public function noAlertForDangerousHighwayWithCyclewayBoth(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'primary', 'cycleway:both' => 'track', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
+    public function noAlertForDangerousHighwayWithBicycleDesignated(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'primary', 'bicycle' => 'designated', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
+    public function noAlertForDangerousHighwayWithBicycleUseSidepath(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'secondary', 'bicycle' => 'use_sidepath', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
+    public function noAlertForShortSegment(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'primary', 'length' => 499.0],
             ],
         ]);
 
@@ -112,7 +168,7 @@ final class TrafficDangerAnalyzerTest extends TestCase
 
         $alerts = $this->analyzer->analyze($stage, [
             'osmWays' => [
-                ['highway' => 'primary', 'lat' => 45.5, 'lon' => 5.5],
+                ['highway' => 'primary', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
             ],
         ]);
 
@@ -123,13 +179,13 @@ final class TrafficDangerAnalyzerTest extends TestCase
     }
 
     #[Test]
-    public function criticalAlertForSecondaryWithoutCycleway(): void
+    public function criticalAlertForTrunkWithoutCycleway(): void
     {
         $stage = $this->createStage();
 
         $alerts = $this->analyzer->analyze($stage, [
             'osmWays' => [
-                ['highway' => 'secondary'],
+                ['highway' => 'trunk', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
             ],
         ]);
 
@@ -138,19 +194,100 @@ final class TrafficDangerAnalyzerTest extends TestCase
     }
 
     #[Test]
-    public function singleAlertForMultipleDangerousSegments(): void
+    public function warningAlertForSecondaryWithoutCycleway(): void
     {
         $stage = $this->createStage();
 
         $alerts = $this->analyzer->analyze($stage, [
             'osmWays' => [
-                ['highway' => 'primary', 'lat' => 45.5, 'lon' => 5.5],
-                ['highway' => 'secondary', 'lat' => 45.6, 'lon' => 5.6],
-                ['highway' => 'primary', 'lat' => 45.7, 'lon' => 5.7],
+                ['highway' => 'secondary', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
             ],
         ]);
 
-        // Returns single alert with count of all dangerous segments
+        $this->assertCount(1, $alerts);
+        $this->assertSame(AlertType::WARNING, $alerts[0]->type);
+        $this->assertEqualsWithDelta(45.5, $alerts[0]->lat, 0.001);
+        $this->assertEqualsWithDelta(5.5, $alerts[0]->lon, 0.001);
+    }
+
+    #[Test]
+    public function nudgeAlertForSecondaryWithLowMaxspeed(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'secondary', 'maxspeed' => '50', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
+        $this->assertEqualsWithDelta(45.5, $alerts[0]->lat, 0.001);
+        $this->assertEqualsWithDelta(5.5, $alerts[0]->lon, 0.001);
+    }
+
+    #[Test]
+    public function nudgeAlertBelowFiftyKmh(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'secondary', 'maxspeed' => '30', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
+    }
+
+    #[Test]
+    public function warningAlertForSecondaryAboveFiftyKmh(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'secondary', 'maxspeed' => '90', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertSame(AlertType::WARNING, $alerts[0]->type);
+    }
+
+    #[Test]
+    public function separateAlertsPerSeverity(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'primary', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
+                ['highway' => 'secondary', 'lat' => 45.6, 'lon' => 5.6, 'length' => 700.0],
+                ['highway' => 'secondary', 'maxspeed' => '30', 'lat' => 45.7, 'lon' => 5.7, 'length' => 800.0],
+            ],
+        ]);
+
+        $this->assertCount(3, $alerts);
+        $this->assertSame(AlertType::CRITICAL, $alerts[0]->type);
+        $this->assertSame(AlertType::WARNING, $alerts[1]->type);
+        $this->assertSame(AlertType::NUDGE, $alerts[2]->type);
+    }
+
+    #[Test]
+    public function criticalAlertGroupsMultiplePrimarySegments(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'primary', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
+                ['highway' => 'primary', 'lat' => 45.7, 'lon' => 5.7, 'length' => 700.0],
+            ],
+        ]);
+
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::CRITICAL, $alerts[0]->type);
         // Uses first segment location
@@ -164,13 +301,58 @@ final class TrafficDangerAnalyzerTest extends TestCase
 
         $alerts = $this->analyzer->analyze($stage, [
             'osmWays' => [
-                ['highway' => 'primary'],
+                ['highway' => 'primary', 'length' => 600.0],
             ],
         ]);
 
         $this->assertCount(1, $alerts);
         $this->assertEqualsWithDelta($stage->startPoint->lat, $alerts[0]->lat, 0.001);
         $this->assertEqualsWithDelta($stage->startPoint->lon, $alerts[0]->lon, 0.001);
+    }
+
+    #[Test]
+    public function parseMaxspeedNumericFormat(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'secondary', 'maxspeed' => '50', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
+    }
+
+    #[Test]
+    public function parseMaxspeedWithUnitFormat(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'secondary', 'maxspeed' => '50 km/h', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
+    }
+
+    #[Test]
+    public function parseMaxspeedCountryCodeFormat(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'secondary', 'maxspeed' => 'FR:50', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
     }
 
     #[Test]

@@ -127,6 +127,9 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                 'cycleway' => $tags['cycleway'] ?? '',
                 'cycleway:right' => $tags['cycleway:right'] ?? '',
                 'cycleway:left' => $tags['cycleway:left'] ?? '',
+                'cycleway:both' => $tags['cycleway:both'] ?? '',
+                'bicycle' => $tags['bicycle'] ?? '',
+                'maxspeed' => $tags['maxspeed'] ?? '',
                 'length' => $length,
             ];
 
