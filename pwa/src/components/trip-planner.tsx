@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { MagicLinkInput } from "@/components/magic-link-input";
 import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { TripSummary } from "@/components/trip-summary";
+import { AlertsSummaryPanel } from "@/components/alerts-summary-panel";
 import { TripHeader } from "@/components/trip-header";
 import { PacingSettings } from "@/components/pacing-settings";
 import { Timeline } from "@/components/timeline";
@@ -77,6 +78,9 @@ export function TripPlanner() {
             isWeatherLoading={isWeatherLoading}
             isProcessing={isProcessing}
           />
+
+          {/* Alerts summary: warnings/critical vs suggestions/detections */}
+          <AlertsSummaryPanel stages={stages} />
 
           {/* Header: title + locations + calendar + pacing */}
           <TripHeader
