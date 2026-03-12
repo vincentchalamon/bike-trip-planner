@@ -12,15 +12,10 @@ import { AlertList } from "@/components/alert-list";
 import { AccommodationPanel } from "@/components/accommodation-panel";
 import { StageDownloads } from "@/components/stage-downloads";
 import { StageDistanceEditor } from "@/components/stage-distance-editor";
+import { DifficultyGauge } from "@/components/difficulty-gauge";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 import { useTripStore } from "@/store/trip-store";
-import { getDifficulty, DIFFICULTY_COLORS } from "@/lib/constants";
-
-const difficultyLabelKeys = {
-  easy: "difficultyEasy",
-  medium: "difficultyMedium",
-  hard: "difficultyHard",
-} as const;
+import { getDifficulty } from "@/lib/constants";
 
 function formatCoords(point: { lat: number; lon: number }): string {
   const latDir = point.lat >= 0 ? "N" : "S";
@@ -138,11 +133,12 @@ export function StageCard({
                 isProcessing={isProcessing}
               />
               {stage.distance !== null && (
-                <span
-                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[difficulty]}`}
-                >
-                  {t(difficultyLabelKeys[difficulty])}
-                </span>
+                <DifficultyGauge
+                  difficulty={difficulty}
+                  distance={stage.distance}
+                  elevation={stage.elevation ?? 0}
+                  alerts={stage.alerts}
+                />
               )}
             </>
           )}
