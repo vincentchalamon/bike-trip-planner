@@ -27,7 +27,7 @@ final class AlertScenarioTest extends TestCase
 
     private function createTranslator(): TranslatorInterface
     {
-        $translator = new self('stub')->createStub(TranslatorInterface::class);
+        $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturnCallback(
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
@@ -37,16 +37,9 @@ final class AlertScenarioTest extends TestCase
 
     private function createHaversineDistanceCalculator(): DistanceCalculatorInterface
     {
-        $calculator = new self('stub')->createStub(DistanceCalculatorInterface::class);
+        $calculator = $this->createStub(DistanceCalculatorInterface::class);
         $calculator->method('distanceBetween')->willReturnCallback(
-            static function (Coordinate $from, Coordinate $to): float {
-                $latDiff = deg2rad($to->lat - $from->lat);
-                $lonDiff = deg2rad($to->lon - $from->lon);
-                $a = sin($latDiff / 2) ** 2
-                    + cos(deg2rad($from->lat)) * cos(deg2rad($to->lat)) * sin($lonDiff / 2) ** 2;
-
-                return 6_371_000.0 * 2.0 * atan2(sqrt($a), sqrt(1.0 - $a));
-            },
+            static fn (Coordinate $from, Coordinate $to): float => ScenarioStageBuilder::haversineMeters($from->lat, $from->lon, $to->lat, $to->lon),
         );
 
         return $calculator;
@@ -142,7 +135,9 @@ final class AlertScenarioTest extends TestCase
 
         // We test the water gap logic directly: a stage >30km with no water points
         // produces a gap exceeding the threshold
-        $hasGap = $this->invokeHasWaterGap($stage, []);
+        $overpassData = $this->loadJsonFixture('overpass-empty.json');
+        $waterPoints = $this->extractWaterPointsWithDistance($stage, $overpassData);
+        $hasGap = $this->invokeHasWaterGap($stage, $waterPoints);
 
         $this->assertTrue($hasGap, 'Stage >30km with no cemeteries should have a water gap.');
     }
@@ -250,9 +245,11 @@ final class AlertScenarioTest extends TestCase
      *
      * @param list<array{lat: float, lon: float, distanceFromStart: float}> $waterPoints
      */
+    // Re-implements CheckWaterPointsHandler::hasWaterGap.
+    // Keep in sync with CheckWaterPointsHandler::WATER_GAP_THRESHOLD_KM (= 30.0).
+    // TODO: extract WaterGapDetector value object to share this logic without duplication.
     private function invokeHasWaterGap(Stage $stage, array $waterPoints): bool
     {
-        // Re-implement the gap detection logic inline (mirrors CheckWaterPointsHandler::hasWaterGap)
         $stageLengthKm = $stage->distance;
         $threshold = 30.0;
 
@@ -351,12 +348,7 @@ final class AlertScenarioTest extends TestCase
 
     private function haversineKm(float $lat1, float $lon1, float $lat2, float $lon2): float
     {
-        $latDiff = deg2rad($lat2 - $lat1);
-        $lonDiff = deg2rad($lon2 - $lon1);
-        $a = sin($latDiff / 2) ** 2
-            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($lonDiff / 2) ** 2;
-
-        return 6_371.0 * 2.0 * atan2(sqrt($a), sqrt(1.0 - $a));
+        return ScenarioStageBuilder::haversineMeters($lat1, $lon1, $lat2, $lon2) / 1_000.0;
     }
 
     /**

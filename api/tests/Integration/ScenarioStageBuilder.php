@@ -133,7 +133,7 @@ final class ScenarioStageBuilder
     /**
      * Haversine distance in meters between two coordinate pairs.
      */
-    private static function haversineMeters(float $lat1, float $lon1, float $lat2, float $lon2): float
+    public static function haversineMeters(float $lat1, float $lon1, float $lat2, float $lon2): float
     {
         $latDiff = deg2rad($lat2 - $lat1);
         $lonDiff = deg2rad($lon2 - $lon1);
