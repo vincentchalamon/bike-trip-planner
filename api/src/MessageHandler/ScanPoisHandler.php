@@ -60,7 +60,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         }
 
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-        $departureHour = $this->tripStateManager->getRequest($tripId)?->departureHour ?? 8;
+        $departureHour = $this->tripStateManager->getRequest($tripId)->departureHour;
 
         $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour): void {
             // Single Overpass query using decimated route points (shared cache key with ScanAllOsmDataHandler)
