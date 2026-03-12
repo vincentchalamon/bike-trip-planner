@@ -132,4 +132,4 @@ flush-queue: ## Stop workers, clear all Messenger queues, and purge trip state c
 	@# Workers receive a stop signal and finish their current message before exiting.
 	@# Redis visibility timeouts prevent double-processing of in-flight messages.
 	@docker compose exec php bin/console app:messenger:clear --all
-	@docker compose exec php bin/console cache:pool:clear trip_state
+	@docker compose exec php bin/console cache:pool:clear cache.trip_state
