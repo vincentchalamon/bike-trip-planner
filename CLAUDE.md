@@ -188,6 +188,8 @@ All code review comments (CI workflow, `/code-review`, `/review`) follow [Conven
 | Nitpick | `nitpick (non-blocking): <subject>` |
 | Positive feedback | `praise: <subject>` |
 
+> **Note:** Automated reviews (CI workflow and `/code-review` skill) must NOT post `nitpick` comments. Only flag issues that impact: correctness, security, performance, architecture, maintainability (dead code), test coverage, or debug leftovers. The `nitpick` label is reserved for manual human reviews.
+
 ### Inline Comments
 
 - Each code-level finding gets its own **inline thread** on the relevant line(s)

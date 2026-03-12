@@ -22,7 +22,7 @@ To do this, follow these steps precisely:
    a. Agent #1: Audit the changes to make sure they comply with the CLAUDE.md. Note that CLAUDE.md is guidance for Claude as it writes code, so not all instructions will be applicable during code
    review.
    b. Agent #2: Read the file changes in the pull request, then do a shallow scan for obvious bugs. Avoid reading extra context beyond the changes, focusing just on the changes themselves. Focus on
-   large bugs, and avoid small issues and nitpicks. Ignore likely false positives. Before claiming any API does not exist or was renamed, the agent MUST verify using these methods in order of reliability:
+   large bugs, and avoid small issues and nitpicks. Do NOT flag nitpicks — only flag issues that impact correctness, security, performance, architecture, maintainability, test coverage, or debug leftovers. Ignore likely false positives. Before claiming any API does not exist or was renamed, the agent MUST verify using these methods in order of reliability:
    (1) Read the actual vendor source file (e.g. `api/vendor/symfony/console/Application.php`) — this is the ground truth.
    (2) Query context7 (`mcp__context7__resolve-library-id` then `mcp__context7__query-docs`) for current documentation.
    If neither verification method is possible, do NOT flag the issue.
@@ -35,8 +35,7 @@ To do this, follow these steps precisely:
    a. 0: Not confident at all. This is a false positive that doesn't stand up to light scrutiny, or is a pre-existing issue.
    b. 25: Somewhat confident. This might be a real issue, but may also be a false positive. The agent wasn't able to verify that it's a real issue. If the issue is stylistic, it is one that was not
    explicitly called out in the relevant CLAUDE.md.
-   c. 50: Moderately confident. The agent was able to verify this is a real issue, but it might be a nitpick or not happen very often in practice. Relative to the rest of the PR, it's not very
-   important.
+   c. 50: Moderately confident. The agent was able to verify this is a real issue, but it is a nitpick or minor style issue that doesn't impact correctness, security, performance, architecture, maintainability, test coverage, or debug leftovers. These are always filtered out.
    d. 75: Highly confident. The agent double checked the issue, and verified that it is very likely it is a real issue that will be hit in practice. The existing approach in the PR is insufficient.
    The issue is very important and will directly impact the code's functionality, or it is an issue that is directly mentioned in the relevant CLAUDE.md.
    e. 100: Absolutely certain. The agent double checked the issue, and confirmed that it is definitely a real issue, that will happen frequently in practice. The evidence directly confirms this.
@@ -100,6 +99,7 @@ Examples of false positives, for steps 4 and 5:
 - Pre-existing issues
 - Something that looks like a bug but is not actually a bug
 - Pedantic nitpicks that a senior engineer wouldn't call out
+- Nitpicks: minor style preferences, naming bikeshedding, trivial formatting, missing documentation, or suggestions that don't impact correctness, security, performance, architecture, maintainability, test coverage, or debug leftovers. If a comment would use the `nitpick` label, do not post it.
 - Issues that a linter, typechecker, or compiler would catch (eg. missing or incorrect imports, type errors, broken tests, formatting issues, pedantic style issues like newlines). No need to run these
   build steps yourself -- it is safe to assume that they will be run separately as part of CI.
 - General code quality issues (eg. lack of test coverage, general security issues, poor documentation), unless explicitly required in CLAUDE.md
