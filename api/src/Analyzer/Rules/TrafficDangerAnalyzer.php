@@ -107,7 +107,11 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
         if ([] !== $nudgeSegments) {
             $first = $nudgeSegments[0];
             $totalLength = (int) array_sum(array_column($nudgeSegments, 'length'));
-            $maxspeed = $this->parseMaxspeed($first['maxspeed'] ?? '') ?? self::NUDGE_MAX_SPEED;
+            $speeds = array_filter(array_map(
+                fn (array $w): ?int => $this->parseMaxspeed($w['maxspeed'] ?? ''),
+                $nudgeSegments,
+            ));
+            $maxspeed = [] !== $speeds ? max($speeds) : self::NUDGE_MAX_SPEED;
             $alerts[] = new Alert(
                 type: AlertType::NUDGE,
                 message: $this->translator->trans(

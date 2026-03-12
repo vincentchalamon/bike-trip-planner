@@ -80,7 +80,11 @@ export type MercureEvent =
     }
   | {
       type: "accommodations_found";
-      data: { stageIndex: number; accommodations: AccommodationPayload[]; alerts?: AlertPayload[] };
+      data: {
+        stageIndex: number;
+        accommodations: AccommodationPayload[];
+        alerts?: AlertPayload[];
+      };
     }
   | {
       type: "terrain_alerts";
