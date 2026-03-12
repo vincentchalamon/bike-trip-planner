@@ -17,6 +17,10 @@
     "totalElevation": "Total elevation:",
     "disclaimer": "Automatically detected data may contain errors."
   },
+  "alertsSummary": {
+    "alertsTitle": "Alerts",
+    "suggestionsTitle": "Suggestions & Detections"
+  },
   "tripTitle": {
     "fallback": "My Trip",
     "placeholder": "Trip name",

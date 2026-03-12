@@ -17,6 +17,10 @@
     "totalElevation": "Dénivelé total :",
     "disclaimer": "Les données détectées automatiquement peuvent contenir des erreurs."
   },
+  "alertsSummary": {
+    "alertsTitle": "Alertes",
+    "suggestionsTitle": "Suggestions et détections"
+  },
   "tripTitle": {
     "fallback": "Mon voyage",
     "placeholder": "Nom du voyage",
