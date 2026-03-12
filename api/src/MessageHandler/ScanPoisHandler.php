@@ -9,14 +9,17 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Engine\FixedSchedule;
+use App\Engine\RiderTimeEstimatorInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
+use App\Geo\GeoDistanceInterface;
+use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
-use App\Geo\GeometryDistributorInterface;
 use App\Scanner\ScannerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -40,6 +43,8 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
         private GeometryDistributorInterface $distributor,
+        private GeoDistanceInterface $haversine,
+        private RiderTimeEstimatorInterface $riderTimeEstimator,
         private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher);
@@ -55,8 +60,9 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         }
 
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+        $departureHour = $this->tripStateManager->getRequest($tripId)?->departureHour ?? 8;
 
-        $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour): void {
             // Single Overpass query using decimated route points (shared cache key with ScanAllOsmDataHandler)
             $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
@@ -125,6 +131,24 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     $alerts[] = ['type' => 'nudge', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
+                // Resupply timing warning: warn when all resupply POIs on this stage
+                // would be closed at the estimated rider passage time
+                if ($this->hasResupplyPoi($stage) && !$this->hasAnyOpenResupplyPoi($stage, $departureHour)) {
+                    $alert = new Alert(
+                        type: AlertType::WARNING,
+                        message: $this->translator->trans(
+                            'alert.resupply.timing_warning',
+                            ['%stage%' => $stage->dayNumber],
+                            'alerts',
+                            $locale,
+                        ),
+                        lat: $stage->startPoint->lat,
+                        lon: $stage->startPoint->lon,
+                    );
+                    $stage->addAlert($alert);
+                    $alerts[] = ['type' => 'warning', 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
+                }
+
                 $payload = [
                     'stageIndex' => $i,
                     'pois' => $pois,
@@ -144,5 +168,84 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
     private function hasResupplyPoi(Stage $stage): bool
     {
         return array_any($stage->pois, fn ($poi): bool => \in_array($poi->category, self::RESUPPLY_CATEGORIES, true));
+    }
+
+    /**
+     * Returns true when at least one resupply POI on the stage is open
+     * at the estimated rider passage time.
+     */
+    private function hasAnyOpenResupplyPoi(Stage $stage, int $departureHour): bool
+    {
+        $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
+        $cumulativeDistances = $this->buildCumulativeDistances($geometry);
+        $totalDistance = $stage->distance;
+
+        foreach ($stage->pois as $poi) {
+            if (!\in_array($poi->category, self::RESUPPLY_CATEGORIES, true)) {
+                continue;
+            }
+
+            $nearestIndex = $this->findNearestGeometryIndex($geometry, $poi->lat, $poi->lon);
+            $distanceFromStart = $cumulativeDistances[$nearestIndex];
+            $estimatedTime = $this->riderTimeEstimator->estimateTimeAtDistance($distanceFromStart, $totalDistance, $departureHour);
+            $schedule = $this->resolveSchedule($poi->category);
+
+            if ($schedule->isOpenAt($estimatedTime)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function resolveSchedule(string $category): FixedSchedule
+    {
+        return match (true) {
+            \in_array($category, ['supermarket', 'convenience', 'general', 'farm', 'greengrocer', 'butcher', 'deli'], true) => FixedSchedule::supermarket(),
+            \in_array($category, ['restaurant', 'cafe', 'bar', 'fast_food'], true) => FixedSchedule::restaurant(),
+            \in_array($category, ['bakery', 'pastry'], true) => FixedSchedule::bakery(),
+            default => FixedSchedule::noFilter(),
+        };
+    }
+
+    /**
+     * Builds an array of cumulative distances (in km) along the geometry.
+     *
+     * @param list<Coordinate> $geometry
+     *
+     * @return list<float>
+     */
+    private function buildCumulativeDistances(array $geometry): array
+    {
+        $cumulative = [0.0];
+
+        for ($i = 1, $count = \count($geometry); $i < $count; ++$i) {
+            $prev = $geometry[$i - 1];
+            $curr = $geometry[$i];
+            $cumulative[] = $cumulative[$i - 1] + $this->haversine->inKilometers($prev->lat, $prev->lon, $curr->lat, $curr->lon);
+        }
+
+        return $cumulative;
+    }
+
+    /**
+     * Finds the index of the closest geometry point to the given coordinates.
+     *
+     * @param list<Coordinate> $geometry
+     */
+    private function findNearestGeometryIndex(array $geometry, float $lat, float $lon): int
+    {
+        $minDist = PHP_FLOAT_MAX;
+        $nearest = 0;
+
+        foreach ($geometry as $i => $point) {
+            $dist = $this->haversine->inMeters($point->lat, $point->lon, $lat, $lon);
+            if ($dist < $minDist) {
+                $minDist = $dist;
+                $nearest = $i;
+            }
+        }
+
+        return $nearest;
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ApiResource;
 
+use ApiPlatform\Metadata\ApiProperty;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -43,4 +44,8 @@ final class TripRequest
     public float $elevationPenalty = 50.0;
 
     public bool $ebikeMode = false;
+
+    #[ApiProperty(description: 'Typical departure hour (0-23, default 8)')]
+    #[Assert\Range(min: 0, max: 23)]
+    public int $departureHour = 8;
 }

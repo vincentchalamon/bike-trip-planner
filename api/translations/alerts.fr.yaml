@@ -11,6 +11,7 @@ alert.cemetery.nudge: "Tronçon de plus de 30 km sans point d'eau détecté (cim
 alert.calendar.nudge: "L'étape %stage% coïncide avec un jour férié (%holiday%). Certains commerces peuvent être fermés."
 alert.calendar.fallback: "Jour férié"
 alert.calendar.sunday_nudge: "L'étape %stage% tombe un dimanche : certains commerces peuvent être fermés, notamment l'après-midi."
+alert.resupply.timing_warning: "Des commerces existent sur l'étape %stage%, mais vous y passeriez en dehors des horaires d'ouverture habituels."
 alert.steep_gradient.warning: "Montée raide détectée : %gradient%% de pente sur %distance%m. Difficile avec un vélo chargé."
 alert.wind.warning: "Vents de face attendus pour %count%/%total% étapes (>25 km/h). Prévoyez du temps supplémentaire."
 stage.label: "Étape %day%"
