@@ -14,13 +14,16 @@ final class GpxStreamRouteParser implements RouteParserInterface
      */
     public function extractTitle(string $content): ?string
     {
+        $previous = libxml_use_internal_errors(true);
+
         $reader = new \XMLReader();
 
         if (!$reader->XML($content, null, \LIBXML_NONET | \LIBXML_NOENT)) {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+
             return null;
         }
-
-        libxml_use_internal_errors(true);
 
         $inTrk = false;
         $inName = false;
@@ -34,6 +37,7 @@ final class GpxStreamRouteParser implements RouteParserInterface
                 $title = trim($reader->value);
                 $reader->close();
                 libxml_clear_errors();
+                libxml_use_internal_errors($previous);
 
                 return '' !== $title ? $title : null;
             } elseif (\XMLReader::END_ELEMENT === $reader->nodeType && 'name' === $reader->localName) {
@@ -46,6 +50,7 @@ final class GpxStreamRouteParser implements RouteParserInterface
 
         $reader->close();
         libxml_clear_errors();
+        libxml_use_internal_errors($previous);
 
         return null;
     }
@@ -61,11 +66,16 @@ final class GpxStreamRouteParser implements RouteParserInterface
     {
         $points = [];
 
+        $previous = libxml_use_internal_errors(true);
+
         $reader = new \XMLReader();
 
         $options = \LIBXML_NONET | \LIBXML_NOENT;
 
         if (!$reader->XML($content, null, $options)) {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+
             throw new \RuntimeException('Failed to initialize XMLReader for GPX content.');
         }
 
@@ -74,8 +84,6 @@ final class GpxStreamRouteParser implements RouteParserInterface
         $lon = 0.0;
         $ele = 0.0;
         $inEle = false;
-
-        libxml_use_internal_errors(true);
 
         while ($reader->read()) {
             if (\XMLReader::ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
@@ -104,6 +112,7 @@ final class GpxStreamRouteParser implements RouteParserInterface
 
         $reader->close();
         libxml_clear_errors();
+        libxml_use_internal_errors($previous);
 
         return $points;
     }

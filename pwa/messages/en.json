@@ -127,6 +127,7 @@
     "failedAddStage": "Failed to add stage.",
     "failedUpdateLocation": "Failed to update stage location.",
     "failedUpdatePacing": "Failed to update pacing settings.",
+    "gpxUploadFailed": "Failed to upload GPX file. Please check the file and try again.",
     "retry": "Try again",
     "tripPlannerError": "Something went wrong while loading the trip planner."
   }

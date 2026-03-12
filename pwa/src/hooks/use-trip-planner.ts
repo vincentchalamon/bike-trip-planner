@@ -54,7 +54,7 @@ export function useTripPlanner() {
     setProcessing(true);
 
     try {
-      const today = new Date().toISOString().split("T")[0] ?? null;
+      const today = new Date().toISOString().split("T")[0];
       const { data, error, response } = await apiClient.POST("/trips", {
         body: {
           sourceUrl,
@@ -96,7 +96,7 @@ export function useTripPlanner() {
     setProcessing(true);
 
     try {
-      const today = new Date().toISOString().split("T")[0] ?? null;
+      const today = new Date().toISOString().split("T")[0];
       const { data, error } = await uploadGpxFile(file, {
         fatigueFactor,
         elevationPenalty,
@@ -105,7 +105,7 @@ export function useTripPlanner() {
       });
 
       if (error || !data) {
-        toast.error(error ?? t("errors.unexpectedError"));
+        toast.error(t("errors.gpxUploadFailed"));
         setProcessing(false);
         return;
       }

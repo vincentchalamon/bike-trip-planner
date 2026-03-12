@@ -110,24 +110,27 @@ final class GpxUploadTest extends ApiTestCase
         \assert(false !== $tempFile);
         file_put_contents($tempFile, '<xml>not a gpx</xml>');
 
-        $file = new UploadedFile(
-            $tempFile,
-            'route.kml',
-            'application/xml',
-            null,
-            true,
-        );
+        try {
+            $file = new UploadedFile(
+                $tempFile,
+                'route.kml',
+                'application/xml',
+                null,
+                true,
+            );
 
-        $client = self::createClient();
-        $client->request('POST', '/trips/gpx-upload', [
-            'headers' => ['Content-Type' => 'multipart/form-data'],
-            'extra' => [
-                'files' => ['gpxFile' => $file],
-            ],
-        ]);
+            $client = self::createClient();
+            $client->request('POST', '/trips/gpx-upload', [
+                'headers' => ['Content-Type' => 'multipart/form-data'],
+                'extra' => [
+                    'files' => ['gpxFile' => $file],
+                ],
+            ]);
 
-        $this->assertResponseStatusCodeSame(400);
-        unlink($tempFile);
+            $this->assertResponseStatusCodeSame(400);
+        } finally {
+            unlink($tempFile);
+        }
     }
 
     #[Test]
@@ -137,24 +140,27 @@ final class GpxUploadTest extends ApiTestCase
         \assert(false !== $tempFile);
         file_put_contents($tempFile, '<?xml version="1.0"?><gpx version="1.1"><trk><trkseg></trkseg></trk></gpx>');
 
-        $file = new UploadedFile(
-            $tempFile,
-            'empty.gpx',
-            'application/gpx+xml',
-            null,
-            true,
-        );
+        try {
+            $file = new UploadedFile(
+                $tempFile,
+                'empty.gpx',
+                'application/gpx+xml',
+                null,
+                true,
+            );
 
-        $client = self::createClient();
-        $client->request('POST', '/trips/gpx-upload', [
-            'headers' => ['Content-Type' => 'multipart/form-data'],
-            'extra' => [
-                'files' => ['gpxFile' => $file],
-            ],
-        ]);
+            $client = self::createClient();
+            $client->request('POST', '/trips/gpx-upload', [
+                'headers' => ['Content-Type' => 'multipart/form-data'],
+                'extra' => [
+                    'files' => ['gpxFile' => $file],
+                ],
+            ]);
 
-        $this->assertResponseStatusCodeSame(422);
-        unlink($tempFile);
+            $this->assertResponseStatusCodeSame(422);
+        } finally {
+            unlink($tempFile);
+        }
     }
 
     #[Test]

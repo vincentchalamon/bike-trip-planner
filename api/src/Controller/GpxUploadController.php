@@ -18,6 +18,7 @@ use App\Message\GenerateStages;
 use App\Message\ScanAllOsmData;
 use App\Repository\TripRequestRepositoryInterface;
 use App\RouteParser\GpxStreamRouteParser;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -52,7 +53,7 @@ final readonly class GpxUploadController
     {
         $file = $request->files->get('gpxFile');
 
-        if (!$file instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+        if (!$file instanceof UploadedFile) {
             return new JsonResponse(
                 ['error' => 'Missing required file: gpxFile'],
                 Response::HTTP_BAD_REQUEST,

@@ -40,6 +40,7 @@ export function GpxUploadButton({ onUpload, disabled }: GpxUploadButtonProps) {
         accept=".gpx"
         onChange={handleChange}
         className="hidden"
+        disabled={disabled}
         data-testid="gpx-file-input"
         aria-label={t("ariaLabel")}
       />
