@@ -1,0 +1,32 @@
+{
+  "elements": [
+    {
+      "type": "node",
+      "id": 2001,
+      "lat": 48.005,
+      "lon": 2.000,
+      "tags": {"landuse": "cemetery", "name": "Cimetière 1"}
+    },
+    {
+      "type": "node",
+      "id": 2002,
+      "lat": 48.100,
+      "lon": 2.000,
+      "tags": {"landuse": "cemetery", "name": "Cimetière 2"}
+    },
+    {
+      "type": "node",
+      "id": 2003,
+      "lat": 48.200,
+      "lon": 2.000,
+      "tags": {"landuse": "cemetery", "name": "Cimetière 3"}
+    },
+    {
+      "type": "node",
+      "id": 2004,
+      "lat": 48.300,
+      "lon": 2.000,
+      "tags": {"landuse": "cemetery", "name": "Cimetière 4"}
+    }
+  ]
+}

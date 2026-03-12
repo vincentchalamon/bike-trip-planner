@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+  <trk>
+    <name>High Elevation Test</name>
+    <trkseg>
+      <trkpt lat="45.000" lon="5.000"><ele>200</ele></trkpt>
+      <trkpt lat="45.001" lon="5.000"><ele>225</ele></trkpt>
+      <trkpt lat="45.002" lon="5.000"><ele>250</ele></trkpt>
+      <trkpt lat="45.003" lon="5.000"><ele>275</ele></trkpt>
+      <trkpt lat="45.004" lon="5.000"><ele>300</ele></trkpt>
+      <trkpt lat="45.005" lon="5.000"><ele>325</ele></trkpt>
+      <trkpt lat="45.006" lon="5.000"><ele>350</ele></trkpt>
+      <trkpt lat="45.007" lon="5.000"><ele>375</ele></trkpt>
+      <trkpt lat="45.008" lon="5.000"><ele>400</ele></trkpt>
+      <trkpt lat="45.009" lon="5.000"><ele>425</ele></trkpt>
+      <trkpt lat="45.010" lon="5.000"><ele>450</ele></trkpt>
+      <trkpt lat="45.011" lon="5.000"><ele>475</ele></trkpt>
+      <trkpt lat="45.012" lon="5.000"><ele>500</ele></trkpt>
+      <trkpt lat="45.013" lon="5.000"><ele>525</ele></trkpt>
+      <trkpt lat="45.014" lon="5.000"><ele>550</ele></trkpt>
+      <trkpt lat="45.015" lon="5.000"><ele>575</ele></trkpt>
+      <trkpt lat="45.016" lon="5.000"><ele>600</ele></trkpt>
+      <trkpt lat="45.017" lon="5.000"><ele>625</ele></trkpt>
+      <trkpt lat="45.018" lon="5.000"><ele>650</ele></trkpt>
+      <trkpt lat="45.019" lon="5.000"><ele>675</ele></trkpt>
+      <trkpt lat="45.020" lon="5.000"><ele>700</ele></trkpt>
+      <trkpt lat="45.021" lon="5.000"><ele>725</ele></trkpt>
+      <trkpt lat="45.022" lon="5.000"><ele>750</ele></trkpt>
+      <trkpt lat="45.023" lon="5.000"><ele>775</ele></trkpt>
+      <trkpt lat="45.024" lon="5.000"><ele>800</ele></trkpt>
+      <trkpt lat="45.025" lon="5.000"><ele>825</ele></trkpt>
+      <trkpt lat="45.026" lon="5.000"><ele>850</ele></trkpt>
+      <trkpt lat="45.027" lon="5.000"><ele>875</ele></trkpt>
+      <trkpt lat="45.028" lon="5.000"><ele>900</ele></trkpt>
+      <trkpt lat="45.029" lon="5.000"><ele>925</ele></trkpt>
+      <trkpt lat="45.030" lon="5.000"><ele>950</ele></trkpt>
+      <trkpt lat="45.031" lon="5.000"><ele>975</ele></trkpt>
+      <trkpt lat="45.032" lon="5.000"><ele>1000</ele></trkpt>
+      <trkpt lat="45.033" lon="5.000"><ele>1025</ele></trkpt>
+      <trkpt lat="45.034" lon="5.000"><ele>1050</ele></trkpt>
+      <trkpt lat="45.035" lon="5.000"><ele>1075</ele></trkpt>
+      <trkpt lat="45.036" lon="5.000"><ele>1100</ele></trkpt>
+      <trkpt lat="45.037" lon="5.000"><ele>1125</ele></trkpt>
+      <trkpt lat="45.038" lon="5.000"><ele>1150</ele></trkpt>
+      <trkpt lat="45.039" lon="5.000"><ele>1175</ele></trkpt>
+      <trkpt lat="45.040" lon="5.000"><ele>1200</ele></trkpt>
+      <trkpt lat="45.041" lon="5.000"><ele>1225</ele></trkpt>
+      <trkpt lat="45.042" lon="5.000"><ele>1250</ele></trkpt>
+      <trkpt lat="45.043" lon="5.000"><ele>1275</ele></trkpt>
+      <trkpt lat="45.044" lon="5.000"><ele>1300</ele></trkpt>
+      <trkpt lat="45.045" lon="5.000"><ele>1325</ele></trkpt>
+      <trkpt lat="45.046" lon="5.000"><ele>1350</ele></trkpt>
+      <trkpt lat="45.047" lon="5.000"><ele>1375</ele></trkpt>
+      <trkpt lat="45.048" lon="5.000"><ele>1400</ele></trkpt>
+      <trkpt lat="45.049" lon="5.000"><ele>1425</ele></trkpt>
+      <trkpt lat="45.050" lon="5.000"><ele>1450</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

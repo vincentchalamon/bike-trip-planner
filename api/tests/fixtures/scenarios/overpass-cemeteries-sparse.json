@@ -1,0 +1,18 @@
+{
+  "elements": [
+    {
+      "type": "node",
+      "id": 1001,
+      "lat": 48.005,
+      "lon": 2.000,
+      "tags": {"landuse": "cemetery", "name": "Cimetière A"}
+    },
+    {
+      "type": "node",
+      "id": 1002,
+      "lat": 48.310,
+      "lon": 2.000,
+      "tags": {"landuse": "cemetery", "name": "Cimetière B"}
+    }
+  ]
+}

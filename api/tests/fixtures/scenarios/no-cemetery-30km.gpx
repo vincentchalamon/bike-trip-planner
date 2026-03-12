@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+  <trk>
+    <name>No Cemetery 30km Test</name>
+    <trkseg>
+      <!-- Linear trace >35km along latitude. Each 0.01° lat ~1.11km.
+           33 segments * 1.11km = ~36.6km -->
+      <trkpt lat="48.000" lon="2.000"><ele>100</ele></trkpt>
+      <trkpt lat="48.010" lon="2.000"><ele>101</ele></trkpt>
+      <trkpt lat="48.020" lon="2.000"><ele>102</ele></trkpt>
+      <trkpt lat="48.030" lon="2.000"><ele>103</ele></trkpt>
+      <trkpt lat="48.040" lon="2.000"><ele>104</ele></trkpt>
+      <trkpt lat="48.050" lon="2.000"><ele>105</ele></trkpt>
+      <trkpt lat="48.060" lon="2.000"><ele>106</ele></trkpt>
+      <trkpt lat="48.070" lon="2.000"><ele>107</ele></trkpt>
+      <trkpt lat="48.080" lon="2.000"><ele>108</ele></trkpt>
+      <trkpt lat="48.090" lon="2.000"><ele>109</ele></trkpt>
+      <trkpt lat="48.100" lon="2.000"><ele>110</ele></trkpt>
+      <trkpt lat="48.110" lon="2.000"><ele>111</ele></trkpt>
+      <trkpt lat="48.120" lon="2.000"><ele>112</ele></trkpt>
+      <trkpt lat="48.130" lon="2.000"><ele>113</ele></trkpt>
+      <trkpt lat="48.140" lon="2.000"><ele>114</ele></trkpt>
+      <trkpt lat="48.150" lon="2.000"><ele>115</ele></trkpt>
+      <trkpt lat="48.160" lon="2.000"><ele>116</ele></trkpt>
+      <trkpt lat="48.170" lon="2.000"><ele>117</ele></trkpt>
+      <trkpt lat="48.180" lon="2.000"><ele>118</ele></trkpt>
+      <trkpt lat="48.190" lon="2.000"><ele>119</ele></trkpt>
+      <trkpt lat="48.200" lon="2.000"><ele>120</ele></trkpt>
+      <trkpt lat="48.210" lon="2.000"><ele>121</ele></trkpt>
+      <trkpt lat="48.220" lon="2.000"><ele>122</ele></trkpt>
+      <trkpt lat="48.230" lon="2.000"><ele>123</ele></trkpt>
+      <trkpt lat="48.240" lon="2.000"><ele>124</ele></trkpt>
+      <trkpt lat="48.250" lon="2.000"><ele>125</ele></trkpt>
+      <trkpt lat="48.260" lon="2.000"><ele>126</ele></trkpt>
+      <trkpt lat="48.270" lon="2.000"><ele>127</ele></trkpt>
+      <trkpt lat="48.280" lon="2.000"><ele>128</ele></trkpt>
+      <trkpt lat="48.290" lon="2.000"><ele>129</ele></trkpt>
+      <trkpt lat="48.300" lon="2.000"><ele>130</ele></trkpt>
+      <trkpt lat="48.310" lon="2.000"><ele>131</ele></trkpt>
+      <trkpt lat="48.320" lon="2.000"><ele>132</ele></trkpt>
+      <trkpt lat="48.330" lon="2.000"><ele>133</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>
