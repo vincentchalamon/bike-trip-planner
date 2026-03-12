@@ -19,11 +19,13 @@ Check that the issue number is a valid number. If not, ask the user for a valid 
 
 Run `gh issue view <issue-number>` and display the issue title and body summary. Ask the user to confirm before proceeding. Also ask if they want to use a different base branch than the default.
 
-## Step 3 -- Create branch
+## Step 3 -- Create worktree
 
 ```bash
-git fetch origin && git checkout -b feature/<issue-number> origin/<base-branch>
+git fetch origin && git worktree add -b feature/<issue-number> .claude/worktrees/feature-<issue-number> origin/<base-branch>
 ```
+
+> **All subsequent steps MUST be executed from the worktree directory (`.claude/worktrees/feature-<issue-number>`).**
 
 ## Step 4 -- Read the issue
 
@@ -39,7 +41,7 @@ Run `make test`. Fix any failures until the suite passes.
 
 ## Step 7 -- Self-review
 
-Run `git diff <base-branch>...HEAD`. Look for:
+From the worktree directory, run `git diff <base-branch>...HEAD`. Look for:
 - Leftover `console.log`, `dump()`, `dd()`, or debug statements
 - Stale TODO/FIXME comments
 - Architectural violations
@@ -48,7 +50,7 @@ Fix anything found, commit, and push.
 
 ## Step 8 -- Create PR (Ready for review)
 
-- Stage and commit changes following Conventional Commits
+- From the worktree directory, stage and commit changes following Conventional Commits
 - Push the branch: `git push -u origin feature/<issue-number>`
 - Create the PR: `gh pr create --fill --base <base-branch>`
 - The PR body must include an **Auto-critique** section per CLAUDE.md
@@ -60,4 +62,5 @@ Run `gh pr checks --watch`. If CI fails, read the logs, fix the issues, push, an
 ## Step 10 -- Finalize
 
 - If TRACKING.md exists, update the row for this issue: change status to "En cours" and branch to `feature/<issue-number>`. Commit and push.
+- Remove the worktree: `git worktree remove .claude/worktrees/feature-<issue-number>`
 - Report the PR URL to the user.
