@@ -196,6 +196,33 @@ final class GpxUploadTest extends ApiTestCase
     }
 
     #[Test]
+    public function applyOptionalParametersIgnoresInvalidValues(): void
+    {
+        $file = new UploadedFile(
+            self::FIXTURES_DIR.'/valid-route.gpx',
+            'valid-route.gpx',
+            'application/gpx+xml',
+            null,
+            true,
+        );
+
+        $client = self::createClient();
+        $client->request('POST', '/trips/gpx-upload', [
+            'headers' => ['Content-Type' => 'multipart/form-data'],
+            'extra' => [
+                'files' => ['gpxFile' => $file],
+                'parameters' => [
+                    'fatigueFactor' => 'not-a-number',
+                    'ebikeMode' => 'notaboolean',
+                ],
+            ],
+        ]);
+
+        // Invalid values must be silently ignored — endpoint must still return 202
+        $this->assertResponseStatusCodeSame(202);
+    }
+
+    #[Test]
     public function uploadWithOptionalParameters(): void
     {
         $file = new UploadedFile(
