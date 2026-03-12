@@ -9,6 +9,48 @@ use App\ApiResource\Model\Coordinate;
 final class GpxStreamRouteParser implements RouteParserInterface
 {
     /**
+     * Extracts the first track name from a GPX string.
+     * Uses XMLReader for O(constant) memory usage.
+     */
+    public function extractTitle(string $content): ?string
+    {
+        $reader = new \XMLReader();
+
+        if (!$reader->XML($content, null, \LIBXML_NONET | \LIBXML_NOENT)) {
+            return null;
+        }
+
+        libxml_use_internal_errors(true);
+
+        $inTrk = false;
+        $inName = false;
+
+        while ($reader->read()) {
+            if (\XMLReader::ELEMENT === $reader->nodeType && 'trk' === $reader->localName) {
+                $inTrk = true;
+            } elseif ($inTrk && \XMLReader::ELEMENT === $reader->nodeType && 'name' === $reader->localName) {
+                $inName = true;
+            } elseif ($inName && \XMLReader::TEXT === $reader->nodeType) {
+                $title = trim($reader->value);
+                $reader->close();
+                libxml_clear_errors();
+
+                return '' !== $title ? $title : null;
+            } elseif (\XMLReader::END_ELEMENT === $reader->nodeType && 'name' === $reader->localName) {
+                $inName = false;
+            } elseif (\XMLReader::ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
+                // Stop searching once we reach track points (name comes before trkpt)
+                break;
+            }
+        }
+
+        $reader->close();
+        libxml_clear_errors();
+
+        return null;
+    }
+
+    /**
      * Parses a GPX string and returns all track points.
      * Uses XMLReader for O(constant) memory usage.
      * Protected against XXE with LIBXML_NONET | LIBXML_NOENT.

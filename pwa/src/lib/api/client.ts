@@ -116,6 +116,59 @@ export async function scrapeAccommodation(
   return res.json() as Promise<ScrapedData>;
 }
 
+export interface GpxUploadResponse {
+  "@context": string;
+  "@id": string;
+  "@type": string;
+  id: string;
+  computationStatus: Record<string, string>;
+}
+
+/**
+ * Upload a GPX file to create a new trip.
+ * The backend parses the GPX synchronously and dispatches async computations.
+ */
+export async function uploadGpxFile(
+  file: File,
+  options?: {
+    startDate?: string | null;
+    fatigueFactor?: number;
+    elevationPenalty?: number;
+    ebikeMode?: boolean;
+  },
+): Promise<{ data: GpxUploadResponse | null; error: string | null }> {
+  const formData = new FormData();
+  formData.append("gpxFile", file);
+
+  if (options?.startDate) {
+    formData.append("startDate", options.startDate);
+  }
+  if (options?.fatigueFactor !== undefined) {
+    formData.append("fatigueFactor", String(options.fatigueFactor));
+  }
+  if (options?.elevationPenalty !== undefined) {
+    formData.append("elevationPenalty", String(options.elevationPenalty));
+  }
+  if (options?.ebikeMode !== undefined) {
+    formData.append("ebikeMode", String(options.ebikeMode));
+  }
+
+  const res = await apiFetch("/trips/gpx-upload", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    return { data: null, error: body?.error ?? "Upload failed" };
+  }
+
+  const data = (await res.json()) as GpxUploadResponse;
+  return { data, error: null };
+}
+
 /**
  * Download a stage file (GPX or FIT) and trigger a browser save dialog.
  * @throws {Error} When the server responds with a non-2xx status.

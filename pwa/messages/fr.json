@@ -9,6 +9,9 @@
     "ariaLabel": "URL Komoot ou Google My Maps",
     "invalidUrl": "Veuillez entrer une URL valide."
   },
+  "gpxUpload": {
+    "ariaLabel": "Importer un fichier GPX"
+  },
   "tripSummary": {
     "totalDistance": "Distance totale :",
     "totalElevation": "Dénivelé total :",
