@@ -61,7 +61,7 @@ jobs:
 
             ## Step 1 — Read the issue
 
-            Use `mcp__github__issue_read` to fetch issue #${{ github.event.issue.number }} from repo `${{ github.repository }}`.
+            Use `mcp__github__get_issue` to fetch issue #${{ github.event.issue.number }} from repo `${{ github.repository }}`.
             Understand all requirements before writing any code.
 
             ## Step 2 — Create branch
@@ -149,7 +149,7 @@ jobs:
       (
         github.event_name == 'issue_comment' &&
         contains(github.event.comment.body, '@claude') &&
-        !(!github.event.issue.pull_request && contains(github.event.comment.body, '@claude pick'))
+        (github.event.issue.pull_request || !contains(github.event.comment.body, '@claude pick'))
       ) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
