@@ -151,7 +151,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
 
                     return 6 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && str_contains($alerts[0]['message'], 'no repair');
+                        && str_contains((string) $alerts[0]['message'], 'no repair');
                 }),
             );
 
@@ -188,7 +188,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
 
                     return 6 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && str_contains($alerts[0]['message'], 'No bike shop on stage 1');
+                        && str_contains((string) $alerts[0]['message'], 'No bike shop on stage 1');
                 }),
             );
 

@@ -111,13 +111,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                     continue;
                 }
 
-                $hasNearbySaleOnly = false;
-                foreach ($saleOnlyShopLocations as $shop) {
-                    if ($this->haversine->inMeters($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']) < self::BIKE_SHOP_PROXIMITY_METERS) {
-                        $hasNearbySaleOnly = true;
-                        break;
-                    }
-                }
+                $hasNearbySaleOnly = array_any($saleOnlyShopLocations, fn (array $shop): bool => $this->haversine->inMeters($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']) < self::BIKE_SHOP_PROXIMITY_METERS);
 
                 $translationKey = $hasNearbySaleOnly ? 'alert.bike_shop.no_repair_nudge' : 'alert.bike_shop.nudge';
                 $stagesWithoutBikeShop[] = [
