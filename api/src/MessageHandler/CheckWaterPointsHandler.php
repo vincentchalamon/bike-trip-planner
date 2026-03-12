@@ -58,7 +58,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                     $stages,
                 ));
 
-            $query = $this->queryBuilder->buildWaterPointQuery($points);
+            $query = $this->queryBuilder->buildCemeteryQuery($points);
             $result = $this->scanner->query($query);
 
             /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
@@ -96,7 +96,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                         'dayNumber' => $stage->dayNumber,
                         'type' => AlertType::NUDGE->value,
                         'message' => $this->translator->trans(
-                            'alert.water_point.nudge',
+                            'alert.cemetery.nudge',
                             ['%stage%' => $stage->dayNumber],
                             'alerts',
                             $locale,

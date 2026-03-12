@@ -130,6 +130,20 @@ final class OsmOverpassQueryBuilderTest extends TestCase
     }
 
     #[Test]
+    public function buildCemeteryQueryContainsCemeteryTags(): void
+    {
+        $points = [new Coordinate(45.0, 5.0)];
+
+        $query = $this->builder->buildCemeteryQuery($points);
+
+        $this->assertStringContainsString('[out:json][timeout:15]', $query);
+        $this->assertStringContainsString('"landuse"="cemetery"', $query);
+        $this->assertStringContainsString('"amenity"="grave_yard"', $query);
+        $this->assertStringContainsString('around:2000', $query);
+        $this->assertStringContainsString('out center 500', $query);
+    }
+
+    #[Test]
     public function buildBatchBikeShopQueryMergesAllStages(): void
     {
         $stage1 = [new Coordinate(45.0, 5.0)];

@@ -41,7 +41,13 @@ interface QueryBuilderInterface
     public function buildBatchBikeShopQuery(array $stageGeometries): string;
 
     /**
+     * Queries cemeteries as a proxy for potable water.
+     *
+     * In France, cemeteries are legally required to provide a water tap on-site,
+     * making them a reliable indicator of accessible water along a route.
+     * This heuristic is most accurate for French itineraries.
+     *
      * @param list<Coordinate> $decimatedPoints
      */
-    public function buildWaterPointQuery(array $decimatedPoints): string;
+    public function buildCemeteryQuery(array $decimatedPoints): string;
 }
