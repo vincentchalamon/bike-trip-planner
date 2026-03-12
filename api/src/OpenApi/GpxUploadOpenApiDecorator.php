@@ -48,6 +48,7 @@ final readonly class GpxUploadOpenApiDecorator implements OpenApiFactoryInterfac
                                             'type' => 'object',
                                             'additionalProperties' => ['type' => 'string'],
                                         ],
+                                        'title' => ['type' => 'string', 'description' => 'Title extracted from GPX metadata'],
                                     ],
                                     'required' => ['@context', '@id', '@type', 'id', 'computationStatus'],
                                 ]),

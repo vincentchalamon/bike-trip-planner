@@ -54,7 +54,7 @@ export function useTripPlanner() {
     setProcessing(true);
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toISOString().split("T")[0]!;
       const { data, error, response } = await apiClient.POST("/trips", {
         body: {
           sourceUrl,
@@ -72,7 +72,7 @@ export function useTripPlanner() {
         return;
       }
 
-      if (!startDate && today) {
+      if (!startDate) {
         updateDates(today, null);
       }
 
@@ -96,7 +96,7 @@ export function useTripPlanner() {
     setProcessing(true);
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date().toISOString().split("T")[0]!;
       const { data, error } = await uploadGpxFile(file, {
         fatigueFactor,
         elevationPenalty,
@@ -110,13 +110,13 @@ export function useTripPlanner() {
         return;
       }
 
-      if (!startDate && today) {
+      if (!startDate) {
         updateDates(today, null);
       }
 
       setTrip({
         id: data.id,
-        title: file.name.replace(/\.gpx$/i, ""),
+        title: data.title ?? file.name.replace(/\.gpx$/i, ""),
         sourceUrl: "",
       });
     } catch (err) {

@@ -61,6 +61,14 @@ final readonly class GpxUploadController
             );
         }
 
+        $mimeType = $file->getMimeType();
+        if (null !== $mimeType && !in_array($mimeType, ['application/gpx+xml', 'application/xml', 'text/xml', 'text/plain'], true)) {
+            return new JsonResponse(
+                ['error' => 'Only .gpx files are accepted.'],
+                Response::HTTP_BAD_REQUEST,
+            );
+        }
+
         $content = file_get_contents($file->getPathname());
         if (false === $content || '' === $content) {
             return new JsonResponse(
@@ -94,13 +102,19 @@ final readonly class GpxUploadController
 
         $result = $this->gpxUploadService->createTrip($points, $title, $tripRequest, $locale);
 
-        return new JsonResponse([
+        $response = [
             '@context' => '/contexts/Trip',
             '@id' => '/trips/'.$result['tripId'],
             '@type' => 'Trip',
             'id' => $result['tripId'],
             'computationStatus' => $result['computationStatus'],
-        ], Response::HTTP_ACCEPTED);
+        ];
+
+        if (null !== $title) {
+            $response['title'] = $title;
+        }
+
+        return new JsonResponse($response, Response::HTTP_ACCEPTED);
     }
 
     private function applyOptionalParameters(TripRequest $tripRequest, Request $request): void

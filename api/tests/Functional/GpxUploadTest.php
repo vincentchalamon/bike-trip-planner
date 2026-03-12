@@ -48,6 +48,9 @@ final class GpxUploadTest extends ApiTestCase
         $this->assertSame('Trip', $data['@type']);
         $this->assertSame('/contexts/Trip', $data['@context']);
 
+        // Title should be extracted from GPX metadata
+        $this->assertSame('Test Route', $data['title']);
+
         // Route computation should already be done (parsed synchronously)
         $this->assertSame('done', $data['computationStatus']['route']);
 

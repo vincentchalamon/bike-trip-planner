@@ -817,6 +817,8 @@ export interface operations {
                         computationStatus: {
                             [key: string]: string;
                         };
+                        /** @description Title extracted from GPX metadata */
+                        title?: string;
                     };
                 };
             };
