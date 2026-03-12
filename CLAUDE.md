@@ -48,7 +48,16 @@ Pre-commit hook runs `make qa` automatically; commit aborts on failure.
 /code-review <pr-number>            # Code review a PR (multi-agent, inline comments)
 /qa                                 # Run full QA pipeline and fix issues
 /typegen                            # Regenerate TS types from backend
+/sprint <sprint-number>             # Implement all sprint issues in parallel via worktree agents
 ```
+
+### GitHub Automation
+
+Claude can also be triggered directly from GitHub:
+
+- **`@claude pick [base-branch]`** — Comment on an issue to have Claude implement it end-to-end (branch, code, PR, CI monitoring). Same workflow as `/pick` but runs in CI without Docker.
+- **`@claude <instruction>`** — Comment on an issue or PR for free-form assistance.
+- **Automated code review** — Every PR automatically receives a Claude code review via the `claude-code-review.yml` workflow.
 
 ## Git Conventions
 
