@@ -51,16 +51,14 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
 | 1 | [#38](https://github.com/vincentchalamon/bike-trip-planner/issues/38) | Distance hébergement-endPoint | S | 1 | — |
-| 2 | [#36](https://github.com/vincentchalamon/bike-trip-planner/issues/36) | Filtre types d'hébergements | M | 1 | — |
-| 3 | [#37](https://github.com/vincentchalamon/bike-trip-planner/issues/37) | Rayon de recherche | M | 1 | — |
-| 4 | [#39](https://github.com/vincentchalamon/bike-trip-planner/issues/39) | Sélectionner un hébergement | L | 2 | — |
+| 2 | [#37](https://github.com/vincentchalamon/bike-trip-planner/issues/37) | Rayon de recherche | M | 1 | — |
+| 3 | [#39](https://github.com/vincentchalamon/bike-trip-planner/issues/39) | Sélectionner un hébergement | L | 2 | — |
 
 ### Recette Sprint 3
 
 - **Tests E2E :** `tests/recette/sprint-03.spec.ts`
 - **Checklist manuelle :**
   - [ ] Distance hébergement-endPoint affichée
-  - [ ] Filtrage par type d'hébergement fonctionnel
   - [ ] Modification du rayon de recherche + résultats mis à jour
   - [ ] Sélection d'un hébergement → recalcul itinéraire (endPoint + startPoint étape suivante)
   - [ ] Responsive : vérifier sur mobile
@@ -73,7 +71,8 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 |-------|----|-------|--------|-----|-----------|
 | 1 | [#48](https://github.com/vincentchalamon/bike-trip-planner/issues/48) | Profil cyclo + presets | M | 1 | — |
 | 2 | [#49](https://github.com/vincentchalamon/bike-trip-planner/issues/49) | Panneau configuration (sidebar) | M | 1 | [#48](https://github.com/vincentchalamon/bike-trip-planner/issues/48) |
-| 3 | [#55](https://github.com/vincentchalamon/bike-trip-planner/issues/55) | Insertion jours de repos | M | 1 | — |
+| 3 | [#36](https://github.com/vincentchalamon/bike-trip-planner/issues/36) | Filtre types d'hébergements | M | 1 | [#49](https://github.com/vincentchalamon/bike-trip-planner/issues/49) |
+| 4 | [#55](https://github.com/vincentchalamon/bike-trip-planner/issues/55) | Insertion jours de repos | M | 1 | — |
 
 ### Recette Sprint 4
 
@@ -81,6 +80,7 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 - **Checklist manuelle :**
   - [ ] Presets cyclo sélectionnables (sportif, touring, etc.)
   - [ ] Panneau de configuration accessible et fonctionnel
+  - [ ] Filtrage par type d'hébergement dans le panneau de configuration
   - [ ] Insertion d'un jour de repos → recalcul des étapes suivantes
   - [ ] Responsive : sidebar sur mobile
 
@@ -152,8 +152,8 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
 | 1 | [#32](https://github.com/vincentchalamon/bike-trip-planner/issues/32) | Onboarding guide | S | 1 | — |
-| 2 | [#33](https://github.com/vincentchalamon/bike-trip-planner/issues/33) | Raccourcis clavier + aide | M | 1 | — |
-| 3 | [#57](https://github.com/vincentchalamon/bike-trip-planner/issues/57) | Undo/Redo | L | 2 | — |
+| 2 | [#57](https://github.com/vincentchalamon/bike-trip-planner/issues/57) | Undo/Redo | L | 2 | — |
+| 3 | [#33](https://github.com/vincentchalamon/bike-trip-planner/issues/33) | Raccourcis clavier + aide | M | 1 | [#57](https://github.com/vincentchalamon/bike-trip-planner/issues/57) |
 
 ### Recette Sprint 8
 
@@ -311,8 +311,8 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 |--------|-------|---------|--------------|
 | 1 | Quick Wins Alertes | 5 | 5 |
 | 2 | Alertes Frontend + UX | 3 | 3 |
-| 3 | Hébergements | 4 | 5 |
-| 4 | Configuration & Profil | 3 | 3 |
+| 3 | Hébergements | 3 | 4 |
+| 4 | Configuration & Profil | 4 | 4 |
 | 5 | Météo & Temps | 3 | 4 |
 | 6 | Export | 3 | 3 |
 | 7 | Carte Interactive | 4 | 9 |
