@@ -73,7 +73,9 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         $polyline = $this->buildPolyline($decimatedPoints);
 
         return \sprintf(
-            '[out:json][timeout:15];(nwr["shop"="bicycle"](around:%d,%s););out center 50;',
+            '[out:json][timeout:15];(nwr["shop"="bicycle"](around:%d,%s);nwr["service:bicycle:repair"="yes"](around:%d,%s););out center tags 50;',
+            self::AROUND_RADIUS_METERS,
+            $polyline,
             self::AROUND_RADIUS_METERS,
             $polyline,
         );
@@ -88,7 +90,9 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         $polyline = $this->buildPolyline($allPoints);
 
         return \sprintf(
-            '[out:json][timeout:15];(nwr["shop"="bicycle"](around:%d,%s););out center 50;',
+            '[out:json][timeout:15];(nwr["shop"="bicycle"](around:%d,%s);nwr["service:bicycle:repair"="yes"](around:%d,%s););out center tags 50;',
+            self::AROUND_RADIUS_METERS,
+            $polyline,
             self::AROUND_RADIUS_METERS,
             $polyline,
         );

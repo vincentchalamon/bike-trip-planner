@@ -69,11 +69,12 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
             $query = $this->queryBuilder->buildBikeShopQuery($points);
             $result = $this->scanner->query($query);
 
-            /** @var list<array{lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
+            /** @var list<array{lat?: float, lon?: float, center?: array{lat: float, lon: float}, tags?: array<string, string>}> $elements */
             $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
 
-            // Parse bike shop locations
-            $bikeShopLocations = [];
+            // Parse bike shop locations, distinguishing repair shops from sale-only shops
+            $repairShopLocations = [];
+            $saleOnlyShopLocations = [];
             foreach ($elements as $element) {
                 $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
                 $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
@@ -82,36 +83,54 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                     continue;
                 }
 
-                $bikeShopLocations[] = ['lat' => (float) $lat, 'lon' => (float) $lon];
+                $tags = $element['tags'] ?? [];
+                $hasRepair = isset($tags['service:bicycle:repair']) && 'yes' === $tags['service:bicycle:repair'];
+
+                if ($hasRepair) {
+                    $repairShopLocations[] = ['lat' => (float) $lat, 'lon' => (float) $lon];
+                } else {
+                    $saleOnlyShopLocations[] = ['lat' => (float) $lat, 'lon' => (float) $lon];
+                }
             }
 
             // Check each stage for nearby bike shops
             $stagesWithoutBikeShop = [];
             foreach ($stages as $i => $stage) {
-                $hasNearby = false;
                 $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
                 $midpoint = $geometry[(int) (\count($geometry) / 2)];
 
-                foreach ($bikeShopLocations as $shop) {
+                $hasNearbyRepair = false;
+                foreach ($repairShopLocations as $shop) {
                     if ($this->haversine->inMeters($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']) < self::BIKE_SHOP_PROXIMITY_METERS) {
-                        $hasNearby = true;
+                        $hasNearbyRepair = true;
                         break;
                     }
                 }
 
-                if (!$hasNearby) {
-                    $stagesWithoutBikeShop[] = [
-                        'stageIndex' => $i,
-                        'dayNumber' => $stage->dayNumber,
-                        'type' => AlertType::NUDGE->value,
-                        'message' => $this->translator->trans(
-                            'alert.bike_shop.nudge',
-                            ['%stage%' => $stage->dayNumber],
-                            'alerts',
-                            $locale,
-                        ),
-                    ];
+                if ($hasNearbyRepair) {
+                    continue;
                 }
+
+                $hasNearbySaleOnly = false;
+                foreach ($saleOnlyShopLocations as $shop) {
+                    if ($this->haversine->inMeters($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']) < self::BIKE_SHOP_PROXIMITY_METERS) {
+                        $hasNearbySaleOnly = true;
+                        break;
+                    }
+                }
+
+                $translationKey = $hasNearbySaleOnly ? 'alert.bike_shop.no_repair_nudge' : 'alert.bike_shop.nudge';
+                $stagesWithoutBikeShop[] = [
+                    'stageIndex' => $i,
+                    'dayNumber' => $stage->dayNumber,
+                    'type' => AlertType::NUDGE->value,
+                    'message' => $this->translator->trans(
+                        $translationKey,
+                        ['%stage%' => $stage->dayNumber],
+                        'alerts',
+                        $locale,
+                    ),
+                ];
             }
 
             $this->publisher->publish($tripId, MercureEventType::BIKE_SHOP_ALERTS, [
