@@ -1,6 +1,5 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "alwaysThinkingEnabled": true,
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "openapi-spec"
@@ -23,25 +22,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *\"/.claude/worktrees/\"* ]]; then exit 0; fi; if [[ \"$FILE\" == *.php ]]; then make php-cs-fixer -- \"${FILE#*/api/}\" --quiet 2>/dev/null; fi; exit 0'"
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *\"/.claude/worktrees/\"* ]]; then exit 0; fi; if [[ \"$FILE\" == *.php ]]; then make rector -- \"${FILE#*/api/}\" --quiet 2>/dev/null; fi; exit 0'"
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *\"/.claude/worktrees/\"* ]]; then exit 0; fi; if [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx ]]; then make prettier -- --write . \"${FILE#*/pwa/}\" 2>/dev/null; fi; exit 0'"
+            "command": "bash -c 'FILE=$(jq -r \".tool_input.file_path\" <<< \"$(cat)\"); if [[ \"$FILE\" == *\"/.claude/worktrees/\"* ]]; then exit 0; fi; if [[ \"$FILE\" == *.php ]]; then make php-cs-fixer -- \"${FILE#*/api/}\" --quiet 2>/dev/null; make rector -- \"${FILE#*/api/}\" --quiet 2>/dev/null; elif [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx ]]; then make prettier -- --write . \"${FILE#*/pwa/}\" 2>/dev/null; fi; exit 0'"
           }
         ]
       }

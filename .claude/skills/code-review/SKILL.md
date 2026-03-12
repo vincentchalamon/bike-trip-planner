@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 Provide a code review for the given pull request.
 
-Use the **Review Comment Format** section in CLAUDE.md for all comments (Conventional Comments labels, inline threads, review body structure).
+Use the **Review Comment Format** section at the bottom of this skill for all comments (Conventional Comments labels, inline threads, review body structure).
 
 To do this, follow these steps precisely:
 
@@ -125,3 +125,101 @@ Notes:
     - # sign after the file name
     - Line range format is L[start]-L[end]
     - Provide at least 1 line of context before and after, centered on the line you are commenting about (eg. if you are commenting about lines 5-6, you should link to `L4-7`)
+
+---
+
+## PR & Quality Standards
+
+Before every PR, follow this protocol:
+
+### 0. Code Quality Principles
+
+All code must follow these principles as much as possible:
+
+- **SOLID** — Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
+- **Law of Demeter** — Only talk to immediate collaborators; avoid deep chaining through objects
+- **Design patterns over quick & dirty** — Prefer well-known patterns (Strategy, Chain of Responsibility, etc.) to ad-hoc solutions
+- **Documented, tested, maintainable** — Unit tests, functional tests, E2E tests, and Diataxis-style documentation (tutorials, how-to, reference, explanation)
+
+If any of these principles cannot be followed in a specific case, **document the reason** in a code comment explaining why the deviation was necessary.
+
+### 1. Diff Analysis
+
+Run `git diff` and review all changes for:
+
+- Leftover `console.log`, `dump()`, `dd()`, or debug statements
+- Stale TODO/FIXME comments
+- Dead code (unused methods, unreachable branches, orphaned imports)
+- Unintended technical debt
+
+### 2. Review Checklist
+
+- [ ] Code respects the project architecture (stateless backend, local-first frontend, DTO contract)
+- [ ] SOLID principles and Law of Demeter are followed (deviations documented)
+- [ ] Design patterns are used where appropriate (no unjustified quick & dirty)
+- [ ] Tests cover new/changed cases: unit (`make test-php`), E2E (`make test-e2e`)
+- [ ] No dead code (unused methods, unreachable branches, orphaned imports)
+- [ ] No lingering TODO/FIXME comments (resolve or create a ticket)
+- [ ] Documentation (PHPDoc, JSDoc, Diataxis docs) is up to date for modified public APIs
+- [ ] Dependent tickets (if applicable) are accounted for
+
+### 3. PR Protocol
+
+1. Create the PR as **Ready for review** (only use Draft if changes are still pending and not yet pushed)
+2. Wait for CI to pass: `gh pr checks --watch`
+
+### 4. Auto-critique
+
+Include an **Auto-critique** section in the PR body listing what was verified.
+
+## Review Comment Format
+
+All code review comments (CI workflow, `/code-review`, `/review`) follow [Conventional Comments](https://conventionalcomments.org/):
+
+```text
+<label> (<decoration>): <subject>
+
+<body>
+```
+
+### Labels
+
+| Severity | Label |
+|----------|-------|
+| Critical (blocking) | `issue (blocking): <subject>` |
+| Warning | `issue: <subject>` |
+| Info / suggestion | `suggestion (non-blocking): <subject>` |
+| Nitpick | `nitpick (non-blocking): <subject>` |
+| Positive feedback | `praise: <subject>` |
+
+> **Note:** Automated reviews (CI workflow and `/code-review` skill) must NOT post `nitpick` comments. Only flag issues that impact: correctness, security, performance, architecture, maintainability (dead code), test coverage, or debug leftovers. The `nitpick` label is reserved for manual human reviews.
+
+### Inline Comments
+
+- Each code-level finding gets its own **inline thread** on the relevant line(s)
+- ALWAYS include a concrete fix using a GitHub ` ```suggestion ` block when applicable
+- Keep suggestions minimal: only change what is necessary
+
+### Review Body
+
+The review submission body contains only PR-level findings:
+
+- Concise summary (1-3 sentences)
+- PR title conventional commit check (if issue found)
+- Review checklist (checked/unchecked items)
+- Count of inline comments posted
+- Footer: "Generated with [Claude Code](https://claude.ai/code)"
+
+### Conventional Commits on PRs
+
+Since PRs are **squash-merged**, only the **PR title** must follow Conventional Commits format. Do NOT check individual commit messages.
+
+### API Verification Guardrail
+
+This project uses cutting-edge framework versions (Symfony 8, PHP 8.5, Next.js 16, React 19) that have breaking changes compared to earlier versions in Claude's training data.
+
+**Rules for code reviewers:**
+
+- NEVER claim a method, class, or function "does not exist" or "was removed" based on training knowledge alone
+- ALWAYS verify against actual vendor source code (`api/vendor/`, `pwa/node_modules/`) or up-to-date documentation (context7 MCP) before making API existence claims
+- If verification is not possible, downgrade the finding to `suggestion (non-blocking)` and explicitly state that verification was not possible for the framework version used
