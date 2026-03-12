@@ -102,7 +102,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             $startDate = $request?->startDate;
             foreach ($stages as $i => $stage) {
                 $accommodations = [];
-                $stageDate = null !== $startDate ? ($startDate->modify(\sprintf('+%d days', $i)) ?: null) : null;
+                $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
                 foreach ($retainedByStage[$i] ?? [] as $raw) {
                     $possibleClosed = false;
                     if (null !== $stageDate) {
