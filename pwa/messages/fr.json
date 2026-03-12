@@ -118,6 +118,11 @@
     "dark": "Sombre",
     "switchTo": "Passer au thème {label}"
   },
+  "progressBar": {
+    "ariaLabel": "Progression du voyage par jour",
+    "segmentAriaLabel": "Jour {day} — {distance} km",
+    "segmentTitle": "Jour {day} — {distance} km"
+  },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",

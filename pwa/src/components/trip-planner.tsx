@@ -6,6 +6,7 @@ import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { TripSummary } from "@/components/trip-summary";
 import { TripHeader } from "@/components/trip-header";
 import { PacingSettings } from "@/components/pacing-settings";
+import { StageProgressBar } from "@/components/stage-progress-bar";
 import { Timeline } from "@/components/timeline";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
@@ -96,6 +97,9 @@ export function TripPlanner() {
               onEbikeModeChange={handleEbikeModeChange}
             />
           </TripHeader>
+
+          {/* Segmented progress bar */}
+          <StageProgressBar />
 
           {/* Timeline */}
           <div id="timeline">

@@ -118,6 +118,11 @@
     "dark": "Dark",
     "switchTo": "Switch to {label} theme"
   },
+  "progressBar": {
+    "ariaLabel": "Trip progress by day",
+    "segmentAriaLabel": "Day {day} — {distance} km",
+    "segmentTitle": "Day {day} — {distance} km"
+  },
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",
