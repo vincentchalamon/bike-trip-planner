@@ -148,7 +148,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         ),
                     );
                     $stage->addAlert($alert);
-                    $alertsToPublish[] = ['type' => $alert->type->value, 'message' => $alert->message];
+                    $alertsToPublish[] = ['type' => $alert->type->value, 'message' => $alert->message, 'lat' => $alert->lat, 'lon' => $alert->lon];
                 }
 
                 $payload = [
