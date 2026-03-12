@@ -57,14 +57,12 @@ interface SegmentBarProps {
 
 function SegmentBar({ score, label, colorClass }: SegmentBarProps) {
   return (
-    <div
-      className="relative h-1.5 w-14 rounded-full bg-muted overflow-hidden"
-      aria-label={label}
-    >
+    <div className="relative h-1.5 w-14 rounded-full bg-muted overflow-hidden">
       <div
         className={`absolute inset-y-0 left-0 rounded-full transition-all duration-300 ${colorClass}`}
         style={{ width: `${score}%` }}
         role="progressbar"
+        aria-label={label}
         aria-valuenow={score}
         aria-valuemin={0}
         aria-valuemax={100}
