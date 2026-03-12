@@ -15,6 +15,7 @@ final readonly class Accommodation
         public float $estimatedPriceMax,
         public bool $isExactPrice,
         public ?string $url = null,
+        public bool $possibleClosed = false,
     ) {
     }
 }

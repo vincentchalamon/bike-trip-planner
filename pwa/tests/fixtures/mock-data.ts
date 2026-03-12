@@ -113,6 +113,7 @@ export function accommodationsFoundEvent(stageIndex: number): MercureEvent {
           estimatedPriceMin: 12,
           estimatedPriceMax: 18,
           isExactPrice: false,
+          possibleClosed: false,
         },
         {
           name: "Hotel du Pont",
@@ -122,6 +123,7 @@ export function accommodationsFoundEvent(stageIndex: number): MercureEvent {
           estimatedPriceMin: 65,
           estimatedPriceMax: 85,
           isExactPrice: false,
+          possibleClosed: false,
         },
       ],
     },

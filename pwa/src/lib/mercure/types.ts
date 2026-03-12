@@ -51,6 +51,7 @@ export interface AccommodationPayload {
   estimatedPriceMin: number;
   estimatedPriceMax: number;
   isExactPrice: boolean;
+  possibleClosed: boolean;
 }
 
 export type MercureEvent =
@@ -79,7 +80,7 @@ export type MercureEvent =
     }
   | {
       type: "accommodations_found";
-      data: { stageIndex: number; accommodations: AccommodationPayload[] };
+      data: { stageIndex: number; accommodations: AccommodationPayload[]; alerts?: AlertPayload[] };
     }
   | {
       type: "terrain_alerts";

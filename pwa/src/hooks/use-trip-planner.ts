@@ -333,6 +333,7 @@ export function useTripPlanner() {
       estimatedPriceMin: 0,
       estimatedPriceMax: 0,
       isExactPrice: false,
+      possibleClosed: false,
     };
     addLocalAccommodation(stageIndex, newAcc);
     setNewAccKey(`${stageIndex}-${accIndex}`);

@@ -41,6 +41,7 @@ export const AccommodationSchema = z.object({
   estimatedPriceMax: z.number(),
   isExactPrice: z.boolean(),
   url: z.string().nullable().optional(),
+  possibleClosed: z.boolean().default(false),
 });
 
 export const StageDataSchema = z.object({

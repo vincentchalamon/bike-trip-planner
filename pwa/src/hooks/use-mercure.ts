@@ -154,6 +154,13 @@ function dispatchEvent(event: MercureEvent): void {
         event.data.stageIndex,
         event.data.accommodations,
       );
+      if (event.data.alerts && event.data.alerts.length > 0) {
+        store.updateStageAlerts(
+          event.data.stageIndex,
+          event.data.alerts,
+          "accommodations",
+        );
+      }
       break;
 
     case "terrain_alerts":
