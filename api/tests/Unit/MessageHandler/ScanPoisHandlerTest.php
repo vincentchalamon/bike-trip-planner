@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Unit\MessageHandler;
 
 use App\ApiResource\Model\Coordinate;
-use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Engine\RiderTimeEstimatorInterface;
-use App\Enum\AlertType;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
