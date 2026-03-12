@@ -205,12 +205,27 @@ These hooks are project-scoped and apply to all contributors who use Claude Code
 
 ### Skills (slash commands)
 
-Two custom skills are available:
+Five custom skills are available in Claude Code:
 
-| Command    | Description                                                                         |
-|------------|-------------------------------------------------------------------------------------|
-| `/qa`      | Runs `make qa`, parses output, and proposes fixes for each issue                    |
-| `/typegen` | Regenerates TypeScript types from the backend OpenAPI spec and verifies compilation |
+| Command                              | Description                                                                         |
+|--------------------------------------|-------------------------------------------------------------------------------------|
+| `/pick <issue-number> [base-branch]` | Implements a GitHub issue end-to-end (branch, code, test, PR, CI monitoring)        |
+| `/code-review <pr-number>`           | Multi-agent code review with inline comments (Conventional Comments format)         |
+| `/qa`                                | Runs `make qa`, parses output, and proposes fixes for each issue                    |
+| `/typegen`                           | Regenerates TypeScript types from the backend OpenAPI spec and verifies compilation |
+| `/sprint <sprint-number>`            | Implements all sprint issues in parallel via worktree agents                        |
+
+### GitHub automation
+
+Claude is also available directly from GitHub, without needing a local Claude Code session:
+
+| Trigger                                   | Where           | What happens                                                                              |
+|-------------------------------------------|-----------------|-------------------------------------------------------------------------------------------|
+| `@claude pick [base-branch]`              | Issue comment    | Claude implements the issue end-to-end: creates branch, codes, opens PR, monitors CI     |
+| `@claude <instruction>`                   | Issue/PR comment | Claude follows the free-form instruction                                                 |
+| Automatic (on PR open/sync)               | Pull requests    | Claude performs an automated code review (`claude-code-review.yml`)                       |
+
+The workflows are defined in `.github/workflows/claude.yml` and `.github/workflows/claude-code-review.yml`.
 
 ### MCP servers
 
@@ -264,9 +279,13 @@ bike-trip-planner/
 │   ├── getting-started.md
 │   ├── contributing.md           # This file
 │   └── claude-code-tooling.md
+├── .github/
+│   └── workflows/
+│       ├── claude.yml              # @claude pick + free-form on issues/PRs
+│       └── claude-code-review.yml  # Automated PR code review
 ├── .claude/
 │   ├── settings.json             # Hooks (auto-formatting, file protection)
-│   └── skills/                   # Custom slash commands (qa, typegen)
+│   └── skills/                   # Custom slash commands (pick, code-review, qa, typegen, sprint)
 └── .mcp.json                     # MCP server config (Apidog OpenAPI)
 ```
 

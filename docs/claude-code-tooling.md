@@ -28,19 +28,13 @@ Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 f
 
 ---
 
-### 1.3 GitHub MCP Server ⭐ RECOMMENDED
+### 1.3 GitHub MCP Server (ALREADY INSTALLED)
 
-**Purpose:** Native management of PRs, issues, code reviews, GitHub Actions from Claude Code. Essential once the repo is on GitHub.
+**Purpose:** Native management of PRs, issues, code reviews, GitHub Actions from Claude Code.
 
 - **Source:** <https://github.com/github/github-mcp-server>
-- **Installation:**
-
-  ```bash
-  claude mcp add --scope project --transport http github https://api.githubcopilot.com/mcp/
-  ```
-
-  Then `/mcp` in Claude Code to authenticate via OAuth.
-- **Key features:** create/merge PRs, comment on issues, search code, trigger CI workflows
+- **Status:** Already enabled (authenticated via OAuth)
+- **Usage:** Available via `mcp__github__*` tools (create/merge PRs, comment on issues, search code, read CI results)
 
 ---
 
@@ -199,100 +193,99 @@ Skills are `.claude/skills/<name>/SKILL.md` files in the project. They add `/nam
 
 **Documentation:** <https://code.claude.com/docs/en/skills>
 
-### 3.1 Skill `/webapp-testing` (official Anthropic) ⭐ RECOMMENDED
+### 3.1 Skill `/pick` (ALREADY INSTALLED) ⭐
 
-**Purpose:** Automates web application testing via Playwright — verifies UI, debugs user flows, generates test scripts.
+**Purpose:** Implements a GitHub issue end-to-end: creates a feature branch, codes the solution, runs tests, opens a PR, monitors CI, and reports back.
 
-- **Source:** <https://github.com/anthropics/skills/tree/main/skills/webapp-testing>
-- **Installation:**
-
-  ```bash
-  # From Claude Code:
-  /plugin marketplace add anthropics/skills
-  ```
-
-  Or manually copy the SKILL.md content into `.claude/skills/webapp-testing/SKILL.md`.
+- **Location:** `.claude/skills/pick/SKILL.md`
+- **Usage:** `/pick <issue-number> [base-branch]`
+- **Also available from GitHub:** Comment `@claude pick [base-branch]` on an issue (see §6)
 
 ---
 
-### 3.2 Custom Skill `/qa` ⭐ RECOMMENDED
+### 3.2 Skill `/code-review` (ALREADY INSTALLED) ⭐
 
-**Purpose:** Runs the full QA pipeline and interprets results. Avoids retyping Docker commands every time.
+**Purpose:** Multi-agent code review with 5 parallel reviewers, confidence scoring, and inline comments in Conventional Comments format.
 
-Create `.claude/skills/qa/SKILL.md`:
-
-```markdown
----
-name: qa
-description: Run the full QA pipeline (PHPStan, PHP-CS-Fixer, ESLint, Prettier, TypeScript checks) and report results
----
-
-Run the project's quality assurance pipeline:
-
-1. Execute `make qa` from the project root
-2. Parse the output to identify:
-   - PHPStan errors (with file paths and line numbers)
-   - PHP-CS-Fixer violations
-   - ESLint warnings/errors
-   - Prettier formatting issues
-   - TypeScript compilation errors
-3. For each issue found, propose a fix
-4. After fixing, re-run `make qa` to verify
-```
+- **Location:** `.claude/skills/code-review/SKILL.md`
+- **Usage:** `/code-review <pr-number>`
+- **Also runs automatically** on every PR via the `claude-code-review.yml` workflow (see §6)
 
 ---
 
-### 3.3 Custom Skill `/typegen` ⭐ RECOMMENDED
+### 3.3 Skill `/qa` (ALREADY INSTALLED) ⭐
 
-**Purpose:** Regenerates TypeScript types from the backend's OpenAPI spec and verifies frontend compilation.
+**Purpose:** Runs the full QA pipeline (`make qa`), parses output, and proposes fixes for each issue.
 
-Create `.claude/skills/typegen/SKILL.md`:
-
-```markdown
----
-name: typegen
-description: Regenerate TypeScript types from backend OpenAPI spec and verify frontend compilation
----
-
-When backend DTOs change, run the type generation pipeline:
-
-1. Ensure the PHP backend is running: `docker compose ps php`
-2. Generate types: `make typegen`
-3. Check for TypeScript errors: `make tsc --noEmit`
-4. If errors exist, fix the frontend code to match the new types
-5. Report what changed in `pwa/src/lib/api/schema.d.ts`
-```
+- **Location:** `.claude/skills/qa/SKILL.md`
+- **Usage:** `/qa`
 
 ---
 
-### 3.4 Skill `/mcp-builder` (official Anthropic) (OPTIONAL)
+### 3.4 Skill `/typegen` (ALREADY INSTALLED) ⭐
 
-**Purpose:** Guides the creation of custom MCP servers if you need to integrate specific tools (e.g., wrapper for Symfony `bin/console` commands).
+**Purpose:** Regenerates TypeScript types from the backend OpenAPI spec and verifies frontend compilation.
 
-- **Source:** <https://github.com/anthropics/skills/tree/main/skills/mcp-builder>
+- **Location:** `.claude/skills/typegen/SKILL.md`
+- **Usage:** `/typegen`
 
 ---
 
-## 4. Summary by Priority
+### 3.5 Skill `/sprint` (ALREADY INSTALLED) ⭐
+
+**Purpose:** Implements all issues from a sprint in parallel using worktree agents, with dependency-aware ordering and CI monitoring.
+
+- **Location:** `.claude/skills/sprint/SKILL.md`
+- **Usage:** `/sprint <sprint-number>`
+
+---
+
+## 4. GitHub Workflows (CI Automation)
+
+Two GitHub Actions workflows enable Claude automation directly from GitHub, without requiring a local Claude Code session.
+
+### 4.1 `claude.yml` — Issue & PR assistant
+
+**Triggers:**
+
+| Comment                          | Where        | Job triggered | Description                                               |
+|----------------------------------|--------------|---------------|-----------------------------------------------------------|
+| `@claude pick [base-branch]`    | Issue        | `pick`        | Full implementation: branch → code → PR → CI monitoring  |
+| `@claude <instruction>`         | Issue or PR  | `claude`      | Free-form: follows the instruction from the comment       |
+
+The `pick` job reproduces the `/pick` skill workflow in CI (without Docker). It parses an optional base branch from the comment, creates `feature/<issue-number>`, implements the solution, opens a PR, monitors CI (up to 3 fix cycles), and reports back on the issue.
+
+### 4.2 `claude-code-review.yml` — Automated PR review
+
+Triggers automatically on every PR (open, sync, reopen, ready for review). Performs a multi-step code review following the same Conventional Comments format as the `/code-review` skill, including security, performance, architecture, and test coverage checks.
+
+---
+
+## 5. Summary by Priority
 
 | Priority | Tool                      | Type              | Status            |
 |----------|---------------------------|-------------------|-------------------|
 | ✅        | Playwright MCP            | MCP Server        | Installed         |
 | ✅        | Context7                  | MCP Server        | Installed         |
+| ✅        | GitHub MCP                | MCP Server        | Installed         |
 | ✅        | Apidog MCP (OpenAPI)      | MCP Server        | Installed         |
 | ✅        | Auto-format PHP (hook)    | Hook PostToolUse  | Configured        |
 | ✅        | Auto-refactor PHP (hook)  | Hook PostToolUse  | Configured        |
 | ✅        | Auto-format TS (hook)     | Hook PostToolUse  | Configured        |
 | ✅        | File protection (hook)    | Hook PreToolUse   | Configured        |
-| ✅        | Skill `/qa`               | Skill custom      | Created           |
-| ✅        | Skill `/typegen`          | Skill custom      | Created           |
-| ⭐        | GitHub MCP                | MCP Server        | To install        |
-| 💡       | Post-compaction reminder  | Hook SessionStart | To configure      |
+| ✅        | Skill `/pick`             | Skill custom      | Installed         |
+| ✅        | Skill `/code-review`      | Skill custom      | Installed         |
+| ✅        | Skill `/qa`               | Skill custom      | Installed         |
+| ✅        | Skill `/typegen`          | Skill custom      | Installed         |
+| ✅        | Skill `/sprint`           | Skill custom      | Installed         |
+| ✅        | `@claude pick` workflow   | GitHub Actions    | Configured        |
+| ✅        | Automated code review     | GitHub Actions    | Configured        |
+| 💡       | Post-compaction reminder  | Hook SessionStart | Optional          |
 | 💡       | Docker/Portainer MCP      | MCP Server        | Optional          |
 
 ---
 
-## 5. References
+## 6. References
 
 - [Official Claude Code Documentation — MCP](https://code.claude.com/docs/en/mcp)
 - [Official Claude Code Documentation — Hooks](https://code.claude.com/docs/en/hooks-guide)
