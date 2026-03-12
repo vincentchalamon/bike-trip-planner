@@ -7,6 +7,8 @@ import {
 import type { MercureEvent } from "../../src/lib/mercure/types";
 
 function terrainAlertsWithSourceEvent(): MercureEvent {
+  // The store's terrain_alerts handler calls updateStageAlerts(idx, alerts, "terrain"),
+  // which adds source: "terrain" to each alert — no need to set it in the payload.
   return {
     type: "terrain_alerts",
     data: {
@@ -15,7 +17,6 @@ function terrainAlertsWithSourceEvent(): MercureEvent {
           {
             type: "warning",
             message: "Gravel road for 3km",
-            source: "terrain",
             lat: 44.6,
             lon: 4.5,
           },
