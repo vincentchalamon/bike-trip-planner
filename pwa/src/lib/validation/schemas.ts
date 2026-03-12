@@ -76,6 +76,7 @@ export const TripStateSchema = z.object({
   fatigueFactor: z.number().min(0.5).max(1.0).default(0.9),
   elevationPenalty: z.number().positive().default(50),
   ebikeMode: z.boolean().default(false),
+  departureHour: z.number().int().min(0).max(23).default(8),
   stages: z.array(StageDataSchema),
   computationStatus: z.record(z.string(), z.string()),
 });
