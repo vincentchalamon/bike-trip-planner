@@ -8,11 +8,13 @@ interface UiState {
   sseConnected: boolean;
   expandedCalendar: boolean;
   error: { type: string; message: string } | null;
+  activeDayNumber: number | null;
 
   setProcessing: (value: boolean) => void;
   setSseConnected: (value: boolean) => void;
   setExpandedCalendar: (value: boolean) => void;
   setError: (error: { type: string; message: string } | null) => void;
+  setActiveDayNumber: (dayNumber: number | null) => void;
 }
 
 /**
@@ -23,6 +25,8 @@ interface UiState {
  * - `sseConnected` — whether the Mercure SSE connection is active
  * - `expandedCalendar` — whether the date picker panel is open
  * - `error` — global error banner state (type + message), or `null`
+ * - `activeDayNumber` — the day number currently highlighted across the UI
+ *   (progress bar, map, elevation profile); `null` means no active day
  *
  * This store is intentionally separate from {@link useTripStore} to avoid
  * unnecessary re-renders of trip-dependent components when only UI flags change.
@@ -33,6 +37,7 @@ export const useUiStore = create<UiState>()(
     sseConnected: false,
     expandedCalendar: false,
     error: null,
+    activeDayNumber: null,
 
     setProcessing: (value) =>
       set((state) => {
@@ -52,6 +57,11 @@ export const useUiStore = create<UiState>()(
     setError: (error) =>
       set((state) => {
         state.error = error;
+      }),
+
+    setActiveDayNumber: (dayNumber) =>
+      set((state) => {
+        state.activeDayNumber = dayNumber;
       }),
   })),
 );

@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { TimelineMarker } from "@/components/timeline-marker";
 import { StageCard } from "@/components/stage-card";
 import { AddStageButton } from "@/components/add-stage-button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useUiStore } from "@/store/ui-store";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 
 interface TimelineProps {
@@ -58,6 +59,7 @@ export function Timeline({
 }: TimelineProps) {
   const MIN_KM = 5;
   const tTimeline = useTranslations("timeline");
+  const setActiveDayNumber = useUiStore((s) => s.setActiveDayNumber);
 
   const canInsertStage = useCallback(
     (afterIndex: number): boolean => {
@@ -89,6 +91,49 @@ export function Timeline({
     }
     return groups;
   }, [stages]);
+
+  // Observe which day heading is closest to the top of the viewport while
+  // scrolling and update the active day number in the UI store accordingly.
+  useEffect(() => {
+    if (dayGroups.length === 0) return;
+
+    const dayNumbers = dayGroups.map((g) => g.dayNumber);
+
+    function getActiveDayFromScroll(): number | null {
+      // Find the last day heading that has scrolled past the viewport midpoint.
+      // Iterating in ascending day order, we keep updating `best` as long as
+      // the heading's top is at or above half the viewport height.
+      let best: number | null = null;
+      const threshold = window.innerHeight / 2;
+
+      for (const dayNumber of dayNumbers) {
+        const el = document.getElementById(`timeline-day-${dayNumber}`);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= threshold) {
+          best = dayNumber;
+        }
+      }
+
+      // Fallback: if no heading has scrolled past the threshold yet, use the first
+      if (best === null && dayNumbers.length > 0) {
+        return dayNumbers[0] ?? null;
+      }
+      return best;
+    }
+
+    function handleScroll() {
+      setActiveDayNumber(getActiveDayFromScroll());
+    }
+
+    // Set initial active day
+    setActiveDayNumber(getActiveDayFromScroll());
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [dayGroups, setActiveDayNumber]);
 
   if (stages.length === 0) {
     if (!isProcessing) return null;
@@ -132,7 +177,10 @@ export function Timeline({
       {dayGroups.map((group, groupIndex) => (
         <div key={group.dayNumber}>
           {/* Day header */}
-          <div className="flex items-center mb-4">
+          <div
+            id={`timeline-day-${group.dayNumber}`}
+            className="flex items-center mb-4"
+          >
             <div className="w-4 shrink-0" aria-hidden="true" />
             <div className="ml-6 md:ml-12">
               <h3 className="text-sm font-semibold text-muted-foreground">
