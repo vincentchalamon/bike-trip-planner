@@ -123,11 +123,14 @@ final class OsmScannerTest extends TestCase
             return new MockResponse(json_encode(['elements' => [['id' => $publicCallCount]]], \JSON_THROW_ON_ERROR));
         }, 'http://overpass-public');
 
+        $storedKeys = [];
+        $cachePool = $this->createEmptyCachePool($storedKeys);
+
         $scanner = new OsmScanner(
             $localClient,
             $publicClient,
             $this->createPassthroughCache(),
-            $this->createEmptyCachePool(),
+            $cachePool,
             $this->createStatusChecker(false),
             new NullLogger(),
         );
@@ -140,6 +143,7 @@ final class OsmScannerTest extends TestCase
         $this->assertCount(2, $results);
         $this->assertSame(0, $localCallCount);
         $this->assertSame(2, $publicCallCount);
+        $this->assertCount(2, $storedKeys, 'Public-wave successful results must be written to cache.');
     }
 
     #[Test]
