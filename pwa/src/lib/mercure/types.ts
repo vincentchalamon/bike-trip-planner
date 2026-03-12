@@ -51,7 +51,7 @@ export interface AccommodationPayload {
   estimatedPriceMin: number;
   estimatedPriceMax: number;
   isExactPrice: boolean;
-  possibleClosed?: boolean;
+  possibleClosed: boolean;
 }
 
 export type MercureEvent =

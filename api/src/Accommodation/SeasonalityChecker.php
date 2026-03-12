@@ -24,9 +24,6 @@ final readonly class SeasonalityChecker implements SeasonalityCheckerInterface
     /** Months considered "winter off-season" when seasonal=yes has no opening_hours. */
     private const array WINTER_MONTHS = [11, 12, 1, 2, 3];
 
-    /**
-     * {@inheritDoc}
-     */
     public function isLikelyOpen(\DateTimeImmutable $date, array $tags): ?bool
     {
         $openingHours = $tags['opening_hours'] ?? null;
