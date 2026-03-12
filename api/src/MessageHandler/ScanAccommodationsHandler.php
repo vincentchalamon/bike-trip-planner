@@ -102,7 +102,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             $startDate = $request?->startDate;
             foreach ($stages as $i => $stage) {
                 $accommodations = [];
-                $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
+                $stageDate = null !== $startDate ? ($startDate->modify(\sprintf('+%d days', $i)) ?: null) : null;
                 foreach ($retainedByStage[$i] ?? [] as $raw) {
                     $possibleClosed = false;
                     if (null !== $stageDate) {
@@ -135,9 +135,10 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     ];
                 }
 
+                $alertsToPublish = [];
                 // Warn if all detected accommodations are likely closed during this period
                 if ([] !== $accommodations && array_all($accommodations, static fn (array $a): bool => true === $a['possibleClosed'])) {
-                    $stage->addAlert(new Alert(
+                    $alert = new Alert(
                         type: AlertType::WARNING,
                         message: $this->translator->trans(
                             'alert.accommodation.seasonal_warning',
@@ -145,13 +146,20 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                             'alerts',
                             $locale,
                         ),
-                    ));
+                    );
+                    $stage->addAlert($alert);
+                    $alertsToPublish[] = ['type' => $alert->type->value, 'message' => $alert->message];
                 }
 
-                $this->publisher->publish($tripId, MercureEventType::ACCOMMODATIONS_FOUND, [
+                $payload = [
                     'stageIndex' => $i,
                     'accommodations' => $accommodations,
-                ]);
+                ];
+                if ([] !== $alertsToPublish) {
+                    $payload['alerts'] = $alertsToPublish;
+                }
+
+                $this->publisher->publish($tripId, MercureEventType::ACCOMMODATIONS_FOUND, $payload);
             }
 
             $this->tripStateManager->storeStages($tripId, $stages);
