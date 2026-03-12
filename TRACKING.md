@@ -32,9 +32,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
-| 1 | [#28](https://github.com/vincentchalamon/bike-trip-planner/issues/28) | Résumer les suggestions et détections | S | 1 | — |
-| 2 | [#41](https://github.com/vincentchalamon/bike-trip-planner/issues/41) | Badge de difficulté avec jauge visuelle | S | 1 | — |
-| 3 | [#40](https://github.com/vincentchalamon/bike-trip-planner/issues/40) | Barre de progression segmentée | M | 1 | — |
+| 1 | [#28](https://github.com/vincentchalamon/bike-trip-planner/issues/28) | Résumer les suggestions et détections | S | [#160](https://github.com/vincentchalamon/bike-trip-planner/pull/160) `feature/28` | — |
+| 2 | [#41](https://github.com/vincentchalamon/bike-trip-planner/issues/41) | Badge de difficulté avec jauge visuelle | S | [#161](https://github.com/vincentchalamon/bike-trip-planner/pull/161) `feature/41` | — |
+| 3 | [#40](https://github.com/vincentchalamon/bike-trip-planner/issues/40) | Barre de progression segmentée | M | [#162](https://github.com/vincentchalamon/bike-trip-planner/pull/162) `feature/40` | — |
 
 ### Recette Sprint 2
 
