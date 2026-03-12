@@ -39,6 +39,16 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function noAlertWithEmptyOsmWays(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, ['osmWays' => []]);
+
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
     public function noAlertForPavedSurfaces(): void
     {
         $stage = $this->createStage();
@@ -161,6 +171,83 @@ final class SurfaceAlertAnalyzerTest extends TestCase
 
         // Missing length defaults to 0.0, below threshold
         $this->assertSame([], $alerts);
+    }
+
+    #[Test]
+    public function noMissingDataAlertBelowThreshold(): void
+    {
+        $stage = $this->createStage();
+
+        // 1 out of 10 ways missing surface = 10% < 30%
+        $osmWays = array_fill(0, 9, ['surface' => 'asphalt', 'length' => 100.0]);
+        $osmWays[] = ['length' => 100.0];
+
+        $alerts = $this->analyzer->analyze($stage, ['osmWays' => $osmWays]);
+
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
+    public function missingDataAlertAtExactThreshold(): void
+    {
+        $stage = $this->createStage();
+
+        // 3 out of 10 ways missing surface = 30% → alert fires
+        $osmWays = array_fill(0, 7, ['surface' => 'asphalt', 'length' => 100.0]);
+        $osmWays = [...$osmWays, ...array_fill(0, 3, ['length' => 100.0])];
+
+        $alerts = $this->analyzer->analyze($stage, ['osmWays' => $osmWays]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertSame(AlertType::WARNING, $alerts[0]->type);
+        $this->assertStringContainsString('alert.surface.missing_data', $alerts[0]->message);
+    }
+
+    #[Test]
+    public function missingDataAlertAboveThreshold(): void
+    {
+        $stage = $this->createStage();
+
+        // 5 out of 10 ways missing surface = 50% > 30%
+        $osmWays = array_fill(0, 5, ['surface' => 'asphalt', 'length' => 100.0]);
+        $osmWays = [...$osmWays, ...array_fill(0, 5, ['length' => 100.0])];
+
+        $alerts = $this->analyzer->analyze($stage, ['osmWays' => $osmWays]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertSame(AlertType::WARNING, $alerts[0]->type);
+        $this->assertStringContainsString('alert.surface.missing_data', $alerts[0]->message);
+        $this->assertStringContainsString('50', $alerts[0]->message);
+    }
+
+    #[Test]
+    public function missingDataAlertTreatsEmptyStringAsMissing(): void
+    {
+        $stage = $this->createStage();
+
+        // All ways have empty surface string = 100% > 30%
+        $osmWays = array_fill(0, 5, ['surface' => '', 'length' => 100.0]);
+
+        $alerts = $this->analyzer->analyze($stage, ['osmWays' => $osmWays]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertStringContainsString('alert.surface.missing_data', $alerts[0]->message);
+    }
+
+    #[Test]
+    public function bothUnpavedAndMissingDataAlerts(): void
+    {
+        $stage = $this->createStage();
+
+        // 6 ways without surface (60% > 30%) + 4 gravel ways totaling 600m (> 500m threshold)
+        $osmWays = array_fill(0, 6, ['length' => 100.0]);
+        $osmWays = [...$osmWays, ...array_fill(0, 4, ['surface' => 'gravel', 'length' => 150.0])];
+
+        $alerts = $this->analyzer->analyze($stage, ['osmWays' => $osmWays]);
+
+        $this->assertCount(2, $alerts);
+        $this->assertStringContainsString('alert.surface.warning', $alerts[0]->message);
+        $this->assertStringContainsString('alert.surface.missing_data', $alerts[1]->message);
     }
 
     #[Test]

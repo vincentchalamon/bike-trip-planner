@@ -112,8 +112,9 @@ final class OsmOverpassQueryBuilderTest extends TestCase
 
         $this->assertStringContainsString('[out:json][timeout:15]', $query);
         $this->assertStringContainsString('"shop"="bicycle"', $query);
+        $this->assertStringContainsString('"service:bicycle:repair"="yes"', $query);
         $this->assertStringContainsString('around:2000', $query);
-        $this->assertStringContainsString('out center 50', $query);
+        $this->assertStringContainsString('out center tags 50', $query);
     }
 
     #[Test]
@@ -181,5 +182,7 @@ final class OsmOverpassQueryBuilderTest extends TestCase
         $this->assertStringContainsString('45.000000,5.000000', $query);
         $this->assertStringContainsString('46.000000,6.000000', $query);
         $this->assertStringContainsString('"shop"="bicycle"', $query);
+        $this->assertStringContainsString('"service:bicycle:repair"="yes"', $query);
+        $this->assertStringContainsString('out center tags 50', $query);
     }
 }
