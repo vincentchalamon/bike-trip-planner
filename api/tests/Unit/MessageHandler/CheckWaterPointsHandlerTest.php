@@ -55,7 +55,7 @@ final class CheckWaterPointsHandlerTest extends TestCase
 
         $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturnCallback(
-            static fn (string $id, array $params): string => \sprintf('No water point on stage %s for 30+ km.', $params['%stage%']),
+            static fn (string $id, array $params): string => \sprintf('No cemetery on stage %s for 30+ km.', $params['%stage%']),
         );
 
         return new CheckWaterPointsHandler(
@@ -85,7 +85,7 @@ final class CheckWaterPointsHandlerTest extends TestCase
         ]);
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildWaterPointQuery')->willReturn('query');
+        $queryBuilder->method('buildCemeteryQuery')->willReturn('query');
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('query')->willReturn([
@@ -143,7 +143,7 @@ final class CheckWaterPointsHandlerTest extends TestCase
         ]);
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildWaterPointQuery')->willReturn('query');
+        $queryBuilder->method('buildCemeteryQuery')->willReturn('query');
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('query')->willReturn(['elements' => []]);
@@ -187,7 +187,7 @@ final class CheckWaterPointsHandlerTest extends TestCase
         ]);
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildWaterPointQuery')->willReturn('query');
+        $queryBuilder->method('buildCemeteryQuery')->willReturn('query');
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('query')->willReturn(['elements' => []]);
@@ -242,7 +242,7 @@ final class CheckWaterPointsHandlerTest extends TestCase
         ]);
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildWaterPointQuery')->willReturn('query');
+        $queryBuilder->method('buildCemeteryQuery')->willReturn('query');
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('query')->willReturn([

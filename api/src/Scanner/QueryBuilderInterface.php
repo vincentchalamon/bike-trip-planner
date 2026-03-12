@@ -43,5 +43,5 @@ interface QueryBuilderInterface
     /**
      * @param list<Coordinate> $decimatedPoints
      */
-    public function buildWaterPointQuery(array $decimatedPoints): string;
+    public function buildCemeteryQuery(array $decimatedPoints): string;
 }
