@@ -35,7 +35,6 @@ export function StageProgressBar() {
 
   const stages = useTripStore((s) => s.stages);
   const activeDayNumber = useUiStore((s) => s.activeDayNumber);
-  const setActiveDayNumber = useUiStore((s) => s.setActiveDayNumber);
 
   const dayDistances = useMemo(() => buildDayDistances(stages), [stages]);
 
@@ -50,18 +49,16 @@ export function StageProgressBar() {
     [dayDistances],
   );
 
-  const handleSegmentClick = useCallback(
-    (dayNumber: number) => {
-      setActiveDayNumber(dayNumber);
-
-      // Scroll the corresponding day heading in the timeline into view
-      const target = document.getElementById(`timeline-day-${dayNumber}`);
-      if (target) {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    },
-    [setActiveDayNumber],
-  );
+  const handleSegmentClick = useCallback((dayNumber: number) => {
+    // The Timeline scroll listener sets activeDayNumber as the page scrolls,
+    // so we only need to trigger the scroll here. Setting activeDayNumber
+    // prematurely would cause a flicker as the scroll listener overrides it
+    // with intermediate positions during smooth scrolling.
+    const target = document.getElementById(`timeline-day-${dayNumber}`);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
 
   if (dayNumbers.length === 0 || totalDistance === 0) {
     return null;
