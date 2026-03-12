@@ -43,8 +43,7 @@ function computeScores(
   );
   const hasSurfaceDifficulty = alerts.some(
     (a) =>
-      a.source === "terrain" &&
-      (a.type === "warning" || a.type === "critical"),
+      a.source === "terrain" && (a.type === "warning" || a.type === "critical"),
   );
   const surfaceScore = hasSurfaceDifficulty ? 100 : 0;
 
