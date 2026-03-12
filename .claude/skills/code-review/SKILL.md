@@ -41,14 +41,17 @@ To do this, follow these steps precisely:
    e. 100: Absolutely certain. The agent double checked the issue, and confirmed that it is definitely a real issue, that will happen frequently in practice. The evidence directly confirms this.
 6. Filter out any issues with a score less than 80. If there are no issues that meet this criteria, do not proceed.
 7. Use a Haiku agent to repeat the eligibility check from #1, to make sure that the pull request is still eligible for code review.
-8. Before posting your review, minimize any previous review comments from Claude on this PR:
+8. Before posting your review, dismiss and minimize any previous review comments from Claude on this PR:
    a. Minimize previous issue comments (old format):
       `gh api repos/{owner}/{repo}/issues/{pr_number}/comments --paginate --jq '.[] | select(.body | contains("### Code review") or contains("## Review")) | .node_id'`
-   b. Minimize previous review submissions:
-      `gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews --paginate --jq '.[] | select(.user.login == "github-actions[bot]" or .user.type == "Bot") | .node_id'`
-   c. For each node_id returned from either query, minimize it using the GraphQL API:
+      For each node_id: `gh api graphql -f query='mutation { minimizeComment(input: {subjectId: "<NODE_ID>", classifier: OUTDATED}) { minimizedComment { isMinimized } } }'`
+   b. Fetch previous bot-authored reviews:
+      `gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews --paginate --jq '.[] | select(.user.login == "claude[bot]" or .user.login == "github-actions[bot]" or .user.type == "Bot") | {node_id: .node_id, state: .state}'`
+   c. For each review with state "APPROVED" or "CHANGES_REQUESTED", dismiss it:
+      `gh api graphql -f query='mutation { dismissPullRequestReview(input: {pullRequestReviewId: "<NODE_ID>", message: "Superseded by new review."}) { pullRequestReview { state } } }'`
+   d. For each review node_id (all states), minimize it:
       `gh api graphql -f query='mutation { minimizeComment(input: {subjectId: "<NODE_ID>", classifier: OUTDATED}) { minimizedComment { isMinimized } } }'`
-   d. If no matching comments are found, skip this step silently
+   e. If no matching comments or reviews are found, skip this step silently
 9. Post the review using the pending review workflow:
 
    ### A. Check self-review
