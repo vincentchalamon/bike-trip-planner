@@ -167,6 +167,35 @@ final class GpxUploadTest extends ApiTestCase
     }
 
     #[Test]
+    public function rejectsDisallowedMimeType(): void
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'test');
+        \assert(false !== $tempFile);
+        // Write JPEG magic bytes so finfo detects image/jpeg
+        file_put_contents($tempFile, "\xFF\xD8\xFF".str_repeat('x', 100));
+
+        try {
+            $file = new UploadedFile(
+                $tempFile,
+                'malicious.gpx',
+                'image/jpeg',
+                null,
+                true,
+            );
+
+            $client = self::createClient();
+            $client->request('POST', '/trips/gpx-upload', [
+                'headers' => ['Content-Type' => 'multipart/form-data'],
+                'extra' => ['files' => ['gpxFile' => $file]],
+            ]);
+
+            $this->assertResponseStatusCodeSame(400);
+        } finally {
+            unlink($tempFile);
+        }
+    }
+
+    #[Test]
     public function uploadWithOptionalParameters(): void
     {
         $file = new UploadedFile(

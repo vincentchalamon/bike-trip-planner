@@ -138,18 +138,21 @@ final readonly class GpxUploadController
         }
 
         $fatigueFactor = $request->request->get('fatigueFactor');
-        if (null !== $fatigueFactor && '' !== $fatigueFactor) {
+        if (null !== $fatigueFactor && '' !== $fatigueFactor && is_numeric($fatigueFactor)) {
             $tripRequest->fatigueFactor = (float) $fatigueFactor;
         }
 
         $elevationPenalty = $request->request->get('elevationPenalty');
-        if (null !== $elevationPenalty && '' !== $elevationPenalty) {
+        if (null !== $elevationPenalty && '' !== $elevationPenalty && is_numeric($elevationPenalty)) {
             $tripRequest->elevationPenalty = (float) $elevationPenalty;
         }
 
         $ebikeMode = $request->request->get('ebikeMode');
         if (null !== $ebikeMode) {
-            $tripRequest->ebikeMode = filter_var($ebikeMode, \FILTER_VALIDATE_BOOLEAN);
+            $parsed = filter_var($ebikeMode, \FILTER_VALIDATE_BOOLEAN, \FILTER_NULL_ON_FAILURE);
+            if (null !== $parsed) {
+                $tripRequest->ebikeMode = $parsed;
+            }
         }
     }
 }
