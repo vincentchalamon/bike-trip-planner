@@ -130,9 +130,11 @@ final readonly class OsmScanner implements ScannerInterface
         // Phase 3 (Wave 2): Fire remaining queries on public client concurrently
         $stillMissing = $this->executeWave($this->publicClient, $needsPublic, $results);
 
-        // Graceful degradation: queries that failed on both waves return empty
-        foreach (array_keys($stillMissing) as $name) {
+        // Graceful degradation: queries that failed on both waves return empty.
+        // Cache the empty result so repeated computations for the same area skip the HTTP waves.
+        foreach ($stillMissing as $name => $query) {
             $results[$name] = [];
+            $this->cacheResult($query, []);
         }
 
         return $results;
