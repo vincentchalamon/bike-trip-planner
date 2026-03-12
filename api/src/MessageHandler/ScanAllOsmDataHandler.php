@@ -43,12 +43,15 @@ final readonly class ScanAllOsmDataHandler extends AbstractTripMessageHandler
                 $decimatedData,
             );
 
-            // Execute all 4 Overpass queries — each call caches the result.
+            // Execute all 5 Overpass queries concurrently — results are cached.
             // Leaf handlers will hit the cache when they build the same queries.
-            $this->scanner->query($this->queryBuilder->buildPoiQuery($points));
-            $this->scanner->query($this->queryBuilder->buildAccommodationQuery($points));
-            $this->scanner->query($this->queryBuilder->buildBikeShopQuery($points));
-            $this->scanner->query($this->queryBuilder->buildCemeteryQuery($points));
+            $this->scanner->queryBatch([
+                'poi' => $this->queryBuilder->buildPoiQuery($points),
+                'accommodation' => $this->queryBuilder->buildAccommodationQuery($points),
+                'bikeShop' => $this->queryBuilder->buildBikeShopQuery($points),
+                'cemetery' => $this->queryBuilder->buildCemeteryQuery($points),
+                'ways' => $this->queryBuilder->buildWaysQuery($points),
+            ]);
         });
     }
 }
