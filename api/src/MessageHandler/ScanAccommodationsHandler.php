@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Accommodation\AccommodationMetadataExtractor;
+use App\Accommodation\SeasonalityCheckerInterface;
 use App\ApiResource\Model\Accommodation;
+use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Engine\PricingHeuristicEngine;
+use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
@@ -23,6 +26,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 // @todo #89 SRP: extract OsmAccommodationParser, AccommodationDeduplicator, AccommodationScraper
 #[AsMessageHandler]
@@ -42,6 +46,8 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         private GeoDistanceInterface $haversine,
         private GeometryDistributorInterface $distributor,
         private AccommodationMetadataExtractor $metadataExtractor,
+        private SeasonalityCheckerInterface $seasonalityChecker,
+        private TranslatorInterface $translator,
         #[Autowire(service: 'accommodation_scraper.client')]
         private HttpClientInterface $scraperClient,
         private LoggerInterface $logger,
@@ -58,7 +64,10 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages): void {
+        $request = $this->tripStateManager->getRequest($tripId);
+        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+
+        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale): void {
             // Single Overpass query using decimated route points (shared cache key with ScanAllOsmDataHandler)
             $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
@@ -75,7 +84,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             $allCandidates = $this->parseOsmElements($elements);
 
             // Distribute candidates to their nearest stage endpoint
-            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>> $candidatesByStage */
+            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>> $candidatesByStage */
             $candidatesByStage = $this->distributor->distributeByEndpoint($allCandidates, $stages);
 
             // Deduplicate + limit per stage BEFORE any scraping
@@ -90,9 +99,16 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             $retainedByStage = $this->scrapeAsync($retainedByStage);
 
             // Build Accommodation DTOs, publish per stage, and store
+            $startDate = $request?->startDate;
             foreach ($stages as $i => $stage) {
                 $accommodations = [];
+                $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
                 foreach ($retainedByStage[$i] ?? [] as $raw) {
+                    $possibleClosed = false;
+                    if (null !== $stageDate) {
+                        $possibleClosed = false === $this->seasonalityChecker->isLikelyOpen($stageDate, $raw['tags'] ?? []);
+                    }
+
                     $accommodation = new Accommodation(
                         name: $raw['name'],
                         type: $raw['type'],
@@ -102,6 +118,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         estimatedPriceMax: $raw['priceMax'],
                         isExactPrice: $raw['isExact'],
                         url: $raw['url'],
+                        possibleClosed: $possibleClosed,
                     );
 
                     $stage->addAccommodation($accommodation);
@@ -114,7 +131,21 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         'estimatedPriceMax' => $accommodation->estimatedPriceMax,
                         'isExactPrice' => $accommodation->isExactPrice,
                         'url' => $accommodation->url,
+                        'possibleClosed' => $accommodation->possibleClosed,
                     ];
+                }
+
+                // Warn if all detected accommodations are likely closed during this period
+                if ([] !== $accommodations && array_all($accommodations, static fn (array $a): bool => true === $a['possibleClosed'])) {
+                    $stage->addAlert(new Alert(
+                        type: AlertType::WARNING,
+                        message: $this->translator->trans(
+                            'alert.accommodation.seasonal_warning',
+                            ['%stage%' => $stage->dayNumber],
+                            'alerts',
+                            $locale,
+                        ),
+                    ));
                 }
 
                 $this->publisher->publish($tripId, MercureEventType::ACCOMMODATIONS_FOUND, [
@@ -132,7 +163,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
      *
      * @param list<array{id?: int, type?: string, tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>
      */
     private function parseOsmElements(array $elements): array
     {
@@ -169,6 +200,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                 'url' => $url,
                 'tagCount' => $tagCount,
                 'hasWebsite' => isset($tags['website']) || isset($tags['contact:website']),
+                'tags' => $tags,
             ];
         }
 
@@ -181,9 +213,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
      * Wave 1: main-page requests for all candidates with a website URL.
      * Wave 2: price-page requests for candidates whose main page had no price.
      *
-     * @param array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>> $retainedByStage
+     * @param array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>> $retainedByStage
      *
-     * @return array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>>
+     * @return array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>>
      */
     private function scrapeAsync(array $retainedByStage): array
     {
@@ -251,7 +283,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         }
 
         if ([] === $needsPricePage) {
-            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>> $result */
+            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>> $result */
             $result = $retainedByStage;
 
             return $result;
@@ -299,16 +331,16 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             }
         }
 
-        /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>> $result */
+        /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>> $result */
         $result = $retainedByStage;
 
         return $result;
     }
 
     /**
-     * @param list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}> $accommodations
+     * @param list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}> $accommodations
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>
      */
     private function deduplicate(array $accommodations): array
     {
