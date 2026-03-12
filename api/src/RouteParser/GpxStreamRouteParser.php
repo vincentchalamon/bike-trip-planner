@@ -6,7 +6,7 @@ namespace App\RouteParser;
 
 use App\ApiResource\Model\Coordinate;
 
-final class GpxStreamRouteParser implements RouteParserInterface
+final class GpxStreamRouteParser implements GpxRouteParserInterface
 {
     /**
      * Extracts the first track name from a GPX string.

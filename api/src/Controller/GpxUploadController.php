@@ -4,47 +4,26 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
-use App\ComputationTracker\ComputationTrackerInterface;
-use App\Engine\DistanceCalculatorInterface;
-use App\Engine\ElevationCalculatorInterface;
-use App\Engine\RouteSimplifierInterface;
-use App\Enum\ComputationName;
-use App\Enum\SourceType;
-use App\Mercure\MercureEventType;
-use App\Mercure\TripUpdatePublisherInterface;
-use App\Message\GenerateStages;
-use App\Message\ScanAllOsmData;
-use App\Repository\TripRequestRepositoryInterface;
-use App\RouteParser\GpxStreamRouteParser;
+use App\Service\GpxUploadService;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Uid\Uuid;
 
 /**
  * Handles direct GPX file uploads, bypassing the URL-based route fetching pipeline.
  *
- * The uploaded GPX content is parsed synchronously, then the same downstream
- * async pipeline (stage generation, OSM scan, etc.) is triggered via Messenger.
+ * Responsible only for HTTP adaptation (validation, request parsing, response formatting).
+ * Business logic is delegated to {@see GpxUploadService}.
  */
 final readonly class GpxUploadController
 {
     private const int MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
 
     public function __construct(
-        private GpxStreamRouteParser $gpxParser,
-        private TripRequestRepositoryInterface $tripStateManager,
-        private ComputationTrackerInterface $computationTracker,
-        private MessageBusInterface $messageBus,
-        private DistanceCalculatorInterface $distanceCalculator,
-        private ElevationCalculatorInterface $elevationCalculator,
-        private RouteSimplifierInterface $routeSimplifier,
-        private TripUpdatePublisherInterface $publisher,
+        private GpxUploadService $gpxUploadService,
     ) {
     }
 
@@ -91,7 +70,7 @@ final readonly class GpxUploadController
         }
 
         try {
-            $points = $this->gpxParser->parse($content);
+            $points = $this->gpxUploadService->parseGpx($content);
         } catch (\RuntimeException) {
             return new JsonResponse(
                 ['error' => 'Invalid GPX file: could not parse XML content.'],
@@ -106,69 +85,21 @@ final readonly class GpxUploadController
             );
         }
 
-        $title = $this->gpxParser->extractTitle($content);
-
-        // Initialize trip (same as TripCreateProcessor)
-        $tripId = Uuid::v7()->toRfc4122();
+        $title = $this->gpxUploadService->extractTitle($content);
 
         $tripRequest = new TripRequest();
         $this->applyOptionalParameters($tripRequest, $request);
 
-        $this->tripStateManager->initializeTrip($tripId, $tripRequest);
-
         $locale = $request->getPreferredLanguage(['en', 'fr']) ?? 'en';
-        $this->tripStateManager->storeLocale($tripId, $locale);
 
-        $computations = ComputationName::pipeline();
-        $this->computationTracker->initializeComputations($tripId, $computations);
-
-        // Store route data (same as FetchAndParseRouteHandler)
-        $this->tripStateManager->storeRawPoints($tripId, array_map(
-            static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
-            $points,
-        ));
-
-        $this->tripStateManager->storeSourceType($tripId, SourceType::GPX_UPLOAD->value);
-        $this->tripStateManager->storeTitle($tripId, $title);
-
-        $decimated = $this->routeSimplifier->simplify($points);
-        $this->tripStateManager->storeDecimatedPoints($tripId, array_map(
-            static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
-            $decimated,
-        ));
-
-        $totalDistance = $this->distanceCalculator->calculateTotalDistance($points);
-        $totalElevation = $this->elevationCalculator->calculateTotalAscent($points);
-        $totalElevationLoss = $this->elevationCalculator->calculateTotalDescent($points);
-
-        // Mark route computation as done (we already parsed the GPX synchronously)
-        $this->computationTracker->markRunning($tripId, ComputationName::ROUTE);
-        $this->computationTracker->markDone($tripId, ComputationName::ROUTE);
-
-        $this->publisher->publish($tripId, MercureEventType::ROUTE_PARSED, [
-            'totalDistance' => round($totalDistance, 1),
-            'totalElevation' => (int) $totalElevation,
-            'totalElevationLoss' => (int) $totalElevationLoss,
-            'sourceType' => SourceType::GPX_UPLOAD->value,
-            'title' => $title,
-        ]);
-
-        // Dispatch downstream async computations
-        $this->messageBus->dispatch(new GenerateStages($tripId));
-        $this->messageBus->dispatch(new ScanAllOsmData($tripId));
-
-        // Build initial computation status
-        $status = [];
-        foreach ($computations as $computation) {
-            $status[$computation->value] = ComputationName::ROUTE === $computation ? 'done' : 'pending';
-        }
+        $result = $this->gpxUploadService->createTrip($points, $title, $tripRequest, $locale);
 
         return new JsonResponse([
             '@context' => '/contexts/Trip',
-            '@id' => '/trips/'.$tripId,
+            '@id' => '/trips/'.$result['tripId'],
             '@type' => 'Trip',
-            'id' => $tripId,
-            'computationStatus' => $status,
+            'id' => $result['tripId'],
+            'computationStatus' => $result['computationStatus'],
         ], Response::HTTP_ACCEPTED);
     }
 

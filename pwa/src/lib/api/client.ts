@@ -1,5 +1,5 @@
 import createClient from "openapi-fetch";
-import type { paths } from "./schema";
+import type { operations, paths } from "./schema";
 import { API_URL } from "@/lib/constants";
 
 function getBrowserLocale(): string {
@@ -116,13 +116,12 @@ export async function scrapeAccommodation(
   return res.json() as Promise<ScrapedData>;
 }
 
-export interface GpxUploadResponse {
-  "@context": string;
-  "@id": string;
-  "@type": string;
-  id: string;
-  computationStatus: Record<string, string>;
-}
+/**
+ * Response type for GPX upload, derived from the OpenAPI specification.
+ * Single source of truth: backend DTO -> OpenAPI spec -> typegen -> this type.
+ */
+export type GpxUploadResponse =
+  operations["gpxUpload"]["responses"]["202"]["content"]["application/json"];
 
 /**
  * Upload a GPX file to create a new trip.

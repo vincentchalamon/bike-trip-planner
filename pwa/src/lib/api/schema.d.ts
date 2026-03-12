@@ -92,6 +92,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/gpx-upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a GPX file to create a trip
+         * @description Parses the GPX file synchronously, creates a trip, and dispatches async computations (stage generation, OSM scan).
+         */
+        post: operations["gpxUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{id}": {
         parameters: {
             query?: never;
@@ -739,6 +759,87 @@ export interface operations {
                     "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    gpxUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GPX file upload with optional trip parameters */
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description GPX file (max 15 MB)
+                     */
+                    gpxFile: string;
+                    /**
+                     * Format: date
+                     * @description Trip start date
+                     */
+                    startDate?: string;
+                    /**
+                     * Format: date
+                     * @description Trip end date
+                     */
+                    endDate?: string;
+                    /** @description Fatigue factor (0-1) */
+                    fatigueFactor?: number;
+                    /** @description Elevation penalty factor */
+                    elevationPenalty?: number;
+                    /** @description E-bike mode */
+                    ebikeMode?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Trip created from GPX upload */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example /contexts/Trip */
+                        "@context": string;
+                        /** @example /trips/01234567-89ab-cdef-0123-456789abcdef */
+                        "@id": string;
+                        /** @example Trip */
+                        "@type": string;
+                        /** Format: uuid */
+                        id: string;
+                        computationStatus: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            /** @description Bad request (missing file, invalid extension, empty file) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error?: string;
+                    };
+                };
+            };
+            /** @description Unprocessable entity (invalid GPX, no track points) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error?: string;
+                    };
                 };
             };
         };
