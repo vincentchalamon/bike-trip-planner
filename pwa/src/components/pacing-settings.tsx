@@ -192,7 +192,7 @@ export function PacingSettings({
           <input
             id="max-distance-per-day"
             type="range"
-            min={10}
+            min={30}
             max={300}
             step={5}
             value={maxDistancePerDay}
