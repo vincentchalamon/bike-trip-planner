@@ -252,8 +252,7 @@ export function Timeline({
                       }
                       onExpandAccommodationRadius={
                         onExpandAccommodationRadius
-                          ? (r) =>
-                              onExpandAccommodationRadius(originalIndex, r)
+                          ? (r) => onExpandAccommodationRadius(originalIndex, r)
                           : undefined
                       }
                       newAccKey={newAccKey}
