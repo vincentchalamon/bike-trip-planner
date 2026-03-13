@@ -271,6 +271,7 @@ export function useTripPlanner() {
       pois: [],
       accommodations: [],
       accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
+      isRestDay: false,
     };
     const updatedStages = stages.map((s) => ({ ...s }));
     updatedStages.splice(afterIndex + 1, 0, placeholder);
