@@ -117,9 +117,9 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
             $target = $base * ($fatigueFactor ** $day) - $elevationPenaltyPerDay;
             $target = max(self::MINIMUM_STAGE_DISTANCE_KM, $target);
 
-            // Apply maxDistancePerDay cap after the pacing formula
-            if (null !== $maxDistancePerDay && $target > $maxDistancePerDay) {
-                $target = $maxDistancePerDay;
+            // Cap to rider profile maximum (always above the minimum by DTO validation)
+            if (null !== $maxDistancePerDay) {
+                $target = min($target, $maxDistancePerDay);
             }
 
             $targets[] = $target;
