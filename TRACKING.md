@@ -40,9 +40,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-02.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Résumé des alertes visible dans le panneau trip
-  - [ ] Badge de difficulté avec jauge colorée par étape
-  - [ ] Barre de progression reflétant l'avancement du trip
+  - [ ] ~~Résumé des alertes visible dans le panneau trip~~
+  - [x] Badge de difficulté avec jauge colorée par étape
+  - [x] Barre de progression reflétant l'avancement du trip
 
 ---
 
@@ -58,9 +58,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-03.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Distance hébergement-endPoint affichée
-  - [ ] Modification du rayon de recherche + résultats mis à jour
-  - [ ] Sélection d'un hébergement → recalcul itinéraire (endPoint + startPoint étape suivante)
+  - [x] Distance hébergement-endPoint affichée
+  - [x] Modification du rayon de recherche + résultats mis à jour
+  - [x] Sélection d'un hébergement → recalcul itinéraire (endPoint + startPoint étape suivante)
   - [ ] Responsive : vérifier sur mobile
 
 ---
