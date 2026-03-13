@@ -112,6 +112,26 @@ export interface paths {
         patch: operations["api_trips_tripIdstages_indexmove_patch"];
         trace?: never;
     };
+    "/trips/{tripId}/stages/{index}/rest-day": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Insert a rest day after a given stage. The next stage startPoint stays identical; dates shift by one day.
+         * @description Creates a Stage resource.
+         */
+        post: operations["api_trips_tripIdstages_indexrest-day_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips": {
         parameters: {
             query?: never;
@@ -176,6 +196,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        Accommodation: {
+            name?: string;
+            type?: string;
+            lat?: number;
+            lon?: number;
+            estimatedPriceMin?: number;
+            estimatedPriceMax?: number;
+            isExactPrice?: boolean;
+            url?: string | null;
+            possibleClosed?: boolean;
+            distanceToEndPoint?: number;
+        };
         "Accommodation.fit": {
             name?: string;
             type?: string;
@@ -227,6 +259,13 @@ export interface components {
             computationStatus?: {
                 [key: string]: string;
             };
+        };
+        Alert: {
+            /** @enum {string} */
+            type?: "critical" | "warning" | "nudge";
+            message?: string;
+            lat?: number | null;
+            lon?: number | null;
         };
         "Alert.fit": {
             /** @enum {string} */
@@ -360,6 +399,13 @@ export interface components {
             "@id": string;
             "@type": string;
         };
+        PointOfInterest: {
+            name?: string;
+            category?: string;
+            lat?: number;
+            lon?: number;
+            distanceFromStart?: number | null;
+        };
         "PointOfInterest.fit": {
             name?: string;
             category?: string;
@@ -380,6 +426,23 @@ export interface components {
             lat?: number;
             lon?: number;
             distanceFromStart?: number | null;
+        };
+        Stage: {
+            weather?: components["schemas"]["WeatherForecast"] | null;
+            alerts?: components["schemas"]["Alert"][];
+            pois?: components["schemas"]["PointOfInterest"][];
+            accommodations?: components["schemas"]["Accommodation"][];
+            selectedAccommodation?: components["schemas"]["Accommodation"] | null;
+            tripId?: string;
+            dayNumber?: number;
+            distance?: number;
+            elevation?: number;
+            startPoint?: components["schemas"]["Coordinate"];
+            endPoint?: components["schemas"]["Coordinate"];
+            geometry?: components["schemas"]["Coordinate"][];
+            label?: string | null;
+            elevationLoss?: number;
+            isRestDay?: boolean;
         };
         "Stage.StageRequest": {
             position?: number | null;
@@ -416,6 +479,8 @@ export interface components {
             endPoint?: components["schemas"]["Coordinate.jsonld"];
             geometry?: components["schemas"]["Coordinate.jsonld"][];
             label?: string | null;
+            /** @default false */
+            isRestDay: boolean;
         };
         "Stage.StageSelectAccommodationRequest.jsonMergePatch": {
             /** @description Latitude of the accommodation to select. */
@@ -438,6 +503,7 @@ export interface components {
             geometry?: components["schemas"]["Coordinate.fit"][];
             label?: string | null;
             elevationLoss?: number;
+            isRestDay?: boolean;
         };
         "Stage.gpx": {
             weather?: components["schemas"]["WeatherForecast.gpx"] | null;
@@ -454,6 +520,7 @@ export interface components {
             geometry?: components["schemas"]["Coordinate.gpx"][];
             label?: string | null;
             elevationLoss?: number;
+            isRestDay?: boolean;
         };
         "Stage.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             weather?: components["schemas"]["WeatherForecast.jsonld"] | null;
@@ -470,6 +537,7 @@ export interface components {
             geometry?: components["schemas"]["Coordinate.jsonld"][];
             label?: string | null;
             elevationLoss?: number;
+            isRestDay?: boolean;
         };
         "Trip.TripRequest": {
             sourceUrl: string | null;
@@ -514,6 +582,15 @@ export interface components {
             computationStatus?: {
                 [key: string]: string;
             };
+        };
+        WeatherForecast: {
+            icon?: string;
+            description?: string;
+            tempMin?: number;
+            tempMax?: number;
+            windSpeed?: number;
+            windDirection?: string;
+            precipitationProbability?: number;
         };
         "WeatherForecast.fit": {
             icon?: string;
@@ -889,6 +966,58 @@ export interface operations {
             };
             /** @description Not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    "api_trips_tripIdstages_indexrest-day_post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stage identifier */
+                tripId: string;
+                /** @description Stage identifier */
+                index: string;
+            };
+            cookie?: never;
+        };
+        /** @description The new Stage resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["Stage"];
+            };
+        };
+        responses: {
+            /** @description Stage resource created */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Stage.StageResponse.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
