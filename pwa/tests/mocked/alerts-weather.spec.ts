@@ -82,4 +82,29 @@ test.describe("Alerts and weather", () => {
       mockedPage.getByText("Analyse de l'étape...").first(),
     ).toBeVisible();
   });
+
+  test("disabling ebike mode clears terrain alerts immediately", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      terrainAlertsEvent(),
+      tripCompleteEvent(),
+    ]);
+    await expect(mockedPage.getByTestId("stage-card-1")).toContainText(
+      "Route non goudronnee sur 3km",
+    );
+
+    const ebikeToggle = mockedPage.getByRole("switch", { name: "Mode VAE" });
+    await ebikeToggle.click(); // enable
+    await ebikeToggle.click(); // disable — optimistic clear, no SSE fired
+
+    await expect(mockedPage.getByTestId("stage-card-1")).not.toContainText(
+      "Route non goudronnee sur 3km",
+    );
+  });
 });
