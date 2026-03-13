@@ -10,9 +10,7 @@ import type {
   AlertData,
 } from "@/lib/validation/schemas";
 import type { AccommodationType } from "@/lib/accommodation-types";
-import {
-  FILTERABLE_ACCOMMODATION_TYPES,
-} from "@/lib/accommodation-types";
+import { FILTERABLE_ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
 
 interface TripIdentity {
   id: string;
@@ -106,7 +104,9 @@ const initialState = {
   averageSpeed: 15,
   ebikeMode: false,
   departureHour: 8,
-  enabledAccommodationTypes: [...FILTERABLE_ACCOMMODATION_TYPES] as AccommodationType[],
+  enabledAccommodationTypes: [
+    ...FILTERABLE_ACCOMMODATION_TYPES,
+  ] as AccommodationType[],
   stages: [],
   computationStatus: {},
 };
@@ -260,7 +260,12 @@ export const useTripStore = create<TripState>()(
         state.endDate = endDate;
       }),
 
-    updatePacingSettings: (fatigueFactor, elevationPenalty, maxDistancePerDay, averageSpeed) =>
+    updatePacingSettings: (
+      fatigueFactor,
+      elevationPenalty,
+      maxDistancePerDay,
+      averageSpeed,
+    ) =>
       set((state) => {
         state.fatigueFactor = fatigueFactor;
         state.elevationPenalty = elevationPenalty;

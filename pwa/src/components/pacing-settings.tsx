@@ -74,7 +74,10 @@ function fromElevationPercent(percent: number): number {
   return percent * 5;
 }
 
-function isIncoherent(averageSpeed: number, maxDistancePerDay: number): boolean {
+function isIncoherent(
+  averageSpeed: number,
+  maxDistancePerDay: number,
+): boolean {
   return averageSpeed < 8 && maxDistancePerDay > 100;
 }
 
@@ -93,12 +96,22 @@ export function PacingSettings({
 
   function handleFatigueChange(e: React.ChangeEvent<HTMLInputElement>) {
     const percent = Number(e.target.value);
-    onUpdate(fromFatiguePercent(percent), elevationPenalty, maxDistancePerDay, averageSpeed);
+    onUpdate(
+      fromFatiguePercent(percent),
+      elevationPenalty,
+      maxDistancePerDay,
+      averageSpeed,
+    );
   }
 
   function handleElevationChange(e: React.ChangeEvent<HTMLInputElement>) {
     const percent = Number(e.target.value);
-    onUpdate(fatigueFactor, fromElevationPercent(percent), maxDistancePerDay, averageSpeed);
+    onUpdate(
+      fatigueFactor,
+      fromElevationPercent(percent),
+      maxDistancePerDay,
+      averageSpeed,
+    );
   }
 
   function handleMaxDistanceChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -138,7 +151,9 @@ export function PacingSettings({
               size="sm"
               className="h-6 px-2 text-xs"
               onClick={() => handlePreset(preset)}
-              aria-label={t("presetLabel", { preset: t(`preset_${preset.key}`) })}
+              aria-label={t("presetLabel", {
+                preset: t(`preset_${preset.key}`),
+              })}
             >
               {t(`preset_${preset.key}`)}
             </Button>
@@ -147,7 +162,10 @@ export function PacingSettings({
 
         {/* Coherence warning */}
         {showCoherenceWarning && (
-          <p className="text-xs text-amber-600 dark:text-amber-400" role="alert">
+          <p
+            className="text-xs text-amber-600 dark:text-amber-400"
+            role="alert"
+          >
             {t("coherenceWarning")}
           </p>
         )}
@@ -169,9 +187,7 @@ export function PacingSettings({
                 <HelpCircle className="h-3.5 w-3.5" />
               </button>
             </TooltipTrigger>
-            <TooltipContent>
-              {t("maxDistanceTooltip")}
-            </TooltipContent>
+            <TooltipContent>{t("maxDistanceTooltip")}</TooltipContent>
           </Tooltip>
           <input
             id="max-distance-per-day"
@@ -206,9 +222,7 @@ export function PacingSettings({
                 <HelpCircle className="h-3.5 w-3.5" />
               </button>
             </TooltipTrigger>
-            <TooltipContent>
-              {t("averageSpeedTooltip")}
-            </TooltipContent>
+            <TooltipContent>{t("averageSpeedTooltip")}</TooltipContent>
           </Tooltip>
           <input
             id="average-speed"

@@ -353,8 +353,20 @@ export function useTripPlanner() {
     newMaxDistance: number,
     newAverageSpeed: number,
   ) {
-    updatePacingSettings(newFatigue, newElevation, newMaxDistance, newAverageSpeed);
-    await patchPacingSettings(newFatigue, newElevation, newMaxDistance, newAverageSpeed, ebikeMode, true);
+    updatePacingSettings(
+      newFatigue,
+      newElevation,
+      newMaxDistance,
+      newAverageSpeed,
+    );
+    await patchPacingSettings(
+      newFatigue,
+      newElevation,
+      newMaxDistance,
+      newAverageSpeed,
+      ebikeMode,
+      true,
+    );
   }
 
   async function handleEbikeModeChange(newEbikeMode: boolean) {
@@ -372,9 +384,7 @@ export function useTripPlanner() {
     );
   }
 
-  async function handleAccommodationTypesChange(
-    newTypes: AccommodationType[],
-  ) {
+  async function handleAccommodationTypesChange(newTypes: AccommodationType[]) {
     setEnabledAccommodationTypes(newTypes);
     if (!tripId) return;
 
