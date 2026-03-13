@@ -13,7 +13,6 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -42,8 +41,7 @@ final readonly class AccommodationScanProcessor implements ProcessorInterface
             throw new NotFoundHttpException(\sprintf('Trip "%s" not found.', $tripId));
         }
 
-        $radiusKm = max(1, min($data->radiusKm, QueryBuilderInterface::MAX_ACCOMMODATION_RADIUS_KM));
-        $radiusMeters = $radiusKm * 1000;
+        $radiusMeters = $data->radiusKm * 1000;
 
         $this->computationTracker->resetComputation($tripId, ComputationName::ACCOMMODATIONS);
         $this->messageBus->dispatch(new ScanAccommodations($tripId, $radiusMeters));
