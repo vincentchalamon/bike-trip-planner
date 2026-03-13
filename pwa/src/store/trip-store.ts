@@ -76,7 +76,6 @@ interface TripState {
     elevationPenalty: number,
   ) => void;
   setEbikeMode: (ebikeMode: boolean) => void;
-  setDepartureHour: (departureHour: number) => void;
   setComputationStatus: (status: Record<string, string>) => void;
   deleteStage: (stageIndex: number) => void;
   clearTrip: () => void;
@@ -252,11 +251,6 @@ export const useTripStore = create<TripState>()(
     setEbikeMode: (ebikeMode) =>
       set((state) => {
         state.ebikeMode = ebikeMode;
-      }),
-
-    setDepartureHour: (departureHour) =>
-      set((state) => {
-        state.departureHour = departureHour;
       }),
 
     setComputationStatus: (status) =>
