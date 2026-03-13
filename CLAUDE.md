@@ -83,7 +83,7 @@ Backend PHP DTOs define the schema → API Platform exports OpenAPI spec → `np
 - **Async processing:** Symfony Messenger with Redis transport. Trip computations run asynchronously across 5 workers; status updates are pushed to the frontend via Mercure SSE.
 - **External API caching:** Redis cache for trip state (30min TTL). Filesystem cache for OSM data (24h) and weather (3h). Scoped HTTP clients prevent SSRF.
 - **Pacing formula:** `target_day_n = base_target * (0.9 ^ (n-1)) - (elevation_gain / 50)` with 30km minimum threshold.
-- **Alert engine:** New rules implement `StageAnalyzerInterface` and are auto-discovered via `#[AutowireIterator]`. Priority integers control execution order.
+- **Alert engine:** New rules implement `StageAnalyzerInterface` and are auto-discovered via `#[AutowireIterator]`. Priority integers control execution order. Standalone async checks live in `MessageHandler/Check*Handler.php` and `MessageHandler/Analyze*Handler.php`. **Whenever an alert rule is added, modified, or removed, you must update both `README.md` (alert-engine table) and `ALERT_RULE_MAP` in `api/tests/Unit/AlertDocumentationTest.php`.**
 - **E2E testing:** Mocked tests use `page.route()` for API interception and `CustomEvent('__test_mercure_event')` for SSE injection. Integration smoke test runs against the real backend.
 
 ### Security Constraints

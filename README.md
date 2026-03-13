@@ -43,7 +43,8 @@ Rules are executed in priority order (lower = higher priority):
 | **Bike shops** | — | nudge | Nearby shop sells bikes but does not offer repair service |
 | **Resupply** | — | nudge | Stage ≥ 40 km with no food/resupply POI along the route |
 | **Resupply** | — | warning | All resupply POIs on the stage are closed at estimated passage time |
-| **Water points** | — | nudge | Stretch > 30 km without a detected drinking water source |
+| **Accommodation** | — | warning | All detected accommodations on the stage are likely closed due to seasonality |
+| **Water points** | — | nudge | Stretch > 30 km without a detected drinking water source (cemeteries used as proxy — water tap required by French law) |
 
 New rules implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`.
 
