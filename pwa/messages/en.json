@@ -93,7 +93,11 @@
     "scraping": "Loading...",
     "scrapeFailed": "Could not extract data from URL",
     "loading": "Searching for accommodations...",
-    "noAccommodation": "No accommodation detected nearby."
+    "noAccommodation": "No accommodation detected nearby.",
+    "select": "Select accommodation",
+    "deselect": "Deselect accommodation",
+    "selected": "Selected",
+    "selectTooltip": "Select this accommodation as your stopover for this stage"
   },
   "addStage": {
     "add": "Add stage",
@@ -135,6 +139,8 @@
     "failedUpdatePacing": "Failed to update pacing settings.",
     "gpxUploadFailed": "Failed to upload GPX file. Please check the file and try again.",
     "retry": "Try again",
-    "tripPlannerError": "Something went wrong while loading the trip planner."
+    "tripPlannerError": "Something went wrong while loading the trip planner.",
+    "failedSelectAccommodation": "Failed to select accommodation.",
+    "failedDeselectAccommodation": "Failed to deselect accommodation."
   }
 }

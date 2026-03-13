@@ -27,6 +27,7 @@ interface TripState {
   fatigueFactor: number;
   elevationPenalty: number;
   ebikeMode: boolean;
+  departureHour: number;
   stages: StageData[];
   computationStatus: Record<string, string>;
 
@@ -62,6 +63,12 @@ interface TripState {
     accIndex: number,
     data: Partial<AccommodationData>,
   ) => void;
+  selectAccommodation: (
+    stageIndex: number,
+    accIndex: number,
+    nextStageIndex: number | null,
+  ) => void;
+  deselectAccommodation: (stageIndex: number) => void;
   updateTitle: (title: string) => void;
   updateDates: (startDate: string | null, endDate: string | null) => void;
   updatePacingSettings: (
@@ -85,6 +92,7 @@ const initialState = {
   fatigueFactor: 0.9,
   elevationPenalty: 50,
   ebikeMode: false,
+  departureHour: 8,
   stages: [],
   computationStatus: {},
 };
@@ -194,6 +202,33 @@ export const useTripStore = create<TripState>()(
         if (acc) {
           Object.assign(acc, data);
         }
+      }),
+
+    selectAccommodation: (stageIndex, accIndex, nextStageIndex) =>
+      set((state) => {
+        const stage = state.stages[stageIndex];
+        if (!stage) return;
+        const acc = stage.accommodations[accIndex];
+        if (!acc) return;
+        // Keep only the selected accommodation
+        stage.accommodations = [acc];
+        stage.selectedAccommodation = acc;
+        // Update stage endPoint to accommodation coordinates
+        stage.endPoint = { lat: acc.lat, lon: acc.lon, ele: 0 };
+        // Update next stage startPoint if applicable
+        if (nextStageIndex !== null) {
+          const nextStage = state.stages[nextStageIndex];
+          if (nextStage) {
+            nextStage.startPoint = { lat: acc.lat, lon: acc.lon, ele: 0 };
+          }
+        }
+      }),
+
+    deselectAccommodation: (stageIndex) =>
+      set((state) => {
+        const stage = state.stages[stageIndex];
+        if (!stage) return;
+        stage.selectedAccommodation = null;
       }),
 
     updateTitle: (title) =>

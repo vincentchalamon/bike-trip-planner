@@ -20,6 +20,7 @@ use App\State\StageCreateProcessor;
 use App\State\StageDeleteProcessor;
 use App\State\StageMoveProcessor;
 use App\State\StageProvider;
+use App\State\StageSelectAccommodationProcessor;
 use App\State\StageUpdateProcessor;
 use App\Symfony\ObjectMapper\TripTransformer;
 use Symfony\Component\ObjectMapper\Attribute\Map;
@@ -88,6 +89,19 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
             provider: StageProvider::class,
             processor: StageDeleteProcessor::class,
         ),
+        new Patch(
+            uriTemplate: '/trips/{tripId}/stages/{index}/accommodation{._format}',
+            uriVariables: [
+                'tripId' => new Link(fromClass: Stage::class),
+                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+            ],
+            status: 202,
+            openapi: new Operation(summary: 'Select or deselect an accommodation for a stage. Selecting updates stage endPoint and next stage startPoint.'),
+            input: StageSelectAccommodationRequest::class,
+            output: StageResponse::class,
+            provider: StageProvider::class,
+            processor: StageSelectAccommodationProcessor::class,
+        ),
     ],
 )]
 #[Map(target: StageResponse::class)]
@@ -103,6 +117,8 @@ final class Stage
 
     /** @var Accommodation[] */
     public array $accommodations = [];
+
+    public ?Accommodation $selectedAccommodation = null;
 
     /**
      * @param list<Coordinate> $geometry

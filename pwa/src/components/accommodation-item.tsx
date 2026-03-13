@@ -12,6 +12,8 @@ import {
   Euro,
   ExternalLink,
   Loader2,
+  CheckCircle2,
+  Circle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +48,9 @@ interface AccommodationItemProps {
   accommodation: AccommodationData;
   onUpdate: (data: Partial<AccommodationData>) => void;
   onRemove: () => void;
+  onSelect?: () => void;
+  onDeselect?: () => void;
+  isSelected?: boolean;
   initialEditing?: boolean;
 }
 
@@ -53,6 +58,9 @@ export function AccommodationItem({
   accommodation,
   onUpdate,
   onRemove,
+  onSelect,
+  onDeselect,
+  isSelected = false,
   initialEditing = false,
 }: AccommodationItemProps) {
   const t = useTranslations("accommodation");
@@ -235,9 +243,31 @@ export function AccommodationItem({
   }
 
   return (
-    <div className="relative group py-2">
+    <div
+      className={`relative group py-2 ${isSelected ? "rounded-md bg-primary/5 border border-primary/20 px-2" : ""}`}
+    >
       {/* Action buttons */}
       <div className="absolute top-2 right-0 flex gap-0.5">
+        {(onSelect || onDeselect) && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`h-6 w-6 transition-opacity cursor-pointer ${
+              isSelected
+                ? "text-primary opacity-100"
+                : "text-muted-icon opacity-100 md:opacity-0 md:group-hover:opacity-100"
+            }`}
+            onClick={isSelected ? onDeselect : onSelect}
+            aria-label={isSelected ? t("deselect") : t("select")}
+            title={isSelected ? t("deselect") : t("selectTooltip")}
+          >
+            {isSelected ? (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            ) : (
+              <Circle className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
@@ -259,8 +289,14 @@ export function AccommodationItem({
       </div>
 
       {/* Name + URL */}
-      <div className="font-semibold text-sm pr-16 flex items-center gap-2">
+      <div className="font-semibold text-sm pr-16 flex items-center gap-2 flex-wrap">
         <span>{accommodation.name}</span>
+        {isSelected && (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">
+            <CheckCircle2 className="h-3 w-3" />
+            {t("selected")}
+          </span>
+        )}
         {accommodation.url && (
           <a
             href={accommodation.url}
