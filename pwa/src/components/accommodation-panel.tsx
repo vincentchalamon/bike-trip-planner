@@ -47,11 +47,17 @@ export function AccommodationPanel({
 }: AccommodationPanelProps) {
   const t = useTranslations("accommodation");
   const [isExpanding, setIsExpanding] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
-  // Reset loader when SSE delivers updated radius
+  // Reset expand loader when SSE delivers updated radius
   useEffect(() => {
     setIsExpanding(false);
   }, [searchRadiusKm]);
+
+  // Reset remove loader when scan results arrive
+  useEffect(() => {
+    if (accommodations.length > 0) setIsRemoving(false);
+  }, [accommodations.length]);
 
   const newAccIndex =
     newAccKey && stageIndex !== undefined
@@ -91,7 +97,7 @@ export function AccommodationPanel({
   return (
     <div className="bg-muted/50 rounded-lg p-4">
       {hasNoAccommodations &&
-        (isProcessing ? (
+        (isProcessing || isRemoving ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             <span>{t("loading")}</span>
@@ -147,7 +153,10 @@ export function AccommodationPanel({
                   onClearNewAcc?.();
                 }
               }}
-              onRemove={() => onRemove(originalIndex)}
+              onRemove={() => {
+                if (isAccommodationSelected(originalIndex)) setIsRemoving(true);
+                onRemove(originalIndex);
+              }}
               onSelect={onSelect ? () => onSelect(originalIndex) : undefined}
               onDeselect={
                 isAccommodationSelected(originalIndex) ? onDeselect : undefined
