@@ -20,6 +20,7 @@ import {
   DEFAULT_ACCOMMODATION_RADIUS_KM,
 } from "@/lib/accommodation-constants";
 import type { AccommodationData, StageData } from "@/lib/validation/schemas";
+import type { AccommodationType } from "@/lib/accommodation-types";
 
 export function useTripPlanner() {
   const t = useTranslations();
@@ -88,6 +89,7 @@ export function useTripPlanner() {
           ebikeMode,
           departureHour,
           startDate: startDate ?? today,
+          enabledAccommodationTypes,
         },
       });
 
@@ -130,6 +132,7 @@ export function useTripPlanner() {
         averageSpeed,
         ebikeMode,
         startDate: startDate ?? today,
+        enabledAccommodationTypes,
       });
 
       if (error || !data) {
@@ -369,6 +372,38 @@ export function useTripPlanner() {
     );
   }
 
+  async function handleAccommodationTypesChange(
+    newTypes: AccommodationType[],
+  ) {
+    setEnabledAccommodationTypes(newTypes);
+    if (!tripId) return;
+
+    try {
+      const { error, response } = await apiClient.PATCH("/trips/{id}", {
+        params: { path: { id: tripId } },
+        headers: { "Content-Type": "application/merge-patch+json" },
+        body: {
+          fatigueFactor,
+          elevationPenalty,
+          maxDistancePerDay,
+          averageSpeed,
+          ebikeMode,
+          departureHour,
+          enabledAccommodationTypes: newTypes,
+        },
+      });
+
+      if (error) {
+        const apiError = parseApiError(response.status, error);
+        toast.error(apiError.message);
+      } else {
+        setProcessing(true);
+      }
+    } catch {
+      toast.error(t("errors.failedUpdateAccommodationTypes"));
+    }
+  }
+
   async function handleExpandAccommodationRadius(
     stageIndex: number,
     currentRadiusKm: number,
@@ -505,7 +540,7 @@ export function useTripPlanner() {
     averageSpeed,
     ebikeMode,
     enabledAccommodationTypes,
-    handleAccommodationTypesChange: setEnabledAccommodationTypes,
+    handleAccommodationTypesChange,
     updateTitle,
     updateLocalAccommodation,
     removeLocalAccommodation,

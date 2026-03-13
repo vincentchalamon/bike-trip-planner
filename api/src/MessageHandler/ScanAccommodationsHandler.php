@@ -78,7 +78,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
 
             // Use stage endpoints (not the full decimated route) so the radius applies to overnight stops only
             $endPoints = array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stagesToProcess);
-            $query = $this->queryBuilder->buildAccommodationQuery($endPoints, $radiusMeters);
+            $query = $this->queryBuilder->buildAccommodationQuery($endPoints, $radiusMeters, $message->enabledAccommodationTypes);
             $result = $this->scanner->query($query);
 
             /** @var list<array{id?: int, type?: string, tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */

@@ -175,6 +175,7 @@
     "retry": "Try again",
     "tripPlannerError": "Something went wrong while loading the trip planner.",
     "failedSelectAccommodation": "Failed to select accommodation.",
-    "failedDeselectAccommodation": "Failed to deselect accommodation."
+    "failedDeselectAccommodation": "Failed to deselect accommodation.",
+    "failedUpdateAccommodationTypes": "Failed to update accommodation type filters."
   }
 }

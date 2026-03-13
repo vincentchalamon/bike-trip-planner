@@ -58,4 +58,18 @@ final class TripRequest
     #[ApiProperty(description: 'Average cycling speed in km/h (default: 15)')]
     #[Assert\Range(min: 5, max: 50)]
     public float $averageSpeed = 15.0;
+
+    /**
+     * Enabled accommodation types for Overpass filtering.
+     * All 7 OSM tourism types are enabled by default.
+     * At least one type must remain enabled.
+     *
+     * @var list<string>
+     */
+    #[ApiProperty(description: 'Enabled OSM tourism types for accommodation search (default: all 7 types)')]
+    #[Assert\Count(min: 1, minMessage: 'At least one accommodation type must be enabled.')]
+    #[Assert\All([
+        new Assert\Choice(choices: ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel']),
+    ])]
+    public array $enabledAccommodationTypes = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel'];
 }

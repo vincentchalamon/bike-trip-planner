@@ -33,8 +33,9 @@ interface QueryBuilderInterface
 
     /**
      * @param array<int, Coordinate> $endPoints
+     * @param list<string>           $enabledTypes OSM tourism types to include (default: all 7)
      */
-    public function buildAccommodationQuery(array $endPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS): string;
+    public function buildAccommodationQuery(array $endPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS, array $enabledTypes = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel']): string;
 
     /**
      * @param list<Coordinate> $decimatedPoints
