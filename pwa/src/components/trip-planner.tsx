@@ -49,6 +49,7 @@ export function TripPlanner() {
   // sentinel div placed where the bar would normally sit.
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [isScrolledPast, setIsScrolledPast] = useState(false);
+  const hasTripData = !!trip;
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -59,7 +60,7 @@ export function TripPlanner() {
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [trip]);
+  }, [hasTripData]);
 
   return (
     <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative">
