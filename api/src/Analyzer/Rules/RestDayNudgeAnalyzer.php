@@ -62,6 +62,7 @@ final readonly class RestDayNudgeAnalyzer implements StageAnalyzerInterface
             if ($allStages[$i]->isRestDay) {
                 break;
             }
+
             ++$consecutiveCount;
         }
 

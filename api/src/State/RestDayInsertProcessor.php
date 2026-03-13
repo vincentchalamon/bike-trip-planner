@@ -29,7 +29,6 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
     }
 
     /**
-     * @param null                                $data
      * @param Post                                $operation
      * @param array{tripId?: string, index?: int} $uriVariables
      */
