@@ -92,7 +92,6 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $tripStateManager->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
         $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
@@ -164,7 +163,6 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $tripStateManager->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
         $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
@@ -235,7 +233,6 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $tripStateManager->method('getStages')->willReturn([$stage]);
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getRequest')->willReturn(null);
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
         $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
@@ -290,5 +287,86 @@ final class ScanAccommodationsHandlerTest extends TestCase
 
         $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
         $handler(new ScanAccommodations('trip-1'));
+    }
+
+    #[Test]
+    public function buildAccommodationQueryReceivesStageEndPoints(): void
+    {
+        $stage = $this->createStage('trip-1', 48.5, 2.5);
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getRequest')->willReturn(null);
+
+        $queryBuilder = $this->createMock(QueryBuilderInterface::class);
+        $queryBuilder->expects($this->once())
+            ->method('buildAccommodationQuery')
+            ->with(
+                $this->callback(static fn (array $points): bool => 1 === \count($points)
+                    && 48.5 === $points[0]->lat
+                    && 2.5 === $points[0]->lon),
+                $this->anything(),
+            )
+            ->willReturn('query');
+
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('query')->willReturn(['elements' => []]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByEndpoint')->willReturn([]);
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
+        $handler(new ScanAccommodations('trip-1'));
+    }
+
+    #[Test]
+    public function secondDispatchDoesNotAccumulateAccommodations(): void
+    {
+        $stage = $this->createStage('trip-2', 48.5, 2.5);
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getRequest')->willReturn(null);
+
+        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
+        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
+
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('query')->willReturn([
+            'elements' => [
+                ['lat' => 48.6, 'lon' => 2.6, 'tags' => ['tourism' => 'hotel', 'name' => 'Hotel A']],
+            ],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByEndpoint')->willReturn([
+            0 => [['name' => 'Hotel A', 'type' => 'hotel', 'lat' => 48.6, 'lon' => 2.6,
+                'priceMin' => 50.0, 'priceMax' => 100.0, 'isExact' => false,
+                'url' => null, 'tagCount' => 2, 'hasWebsite' => false, 'tags' => []]],
+        ]);
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inKilometers')->willReturn(1.0);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->exactly(2))
+            ->method('publish')
+            ->with(
+                'trip-2',
+                MercureEventType::ACCOMMODATIONS_FOUND,
+                $this->callback(static fn (array $d): bool => 1 === \count($d['accommodations']))
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
+        $handler(new ScanAccommodations('trip-2'));
+        $handler(new ScanAccommodations('trip-2'));
+
+        $this->assertCount(1, $stage->accommodations);
     }
 }
