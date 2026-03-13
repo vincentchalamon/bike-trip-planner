@@ -76,7 +76,8 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             // Note: endPoint intentionally not reverted — accommodation coords serve as
             // stage boundary until Valhalla (ADR-017) provides proper re-route.
             $this->messageBus->dispatch(new ScanAccommodations($tripId));
-            $this->messageBus->dispatch(new RecalculateStages($tripId, [$index]));
+            $affectedDeselect = isset($stages[$index + 1]) ? [$index, $index + 1] : [$index];
+            $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect));
 
             return $this->objectMapper->map($stage, StageResponse::class);
         }
