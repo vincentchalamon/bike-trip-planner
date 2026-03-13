@@ -7,12 +7,14 @@ interface UiState {
   isProcessing: boolean;
   sseConnected: boolean;
   expandedCalendar: boolean;
+  isConfigPanelOpen: boolean;
   error: { type: string; message: string } | null;
   activeDayNumber: number | null;
 
   setProcessing: (value: boolean) => void;
   setSseConnected: (value: boolean) => void;
   setExpandedCalendar: (value: boolean) => void;
+  setConfigPanelOpen: (value: boolean) => void;
   setError: (error: { type: string; message: string } | null) => void;
   setActiveDayNumber: (dayNumber: number | null) => void;
 }
@@ -24,6 +26,7 @@ interface UiState {
  * - `isProcessing` — whether an async backend computation is in flight
  * - `sseConnected` — whether the Mercure SSE connection is active
  * - `expandedCalendar` — whether the date picker panel is open
+ * - `isConfigPanelOpen` — whether the configuration sidebar is open
  * - `error` — global error banner state (type + message), or `null`
  * - `activeDayNumber` — the day number currently highlighted across the UI
  *   (progress bar, map, elevation profile); `null` means no active day
@@ -36,6 +39,7 @@ export const useUiStore = create<UiState>()(
     isProcessing: false,
     sseConnected: false,
     expandedCalendar: false,
+    isConfigPanelOpen: false,
     error: null,
     activeDayNumber: null,
 
@@ -52,6 +56,11 @@ export const useUiStore = create<UiState>()(
     setExpandedCalendar: (value) =>
       set((state) => {
         state.expandedCalendar = value;
+      }),
+
+    setConfigPanelOpen: (value) =>
+      set((state) => {
+        state.isConfigPanelOpen = value;
       }),
 
     setError: (error) =>

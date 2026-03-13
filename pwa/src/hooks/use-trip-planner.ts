@@ -55,8 +55,14 @@ export function useTripPlanner() {
   const averageSpeed = useTripStore((s) => s.averageSpeed);
   const ebikeMode = useTripStore((s) => s.ebikeMode);
   const departureHour = useTripStore((s) => s.departureHour);
+  const enabledAccommodationTypes = useTripStore(
+    (s) => s.enabledAccommodationTypes,
+  );
   const updatePacingSettings = useTripStore((s) => s.updatePacingSettings);
   const setEbikeMode = useTripStore((s) => s.setEbikeMode);
+  const setEnabledAccommodationTypes = useTripStore(
+    (s) => s.setEnabledAccommodationTypes,
+  );
   const updateStageAlerts = useTripStore((s) => s.updateStageAlerts);
   const isProcessing = useUiStore((s) => s.isProcessing);
   const setProcessing = useUiStore((s) => s.setProcessing);
@@ -498,6 +504,8 @@ export function useTripPlanner() {
     maxDistancePerDay,
     averageSpeed,
     ebikeMode,
+    enabledAccommodationTypes,
+    handleAccommodationTypesChange: setEnabledAccommodationTypes,
     updateTitle,
     updateLocalAccommodation,
     removeLocalAccommodation,
