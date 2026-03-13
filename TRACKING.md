@@ -10,11 +10,11 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
-| 1 | [#88](https://github.com/vincentchalamon/bike-trip-planner/issues/88) | Alerte calendrier : dimanches | S | 1 | — |
-| 2 | [#63](https://github.com/vincentchalamon/bike-trip-planner/issues/63) | Détection des pentes raides | S | 1 | — |
-| 3 | [#66](https://github.com/vincentchalamon/bike-trip-planner/issues/66) | Détecter les points de charge VAE | S | 1 | — |
-| 4 | [#58](https://github.com/vincentchalamon/bike-trip-planner/issues/58) | Détection des points d'eau | M | 1 | — |
-| 5 | [#54](https://github.com/vincentchalamon/bike-trip-planner/issues/54) | Correction des dénivelés sous-estimés | M | 1 | — |
+| 1 | [#88](https://github.com/vincentchalamon/bike-trip-planner/issues/88) | Alerte calendrier : dimanches | S | [#110](https://github.com/vincentchalamon/bike-trip-planner/pull/110) `feature/88` | — |
+| 2 | [#63](https://github.com/vincentchalamon/bike-trip-planner/issues/63) | Détection des pentes raides | S | [#111](https://github.com/vincentchalamon/bike-trip-planner/pull/111) `feature/63` | — |
+| 3 | [#66](https://github.com/vincentchalamon/bike-trip-planner/issues/66) | Détecter les points de charge VAE | S | [#112](https://github.com/vincentchalamon/bike-trip-planner/pull/112) `feature/66` | — |
+| 4 | [#58](https://github.com/vincentchalamon/bike-trip-planner/issues/58) | Détection des points d'eau | M | [#116](https://github.com/vincentchalamon/bike-trip-planner/pull/116) `feature/58` | — |
+| 5 | [#54](https://github.com/vincentchalamon/bike-trip-planner/issues/54) | Correction des dénivelés sous-estimés | M | [#117](https://github.com/vincentchalamon/bike-trip-planner/pull/117) `feature/54` | — |
 
 ### Recette Sprint 1
 

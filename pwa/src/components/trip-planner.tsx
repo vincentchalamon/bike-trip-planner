@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { MagicLinkInput } from "@/components/magic-link-input";
 import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { TripSummary } from "@/components/trip-summary";
-import { AlertsSummaryPanel } from "@/components/alerts-summary-panel";
 import { TripHeader } from "@/components/trip-header";
 import { PacingSettings } from "@/components/pacing-settings";
 import { StageProgressBar } from "@/components/stage-progress-bar";
@@ -80,9 +79,6 @@ export function TripPlanner() {
             isProcessing={isProcessing}
           />
 
-          {/* Alerts summary: warnings/critical vs suggestions/detections */}
-          <AlertsSummaryPanel stages={stages} />
-
           {/* Header: title + locations + calendar + pacing */}
           <TripHeader
             title={trip.title}
@@ -102,8 +98,10 @@ export function TripPlanner() {
             />
           </TripHeader>
 
-          {/* Segmented progress bar */}
-          <StageProgressBar />
+          {/* Segmented progress bar — sticky so it stays visible while scrolling */}
+          <div className="sticky top-0 z-10 bg-background py-1 -mx-4 md:-mx-6 px-4 md:px-6">
+            <StageProgressBar />
+          </div>
 
           {/* Timeline */}
           <div id="timeline">

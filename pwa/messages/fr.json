@@ -17,10 +17,6 @@
     "totalElevation": "Dénivelé total :",
     "disclaimer": "Les données détectées automatiquement peuvent contenir des erreurs."
   },
-  "alertsSummary": {
-    "alertsTitle": "Alertes",
-    "suggestionsTitle": "Suggestions et détections"
-  },
   "tripTitle": {
     "fallback": "Mon voyage",
     "placeholder": "Nom du voyage",
@@ -38,9 +34,6 @@
     "difficultyEasy": "Facile",
     "difficultyMedium": "Moyen",
     "difficultyHard": "Difficile",
-    "gaugeDistanceLabel": "{value} km",
-    "gaugeElevationLabel": "{value} m D+",
-    "gaugeSurfaceLabel": "Terrain difficile",
     "minStagesReached": "Minimum 2 étapes requises",
     "downloadGpx": "Télécharger le GPX étape {dayNumber}",
     "downloadFit": "Télécharger le FIT étape {dayNumber}",
@@ -128,7 +121,8 @@
   "progressBar": {
     "ariaLabel": "Progression du voyage par jour",
     "segmentAriaLabel": "Jour {day} — {distance} km",
-    "segmentTitle": "Jour {day} — {distance} km"
+    "segmentTitle": "Jour {day} — {distance} km",
+    "segmentLabel": "J{day} · {distance} km"
   },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",

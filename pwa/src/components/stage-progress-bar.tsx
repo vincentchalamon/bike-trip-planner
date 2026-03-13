@@ -50,10 +50,6 @@ export function StageProgressBar() {
   );
 
   const handleSegmentClick = useCallback((dayNumber: number) => {
-    // The Timeline scroll listener sets activeDayNumber as the page scrolls,
-    // so we only need to trigger the scroll here. Setting activeDayNumber
-    // prematurely would cause a flicker as the scroll listener overrides it
-    // with intermediate positions during smooth scrolling.
     const target = document.getElementById(`timeline-day-${dayNumber}`);
     if (target) {
       target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -69,7 +65,7 @@ export function StageProgressBar() {
       role="navigation"
       aria-label={t("ariaLabel")}
       data-testid="stage-progress-bar"
-      className="flex w-full gap-0.5 h-3 rounded-full overflow-hidden"
+      className="flex w-full gap-1"
     >
       {dayNumbers.map((dayNumber, index) => {
         const distance = dayDistances.get(dayNumber) ?? 0;
@@ -77,6 +73,7 @@ export function StageProgressBar() {
         const isActive = activeDayNumber === dayNumber;
         const isFirst = index === 0;
         const isLast = index === dayNumbers.length - 1;
+        const showLabel = widthPct >= 8;
 
         return (
           <button
@@ -90,19 +87,31 @@ export function StageProgressBar() {
             aria-current={isActive ? "true" : undefined}
             data-testid={`progress-segment-${dayNumber}`}
             style={{ width: `${widthPct}%` }}
-            className={[
-              "h-full transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand",
-              isActive ? "bg-brand" : "bg-brand/30 hover:bg-brand/60",
-              isFirst ? "rounded-l-full" : "",
-              isLast ? "rounded-r-full" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            className="flex flex-col gap-0.5 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand"
             title={t("segmentTitle", {
               day: dayNumber,
               distance: Math.round(distance),
             })}
-          />
+          >
+            {showLabel && (
+              <span className="text-[10px] leading-none text-muted-foreground truncate transition-colors duration-200 group-hover:text-foreground">
+                {t("segmentLabel", {
+                  day: dayNumber,
+                  distance: Math.round(distance),
+                })}
+              </span>
+            )}
+            <span
+              className={[
+                "h-1.5 w-full rounded-full transition-all duration-200",
+                isActive ? "bg-brand" : "bg-brand/30 hover:bg-brand/60",
+                isFirst ? "rounded-l-full" : "",
+                isLast ? "rounded-r-full" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            />
+          </button>
         );
       })}
     </div>

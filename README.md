@@ -8,9 +8,39 @@ A local-first bikepacking trip planner. Paste a Komoot tour URL, get a structure
 
 - **Magic Link ingestion** — Provide a Komoot tour/collection URL or Google MyMaps link; the backend fetches the route, parses elevation data, and computes a full trip plan asynchronously.
 - **Pacing engine** — Distributes distance across days accounting for cumulative fatigue and elevation gain, with a configurable minimum daily threshold.
-- **Alert engine** — Rule-based system that flags dangerous passes, exposed ridges, remote segments with no services, and weather windows.
+- **Alert engine** — Rule-based system with three severity levels (`critical`, `warning`, `nudge`) covering continuity gaps, elevation, steep gradients, surface type, traffic danger, and e-bike range. See [Alert engine](#alert-engine) for the full rule catalogue.
 - **Accommodation scanner** — Queries OpenStreetMap Overpass for bivouac spots, refuges, and gîtes near each stage end, with heuristic pricing.
 - **Local-first** — Trip data lives in-memory during a session. No account required, no persistent cloud database — computation is on-demand.
+
+## Alert engine
+
+The backend runs a pipeline of analyzers on each stage. Three severity levels are used:
+
+| Level | Color | Description |
+|-------|-------|-------------|
+| `critical` | Red | Blocking issue requiring immediate attention |
+| `warning` | Orange | Significant issue to watch |
+| `nudge` | Blue | Informational suggestion |
+
+Rules are executed in priority order (lower = higher priority):
+
+| Rule | Priority | Severity | Trigger |
+|------|----------|----------|---------|
+| **Continuity** | 5 | critical | Gap > 500 m between consecutive stages |
+| **Continuity** | 5 | warning | Gap 100–500 m between stages |
+| **Elevation** | 10 | warning | Elevation gain > 1 200 m on a stage |
+| **Steep gradient** | 20 | warning | Sustained ≥ 8 % gradient over ≥ 500 m |
+| **Surface** | 20 | warning | Unpaved section ≥ 500 m (gravel, dirt, mud, grass, sand…) |
+| **Surface** | 20 | warning | OSM surface data missing on ≥ 30 % of ways |
+| **Traffic** | 20 | critical | Primary/trunk road without cycle infrastructure ≥ 500 m |
+| **Traffic** | 20 | warning | Secondary road, no cycleway, speed limit > 50 km/h |
+| **Traffic** | 20 | nudge | Secondary road, speed limit ≤ 50 km/h |
+| **E-bike range** | 20 | warning | Day distance > effective range (80 km − elevation / 25) |
+| **Calendar** | — | nudge | Stage falls on a Sunday (businesses may be closed) |
+| **Charging points** | — | nudge | Stage with e-bike enabled and no charging point within range |
+| **Water points** | — | nudge | Stretch > 30 km without a detected drinking water source |
+
+New rules implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`.
 
 ## Architecture overview
 
