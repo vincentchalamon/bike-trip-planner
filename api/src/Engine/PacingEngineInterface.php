@@ -12,9 +12,9 @@ interface PacingEngineInterface
     /**
      * Generates stages from a decimated track using a fatigue-aware pacing formula.
      *
-     * @param list<Coordinate>      $points             Decimated track points (geometry + splitting)
-     * @param list<Coordinate>|null $rawPoints          Full-resolution points for accurate elevation calculation (falls back to $points when null)
-     * @param float|null            $maxDistancePerDay  Optional cap on daily distance (km), applied after the pacing formula
+     * @param list<Coordinate>      $points            Decimated track points (geometry + splitting)
+     * @param list<Coordinate>|null $rawPoints         Full-resolution points for accurate elevation calculation (falls back to $points when null)
+     * @param float|null            $maxDistancePerDay Optional cap on daily distance (km), applied after the pacing formula
      *
      * @return list<Stage>
      */

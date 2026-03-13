@@ -296,7 +296,7 @@ final class PacingEngineRegistryTest extends TestCase
         }
 
         // First stage with cap should not be larger than first stage without cap
-        if (!empty($stagesWithoutCap) && $stagesWithoutCap[0]->distance > 50.0) {
+        if ($stagesWithoutCap !== [] && $stagesWithoutCap[0]->distance > 50.0) {
             $this->assertLessThan($stagesWithoutCap[0]->distance, $stagesWithCap[0]->distance);
         }
     }
