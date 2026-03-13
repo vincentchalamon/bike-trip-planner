@@ -253,7 +253,12 @@ export const useTripStore = create<TripState>()(
         state.endDate = endDate;
       }),
 
-    updatePacingSettings: (fatigueFactor, elevationPenalty, maxDistancePerDay, averageSpeed) =>
+    updatePacingSettings: (
+      fatigueFactor,
+      elevationPenalty,
+      maxDistancePerDay,
+      averageSpeed,
+    ) =>
       set((state) => {
         state.fatigueFactor = fatigueFactor;
         state.elevationPenalty = elevationPenalty;
