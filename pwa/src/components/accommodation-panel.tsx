@@ -95,9 +95,7 @@ export function AccommodationPanel({
               }}
               onRemove={() => onRemove(originalIndex)}
               onSelect={onSelect ? () => onSelect(originalIndex) : undefined}
-              onDeselect={
-                isAccommodationSelected(acc) ? onDeselect : undefined
-              }
+              onDeselect={isAccommodationSelected(acc) ? onDeselect : undefined}
               initialEditing={newAccKey === `${stageIndex}-${originalIndex}`}
             />
           </div>

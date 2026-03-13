@@ -35,9 +35,7 @@ export function useTripPlanner() {
   const updateLocalAccommodation = useTripStore(
     (s) => s.updateLocalAccommodation,
   );
-  const selectAccommodationInStore = useTripStore(
-    (s) => s.selectAccommodation,
-  );
+  const selectAccommodationInStore = useTripStore((s) => s.selectAccommodation);
   const deselectAccommodationInStore = useTripStore(
     (s) => s.deselectAccommodation,
   );
@@ -67,6 +65,7 @@ export function useTripPlanner() {
           fatigueFactor,
           elevationPenalty,
           ebikeMode,
+          departureHour: 8,
           startDate: startDate ?? today,
         },
       });
@@ -152,6 +151,7 @@ export function useTripPlanner() {
           fatigueFactor,
           elevationPenalty,
           ebikeMode,
+          departureHour: 8,
         },
       });
 
@@ -296,6 +296,7 @@ export function useTripPlanner() {
           fatigueFactor: newFatigue,
           elevationPenalty: newElevation,
           ebikeMode: newEbikeMode,
+          departureHour: 8,
         },
       });
 

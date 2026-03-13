@@ -52,6 +52,26 @@ export interface paths {
         patch: operations["api_trips_tripIdstages_index_patch"];
         trace?: never;
     };
+    "/trips/{tripId}/stages/{index}/accommodation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Select or deselect an accommodation for a stage. Selecting updates stage endPoint and next stage startPoint.
+         * @description Updates the Stage resource.
+         */
+        patch: operations["api_trips_tripIdstages_indexaccommodation_patch"];
+        trace?: never;
+    };
     "/trips/{tripId}/stages/{index}/move": {
         parameters: {
             query?: never;
@@ -145,6 +165,7 @@ export interface components {
             estimatedPriceMax?: number;
             isExactPrice?: boolean;
             url?: string | null;
+            possibleClosed?: boolean;
         };
         "Accommodation.gpx": {
             name?: string;
@@ -155,6 +176,7 @@ export interface components {
             estimatedPriceMax?: number;
             isExactPrice?: boolean;
             url?: string | null;
+            possibleClosed?: boolean;
         };
         "Accommodation.jsonld": {
             name?: string;
@@ -165,6 +187,7 @@ export interface components {
             estimatedPriceMax?: number;
             isExactPrice?: boolean;
             url?: string | null;
+            possibleClosed?: boolean;
         };
         "Alert.fit": {
             /** @enum {string} */
@@ -326,6 +349,8 @@ export interface components {
             label?: string | null;
             distance?: number | null;
             toIndex?: number | null;
+            /** @description Index of the accommodation to select within the stage's accommodations list. */
+            selectedAccommodationIndex?: number | null;
         };
         "Stage.StageRequest.jsonMergePatch": {
             position?: number | null;
@@ -334,12 +359,15 @@ export interface components {
             label?: string | null;
             distance?: number | null;
             toIndex?: number | null;
+            /** @description Index of the accommodation to select within the stage's accommodations list. */
+            selectedAccommodationIndex?: number | null;
         };
         "Stage.StageResponse.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             weather?: components["schemas"]["WeatherForecast.jsonld"] | null;
             alerts?: components["schemas"]["Alert.jsonld"][];
             pois?: components["schemas"]["PointOfInterest.jsonld"][];
             accommodations?: components["schemas"]["Accommodation.jsonld"][];
+            selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
             /**
              * Format: iri-reference
              * @example https://example.com/
@@ -359,6 +387,7 @@ export interface components {
             alerts?: components["schemas"]["Alert.fit"][];
             pois?: components["schemas"]["PointOfInterest.fit"][];
             accommodations?: components["schemas"]["Accommodation.fit"][];
+            selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -374,6 +403,7 @@ export interface components {
             alerts?: components["schemas"]["Alert.gpx"][];
             pois?: components["schemas"]["PointOfInterest.gpx"][];
             accommodations?: components["schemas"]["Accommodation.gpx"][];
+            selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -389,6 +419,7 @@ export interface components {
             alerts?: components["schemas"]["Alert.jsonld"][];
             pois?: components["schemas"]["PointOfInterest.jsonld"][];
             accommodations?: components["schemas"]["Accommodation.jsonld"][];
+            selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -411,6 +442,11 @@ export interface components {
             elevationPenalty: number;
             /** @default false */
             ebikeMode: boolean;
+            /**
+             * @description Typical departure hour (0-23, default 8)
+             * @default 8
+             */
+            departureHour: number;
         };
         "Trip.TripRequest.jsonMergePatch": {
             /** Format: uri */
@@ -425,6 +461,11 @@ export interface components {
             elevationPenalty: number;
             /** @default false */
             ebikeMode: boolean;
+            /**
+             * @description Typical departure hour (0-23, default 8)
+             * @default 8
+             */
+            departureHour: number;
         };
         "Trip.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
@@ -591,6 +632,69 @@ export interface operations {
         };
     };
     api_trips_tripIdstages_index_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stage identifier */
+                tripId: string;
+                /** @description Stage identifier */
+                index: string;
+            };
+            cookie?: never;
+        };
+        /** @description The updated Stage resource */
+        requestBody: {
+            content: {
+                "application/merge-patch+json": components["schemas"]["Stage.StageRequest.jsonMergePatch"];
+            };
+        };
+        responses: {
+            /** @description Stage resource updated */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Stage.StageResponse.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_trips_tripIdstages_indexaccommodation_patch: {
         parameters: {
             query?: never;
             header?: never;
