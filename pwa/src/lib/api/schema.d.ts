@@ -488,6 +488,29 @@ export interface components {
              * @default 8
              */
             departureHour: number;
+            /**
+             * @description Maximum distance cap per day in km (default: 80)
+             * @default 80
+             */
+            maxDistancePerDay: number;
+            /**
+             * @description Average cycling speed in km/h (default: 15)
+             * @default 15
+             */
+            averageSpeed: number;
+            /**
+             * @description Enabled OSM tourism types for accommodation search (default: all 7 types)
+             * @default [
+             *       "camp_site",
+             *       "hostel",
+             *       "alpine_hut",
+             *       "chalet",
+             *       "guest_house",
+             *       "motel",
+             *       "hotel"
+             *     ]
+             */
+            enabledAccommodationTypes: string[];
         };
         "Trip.TripRequest.jsonMergePatch": {
             /** Format: uri */
@@ -507,6 +530,29 @@ export interface components {
              * @default 8
              */
             departureHour: number;
+            /**
+             * @description Maximum distance cap per day in km (default: 80)
+             * @default 80
+             */
+            maxDistancePerDay: number;
+            /**
+             * @description Average cycling speed in km/h (default: 15)
+             * @default 15
+             */
+            averageSpeed: number;
+            /**
+             * @description Enabled OSM tourism types for accommodation search (default: all 7 types)
+             * @default [
+             *       "camp_site",
+             *       "hostel",
+             *       "alpine_hut",
+             *       "chalet",
+             *       "guest_house",
+             *       "motel",
+             *       "hotel"
+             *     ]
+             */
+            enabledAccommodationTypes: string[];
         };
         "Trip.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
