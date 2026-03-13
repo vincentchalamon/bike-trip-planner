@@ -137,7 +137,6 @@ export function StageCard({
                   difficulty={difficulty}
                   distance={stage.distance}
                   elevation={stage.elevation ?? 0}
-                  alerts={stage.alerts}
                 />
               )}
             </>

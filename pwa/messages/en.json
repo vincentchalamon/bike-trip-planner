@@ -17,10 +17,6 @@
     "totalElevation": "Total elevation:",
     "disclaimer": "Automatically detected data may contain errors."
   },
-  "alertsSummary": {
-    "alertsTitle": "Alerts",
-    "suggestionsTitle": "Suggestions & Detections"
-  },
   "tripTitle": {
     "fallback": "My Trip",
     "placeholder": "Trip name",
@@ -38,9 +34,6 @@
     "difficultyEasy": "Easy",
     "difficultyMedium": "Medium",
     "difficultyHard": "Hard",
-    "gaugeDistanceLabel": "{value} km",
-    "gaugeElevationLabel": "{value} m D+",
-    "gaugeSurfaceLabel": "Difficult terrain",
     "minStagesReached": "Minimum 2 stages required",
     "downloadGpx": "Download GPX stage {dayNumber}",
     "downloadFit": "Download FIT stage {dayNumber}",
@@ -128,7 +121,8 @@
   "progressBar": {
     "ariaLabel": "Trip progress by day",
     "segmentAriaLabel": "Day {day} — {distance} km",
-    "segmentTitle": "Day {day} — {distance} km"
+    "segmentTitle": "Day {day} — {distance} km",
+    "segmentLabel": "Day {day} · {distance} km"
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",

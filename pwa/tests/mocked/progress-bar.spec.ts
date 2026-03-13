@@ -35,7 +35,10 @@ test.describe("Stage progress bar", () => {
     mockedPage,
   }) => {
     await createFullTrip();
+    // Scroll past the sentinel to reveal the sticky progress bar
+    await mockedPage.evaluate(() => window.scrollBy(0, 500));
     const seg2 = mockedPage.getByTestId("progress-segment-2");
+    await expect(seg2).toBeVisible();
     await seg2.click();
     await expect(seg2).toHaveAttribute("aria-current", "true");
   });
@@ -45,6 +48,9 @@ test.describe("Stage progress bar", () => {
     mockedPage,
   }) => {
     await createFullTrip();
+    // Scroll past the sentinel to reveal the sticky progress bar
+    await mockedPage.evaluate(() => window.scrollBy(0, 500));
+    await expect(mockedPage.getByTestId("progress-segment-2")).toBeVisible();
     await mockedPage.getByTestId("progress-segment-2").click();
     await expect(
       mockedPage.getByTestId("progress-segment-1"),
@@ -103,9 +109,19 @@ test.describe("Stage progress bar", () => {
     expect(seg1Box).not.toBeNull();
     expect(seg2Box).not.toBeNull();
 
-    if (seg1Box && seg2Box) {
-      // Allow ±5px tolerance
-      expect(seg1Box.width).toBeGreaterThan(seg2Box.width * 1.8);
+    // day1=100km, day2=50km, total=150km → seg2 starts at 100/150 ≈ 66.7% of container
+    const barBox = await mockedPage
+      .getByTestId("stage-progress-bar")
+      .boundingBox();
+    expect(barBox).not.toBeNull();
+    if (seg1Box && seg2Box && barBox) {
+      const seg1RelLeft = (seg1Box.x - barBox.x) / barBox.width;
+      const seg2RelLeft = (seg2Box.x - barBox.x) / barBox.width;
+      // seg1 is at ~0% (first day)
+      expect(seg1RelLeft).toBeLessThan(0.05);
+      // seg2 is at ~66.7% (100km / 150km total)
+      expect(seg2RelLeft).toBeGreaterThan(0.6);
+      expect(seg2RelLeft).toBeLessThan(0.75);
     }
   });
 

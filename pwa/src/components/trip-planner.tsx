@@ -1,10 +1,10 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { MagicLinkInput } from "@/components/magic-link-input";
 import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { TripSummary } from "@/components/trip-summary";
-import { AlertsSummaryPanel } from "@/components/alerts-summary-panel";
 import { TripHeader } from "@/components/trip-header";
 import { PacingSettings } from "@/components/pacing-settings";
 import { StageProgressBar } from "@/components/stage-progress-bar";
@@ -44,6 +44,24 @@ export function TripPlanner() {
     clearNewAccKey,
   } = useTripPlanner();
 
+  // Show the sticky progress bar only when its natural position has scrolled
+  // off the top of the viewport. An IntersectionObserver watches an invisible
+  // sentinel div placed where the bar would normally sit.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [isScrolledPast, setIsScrolledPast] = useState(false);
+  const hasTripData = !!trip;
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsScrolledPast(!(entry?.isIntersecting ?? true)),
+      { threshold: 0 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasTripData]);
+
   return (
     <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative">
       {/* Skip link */}
@@ -80,9 +98,6 @@ export function TripPlanner() {
             isProcessing={isProcessing}
           />
 
-          {/* Alerts summary: warnings/critical vs suggestions/detections */}
-          <AlertsSummaryPanel stages={stages} />
-
           {/* Header: title + locations + calendar + pacing */}
           <TripHeader
             title={trip.title}
@@ -102,8 +117,20 @@ export function TripPlanner() {
             />
           </TripHeader>
 
-          {/* Segmented progress bar */}
-          <StageProgressBar />
+          {/* Sentinel — marks the natural position of the progress bar in the
+              flow. The sticky bar becomes visible once this exits the viewport. */}
+          <div ref={sentinelRef} aria-hidden="true" />
+
+          {/* Segmented progress bar — sticky, visible only after scrolling past
+              the sentinel so it does not duplicate the timeline start. */}
+          <div
+            className={[
+              "sticky top-0 z-20 bg-background -mx-4 md:-mx-6 px-4 md:px-6 overflow-hidden",
+              isScrolledPast ? "py-1" : "h-0 py-0 pointer-events-none",
+            ].join(" ")}
+          >
+            <StageProgressBar />
+          </div>
 
           {/* Timeline */}
           <div id="timeline">
