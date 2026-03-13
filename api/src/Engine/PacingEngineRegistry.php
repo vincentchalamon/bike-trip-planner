@@ -40,9 +40,9 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
      * Minimum stage distance: 30km
      * An optional maxDistancePerDay cap is applied after the formula.
      *
-     * @param list<Coordinate>      $points             Decimated track points (geometry + splitting)
-     * @param list<Coordinate>|null $rawPoints          Full-resolution points for accurate elevation calculation (falls back to $points when null)
-     * @param float|null            $maxDistancePerDay  Optional cap on daily distance (km), applied after the pacing formula
+     * @param list<Coordinate>      $points            Decimated track points (geometry + splitting)
+     * @param list<Coordinate>|null $rawPoints         Full-resolution points for accurate elevation calculation (falls back to $points when null)
+     * @param float|null            $maxDistancePerDay Optional cap on daily distance (km), applied after the pacing formula
      *
      * @return list<Stage>
      */
