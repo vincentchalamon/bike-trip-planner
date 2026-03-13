@@ -36,8 +36,13 @@ Rules are executed in priority order (lower = higher priority):
 | **Traffic** | 20 | warning | Secondary road, no cycleway, speed limit > 50 km/h |
 | **Traffic** | 20 | nudge | Secondary road, speed limit ≤ 50 km/h |
 | **E-bike range** | 20 | warning | Day distance > effective range (80 km − elevation / 25) |
+| **Calendar** | — | nudge | Stage falls on a French public holiday |
 | **Calendar** | — | nudge | Stage falls on a Sunday (businesses may be closed) |
-| **Charging points** | — | nudge | Stage with e-bike enabled and no charging point within range |
+| **Wind** | — | warning | Headwind ≥ 25 km/h on ≥ 60 % of stages with weather data |
+| **Bike shops** | — | nudge | No repair shop within 2 km of stage midpoint (trips > 5 stages) |
+| **Bike shops** | — | nudge | Nearby shop sells bikes but does not offer repair service |
+| **Resupply** | — | nudge | Stage ≥ 40 km with no food/resupply POI along the route |
+| **Resupply** | — | warning | All resupply POIs on the stage are closed at estimated passage time |
 | **Water points** | — | nudge | Stretch > 30 km without a detected drinking water source |
 
 New rules implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`.
