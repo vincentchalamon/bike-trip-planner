@@ -91,9 +91,10 @@ security-check: ## Run Security Check
 test-e2e: ## Run Playwright End-to-End tests
 	@docker run --network host \
 		-w /app -v $(CURDIR)/pwa:/app \
+		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.58.2-noble \
-		/bin/sh -c 'npm ci; npx playwright test'
+		/bin/sh -c 'npm ci; npx playwright test $(ARGS)'
 
 playwright: test-e2e ## Alias for "test-e2e"
 
