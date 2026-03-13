@@ -19,7 +19,7 @@ import type { AccommodationData } from "@/lib/validation/schemas";
 import { scrapeAccommodation } from "@/lib/api/client";
 import { isValidHttpsUrl } from "@/lib/validation/url";
 import { SCRAPE_DEBOUNCE_MS } from "@/lib/constants";
-import { formatPrice } from "@/lib/formatters";
+import { formatPrice, formatDistanceKm } from "@/lib/formatters";
 
 const typeIcons: Record<string, React.ElementType> = {
   hotel: Hotel,
@@ -106,6 +106,7 @@ export function AccommodationItem({
     typeLabelKeys[accommodation.type as keyof typeof typeLabelKeys] ??
     "type_other";
   const typeLabel = t(typeKey);
+  const distLabel = formatDistanceKm(accommodation.distanceToEndPoint ?? 0);
 
   function startEditing() {
     setEditUrl(accommodation.url ?? "");
@@ -273,7 +274,7 @@ export function AccommodationItem({
         )}
       </div>
 
-      {/* Type icon + label + price */}
+      {/* Type icon + label + price + distance to end point */}
       <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <TypeIcon className="h-3.5 w-3.5" />
@@ -283,6 +284,12 @@ export function AccommodationItem({
           <div className="flex items-center gap-1">
             <Euro className="h-3.5 w-3.5" />
             <span>{formatPrice(accommodation)}</span>
+          </div>
+        )}
+        {distLabel && (
+          <div className="flex items-center gap-1">
+            <MapPin className="h-3.5 w-3.5" />
+            <span>{distLabel}</span>
           </div>
         )}
       </div>

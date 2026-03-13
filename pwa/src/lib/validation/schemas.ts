@@ -42,6 +42,7 @@ export const AccommodationSchema = z.object({
   isExactPrice: z.boolean(),
   url: z.string().nullable().optional(),
   possibleClosed: z.boolean().default(false),
+  distanceToEndPoint: z.number().default(0),
 });
 
 export const StageDataSchema = z.object({

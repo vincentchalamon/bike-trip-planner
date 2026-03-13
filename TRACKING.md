@@ -50,7 +50,7 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
-| 1 | [#38](https://github.com/vincentchalamon/bike-trip-planner/issues/38) | Distance hébergement-endPoint | S | 1 | — |
+| 1 | [#38](https://github.com/vincentchalamon/bike-trip-planner/issues/38) | Distance hébergement-endPoint | S | [#167](https://github.com/vincentchalamon/bike-trip-planner/pull/167) `feature/38` | — |
 | 2 | [#37](https://github.com/vincentchalamon/bike-trip-planner/issues/37) | Rayon de recherche | M | 1 | — |
 | 3 | [#39](https://github.com/vincentchalamon/bike-trip-planner/issues/39) | Sélectionner un hébergement | L | 2 | — |
 

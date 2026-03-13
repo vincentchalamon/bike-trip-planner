@@ -16,6 +16,7 @@ final readonly class Accommodation
         public bool $isExactPrice,
         public ?string $url = null,
         public bool $possibleClosed = false,
+        public float $distanceToEndPoint = 0.0,
     ) {
     }
 }
