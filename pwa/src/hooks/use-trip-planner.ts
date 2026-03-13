@@ -353,9 +353,6 @@ export function useTripPlanner() {
     const nextRadius = currentRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;
     if (nextRadius > MAX_ACCOMMODATION_RADIUS_KM) return;
 
-    // Optimistic: clear only this stage's accommodations so the loading spinner appears
-    updateStageAccommodations(stageIndex, []);
-
     try {
       const ok = await scanAccommodations(tripId, nextRadius, stageIndex);
       if (ok) {

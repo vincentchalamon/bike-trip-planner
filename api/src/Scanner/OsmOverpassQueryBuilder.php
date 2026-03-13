@@ -50,7 +50,7 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
     }
 
     /**
-     * @param list<Coordinate> $endPoints
+     * @param array<int, Coordinate> $endPoints
      */
     public function buildAccommodationQuery(array $endPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS): string
     {

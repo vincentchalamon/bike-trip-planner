@@ -70,15 +70,11 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale, $radiusMeters, $stageIndex): void {
-            // When scoping to a specific stage, only query that endpoint
-            // $originalIndices maps 0-based distributor position → original stage index
-            if (null !== $stageIndex && isset($stages[$stageIndex])) {
-                $stagesToProcess = [$stages[$stageIndex]];
-                $originalIndices = [$stageIndex];
-            } else {
-                $stagesToProcess = array_values($stages);
-                $originalIndices = array_keys($stages);
-            }
+            // Preserve original stage keys so distributor output maps directly without re-mapping
+            $isExpandScan = null !== $stageIndex;
+            $stagesToProcess = ($isExpandScan && isset($stages[$stageIndex]))
+                ? [$stageIndex => $stages[$stageIndex]]
+                : $stages;
 
             // Use stage endpoints (not the full decimated route) so the radius applies to overnight stops only
             $endPoints = array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stagesToProcess);
@@ -91,16 +87,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             // Phase 1: Parse OSM elements into candidates (no HTTP)
             $allCandidates = $this->parseOsmElements($elements);
 
-            // Distribute candidates to their nearest stage endpoint
-            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>> $candidatesByStageRaw */
-            $candidatesByStageRaw = $this->distributor->distributeByEndpoint($allCandidates, $stagesToProcess);
-
-            // Re-map 0-based distributor keys back to original stage indices
+            // Distribute candidates to their nearest stage endpoint (output keys match $stagesToProcess keys)
             /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>> $candidatesByStage */
-            $candidatesByStage = [];
-            foreach ($candidatesByStageRaw as $pos => $candidates) {
-                $candidatesByStage[$originalIndices[$pos]] = $candidates;
-            }
+            $candidatesByStage = $this->distributor->distributeByEndpoint($allCandidates, $stagesToProcess);
 
             // Deduplicate + limit per stage BEFORE any scraping
             $retainedByStage = [];
@@ -115,12 +104,40 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
 
             // Build Accommodation DTOs, publish per stage, and store
             $startDate = $request?->startDate;
-            foreach ($originalIndices as $pos => $i) {
-                $stage = $stagesToProcess[$pos];
+            foreach ($stagesToProcess as $i => $stage) {
                 $accommodations = [];
-                $stage->accommodations = []; // Reset before each scan: ScanAccommodations may run multiple times (GenerateStages + RecalculateStages)
+
+                if ($isExpandScan) {
+                    // Expand scan: keep existing accommodations, add only new unique ones
+                    $existingKeys = [];
+                    foreach ($stage->accommodations as $existing) {
+                        $existingKeys[\sprintf('%F,%F', $existing->lat, $existing->lon)] = true;
+                        $accommodations[] = [
+                            'name' => $existing->name,
+                            'type' => $existing->type,
+                            'lat' => $existing->lat,
+                            'lon' => $existing->lon,
+                            'estimatedPriceMin' => $existing->estimatedPriceMin,
+                            'estimatedPriceMax' => $existing->estimatedPriceMax,
+                            'isExactPrice' => $existing->isExactPrice,
+                            'url' => $existing->url,
+                            'possibleClosed' => $existing->possibleClosed,
+                            'distanceToEndPoint' => $existing->distanceToEndPoint,
+                        ];
+                    }
+                } else {
+                    // Full scan: reset before populating
+                    $stage->accommodations = [];
+                    $existingKeys = [];
+                }
+
                 $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
                 foreach ($retainedByStage[$i] ?? [] as $raw) {
+                    $key = \sprintf('%F,%F', $raw['lat'], $raw['lon']);
+                    if (isset($existingKeys[$key])) {
+                        continue; // skip duplicates when expanding
+                    }
+
                     $possibleClosed = false;
                     if ($stageDate instanceof \DateTimeImmutable) {
                         $possibleClosed = false === $this->seasonalityChecker->isLikelyOpen($stageDate, $raw['tags'] ?? []);
