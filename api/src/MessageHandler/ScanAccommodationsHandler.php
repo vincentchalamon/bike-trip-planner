@@ -109,6 +109,13 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         $possibleClosed = false === $this->seasonalityChecker->isLikelyOpen($stageDate, $raw['tags'] ?? []);
                     }
 
+                    $distanceToEndPoint = $this->haversine->inKilometers(
+                        $raw['lat'],
+                        $raw['lon'],
+                        $stage->endPoint->lat,
+                        $stage->endPoint->lon,
+                    );
+
                     $accommodation = new Accommodation(
                         name: $raw['name'],
                         type: $raw['type'],
@@ -119,6 +126,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         isExactPrice: $raw['isExact'],
                         url: $raw['url'],
                         possibleClosed: $possibleClosed,
+                        distanceToEndPoint: $distanceToEndPoint,
                     );
 
                     $stage->addAccommodation($accommodation);
@@ -132,6 +140,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         'isExactPrice' => $accommodation->isExactPrice,
                         'url' => $accommodation->url,
                         'possibleClosed' => $accommodation->possibleClosed,
+                        'distanceToEndPoint' => $accommodation->distanceToEndPoint,
                     ];
                 }
 
