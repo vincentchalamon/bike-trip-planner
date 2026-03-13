@@ -209,13 +209,15 @@ test.describe("Accommodations", () => {
     const stageCard = mockedPage.getByTestId("stage-card-1");
     const expandButton = stageCard.getByRole("button", { name: /7 km/i });
     await expect(expandButton).toBeVisible();
-    await expandButton.click();
 
-    // The request should have been made with radiusKm = 7
-    await mockedPage.waitForRequest(
+    // Set up the request promise BEFORE clicking to avoid race condition
+    const requestPromise = mockedPage.waitForRequest(
       (req) =>
         req.url().includes("/accommodations/scan") && req.method() === "POST",
     );
+    await expandButton.click();
+    await requestPromise;
+
     expect(scanRequestBody).toMatchObject({ radiusKm: 7 });
   });
 });
