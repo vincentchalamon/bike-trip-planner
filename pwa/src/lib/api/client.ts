@@ -101,19 +101,24 @@ export interface ScrapedData {
 }
 
 /**
- * Trigger an accommodation re-scan for all stages with a custom radius.
+ * Trigger an accommodation re-scan with a custom radius.
+ * When `stageIndex` is provided, only that stage's endpoint is scanned.
  * Returns `true` on success, `false` when the trip is not found or the request fails.
  */
 export async function scanAccommodations(
   tripId: string,
   radiusKm: number,
+  stageIndex?: number,
 ): Promise<boolean> {
   const res = await apiFetch(
     `/trips/${encodeURIComponent(tripId)}/accommodations/scan`,
     {
       method: "POST",
       headers: { "Content-Type": "application/ld+json" },
-      body: JSON.stringify({ radiusKm }),
+      body: JSON.stringify({
+        radiusKm,
+        ...(stageIndex !== undefined && { stageIndex }),
+      }),
     },
   );
   return res.ok;

@@ -218,6 +218,8 @@ export interface components {
              * @default 5
              */
             radiusKm: number;
+            /** @description Optional stage index to restrict the scan to a single stage */
+            stageIndex?: number | null;
         };
         "AccommodationScan.Trip.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;

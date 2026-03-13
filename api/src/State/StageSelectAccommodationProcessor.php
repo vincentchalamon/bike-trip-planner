@@ -77,7 +77,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             // stage boundary until Valhalla (ADR-017) provides proper re-route.
             $this->messageBus->dispatch(new ScanAccommodations($tripId));
             $affectedDeselect = isset($stages[$index + 1]) ? [$index, $index + 1] : [$index];
-            $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect));
+            $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect, skipAccommodationScan: true));
 
             return $this->objectMapper->map($stage, StageResponse::class);
         }
@@ -138,7 +138,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             $affectedIndices[] = $index + 1;
         }
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipAccommodationScan: true));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {

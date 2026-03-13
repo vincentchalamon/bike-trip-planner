@@ -44,7 +44,7 @@ final readonly class AccommodationScanProcessor implements ProcessorInterface
         $radiusMeters = $data->radiusKm * 1000;
 
         $this->computationTracker->resetComputation($tripId, ComputationName::ACCOMMODATIONS);
-        $this->messageBus->dispatch(new ScanAccommodations($tripId, $radiusMeters));
+        $this->messageBus->dispatch(new ScanAccommodations($tripId, $radiusMeters, $data->stageIndex));
 
         $statuses = $this->computationTracker->getStatuses($tripId) ?? [];
 

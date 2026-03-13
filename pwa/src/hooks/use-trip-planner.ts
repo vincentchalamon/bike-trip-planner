@@ -344,17 +344,20 @@ export function useTripPlanner() {
     );
   }
 
-  async function handleExpandAccommodationRadius(currentRadiusKm: number) {
+  async function handleExpandAccommodationRadius(
+    stageIndex: number,
+    currentRadiusKm: number,
+  ) {
     if (!tripId) return;
 
     const nextRadius = currentRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;
     if (nextRadius > MAX_ACCOMMODATION_RADIUS_KM) return;
 
-    // Optimistic: clear accommodations so the loading spinner appears
-    stages.forEach((_, i) => updateStageAccommodations(i, []));
+    // Optimistic: clear only this stage's accommodations so the loading spinner appears
+    updateStageAccommodations(stageIndex, []);
 
     try {
-      const ok = await scanAccommodations(tripId, nextRadius);
+      const ok = await scanAccommodations(tripId, nextRadius, stageIndex);
       if (ok) {
         setProcessing(true);
       } else {

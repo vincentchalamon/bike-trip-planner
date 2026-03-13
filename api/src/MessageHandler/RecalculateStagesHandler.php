@@ -74,7 +74,10 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         // Dispatch POI/Accommodation/BikeShop scans for affected stages
         if ([] !== $affectedIndices) {
             $this->messageBus->dispatch(new ScanPois($tripId));
-            $this->messageBus->dispatch(new ScanAccommodations($tripId));
+            if (!$message->skipAccommodationScan) {
+                $this->messageBus->dispatch(new ScanAccommodations($tripId));
+            }
+
             $this->messageBus->dispatch(new CheckBikeShops($tripId));
             $this->messageBus->dispatch(new AnalyzeTerrain($tripId));
         }

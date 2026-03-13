@@ -59,6 +59,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
     {
         $tripId = $message->tripId;
         $radiusMeters = $message->radiusMeters;
+        $stageIndex = $message->stageIndex;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -68,9 +69,19 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         $request = $this->tripStateManager->getRequest($tripId);
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
-        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale, $radiusMeters): void {
+        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale, $radiusMeters, $stageIndex): void {
+            // When scoping to a specific stage, only query that endpoint
+            // $originalIndices maps 0-based distributor position → original stage index
+            if (null !== $stageIndex && isset($stages[$stageIndex])) {
+                $stagesToProcess = [$stages[$stageIndex]];
+                $originalIndices = [$stageIndex];
+            } else {
+                $stagesToProcess = array_values($stages);
+                $originalIndices = array_keys($stages);
+            }
+
             // Use stage endpoints (not the full decimated route) so the radius applies to overnight stops only
-            $endPoints = array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stages);
+            $endPoints = array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stagesToProcess);
             $query = $this->queryBuilder->buildAccommodationQuery($endPoints, $radiusMeters);
             $result = $this->scanner->query($query);
 
@@ -81,8 +92,15 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             $allCandidates = $this->parseOsmElements($elements);
 
             // Distribute candidates to their nearest stage endpoint
+            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>> $candidatesByStageRaw */
+            $candidatesByStageRaw = $this->distributor->distributeByEndpoint($allCandidates, $stagesToProcess);
+
+            // Re-map 0-based distributor keys back to original stage indices
             /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>> $candidatesByStage */
-            $candidatesByStage = $this->distributor->distributeByEndpoint($allCandidates, $stages);
+            $candidatesByStage = [];
+            foreach ($candidatesByStageRaw as $pos => $candidates) {
+                $candidatesByStage[$originalIndices[$pos]] = $candidates;
+            }
 
             // Deduplicate + limit per stage BEFORE any scraping
             $retainedByStage = [];
@@ -97,7 +115,8 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
 
             // Build Accommodation DTOs, publish per stage, and store
             $startDate = $request?->startDate;
-            foreach ($stages as $i => $stage) {
+            foreach ($originalIndices as $pos => $i) {
+                $stage = $stagesToProcess[$pos];
                 $accommodations = [];
                 $stage->accommodations = []; // Reset before each scan: ScanAccommodations may run multiple times (GenerateStages + RecalculateStages)
                 $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
@@ -168,9 +187,12 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                 }
 
                 $this->publisher->publish($tripId, MercureEventType::ACCOMMODATIONS_FOUND, $payload);
+
+                // Update the stage in the full stages array
+                $stages[$i] = $stage;
             }
 
-            $this->tripStateManager->storeStages($tripId, $stages);
+            $this->tripStateManager->storeStages($tripId, array_values($stages));
         });
     }
 
