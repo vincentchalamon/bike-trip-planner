@@ -135,6 +135,8 @@ test.describe("Pacing settings", () => {
       name: "Vitesse moyenne (km/h)",
     });
     await averageSpeedSlider.fill("7");
-    await expect(mockedPage.getByRole("alert")).toBeVisible();
+    await expect(
+      mockedPage.getByRole("alert").filter({ hasText: "vitesse" }),
+    ).toBeVisible();
   });
 });

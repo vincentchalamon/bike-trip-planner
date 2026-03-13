@@ -57,7 +57,7 @@ test.describe("Title editing", () => {
     });
     // Suggestion banner with "Appliquer" button
     await expect(
-      mockedPage.getByRole("button", { name: "Appliquer" }),
+      mockedPage.getByRole("button", { name: "Appliquer", exact: true }),
     ).toBeVisible({ timeout: 5000 });
     await expect(mockedPage.getByText("Suggestion :")).toBeVisible();
   });
