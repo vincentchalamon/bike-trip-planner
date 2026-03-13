@@ -11,8 +11,14 @@ import {
   parseApiError,
   isNetworkError,
   uploadGpxFile,
+  scanAccommodations,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
+import {
+  MAX_ACCOMMODATION_RADIUS_KM,
+  ACCOMMODATION_RADIUS_STEP_KM,
+  DEFAULT_ACCOMMODATION_RADIUS_KM,
+} from "@/lib/accommodation-constants";
 import type { AccommodationData, StageData } from "@/lib/validation/schemas";
 
 export function useTripPlanner() {
@@ -229,6 +235,7 @@ export function useTripPlanner() {
       alerts: [],
       pois: [],
       accommodations: [],
+      accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
     };
     const updatedStages = stages.map((s) => ({ ...s }));
     updatedStages.splice(afterIndex + 1, 0, placeholder);
@@ -328,6 +335,24 @@ export function useTripPlanner() {
       newEbikeMode,
       false,
     );
+  }
+
+  async function handleExpandAccommodationRadius(currentRadiusKm: number) {
+    if (!tripId) return;
+
+    const nextRadius = currentRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;
+    if (nextRadius > MAX_ACCOMMODATION_RADIUS_KM) return;
+
+    try {
+      const ok = await scanAccommodations(tripId, nextRadius);
+      if (ok) {
+        setProcessing(true);
+      } else {
+        toast.error(t("errors.unexpectedError"));
+      }
+    } catch {
+      toast.error(t("errors.unexpectedError"));
+    }
   }
 
   function handleAddAccommodation(stageIndex: number) {
@@ -444,6 +469,7 @@ export function useTripPlanner() {
     handleAddAccommodation,
     handleSelectAccommodation,
     handleDeselectAccommodation,
+    handleExpandAccommodationRadius,
     clearNewAccKey: () => setNewAccKey(null),
   };
 }

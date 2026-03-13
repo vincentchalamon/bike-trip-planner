@@ -173,6 +173,16 @@ export async function mockAllApis(
       }),
     }),
   );
+
+  // POST /trips/{id}/accommodations/scan — re-scan accommodations with custom radius
+  await page.route("**/trips/*/accommodations/scan", (route, request) => {
+    if (request.method() !== "POST") return route.fallback();
+    return route.fulfill({
+      status: 202,
+      contentType: "application/ld+json",
+      body: JSON.stringify(defaultTripResponse),
+    });
+  });
 }
 
 function placeNameFromCoords(lat: number, lon: number): string {

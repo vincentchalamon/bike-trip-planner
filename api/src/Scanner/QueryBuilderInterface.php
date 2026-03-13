@@ -11,6 +11,14 @@ use App\ApiResource\Model\Coordinate;
  */
 interface QueryBuilderInterface
 {
+    public const int DEFAULT_ACCOMMODATION_RADIUS_METERS = 5000;
+
+    public const int MAX_ACCOMMODATION_RADIUS_METERS = 15000;
+
+    public const int MAX_ACCOMMODATION_RADIUS_KM = self::MAX_ACCOMMODATION_RADIUS_METERS / 1000;
+
+    public const int DEFAULT_ACCOMMODATION_RADIUS_KM = self::DEFAULT_ACCOMMODATION_RADIUS_METERS / 1000;
+
     /**
      * @param list<Coordinate> $decimatedPoints
      */
@@ -26,7 +34,7 @@ interface QueryBuilderInterface
     /**
      * @param list<Coordinate> $decimatedPoints
      */
-    public function buildAccommodationQuery(array $decimatedPoints): string;
+    public function buildAccommodationQuery(array $decimatedPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS): string;
 
     /**
      * @param list<Coordinate> $decimatedPoints

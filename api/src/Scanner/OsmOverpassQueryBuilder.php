@@ -10,8 +10,6 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
 {
     private const int AROUND_RADIUS_METERS = 2000;
 
-    private const int ACCOMMODATION_RADIUS_METERS = 5000;
-
     private const int WAYS_RADIUS_METERS = 100;
 
     /**
@@ -54,13 +52,13 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
     /**
      * @param list<Coordinate> $decimatedPoints
      */
-    public function buildAccommodationQuery(array $decimatedPoints): string
+    public function buildAccommodationQuery(array $decimatedPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS): string
     {
         $polyline = $this->buildPolyline($decimatedPoints);
 
         return \sprintf(
             '[out:json][timeout:15];(nwr["tourism"~"^(camp_site|hostel|hotel|motel|guest_house|chalet|alpine_hut)$"](around:%d,%s););out center 100;',
-            self::ACCOMMODATION_RADIUS_METERS,
+            $radiusMeters,
             $polyline,
         );
     }

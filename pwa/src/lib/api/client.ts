@@ -101,6 +101,25 @@ export interface ScrapedData {
 }
 
 /**
+ * Trigger an accommodation re-scan for all stages with a custom radius.
+ * Returns `true` on success, `false` when the trip is not found or the request fails.
+ */
+export async function scanAccommodations(
+  tripId: string,
+  radiusKm: number,
+): Promise<boolean> {
+  const res = await apiFetch(
+    `/trips/${encodeURIComponent(tripId)}/accommodations/scan`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ radiusKm }),
+    },
+  );
+  return res.ok;
+}
+
+/**
  * Scrape accommodation metadata from the given URL via the backend proxy.
  * @returns Scraped data, or `null` when the URL is unsupported or the request fails.
  */
