@@ -8,9 +8,10 @@ import { AddAccommodationButton } from "@/components/add-accommodation-button";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import type { AccommodationData } from "@/lib/validation/schemas";
-
-const MAX_ACCOMMODATION_RADIUS_KM = 15;
-const ACCOMMODATION_RADIUS_STEP_KM = 2;
+import {
+  MAX_ACCOMMODATION_RADIUS_KM,
+  ACCOMMODATION_RADIUS_STEP_KM,
+} from "@/lib/accommodation-constants";
 
 interface AccommodationPanelProps {
   accommodations: AccommodationData[];

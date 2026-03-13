@@ -212,7 +212,10 @@ test.describe("Accommodations", () => {
     await expandButton.click();
 
     // The request should have been made with radiusKm = 7
-    await mockedPage.waitForTimeout(200);
+    await mockedPage.waitForRequest(
+      (req) =>
+        req.url().includes("/accommodations/scan") && req.method() === "POST",
+    );
     expect(scanRequestBody).toMatchObject({ radiusKm: 7 });
   });
 });

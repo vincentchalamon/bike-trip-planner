@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\ApiResource;
 
 use ApiPlatform\Metadata\ApiProperty;
+use App\Scanner\QueryBuilderInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -13,6 +14,6 @@ use Symfony\Component\Validator\Constraints as Assert;
 final class AccommodationScanRequest
 {
     #[ApiProperty(description: 'Search radius in km (default: 5, max: 15, step: 2)')]
-    #[Assert\Range(min: 1, max: 15)]
+    #[Assert\Range(min: 1, max: QueryBuilderInterface::MAX_ACCOMMODATION_RADIUS_KM)]
     public int $radiusKm = 5;
 }

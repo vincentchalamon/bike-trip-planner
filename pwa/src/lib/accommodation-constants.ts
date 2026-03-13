@@ -1,0 +1,2 @@
+export const MAX_ACCOMMODATION_RADIUS_KM = 15;
+export const ACCOMMODATION_RADIUS_STEP_KM = 2;

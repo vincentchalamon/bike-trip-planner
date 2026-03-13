@@ -14,6 +14,10 @@ import {
   scanAccommodations,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
+import {
+  MAX_ACCOMMODATION_RADIUS_KM,
+  ACCOMMODATION_RADIUS_STEP_KM,
+} from "@/lib/accommodation-constants";
 import type { AccommodationData, StageData } from "@/lib/validation/schemas";
 
 export function useTripPlanner() {
@@ -338,8 +342,8 @@ export function useTripPlanner() {
   ) {
     if (!tripId) return;
 
-    const nextRadius = currentRadiusKm + 2;
-    if (nextRadius > 15) return;
+    const nextRadius = currentRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;
+    if (nextRadius > MAX_ACCOMMODATION_RADIUS_KM) return;
 
     try {
       const ok = await scanAccommodations(tripId, nextRadius);
