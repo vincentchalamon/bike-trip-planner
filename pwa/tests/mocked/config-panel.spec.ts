@@ -2,29 +2,49 @@ import { test, expect } from "../fixtures/base.fixture";
 import { routeParsedEvent } from "../fixtures/mock-data";
 
 test.describe("ConfigPanel", () => {
-  test("opens via gear button", async ({ submitUrl, injectEvent, mockedPage }) => {
+  test("opens via gear button", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
-    await mockedPage.getByRole("button", { name: "Ouvrir les paramètres" }).click();
+    await mockedPage
+      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .click();
     await expect(
       mockedPage.getByRole("dialog", { name: "Paramètres" }),
     ).toBeVisible();
   });
 
-  test("closes via ✕ button", async ({ submitUrl, injectEvent, mockedPage }) => {
+  test("closes via ✕ button", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
-    await mockedPage.getByRole("button", { name: "Ouvrir les paramètres" }).click();
+    await mockedPage
+      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .click();
     const dialog = mockedPage.getByRole("dialog", { name: "Paramètres" });
     await expect(dialog).toBeVisible();
-    await mockedPage.getByRole("button", { name: "Fermer les paramètres" }).click();
+    await mockedPage
+      .getByRole("button", { name: "Fermer les paramètres" })
+      .click();
     await expect(dialog).not.toBeInViewport();
   });
 
-  test("closes via backdrop click", async ({ submitUrl, injectEvent, mockedPage }) => {
+  test("closes via backdrop click", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
-    await mockedPage.getByRole("button", { name: "Ouvrir les paramètres" }).click();
+    await mockedPage
+      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .click();
     const dialog = mockedPage.getByRole("dialog", { name: "Paramètres" });
     await expect(dialog).toBeVisible();
     // Click the backdrop (outside the panel)
@@ -32,10 +52,16 @@ test.describe("ConfigPanel", () => {
     await expect(dialog).not.toBeInViewport();
   });
 
-  test("closes via Escape key", async ({ submitUrl, injectEvent, mockedPage }) => {
+  test("closes via Escape key", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
-    await mockedPage.getByRole("button", { name: "Ouvrir les paramètres" }).click();
+    await mockedPage
+      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .click();
     const dialog = mockedPage.getByRole("dialog", { name: "Paramètres" });
     await expect(dialog).toBeVisible();
     await mockedPage.keyboard.press("Escape");
@@ -49,13 +75,24 @@ test.describe("ConfigPanel", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
-    await mockedPage.getByRole("button", { name: "Ouvrir les paramètres" }).click();
+    await mockedPage
+      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .click();
     await expect(
       mockedPage.getByRole("dialog", { name: "Paramètres" }),
     ).toBeVisible();
 
     // Disable all types except one by clicking each enabled switch
-    const typeLabels = ["Hôtel", "Auberge", "Camping", "Gîte", "Chambre d'hôte", "Motel", "Refuge", "Autre"];
+    const typeLabels = [
+      "Hôtel",
+      "Auberge",
+      "Camping",
+      "Gîte",
+      "Chambre d'hôte",
+      "Motel",
+      "Refuge",
+      "Autre",
+    ];
     // Keep only the first type enabled — disable the rest
     for (const label of typeLabels.slice(1)) {
       const switchEl = mockedPage.getByRole("switch", { name: label });
