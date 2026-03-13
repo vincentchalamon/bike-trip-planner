@@ -69,7 +69,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale, $radiusMeters): void {
-            // Query accommodations around stage endpoints only — accommodations are where cyclists stop for the night
+            // Use stage endpoints (not the full decimated route) so the radius applies to overnight stops only
             $endPoints = array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stages);
             $query = $this->queryBuilder->buildAccommodationQuery($endPoints, $radiusMeters);
             $result = $this->scanner->query($query);
@@ -99,7 +99,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             $startDate = $request?->startDate;
             foreach ($stages as $i => $stage) {
                 $accommodations = [];
-                $stage->accommodations = [];
+                $stage->accommodations = []; // Reset before each scan: ScanAccommodations may run multiple times (GenerateStages + RecalculateStages)
                 $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
                 foreach ($retainedByStage[$i] ?? [] as $raw) {
                     $possibleClosed = false;
