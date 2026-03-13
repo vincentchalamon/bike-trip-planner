@@ -89,7 +89,12 @@ security-check: ## Run Security Check
 	@docker compose --profile provisioning run --rm --entrypoint "" provisioner symfony check:security
 
 test-e2e: ## Run Playwright End-to-End tests
-	@docker compose exec pwa npx playwright test
+	@docker run --network host \
+		-w /app -v $(CURDIR)/pwa:/app \
+		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
+		--rm --ipc=host \
+		mcr.microsoft.com/playwright:v1.58.2-noble \
+		/bin/sh -c 'npm install; npx playwright test $(ARGS)'
 
 playwright: test-e2e ## Alias for "test-e2e"
 

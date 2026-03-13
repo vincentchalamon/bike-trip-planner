@@ -126,7 +126,6 @@ services:
       NODE_ENV: development
       # Development usage only
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
-      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/chromium-browser
     volumes:
       - ./pwa/:/app
       - .docker/pwa/:/usr/local/bin/docker
