@@ -46,7 +46,7 @@ Rules are executed in priority order (lower = higher priority):
 | **Accommodation** | — | warning | All detected accommodations on the stage are likely closed due to seasonality |
 | **Water points** | — | nudge | Stretch > 30 km without a detected drinking water source (cemeteries used as proxy — water tap required by French law) |
 
-New rules implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`.
+**Terrain rules** (Continuity, Elevation, Steep gradient, Surface, Traffic, E-bike range) implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`. Rules with `—` priority (Calendar, Wind, Bike shops, Resupply, Accommodation, Water points) are separate async Symfony Message handlers.
 
 ## Architecture overview
 
