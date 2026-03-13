@@ -1,6 +1,7 @@
 /**
  * All supported accommodation types for filtering.
- * Mirrors the OSM/backend type values used in AccommodationData.
+ * Mirrors OSM tourism tags used in App\Scanner\OsmOverpassQueryBuilder on the backend.
+ * Keep in sync with the PHP source.
  */
 export const ACCOMMODATION_TYPES = [
   "hotel",

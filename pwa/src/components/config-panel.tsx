@@ -68,9 +68,31 @@ export function ConfigPanel({
 
   // Trap focus inside panel when open
   useEffect(() => {
-    if (isOpen) {
-      panelRef.current?.focus();
+    if (!isOpen) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const focusable = panel.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    function handleTab(e: KeyboardEvent) {
+      if (e.key !== "Tab") return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
     }
+    panel.focus();
+    panel.addEventListener("keydown", handleTab);
+    return () => panel.removeEventListener("keydown", handleTab);
   }, [isOpen]);
 
   function handleAccommodationTypeToggle(type: AccommodationType) {

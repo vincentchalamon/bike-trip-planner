@@ -517,6 +517,7 @@ export function useTripPlanner() {
     averageSpeed,
     ebikeMode,
     enabledAccommodationTypes,
+    // Wired to backend filtering in #173 (feature/36)
     handleAccommodationTypesChange: setEnabledAccommodationTypes,
     updateTitle,
     updateLocalAccommodation,
