@@ -37,14 +37,13 @@ final readonly class AccommodationScanProcessor implements ProcessorInterface
     {
         $tripId = $uriVariables['tripId'] ?? '';
 
-        if (!$this->tripStateManager->getRequest($tripId) instanceof \App\ApiResource\TripRequest) {
+        $tripRequest = $this->tripStateManager->getRequest($tripId);
+        if (!$tripRequest instanceof \App\ApiResource\TripRequest) {
             throw new NotFoundHttpException(\sprintf('Trip "%s" not found.', $tripId));
         }
 
         $radiusMeters = $data->radiusKm * 1000;
 
-        $tripRequest = $this->tripStateManager->getRequest($tripId);
-        \assert($tripRequest instanceof \App\ApiResource\TripRequest);
         $enabledAccommodationTypes = $tripRequest->enabledAccommodationTypes;
 
         $this->computationTracker->resetComputation($tripId, ComputationName::ACCOMMODATIONS);
