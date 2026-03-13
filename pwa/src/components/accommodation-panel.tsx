@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, Info, ChevronRight } from "lucide-react";
 import { AccommodationItem } from "@/components/accommodation-item";
@@ -46,17 +46,25 @@ export function AccommodationPanel({
   searchRadiusKm = DEFAULT_ACCOMMODATION_RADIUS_KM,
 }: AccommodationPanelProps) {
   const t = useTranslations("accommodation");
-  const [isExpanding, setIsExpanding] = useState(false);
-  const [isRemoving, setIsRemoving] = useState(false);
+  // isExpanding: derived from state + prop — no effect needed.
+  // expandingFromRadius stores the radius at click time; when the SSE delivers
+  // the new radius (searchRadiusKm changes), the derived value becomes false.
+  const [expandingFromRadius, setExpandingFromRadius] = useState<number | null>(
+    null,
+  );
+  const isExpanding =
+    expandingFromRadius !== null && searchRadiusKm === expandingFromRadius;
 
-  // Reset expand loader when SSE delivers updated radius
-  useEffect(() => {
-    setIsExpanding(false);
-  }, [searchRadiusKm]);
+  // isRemoving: ref-based so the effect only mutates a ref (not state).
+  // Derived: true only while the list is empty after a selected-remove click.
+  const removingActiveRef = useRef(false);
+  const isRemoving = removingActiveRef.current && accommodations.length === 0;
 
-  // Reset remove loader when scan results arrive
+  // Reset the ref once scan results repopulate the list
   useEffect(() => {
-    if (accommodations.length > 0) setIsRemoving(false);
+    if (accommodations.length > 0) {
+      removingActiveRef.current = false;
+    }
   }, [accommodations.length]);
 
   const newAccIndex =
@@ -122,7 +130,7 @@ export function AccommodationPanel({
                       size="sm"
                       className="h-auto p-0 text-xs text-primary justify-start"
                       onClick={() => {
-                        setIsExpanding(true);
+                        setExpandingFromRadius(searchRadiusKm);
                         onExpandRadius(searchRadiusKm);
                       }}
                     >
@@ -154,7 +162,9 @@ export function AccommodationPanel({
                 }
               }}
               onRemove={() => {
-                if (isAccommodationSelected(originalIndex)) setIsRemoving(true);
+                if (isAccommodationSelected(originalIndex)) {
+                  removingActiveRef.current = true;
+                }
                 onRemove(originalIndex);
               }}
               onSelect={onSelect ? () => onSelect(originalIndex) : undefined}
@@ -179,7 +189,7 @@ export function AccommodationPanel({
             size="sm"
             className="h-auto p-0 text-xs text-primary"
             onClick={() => {
-              setIsExpanding(true);
+              setExpandingFromRadius(searchRadiusKm);
               onExpandRadius(searchRadiusKm);
             }}
           >
