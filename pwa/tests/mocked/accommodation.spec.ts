@@ -59,12 +59,12 @@ test.describe("Accommodations", () => {
     ]);
     const stageCard = mockedPage.getByTestId("stage-card-1");
     await expect(stageCard).toContainText("Camping Les Oliviers");
-    // Click remove button on first accommodation
+    // Click remove button on first accommodation (Hotel du Pont — 0.5km, sorted first by distance)
     const removeButtons = stageCard.getByRole("button", {
       name: "Supprimer l'hébergement",
     });
     await removeButtons.first().click();
-    await expect(stageCard).not.toContainText("Camping Les Oliviers");
+    await expect(stageCard).not.toContainText("Hotel du Pont");
   });
 
   test("hides distance badge when distanceToEndPoint is zero", async ({

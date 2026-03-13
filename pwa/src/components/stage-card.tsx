@@ -41,7 +41,7 @@ interface StageCardProps {
   onRemoveAccommodation: (accIndex: number) => void;
   onSelectAccommodation?: (accIndex: number) => void;
   onDeselectAccommodation?: () => void;
-  onExpandAccommodationRadius?: (currentRadiusKm: number) => void;
+  onExpandAccommodationRadius?: (currentRadiusKm: number) => Promise<boolean>;
   newAccKey?: string | null;
   stageOriginalIndex?: number;
   onClearNewAcc?: () => void;

@@ -347,21 +347,24 @@ export function useTripPlanner() {
   async function handleExpandAccommodationRadius(
     stageIndex: number,
     currentRadiusKm: number,
-  ) {
-    if (!tripId) return;
+  ): Promise<boolean> {
+    if (!tripId) return false;
 
     const nextRadius = currentRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;
-    if (nextRadius > MAX_ACCOMMODATION_RADIUS_KM) return;
+    if (nextRadius > MAX_ACCOMMODATION_RADIUS_KM) return false;
 
     try {
       const ok = await scanAccommodations(tripId, nextRadius, stageIndex);
       if (ok) {
         setProcessing(true);
+        return true;
       } else {
         toast.error(t("errors.unexpectedError"));
+        return false;
       }
     } catch {
       toast.error(t("errors.unexpectedError"));
+      return false;
     }
   }
 
@@ -436,7 +439,10 @@ export function useTripPlanner() {
         {
           params: { path: { tripId, index: String(stageIndex) } },
           headers: { "Content-Type": "application/merge-patch+json" },
-          body: { selectedAccommodationLat: null, selectedAccommodationLon: null },
+          body: {
+            selectedAccommodationLat: null,
+            selectedAccommodationLon: null,
+          },
         },
       );
       if (error) {

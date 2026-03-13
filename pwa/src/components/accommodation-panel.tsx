@@ -22,7 +22,7 @@ interface AccommodationPanelProps {
   onAdd: () => void;
   onSelect?: (accIndex: number) => void;
   onDeselect?: () => void;
-  onExpandRadius?: (currentRadiusKm: number) => void;
+  onExpandRadius?: (currentRadiusKm: number) => Promise<boolean>;
   newAccKey?: string | null;
   stageIndex?: number;
   onClearNewAcc?: () => void;
@@ -60,12 +60,12 @@ export function AccommodationPanel({
   const removingActiveRef = useRef(false);
   const isRemoving = removingActiveRef.current && accommodations.length === 0;
 
-  // Reset the ref once scan results repopulate the list
+  // Reset the ref when a scan result arrives (even empty).
+  // Ref mutation avoids a re-render here; the spinner clears on the next
+  // re-render triggered by the SSE update that changed accommodations.
   useEffect(() => {
-    if (accommodations.length > 0) {
-      removingActiveRef.current = false;
-    }
-  }, [accommodations.length]);
+    removingActiveRef.current = false;
+  }, [accommodations]);
 
   const newAccIndex =
     newAccKey && stageIndex !== undefined
@@ -129,9 +129,10 @@ export function AccommodationPanel({
                       variant="link"
                       size="sm"
                       className="h-auto p-0 text-xs text-primary justify-start"
-                      onClick={() => {
+                      onClick={async () => {
                         setExpandingFromRadius(searchRadiusKm);
-                        onExpandRadius(searchRadiusKm);
+                        const ok = await onExpandRadius(searchRadiusKm);
+                        if (!ok) setExpandingFromRadius(null);
                       }}
                     >
                       <ChevronRight className="h-3 w-3 mr-1" />
@@ -188,9 +189,10 @@ export function AccommodationPanel({
             variant="link"
             size="sm"
             className="h-auto p-0 text-xs text-primary"
-            onClick={() => {
+            onClick={async () => {
               setExpandingFromRadius(searchRadiusKm);
-              onExpandRadius(searchRadiusKm);
+              const ok = await onExpandRadius(searchRadiusKm);
+              if (!ok) setExpandingFromRadius(null);
             }}
           >
             <ChevronRight className="h-3 w-3 mr-1" />
