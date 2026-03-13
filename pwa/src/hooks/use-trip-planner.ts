@@ -8,6 +8,7 @@ import { useUiStore } from "@/store/ui-store";
 import { useMercure } from "@/hooks/use-mercure";
 import {
   apiClient,
+  apiFetch,
   parseApiError,
   isNetworkError,
   uploadGpxFile,
@@ -49,6 +50,7 @@ export function useTripPlanner() {
     (s) => s.deselectAccommodation,
   );
   const deleteStage = useTripStore((s) => s.deleteStage);
+  const insertRestDay = useTripStore((s) => s.insertRestDay);
   const fatigueFactor = useTripStore((s) => s.fatigueFactor);
   const elevationPenalty = useTripStore((s) => s.elevationPenalty);
   const ebikeMode = useTripStore((s) => s.ebikeMode);
@@ -199,6 +201,35 @@ export function useTripPlanner() {
       }
     } catch {
       toast.error(t("errors.failedDeleteStage"));
+      useTripStore.getState().setStages(snapshot);
+    }
+  }
+
+  async function handleInsertRestDay(afterIndex: number) {
+    if (!tripId) return;
+
+    const snapshot = [...stages];
+    insertRestDay(afterIndex);
+
+    try {
+      const res = await apiFetch(
+        `/trips/${encodeURIComponent(tripId)}/stages/${afterIndex}/rest-day`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/ld+json",
+            Accept: "application/ld+json",
+          },
+        },
+      );
+      if (!res.ok) {
+        toast.error(t("errors.failedInsertRestDay"));
+        useTripStore.getState().setStages(snapshot);
+      } else {
+        setProcessing(true);
+      }
+    } catch {
+      toast.error(t("errors.failedInsertRestDay"));
       useTripStore.getState().setStages(snapshot);
     }
   }
@@ -492,6 +523,7 @@ export function useTripPlanner() {
     handleSelectAccommodation,
     handleDeselectAccommodation,
     handleExpandAccommodationRadius,
+    handleInsertRestDay,
     clearNewAccKey: () => setNewAccKey(null),
   };
 }

@@ -19,6 +19,7 @@ alert.resupply.timing_warning: "Des commerces existent sur l'étape %stage%, mai
 alert.steep_gradient.warning: "Montée raide détectée : %gradient%% de pente sur %distance%m. Difficile avec un vélo chargé."
 alert.wind.warning: "Vents de face attendus pour %count%/%total% étapes (>25 km/h). Prévoyez du temps supplémentaire."
 alert.accommodation.seasonal_warning: "Tous les hébergements détectés à l'étape %stage% sont potentiellement fermés à cette période."
+alert.rest_day.nudge: "L'étape %stage% est le %days%e jour consécutif de vélo sans pause. Envisagez d'insérer un jour de repos."
 stage.label: "Étape %day%"
 weather.clear_sky: "Ciel dégagé"
 weather.mainly_clear: "Plutôt dégagé"

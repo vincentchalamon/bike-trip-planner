@@ -55,4 +55,6 @@ final class StageResponse
     public array $geometry = [];
 
     public ?string $label = null;
+
+    public bool $isRestDay = false;
 }

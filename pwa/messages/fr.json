@@ -105,6 +105,11 @@
     "add": "Ajouter une étape",
     "insufficientSpace": "Espace insuffisant pour ajouter une étape (minimum 5 km par étape)"
   },
+  "restDay": {
+    "add": "Ajouter un jour de repos",
+    "label": "Jour de repos",
+    "ariaLabel": "Insérer un jour de repos après l'étape {dayNumber}"
+  },
   "pacing": {
     "fatigue": "Indice de fatigue accumulée",
     "fatigueTooltip": "Réduit la distance de {value}% par jour pour compenser la fatigue accumulée.",
@@ -143,6 +148,7 @@
     "retry": "Réessayer",
     "tripPlannerError": "Une erreur est survenue lors du chargement du planificateur.",
     "failedSelectAccommodation": "Impossible de sélectionner l'hébergement.",
-    "failedDeselectAccommodation": "Impossible de désélectionner l'hébergement."
+    "failedDeselectAccommodation": "Impossible de désélectionner l'hébergement.",
+    "failedInsertRestDay": "Impossible d'insérer le jour de repos."
   }
 }

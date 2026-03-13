@@ -19,6 +19,7 @@ alert.resupply.timing_warning: "Shops exist on stage %stage%, but you would pass
 alert.steep_gradient.warning: "Steep climb detected: %gradient%% gradient over %distance%m. Tough with a loaded bike."
 alert.wind.warning: "Headwinds expected for %count%/%total% stages (>25 km/h). Allow extra time."
 alert.accommodation.seasonal_warning: "All detected accommodations on stage %stage% may be closed during this period."
+alert.rest_day.nudge: "Stage %stage% is day %days% of cycling without a break. Consider inserting a rest day."
 stage.label: "Stage %day%"
 weather.clear_sky: "Clear sky"
 weather.mainly_clear: "Mainly clear"

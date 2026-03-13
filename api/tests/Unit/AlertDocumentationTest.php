@@ -40,6 +40,7 @@ final class AlertDocumentationTest extends TestCase
         'steep_gradient' => 'Steep gradient',
         'wind' => 'Wind',
         'accommodation' => 'Accommodation',
+        'rest_day' => 'Rest day',
     ];
 
     /**

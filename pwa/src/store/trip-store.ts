@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 import type {
   StageData,
   WeatherData,
@@ -79,6 +80,7 @@ interface TripState {
   setEbikeMode: (ebikeMode: boolean) => void;
   setComputationStatus: (status: Record<string, string>) => void;
   deleteStage: (stageIndex: number) => void;
+  insertRestDay: (afterIndex: number) => void;
   clearTrip: () => void;
 }
 
@@ -266,6 +268,36 @@ export const useTripStore = create<TripState>()(
     deleteStage: (stageIndex) =>
       set((state) => {
         state.stages.splice(stageIndex, 1);
+        state.stages.forEach((s, i) => {
+          s.dayNumber = i + 1;
+        });
+      }),
+
+    insertRestDay: (afterIndex) =>
+      set((state) => {
+        const afterStage = state.stages[afterIndex];
+        if (!afterStage) return;
+
+        const restDay: StageData = {
+          dayNumber: afterIndex + 2,
+          distance: 0,
+          elevation: 0,
+          elevationLoss: 0,
+          startPoint: { ...afterStage.endPoint },
+          endPoint: { ...afterStage.endPoint },
+          geometry: [],
+          label: null,
+          startLabel: afterStage.endLabel ?? null,
+          endLabel: afterStage.endLabel ?? null,
+          weather: null,
+          alerts: [],
+          pois: [],
+          accommodations: [],
+          accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
+          isRestDay: true,
+        };
+
+        state.stages.splice(afterIndex + 1, 0, restDay);
         state.stages.forEach((s, i) => {
           s.dayNumber = i + 1;
         });

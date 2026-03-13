@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { TimelineMarker } from "@/components/timeline-marker";
 import { StageCard } from "@/components/stage-card";
 import { AddStageButton } from "@/components/add-stage-button";
+import { AddRestDayButton } from "@/components/add-rest-day-button";
+import { RestDayCard } from "@/components/rest-day-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUiStore } from "@/store/ui-store";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
@@ -15,6 +17,7 @@ interface TimelineProps {
   isProcessing?: boolean;
   onDeleteStage: (index: number) => void;
   onAddStage: (afterIndex: number) => void;
+  onInsertRestDay?: (afterIndex: number) => void;
   onDistanceChange?: (index: number, distance: number) => void;
   onAddAccommodation: (stageIndex: number) => void;
   onUpdateAccommodation: (
@@ -56,6 +59,7 @@ export function Timeline({
   isProcessing,
   onDeleteStage,
   onAddStage,
+  onInsertRestDay,
   onDistanceChange,
   onAddAccommodation,
   onUpdateAccommodation,
@@ -204,56 +208,69 @@ export function Timeline({
               <div className="flex items-start mb-4">
                 <div className="w-4 shrink-0" aria-hidden="true" />
                 <div className="ml-6 md:ml-12 flex-1">
-                  <StageCard
-                    stage={stage}
-                    stageIndex={originalIndex}
-                    isFirst={originalIndex === 0}
-                    isLast={originalIndex === stages.length - 1}
-                    canDelete={stages.length > 2}
-                    isProcessing={isProcessing}
-                    onDelete={() => onDeleteStage(originalIndex)}
-                    onDistanceChange={
-                      onDistanceChange
-                        ? (d) => onDistanceChange(originalIndex, d)
-                        : undefined
-                    }
-                    onAddAccommodation={() => onAddAccommodation(originalIndex)}
-                    onUpdateAccommodation={(accIdx, data) =>
-                      onUpdateAccommodation(originalIndex, accIdx, data)
-                    }
-                    onRemoveAccommodation={(accIdx) =>
-                      onRemoveAccommodation(originalIndex, accIdx)
-                    }
-                    onSelectAccommodation={
-                      onSelectAccommodation
-                        ? (accIdx) =>
-                            onSelectAccommodation(originalIndex, accIdx)
-                        : undefined
-                    }
-                    onDeselectAccommodation={
-                      onDeselectAccommodation
-                        ? () => onDeselectAccommodation(originalIndex)
-                        : undefined
-                    }
-                    onExpandAccommodationRadius={
-                      onExpandAccommodationRadius
-                        ? (r) => onExpandAccommodationRadius(originalIndex, r)
-                        : undefined
-                    }
-                    newAccKey={newAccKey}
-                    stageOriginalIndex={originalIndex}
-                    onClearNewAcc={onClearNewAcc}
-                  />
+                  {stage.isRestDay ? (
+                    <RestDayCard
+                      dayNumber={stage.dayNumber}
+                      stageIndex={originalIndex}
+                      canDelete={stages.length > 2}
+                      isProcessing={isProcessing}
+                      onDelete={() => onDeleteStage(originalIndex)}
+                    />
+                  ) : (
+                    <StageCard
+                      stage={stage}
+                      stageIndex={originalIndex}
+                      isFirst={originalIndex === 0}
+                      isLast={originalIndex === stages.length - 1}
+                      canDelete={stages.length > 2}
+                      isProcessing={isProcessing}
+                      onDelete={() => onDeleteStage(originalIndex)}
+                      onDistanceChange={
+                        onDistanceChange
+                          ? (d) => onDistanceChange(originalIndex, d)
+                          : undefined
+                      }
+                      onAddAccommodation={() =>
+                        onAddAccommodation(originalIndex)
+                      }
+                      onUpdateAccommodation={(accIdx, data) =>
+                        onUpdateAccommodation(originalIndex, accIdx, data)
+                      }
+                      onRemoveAccommodation={(accIdx) =>
+                        onRemoveAccommodation(originalIndex, accIdx)
+                      }
+                      onSelectAccommodation={
+                        onSelectAccommodation
+                          ? (accIdx) =>
+                              onSelectAccommodation(originalIndex, accIdx)
+                          : undefined
+                      }
+                      onDeselectAccommodation={
+                        onDeselectAccommodation
+                          ? () => onDeselectAccommodation(originalIndex)
+                          : undefined
+                      }
+                      onExpandAccommodationRadius={
+                        onExpandAccommodationRadius
+                          ? (r) =>
+                              onExpandAccommodationRadius(originalIndex, r)
+                          : undefined
+                      }
+                      newAccKey={newAccKey}
+                      stageOriginalIndex={originalIndex}
+                      onClearNewAcc={onClearNewAcc}
+                    />
+                  )}
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Add stage button between day groups */}
+          {/* Add stage / rest day buttons between day groups */}
           {groupIndex < dayGroups.length - 1 && (
             <div className="flex items-center mb-4">
               <TimelineMarker />
-              <div className="ml-6 md:ml-12 flex-1">
+              <div className="ml-6 md:ml-12 flex-1 flex flex-wrap gap-2">
                 <AddStageButton
                   afterIndex={
                     group.stages[group.stages.length - 1]!.originalIndex
@@ -269,6 +286,22 @@ export function Timeline({
                     )
                   }
                 />
+                {onInsertRestDay &&
+                  !group.stages[group.stages.length - 1]?.stage.isRestDay &&
+                  !dayGroups[groupIndex + 1]?.stages[0]?.stage.isRestDay && (
+                    <AddRestDayButton
+                      afterIndex={
+                        group.stages[group.stages.length - 1]!.originalIndex
+                      }
+                      dayNumber={group.dayNumber}
+                      onClick={() =>
+                        onInsertRestDay(
+                          group.stages[group.stages.length - 1]!.originalIndex,
+                        )
+                      }
+                      disabled={isProcessing}
+                    />
+                  )}
               </div>
             </div>
           )}
