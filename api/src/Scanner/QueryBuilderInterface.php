@@ -17,6 +17,8 @@ interface QueryBuilderInterface
 
     public const int MAX_ACCOMMODATION_RADIUS_KM = self::MAX_ACCOMMODATION_RADIUS_METERS / 1000;
 
+    public const int DEFAULT_ACCOMMODATION_RADIUS_KM = self::DEFAULT_ACCOMMODATION_RADIUS_METERS / 1000;
+
     /**
      * @param list<Coordinate> $decimatedPoints
      */
