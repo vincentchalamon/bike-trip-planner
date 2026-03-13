@@ -57,7 +57,7 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
     {
         // Build regex from enabled types; fall back to all types if list is empty
         $typesPattern = [] !== $enabledTypes
-            ? implode('|', array_map('preg_quote', $enabledTypes, array_fill(0, \count($enabledTypes), '/')))
+            ? implode('|', array_map(preg_quote(...), $enabledTypes, array_fill(0, \count($enabledTypes), '/')))
             : 'camp_site|hostel|alpine_hut|chalet|guest_house|motel|hotel';
 
         $filters = '';
