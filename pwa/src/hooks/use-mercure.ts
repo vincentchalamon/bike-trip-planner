@@ -7,6 +7,7 @@ import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { reverseGeocode } from "@/lib/geocode/client";
 import { toast } from "sonner";
+import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 
 const MERCURE_URL =
   process.env.NEXT_PUBLIC_MERCURE_URL ??
@@ -79,7 +80,7 @@ function dispatchEvent(event: MercureEvent): void {
             alerts: [],
             pois: [],
             accommodations: [],
-            accommodationSearchRadiusKm: 5,
+            accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
           };
         });
         store.setStages(merged);
@@ -114,8 +115,9 @@ function dispatchEvent(event: MercureEvent): void {
             pois: [],
             accommodations: endMatch ? prev.accommodations : [],
             accommodationSearchRadiusKm: endMatch
-              ? (prev.accommodationSearchRadiusKm ?? 5)
-              : 5,
+              ? (prev.accommodationSearchRadiusKm ??
+                DEFAULT_ACCOMMODATION_RADIUS_KM)
+              : DEFAULT_ACCOMMODATION_RADIUS_KM,
           };
         });
         store.setStages(stages);

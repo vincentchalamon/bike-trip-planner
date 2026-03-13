@@ -11,6 +11,7 @@ import type { AccommodationData } from "@/lib/validation/schemas";
 import {
   MAX_ACCOMMODATION_RADIUS_KM,
   ACCOMMODATION_RADIUS_STEP_KM,
+  DEFAULT_ACCOMMODATION_RADIUS_KM,
 } from "@/lib/accommodation-constants";
 
 interface AccommodationPanelProps {
@@ -42,7 +43,7 @@ export function AccommodationPanel({
   stageIndex,
   onClearNewAcc,
   isProcessing,
-  searchRadiusKm = 5,
+  searchRadiusKm = DEFAULT_ACCOMMODATION_RADIUS_KM,
 }: AccommodationPanelProps) {
   const t = useTranslations("accommodation");
   const newAccIndex =

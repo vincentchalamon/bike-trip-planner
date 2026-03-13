@@ -10,8 +10,6 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
 {
     private const int AROUND_RADIUS_METERS = 2000;
 
-    public const int ACCOMMODATION_RADIUS_STEP_METERS = 2000;
-
     private const int WAYS_RADIUS_METERS = 100;
 
     /**

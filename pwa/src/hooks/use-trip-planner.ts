@@ -17,6 +17,7 @@ import { getRandomTripName } from "@/lib/trip-utils";
 import {
   MAX_ACCOMMODATION_RADIUS_KM,
   ACCOMMODATION_RADIUS_STEP_KM,
+  DEFAULT_ACCOMMODATION_RADIUS_KM,
 } from "@/lib/accommodation-constants";
 import type { AccommodationData, StageData } from "@/lib/validation/schemas";
 
@@ -234,7 +235,7 @@ export function useTripPlanner() {
       alerts: [],
       pois: [],
       accommodations: [],
-      accommodationSearchRadiusKm: 5,
+      accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
     };
     const updatedStages = stages.map((s) => ({ ...s }));
     updatedStages.splice(afterIndex + 1, 0, placeholder);
@@ -336,10 +337,7 @@ export function useTripPlanner() {
     );
   }
 
-  async function handleExpandAccommodationRadius(
-    stageIndex: number,
-    currentRadiusKm: number,
-  ) {
+  async function handleExpandAccommodationRadius(currentRadiusKm: number) {
     if (!tripId) return;
 
     const nextRadius = currentRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;

@@ -25,10 +25,7 @@ interface TimelineProps {
   onRemoveAccommodation: (stageIndex: number, accIndex: number) => void;
   onSelectAccommodation?: (stageIndex: number, accIndex: number) => void;
   onDeselectAccommodation?: (stageIndex: number) => void;
-  onExpandAccommodationRadius?: (
-    stageIndex: number,
-    currentRadiusKm: number,
-  ) => void;
+  onExpandAccommodationRadius?: (currentRadiusKm: number) => void;
   newAccKey?: string | null;
   onClearNewAcc?: () => void;
 }
@@ -235,12 +232,7 @@ export function Timeline({
                         ? () => onDeselectAccommodation(originalIndex)
                         : undefined
                     }
-                    onExpandAccommodationRadius={
-                      onExpandAccommodationRadius
-                        ? (radiusKm) =>
-                            onExpandAccommodationRadius(originalIndex, radiusKm)
-                        : undefined
-                    }
+                    onExpandAccommodationRadius={onExpandAccommodationRadius}
                     newAccKey={newAccKey}
                     stageOriginalIndex={originalIndex}
                     onClearNewAcc={onClearNewAcc}

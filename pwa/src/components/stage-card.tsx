@@ -16,6 +16,7 @@ import { DifficultyGauge } from "@/components/difficulty-gauge";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 import { useTripStore } from "@/store/trip-store";
 import { getDifficulty } from "@/lib/constants";
+import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 
 function formatCoords(point: { lat: number; lon: number }): string {
   const latDir = point.lat >= 0 ? "N" : "S";
@@ -179,7 +180,10 @@ export function StageCard({
               stageIndex={stageOriginalIndex}
               onClearNewAcc={onClearNewAcc}
               isProcessing={isProcessing}
-              searchRadiusKm={stage.accommodationSearchRadiusKm ?? 5}
+              searchRadiusKm={
+                stage.accommodationSearchRadiusKm ??
+                DEFAULT_ACCOMMODATION_RADIUS_KM
+              }
             />
           </>
         )}

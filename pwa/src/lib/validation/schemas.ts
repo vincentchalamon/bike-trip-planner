@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 
 export const CoordinateSchema = z.object({
   lat: z.number(),
@@ -61,7 +62,11 @@ export const StageDataSchema = z.object({
   pois: z.array(PointOfInterestSchema),
   accommodations: z.array(AccommodationSchema),
   selectedAccommodation: AccommodationSchema.nullable().optional(),
-  accommodationSearchRadiusKm: z.number().int().positive().default(5),
+  accommodationSearchRadiusKm: z
+    .number()
+    .int()
+    .positive()
+    .default(DEFAULT_ACCOMMODATION_RADIUS_KM),
 });
 
 export const TripStateSchema = z.object({
