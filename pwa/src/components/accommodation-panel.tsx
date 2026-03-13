@@ -84,7 +84,8 @@ export function AccommodationPanel({
   }, [accommodations, newAccIndex]);
 
   const nextRadiusKm = searchRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;
-  const canExpand = nextRadiusKm <= MAX_ACCOMMODATION_RADIUS_KM;
+  const canExpand =
+    nextRadiusKm <= MAX_ACCOMMODATION_RADIUS_KM && !selectedAccommodation;
   const hasNoAccommodations = accommodations.length === 0;
 
   return (
