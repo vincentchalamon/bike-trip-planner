@@ -46,6 +46,12 @@ export function StageProgressBar() {
     [dayDistances],
   );
 
+  // Index of the active day (used to split past/current/future styling).
+  const activeDayIndex = useMemo(
+    () => (activeDayNumber !== null ? dayNumbers.indexOf(activeDayNumber) : -1),
+    [dayNumbers, activeDayNumber],
+  );
+
   // Cumulative left-percentage for each day's start marker (0..100).
   // Index 0 = first day = 0%, last entry = 100% (end marker).
   const cumulativePcts = useMemo(() => {
@@ -83,11 +89,23 @@ export function StageProgressBar() {
       style={{ height: 44 }}
     >
       {/* Horizontal line — inset by half-dot on each side so it runs dot-centre to dot-centre */}
+      {/* Future portion (faded) */}
       <div
-        className="absolute top-2 h-0.5 bg-brand"
+        className="absolute top-2 h-0.5 bg-brand/30"
         style={{ left: DOT_HALF, right: DOT_HALF }}
         aria-hidden="true"
       />
+      {/* Past + active portion (full brand), up to end of the active day */}
+      {activeDayIndex >= 0 && (
+        <div
+          className="absolute top-2 h-0.5 bg-brand transition-all duration-300"
+          style={{
+            left: DOT_HALF,
+            width: `calc(${cumulativePcts[activeDayIndex + 1] ?? 100}% - ${DOT_HALF}px)`,
+          }}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Day markers */}
       {dayNumbers.map((dayNumber, index) => {
@@ -95,6 +113,8 @@ export function StageProgressBar() {
         const segWidthPct = (distance / totalDistance) * 100;
         const leftPct = cumulativePcts[index] ?? 0;
         const isActive = activeDayNumber === dayNumber;
+        const isPast = activeDayIndex >= 0 ? index < activeDayIndex : false;
+        const isFuture = activeDayIndex >= 0 ? index > activeDayIndex : false;
         const showLabel = segWidthPct >= 8;
 
         return (
@@ -118,8 +138,14 @@ export function StageProgressBar() {
             {/* TimelineMarker-style dot */}
             <div
               className={cn(
-                "w-4 h-4 rounded-full border-[3px] border-brand transition-colors duration-200",
-                isActive ? "bg-brand" : "bg-background hover:bg-brand/20",
+                "w-4 h-4 rounded-full border-[3px] transition-colors duration-200",
+                isActive
+                  ? "border-brand bg-brand"
+                  : isPast
+                    ? "border-brand bg-brand/60 hover:bg-brand/80"
+                    : isFuture
+                      ? "border-brand/30 bg-background hover:border-brand/60"
+                      : "border-brand bg-background hover:bg-brand/20",
               )}
             />
             {/* Label below the dot */}
