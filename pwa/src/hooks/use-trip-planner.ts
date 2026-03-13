@@ -41,6 +41,9 @@ export function useTripPlanner() {
   const updateLocalAccommodation = useTripStore(
     (s) => s.updateLocalAccommodation,
   );
+  const updateStageAccommodations = useTripStore(
+    (s) => s.updateStageAccommodations,
+  );
   const selectAccommodationInStore = useTripStore((s) => s.selectAccommodation);
   const deselectAccommodationInStore = useTripStore(
     (s) => s.deselectAccommodation,
@@ -52,6 +55,7 @@ export function useTripPlanner() {
   const departureHour = useTripStore((s) => s.departureHour);
   const updatePacingSettings = useTripStore((s) => s.updatePacingSettings);
   const setEbikeMode = useTripStore((s) => s.setEbikeMode);
+  const updateStageAlerts = useTripStore((s) => s.updateStageAlerts);
   const isProcessing = useUiStore((s) => s.isProcessing);
   const setProcessing = useUiStore((s) => s.setProcessing);
 
@@ -329,6 +333,9 @@ export function useTripPlanner() {
 
   async function handleEbikeModeChange(newEbikeMode: boolean) {
     setEbikeMode(newEbikeMode);
+    if (!newEbikeMode) {
+      stages.forEach((_, i) => updateStageAlerts(i, [], "terrain"));
+    }
     await patchPacingSettings(
       fatigueFactor,
       elevationPenalty,
@@ -337,21 +344,27 @@ export function useTripPlanner() {
     );
   }
 
-  async function handleExpandAccommodationRadius(currentRadiusKm: number) {
-    if (!tripId) return;
+  async function handleExpandAccommodationRadius(
+    stageIndex: number,
+    currentRadiusKm: number,
+  ): Promise<boolean> {
+    if (!tripId) return false;
 
     const nextRadius = currentRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;
-    if (nextRadius > MAX_ACCOMMODATION_RADIUS_KM) return;
+    if (nextRadius > MAX_ACCOMMODATION_RADIUS_KM) return false;
 
     try {
-      const ok = await scanAccommodations(tripId, nextRadius);
+      const ok = await scanAccommodations(tripId, nextRadius, stageIndex);
       if (ok) {
         setProcessing(true);
+        return true;
       } else {
         toast.error(t("errors.unexpectedError"));
+        return false;
       }
     } catch {
       toast.error(t("errors.unexpectedError"));
+      return false;
     }
   }
 
@@ -379,6 +392,9 @@ export function useTripPlanner() {
   ) {
     if (!tripId) return;
 
+    const acc = stages[stageIndex]?.accommodations[accIndex];
+    if (!acc) return;
+
     const nextStageIndex =
       stageIndex + 1 < stages.length ? stageIndex + 1 : null;
 
@@ -391,7 +407,10 @@ export function useTripPlanner() {
         {
           params: { path: { tripId, index: String(stageIndex) } },
           headers: { "Content-Type": "application/merge-patch+json" },
-          body: { selectedAccommodationIndex: accIndex },
+          body: {
+            selectedAccommodationLat: acc.lat,
+            selectedAccommodationLon: acc.lon,
+          },
         },
       );
       if (error) {
@@ -420,7 +439,10 @@ export function useTripPlanner() {
         {
           params: { path: { tripId, index: String(stageIndex) } },
           headers: { "Content-Type": "application/merge-patch+json" },
-          body: { selectedAccommodationIndex: null },
+          body: {
+            selectedAccommodationLat: null,
+            selectedAccommodationLon: null,
+          },
         },
       );
       if (error) {

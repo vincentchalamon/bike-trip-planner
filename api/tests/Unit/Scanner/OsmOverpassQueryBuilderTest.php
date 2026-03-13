@@ -100,6 +100,23 @@ final class OsmOverpassQueryBuilderTest extends TestCase
     }
 
     #[Test]
+    public function buildAccommodationQueryGeneratesIndividualCirclesPerEndPoint(): void
+    {
+        $points = [
+            new Coordinate(48.5, 2.5),
+            new Coordinate(49.0, 3.0),
+        ];
+
+        $query = $this->builder->buildAccommodationQuery($points, 5000);
+
+        // Each endpoint gets its own around: filter — not a corridor polyline
+        $this->assertStringContainsString('(around:5000,48.500000,2.500000)', $query);
+        $this->assertStringContainsString('(around:5000,49.000000,3.000000)', $query);
+        // The two filters must be separate statements (not a single around with all coords)
+        $this->assertStringNotContainsString('around:5000,48.500000,2.500000,49.000000,3.000000', $query);
+    }
+
+    #[Test]
     public function buildAccommodationQueryContainsAccommodationTypes(): void
     {
         $points = [new Coordinate(45.0, 5.0)];

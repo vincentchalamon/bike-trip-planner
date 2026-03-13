@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, Info, ChevronRight } from "lucide-react";
 import { AccommodationItem } from "@/components/accommodation-item";
@@ -22,7 +22,7 @@ interface AccommodationPanelProps {
   onAdd: () => void;
   onSelect?: (accIndex: number) => void;
   onDeselect?: () => void;
-  onExpandRadius?: (currentRadiusKm: number) => void;
+  onExpandRadius?: (currentRadiusKm: number) => Promise<boolean>;
   newAccKey?: string | null;
   stageIndex?: number;
   onClearNewAcc?: () => void;
@@ -46,6 +46,27 @@ export function AccommodationPanel({
   searchRadiusKm = DEFAULT_ACCOMMODATION_RADIUS_KM,
 }: AccommodationPanelProps) {
   const t = useTranslations("accommodation");
+  // isExpanding: derived from state + prop — no effect needed.
+  // expandingFromRadius stores the radius at click time; when the SSE delivers
+  // the new radius (searchRadiusKm changes), the derived value becomes false.
+  const [expandingFromRadius, setExpandingFromRadius] = useState<number | null>(
+    null,
+  );
+  const isExpanding =
+    expandingFromRadius !== null && searchRadiusKm === expandingFromRadius;
+
+  // isRemoving: ref-based so the effect only mutates a ref (not state).
+  // Derived: true only while the list is empty after a selected-remove click.
+  const removingActiveRef = useRef(false);
+  const isRemoving = removingActiveRef.current && accommodations.length === 0;
+
+  // Reset the ref when a scan result arrives (even empty).
+  // Ref mutation avoids a re-render here; the spinner clears on the next
+  // re-render triggered by the SSE update that changed accommodations.
+  useEffect(() => {
+    removingActiveRef.current = false;
+  }, [accommodations]);
+
   const newAccIndex =
     newAccKey && stageIndex !== undefined
       ? parseInt(newAccKey.split("-")[1] ?? "", 10)
@@ -70,20 +91,21 @@ export function AccommodationPanel({
         if (a === newAccIndex) return 1;
         if (b === newAccIndex) return -1;
         return (
-          (accommodations[a]?.estimatedPriceMin ?? 0) -
-          (accommodations[b]?.estimatedPriceMin ?? 0)
+          (accommodations[a]?.distanceToEndPoint ?? 0) -
+          (accommodations[b]?.distanceToEndPoint ?? 0)
         );
       });
   }, [accommodations, newAccIndex]);
 
   const nextRadiusKm = searchRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;
-  const canExpand = nextRadiusKm <= MAX_ACCOMMODATION_RADIUS_KM;
+  const canExpand =
+    nextRadiusKm <= MAX_ACCOMMODATION_RADIUS_KM && !selectedAccommodation;
   const hasNoAccommodations = accommodations.length === 0;
 
   return (
     <div className="bg-muted/50 rounded-lg p-4">
       {hasNoAccommodations &&
-        (isProcessing ? (
+        (isProcessing || isRemoving ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             <span>{t("loading")}</span>
@@ -96,18 +118,31 @@ export function AccommodationPanel({
             </div>
             {canExpand && onExpandRadius && (
               <div className="flex flex-col gap-1 pl-5">
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="h-auto p-0 text-xs text-primary justify-start"
-                  onClick={() => onExpandRadius(searchRadiusKm)}
-                >
-                  <ChevronRight className="h-3 w-3 mr-1" />
-                  {t("expandRadius", { radius: nextRadiusKm })}
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  {t("suggestExpandTypes")}
-                </p>
+                {isExpanding ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>{t("loading")}</span>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs text-primary justify-start"
+                      onClick={async () => {
+                        setExpandingFromRadius(searchRadiusKm);
+                        const ok = await onExpandRadius(searchRadiusKm);
+                        if (!ok) setExpandingFromRadius(null);
+                      }}
+                    >
+                      <ChevronRight className="h-3 w-3 mr-1" />
+                      {t("expandRadius", { radius: nextRadiusKm })}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      {t("suggestExpandTypes")}
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -127,7 +162,12 @@ export function AccommodationPanel({
                   onClearNewAcc?.();
                 }
               }}
-              onRemove={() => onRemove(originalIndex)}
+              onRemove={() => {
+                if (isAccommodationSelected(originalIndex)) {
+                  removingActiveRef.current = true;
+                }
+                onRemove(originalIndex);
+              }}
               onSelect={onSelect ? () => onSelect(originalIndex) : undefined}
               onDeselect={
                 isAccommodationSelected(originalIndex) ? onDeselect : undefined
@@ -137,13 +177,23 @@ export function AccommodationPanel({
           </div>
         );
       })}
-      {!hasNoAccommodations && canExpand && onExpandRadius && (
+      {!hasNoAccommodations && isExpanding && (
+        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <span>{t("loading")}</span>
+        </div>
+      )}
+      {!hasNoAccommodations && canExpand && onExpandRadius && !isExpanding && (
         <div className="mt-2">
           <Button
             variant="link"
             size="sm"
             className="h-auto p-0 text-xs text-primary"
-            onClick={() => onExpandRadius(searchRadiusKm)}
+            onClick={async () => {
+              setExpandingFromRadius(searchRadiusKm);
+              const ok = await onExpandRadius(searchRadiusKm);
+              if (!ok) setExpandingFromRadius(null);
+            }}
           >
             <ChevronRight className="h-3 w-3 mr-1" />
             {t("expandRadius", { radius: nextRadiusKm })}

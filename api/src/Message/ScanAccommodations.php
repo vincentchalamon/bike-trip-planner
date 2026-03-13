@@ -11,6 +11,7 @@ final readonly class ScanAccommodations
     public function __construct(
         public string $tripId,
         public int $radiusMeters = QueryBuilderInterface::DEFAULT_ACCOMMODATION_RADIUS_METERS,
+        public ?int $stageIndex = null,
     ) {
     }
 }

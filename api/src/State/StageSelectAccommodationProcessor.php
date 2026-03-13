@@ -9,7 +9,6 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\StageResponse;
 use App\ApiResource\StageSelectAccommodationRequest;
-use App\Engine\DistanceCalculatorInterface;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
@@ -33,10 +32,10 @@ use Symfony\Component\ObjectMapper\ObjectMapperInterface;
  * - selectedAccommodation is cleared on the stage.
  * - A new accommodation search is triggered to repopulate options.
  *
- * Note: Full route recalculation via Valhalla (ADR-017) is not yet implemented.
- * The geometry update is approximated using a straight-line distance between
- * the updated start/end points. Once Valhalla integration is complete, the
- * RecalculateRouteSegment message handler will replace this approximation.
+ * Note: Selecting an accommodation updates the stage endPoint marker but does NOT
+ * change the stage distance or geometry — those reflect the actual GPX route and
+ * must not be overwritten with a straight-line approximation. Route recalculation
+ * via Valhalla (ADR-017) is not yet implemented.
  *
  * @implements ProcessorInterface<StageSelectAccommodationRequest, StageResponse>
  */
@@ -45,7 +44,6 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
-        private DistanceCalculatorInterface $distanceCalculator,
         private ObjectMapperInterface $objectMapper,
     ) {
     }
@@ -69,7 +67,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         $stage = $stages[$index];
 
         // Deselect: clear selected accommodation and trigger a new accommodation scan
-        if (null === $data->selectedAccommodationIndex) {
+        if (null === $data->selectedAccommodationLat || null === $data->selectedAccommodationLon) {
             $stage->selectedAccommodation = null;
             $stages[$index] = $stage;
             $this->tripStateManager->storeStages($tripId, $stages);
@@ -77,33 +75,33 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             // stage boundary until Valhalla (ADR-017) provides proper re-route.
             $this->messageBus->dispatch(new ScanAccommodations($tripId));
             $affectedDeselect = isset($stages[$index + 1]) ? [$index, $index + 1] : [$index];
-            $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect));
+            $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect, skipAccommodationScan: true));
 
             return $this->objectMapper->map($stage, StageResponse::class);
         }
 
-        $accIndex = $data->selectedAccommodationIndex;
+        $lat = $data->selectedAccommodationLat;
+        $lon = $data->selectedAccommodationLon;
 
-        if (!isset($stage->accommodations[$accIndex])) {
-            throw new UnprocessableEntityHttpException(\sprintf('Accommodation at index %d not found for stage %d.', $accIndex, $index));
+        $selected = null;
+        foreach ($stage->accommodations as $accommodation) {
+            if (abs($accommodation->lat - $lat) < 1e-6 && abs($accommodation->lon - $lon) < 1e-6) {
+                $selected = $accommodation;
+                break;
+            }
         }
 
-        $selected = $stage->accommodations[$accIndex];
+        if (null === $selected) {
+            throw new UnprocessableEntityHttpException(\sprintf('Accommodation at coordinates (%F, %F) not found for stage %d.', $lat, $lon, $index));
+        }
 
         // Keep only the selected accommodation (remove others)
         $stage->accommodations = [$selected];
         $stage->selectedAccommodation = $selected;
 
-        // Update stage endPoint to the accommodation coordinates
+        // Update stage endPoint to the accommodation coordinates (marker only)
+        // Distance and geometry are intentionally preserved from the original GPX route
         $stage->endPoint = new \App\ApiResource\Model\Coordinate($selected->lat, $selected->lon);
-
-        // Update distance with straight-line approximation
-        // TODO: Replace with Valhalla route recalculation (ADR-017) once available
-        $stage->distance = $this->distanceCalculator->distanceBetween(
-            $stage->startPoint,
-            $stage->endPoint,
-        ) / 1000.0;
-        $stage->geometry = [$stage->startPoint, $stage->endPoint];
 
         $stages[$index] = $stage;
 
@@ -111,15 +109,6 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         if (isset($stages[$index + 1])) {
             $nextStage = $stages[$index + 1];
             $nextStage->startPoint = $stage->endPoint;
-
-            // Recalculate next stage distance with straight-line approximation
-            // TODO: Replace with Valhalla route recalculation (ADR-017) once available
-            $nextStage->distance = $this->distanceCalculator->distanceBetween(
-                $nextStage->startPoint,
-                $nextStage->endPoint,
-            ) / 1000.0;
-            $nextStage->geometry = [$nextStage->startPoint, $nextStage->endPoint];
-
             $stages[$index + 1] = $nextStage;
         }
 
@@ -131,7 +120,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             $affectedIndices[] = $index + 1;
         }
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipAccommodationScan: true));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {

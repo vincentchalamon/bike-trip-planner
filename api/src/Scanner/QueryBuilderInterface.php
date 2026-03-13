@@ -32,9 +32,9 @@ interface QueryBuilderInterface
     public function buildBatchPoiQuery(array $stageGeometries): string;
 
     /**
-     * @param list<Coordinate> $decimatedPoints
+     * @param array<int, Coordinate> $endPoints
      */
-    public function buildAccommodationQuery(array $decimatedPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS): string;
+    public function buildAccommodationQuery(array $endPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS): string;
 
     /**
      * @param list<Coordinate> $decimatedPoints

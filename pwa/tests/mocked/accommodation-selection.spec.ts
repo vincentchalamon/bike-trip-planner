@@ -75,15 +75,15 @@ test.describe("Accommodation selection", () => {
     await expect(stageCard).toContainText("Camping Les Oliviers");
     await expect(stageCard).toContainText("Hotel du Pont");
 
-    // Select the first accommodation
+    // Select the first accommodation (Hotel du Pont — 0.5km, sorted first by distance)
     const selectButtons = stageCard.getByRole("button", {
       name: "Sélectionner cet hébergement",
     });
     await selectButtons.first().click();
 
-    // Only one accommodation should remain
-    await expect(stageCard).toContainText("Camping Les Oliviers");
-    await expect(stageCard).not.toContainText("Hotel du Pont");
+    // Only the selected accommodation should remain (Hotel du Pont; Camping removed)
+    await expect(stageCard).toContainText("Hotel du Pont");
+    await expect(stageCard).not.toContainText("Camping Les Oliviers");
   });
 
   test("deselecting an accommodation restores deselect state", async ({

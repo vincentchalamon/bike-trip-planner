@@ -21,9 +21,10 @@ final readonly class GeometryBasedDistributor implements GeometryDistributorInte
 
     /**
      * Assigns each item to the stage whose endPoint is closest.
+     * Output keys match the input $stages keys.
      *
      * @param list<array{lat: float, lon: float}> $items
-     * @param list<Stage>                         $stages
+     * @param array<int, Stage>                   $stages
      *
      * @return array<int, list<array{lat: float, lon: float}>>
      */

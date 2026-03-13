@@ -16,4 +16,8 @@ final class AccommodationScanRequest
     #[ApiProperty(description: 'Search radius in km (default: 5, max: 15, step: 2)')]
     #[Assert\Range(min: 1, max: QueryBuilderInterface::MAX_ACCOMMODATION_RADIUS_KM)]
     public int $radiusKm = QueryBuilderInterface::DEFAULT_ACCOMMODATION_RADIUS_KM;
+
+    #[ApiProperty(description: 'Optional stage index to restrict the scan to a single stage')]
+    #[Assert\PositiveOrZero]
+    public ?int $stageIndex = null;
 }

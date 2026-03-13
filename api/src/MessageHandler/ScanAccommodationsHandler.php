@@ -59,6 +59,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
     {
         $tripId = $message->tripId;
         $radiusMeters = $message->radiusMeters;
+        $stageIndex = $message->stageIndex;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -68,14 +69,16 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         $request = $this->tripStateManager->getRequest($tripId);
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
-        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale, $radiusMeters): void {
-            // Single Overpass query using decimated route points (shared cache key with ScanAllOsmDataHandler)
-            $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
-            $points = null !== $decimatedData
-                ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
-                : array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stages);
+        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale, $radiusMeters, $stageIndex): void {
+            // Preserve original stage keys so distributor output maps directly without re-mapping
+            $isExpandScan = null !== $stageIndex;
+            $stagesToProcess = ($isExpandScan && isset($stages[$stageIndex]))
+                ? [$stageIndex => $stages[$stageIndex]]
+                : $stages;
 
-            $query = $this->queryBuilder->buildAccommodationQuery($points, $radiusMeters);
+            // Use stage endpoints (not the full decimated route) so the radius applies to overnight stops only
+            $endPoints = array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stagesToProcess);
+            $query = $this->queryBuilder->buildAccommodationQuery($endPoints, $radiusMeters);
             $result = $this->scanner->query($query);
 
             /** @var list<array{id?: int, type?: string, tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
@@ -84,9 +87,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             // Phase 1: Parse OSM elements into candidates (no HTTP)
             $allCandidates = $this->parseOsmElements($elements);
 
-            // Distribute candidates to their nearest stage endpoint
+            // Distribute candidates to their nearest stage endpoint (output keys match $stagesToProcess keys)
             /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>> $candidatesByStage */
-            $candidatesByStage = $this->distributor->distributeByEndpoint($allCandidates, $stages);
+            $candidatesByStage = $this->distributor->distributeByEndpoint($allCandidates, $stagesToProcess);
 
             // Deduplicate + limit per stage BEFORE any scraping
             $retainedByStage = [];
@@ -101,10 +104,40 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
 
             // Build Accommodation DTOs, publish per stage, and store
             $startDate = $request?->startDate;
-            foreach ($stages as $i => $stage) {
+            foreach ($stagesToProcess as $i => $stage) {
                 $accommodations = [];
+
+                if ($isExpandScan) {
+                    // Expand scan: keep existing accommodations, add only new unique ones
+                    $existingKeys = [];
+                    foreach ($stage->accommodations as $existing) {
+                        $existingKeys[\sprintf('%F,%F', $existing->lat, $existing->lon)] = true;
+                        $accommodations[] = [
+                            'name' => $existing->name,
+                            'type' => $existing->type,
+                            'lat' => $existing->lat,
+                            'lon' => $existing->lon,
+                            'estimatedPriceMin' => $existing->estimatedPriceMin,
+                            'estimatedPriceMax' => $existing->estimatedPriceMax,
+                            'isExactPrice' => $existing->isExactPrice,
+                            'url' => $existing->url,
+                            'possibleClosed' => $existing->possibleClosed,
+                            'distanceToEndPoint' => $existing->distanceToEndPoint,
+                        ];
+                    }
+                } else {
+                    // Full scan: reset before populating
+                    $stage->accommodations = [];
+                    $existingKeys = [];
+                }
+
                 $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
                 foreach ($retainedByStage[$i] ?? [] as $raw) {
+                    $key = \sprintf('%F,%F', $raw['lat'], $raw['lon']);
+                    if (isset($existingKeys[$key])) {
+                        continue; // skip duplicates when expanding
+                    }
+
                     $possibleClosed = false;
                     if ($stageDate instanceof \DateTimeImmutable) {
                         $possibleClosed = false === $this->seasonalityChecker->isLikelyOpen($stageDate, $raw['tags'] ?? []);
@@ -171,9 +204,12 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                 }
 
                 $this->publisher->publish($tripId, MercureEventType::ACCOMMODATIONS_FOUND, $payload);
+
+                // Update the stage in the full stages array
+                $stages[$i] = $stage;
             }
 
-            $this->tripStateManager->storeStages($tripId, $stages);
+            $this->tripStateManager->storeStages($tripId, array_values($stages));
         });
     }
 

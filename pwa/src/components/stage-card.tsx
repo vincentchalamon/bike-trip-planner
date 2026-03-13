@@ -41,7 +41,7 @@ interface StageCardProps {
   onRemoveAccommodation: (accIndex: number) => void;
   onSelectAccommodation?: (accIndex: number) => void;
   onDeselectAccommodation?: () => void;
-  onExpandAccommodationRadius?: (currentRadiusKm: number) => void;
+  onExpandAccommodationRadius?: (currentRadiusKm: number) => Promise<boolean>;
   newAccKey?: string | null;
   stageOriginalIndex?: number;
   onClearNewAcc?: () => void;
@@ -81,10 +81,14 @@ export function StageCard({
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-3 right-3 h-6 w-6 text-muted-icon"
+          className="absolute top-3 right-3 h-6 w-6 text-muted-icon cursor-pointer"
           onClick={onDelete}
           disabled={!canDelete}
-          title={!canDelete ? t("minStagesReached") : undefined}
+          title={
+            !canDelete
+              ? t("minStagesReached")
+              : t("deleteStage", { dayNumber: stage.dayNumber })
+          }
           aria-label={t("deleteStage", { dayNumber: stage.dayNumber })}
           data-testid={`delete-stage-${stage.dayNumber}`}
         >
