@@ -12,6 +12,8 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
+use App\Message\CheckCalendar;
+use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
@@ -144,6 +146,8 @@ final class StageSelectAccommodationTest extends ApiTestCase
         );
 
         $this->assertContains(RecalculateStages::class, $messageClasses);
+        $this->assertContains(FetchWeather::class, $messageClasses);
+        $this->assertContains(CheckCalendar::class, $messageClasses);
     }
 
     #[Test]

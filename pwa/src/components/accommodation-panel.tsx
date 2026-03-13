@@ -41,8 +41,10 @@ export function AccommodationPanel({
       ? parseInt(newAccKey.split("-")[1] ?? "", 10)
       : null;
 
-  function isAccommodationSelected(acc: AccommodationData): boolean {
+  function isAccommodationSelected(originalIndex: number): boolean {
     if (!selectedAccommodation) return false;
+    const acc = accommodations[originalIndex];
+    if (!acc) return false;
     return (
       acc.lat === selectedAccommodation.lat &&
       acc.lon === selectedAccommodation.lon &&
@@ -86,7 +88,7 @@ export function AccommodationPanel({
             {displayIndex > 0 && <Separator className="my-2" />}
             <AccommodationItem
               accommodation={acc}
-              isSelected={isAccommodationSelected(acc)}
+              isSelected={isAccommodationSelected(originalIndex)}
               onUpdate={(data) => {
                 onUpdate(originalIndex, data);
                 if (newAccKey === `${stageIndex}-${originalIndex}`) {
@@ -95,7 +97,9 @@ export function AccommodationPanel({
               }}
               onRemove={() => onRemove(originalIndex)}
               onSelect={onSelect ? () => onSelect(originalIndex) : undefined}
-              onDeselect={isAccommodationSelected(acc) ? onDeselect : undefined}
+              onDeselect={
+                isAccommodationSelected(originalIndex) ? onDeselect : undefined
+              }
               initialEditing={newAccKey === `${stageIndex}-${originalIndex}`}
             />
           </div>

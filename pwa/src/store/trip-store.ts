@@ -27,6 +27,7 @@ interface TripState {
   fatigueFactor: number;
   elevationPenalty: number;
   ebikeMode: boolean;
+  departureHour: number;
   stages: StageData[];
   computationStatus: Record<string, string>;
 
@@ -75,6 +76,7 @@ interface TripState {
     elevationPenalty: number,
   ) => void;
   setEbikeMode: (ebikeMode: boolean) => void;
+  setDepartureHour: (departureHour: number) => void;
   setComputationStatus: (status: Record<string, string>) => void;
   deleteStage: (stageIndex: number) => void;
   clearTrip: () => void;
@@ -91,6 +93,7 @@ const initialState = {
   fatigueFactor: 0.9,
   elevationPenalty: 50,
   ebikeMode: false,
+  departureHour: 8,
   stages: [],
   computationStatus: {},
 };
@@ -249,6 +252,11 @@ export const useTripStore = create<TripState>()(
     setEbikeMode: (ebikeMode) =>
       set((state) => {
         state.ebikeMode = ebikeMode;
+      }),
+
+    setDepartureHour: (departureHour) =>
+      set((state) => {
+        state.departureHour = departureHour;
       }),
 
     setComputationStatus: (status) =>

@@ -43,6 +43,7 @@ export function useTripPlanner() {
   const fatigueFactor = useTripStore((s) => s.fatigueFactor);
   const elevationPenalty = useTripStore((s) => s.elevationPenalty);
   const ebikeMode = useTripStore((s) => s.ebikeMode);
+  const departureHour = useTripStore((s) => s.departureHour);
   const updatePacingSettings = useTripStore((s) => s.updatePacingSettings);
   const setEbikeMode = useTripStore((s) => s.setEbikeMode);
   const isProcessing = useUiStore((s) => s.isProcessing);
@@ -65,7 +66,7 @@ export function useTripPlanner() {
           fatigueFactor,
           elevationPenalty,
           ebikeMode,
-          departureHour: 8,
+          departureHour,
           startDate: startDate ?? today,
         },
       });
@@ -151,7 +152,7 @@ export function useTripPlanner() {
           fatigueFactor,
           elevationPenalty,
           ebikeMode,
-          departureHour: 8,
+          departureHour,
         },
       });
 
@@ -296,7 +297,7 @@ export function useTripPlanner() {
           fatigueFactor: newFatigue,
           elevationPenalty: newElevation,
           ebikeMode: newEbikeMode,
-          departureHour: 8,
+          departureHour,
         },
       });
 

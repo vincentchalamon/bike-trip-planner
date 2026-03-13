@@ -7,8 +7,8 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
-use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
+use App\ApiResource\StageSelectAccommodationRequest;
 use App\Engine\DistanceCalculatorInterface;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
@@ -38,7 +38,7 @@ use Symfony\Component\ObjectMapper\ObjectMapperInterface;
  * the updated start/end points. Once Valhalla integration is complete, the
  * RecalculateRouteSegment message handler will replace this approximation.
  *
- * @implements ProcessorInterface<StageRequest, StageResponse>
+ * @implements ProcessorInterface<StageSelectAccommodationRequest, StageResponse>
  */
 final readonly class StageSelectAccommodationProcessor implements ProcessorInterface
 {
@@ -51,7 +51,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
     }
 
     /**
-     * @param StageRequest                        $data
+     * @param StageSelectAccommodationRequest     $data
      * @param Patch                               $operation
      * @param array{tripId?: string, index?: int} $uriVariables
      */
@@ -81,11 +81,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         $accIndex = $data->selectedAccommodationIndex;
 
         if (!isset($stage->accommodations[$accIndex])) {
-            throw new UnprocessableEntityHttpException(\sprintf(
-                'Accommodation at index %d not found for stage %d.',
-                $accIndex,
-                $index,
-            ));
+            throw new UnprocessableEntityHttpException(\sprintf('Accommodation at index %d not found for stage %d.', $accIndex, $index));
         }
 
         $selected = $stage->accommodations[$accIndex];
