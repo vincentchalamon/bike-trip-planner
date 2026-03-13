@@ -25,6 +25,9 @@ test.describe("Accommodations", () => {
     // Check accommodation type labels
     await expect(stageCard).toContainText("Camping");
     await expect(stageCard).toContainText("Hôtel");
+    // Check distance badges
+    await expect(stageCard).toContainText("1.2 km");
+    await expect(stageCard).toContainText("0.5 km");
   });
 
   test("adds manual accommodation", async ({ createFullTrip, mockedPage }) => {
@@ -61,6 +64,42 @@ test.describe("Accommodations", () => {
     });
     await removeButtons.first().click();
     await expect(stageCard).not.toContainText("Camping Les Oliviers");
+  });
+
+  test("hides distance badge when distanceToEndPoint is zero", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      {
+        type: "accommodations_found",
+        data: {
+          stageIndex: 0,
+          accommodations: [
+            {
+              name: "Camping Zero Distance",
+              type: "camp_site",
+              lat: 44.5,
+              lon: 4.38,
+              estimatedPriceMin: 10,
+              estimatedPriceMax: 15,
+              isExactPrice: false,
+              possibleClosed: false,
+              distanceToEndPoint: 0,
+            },
+          ],
+        },
+      },
+      tripCompleteEvent(),
+    ]);
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard).toContainText("Camping Zero Distance");
+    // Distance badge should not be rendered when distance is 0
+    await expect(stageCard).not.toContainText("0 km");
   });
 
   test("no accommodation panel on last stage", async ({
