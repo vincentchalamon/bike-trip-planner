@@ -35,7 +35,10 @@ test.describe("Stage progress bar", () => {
     mockedPage,
   }) => {
     await createFullTrip();
+    // Scroll past the sentinel to reveal the sticky progress bar
+    await mockedPage.evaluate(() => window.scrollBy(0, 500));
     const seg2 = mockedPage.getByTestId("progress-segment-2");
+    await expect(seg2).toBeVisible();
     await seg2.click();
     await expect(seg2).toHaveAttribute("aria-current", "true");
   });
@@ -45,6 +48,9 @@ test.describe("Stage progress bar", () => {
     mockedPage,
   }) => {
     await createFullTrip();
+    // Scroll past the sentinel to reveal the sticky progress bar
+    await mockedPage.evaluate(() => window.scrollBy(0, 500));
+    await expect(mockedPage.getByTestId("progress-segment-2")).toBeVisible();
     await mockedPage.getByTestId("progress-segment-2").click();
     await expect(
       mockedPage.getByTestId("progress-segment-1"),
