@@ -68,7 +68,9 @@ function dispatchEvent(event: MercureEvent): void {
               label: s.label ?? existing.label,
             };
           }
-          // Reset derived data for affected or new stages
+          // Reset derived data for affected or new stages,
+          // but preserve accommodations: if a new scan is needed,
+          // accommodations_found will arrive and replace them
           return {
             ...s,
             elevationLoss: s.elevationLoss ?? 0,
@@ -79,8 +81,11 @@ function dispatchEvent(event: MercureEvent): void {
             weather: null,
             alerts: [],
             pois: [],
-            accommodations: [],
-            accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
+            accommodations: existing?.accommodations ?? [],
+            selectedAccommodation: existing?.selectedAccommodation ?? null,
+            accommodationSearchRadiusKm:
+              existing?.accommodationSearchRadiusKm ??
+              DEFAULT_ACCOMMODATION_RADIUS_KM,
           };
         });
         store.setStages(merged);
