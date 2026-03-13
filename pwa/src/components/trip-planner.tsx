@@ -124,11 +124,8 @@ export function TripPlanner() {
               the sentinel so it does not duplicate the timeline start. */}
           <div
             className={[
-              "sticky top-0 z-20 bg-background py-1 -mx-4 md:-mx-6 px-4 md:px-6",
-              "transition-opacity duration-200",
-              isScrolledPast
-                ? "opacity-100"
-                : "opacity-0 pointer-events-none select-none",
+              "sticky top-0 z-20 bg-background -mx-4 md:-mx-6 px-4 md:px-6 overflow-hidden",
+              isScrolledPast ? "py-1" : "h-0 py-0 pointer-events-none",
             ].join(" ")}
           >
             <StageProgressBar />
