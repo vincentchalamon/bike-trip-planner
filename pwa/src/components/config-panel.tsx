@@ -130,10 +130,7 @@ export function ConfigPanel({
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
           {/* Cyclo profile / pacing settings */}
           <section aria-labelledby="config-pacing-heading">
-            <h3
-              id="config-pacing-heading"
-              className="text-sm font-medium mb-3"
-            >
+            <h3 id="config-pacing-heading" className="text-sm font-medium mb-3">
               {t("pacingTitle")}
             </h3>
             <PacingSettings
@@ -262,10 +259,7 @@ export function ConfigPanel({
 
           {/* Future features: Duplication + Sharing */}
           <section aria-labelledby="config-future-heading">
-            <h3
-              id="config-future-heading"
-              className="text-sm font-medium mb-3"
-            >
+            <h3 id="config-future-heading" className="text-sm font-medium mb-3">
               {t("tripActionsTitle")}
             </h3>
             <div className="flex flex-col gap-2">
@@ -311,4 +305,3 @@ export function ConfigPanel({
     </>
   );
 }
-
