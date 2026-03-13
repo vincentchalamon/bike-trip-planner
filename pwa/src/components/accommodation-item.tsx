@@ -106,6 +106,7 @@ export function AccommodationItem({
     typeLabelKeys[accommodation.type as keyof typeof typeLabelKeys] ??
     "type_other";
   const typeLabel = t(typeKey);
+  const distLabel = formatDistanceKm(accommodation.distanceToEndPoint ?? 0);
 
   function startEditing() {
     setEditUrl(accommodation.url ?? "");
@@ -285,12 +286,10 @@ export function AccommodationItem({
             <span>{formatPrice(accommodation)}</span>
           </div>
         )}
-        {formatDistanceKm(accommodation.distanceToEndPoint ?? 0) && (
+        {distLabel && (
           <div className="flex items-center gap-1">
             <MapPin className="h-3.5 w-3.5" />
-            <span>
-              {formatDistanceKm(accommodation.distanceToEndPoint ?? 0)}
-            </span>
+            <span>{distLabel}</span>
           </div>
         )}
       </div>
