@@ -150,24 +150,67 @@ final class StageSelectAccommodationTest extends ApiTestCase
         $this->assertContains(CheckCalendar::class, $messageClasses);
     }
 
+    private function seedTripWithSelectedAccommodation(string $tripId): void
+    {
+        $container = self::getContainer();
+
+        /** @var TripRequestRepositoryInterface $repo */
+        $repo = $container->get(TripRequestRepositoryInterface::class);
+
+        $request = new TripRequest();
+        $request->sourceUrl = 'https://www.komoot.com/tour/987654321';
+        $request->startDate = new \DateTimeImmutable('2026-07-01');
+
+        $repo->initializeTrip($tripId, $request);
+        $repo->storeSourceType($tripId, SourceType::KOMOOT_TOUR->value);
+
+        $accommodation = new Accommodation(
+            name: 'Camping Les Pins',
+            type: 'camp_site',
+            lat: 45.48,
+            lon: 5.48,
+            estimatedPriceMin: 12.0,
+            estimatedPriceMax: 18.0,
+            isExactPrice: false,
+        );
+
+        $stage0 = new Stage(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 80.0,
+            elevation: 500.0,
+            startPoint: new Coordinate(45.0, 5.0),
+            endPoint: new Coordinate(45.48, 5.48),
+        );
+        $stage0->accommodations = [$accommodation];
+        $stage0->selectedAccommodation = $accommodation;
+
+        $stage1 = new Stage(
+            tripId: $tripId,
+            dayNumber: 2,
+            distance: 70.0,
+            elevation: 400.0,
+            startPoint: new Coordinate(45.48, 5.48),
+            endPoint: new Coordinate(46.0, 6.0),
+        );
+
+        $repo->storeStages($tripId, [$stage0, $stage1]);
+
+        /** @var ComputationTrackerInterface $tracker */
+        $tracker = $container->get(ComputationTrackerInterface::class);
+        $tracker->initializeComputations($tripId, ComputationName::cases());
+    }
+
     #[Test]
     public function deselectAccommodationDispatchesScanAccommodations(): void
     {
         self::createClient();
-        $this->seedTripWithStages(self::TRIP_ID);
-
-        // First select an accommodation
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
-            'json' => ['selectedAccommodationIndex' => 0],
-        ]);
-        $this->assertResponseStatusCodeSame(202);
+        $this->seedTripWithSelectedAccommodation(self::TRIP_ID);
 
         /** @var InMemoryTransport $transport */
         $transport = self::getContainer()->get('messenger.transport.async');
         $transport->reset();
 
-        // Then deselect
         self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
             'json' => ['selectedAccommodationIndex' => null],
