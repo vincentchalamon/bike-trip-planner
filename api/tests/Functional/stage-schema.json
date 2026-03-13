@@ -137,6 +137,9 @@
         }
       }
     },
+    "isRestDay": {
+      "type": "boolean"
+    },
     "geometry": {
       "type": "array",
       "items": {
