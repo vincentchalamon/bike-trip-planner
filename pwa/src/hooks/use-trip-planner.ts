@@ -180,6 +180,7 @@ export function useTripPlanner() {
           averageSpeed,
           ebikeMode,
           departureHour,
+          enabledAccommodationTypes,
         },
       });
 
@@ -330,6 +331,7 @@ export function useTripPlanner() {
           averageSpeed: newAverageSpeed,
           ebikeMode: newEbikeMode,
           departureHour,
+          enabledAccommodationTypes,
         },
       });
 
