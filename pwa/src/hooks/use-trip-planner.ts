@@ -52,6 +52,7 @@ export function useTripPlanner() {
   const departureHour = useTripStore((s) => s.departureHour);
   const updatePacingSettings = useTripStore((s) => s.updatePacingSettings);
   const setEbikeMode = useTripStore((s) => s.setEbikeMode);
+  const updateStageAlerts = useTripStore((s) => s.updateStageAlerts);
   const isProcessing = useUiStore((s) => s.isProcessing);
   const setProcessing = useUiStore((s) => s.setProcessing);
 
@@ -329,6 +330,9 @@ export function useTripPlanner() {
 
   async function handleEbikeModeChange(newEbikeMode: boolean) {
     setEbikeMode(newEbikeMode);
+    if (!newEbikeMode) {
+      stages.forEach((_, i) => updateStageAlerts(i, [], "terrain"));
+    }
     await patchPacingSettings(
       fatigueFactor,
       elevationPenalty,

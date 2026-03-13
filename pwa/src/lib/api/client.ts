@@ -112,7 +112,7 @@ export async function scanAccommodations(
     `/trips/${encodeURIComponent(tripId)}/accommodations/scan`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/ld+json" },
       body: JSON.stringify({ radiusKm }),
     },
   );

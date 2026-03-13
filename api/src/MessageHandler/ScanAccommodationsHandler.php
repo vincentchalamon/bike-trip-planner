@@ -69,13 +69,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale, $radiusMeters): void {
-            // Single Overpass query using decimated route points (shared cache key with ScanAllOsmDataHandler)
-            $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
-            $points = null !== $decimatedData
-                ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
-                : array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stages);
-
-            $query = $this->queryBuilder->buildAccommodationQuery($points, $radiusMeters);
+            // Query accommodations around stage endpoints only — accommodations are where cyclists stop for the night
+            $endPoints = array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stages);
+            $query = $this->queryBuilder->buildAccommodationQuery($endPoints, $radiusMeters);
             $result = $this->scanner->query($query);
 
             /** @var list<array{id?: int, type?: string, tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
@@ -103,6 +99,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             $startDate = $request?->startDate;
             foreach ($stages as $i => $stage) {
                 $accommodations = [];
+                $stage->accommodations = [];
                 $stageDate = $startDate?->modify(\sprintf('+%d days', $i));
                 foreach ($retainedByStage[$i] ?? [] as $raw) {
                     $possibleClosed = false;
