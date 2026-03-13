@@ -73,7 +73,10 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             $stage->selectedAccommodation = null;
             $stages[$index] = $stage;
             $this->tripStateManager->storeStages($tripId, $stages);
+            // Note: endPoint intentionally not reverted — accommodation coords serve as
+            // stage boundary until Valhalla (ADR-017) provides proper re-route.
             $this->messageBus->dispatch(new ScanAccommodations($tripId));
+            $this->messageBus->dispatch(new RecalculateStages($tripId, [$index]));
 
             return $this->objectMapper->map($stage, StageResponse::class);
         }

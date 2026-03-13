@@ -223,6 +223,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
         );
 
         $this->assertContains(ScanAccommodations::class, $messageClasses);
+        $this->assertContains(RecalculateStages::class, $messageClasses);
     }
 
     #[Test]

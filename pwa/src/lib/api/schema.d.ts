@@ -349,8 +349,6 @@ export interface components {
             label?: string | null;
             distance?: number | null;
             toIndex?: number | null;
-            /** @description Index of the accommodation to select within the stage's accommodations list. */
-            selectedAccommodationIndex?: number | null;
         };
         "Stage.StageRequest.jsonMergePatch": {
             position?: number | null;
@@ -359,8 +357,6 @@ export interface components {
             label?: string | null;
             distance?: number | null;
             toIndex?: number | null;
-            /** @description Index of the accommodation to select within the stage's accommodations list. */
-            selectedAccommodationIndex?: number | null;
         };
         "Stage.StageResponse.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             weather?: components["schemas"]["WeatherForecast.jsonld"] | null;
@@ -381,6 +377,10 @@ export interface components {
             endPoint?: components["schemas"]["Coordinate.jsonld"];
             geometry?: components["schemas"]["Coordinate.jsonld"][];
             label?: string | null;
+        };
+        "Stage.StageSelectAccommodationRequest.jsonMergePatch": {
+            /** @description Index of the accommodation to select within the stage's accommodations list. */
+            selectedAccommodationIndex?: number | null;
         };
         "Stage.fit": {
             weather?: components["schemas"]["WeatherForecast.fit"] | null;
@@ -709,7 +709,7 @@ export interface operations {
         /** @description The updated Stage resource */
         requestBody: {
             content: {
-                "application/merge-patch+json": components["schemas"]["Stage.StageRequest.jsonMergePatch"];
+                "application/merge-patch+json": components["schemas"]["Stage.StageSelectAccommodationRequest.jsonMergePatch"];
             };
         };
         responses: {
