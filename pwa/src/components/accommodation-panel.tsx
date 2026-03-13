@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, Info, ChevronRight } from "lucide-react";
 import { AccommodationItem } from "@/components/accommodation-item";
@@ -46,6 +46,13 @@ export function AccommodationPanel({
   searchRadiusKm = DEFAULT_ACCOMMODATION_RADIUS_KM,
 }: AccommodationPanelProps) {
   const t = useTranslations("accommodation");
+  const [isExpanding, setIsExpanding] = useState(false);
+
+  // Reset loader when SSE delivers updated radius
+  useEffect(() => {
+    setIsExpanding(false);
+  }, [searchRadiusKm]);
+
   const newAccIndex =
     newAccKey && stageIndex !== undefined
       ? parseInt(newAccKey.split("-")[1] ?? "", 10)
@@ -70,8 +77,8 @@ export function AccommodationPanel({
         if (a === newAccIndex) return 1;
         if (b === newAccIndex) return -1;
         return (
-          (accommodations[a]?.estimatedPriceMin ?? 0) -
-          (accommodations[b]?.estimatedPriceMin ?? 0)
+          (accommodations[a]?.distanceToEndPoint ?? 0) -
+          (accommodations[b]?.distanceToEndPoint ?? 0)
         );
       });
   }, [accommodations, newAccIndex]);
@@ -96,18 +103,30 @@ export function AccommodationPanel({
             </div>
             {canExpand && onExpandRadius && (
               <div className="flex flex-col gap-1 pl-5">
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="h-auto p-0 text-xs text-primary justify-start"
-                  onClick={() => onExpandRadius(searchRadiusKm)}
-                >
-                  <ChevronRight className="h-3 w-3 mr-1" />
-                  {t("expandRadius", { radius: nextRadiusKm })}
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  {t("suggestExpandTypes")}
-                </p>
+                {isExpanding ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>{t("loading")}</span>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs text-primary justify-start"
+                      onClick={() => {
+                        setIsExpanding(true);
+                        onExpandRadius(searchRadiusKm);
+                      }}
+                    >
+                      <ChevronRight className="h-3 w-3 mr-1" />
+                      {t("expandRadius", { radius: nextRadiusKm })}
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      {t("suggestExpandTypes")}
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -137,13 +156,22 @@ export function AccommodationPanel({
           </div>
         );
       })}
-      {!hasNoAccommodations && canExpand && onExpandRadius && (
+      {!hasNoAccommodations && isExpanding && (
+        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <span>{t("loading")}</span>
+        </div>
+      )}
+      {!hasNoAccommodations && canExpand && onExpandRadius && !isExpanding && (
         <div className="mt-2">
           <Button
             variant="link"
             size="sm"
             className="h-auto p-0 text-xs text-primary"
-            onClick={() => onExpandRadius(searchRadiusKm)}
+            onClick={() => {
+              setIsExpanding(true);
+              onExpandRadius(searchRadiusKm);
+            }}
           >
             <ChevronRight className="h-3 w-3 mr-1" />
             {t("expandRadius", { radius: nextRadiusKm })}
