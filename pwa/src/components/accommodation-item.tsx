@@ -288,7 +288,9 @@ export function AccommodationItem({
         {formatDistanceKm(accommodation.distanceToEndPoint ?? 0) && (
           <div className="flex items-center gap-1">
             <MapPin className="h-3.5 w-3.5" />
-            <span>{formatDistanceKm(accommodation.distanceToEndPoint ?? 0)}</span>
+            <span>
+              {formatDistanceKm(accommodation.distanceToEndPoint ?? 0)}
+            </span>
           </div>
         )}
       </div>
