@@ -274,6 +274,7 @@ export function AccommodationItem({
           className="h-6 w-6 text-muted-icon opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-pointer"
           onClick={startEditing}
           aria-label={t("edit")}
+          title={t("edit")}
         >
           <Pencil className="h-3.5 w-3.5" />
         </Button>
@@ -281,8 +282,12 @@ export function AccommodationItem({
           variant="ghost"
           size="icon"
           className="h-6 w-6 text-muted-icon opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-pointer"
-          onClick={onRemove}
+          onClick={() => {
+            if (isSelected) onDeselect?.();
+            onRemove();
+          }}
           aria-label={t("remove")}
+          title={t("remove")}
         >
           <X className="h-3.5 w-3.5" />
         </Button>
