@@ -279,6 +279,28 @@ final class PacingEngineRegistryTest extends TestCase
         $this->assertGreaterThanOrEqual(500.0, $lastStage->elevation);
     }
 
+    #[Test]
+    public function generateStagesAppliesMaxDistancePerDayCap(): void
+    {
+        // Use a long track to get stages that would normally exceed the cap
+        $points = $this->createTrack(100);
+
+        // Without cap, stages can be large
+        $stagesWithoutCap = $this->engine->generateStages('trip-1', $points, 3, 500.0);
+        // With a 50km cap, no stage should exceed 50km
+        $stagesWithCap = $this->engine->generateStages('trip-1', $points, 3, 500.0, maxDistancePerDay: 50.0);
+
+        $this->assertNotEmpty($stagesWithCap);
+        foreach ($stagesWithCap as $stage) {
+            $this->assertLessThanOrEqual(50.1, $stage->distance); // small tolerance for floating point
+        }
+
+        // First stage with cap should not be larger than first stage without cap
+        if (!empty($stagesWithoutCap) && $stagesWithoutCap[0]->distance > 50.0) {
+            $this->assertLessThan($stagesWithoutCap[0]->distance, $stagesWithCap[0]->distance);
+        }
+    }
+
     /**
      * @return list<Coordinate>
      */

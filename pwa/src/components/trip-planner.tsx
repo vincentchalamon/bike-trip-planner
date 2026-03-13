@@ -28,6 +28,8 @@ export function TripPlanner() {
     isWeatherLoading,
     fatigueFactor,
     elevationPenalty,
+    maxDistancePerDay,
+    averageSpeed,
     ebikeMode,
     updateTitle,
     updateLocalAccommodation,
@@ -114,6 +116,8 @@ export function TripPlanner() {
             <PacingSettings
               fatigueFactor={fatigueFactor}
               elevationPenalty={elevationPenalty}
+              maxDistancePerDay={maxDistancePerDay}
+              averageSpeed={averageSpeed}
               ebikeMode={ebikeMode}
               onUpdate={handlePacingChange}
               onEbikeModeChange={handleEbikeModeChange}

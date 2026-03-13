@@ -51,6 +51,8 @@ export function useTripPlanner() {
   const deleteStage = useTripStore((s) => s.deleteStage);
   const fatigueFactor = useTripStore((s) => s.fatigueFactor);
   const elevationPenalty = useTripStore((s) => s.elevationPenalty);
+  const maxDistancePerDay = useTripStore((s) => s.maxDistancePerDay);
+  const averageSpeed = useTripStore((s) => s.averageSpeed);
   const ebikeMode = useTripStore((s) => s.ebikeMode);
   const departureHour = useTripStore((s) => s.departureHour);
   const updatePacingSettings = useTripStore((s) => s.updatePacingSettings);
@@ -75,6 +77,8 @@ export function useTripPlanner() {
           sourceUrl,
           fatigueFactor,
           elevationPenalty,
+          maxDistancePerDay,
+          averageSpeed,
           ebikeMode,
           departureHour,
           startDate: startDate ?? today,
@@ -116,6 +120,8 @@ export function useTripPlanner() {
       const { data, error } = await uploadGpxFile(file, {
         fatigueFactor,
         elevationPenalty,
+        maxDistancePerDay,
+        averageSpeed,
         ebikeMode,
         startDate: startDate ?? today,
       });
@@ -161,6 +167,8 @@ export function useTripPlanner() {
           endDate: newEnd,
           fatigueFactor,
           elevationPenalty,
+          maxDistancePerDay,
+          averageSpeed,
           ebikeMode,
           departureHour,
         },
@@ -295,6 +303,8 @@ export function useTripPlanner() {
   async function patchPacingSettings(
     newFatigue: number,
     newElevation: number,
+    newMaxDistance: number,
+    newAverageSpeed: number,
     newEbikeMode: boolean,
     clearStages: boolean,
   ) {
@@ -307,6 +317,8 @@ export function useTripPlanner() {
         body: {
           fatigueFactor: newFatigue,
           elevationPenalty: newElevation,
+          maxDistancePerDay: newMaxDistance,
+          averageSpeed: newAverageSpeed,
           ebikeMode: newEbikeMode,
           departureHour,
         },
@@ -326,9 +338,14 @@ export function useTripPlanner() {
     }
   }
 
-  async function handlePacingChange(newFatigue: number, newElevation: number) {
-    updatePacingSettings(newFatigue, newElevation);
-    await patchPacingSettings(newFatigue, newElevation, ebikeMode, true);
+  async function handlePacingChange(
+    newFatigue: number,
+    newElevation: number,
+    newMaxDistance: number,
+    newAverageSpeed: number,
+  ) {
+    updatePacingSettings(newFatigue, newElevation, newMaxDistance, newAverageSpeed);
+    await patchPacingSettings(newFatigue, newElevation, newMaxDistance, newAverageSpeed, ebikeMode, true);
   }
 
   async function handleEbikeModeChange(newEbikeMode: boolean) {
@@ -339,6 +356,8 @@ export function useTripPlanner() {
     await patchPacingSettings(
       fatigueFactor,
       elevationPenalty,
+      maxDistancePerDay,
+      averageSpeed,
       newEbikeMode,
       false,
     );
@@ -476,6 +495,8 @@ export function useTripPlanner() {
     isWeatherLoading,
     fatigueFactor,
     elevationPenalty,
+    maxDistancePerDay,
+    averageSpeed,
     ebikeMode,
     updateTitle,
     updateLocalAccommodation,

@@ -185,6 +185,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
             $request->fatigueFactor,
             $request->elevationPenalty,
             $rawPoints,
+            $request->maxDistancePerDay,
         );
     }
 }

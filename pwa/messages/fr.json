@@ -106,6 +106,18 @@
     "insufficientSpace": "Espace insuffisant pour ajouter une étape (minimum 5 km par étape)"
   },
   "pacing": {
+    "profile": "Profil :",
+    "preset_beginner": "Débutant",
+    "preset_intermediate": "Intermédiaire",
+    "preset_expert": "Expert",
+    "presetLabel": "Appliquer le profil {preset}",
+    "coherenceWarning": "Attention : votre vitesse moyenne est très faible pour la distance journalière maximale définie.",
+    "maxDistance": "Distance max/jour",
+    "maxDistanceTooltip": "Plafond de distance journalière (km), appliqué après la formule de pacing.",
+    "maxDistanceLabel": "Distance maximale par jour (km)",
+    "averageSpeed": "Vitesse moyenne",
+    "averageSpeedTooltip": "Vitesse moyenne (km/h), utilisée pour estimer le temps de parcours.",
+    "averageSpeedLabel": "Vitesse moyenne (km/h)",
     "fatigue": "Indice de fatigue accumulée",
     "fatigueTooltip": "Réduit la distance de {value}% par jour pour compenser la fatigue accumulée.",
     "fatigueError": "Doit être entre 1% et 50%",

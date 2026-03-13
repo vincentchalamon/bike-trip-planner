@@ -52,6 +52,7 @@ final readonly class IdempotencyChecker implements IdempotencyCheckerInterface
             $request->endDate?->format('Y-m-d'),
             $request->fatigueFactor,
             $request->elevationPenalty,
+            $request->maxDistancePerDay,
             $request->ebikeMode,
         ]));
     }

@@ -38,9 +38,11 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
      *
      * Formula: Dn = base * fatigueFactor^(n-1) - (D+ / elevationPenalty)
      * Minimum stage distance: 30km
+     * An optional maxDistancePerDay cap is applied after the formula.
      *
-     * @param list<Coordinate>      $points    Decimated track points (geometry + splitting)
-     * @param list<Coordinate>|null $rawPoints Full-resolution points for accurate elevation calculation (falls back to $points when null)
+     * @param list<Coordinate>      $points             Decimated track points (geometry + splitting)
+     * @param list<Coordinate>|null $rawPoints          Full-resolution points for accurate elevation calculation (falls back to $points when null)
+     * @param float|null            $maxDistancePerDay  Optional cap on daily distance (km), applied after the pacing formula
      *
      * @return list<Stage>
      */
@@ -52,6 +54,7 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
         float $fatigueFactor = 0.9,
         float $elevationPenalty = 50.0,
         ?array $rawPoints = null,
+        ?float $maxDistancePerDay = null,
     ): array {
         if ([] === $points || $numberOfDays <= 0) {
             return [];
@@ -60,7 +63,7 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
         $elevationPoints = $rawPoints ?? $points;
 
         // Compute target distances for each day using raw points for accurate elevation
-        $targets = $this->computeTargetDistances($numberOfDays, $totalDistanceKm, $elevationPoints, $fatigueFactor, $elevationPenalty);
+        $targets = $this->computeTargetDistances($numberOfDays, $totalDistanceKm, $elevationPoints, $fatigueFactor, $elevationPenalty, $maxDistancePerDay);
 
         return $this->sliceIntoStages($tripId, $points, $targets, $rawPoints);
     }
@@ -76,10 +79,12 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
      *    This ensures the sum of all daily targets equals the total distance after penalty subtraction.
      * 4. For each day n (0-indexed): target_n = base * fatigueFactor^n - penaltyPerDay
      * 5. Clamp each target to the minimum stage distance (30 km).
+     * 6. Optionally cap each target to maxDistancePerDay (applied after step 5).
      *
      * The fatigueFactor (default 0.9) models cumulative rider fatigue: day 1 is the longest,
      * each subsequent day is ~10% shorter. The elevationPenalty (default 50) converts
      * meters of ascent into equivalent flat kilometers (e.g. 1000m D+ ≈ 20 km penalty).
+     * The maxDistancePerDay cap is a hard upper bound set by the rider profile.
      *
      * @param list<Coordinate> $points
      *
@@ -91,6 +96,7 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
         array $points,
         float $fatigueFactor,
         float $elevationPenalty,
+        ?float $maxDistancePerDay = null,
     ): array {
         $elevation = $this->elevationCalculator->calculateTotalAscent($points);
 
@@ -109,7 +115,14 @@ final readonly class PacingEngineRegistry implements PacingEngineInterface
         $targets = [];
         for ($day = 0; $day < $numberOfDays; ++$day) {
             $target = $base * ($fatigueFactor ** $day) - $elevationPenaltyPerDay;
-            $targets[] = max(self::MINIMUM_STAGE_DISTANCE_KM, $target);
+            $target = max(self::MINIMUM_STAGE_DISTANCE_KM, $target);
+
+            // Apply maxDistancePerDay cap after the pacing formula
+            if (null !== $maxDistancePerDay && $target > $maxDistancePerDay) {
+                $target = $maxDistancePerDay;
+            }
+
+            $targets[] = $target;
         }
 
         return $targets;

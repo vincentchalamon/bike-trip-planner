@@ -152,6 +152,19 @@ final class ComputationDependencyResolverTest extends TestCase
     }
 
     #[Test]
+    public function maxDistancePerDayChangeReturnsStages(): void
+    {
+        $old = $this->createRequest('https://www.komoot.com/tour/123');
+        $new = $this->createRequest('https://www.komoot.com/tour/123');
+        $old->maxDistancePerDay = 80.0;
+        $new->maxDistancePerDay = 50.0;
+
+        $result = $this->resolver->resolve($old, $new);
+
+        $this->assertContains(ComputationName::STAGES, $result);
+    }
+
+    #[Test]
     public function bothNullDatesAreEqual(): void
     {
         $old = $this->createRequest('https://www.komoot.com/tour/123');

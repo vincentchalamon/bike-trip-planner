@@ -11,12 +11,13 @@ final class ComputationDependencyResolver
 {
     /** @var array<string, array<ComputationName>> */
     private const array PARAMETER_DEPENDENCIES = [
-        'sourceUrl' => [ComputationName::ROUTE],       // cascade everything
-        'endDate' => [ComputationName::STAGES],         // cascade subtree
-        'fatigueFactor' => [ComputationName::STAGES],   // cascade subtree
-        'elevationPenalty' => [ComputationName::STAGES], // cascade subtree
+        'sourceUrl' => [ComputationName::ROUTE],            // cascade everything
+        'endDate' => [ComputationName::STAGES],              // cascade subtree
+        'fatigueFactor' => [ComputationName::STAGES],        // cascade subtree
+        'elevationPenalty' => [ComputationName::STAGES],     // cascade subtree
+        'maxDistancePerDay' => [ComputationName::STAGES],    // cascade subtree
         'startDate' => [ComputationName::WEATHER, ComputationName::CALENDAR],
-        'ebikeMode' => [ComputationName::TERRAIN],      // re-analyze only
+        'ebikeMode' => [ComputationName::TERRAIN],           // re-analyze only
     ];
 
     /**
@@ -54,6 +55,7 @@ final class ComputationDependencyResolver
             'endDate' => $old->endDate?->format('Y-m-d') !== $new->endDate?->format('Y-m-d'),
             'fatigueFactor' => $old->fatigueFactor !== $new->fatigueFactor,
             'elevationPenalty' => $old->elevationPenalty !== $new->elevationPenalty,
+            'maxDistancePerDay' => $old->maxDistancePerDay !== $new->maxDistancePerDay,
             'ebikeMode' => $old->ebikeMode !== $new->ebikeMode,
             default => false,
         };
