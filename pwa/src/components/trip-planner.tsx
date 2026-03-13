@@ -41,6 +41,8 @@ export function TripPlanner() {
     handlePacingChange,
     handleEbikeModeChange,
     handleAddAccommodation,
+    handleSelectAccommodation,
+    handleDeselectAccommodation,
     clearNewAccKey,
   } = useTripPlanner();
 
@@ -144,6 +146,8 @@ export function TripPlanner() {
               onAddAccommodation={handleAddAccommodation}
               onUpdateAccommodation={updateLocalAccommodation}
               onRemoveAccommodation={removeLocalAccommodation}
+              onSelectAccommodation={handleSelectAccommodation}
+              onDeselectAccommodation={handleDeselectAccommodation}
               newAccKey={newAccKey}
               onClearNewAcc={clearNewAccKey}
             />

@@ -10,9 +10,12 @@ import type { AccommodationData } from "@/lib/validation/schemas";
 
 interface AccommodationPanelProps {
   accommodations: AccommodationData[];
+  selectedAccommodation?: AccommodationData | null;
   onUpdate: (accIndex: number, data: Partial<AccommodationData>) => void;
   onRemove: (accIndex: number) => void;
   onAdd: () => void;
+  onSelect?: (accIndex: number) => void;
+  onDeselect?: () => void;
   newAccKey?: string | null;
   stageIndex?: number;
   onClearNewAcc?: () => void;
@@ -21,9 +24,12 @@ interface AccommodationPanelProps {
 
 export function AccommodationPanel({
   accommodations,
+  selectedAccommodation,
   onUpdate,
   onRemove,
   onAdd,
+  onSelect,
+  onDeselect,
   newAccKey,
   stageIndex,
   onClearNewAcc,
@@ -34,6 +40,15 @@ export function AccommodationPanel({
     newAccKey && stageIndex !== undefined
       ? parseInt(newAccKey.split("-")[1] ?? "", 10)
       : null;
+
+  function isAccommodationSelected(acc: AccommodationData): boolean {
+    if (!selectedAccommodation) return false;
+    return (
+      acc.lat === selectedAccommodation.lat &&
+      acc.lon === selectedAccommodation.lon &&
+      acc.name === selectedAccommodation.name
+    );
+  }
 
   const sortedIndices = useMemo(() => {
     return accommodations
@@ -71,6 +86,7 @@ export function AccommodationPanel({
             {displayIndex > 0 && <Separator className="my-2" />}
             <AccommodationItem
               accommodation={acc}
+              isSelected={isAccommodationSelected(acc)}
               onUpdate={(data) => {
                 onUpdate(originalIndex, data);
                 if (newAccKey === `${stageIndex}-${originalIndex}`) {
@@ -78,6 +94,10 @@ export function AccommodationPanel({
                 }
               }}
               onRemove={() => onRemove(originalIndex)}
+              onSelect={onSelect ? () => onSelect(originalIndex) : undefined}
+              onDeselect={
+                isAccommodationSelected(acc) ? onDeselect : undefined
+              }
               initialEditing={newAccKey === `${stageIndex}-${originalIndex}`}
             />
           </div>

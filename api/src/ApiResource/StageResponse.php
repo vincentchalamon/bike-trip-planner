@@ -33,6 +33,8 @@ final class StageResponse
     /** @var Accommodation[] */
     public array $accommodations = [];
 
+    public ?Accommodation $selectedAccommodation = null;
+
     public Trip $trip;
 
     public int $dayNumber;

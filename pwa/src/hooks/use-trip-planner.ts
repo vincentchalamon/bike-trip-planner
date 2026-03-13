@@ -35,6 +35,12 @@ export function useTripPlanner() {
   const updateLocalAccommodation = useTripStore(
     (s) => s.updateLocalAccommodation,
   );
+  const selectAccommodationInStore = useTripStore(
+    (s) => s.selectAccommodation,
+  );
+  const deselectAccommodationInStore = useTripStore(
+    (s) => s.deselectAccommodation,
+  );
   const deleteStage = useTripStore((s) => s.deleteStage);
   const fatigueFactor = useTripStore((s) => s.fatigueFactor);
   const elevationPenalty = useTripStore((s) => s.elevationPenalty);
@@ -339,6 +345,69 @@ export function useTripPlanner() {
     setNewAccKey(`${stageIndex}-${accIndex}`);
   }
 
+  async function handleSelectAccommodation(
+    stageIndex: number,
+    accIndex: number,
+  ) {
+    if (!tripId) return;
+
+    const nextStageIndex =
+      stageIndex + 1 < stages.length ? stageIndex + 1 : null;
+
+    // Optimistic update
+    selectAccommodationInStore(stageIndex, accIndex, nextStageIndex);
+
+    try {
+      const { error, response } = await apiClient.PATCH(
+        "/trips/{tripId}/stages/{index}/accommodation",
+        {
+          params: { path: { tripId, index: String(stageIndex) } },
+          headers: { "Content-Type": "application/merge-patch+json" },
+          body: { selectedAccommodationIndex: accIndex },
+        },
+      );
+      if (error) {
+        const apiError = parseApiError(response.status, error);
+        toast.error(apiError.message);
+        // Rollback on error: restore accommodations from store snapshot
+        useTripStore.getState().setStages([...stages]);
+      } else {
+        setProcessing(true);
+      }
+    } catch {
+      toast.error(t("errors.failedSelectAccommodation"));
+      useTripStore.getState().setStages([...stages]);
+    }
+  }
+
+  async function handleDeselectAccommodation(stageIndex: number) {
+    if (!tripId) return;
+
+    // Optimistic update
+    deselectAccommodationInStore(stageIndex);
+
+    try {
+      const { error, response } = await apiClient.PATCH(
+        "/trips/{tripId}/stages/{index}/accommodation",
+        {
+          params: { path: { tripId, index: String(stageIndex) } },
+          headers: { "Content-Type": "application/merge-patch+json" },
+          body: { selectedAccommodationIndex: null },
+        },
+      );
+      if (error) {
+        const apiError = parseApiError(response.status, error);
+        toast.error(apiError.message);
+        useTripStore.getState().setStages([...stages]);
+      } else {
+        setProcessing(true);
+      }
+    } catch {
+      toast.error(t("errors.failedDeselectAccommodation"));
+      useTripStore.getState().setStages([...stages]);
+    }
+  }
+
   const firstStage = stages[0];
   const firstWeather = firstStage?.weather ?? null;
   const isWeatherLoading = isProcessing && stages.length > 0 && !firstWeather;
@@ -370,6 +439,8 @@ export function useTripPlanner() {
     handlePacingChange,
     handleEbikeModeChange,
     handleAddAccommodation,
+    handleSelectAccommodation,
+    handleDeselectAccommodation,
     clearNewAccKey: () => setNewAccKey(null),
   };
 }

@@ -96,6 +96,16 @@ export async function mockAllApis(
     });
   });
 
+  // PATCH /trips/{id}/stages/{index}/accommodation — select/deselect accommodation
+  await page.route("**/trips/*/stages/*/accommodation", (route, request) => {
+    if (request.method() !== "PATCH") return route.fallback();
+    return route.fulfill({
+      status: 202,
+      contentType: "application/ld+json",
+      body: JSON.stringify({ "@type": "StageResponse" }),
+    });
+  });
+
   // PATCH /trips/{id}/stages/{index} — update stage
   await page.route("**/trips/*/stages/*", (route, request) => {
     if (request.method() !== "PATCH") return route.fallback();

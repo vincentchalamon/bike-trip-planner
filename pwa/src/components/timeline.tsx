@@ -23,6 +23,8 @@ interface TimelineProps {
     data: Partial<AccommodationData>,
   ) => void;
   onRemoveAccommodation: (stageIndex: number, accIndex: number) => void;
+  onSelectAccommodation?: (stageIndex: number, accIndex: number) => void;
+  onDeselectAccommodation?: (stageIndex: number) => void;
   newAccKey?: string | null;
   onClearNewAcc?: () => void;
 }
@@ -54,6 +56,8 @@ export function Timeline({
   onAddAccommodation,
   onUpdateAccommodation,
   onRemoveAccommodation,
+  onSelectAccommodation,
+  onDeselectAccommodation,
   newAccKey,
   onClearNewAcc,
 }: TimelineProps) {
@@ -214,6 +218,17 @@ export function Timeline({
                     }
                     onRemoveAccommodation={(accIdx) =>
                       onRemoveAccommodation(originalIndex, accIdx)
+                    }
+                    onSelectAccommodation={
+                      onSelectAccommodation
+                        ? (accIdx) =>
+                            onSelectAccommodation(originalIndex, accIdx)
+                        : undefined
+                    }
+                    onDeselectAccommodation={
+                      onDeselectAccommodation
+                        ? () => onDeselectAccommodation(originalIndex)
+                        : undefined
                     }
                     newAccKey={newAccKey}
                     stageOriginalIndex={originalIndex}

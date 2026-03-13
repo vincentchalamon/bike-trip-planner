@@ -38,6 +38,8 @@ interface StageCardProps {
     data: Partial<AccommodationData>,
   ) => void;
   onRemoveAccommodation: (accIndex: number) => void;
+  onSelectAccommodation?: (accIndex: number) => void;
+  onDeselectAccommodation?: () => void;
   newAccKey?: string | null;
   stageOriginalIndex?: number;
   onClearNewAcc?: () => void;
@@ -55,6 +57,8 @@ export function StageCard({
   onAddAccommodation,
   onUpdateAccommodation,
   onRemoveAccommodation,
+  onSelectAccommodation,
+  onDeselectAccommodation,
   newAccKey,
   stageOriginalIndex,
   onClearNewAcc,
@@ -162,9 +166,12 @@ export function StageCard({
             <Separator className="mt-4 mb-4" />
             <AccommodationPanel
               accommodations={stage.accommodations}
+              selectedAccommodation={stage.selectedAccommodation}
               onUpdate={onUpdateAccommodation}
               onRemove={onRemoveAccommodation}
               onAdd={onAddAccommodation}
+              onSelect={onSelectAccommodation}
+              onDeselect={onDeselectAccommodation}
               newAccKey={newAccKey}
               stageIndex={stageOriginalIndex}
               onClearNewAcc={onClearNewAcc}

@@ -25,4 +25,11 @@ final class StageRequest
 
     #[Assert\PositiveOrZero]
     public ?int $toIndex = null;
+
+    /**
+     * Index of the accommodation to select within the stage's accommodations list.
+     * Pass null to deselect the currently selected accommodation.
+     */
+    #[Assert\PositiveOrZero]
+    public ?int $selectedAccommodationIndex = null;
 }

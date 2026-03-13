@@ -93,7 +93,11 @@
     "scraping": "Chargement...",
     "scrapeFailed": "Impossible d'extraire les données de l'URL",
     "loading": "Recherche d'hébergements...",
-    "noAccommodation": "Aucun hébergement détecté à proximité."
+    "noAccommodation": "Aucun hébergement détecté à proximité.",
+    "select": "Sélectionner cet hébergement",
+    "deselect": "Désélectionner l'hébergement",
+    "selected": "Sélectionné",
+    "selectTooltip": "Sélectionner cet hébergement comme étape de nuit"
   },
   "addStage": {
     "add": "Ajouter une étape",
@@ -135,6 +139,8 @@
     "failedUpdatePacing": "Impossible de mettre à jour les réglages.",
     "gpxUploadFailed": "Impossible d'importer le fichier GPX. Vérifiez le fichier et réessayez.",
     "retry": "Réessayer",
-    "tripPlannerError": "Une erreur est survenue lors du chargement du planificateur."
+    "tripPlannerError": "Une erreur est survenue lors du chargement du planificateur.",
+    "failedSelectAccommodation": "Impossible de sélectionner l'hébergement.",
+    "failedDeselectAccommodation": "Impossible de désélectionner l'hébergement."
   }
 }
