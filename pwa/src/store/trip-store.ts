@@ -163,7 +163,8 @@ export const useTripStore = create<TripState>()(
         if (state.stages[stageIndex]) {
           state.stages[stageIndex].accommodations = accs;
           if (searchRadiusKm !== undefined) {
-            state.stages[stageIndex].accommodationSearchRadiusKm = searchRadiusKm;
+            state.stages[stageIndex].accommodationSearchRadiusKm =
+              searchRadiusKm;
           }
         }
       }),

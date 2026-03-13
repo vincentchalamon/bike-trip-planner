@@ -191,7 +191,10 @@ test.describe("Accommodations", () => {
       return route.fulfill({
         status: 202,
         contentType: "application/ld+json",
-        body: JSON.stringify({ id: "test-trip-abc-123", computationStatus: {} }),
+        body: JSON.stringify({
+          id: "test-trip-abc-123",
+          computationStatus: {},
+        }),
       });
     });
 
