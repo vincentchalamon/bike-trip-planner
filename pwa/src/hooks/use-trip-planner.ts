@@ -41,6 +41,9 @@ export function useTripPlanner() {
   const updateLocalAccommodation = useTripStore(
     (s) => s.updateLocalAccommodation,
   );
+  const updateStageAccommodations = useTripStore(
+    (s) => s.updateStageAccommodations,
+  );
   const selectAccommodationInStore = useTripStore((s) => s.selectAccommodation);
   const deselectAccommodationInStore = useTripStore(
     (s) => s.deselectAccommodation,
@@ -347,6 +350,9 @@ export function useTripPlanner() {
     const nextRadius = currentRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;
     if (nextRadius > MAX_ACCOMMODATION_RADIUS_KM) return;
 
+    // Optimistic: clear accommodations so the loading spinner appears
+    stages.forEach((_, i) => updateStageAccommodations(i, []));
+
     try {
       const ok = await scanAccommodations(tripId, nextRadius);
       if (ok) {
@@ -383,6 +389,9 @@ export function useTripPlanner() {
   ) {
     if (!tripId) return;
 
+    const acc = stages[stageIndex]?.accommodations[accIndex];
+    if (!acc) return;
+
     const nextStageIndex =
       stageIndex + 1 < stages.length ? stageIndex + 1 : null;
 
@@ -395,7 +404,10 @@ export function useTripPlanner() {
         {
           params: { path: { tripId, index: String(stageIndex) } },
           headers: { "Content-Type": "application/merge-patch+json" },
-          body: { selectedAccommodationIndex: accIndex },
+          body: {
+            selectedAccommodationLat: acc.lat,
+            selectedAccommodationLon: acc.lon,
+          },
         },
       );
       if (error) {
@@ -424,7 +436,7 @@ export function useTripPlanner() {
         {
           params: { path: { tripId, index: String(stageIndex) } },
           headers: { "Content-Type": "application/merge-patch+json" },
-          body: { selectedAccommodationIndex: null },
+          body: { selectedAccommodationLat: null, selectedAccommodationLon: null },
         },
       );
       if (error) {

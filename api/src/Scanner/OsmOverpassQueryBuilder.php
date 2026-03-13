@@ -50,17 +50,21 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
     }
 
     /**
-     * @param list<Coordinate> $decimatedPoints
+     * @param list<Coordinate> $endPoints
      */
-    public function buildAccommodationQuery(array $decimatedPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS): string
+    public function buildAccommodationQuery(array $endPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS): string
     {
-        $polyline = $this->buildPolyline($decimatedPoints);
+        $filters = '';
+        foreach ($endPoints as $point) {
+            $filters .= \sprintf(
+                'nwr["tourism"~"^(camp_site|hostel|hotel|motel|guest_house|chalet|alpine_hut)$"](around:%d,%F,%F);',
+                $radiusMeters,
+                $point->lat,
+                $point->lon,
+            );
+        }
 
-        return \sprintf(
-            '[out:json][timeout:15];(nwr["tourism"~"^(camp_site|hostel|hotel|motel|guest_house|chalet|alpine_hut)$"](around:%d,%s););out center 100;',
-            $radiusMeters,
-            $polyline,
-        );
+        return \sprintf('[out:json][timeout:15];(%s);out center 100;', $filters);
     }
 
     /**

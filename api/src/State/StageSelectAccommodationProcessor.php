@@ -69,7 +69,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         $stage = $stages[$index];
 
         // Deselect: clear selected accommodation and trigger a new accommodation scan
-        if (null === $data->selectedAccommodationIndex) {
+        if (null === $data->selectedAccommodationLat || null === $data->selectedAccommodationLon) {
             $stage->selectedAccommodation = null;
             $stages[$index] = $stage;
             $this->tripStateManager->storeStages($tripId, $stages);
@@ -82,13 +82,20 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             return $this->objectMapper->map($stage, StageResponse::class);
         }
 
-        $accIndex = $data->selectedAccommodationIndex;
+        $lat = $data->selectedAccommodationLat;
+        $lon = $data->selectedAccommodationLon;
 
-        if (!isset($stage->accommodations[$accIndex])) {
-            throw new UnprocessableEntityHttpException(\sprintf('Accommodation at index %d not found for stage %d.', $accIndex, $index));
+        $selected = null;
+        foreach ($stage->accommodations as $accommodation) {
+            if (abs($accommodation->lat - $lat) < 1e-6 && abs($accommodation->lon - $lon) < 1e-6) {
+                $selected = $accommodation;
+                break;
+            }
         }
 
-        $selected = $stage->accommodations[$accIndex];
+        if (null === $selected) {
+            throw new UnprocessableEntityHttpException(\sprintf('Accommodation at coordinates (%F, %F) not found for stage %d.', $lat, $lon, $index));
+        }
 
         // Keep only the selected accommodation (remove others)
         $stage->accommodations = [$selected];

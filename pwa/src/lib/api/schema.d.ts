@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/trips/{tripId}/accommodations/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-scan accommodations for all stages with a custom radius.
+         * @description Creates a AccommodationScan resource.
+         */
+        post: operations["api_trips_tripIdaccommodationsscan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{tripId}/stages": {
         parameters: {
             query?: never;
@@ -166,6 +186,7 @@ export interface components {
             isExactPrice?: boolean;
             url?: string | null;
             possibleClosed?: boolean;
+            distanceToEndPoint?: number;
         };
         "Accommodation.gpx": {
             name?: string;
@@ -177,6 +198,7 @@ export interface components {
             isExactPrice?: boolean;
             url?: string | null;
             possibleClosed?: boolean;
+            distanceToEndPoint?: number;
         };
         "Accommodation.jsonld": {
             name?: string;
@@ -188,6 +210,21 @@ export interface components {
             isExactPrice?: boolean;
             url?: string | null;
             possibleClosed?: boolean;
+            distanceToEndPoint?: number;
+        };
+        "AccommodationScan.AccommodationScanRequest": {
+            /**
+             * @description Search radius in km (default: 5, max: 15, step: 2)
+             * @default 5
+             */
+            radiusKm: number;
+        };
+        "AccommodationScan.Trip.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            id?: string;
+            /** @description Map of ComputationName->value to status string */
+            computationStatus?: {
+                [key: string]: string;
+            };
         };
         "Alert.fit": {
             /** @enum {string} */
@@ -379,8 +416,10 @@ export interface components {
             label?: string | null;
         };
         "Stage.StageSelectAccommodationRequest.jsonMergePatch": {
-            /** @description Index of the accommodation to select within the stage's accommodations list. */
-            selectedAccommodationIndex?: number | null;
+            /** @description Latitude of the accommodation to select. */
+            selectedAccommodationLat?: number | null;
+            /** @description Longitude of the accommodation to select. */
+            selectedAccommodationLon?: number | null;
         };
         "Stage.fit": {
             weather?: components["schemas"]["WeatherForecast.fit"] | null;
@@ -510,6 +549,56 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    api_trips_tripIdaccommodationsscan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description AccommodationScan identifier */
+                tripId: string;
+            };
+            cookie?: never;
+        };
+        /** @description The new AccommodationScan resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["AccommodationScan.AccommodationScanRequest"];
+            };
+        };
+        responses: {
+            /** @description AccommodationScan resource created */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["AccommodationScan.Trip.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
     api_trips_tripIdstages_post: {
         parameters: {
             query?: never;

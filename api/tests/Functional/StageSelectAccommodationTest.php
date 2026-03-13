@@ -90,7 +90,8 @@ final class StageSelectAccommodationTest extends ApiTestCase
         $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
             'json' => [
-                'selectedAccommodationIndex' => 0,
+                'selectedAccommodationLat' => 45.48,
+                'selectedAccommodationLon' => 5.48,
             ],
         ]);
 
@@ -132,7 +133,8 @@ final class StageSelectAccommodationTest extends ApiTestCase
         self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
             'json' => [
-                'selectedAccommodationIndex' => 0,
+                'selectedAccommodationLat' => 45.48,
+                'selectedAccommodationLon' => 5.48,
             ],
         ]);
 
@@ -213,7 +215,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
 
         self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
-            'json' => ['selectedAccommodationIndex' => null],
+            'json' => ['selectedAccommodationLat' => null, 'selectedAccommodationLon' => null],
         ]);
         $this->assertResponseStatusCodeSame(202);
 
@@ -244,7 +246,8 @@ final class StageSelectAccommodationTest extends ApiTestCase
         self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
             'json' => [
-                'selectedAccommodationIndex' => 99,
+                'selectedAccommodationLat' => 99.0,
+                'selectedAccommodationLon' => 99.0,
             ],
         ]);
 
@@ -260,7 +263,8 @@ final class StageSelectAccommodationTest extends ApiTestCase
         self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/99/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
             'json' => [
-                'selectedAccommodationIndex' => 0,
+                'selectedAccommodationLat' => 45.48,
+                'selectedAccommodationLon' => 5.48,
             ],
         ]);
 
