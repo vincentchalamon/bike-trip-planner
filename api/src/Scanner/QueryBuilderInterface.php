@@ -26,7 +26,7 @@ interface QueryBuilderInterface
     /**
      * @param list<Coordinate> $decimatedPoints
      */
-    public function buildAccommodationQuery(array $decimatedPoints): string;
+    public function buildAccommodationQuery(array $decimatedPoints, int $radiusMeters = 5000): string;
 
     /**
      * @param list<Coordinate> $decimatedPoints

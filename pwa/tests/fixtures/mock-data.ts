@@ -99,11 +99,15 @@ export function weatherFetchedEvent(): MercureEvent {
   };
 }
 
-export function accommodationsFoundEvent(stageIndex: number): MercureEvent {
+export function accommodationsFoundEvent(
+  stageIndex: number,
+  searchRadiusKm = 5,
+): MercureEvent {
   return {
     type: "accommodations_found",
     data: {
       stageIndex,
+      searchRadiusKm,
       accommodations: [
         {
           name: "Camping Les Oliviers",
@@ -128,6 +132,20 @@ export function accommodationsFoundEvent(stageIndex: number): MercureEvent {
           distanceToEndPoint: 0.5,
         },
       ],
+    },
+  };
+}
+
+export function emptyAccommodationsFoundEvent(
+  stageIndex: number,
+  searchRadiusKm = 5,
+): MercureEvent {
+  return {
+    type: "accommodations_found",
+    data: {
+      stageIndex,
+      searchRadiusKm,
+      accommodations: [],
     },
   };
 }

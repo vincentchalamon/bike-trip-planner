@@ -3,6 +3,7 @@ import {
   routeParsedEvent,
   stagesComputedEvent,
   accommodationsFoundEvent,
+  emptyAccommodationsFoundEvent,
   tripCompleteEvent,
 } from "../fixtures/mock-data";
 
@@ -113,5 +114,102 @@ test.describe("Accommodations", () => {
     await expect(
       lastStage.getByRole("button", { name: "Ajouter un hébergement" }),
     ).toBeHidden();
+  });
+
+  test("shows no-accommodation message with radius when no results", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      emptyAccommodationsFoundEvent(0, 5),
+      tripCompleteEvent(),
+    ]);
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard).toContainText("5 km");
+    // Expand radius button should be visible
+    await expect(
+      stageCard.getByRole("button", { name: /7 km/i }),
+    ).toBeVisible();
+  });
+
+  test("shows expand radius button when accommodations found and radius below max", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      accommodationsFoundEvent(0, 5),
+      tripCompleteEvent(),
+    ]);
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard).toContainText("Camping Les Oliviers");
+    // Expand radius suggestion should be available
+    await expect(
+      stageCard.getByRole("button", { name: /7 km/i }),
+    ).toBeVisible();
+  });
+
+  test("hides expand radius button when max radius reached", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      accommodationsFoundEvent(0, 15),
+      tripCompleteEvent(),
+    ]);
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard).toContainText("Camping Les Oliviers");
+    // No expand button when at max radius
+    await expect(
+      stageCard.getByRole("button", { name: /17 km/i }),
+    ).toBeHidden();
+  });
+
+  test("clicking expand radius button triggers accommodation re-scan", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    let scanRequestBody: unknown = null;
+
+    // Intercept the accommodation scan request
+    await mockedPage.route("**/trips/*/accommodations/scan", (route, req) => {
+      if (req.method() === "POST") {
+        scanRequestBody = JSON.parse(req.postData() ?? "{}");
+      }
+      return route.fulfill({
+        status: 202,
+        contentType: "application/ld+json",
+        body: JSON.stringify({ id: "test-trip-abc-123", computationStatus: {} }),
+      });
+    });
+
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      emptyAccommodationsFoundEvent(0, 5),
+      tripCompleteEvent(),
+    ]);
+
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    const expandButton = stageCard.getByRole("button", { name: /7 km/i });
+    await expect(expandButton).toBeVisible();
+    await expandButton.click();
+
+    // The request should have been made with radiusKm = 7
+    await mockedPage.waitForTimeout(200);
+    expect(scanRequestBody).toMatchObject({ radiusKm: 7 });
   });
 });

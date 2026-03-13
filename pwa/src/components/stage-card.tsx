@@ -40,6 +40,7 @@ interface StageCardProps {
   onRemoveAccommodation: (accIndex: number) => void;
   onSelectAccommodation?: (accIndex: number) => void;
   onDeselectAccommodation?: () => void;
+  onExpandAccommodationRadius?: (currentRadiusKm: number) => void;
   newAccKey?: string | null;
   stageOriginalIndex?: number;
   onClearNewAcc?: () => void;
@@ -59,6 +60,7 @@ export function StageCard({
   onRemoveAccommodation,
   onSelectAccommodation,
   onDeselectAccommodation,
+  onExpandAccommodationRadius,
   newAccKey,
   stageOriginalIndex,
   onClearNewAcc,
@@ -172,10 +174,12 @@ export function StageCard({
               onAdd={onAddAccommodation}
               onSelect={onSelectAccommodation}
               onDeselect={onDeselectAccommodation}
+              onExpandRadius={onExpandAccommodationRadius}
               newAccKey={newAccKey}
               stageIndex={stageOriginalIndex}
               onClearNewAcc={onClearNewAcc}
               isProcessing={isProcessing}
+              searchRadiusKm={stage.accommodationSearchRadiusKm ?? 5}
             />
           </>
         )}

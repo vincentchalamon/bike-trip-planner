@@ -2,11 +2,15 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Loader2, Info } from "lucide-react";
+import { Loader2, Info, ChevronRight } from "lucide-react";
 import { AccommodationItem } from "@/components/accommodation-item";
 import { AddAccommodationButton } from "@/components/add-accommodation-button";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import type { AccommodationData } from "@/lib/validation/schemas";
+
+const MAX_ACCOMMODATION_RADIUS_KM = 15;
+const ACCOMMODATION_RADIUS_STEP_KM = 2;
 
 interface AccommodationPanelProps {
   accommodations: AccommodationData[];
@@ -16,10 +20,12 @@ interface AccommodationPanelProps {
   onAdd: () => void;
   onSelect?: (accIndex: number) => void;
   onDeselect?: () => void;
+  onExpandRadius?: (currentRadiusKm: number) => void;
   newAccKey?: string | null;
   stageIndex?: number;
   onClearNewAcc?: () => void;
   isProcessing?: boolean;
+  searchRadiusKm?: number;
 }
 
 export function AccommodationPanel({
@@ -30,10 +36,12 @@ export function AccommodationPanel({
   onAdd,
   onSelect,
   onDeselect,
+  onExpandRadius,
   newAccKey,
   stageIndex,
   onClearNewAcc,
   isProcessing,
+  searchRadiusKm = 5,
 }: AccommodationPanelProps) {
   const t = useTranslations("accommodation");
   const newAccIndex =
@@ -66,18 +74,40 @@ export function AccommodationPanel({
       });
   }, [accommodations, newAccIndex]);
 
+  const nextRadiusKm = searchRadiusKm + ACCOMMODATION_RADIUS_STEP_KM;
+  const canExpand = nextRadiusKm <= MAX_ACCOMMODATION_RADIUS_KM;
+  const hasNoAccommodations = accommodations.length === 0;
+
   return (
     <div className="bg-muted/50 rounded-lg p-4">
-      {accommodations.length === 0 &&
+      {hasNoAccommodations &&
         (isProcessing ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             <span>{t("loading")}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-            <Info className="h-3.5 w-3.5" />
-            <span>{t("noAccommodation")}</span>
+          <div className="mb-3 space-y-2">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Info className="h-3.5 w-3.5 shrink-0" />
+              <span>{t("noAccommodation", { radius: searchRadiusKm })}</span>
+            </div>
+            {canExpand && onExpandRadius && (
+              <div className="flex flex-col gap-1 pl-5">
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs text-primary justify-start"
+                  onClick={() => onExpandRadius(searchRadiusKm)}
+                >
+                  <ChevronRight className="h-3 w-3 mr-1" />
+                  {t("expandRadius", { radius: nextRadiusKm })}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  {t("suggestExpandTypes")}
+                </p>
+              </div>
+            )}
           </div>
         ))}
       {sortedIndices.map((originalIndex, displayIndex) => {
@@ -105,6 +135,19 @@ export function AccommodationPanel({
           </div>
         );
       })}
+      {!hasNoAccommodations && canExpand && onExpandRadius && (
+        <div className="mt-2">
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto p-0 text-xs text-primary"
+            onClick={() => onExpandRadius(searchRadiusKm)}
+          >
+            <ChevronRight className="h-3 w-3 mr-1" />
+            {t("expandRadius", { radius: nextRadiusKm })}
+          </Button>
+        </div>
+      )}
       <div className={accommodations.length > 0 ? "mt-3" : ""}>
         <AddAccommodationButton onClick={onAdd} />
       </div>

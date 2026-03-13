@@ -45,6 +45,7 @@ interface TripState {
   updateStageAccommodations: (
     stageIndex: number,
     accs: AccommodationData[],
+    searchRadiusKm?: number,
   ) => void;
   updateStageAlerts: (
     stageIndex: number,
@@ -157,10 +158,13 @@ export const useTripStore = create<TripState>()(
         }
       }),
 
-    updateStageAccommodations: (stageIndex, accs) =>
+    updateStageAccommodations: (stageIndex, accs, searchRadiusKm) =>
       set((state) => {
         if (state.stages[stageIndex]) {
           state.stages[stageIndex].accommodations = accs;
+          if (searchRadiusKm !== undefined) {
+            state.stages[stageIndex].accommodationSearchRadiusKm = searchRadiusKm;
+          }
         }
       }),
 

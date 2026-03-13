@@ -8,6 +8,7 @@ final readonly class ScanAccommodations
 {
     public function __construct(
         public string $tripId,
+        public int $radiusMeters = 5000,
     ) {
     }
 }

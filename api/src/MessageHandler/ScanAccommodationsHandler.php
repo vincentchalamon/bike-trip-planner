@@ -58,6 +58,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
     public function __invoke(ScanAccommodations $message): void
     {
         $tripId = $message->tripId;
+        $radiusMeters = $message->radiusMeters;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -67,14 +68,14 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         $request = $this->tripStateManager->getRequest($tripId);
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
-        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale, $radiusMeters): void {
             // Single Overpass query using decimated route points (shared cache key with ScanAllOsmDataHandler)
             $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
                 ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
                 : array_map(static fn (Stage $stage): Coordinate => $stage->endPoint, $stages);
 
-            $query = $this->queryBuilder->buildAccommodationQuery($points);
+            $query = $this->queryBuilder->buildAccommodationQuery($points, $radiusMeters);
             $result = $this->scanner->query($query);
 
             /** @var list<array{id?: int, type?: string, tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
@@ -163,6 +164,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                 $payload = [
                     'stageIndex' => $i,
                     'accommodations' => $accommodations,
+                    'searchRadiusKm' => (int) round($radiusMeters / 1000),
                 ];
                 if ([] !== $alertsToPublish) {
                     $payload['alerts'] = $alertsToPublish;

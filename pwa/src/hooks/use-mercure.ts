@@ -79,6 +79,7 @@ function dispatchEvent(event: MercureEvent): void {
             alerts: [],
             pois: [],
             accommodations: [],
+            accommodationSearchRadiusKm: 5,
           };
         });
         store.setStages(merged);
@@ -112,6 +113,9 @@ function dispatchEvent(event: MercureEvent): void {
             alerts: [],
             pois: [],
             accommodations: endMatch ? prev.accommodations : [],
+            accommodationSearchRadiusKm: endMatch
+              ? (prev.accommodationSearchRadiusKm ?? 5)
+              : 5,
           };
         });
         store.setStages(stages);
@@ -153,6 +157,7 @@ function dispatchEvent(event: MercureEvent): void {
       store.updateStageAccommodations(
         event.data.stageIndex,
         event.data.accommodations,
+        event.data.searchRadiusKm,
       );
       if (event.data.alerts && event.data.alerts.length > 0) {
         store.updateStageAlerts(

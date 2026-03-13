@@ -89,6 +89,17 @@ final class OsmOverpassQueryBuilderTest extends TestCase
     }
 
     #[Test]
+    public function buildAccommodationQueryUsesCustomRadius(): void
+    {
+        $points = [new Coordinate(45.0, 5.0)];
+
+        $query = $this->builder->buildAccommodationQuery($points, 7000);
+
+        $this->assertStringContainsString('around:7000', $query);
+        $this->assertStringNotContainsString('around:5000', $query);
+    }
+
+    #[Test]
     public function buildAccommodationQueryContainsAccommodationTypes(): void
     {
         $points = [new Coordinate(45.0, 5.0)];

@@ -85,6 +85,7 @@ export type MercureEvent =
         stageIndex: number;
         accommodations: AccommodationPayload[];
         alerts?: AlertPayload[];
+        searchRadiusKm?: number;
       };
     }
   | {

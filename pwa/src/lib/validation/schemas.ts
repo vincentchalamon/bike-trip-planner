@@ -61,6 +61,7 @@ export const StageDataSchema = z.object({
   pois: z.array(PointOfInterestSchema),
   accommodations: z.array(AccommodationSchema),
   selectedAccommodation: AccommodationSchema.nullable().optional(),
+  accommodationSearchRadiusKm: z.number().int().positive().default(5),
 });
 
 export const TripStateSchema = z.object({
