@@ -81,7 +81,7 @@ final readonly class RestDayNudgeAnalyzer implements StageAnalyzerInterface
                 'alert.rest_day.nudge',
                 [
                     '%stage%' => $stage->dayNumber,
-                    '%days%' => $this->consecutiveDaysThreshold,
+                    '%days%' => $consecutiveCount,
                 ],
                 'alerts',
                 $locale,

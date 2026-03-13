@@ -8,7 +8,6 @@ import { useUiStore } from "@/store/ui-store";
 import { useMercure } from "@/hooks/use-mercure";
 import {
   apiClient,
-  apiFetch,
   parseApiError,
   isNetworkError,
   uploadGpxFile,
@@ -212,17 +211,16 @@ export function useTripPlanner() {
     insertRestDay(afterIndex);
 
     try {
-      const res = await apiFetch(
-        `/trips/${encodeURIComponent(tripId)}/stages/${afterIndex}/rest-day`,
+      const { response } = await apiClient.POST(
+        "/trips/{tripId}/stages/{index}/rest-day",
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/ld+json",
-            Accept: "application/ld+json",
+          params: {
+            path: { tripId, index: String(afterIndex) },
           },
+          parseAs: "json",
         },
       );
-      if (!res.ok) {
+      if (!response.ok) {
         toast.error(t("errors.failedInsertRestDay"));
         useTripStore.getState().setStages(snapshot);
       } else {

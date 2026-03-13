@@ -11,6 +11,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
+use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -68,6 +69,10 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         }
 
         $this->tripStateManager->storeStages($tripId, $stages);
+
+        $insertedIndex = $index + 1;
+        $affectedIndices = range($insertedIndex, count($stages) - 1);
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {

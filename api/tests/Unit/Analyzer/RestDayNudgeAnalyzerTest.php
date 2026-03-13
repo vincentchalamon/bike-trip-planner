@@ -136,8 +136,10 @@ final class RestDayNudgeAnalyzerTest extends TestCase
         $alertsDay6 = $analyzer->analyze($stages[5], ['allStages' => $stages]);
 
         $this->assertCount(1, $alertsDay3);
+        $this->assertStringContainsString('3', $alertsDay3[0]->message); // consecutive count = 3
         $this->assertSame([], $alertsDay4);
         $this->assertCount(1, $alertsDay6);
+        $this->assertStringContainsString('6', $alertsDay6[0]->message); // consecutive count = 6, not threshold 3
     }
 
     #[Test]
