@@ -387,6 +387,7 @@ export function useTripPlanner() {
   }
 
   async function handleAccommodationTypesChange(newTypes: AccommodationType[]) {
+    const previous = enabledAccommodationTypes;
     setEnabledAccommodationTypes(newTypes);
     if (!tripId) return;
 
@@ -406,12 +407,14 @@ export function useTripPlanner() {
       });
 
       if (error) {
+        setEnabledAccommodationTypes(previous);
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
       } else {
         setProcessing(true);
       }
     } catch {
+      setEnabledAccommodationTypes(previous);
       toast.error(t("errors.failedUpdateAccommodationTypes"));
     }
   }
