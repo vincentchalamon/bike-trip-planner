@@ -99,6 +99,7 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
             status: 202,
             openapi: new Operation(summary: 'Insert a rest day after a given stage. The next stage startPoint stays identical; dates shift by one day.'),
             output: StageResponse::class,
+            input: false,
             processor: RestDayInsertProcessor::class,
         ),
         new Patch(

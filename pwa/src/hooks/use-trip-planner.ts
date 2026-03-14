@@ -217,8 +217,6 @@ export function useTripPlanner() {
           params: {
             path: { tripId, index: String(afterIndex) },
           },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          body: {} as any,
           parseAs: "json",
         },
       );

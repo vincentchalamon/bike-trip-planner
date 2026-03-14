@@ -196,18 +196,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Accommodation: {
-            name?: string;
-            type?: string;
-            lat?: number;
-            lon?: number;
-            estimatedPriceMin?: number;
-            estimatedPriceMax?: number;
-            isExactPrice?: boolean;
-            url?: string | null;
-            possibleClosed?: boolean;
-            distanceToEndPoint?: number;
-        };
         "Accommodation.fit": {
             name?: string;
             type?: string;
@@ -259,13 +247,6 @@ export interface components {
             computationStatus?: {
                 [key: string]: string;
             };
-        };
-        Alert: {
-            /** @enum {string} */
-            type?: "critical" | "warning" | "nudge";
-            message?: string;
-            lat?: number | null;
-            lon?: number | null;
         };
         "Alert.fit": {
             /** @enum {string} */
@@ -399,13 +380,6 @@ export interface components {
             "@id": string;
             "@type": string;
         };
-        PointOfInterest: {
-            name?: string;
-            category?: string;
-            lat?: number;
-            lon?: number;
-            distanceFromStart?: number | null;
-        };
         "PointOfInterest.fit": {
             name?: string;
             category?: string;
@@ -426,23 +400,6 @@ export interface components {
             lat?: number;
             lon?: number;
             distanceFromStart?: number | null;
-        };
-        Stage: {
-            weather?: components["schemas"]["WeatherForecast"] | null;
-            alerts?: components["schemas"]["Alert"][];
-            pois?: components["schemas"]["PointOfInterest"][];
-            accommodations?: components["schemas"]["Accommodation"][];
-            selectedAccommodation?: components["schemas"]["Accommodation"] | null;
-            tripId?: string;
-            dayNumber?: number;
-            distance?: number;
-            elevation?: number;
-            startPoint?: components["schemas"]["Coordinate"];
-            endPoint?: components["schemas"]["Coordinate"];
-            geometry?: components["schemas"]["Coordinate"][];
-            label?: string | null;
-            elevationLoss?: number;
-            isRestDay?: boolean;
         };
         "Stage.StageRequest": {
             position?: number | null;
@@ -479,8 +436,6 @@ export interface components {
             endPoint?: components["schemas"]["Coordinate.jsonld"];
             geometry?: components["schemas"]["Coordinate.jsonld"][];
             label?: string | null;
-            /** @default false */
-            isRestDay: boolean;
         };
         "Stage.StageSelectAccommodationRequest.jsonMergePatch": {
             /** @description Latitude of the accommodation to select. */
@@ -582,15 +537,6 @@ export interface components {
             computationStatus?: {
                 [key: string]: string;
             };
-        };
-        WeatherForecast: {
-            icon?: string;
-            description?: string;
-            tempMin?: number;
-            tempMax?: number;
-            windSpeed?: number;
-            windDirection?: string;
-            precipitationProbability?: number;
         };
         "WeatherForecast.fit": {
             icon?: string;
@@ -1000,12 +946,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        /** @description The new Stage resource */
-        requestBody: {
-            content: {
-                "application/ld+json": components["schemas"]["Stage"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Stage resource created */
             202: {
