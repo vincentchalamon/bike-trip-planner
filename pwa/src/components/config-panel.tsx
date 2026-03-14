@@ -191,7 +191,11 @@ export function ConfigPanel({
                         handleAccommodationTypeToggle(type)
                       }
                       disabled={isLastEnabled}
-                      aria-label={tAccommodation(`type_${type}` as never)}
+                      aria-label={tAccommodation(
+                        `type_${type}` as Parameters<
+                          typeof tAccommodation
+                        >[0],
+                      )}
                     />
                     <label
                       htmlFor={`acc-type-${type}`}
@@ -200,7 +204,11 @@ export function ConfigPanel({
                         isLastEnabled && "opacity-50 cursor-not-allowed",
                       )}
                     >
-                      {tAccommodation(`type_${type}` as never)}
+                      {tAccommodation(
+                        `type_${type}` as Parameters<
+                          typeof tAccommodation
+                        >[0],
+                      )}
                     </label>
                   </div>
                 );
