@@ -192,9 +192,7 @@ export function ConfigPanel({
                       }
                       disabled={isLastEnabled}
                       aria-label={tAccommodation(
-                        `type_${type}` as Parameters<
-                          typeof tAccommodation
-                        >[0],
+                        `type_${type}` as Parameters<typeof tAccommodation>[0],
                       )}
                     />
                     <label
@@ -205,9 +203,7 @@ export function ConfigPanel({
                       )}
                     >
                       {tAccommodation(
-                        `type_${type}` as Parameters<
-                          typeof tAccommodation
-                        >[0],
+                        `type_${type}` as Parameters<typeof tAccommodation>[0],
                       )}
                     </label>
                   </div>
