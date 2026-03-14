@@ -80,8 +80,8 @@ interface TripState {
   updatePacingSettings: (
     fatigueFactor: number,
     elevationPenalty: number,
-    maxDistancePerDay?: number,
-    averageSpeed?: number,
+    maxDistancePerDay: number,
+    averageSpeed: number,
   ) => void;
   setEbikeMode: (ebikeMode: boolean) => void;
   setEnabledAccommodationTypes: (types: AccommodationType[]) => void;
@@ -267,12 +267,8 @@ export const useTripStore = create<TripState>()(
       set((state) => {
         state.fatigueFactor = fatigueFactor;
         state.elevationPenalty = elevationPenalty;
-        if (maxDistancePerDay !== undefined) {
-          state.maxDistancePerDay = maxDistancePerDay;
-        }
-        if (averageSpeed !== undefined) {
-          state.averageSpeed = averageSpeed;
-        }
+        state.maxDistancePerDay = maxDistancePerDay;
+        state.averageSpeed = averageSpeed;
       }),
 
     setEbikeMode: (ebikeMode) =>
