@@ -53,6 +53,16 @@ export function ConfigPanel({
   const isOpen = useUiStore((s) => s.isConfigPanelOpen);
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
   const panelRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  // Restore focus to the trigger element when panel closes
+  useEffect(() => {
+    if (isOpen) {
+      previousFocusRef.current = document.activeElement as HTMLElement;
+    } else {
+      previousFocusRef.current?.focus();
+    }
+  }, [isOpen]);
 
   // Close on Escape key
   useEffect(() => {
@@ -125,6 +135,7 @@ export function ConfigPanel({
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
+        aria-hidden={!isOpen}
         aria-label={t("title")}
         className={cn(
           "fixed top-0 right-0 z-50 h-full w-80 bg-background border-l shadow-xl",
