@@ -53,12 +53,9 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
      * @param array<int, Coordinate> $endPoints
      * @param list<string>           $enabledTypes OSM tourism types to include (default: all 7)
      */
-    public function buildAccommodationQuery(array $endPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS, array $enabledTypes = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel']): string
+    public function buildAccommodationQuery(array $endPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS, array $enabledTypes = \App\ApiResource\TripRequest::ALL_ACCOMMODATION_TYPES): string
     {
-        // Build regex from enabled types; fall back to all types if list is empty
-        $typesPattern = [] !== $enabledTypes
-            ? implode('|', array_map(preg_quote(...), $enabledTypes, array_fill(0, \count($enabledTypes), '/')))
-            : 'camp_site|hostel|alpine_hut|chalet|guest_house|motel|hotel';
+        $typesPattern = implode('|', array_map(preg_quote(...), $enabledTypes, array_fill(0, \count($enabledTypes), '/')));
 
         $filters = '';
         foreach ($endPoints as $point) {

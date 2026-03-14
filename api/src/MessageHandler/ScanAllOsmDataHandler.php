@@ -44,7 +44,7 @@ final readonly class ScanAllOsmDataHandler extends AbstractTripMessageHandler
             );
 
             $request = $this->tripStateManager->getRequest($tripId);
-            $enabledAccommodationTypes = $request instanceof \App\ApiResource\TripRequest ? $request->enabledAccommodationTypes : ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel'];
+            $enabledAccommodationTypes = $request instanceof \App\ApiResource\TripRequest ? $request->enabledAccommodationTypes : \App\ApiResource\TripRequest::ALL_ACCOMMODATION_TYPES;
 
             // Execute all 5 Overpass queries concurrently — results are cached.
             // Leaf handlers will hit the cache when they build the same queries.

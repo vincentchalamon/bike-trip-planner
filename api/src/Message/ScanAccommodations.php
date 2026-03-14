@@ -15,7 +15,7 @@ final readonly class ScanAccommodations
         public string $tripId,
         public int $radiusMeters = QueryBuilderInterface::DEFAULT_ACCOMMODATION_RADIUS_METERS,
         public ?int $stageIndex = null,
-        public array $enabledAccommodationTypes = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel'],
+        public array $enabledAccommodationTypes = \App\ApiResource\TripRequest::ALL_ACCOMMODATION_TYPES,
     ) {
     }
 }

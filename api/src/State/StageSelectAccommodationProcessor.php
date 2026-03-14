@@ -74,7 +74,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             // Note: endPoint intentionally not reverted — accommodation coords serve as
             // stage boundary until Valhalla (ADR-017) provides proper re-route.
             $request = $this->tripStateManager->getRequest($tripId);
-            $enabledAccommodationTypes = $request instanceof \App\ApiResource\TripRequest ? $request->enabledAccommodationTypes : ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel'];
+            $enabledAccommodationTypes = $request instanceof \App\ApiResource\TripRequest ? $request->enabledAccommodationTypes : \App\ApiResource\TripRequest::ALL_ACCOMMODATION_TYPES;
             $this->messageBus->dispatch(new ScanAccommodations($tripId, enabledAccommodationTypes: $enabledAccommodationTypes));
             $affectedDeselect = isset($stages[$index + 1]) ? [$index, $index + 1] : [$index];
             $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect, skipAccommodationScan: true));

@@ -76,7 +76,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
             $this->messageBus->dispatch(new ScanPois($tripId));
             if (!$message->skipAccommodationScan) {
                 $request = $this->tripStateManager->getRequest($tripId);
-                $enabledTypes = $request instanceof \App\ApiResource\TripRequest ? $request->enabledAccommodationTypes : ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel'];
+                $enabledTypes = $request instanceof \App\ApiResource\TripRequest ? $request->enabledAccommodationTypes : \App\ApiResource\TripRequest::ALL_ACCOMMODATION_TYPES;
                 $this->messageBus->dispatch(new ScanAccommodations($tripId, enabledAccommodationTypes: $enabledTypes));
             }
 

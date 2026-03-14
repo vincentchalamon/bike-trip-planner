@@ -158,7 +158,7 @@ final readonly class GpxUploadController
         /** @var list<string> $enabledAccommodationTypes */
         $enabledAccommodationTypes = $request->request->all('enabledAccommodationTypes');
         if ([] !== $enabledAccommodationTypes) {
-            $allowed = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel'];
+            $allowed = TripRequest::ALL_ACCOMMODATION_TYPES;
             $filtered = array_values(array_filter(
                 $enabledAccommodationTypes,
                 static fn (string $type): bool => \in_array($type, $allowed, true),
