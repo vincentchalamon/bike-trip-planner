@@ -26,6 +26,8 @@ interface TripState {
   endDate: string | null;
   fatigueFactor: number;
   elevationPenalty: number;
+  maxDistancePerDay: number;
+  averageSpeed: number;
   ebikeMode: boolean;
   departureHour: number;
   stages: StageData[];
@@ -75,6 +77,8 @@ interface TripState {
   updatePacingSettings: (
     fatigueFactor: number,
     elevationPenalty: number,
+    maxDistancePerDay: number,
+    averageSpeed: number,
   ) => void;
   setEbikeMode: (ebikeMode: boolean) => void;
   setComputationStatus: (status: Record<string, string>) => void;
@@ -92,6 +96,8 @@ const initialState = {
   endDate: null,
   fatigueFactor: 0.9,
   elevationPenalty: 50,
+  maxDistancePerDay: 80,
+  averageSpeed: 15,
   ebikeMode: false,
   departureHour: 8,
   stages: [],
@@ -247,10 +253,17 @@ export const useTripStore = create<TripState>()(
         state.endDate = endDate;
       }),
 
-    updatePacingSettings: (fatigueFactor, elevationPenalty) =>
+    updatePacingSettings: (
+      fatigueFactor,
+      elevationPenalty,
+      maxDistancePerDay,
+      averageSpeed,
+    ) =>
       set((state) => {
         state.fatigueFactor = fatigueFactor;
         state.elevationPenalty = elevationPenalty;
+        state.maxDistancePerDay = maxDistancePerDay;
+        state.averageSpeed = averageSpeed;
       }),
 
     setEbikeMode: (ebikeMode) =>

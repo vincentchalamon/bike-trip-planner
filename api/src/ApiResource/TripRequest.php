@@ -48,4 +48,14 @@ final class TripRequest
     #[ApiProperty(description: 'Typical departure hour (0-23, default 8)')]
     #[Assert\Range(min: 0, max: 23)]
     public int $departureHour = 8;
+
+    // Maximum distance per day cap (km), applied after pacing formula
+    #[ApiProperty(description: 'Maximum distance cap per day in km (default: 80)')]
+    #[Assert\Range(min: 30, max: 300)]
+    public float $maxDistancePerDay = 80.0;
+
+    // Average cycling speed (km/h), reserved for travel time estimation (Sprint 5, issue #61)
+    #[ApiProperty(description: 'Average cycling speed in km/h (default: 15)')]
+    #[Assert\Range(min: 5, max: 50)]
+    public float $averageSpeed = 15.0;
 }

@@ -157,6 +157,8 @@ export async function uploadGpxFile(
     startDate?: string | null;
     fatigueFactor?: number;
     elevationPenalty?: number;
+    maxDistancePerDay?: number;
+    averageSpeed?: number;
     ebikeMode?: boolean;
   },
 ): Promise<{ data: GpxUploadResponse | null; error: string | null }> {
@@ -171,6 +173,12 @@ export async function uploadGpxFile(
   }
   if (options?.elevationPenalty !== undefined) {
     formData.append("elevationPenalty", String(options.elevationPenalty));
+  }
+  if (options?.maxDistancePerDay !== undefined) {
+    formData.append("maxDistancePerDay", String(options.maxDistancePerDay));
+  }
+  if (options?.averageSpeed !== undefined) {
+    formData.append("averageSpeed", String(options.averageSpeed));
   }
   if (options?.ebikeMode !== undefined) {
     formData.append("ebikeMode", String(options.ebikeMode));
