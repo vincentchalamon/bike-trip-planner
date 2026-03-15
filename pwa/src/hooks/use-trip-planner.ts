@@ -20,6 +20,7 @@ import {
   DEFAULT_ACCOMMODATION_RADIUS_KM,
 } from "@/lib/accommodation-constants";
 import type { AccommodationData, StageData } from "@/lib/validation/schemas";
+import type { AccommodationType } from "@/lib/accommodation-types";
 
 export function useTripPlanner() {
   const t = useTranslations();
@@ -89,6 +90,7 @@ export function useTripPlanner() {
           ebikeMode,
           departureHour,
           startDate: startDate ?? today,
+          enabledAccommodationTypes,
         },
       });
 
@@ -131,6 +133,7 @@ export function useTripPlanner() {
         averageSpeed,
         ebikeMode,
         startDate: startDate ?? today,
+        enabledAccommodationTypes,
       });
 
       if (error || !data) {
@@ -178,6 +181,7 @@ export function useTripPlanner() {
           averageSpeed,
           ebikeMode,
           departureHour,
+          enabledAccommodationTypes,
         },
       });
 
@@ -357,6 +361,7 @@ export function useTripPlanner() {
           averageSpeed: newAverageSpeed,
           ebikeMode: newEbikeMode,
           departureHour,
+          enabledAccommodationTypes,
         },
       });
 
@@ -409,6 +414,39 @@ export function useTripPlanner() {
       newEbikeMode,
       false,
     );
+  }
+
+  async function handleAccommodationTypesChange(newTypes: AccommodationType[]) {
+    const previous = enabledAccommodationTypes;
+    setEnabledAccommodationTypes(newTypes);
+    if (!tripId) return;
+
+    try {
+      const { error, response } = await apiClient.PATCH("/trips/{id}", {
+        params: { path: { id: tripId } },
+        headers: { "Content-Type": "application/merge-patch+json" },
+        body: {
+          fatigueFactor,
+          elevationPenalty,
+          maxDistancePerDay,
+          averageSpeed,
+          ebikeMode,
+          departureHour,
+          enabledAccommodationTypes: newTypes,
+        },
+      });
+
+      if (error) {
+        setEnabledAccommodationTypes(previous);
+        const apiError = parseApiError(response.status, error);
+        toast.error(apiError.message);
+      } else {
+        setProcessing(true);
+      }
+    } catch {
+      setEnabledAccommodationTypes(previous);
+      toast.error(t("errors.failedUpdateAccommodationTypes"));
+    }
   }
 
   async function handleExpandAccommodationRadius(
@@ -547,8 +585,7 @@ export function useTripPlanner() {
     averageSpeed,
     ebikeMode,
     enabledAccommodationTypes,
-    // Wired to backend filtering in #173 (feature/36)
-    handleAccommodationTypesChange: setEnabledAccommodationTypes,
+    handleAccommodationTypesChange,
     updateTitle,
     updateLocalAccommodation,
     removeLocalAccommodation,

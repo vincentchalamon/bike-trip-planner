@@ -43,11 +43,15 @@ final readonly class ScanAllOsmDataHandler extends AbstractTripMessageHandler
                 $decimatedData,
             );
 
+            $request = $this->tripStateManager->getRequest($tripId);
+            \assert($request instanceof \App\ApiResource\TripRequest);
+            $enabledAccommodationTypes = $request->enabledAccommodationTypes;
+
             // Execute all 5 Overpass queries concurrently — results are cached.
             // Leaf handlers will hit the cache when they build the same queries.
             $this->scanner->queryBatch([
                 'poi' => $this->queryBuilder->buildPoiQuery($points),
-                'accommodation' => $this->queryBuilder->buildAccommodationQuery($points),
+                'accommodation' => $this->queryBuilder->buildAccommodationQuery($points, QueryBuilderInterface::DEFAULT_ACCOMMODATION_RADIUS_METERS, $enabledAccommodationTypes),
                 'bikeShop' => $this->queryBuilder->buildBikeShopQuery($points),
                 'cemetery' => $this->queryBuilder->buildCemeteryQuery($points),
                 'ways' => $this->queryBuilder->buildWaysQuery($points),

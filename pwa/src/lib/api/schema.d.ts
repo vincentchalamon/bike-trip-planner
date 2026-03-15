@@ -521,6 +521,19 @@ export interface components {
              * @default 15
              */
             averageSpeed: number;
+            /**
+             * @description Enabled OSM tourism types for accommodation search (default: all 7 types)
+             * @default [
+             *       "camp_site",
+             *       "hostel",
+             *       "alpine_hut",
+             *       "chalet",
+             *       "guest_house",
+             *       "motel",
+             *       "hotel"
+             *     ]
+             */
+            enabledAccommodationTypes: string[];
         };
         "Trip.TripRequest.jsonMergePatch": {
             /** Format: uri */
@@ -550,6 +563,19 @@ export interface components {
              * @default 15
              */
             averageSpeed: number;
+            /**
+             * @description Enabled OSM tourism types for accommodation search (default: all 7 types)
+             * @default [
+             *       "camp_site",
+             *       "hostel",
+             *       "alpine_hut",
+             *       "chalet",
+             *       "guest_house",
+             *       "motel",
+             *       "hotel"
+             *     ]
+             */
+            enabledAccommodationTypes: string[];
         };
         "Trip.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;

@@ -95,4 +95,30 @@ final class AccommodationScanProcessorTest extends TestCase
 
         $processor->process(new AccommodationScanRequest(), new Post(), ['tripId' => $tripId]);
     }
+
+    #[Test]
+    public function propagatesEnabledAccommodationTypesFromStoredRequest(): void
+    {
+        $tripId = 'trip-types';
+        $enabledTypes = ['camp_site', 'hostel'];
+
+        $tripRequest = new TripRequest();
+        $tripRequest->enabledAccommodationTypes = $enabledTypes;
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getRequest')->willReturn($tripRequest);
+
+        $computationTracker = $this->createStub(ComputationTrackerInterface::class);
+        $computationTracker->method('getStatuses')->willReturn([]);
+
+        $messageBus = $this->createMock(MessageBusInterface::class);
+        $messageBus->expects($this->once())
+            ->method('dispatch')
+            ->with($this->callback(static fn (ScanAccommodations $message): bool => $message->enabledAccommodationTypes === $enabledTypes))
+            ->willReturn(new Envelope(new ScanAccommodations($tripId)));
+
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker);
+
+        $processor->process(new AccommodationScanRequest(), new Post(), ['tripId' => $tripId]);
+    }
 }

@@ -160,6 +160,7 @@ export async function uploadGpxFile(
     maxDistancePerDay?: number;
     averageSpeed?: number;
     ebikeMode?: boolean;
+    enabledAccommodationTypes?: string[];
   },
 ): Promise<{ data: GpxUploadResponse | null; error: string | null }> {
   const formData = new FormData();
@@ -182,6 +183,11 @@ export async function uploadGpxFile(
   }
   if (options?.ebikeMode !== undefined) {
     formData.append("ebikeMode", String(options.ebikeMode));
+  }
+  if (options?.enabledAccommodationTypes !== undefined) {
+    options.enabledAccommodationTypes.forEach((type) => {
+      formData.append("enabledAccommodationTypes[]", type);
+    });
   }
 
   const res = await apiFetch("/trips/gpx-upload", {

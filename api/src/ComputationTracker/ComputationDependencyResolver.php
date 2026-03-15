@@ -18,6 +18,7 @@ final class ComputationDependencyResolver
         'maxDistancePerDay' => [ComputationName::STAGES],    // cascade subtree
         'startDate' => [ComputationName::WEATHER, ComputationName::CALENDAR],
         'ebikeMode' => [ComputationName::TERRAIN],           // re-analyze only
+        'enabledAccommodationTypes' => [ComputationName::ACCOMMODATIONS], // re-scan with new types
     ];
 
     /**
@@ -57,7 +58,22 @@ final class ComputationDependencyResolver
             'elevationPenalty' => $old->elevationPenalty !== $new->elevationPenalty,
             'maxDistancePerDay' => $old->maxDistancePerDay !== $new->maxDistancePerDay,
             'ebikeMode' => $old->ebikeMode !== $new->ebikeMode,
+            'enabledAccommodationTypes' => $this->accommodationTypesChanged($old->enabledAccommodationTypes, $new->enabledAccommodationTypes),
             default => false,
         };
+    }
+
+    /**
+     * @param list<string> $old
+     * @param list<string> $new
+     */
+    private function accommodationTypesChanged(array $old, array $new): bool
+    {
+        $sortedOld = $old;
+        $sortedNew = $new;
+        sort($sortedOld);
+        sort($sortedNew);
+
+        return $sortedOld !== $sortedNew;
     }
 }

@@ -51,13 +51,17 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
 
     /**
      * @param array<int, Coordinate> $endPoints
+     * @param list<string>           $enabledTypes OSM tourism types to include (default: all 7)
      */
-    public function buildAccommodationQuery(array $endPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS): string
+    public function buildAccommodationQuery(array $endPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS, array $enabledTypes = \App\ApiResource\TripRequest::ALL_ACCOMMODATION_TYPES): string
     {
+        $typesPattern = implode('|', array_map(preg_quote(...), $enabledTypes, array_fill(0, \count($enabledTypes), '/')));
+
         $filters = '';
         foreach ($endPoints as $point) {
             $filters .= \sprintf(
-                'nwr["tourism"~"^(camp_site|hostel|hotel|motel|guest_house|chalet|alpine_hut)$"](around:%d,%F,%F);',
+                'nwr["tourism"~"^(%s)$"](around:%d,%F,%F);',
+                $typesPattern,
                 $radiusMeters,
                 $point->lat,
                 $point->lon,

@@ -16,7 +16,7 @@ import { PacingSettings } from "@/components/pacing-settings";
 import { useUiStore } from "@/store/ui-store";
 import { cn } from "@/lib/utils";
 import {
-  ACCOMMODATION_TYPES,
+  FILTERABLE_ACCOMMODATION_TYPES,
   type AccommodationType,
 } from "@/lib/accommodation-types";
 
@@ -188,7 +188,7 @@ export function ConfigPanel({
               {t("accommodationTitle")}
             </h3>
             <div className="flex flex-col gap-2">
-              {ACCOMMODATION_TYPES.map((type) => {
+              {FILTERABLE_ACCOMMODATION_TYPES.map((type) => {
                 const isEnabled = enabledAccommodationTypes.includes(type);
                 const isLastEnabled =
                   isEnabled && enabledAccommodationTypes.length <= 1;

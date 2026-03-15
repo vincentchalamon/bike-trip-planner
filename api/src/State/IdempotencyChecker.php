@@ -46,6 +46,9 @@ final readonly class IdempotencyChecker implements IdempotencyCheckerInterface
 
     private function computeHash(TripRequest $request): string
     {
+        $sortedAccommodationTypes = $request->enabledAccommodationTypes;
+        sort($sortedAccommodationTypes);
+
         return hash('xxh128', serialize([
             $request->sourceUrl,
             $request->startDate?->format('Y-m-d'),
@@ -54,6 +57,7 @@ final readonly class IdempotencyChecker implements IdempotencyCheckerInterface
             $request->elevationPenalty,
             $request->maxDistancePerDay,
             $request->ebikeMode,
+            $sortedAccommodationTypes,
         ]));
     }
 

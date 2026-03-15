@@ -92,7 +92,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
             ]);
 
             $this->messageBus->dispatch(new ScanPois($tripId));
-            $this->messageBus->dispatch(new ScanAccommodations($tripId));
+            $this->messageBus->dispatch(new ScanAccommodations($tripId, enabledAccommodationTypes: $request->enabledAccommodationTypes));
             $this->messageBus->dispatch(new AnalyzeTerrain($tripId));
             $this->messageBus->dispatch(new FetchWeather($tripId));
             $this->messageBus->dispatch(new CheckCalendar($tripId));

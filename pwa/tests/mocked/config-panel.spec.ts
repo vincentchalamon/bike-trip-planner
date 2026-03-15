@@ -82,7 +82,7 @@ test.describe("ConfigPanel", () => {
       mockedPage.getByRole("dialog", { name: "Paramètres" }),
     ).toBeInViewport();
 
-    // Disable all types except one by clicking each enabled switch
+    // Only FILTERABLE_ACCOMMODATION_TYPES are shown (7 types, "Autre" excluded)
     const typeLabels = [
       "Hôtel",
       "Auberge",
@@ -91,7 +91,6 @@ test.describe("ConfigPanel", () => {
       "Chambre d'hôte",
       "Motel",
       "Refuge",
-      "Autre",
     ];
     // Keep only the first type enabled — disable the rest
     for (const label of typeLabels.slice(1)) {

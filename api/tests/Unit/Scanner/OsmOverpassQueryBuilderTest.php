@@ -132,6 +132,33 @@ final class OsmOverpassQueryBuilderTest extends TestCase
     }
 
     #[Test]
+    public function buildAccommodationQueryWithEnabledTypesFiltersToRequestedTypes(): void
+    {
+        $points = [new Coordinate(45.0, 5.0)];
+
+        $query = $this->builder->buildAccommodationQuery($points, 5000, ['camp_site', 'hostel']);
+
+        $this->assertStringContainsString('camp_site', $query);
+        $this->assertStringContainsString('hostel', $query);
+        $this->assertStringNotContainsString('hotel', $query);
+        $this->assertStringNotContainsString('motel', $query);
+        $this->assertStringNotContainsString('guest_house', $query);
+        $this->assertStringNotContainsString('chalet', $query);
+        $this->assertStringNotContainsString('alpine_hut', $query);
+    }
+
+    #[Test]
+    public function buildAccommodationQueryWithSingleTypeUsesOnlyThatType(): void
+    {
+        $points = [new Coordinate(45.0, 5.0)];
+
+        $query = $this->builder->buildAccommodationQuery($points, 5000, ['hotel']);
+
+        $this->assertStringContainsString('"tourism"~"^(hotel)$"', $query);
+        $this->assertStringNotContainsString('camp_site', $query);
+    }
+
+    #[Test]
     public function buildBikeShopQuery(): void
     {
         $points = [new Coordinate(45.0, 5.0)];

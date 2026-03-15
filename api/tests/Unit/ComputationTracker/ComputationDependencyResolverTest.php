@@ -176,6 +176,34 @@ final class ComputationDependencyResolverTest extends TestCase
         $this->assertSame([], $result);
     }
 
+    #[Test]
+    public function enabledAccommodationTypesChangeReturnsAccommodations(): void
+    {
+        $old = $this->createRequest('https://www.komoot.com/tour/123');
+        $new = $this->createRequest('https://www.komoot.com/tour/123');
+        $old->enabledAccommodationTypes = ['camp_site', 'hostel', 'hotel', 'motel', 'guest_house', 'chalet', 'alpine_hut'];
+        $new->enabledAccommodationTypes = ['camp_site', 'hostel'];
+
+        $result = $this->resolver->resolve($old, $new);
+
+        $this->assertContains(ComputationName::ACCOMMODATIONS, $result);
+        $this->assertNotContains(ComputationName::STAGES, $result);
+        $this->assertNotContains(ComputationName::ROUTE, $result);
+    }
+
+    #[Test]
+    public function enabledAccommodationTypesSameValuesInDifferentOrderAreEqual(): void
+    {
+        $old = $this->createRequest('https://www.komoot.com/tour/123');
+        $new = $this->createRequest('https://www.komoot.com/tour/123');
+        $old->enabledAccommodationTypes = ['hotel', 'camp_site', 'hostel'];
+        $new->enabledAccommodationTypes = ['camp_site', 'hotel', 'hostel'];
+
+        $result = $this->resolver->resolve($old, $new);
+
+        $this->assertSame([], $result);
+    }
+
     private function createRequest(string $sourceUrl, ?string $startDate = null, ?string $endDate = null): TripRequest
     {
         $request = new TripRequest();

@@ -76,7 +76,9 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         if ([] !== $affectedIndices) {
             $this->messageBus->dispatch(new ScanPois($tripId));
             if (!$message->skipAccommodationScan) {
-                $this->messageBus->dispatch(new ScanAccommodations($tripId));
+                $request = $this->tripStateManager->getRequest($tripId);
+                \assert($request instanceof \App\ApiResource\TripRequest);
+                $this->messageBus->dispatch(new ScanAccommodations($tripId, enabledAccommodationTypes: $request->enabledAccommodationTypes));
             }
 
             $this->messageBus->dispatch(new CheckBikeShops($tripId));

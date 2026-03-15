@@ -17,6 +17,7 @@ use App\Message\CheckCalendar;
 use App\Message\FetchAndParseRoute;
 use App\Message\FetchWeather;
 use App\Message\GenerateStages;
+use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -98,10 +99,22 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
             ComputationName::TERRAIN => $this->messageBus->dispatch(new AnalyzeTerrain($tripId)),
             ComputationName::WEATHER => $this->messageBus->dispatch(new FetchWeather($tripId)),
             ComputationName::CALENDAR => $this->messageBus->dispatch(new CheckCalendar($tripId)),
+            ComputationName::ACCOMMODATIONS => $this->dispatchAccommodationsScan($tripId),
             // These computations are cascaded internally by their parent handlers,
             // not dispatched directly as root computations from a PATCH operation.
             // If a new ComputationName appears here unexpectedly, fail-fast to surface the gap.
             default => throw new \LogicException(\sprintf('No direct dispatch registered for computation "%s" in %s. Add it to PARAMETER_DEPENDENCIES or wire its dispatch here.', $computation->value, self::class)),
         };
+    }
+
+    private function dispatchAccommodationsScan(string $tripId): void
+    {
+        $request = $this->tripStateManager->getRequest($tripId);
+        \assert($request instanceof TripRequest);
+
+        $this->messageBus->dispatch(new ScanAccommodations(
+            $tripId,
+            enabledAccommodationTypes: $request->enabledAccommodationTypes,
+        ));
     }
 }

@@ -154,5 +154,18 @@ final readonly class GpxUploadController
                 $tripRequest->ebikeMode = $parsed;
             }
         }
+
+        /** @var list<string> $enabledAccommodationTypes */
+        $enabledAccommodationTypes = $request->request->all('enabledAccommodationTypes');
+        if ([] !== $enabledAccommodationTypes) {
+            $allowed = TripRequest::ALL_ACCOMMODATION_TYPES;
+            $filtered = array_values(array_filter(
+                $enabledAccommodationTypes,
+                static fn (string $type): bool => \in_array($type, $allowed, true),
+            ));
+            if ([] !== $filtered) {
+                $tripRequest->enabledAccommodationTypes = $filtered;
+            }
+        }
     }
 }
