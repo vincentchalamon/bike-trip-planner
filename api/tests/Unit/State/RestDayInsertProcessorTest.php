@@ -15,6 +15,7 @@ use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\RestDayInsertProcessor;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\Envelope;
@@ -23,9 +24,12 @@ use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
 final class RestDayInsertProcessorTest extends TestCase
 {
-    private TripRequestRepositoryInterface $tripStateManager;
-    private MessageBusInterface $messageBus;
-    private ObjectMapperInterface $objectMapper;
+    private MockObject&TripRequestRepositoryInterface $tripStateManager;
+
+    private MockObject&MessageBusInterface $messageBus;
+
+    private MockObject&ObjectMapperInterface $objectMapper;
+
     private RestDayInsertProcessor $processor;
 
     #[\Override]
@@ -55,8 +59,8 @@ final class RestDayInsertProcessorTest extends TestCase
     #[Test]
     public function insertsRestDayAtCorrectPositionAndRenumbersStages(): void
     {
-        $coord = new Coordinate(45.0, 5.0);
-        $coord2 = new Coordinate(46.0, 6.0);
+        $coord = new Coordinate(lat: 45.0, lon: 5.0);
+        $coord2 = new Coordinate(lat: 46.0, lon: 6.0);
 
         $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord2);
         $stage1 = new Stage(tripId: 'trip-1', dayNumber: 2, distance: 90.0, elevation: 600.0, startPoint: $coord2, endPoint: $coord);
@@ -94,11 +98,10 @@ final class RestDayInsertProcessorTest extends TestCase
     #[Test]
     public function returnsStageResponseMappedFromInsertedStage(): void
     {
-        $coord = new Coordinate(45.0, 5.0);
+        $coord = new Coordinate(lat: 45.0, lon: 5.0);
         $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
 
         $this->tripStateManager->method('getStages')->willReturn([$stage0]);
-        $this->tripStateManager->method('storeStages')->willReturn(null);
         $this->tripStateManager->method('getRequest')->willReturn(null);
         $this->messageBus->method('dispatch')->willReturnCallback(static fn (object $msg): Envelope => new Envelope($msg));
 
@@ -119,13 +122,12 @@ final class RestDayInsertProcessorTest extends TestCase
     #[Test]
     public function dispatchesRecalculateStagesWithFullRange(): void
     {
-        $coord = new Coordinate(45.0, 5.0);
+        $coord = new Coordinate(lat: 45.0, lon: 5.0);
         $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
         $stage1 = new Stage(tripId: 'trip-1', dayNumber: 2, distance: 90.0, elevation: 600.0, startPoint: $coord, endPoint: $coord);
         $stage2 = new Stage(tripId: 'trip-1', dayNumber: 3, distance: 70.0, elevation: 400.0, startPoint: $coord, endPoint: $coord);
 
         $this->tripStateManager->method('getStages')->willReturn([$stage0, $stage1, $stage2]);
-        $this->tripStateManager->method('storeStages')->willReturn(null);
         $this->tripStateManager->method('getRequest')->willReturn(null);
 
         $dispatchedMessages = [];
@@ -152,14 +154,13 @@ final class RestDayInsertProcessorTest extends TestCase
     #[Test]
     public function doesNotDispatchWeatherAndCalendarWhenNoStartDate(): void
     {
-        $coord = new Coordinate(45.0, 5.0);
+        $coord = new Coordinate(lat: 45.0, lon: 5.0);
         $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
 
         $tripRequest = new TripRequest();
         // startDate is null by default
 
         $this->tripStateManager->method('getStages')->willReturn([$stage0]);
-        $this->tripStateManager->method('storeStages')->willReturn(null);
         $this->tripStateManager->method('getRequest')->willReturn($tripRequest);
 
         $dispatchedMessages = [];
@@ -184,14 +185,13 @@ final class RestDayInsertProcessorTest extends TestCase
     #[Test]
     public function dispatchesFetchWeatherAndCheckCalendarWhenStartDateIsSet(): void
     {
-        $coord = new Coordinate(45.0, 5.0);
+        $coord = new Coordinate(lat: 45.0, lon: 5.0);
         $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
 
         $tripRequest = new TripRequest();
         $tripRequest->startDate = new \DateTimeImmutable('2026-06-01');
 
         $this->tripStateManager->method('getStages')->willReturn([$stage0]);
-        $this->tripStateManager->method('storeStages')->willReturn(null);
         $this->tripStateManager->method('getRequest')->willReturn($tripRequest);
 
         $dispatchedMessages = [];
