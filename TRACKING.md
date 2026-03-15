@@ -61,7 +61,7 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
   - [x] Distance hébergement-endPoint affichée
   - [x] Modification du rayon de recherche + résultats mis à jour
   - [x] Sélection d'un hébergement → recalcul itinéraire (endPoint + startPoint étape suivante)
-  - [ ] Responsive : vérifier sur mobile
+  - [x] Responsive : vérifier sur mobile
 
 ---
 
@@ -78,11 +78,11 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-04.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Presets cyclo sélectionnables (sportif, touring, etc.)
-  - [ ] Panneau de configuration accessible et fonctionnel
-  - [ ] Filtrage par type d'hébergement dans le panneau de configuration
-  - [ ] Insertion d'un jour de repos → recalcul des étapes suivantes
-  - [ ] Responsive : sidebar sur mobile
+  - [x] Presets cyclo sélectionnables (sportif, touring, etc.)
+  - [x] Panneau de configuration accessible et fonctionnel
+  - [x] Filtrage par type d'hébergement dans le panneau de configuration
+  - [x] Insertion d'un jour de repos → recalcul des étapes suivantes
+  - [x] Responsive : sidebar sur mobile
 
 ---
 
