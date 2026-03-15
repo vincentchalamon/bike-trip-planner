@@ -2,15 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Settings } from "lucide-react";
 import { MagicLinkInput } from "@/components/magic-link-input";
 import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { TripSummary } from "@/components/trip-summary";
 import { TripHeader } from "@/components/trip-header";
-import { PacingSettings } from "@/components/pacing-settings";
 import { StageProgressBar } from "@/components/stage-progress-bar";
 import { Timeline } from "@/components/timeline";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ConfigPanel } from "@/components/config-panel";
+import { Button } from "@/components/ui/button";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
+import { useUiStore } from "@/store/ui-store";
 
 export function TripPlanner() {
   const t = useTranslations();
@@ -31,6 +33,8 @@ export function TripPlanner() {
     maxDistancePerDay,
     averageSpeed,
     ebikeMode,
+    enabledAccommodationTypes,
+    handleAccommodationTypesChange,
     updateTitle,
     updateLocalAccommodation,
     removeLocalAccommodation,
@@ -49,6 +53,8 @@ export function TripPlanner() {
     handleInsertRestDay,
     clearNewAccKey,
   } = useTripPlanner();
+
+  const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
 
   // Show the sticky progress bar only when its natural position has scrolled
   // off the top of the viewport. An IntersectionObserver watches an invisible
@@ -78,7 +84,7 @@ export function TripPlanner() {
         {t("layout.skipToTimeline")}
       </a>
 
-      {/* Toolbar: magic link + GPX upload + buttons */}
+      {/* Toolbar: magic link + GPX upload + config button */}
       <div className="flex items-center gap-2">
         <div className="flex-1 min-w-0">
           <MagicLinkInput
@@ -88,7 +94,16 @@ export function TripPlanner() {
           />
         </div>
         <GpxUploadButton onUpload={handleGpxUpload} disabled={isProcessing} />
-        <ThemeToggle />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 cursor-pointer"
+          onClick={() => setConfigPanelOpen(true)}
+          title={t("config.open")}
+          aria-label={t("config.open")}
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Trip content */}
@@ -104,7 +119,7 @@ export function TripPlanner() {
             isProcessing={isProcessing}
           />
 
-          {/* Header: title + locations + calendar + pacing */}
+          {/* Header: title + locations + calendar */}
           <TripHeader
             title={trip.title}
             onTitleChange={updateTitle}
@@ -113,17 +128,7 @@ export function TripPlanner() {
             onDatesChange={handleDatesChange}
             showTitleSuggestion={totalDistance !== null}
             isTitleLoading={isProcessing && totalDistance === null}
-          >
-            <PacingSettings
-              fatigueFactor={fatigueFactor}
-              elevationPenalty={elevationPenalty}
-              maxDistancePerDay={maxDistancePerDay}
-              averageSpeed={averageSpeed}
-              ebikeMode={ebikeMode}
-              onUpdate={handlePacingChange}
-              onEbikeModeChange={handleEbikeModeChange}
-            />
-          </TripHeader>
+          />
 
           {/* Sentinel — marks the natural position of the progress bar in the
               flow. The sticky bar becomes visible once this exits the viewport. */}
@@ -162,6 +167,19 @@ export function TripPlanner() {
           </div>
         </div>
       )}
+
+      {/* Configuration panel (sidebar drawer) */}
+      <ConfigPanel
+        fatigueFactor={fatigueFactor}
+        elevationPenalty={elevationPenalty}
+        maxDistancePerDay={maxDistancePerDay}
+        averageSpeed={averageSpeed}
+        ebikeMode={ebikeMode}
+        enabledAccommodationTypes={enabledAccommodationTypes}
+        onPacingUpdate={handlePacingChange}
+        onEbikeModeChange={handleEbikeModeChange}
+        onAccommodationTypesChange={handleAccommodationTypesChange}
+      />
     </main>
   );
 }

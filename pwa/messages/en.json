@@ -147,6 +147,26 @@
     "segmentTitle": "Day {day} — {distance} km",
     "segmentLabel": "Day {day} · {distance} km"
   },
+  "config": {
+    "title": "Settings",
+    "close": "Close settings",
+    "open": "Open settings",
+    "pacingTitle": "Rider profile",
+    "accommodationTitle": "Accommodation types",
+    "themeTitle": "Theme",
+    "themeDescription": "Toggle light / dark mode",
+    "splitViewTitle": "Split view",
+    "splitViewLabel": "Map / timeline split view",
+    "splitViewTooltip": "Available in a future sprint (map feature).",
+    "languageTitle": "Language",
+    "languagePlaceholder": "Language switcher (coming soon)",
+    "languageTooltip": "Language selection will be available soon.",
+    "tripActionsTitle": "Trip actions",
+    "duplicateLabel": "Duplicate trip",
+    "duplicateTooltip": "Requires persistent storage (coming soon).",
+    "shareLabel": "Share trip",
+    "shareTooltip": "Requires persistent storage (coming soon)."
+  },
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",

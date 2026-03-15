@@ -99,6 +99,14 @@ test.describe("Alerts and weather", () => {
       "Route non goudronnee sur 3km",
     );
 
+    // VAE toggle is inside the ConfigPanel — open it first
+    await mockedPage
+      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .click();
+    await expect(
+      mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    ).toBeInViewport();
+
     const ebikeToggle = mockedPage.getByRole("switch", { name: "Mode VAE" });
     await ebikeToggle.click(); // enable
     await ebikeToggle.click(); // disable — optimistic clear, no SSE fired

@@ -147,6 +147,26 @@
     "segmentTitle": "Jour {day} — {distance} km",
     "segmentLabel": "J{day} · {distance} km"
   },
+  "config": {
+    "title": "Paramètres",
+    "close": "Fermer les paramètres",
+    "open": "Ouvrir les paramètres",
+    "pacingTitle": "Profil cyclo",
+    "accommodationTitle": "Types d'hébergements",
+    "themeTitle": "Thème",
+    "themeDescription": "Basculer clair / sombre",
+    "splitViewTitle": "Vue partagée",
+    "splitViewLabel": "Vue partagée carte / timeline",
+    "splitViewTooltip": "Disponible dans un prochain sprint (fonctionnalité carte).",
+    "languageTitle": "Langue",
+    "languagePlaceholder": "Sélecteur de langue (bientôt disponible)",
+    "languageTooltip": "La sélection de la langue sera disponible prochainement.",
+    "tripActionsTitle": "Actions sur le voyage",
+    "duplicateLabel": "Dupliquer le voyage",
+    "duplicateTooltip": "Nécessite la persistance en base de données (bientôt disponible).",
+    "shareLabel": "Partager le voyage",
+    "shareTooltip": "Nécessite la persistance en base de données (bientôt disponible)."
+  },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",

@@ -1,6 +1,17 @@
 import { test, expect } from "../fixtures/base.fixture";
 import { routeParsedEvent } from "../fixtures/mock-data";
 
+async function openConfigPanel(
+  mockedPage: import("@playwright/test").Page,
+): Promise<void> {
+  await mockedPage
+    .getByRole("button", { name: "Ouvrir les paramètres" })
+    .click();
+  await expect(
+    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+  ).toBeInViewport();
+}
+
 test.describe("Pacing settings", () => {
   test("shows fatigue and elevation sliders", async ({
     submitUrl,
@@ -9,6 +20,7 @@ test.describe("Pacing settings", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    await openConfigPanel(mockedPage);
     const fatigueSlider = mockedPage.getByRole("slider", {
       name: "Indice de fatigue accumulée",
     });
@@ -26,6 +38,7 @@ test.describe("Pacing settings", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    await openConfigPanel(mockedPage);
     const fatigueSlider = mockedPage.getByRole("slider", {
       name: "Indice de fatigue accumulée",
     });
@@ -40,6 +53,7 @@ test.describe("Pacing settings", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    await openConfigPanel(mockedPage);
     const maxDistanceSlider = mockedPage.getByRole("slider", {
       name: "Distance maximale par jour (km)",
     });
@@ -57,6 +71,7 @@ test.describe("Pacing settings", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    await openConfigPanel(mockedPage);
     const maxDistanceSlider = mockedPage.getByRole("slider", {
       name: "Distance maximale par jour (km)",
     });
@@ -70,6 +85,7 @@ test.describe("Pacing settings", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    await openConfigPanel(mockedPage);
     const averageSpeedSlider = mockedPage.getByRole("slider", {
       name: "Vitesse moyenne (km/h)",
     });
@@ -83,6 +99,7 @@ test.describe("Pacing settings", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    await openConfigPanel(mockedPage);
     const beginnerButton = mockedPage.getByRole("button", {
       name: "Appliquer le profil Débutant",
     });
@@ -104,6 +121,7 @@ test.describe("Pacing settings", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    await openConfigPanel(mockedPage);
     const beginnerButton = mockedPage.getByRole("button", {
       name: "Appliquer le profil Débutant",
     });
@@ -125,6 +143,7 @@ test.describe("Pacing settings", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    await openConfigPanel(mockedPage);
     const expertButton = mockedPage.getByRole("button", {
       name: "Appliquer le profil Expert",
     });

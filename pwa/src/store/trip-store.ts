@@ -10,6 +10,8 @@ import type {
   AccommodationData,
   AlertData,
 } from "@/lib/validation/schemas";
+import type { AccommodationType } from "@/lib/accommodation-types";
+import { ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
 
 interface TripIdentity {
   id: string;
@@ -31,6 +33,7 @@ interface TripState {
   averageSpeed: number;
   ebikeMode: boolean;
   departureHour: number;
+  enabledAccommodationTypes: AccommodationType[];
   stages: StageData[];
   computationStatus: Record<string, string>;
 
@@ -82,6 +85,7 @@ interface TripState {
     averageSpeed: number,
   ) => void;
   setEbikeMode: (ebikeMode: boolean) => void;
+  setEnabledAccommodationTypes: (types: AccommodationType[]) => void;
   setComputationStatus: (status: Record<string, string>) => void;
   deleteStage: (stageIndex: number) => void;
   insertRestDay: (afterIndex: number) => void;
@@ -102,6 +106,7 @@ const initialState = {
   averageSpeed: 15,
   ebikeMode: false,
   departureHour: 8,
+  enabledAccommodationTypes: [...ACCOMMODATION_TYPES] as AccommodationType[],
   stages: [],
   computationStatus: {},
 };
@@ -271,6 +276,11 @@ export const useTripStore = create<TripState>()(
     setEbikeMode: (ebikeMode) =>
       set((state) => {
         state.ebikeMode = ebikeMode;
+      }),
+
+    setEnabledAccommodationTypes: (types) =>
+      set((state) => {
+        state.enabledAccommodationTypes = types;
       }),
 
     setComputationStatus: (status) =>
