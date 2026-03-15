@@ -123,7 +123,7 @@
     "averageSpeed": "Average speed",
     "averageSpeedTooltip": "Average cycling speed (km/h), used for travel time estimation.",
     "averageSpeedLabel": "Average cycling speed (km/h)",
-    "fatigue": "Accumulated fatigue index",
+    "fatigue": "Accumulated fatigue",
     "fatigueTooltip": "Reduces distance by {value}% per day to compensate for accumulated fatigue.",
     "fatigueError": "Must be between 1% and 50%",
     "fatigueLabel": "Accumulated fatigue index",
@@ -145,7 +145,10 @@
     "ariaLabel": "Trip progress by day",
     "segmentAriaLabel": "Day {day} — {distance} km",
     "segmentTitle": "Day {day} — {distance} km",
-    "segmentLabel": "Day {day} · {distance} km"
+    "segmentLabel": "Day {day} · {distance} km",
+    "segmentRestDayAriaLabel": "Day {day} — Rest",
+    "segmentRestDayTitle": "Day {day} — Rest",
+    "segmentRestDayLabel": "Day {day} · Rest"
   },
   "config": {
     "title": "Settings",

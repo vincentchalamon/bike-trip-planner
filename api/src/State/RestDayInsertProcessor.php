@@ -79,7 +79,7 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
 
         $insertedIndex = $index + 1;
         $affectedIndices = range($insertedIndex, count($stages) - 1);
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: true));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {

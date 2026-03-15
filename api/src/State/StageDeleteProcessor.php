@@ -51,7 +51,9 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
 
         $sourceType = $this->tripStateManager->getSourceType($tripId);
 
-        if ($stages[$index]->isRestDay) {
+        $isRestDayDeletion = $stages[$index]->isRestDay;
+
+        if ($isRestDayDeletion) {
             // Rest days are just removed without merging
             array_splice($stages, $index, 1);
             $mergedIndex = null;
@@ -72,7 +74,7 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         $this->tripStateManager->storeStages($tripId, $stages);
 
         $affectedIndices = null !== $mergedIndex ? [$mergedIndex] : [];
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: $isRestDayDeletion));
 
         $this->messageBus->dispatch(new FetchWeather($tripId));
         $this->messageBus->dispatch(new CheckCalendar($tripId));

@@ -160,7 +160,7 @@ export function ConfigPanel({
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-6">
           {/* Cyclo profile / pacing settings */}
           <section aria-labelledby="config-pacing-heading">
             <h3 id="config-pacing-heading" className="text-sm font-medium mb-3">

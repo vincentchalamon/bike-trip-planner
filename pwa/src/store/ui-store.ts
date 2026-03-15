@@ -5,6 +5,7 @@ import { immer } from "zustand/middleware/immer";
 
 interface UiState {
   isProcessing: boolean;
+  isAccommodationScanning: boolean;
   sseConnected: boolean;
   expandedCalendar: boolean;
   isConfigPanelOpen: boolean;
@@ -12,6 +13,7 @@ interface UiState {
   activeDayNumber: number | null;
 
   setProcessing: (value: boolean) => void;
+  setAccommodationScanning: (value: boolean) => void;
   setSseConnected: (value: boolean) => void;
   setExpandedCalendar: (value: boolean) => void;
   setConfigPanelOpen: (value: boolean) => void;
@@ -37,6 +39,7 @@ interface UiState {
 export const useUiStore = create<UiState>()(
   immer((set) => ({
     isProcessing: false,
+    isAccommodationScanning: false,
     sseConnected: false,
     expandedCalendar: false,
     isConfigPanelOpen: false,
@@ -46,6 +49,11 @@ export const useUiStore = create<UiState>()(
     setProcessing: (value) =>
       set((state) => {
         state.isProcessing = value;
+      }),
+
+    setAccommodationScanning: (value) =>
+      set((state) => {
+        state.isAccommodationScanning = value;
       }),
 
     setSseConnected: (value) =>

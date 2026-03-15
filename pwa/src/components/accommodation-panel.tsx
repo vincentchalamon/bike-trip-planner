@@ -7,6 +7,7 @@ import { AccommodationItem } from "@/components/accommodation-item";
 import { AddAccommodationButton } from "@/components/add-accommodation-button";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { useUiStore } from "@/store/ui-store";
 import type { AccommodationData } from "@/lib/validation/schemas";
 import {
   MAX_ACCOMMODATION_RADIUS_KM,
@@ -26,7 +27,6 @@ interface AccommodationPanelProps {
   newAccKey?: string | null;
   stageIndex?: number;
   onClearNewAcc?: () => void;
-  isProcessing?: boolean;
   searchRadiusKm?: number;
 }
 
@@ -42,10 +42,10 @@ export function AccommodationPanel({
   newAccKey,
   stageIndex,
   onClearNewAcc,
-  isProcessing,
   searchRadiusKm = DEFAULT_ACCOMMODATION_RADIUS_KM,
 }: AccommodationPanelProps) {
   const t = useTranslations("accommodation");
+  const isAccommodationScanning = useUiStore((s) => s.isAccommodationScanning);
   // isExpanding: derived from state + prop — no effect needed.
   // expandingFromRadius stores the radius at click time; when the SSE delivers
   // the new radius (searchRadiusKm changes), the derived value becomes false.
@@ -105,7 +105,7 @@ export function AccommodationPanel({
   return (
     <div className="bg-muted/50 rounded-lg p-4">
       {hasNoAccommodations &&
-        (isProcessing || isRemoving ? (
+        (isAccommodationScanning || isRemoving ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             <span>{t("loading")}</span>
@@ -166,6 +166,9 @@ export function AccommodationPanel({
                 if (isAccommodationSelected(originalIndex)) {
                   removingActiveRef.current = true;
                 }
+                if (newAccKey === `${stageIndex}-${originalIndex}`) {
+                  onClearNewAcc?.();
+                }
                 onRemove(originalIndex);
               }}
               onSelect={onSelect ? () => onSelect(originalIndex) : undefined}
@@ -177,7 +180,7 @@ export function AccommodationPanel({
           </div>
         );
       })}
-      {!hasNoAccommodations && isExpanding && (
+      {!hasNoAccommodations && (isExpanding || isAccommodationScanning) && (
         <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           <span>{t("loading")}</span>
@@ -200,9 +203,11 @@ export function AccommodationPanel({
           </Button>
         </div>
       )}
-      <div className={accommodations.length > 0 ? "mt-3" : ""}>
-        <AddAccommodationButton onClick={onAdd} />
-      </div>
+      {!selectedAccommodation && (
+        <div className={accommodations.length > 0 ? "mt-3" : ""}>
+          <AddAccommodationButton onClick={onAdd} />
+        </div>
+      )}
     </div>
   );
 }

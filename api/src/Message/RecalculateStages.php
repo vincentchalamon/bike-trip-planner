@@ -13,6 +13,7 @@ final readonly class RecalculateStages
         public string $tripId,
         public array $affectedIndices,
         public bool $skipAccommodationScan = false,
+        public bool $skipGeographicScans = false,
     ) {
     }
 }

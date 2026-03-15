@@ -135,19 +135,28 @@ export function PacingSettings({
 
   const showCoherenceWarning = isIncoherent(averageSpeed, maxDistancePerDay);
 
+  const activePresetKey =
+    PRESETS.find(
+      (p) =>
+        p.maxDistancePerDay === maxDistancePerDay &&
+        p.averageSpeed === averageSpeed &&
+        fromElevationPercent(p.elevationPenaltyPercent) === elevationPenalty &&
+        fromFatiguePercent(p.fatiguePercent) === fatigueFactor,
+    )?.key ?? null;
+
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-2 text-sm">
         {/* Presets */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-muted-foreground whitespace-nowrap">
+          <span className="text-muted-foreground truncate min-w-0">
             {t("profile")}
           </span>
           {PRESETS.map((preset) => (
             <Button
               key={preset.key}
               type="button"
-              variant="outline"
+              variant={activePresetKey === preset.key ? "default" : "outline"}
               size="sm"
               className="h-6 px-2 text-xs"
               onClick={() => handlePreset(preset)}
@@ -174,7 +183,7 @@ export function PacingSettings({
         <div className="flex items-center gap-2">
           <label
             htmlFor="max-distance-per-day"
-            className="text-muted-foreground whitespace-nowrap"
+            className="text-muted-foreground truncate min-w-0"
           >
             {t("maxDistance")}
           </label>
@@ -209,7 +218,7 @@ export function PacingSettings({
         <div className="flex items-center gap-2">
           <label
             htmlFor="average-speed"
-            className="text-muted-foreground whitespace-nowrap"
+            className="text-muted-foreground truncate min-w-0"
           >
             {t("averageSpeed")}
           </label>
@@ -243,7 +252,7 @@ export function PacingSettings({
         <div className="flex items-center gap-2">
           <label
             htmlFor="fatigue-factor"
-            className="text-muted-foreground whitespace-nowrap"
+            className="text-muted-foreground truncate min-w-0"
           >
             {t("fatigue")}
           </label>
@@ -278,7 +287,7 @@ export function PacingSettings({
         <div className="flex items-center gap-2">
           <label
             htmlFor="elevation-penalty"
-            className="text-muted-foreground whitespace-nowrap"
+            className="text-muted-foreground truncate min-w-0"
           >
             {t("elevationPenalty")}
           </label>
@@ -313,7 +322,7 @@ export function PacingSettings({
         <div className="flex items-center gap-2">
           <label
             htmlFor="ebike-mode"
-            className="text-muted-foreground whitespace-nowrap"
+            className="text-muted-foreground truncate min-w-0"
           >
             {t("ebikeMode")}
           </label>

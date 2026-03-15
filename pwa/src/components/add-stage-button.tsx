@@ -19,7 +19,7 @@ export function AddStageButton({
   return (
     <Button
       variant="outline"
-      className="w-full max-w-[80%] md:max-w-[80%] border-dashed border-muted-icon text-muted-icon hover:text-foreground hover:border-brand cursor-pointer"
+      className="w-full md:max-w-[80%] border-dashed border-muted-icon text-muted-icon hover:text-foreground hover:border-brand cursor-pointer"
       onClick={onClick}
       disabled={disabled}
       title={disabled ? t("insufficientSpace") : undefined}

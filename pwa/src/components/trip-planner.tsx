@@ -62,12 +62,31 @@ export function TripPlanner() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [isScrolledPast, setIsScrolledPast] = useState(false);
   const hasTripData = !!trip;
+  const scrollDirRef = useRef<"down" | "up">("down");
+  const lastScrollYRef = useRef(0);
+
+  // Track scroll direction so the bar is only hidden when scrolling back up.
+  useEffect(() => {
+    function onScroll() {
+      const y = window.scrollY;
+      scrollDirRef.current = y >= lastScrollYRef.current ? "down" : "up";
+      lastScrollYRef.current = y;
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
     const observer = new IntersectionObserver(
-      ([entry]) => setIsScrolledPast(!(entry?.isIntersecting ?? true)),
+      ([entry]) => {
+        if (!entry?.isIntersecting) {
+          setIsScrolledPast(true);
+        } else if (scrollDirRef.current === "up") {
+          setIsScrolledPast(false);
+        }
+      },
       { threshold: 0 },
     );
     observer.observe(sentinel);
@@ -134,15 +153,20 @@ export function TripPlanner() {
               flow. The sticky bar becomes visible once this exits the viewport. */}
           <div ref={sentinelRef} aria-hidden="true" />
 
-          {/* Segmented progress bar — sticky, visible only after scrolling past
-              the sentinel so it does not duplicate the timeline start. */}
+          {/* Segmented progress bar — fixed, visible only after scrolling past
+              the sentinel so it does not duplicate the timeline start.
+              Fixed positioning avoids the sticky-layout glitch where the bar
+              briefly appears mid-content before snapping to the top. */}
           <div
             className={[
-              "sticky top-0 z-20 bg-background -mx-4 md:-mx-6 px-4 md:px-6 overflow-hidden",
-              isScrolledPast ? "py-1" : "h-0 py-0 pointer-events-none",
+              "fixed top-0 left-0 right-0 z-20 bg-background overflow-hidden",
+              "transition-transform duration-200",
+              isScrolledPast ? "" : "-translate-y-full pointer-events-none",
             ].join(" ")}
           >
-            <StageProgressBar />
+            <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-2">
+              <StageProgressBar />
+            </div>
           </div>
 
           {/* Timeline */}
