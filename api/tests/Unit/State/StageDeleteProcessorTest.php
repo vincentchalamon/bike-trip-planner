@@ -107,6 +107,33 @@ final class StageDeleteProcessorTest extends TestCase
     }
 
     #[Test]
+    public function deletingRegularStageDoesNotSkipGeographicScans(): void
+    {
+        $coord = new Coordinate(lat: 45.0, lon: 5.0);
+
+        $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
+        $stage1 = new Stage(tripId: 'trip-1', dayNumber: 2, distance: 90.0, elevation: 600.0, startPoint: $coord, endPoint: $coord);
+        $stage2 = new Stage(tripId: 'trip-1', dayNumber: 3, distance: 70.0, elevation: 400.0, startPoint: $coord, endPoint: $coord);
+
+        $this->tripStateManager->method('getStages')->willReturn([$stage0, $stage1, $stage2]);
+        $this->tripStateManager->method('getSourceType')->willReturn(null);
+
+        $dispatchedMessages = [];
+        $this->messageBus->method('dispatch')->willReturnCallback(static function (object $msg) use (&$dispatchedMessages): Envelope {
+            $dispatchedMessages[] = $msg;
+
+            return new Envelope($msg);
+        });
+
+        $this->processor->process(null, new Delete(), ['tripId' => 'trip-1', 'index' => 1]);
+
+        $recalculate = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof RecalculateStages));
+        $this->assertCount(1, $recalculate);
+        // Geographic scans must NOT be skipped: deleting a regular stage changes geography
+        $this->assertFalse($recalculate[0]->skipGeographicScans);
+    }
+
+    #[Test]
     public function deletingRestDayAlwaysDispatchesWeatherAndCalendar(): void
     {
         $coord = new Coordinate(lat: 45.0, lon: 5.0);

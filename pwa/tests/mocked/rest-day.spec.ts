@@ -259,6 +259,25 @@ test.describe("Rest day management", () => {
     ).not.toBeVisible();
   });
 
+  test("add-rest-day buttons are not disabled during accommodation scan", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    // Inject stages but NOT trip_complete so isAccommodationScanning remains true
+    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
+
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Buttons must remain enabled even while an accommodation scan is in progress
+    await expect(
+      mockedPage.getByTestId("add-rest-day-button-0"),
+    ).not.toBeDisabled();
+  });
+
   test("rolls back optimistic insert on API failure", async ({
     createFullTrip,
     mockedPage,
