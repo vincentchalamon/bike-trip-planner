@@ -109,7 +109,7 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->objectMapper->expects($this->once())
             ->method('map')
             ->with(
-                $this->callback(static fn (Stage $s): bool => $s->isRestDay && $s->tripId === 'trip-1'),
+                $this->callback(static fn (Stage $s): bool => $s->isRestDay && 'trip-1' === $s->tripId),
                 StageResponse::class,
             )
             ->willReturn($expectedResponse);
