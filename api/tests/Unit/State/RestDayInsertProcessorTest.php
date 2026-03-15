@@ -19,6 +19,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\ObjectMapper\ObjectMapperInterface;
@@ -56,6 +57,35 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->expectException(NotFoundHttpException::class);
 
         $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 5]);
+    }
+
+    #[Test]
+    public function throwsUnprocessableEntityWhenStageItselfIsRestDay(): void
+    {
+        $coord = new Coordinate(lat: 45.0, lon: 5.0);
+        $restDay = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 0.0, elevation: 0.0, startPoint: $coord, endPoint: $coord, isRestDay: true);
+        $stage1 = new Stage(tripId: 'trip-1', dayNumber: 2, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
+
+        $this->tripStateManager->method('getStages')->willReturn([$restDay, $stage1]);
+
+        $this->expectException(UnprocessableEntityHttpException::class);
+
+        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+    }
+
+    #[Test]
+    public function throwsUnprocessableEntityWhenNextStageIsRestDay(): void
+    {
+        $coord = new Coordinate(lat: 45.0, lon: 5.0);
+        $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
+        $restDay = new Stage(tripId: 'trip-1', dayNumber: 2, distance: 0.0, elevation: 0.0, startPoint: $coord, endPoint: $coord, isRestDay: true);
+        $stage2 = new Stage(tripId: 'trip-1', dayNumber: 3, distance: 90.0, elevation: 600.0, startPoint: $coord, endPoint: $coord);
+
+        $this->tripStateManager->method('getStages')->willReturn([$stage0, $restDay, $stage2]);
+
+        $this->expectException(UnprocessableEntityHttpException::class);
+
+        $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
     }
 
     #[Test]

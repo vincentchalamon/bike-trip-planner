@@ -14,6 +14,7 @@ use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
@@ -45,6 +46,12 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         }
 
         $afterStage = $stages[$index];
+
+        // Prevent adjacent rest days — the frontend enforces this too, but the
+        // API contract must be self-consistent.
+        if ($afterStage->isRestDay || (isset($stages[$index + 1]) && $stages[$index + 1]->isRestDay)) {
+            throw new UnprocessableEntityHttpException('Cannot insert a rest day adjacent to an existing rest day.');
+        }
 
         // The rest day sits between $index and $index+1.
         // startPoint = endPoint of the previous stage (same location).
