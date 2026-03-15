@@ -19,6 +19,15 @@ function buildDayDistances(stages: StageData[]): Map<number, number> {
   return map;
 }
 
+/** Returns the set of dayNumbers that are rest days. */
+function buildRestDayNumbers(stages: StageData[]): Set<number> {
+  const set = new Set<number>();
+  for (const stage of stages) {
+    if (stage.isRestDay) set.add(stage.dayNumber);
+  }
+  return set;
+}
+
 /**
  * Horizontal progress bar mirroring the vertical timeline design.
  *
@@ -34,6 +43,7 @@ export function StageProgressBar() {
   const activeDayNumber = useUiStore((s) => s.activeDayNumber);
 
   const dayDistances = useMemo(() => buildDayDistances(stages), [stages]);
+  const restDayNumbers = useMemo(() => buildRestDayNumbers(stages), [stages]);
 
   const totalDistance = useMemo(
     () => Array.from(dayDistances.values()).reduce((sum, d) => sum + d, 0),
@@ -52,17 +62,13 @@ export function StageProgressBar() {
     [dayNumbers, activeDayNumber],
   );
 
-  // Cumulative left-percentage for each day's start marker (0..100).
+  // Left-percentage for each day's marker (0..100), equally spaced.
   // Index 0 = first day = 0%, last entry = 100% (end marker).
   const cumulativePcts = useMemo(() => {
-    const pcts: number[] = [0];
-    let cum = 0;
-    for (const dn of dayNumbers) {
-      cum += ((dayDistances.get(dn) ?? 0) / totalDistance) * 100;
-      pcts.push(Math.min(cum, 100));
-    }
-    return pcts;
-  }, [dayNumbers, dayDistances, totalDistance]);
+    const n = dayNumbers.length;
+    if (n === 0) return [0];
+    return [...dayNumbers.map((_, i) => (i / n) * 100), 100];
+  }, [dayNumbers]);
 
   const handleSegmentClick = useCallback((dayNumber: number) => {
     const target = document.getElementById(`timeline-day-${dayNumber}`);
@@ -91,14 +97,14 @@ export function StageProgressBar() {
       {/* Horizontal line — inset by half-dot on each side so it runs dot-centre to dot-centre */}
       {/* Future portion (faded) */}
       <div
-        className="absolute top-2 h-0.5 bg-brand/30"
+        className="absolute top-[13px] h-0.5 bg-brand/30"
         style={{ left: DOT_HALF, right: DOT_HALF }}
         aria-hidden="true"
       />
       {/* Past + active portion (full brand), up to end of the active day */}
       {activeDayIndex >= 0 && (
         <div
-          className="absolute top-2 h-0.5 bg-brand transition-all duration-300"
+          className="absolute top-[13px] h-0.5 bg-brand transition-all duration-300"
           style={{
             left: DOT_HALF,
             width: `calc(${cumulativePcts[activeDayIndex + 1] ?? 100}% - ${DOT_HALF}px)`,
@@ -110,30 +116,43 @@ export function StageProgressBar() {
       {/* Day markers */}
       {dayNumbers.map((dayNumber, index) => {
         const distance = dayDistances.get(dayNumber) ?? 0;
-        const segWidthPct = (distance / totalDistance) * 100;
+        const isRestDay = restDayNumbers.has(dayNumber);
         const leftPct = cumulativePcts[index] ?? 0;
         const isActive = activeDayNumber === dayNumber;
         const isPast = activeDayIndex >= 0 ? index < activeDayIndex : false;
         const isFuture = activeDayIndex >= 0 ? index > activeDayIndex : false;
-        const showLabel = segWidthPct >= 8;
+        const showLabel = (100 / dayNumbers.length) >= 8;
 
         return (
           <button
             key={dayNumber}
             type="button"
             onClick={() => handleSegmentClick(dayNumber)}
-            aria-label={t("segmentAriaLabel", {
-              day: dayNumber,
-              distance: Math.round(distance),
-            })}
+            aria-label={
+              isRestDay
+                ? t("segmentRestDayAriaLabel", { day: dayNumber })
+                : t("segmentAriaLabel", {
+                    day: dayNumber,
+                    distance: Math.round(distance),
+                  })
+            }
             aria-current={isActive ? "true" : undefined}
             data-testid={`progress-segment-${dayNumber}`}
-            style={{ left: `${leftPct}%` }}
-            className="absolute flex flex-col items-center cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand -translate-x-1/2"
-            title={t("segmentTitle", {
-              day: dayNumber,
-              distance: Math.round(distance),
-            })}
+            style={{ left: `${leftPct}%`, top: 5 }}
+            className={cn(
+              "absolute flex flex-col cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
+              index === 0 && !isRestDay
+                ? "items-start"
+                : "-translate-x-1/2 items-center",
+            )}
+            title={
+              isRestDay
+                ? t("segmentRestDayTitle", { day: dayNumber })
+                : t("segmentTitle", {
+                    day: dayNumber,
+                    distance: Math.round(distance),
+                  })
+            }
           >
             {/* TimelineMarker-style dot */}
             <div
@@ -151,10 +170,12 @@ export function StageProgressBar() {
             {/* Label below the dot */}
             {showLabel && (
               <span className="text-[10px] leading-none mt-1 text-muted-foreground whitespace-nowrap">
-                {t("segmentLabel", {
-                  day: dayNumber,
-                  distance: Math.round(distance),
-                })}
+                {isRestDay
+                  ? t("segmentRestDayLabel", { day: dayNumber })
+                  : t("segmentLabel", {
+                      day: dayNumber,
+                      distance: Math.round(distance),
+                    })}
               </span>
             )}
           </button>
@@ -164,7 +185,7 @@ export function StageProgressBar() {
       {/* End marker */}
       <div
         className="absolute flex flex-col items-center -translate-x-1/2"
-        style={{ left: "100%" }}
+        style={{ left: "100%", top: 5 }}
         aria-hidden="true"
       >
         <div className="w-4 h-4 rounded-full border-[3px] border-brand bg-background" />

@@ -192,7 +192,7 @@ export function Timeline({
           {/* Day header */}
           <div
             id={`timeline-day-${group.dayNumber}`}
-            className="flex items-center mb-4"
+            className="flex items-center mb-4 scroll-mt-16"
           >
             <div className="w-4 shrink-0" aria-hidden="true" />
             <div className="ml-6 md:ml-12">
@@ -207,13 +207,12 @@ export function Timeline({
             <div key={stage.dayNumber + "-" + originalIndex} role="listitem">
               <div className="flex items-start mb-4">
                 <div className="w-4 shrink-0" aria-hidden="true" />
-                <div className="ml-6 md:ml-12 flex-1">
+                <div className="ml-6 md:ml-12 flex-1 min-w-0">
                   {stage.isRestDay ? (
                     <RestDayCard
                       dayNumber={stage.dayNumber}
                       stageIndex={originalIndex}
                       canDelete={stages.length > 2}
-                      isProcessing={isProcessing}
                       onDelete={() => onDeleteStage(originalIndex)}
                     />
                   ) : (
@@ -269,7 +268,22 @@ export function Timeline({
           {groupIndex < dayGroups.length - 1 && (
             <div className="flex items-center mb-4">
               <TimelineMarker />
-              <div className="ml-6 md:ml-12 flex-1 flex flex-wrap gap-2">
+              <div className="ml-6 md:ml-12 flex-1 min-w-0 flex flex-wrap gap-2">
+                {onInsertRestDay &&
+                  !group.stages[group.stages.length - 1]?.stage.isRestDay &&
+                  !dayGroups[groupIndex + 1]?.stages[0]?.stage.isRestDay && (
+                    <AddRestDayButton
+                      afterIndex={
+                        group.stages[group.stages.length - 1]!.originalIndex
+                      }
+                      dayNumber={group.dayNumber}
+                      onClick={() =>
+                        onInsertRestDay(
+                          group.stages[group.stages.length - 1]!.originalIndex,
+                        )
+                      }
+                    />
+                  )}
                 <AddStageButton
                   afterIndex={
                     group.stages[group.stages.length - 1]!.originalIndex
@@ -285,22 +299,6 @@ export function Timeline({
                     )
                   }
                 />
-                {onInsertRestDay &&
-                  !group.stages[group.stages.length - 1]?.stage.isRestDay &&
-                  !dayGroups[groupIndex + 1]?.stages[0]?.stage.isRestDay && (
-                    <AddRestDayButton
-                      afterIndex={
-                        group.stages[group.stages.length - 1]!.originalIndex
-                      }
-                      dayNumber={group.dayNumber}
-                      onClick={() =>
-                        onInsertRestDay(
-                          group.stages[group.stages.length - 1]!.originalIndex,
-                        )
-                      }
-                      disabled={isProcessing}
-                    />
-                  )}
               </div>
             </div>
           )}

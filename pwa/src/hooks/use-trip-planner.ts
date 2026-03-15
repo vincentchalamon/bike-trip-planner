@@ -68,6 +68,9 @@ export function useTripPlanner() {
   const updateStageAlerts = useTripStore((s) => s.updateStageAlerts);
   const isProcessing = useUiStore((s) => s.isProcessing);
   const setProcessing = useUiStore((s) => s.setProcessing);
+  const setAccommodationScanning = useUiStore(
+    (s) => s.setAccommodationScanning,
+  );
 
   const [newAccKey, setNewAccKey] = useState<string | null>(null);
 
@@ -77,6 +80,7 @@ export function useTripPlanner() {
   async function handleMagicLink(sourceUrl: string) {
     clearTrip();
     setProcessing(true);
+    setAccommodationScanning(true);
 
     try {
       const today = new Date().toISOString().split("T")[0]!;
@@ -98,6 +102,7 @@ export function useTripPlanner() {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
         setProcessing(false);
+        setAccommodationScanning(false);
         return;
       }
 
@@ -117,12 +122,14 @@ export function useTripPlanner() {
         toast.error(t("errors.unexpectedError"));
       }
       setProcessing(false);
+      setAccommodationScanning(false);
     }
   }
 
   async function handleGpxUpload(file: File) {
     clearTrip();
     setProcessing(true);
+    setAccommodationScanning(true);
 
     try {
       const today = new Date().toISOString().split("T")[0]!;
@@ -139,6 +146,7 @@ export function useTripPlanner() {
       if (error || !data) {
         toast.error(t("errors.gpxUploadFailed"));
         setProcessing(false);
+        setAccommodationScanning(false);
         return;
       }
 
@@ -158,6 +166,7 @@ export function useTripPlanner() {
         toast.error(t("errors.unexpectedError"));
       }
       setProcessing(false);
+      setAccommodationScanning(false);
     }
   }
 
@@ -190,6 +199,7 @@ export function useTripPlanner() {
         toast.error(apiError.message);
       } else {
         setProcessing(true);
+        setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedUpdateDates"));
@@ -199,6 +209,7 @@ export function useTripPlanner() {
   async function handleDeleteStage(index: number) {
     if (!tripId) return;
 
+    const isRestDay = stages[index]?.isRestDay ?? false;
     const snapshot = [...stages];
     deleteStage(index);
 
@@ -215,6 +226,7 @@ export function useTripPlanner() {
         useTripStore.getState().setStages(snapshot);
       } else {
         setProcessing(true);
+        if (!isRestDay) setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedDeleteStage"));
@@ -310,6 +322,7 @@ export function useTripPlanner() {
         useTripStore.getState().setStages(stages);
       } else {
         setProcessing(true);
+        setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedAddStage"));
@@ -334,6 +347,7 @@ export function useTripPlanner() {
         toast.error(apiError.message);
       } else {
         setProcessing(true);
+        setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedUpdateLocation"));
@@ -370,6 +384,7 @@ export function useTripPlanner() {
         toast.error(apiError.message);
       } else {
         setProcessing(true);
+        setAccommodationScanning(true);
         if (clearStages) {
           useTripStore.getState().setStages([]);
         }
@@ -442,6 +457,7 @@ export function useTripPlanner() {
         toast.error(apiError.message);
       } else {
         setProcessing(true);
+        setAccommodationScanning(true);
       }
     } catch {
       setEnabledAccommodationTypes(previous);
@@ -462,6 +478,7 @@ export function useTripPlanner() {
       const ok = await scanAccommodations(tripId, nextRadius, stageIndex);
       if (ok) {
         setProcessing(true);
+        setAccommodationScanning(true);
         return true;
       } else {
         toast.error(t("errors.unexpectedError"));
@@ -525,6 +542,7 @@ export function useTripPlanner() {
         useTripStore.getState().setStages([...stages]);
       } else {
         setProcessing(true);
+        setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedSelectAccommodation"));
@@ -556,6 +574,7 @@ export function useTripPlanner() {
         useTripStore.getState().setStages([...stages]);
       } else {
         setProcessing(true);
+        setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedDeselectAccommodation"));

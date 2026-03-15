@@ -225,6 +225,59 @@ test.describe("Rest day management", () => {
     await expect(mockedPage.getByTestId("stage-card-2")).toBeVisible();
   });
 
+  test("inserting a rest day does not trigger the accommodation loading indicator", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    // Trip with stages but no accommodations (geographic scan not run)
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      tripCompleteEvent(),
+    ]);
+    await expect(mockedPage.getByTestId("stage-card-3")).toBeVisible({
+      timeout: 10000,
+    });
+
+    await mockedPage.route("**/stages/*/rest-day", (route) => {
+      return route.fulfill({ status: 202, body: "" });
+    });
+
+    await mockedPage.getByTestId("add-rest-day-button-0").click();
+
+    // Optimistic insert: rest day card appears immediately
+    await expect(mockedPage.getByTestId("rest-day-card-1")).toBeVisible({
+      timeout: 5000,
+    });
+
+    // The accommodation loading indicator must NOT appear:
+    // inserting a rest day sets isProcessing=true but NOT isAccommodationScanning
+    await expect(
+      mockedPage.getByTestId("accommodation-loading"),
+    ).not.toBeVisible();
+  });
+
+  test("add-rest-day buttons are not disabled during accommodation scan", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    // Inject stages but NOT trip_complete so isAccommodationScanning remains true
+    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
+
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Buttons must remain enabled even while an accommodation scan is in progress
+    await expect(
+      mockedPage.getByTestId("add-rest-day-button-0"),
+    ).not.toBeDisabled();
+  });
+
   test("rolls back optimistic insert on API failure", async ({
     createFullTrip,
     mockedPage,

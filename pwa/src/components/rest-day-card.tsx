@@ -9,7 +9,6 @@ interface RestDayCardProps {
   dayNumber: number;
   stageIndex: number;
   canDelete?: boolean;
-  isProcessing?: boolean;
   onDelete?: () => void;
 }
 
@@ -17,7 +16,6 @@ export function RestDayCard({
   dayNumber,
   stageIndex,
   canDelete = true,
-  isProcessing = false,
   onDelete,
 }: RestDayCardProps) {
   const tRestDay = useTranslations("restDay");
@@ -25,7 +23,7 @@ export function RestDayCard({
 
   return (
     <div
-      className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 p-4 flex items-center gap-3"
+      className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 p-4 flex items-center gap-3 w-full md:max-w-[80%]"
       data-testid={`rest-day-card-${stageIndex}`}
     >
       <BedDouble className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -40,7 +38,6 @@ export function RestDayCard({
           size="icon"
           className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
           onClick={onDelete}
-          disabled={isProcessing}
           aria-label={tStage("deleteStage", { dayNumber })}
           data-testid={`delete-rest-day-${stageIndex}`}
         >

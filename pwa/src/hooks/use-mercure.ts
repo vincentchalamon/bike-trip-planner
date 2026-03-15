@@ -262,17 +262,20 @@ function dispatchEvent(event: MercureEvent): void {
     case "trip_complete":
       store.setComputationStatus(event.data.computationStatus);
       useUiStore.getState().setProcessing(false);
+      useUiStore.getState().setAccommodationScanning(false);
       break;
 
     case "validation_error":
       toast.error(event.data.message);
       useUiStore.getState().setProcessing(false);
+      useUiStore.getState().setAccommodationScanning(false);
       break;
 
     case "computation_error":
       toast.error(`Computation failed: ${event.data.message}`);
       if (!event.data.retryable) {
         useUiStore.getState().setProcessing(false);
+        useUiStore.getState().setAccommodationScanning(false);
       }
       break;
   }

@@ -123,7 +123,7 @@
     "averageSpeed": "Vitesse moyenne",
     "averageSpeedTooltip": "Vitesse moyenne (km/h), utilisée pour estimer le temps de parcours.",
     "averageSpeedLabel": "Vitesse moyenne (km/h)",
-    "fatigue": "Indice de fatigue accumulée",
+    "fatigue": "Fatigue accumulée",
     "fatigueTooltip": "Réduit la distance de {value}% par jour pour compenser la fatigue accumulée.",
     "fatigueError": "Doit être entre 1% et 50%",
     "fatigueLabel": "Indice de fatigue accumulée",
@@ -145,7 +145,10 @@
     "ariaLabel": "Progression du voyage par jour",
     "segmentAriaLabel": "Jour {day} — {distance} km",
     "segmentTitle": "Jour {day} — {distance} km",
-    "segmentLabel": "J{day} · {distance} km"
+    "segmentLabel": "J{day} · {distance} km",
+    "segmentRestDayAriaLabel": "Jour {day} — Repos",
+    "segmentRestDayTitle": "Jour {day} — Repos",
+    "segmentRestDayLabel": "J{day} · Repos"
   },
   "config": {
     "title": "Paramètres",

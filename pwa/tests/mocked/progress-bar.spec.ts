@@ -60,7 +60,7 @@ test.describe("Stage progress bar", () => {
     ).not.toHaveAttribute("aria-current");
   });
 
-  test("segments are proportional to distance", async ({
+  test("segments are equally spaced regardless of distance", async ({
     submitUrl,
     injectSequence,
     mockedPage,
@@ -98,7 +98,7 @@ test.describe("Stage progress bar", () => {
     ]);
     await expect(mockedPage.getByTestId("stage-progress-bar")).toBeVisible();
 
-    // Segment 1 should be roughly twice as wide as segment 2
+    // Segments are equally spaced regardless of distance: 2 days → seg2 at 50%
     const seg1Box = await mockedPage
       .getByTestId("progress-segment-1")
       .boundingBox();
@@ -109,7 +109,6 @@ test.describe("Stage progress bar", () => {
     expect(seg1Box).not.toBeNull();
     expect(seg2Box).not.toBeNull();
 
-    // day1=100km, day2=50km, total=150km → seg2 starts at 100/150 ≈ 66.7% of container
     const barBox = await mockedPage
       .getByTestId("stage-progress-bar")
       .boundingBox();
@@ -117,11 +116,11 @@ test.describe("Stage progress bar", () => {
     if (seg1Box && seg2Box && barBox) {
       const seg1RelLeft = (seg1Box.x - barBox.x) / barBox.width;
       const seg2RelLeft = (seg2Box.x - barBox.x) / barBox.width;
-      // seg1 is at ~0% (first day)
+      // seg1 is at ~0% (first day, no translate)
       expect(seg1RelLeft).toBeLessThan(0.05);
-      // seg2 is at ~66.7% (100km / 150km total)
-      expect(seg2RelLeft).toBeGreaterThan(0.6);
-      expect(seg2RelLeft).toBeLessThan(0.75);
+      // With equal spacing and 2 days: seg2 is at index 1 → (1/2)*100 = 50%
+      expect(seg2RelLeft).toBeGreaterThan(0.45);
+      expect(seg2RelLeft).toBeLessThan(0.55);
     }
   });
 

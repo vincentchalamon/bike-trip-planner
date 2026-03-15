@@ -183,7 +183,6 @@ export function StageCard({
               newAccKey={newAccKey}
               stageIndex={stageOriginalIndex}
               onClearNewAcc={onClearNewAcc}
-              isProcessing={isProcessing}
               searchRadiusKm={
                 stage.accommodationSearchRadiusKm ??
                 DEFAULT_ACCOMMODATION_RADIUS_KM

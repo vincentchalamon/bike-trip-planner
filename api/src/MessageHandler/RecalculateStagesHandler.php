@@ -44,8 +44,6 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
             $affectedIndices = array_keys($stages);
         }
 
-        $this->tripStateManager->storeStages($tripId, $stages);
-
         // Publish updated stages so the frontend refreshes immediately
         $this->publisher->publish($tripId, MercureEventType::STAGES_COMPUTED, [
             'stages' => array_map(
@@ -73,7 +71,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         ]);
 
         // Dispatch POI/Accommodation/BikeShop scans for affected stages
-        if ([] !== $affectedIndices) {
+        if ([] !== $affectedIndices && !$message->skipGeographicScans) {
             $this->messageBus->dispatch(new ScanPois($tripId));
             if (!$message->skipAccommodationScan) {
                 $request = $this->tripStateManager->getRequest($tripId);
