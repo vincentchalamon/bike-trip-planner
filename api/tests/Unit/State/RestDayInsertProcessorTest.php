@@ -181,6 +181,8 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->assertSame('trip-1', $recalculate[0]->tripId);
         // After inserting at index 0, stages are [0..3], inserted at 1, so affected = [1,2,3]
         $this->assertSame([1, 2, 3], $recalculate[0]->affectedIndices);
+        // Geographic scans must be skipped: inserting a rest day does not change geography
+        $this->assertTrue($recalculate[0]->skipGeographicScans);
     }
 
     #[Test]

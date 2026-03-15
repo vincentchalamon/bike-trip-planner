@@ -106,7 +106,10 @@ export function AccommodationPanel({
     <div className="bg-muted/50 rounded-lg p-4">
       {hasNoAccommodations &&
         (isAccommodationScanning || isRemoving ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+          <div
+            className="flex items-center gap-2 text-xs text-muted-foreground mb-3"
+            data-testid="accommodation-loading"
+          >
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             <span>{t("loading")}</span>
           </div>
@@ -181,7 +184,10 @@ export function AccommodationPanel({
         );
       })}
       {!hasNoAccommodations && (isExpanding || isAccommodationScanning) && (
-        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <div
+          className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"
+          data-testid="accommodation-loading"
+        >
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           <span>{t("loading")}</span>
         </div>

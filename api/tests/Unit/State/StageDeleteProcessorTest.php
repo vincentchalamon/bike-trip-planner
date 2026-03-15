@@ -102,6 +102,8 @@ final class StageDeleteProcessorTest extends TestCase
         $this->assertCount(1, $recalculate);
         $this->assertSame('trip-1', $recalculate[0]->tripId);
         $this->assertSame([], $recalculate[0]->affectedIndices);
+        // Geographic scans must be skipped: deleting a rest day does not change geography
+        $this->assertTrue($recalculate[0]->skipGeographicScans);
     }
 
     #[Test]
