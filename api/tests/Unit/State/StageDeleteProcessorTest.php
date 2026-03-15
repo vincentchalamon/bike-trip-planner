@@ -16,6 +16,7 @@ use App\State\StageDeleteProcessor;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -27,7 +28,7 @@ final class StageDeleteProcessorTest extends TestCase
 
     private MockObject&MessageBusInterface $messageBus;
 
-    private MockObject&DistanceCalculatorInterface $distanceCalculator;
+    private Stub $distanceCalculator;
 
     private StageDeleteProcessor $processor;
 
@@ -36,7 +37,7 @@ final class StageDeleteProcessorTest extends TestCase
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
-        $this->distanceCalculator = $this->createMock(DistanceCalculatorInterface::class);
+        $this->distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
 
         $this->processor = new StageDeleteProcessor(
             $this->tripStateManager,
