@@ -67,6 +67,7 @@ export const StageDataSchema = z.object({
     .int()
     .positive()
     .default(DEFAULT_ACCOMMODATION_RADIUS_KM),
+  isRestDay: z.boolean().default(false),
 });
 
 export const TripStateSchema = z.object({

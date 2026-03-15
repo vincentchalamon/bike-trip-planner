@@ -60,6 +60,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                     'locale' => $locale,
                     'ebikeMode' => $ebikeMode,
                     'osmWays' => $waysByStage[$i] ?? [],
+                    'allStages' => $stages,
                 ];
 
                 $stage->alerts = [];

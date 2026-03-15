@@ -65,6 +65,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
                         'ele' => $s->endPoint->ele,
                     ],
                     'label' => $s->label,
+                    'isRestDay' => $s->isRestDay,
                 ],
                 $stages,
             ),

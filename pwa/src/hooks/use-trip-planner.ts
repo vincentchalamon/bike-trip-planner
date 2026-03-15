@@ -50,6 +50,7 @@ export function useTripPlanner() {
     (s) => s.deselectAccommodation,
   );
   const deleteStage = useTripStore((s) => s.deleteStage);
+  const insertRestDay = useTripStore((s) => s.insertRestDay);
   const fatigueFactor = useTripStore((s) => s.fatigueFactor);
   const elevationPenalty = useTripStore((s) => s.elevationPenalty);
   const maxDistancePerDay = useTripStore((s) => s.maxDistancePerDay);
@@ -221,6 +222,34 @@ export function useTripPlanner() {
     }
   }
 
+  async function handleInsertRestDay(afterIndex: number) {
+    if (!tripId) return;
+
+    const snapshot = [...stages];
+    insertRestDay(afterIndex);
+
+    try {
+      const { response } = await apiClient.POST(
+        "/trips/{tripId}/stages/{index}/rest-day",
+        {
+          params: {
+            path: { tripId, index: String(afterIndex) },
+          },
+          parseAs: "json",
+        },
+      );
+      if (!response.ok) {
+        toast.error(t("errors.failedInsertRestDay"));
+        useTripStore.getState().setStages(snapshot);
+      } else {
+        setProcessing(true);
+      }
+    } catch {
+      toast.error(t("errors.failedInsertRestDay"));
+      useTripStore.getState().setStages(snapshot);
+    }
+  }
+
   async function handleAddStage(afterIndex: number) {
     if (!tripId) return;
 
@@ -258,6 +287,7 @@ export function useTripPlanner() {
       pois: [],
       accommodations: [],
       accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
+      isRestDay: false,
     };
     const updatedStages = stages.map((s) => ({ ...s }));
     updatedStages.splice(afterIndex + 1, 0, placeholder);
@@ -571,6 +601,7 @@ export function useTripPlanner() {
     handleSelectAccommodation,
     handleDeselectAccommodation,
     handleExpandAccommodationRadius,
+    handleInsertRestDay,
     clearNewAccKey: () => setNewAccKey(null),
   };
 }

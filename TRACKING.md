@@ -187,13 +187,13 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 ## Sprint 10 — i18n & Documentation
 
-| Ordre | ID | Titre | Effort | PRs | Dépend de |
-|-------|----|-------|--------|-----|-----------|
-| 1 | [#44](https://github.com/vincentchalamon/bike-trip-planner/issues/44) | Support multi-langue (fr/en) | L | 3 | — |
-| 2 | [#70](https://github.com/vincentchalamon/bike-trip-planner/issues/70) | i18n client-side export statique | S | 1 | [#44](https://github.com/vincentchalamon/bike-trip-planner/issues/44) |
-| 3 | [#26](https://github.com/vincentchalamon/bike-trip-planner/issues/26) | Traduire documentation en français | S | 1 | — |
-| 4 | [#27](https://github.com/vincentchalamon/bike-trip-planner/issues/27) | Améliorer présentation documentation | S | 1 | — |
-| 5 | [#29](https://github.com/vincentchalamon/bike-trip-planner/issues/29) | Changer la licence | S | 1 | — |
+| Ordre | ID | Titre | Effort | PRs                                                                  | Dépend de |
+|-------|----|-------|--------|----------------------------------------------------------------------|-----------|
+| 1 | [#44](https://github.com/vincentchalamon/bike-trip-planner/issues/44) | Support multi-langue (fr/en) | L | 3                                                                    | — |
+| 2 | [#70](https://github.com/vincentchalamon/bike-trip-planner/issues/70) | i18n client-side export statique | S | 1                                                                    | [#44](https://github.com/vincentchalamon/bike-trip-planner/issues/44) |
+| 3 | [#26](https://github.com/vincentchalamon/bike-trip-planner/issues/26) | Traduire documentation en français | S | 1                                                                    | — |
+| 4 | [#27](https://github.com/vincentchalamon/bike-trip-planner/issues/27) | Améliorer présentation documentation | S | 1                                                                    | — |
+| 5 | [#29](https://github.com/vincentchalamon/bike-trip-planner/issues/29) | Changer la licence | S | [#96](https://github.com/vincentchalamon/bike-trip-planner/pull/96) `fix/29-agpl-v3-license` | — |
 
 ### Recette Sprint 10
 

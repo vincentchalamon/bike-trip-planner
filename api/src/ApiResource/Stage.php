@@ -16,6 +16,7 @@ use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\WeatherForecast;
+use App\State\RestDayInsertProcessor;
 use App\State\StageCreateProcessor;
 use App\State\StageDeleteProcessor;
 use App\State\StageMoveProcessor;
@@ -89,6 +90,18 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
             provider: StageProvider::class,
             processor: StageDeleteProcessor::class,
         ),
+        new Post(
+            uriTemplate: '/trips/{tripId}/stages/{index}/rest-day{._format}',
+            uriVariables: [
+                'tripId' => new Link(fromClass: Stage::class),
+                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+            ],
+            status: 202,
+            openapi: new Operation(summary: 'Insert a rest day after a given stage. The next stage startPoint stays identical; dates shift by one day.'),
+            input: false,
+            output: StageResponse::class,
+            processor: RestDayInsertProcessor::class,
+        ),
         new Patch(
             uriTemplate: '/trips/{tripId}/stages/{index}/accommodation{._format}',
             uriVariables: [
@@ -134,6 +147,7 @@ final class Stage
         public array $geometry = [],
         public ?string $label = null,
         public float $elevationLoss = 0.0,
+        public bool $isRestDay = false,
     ) {
     }
 
