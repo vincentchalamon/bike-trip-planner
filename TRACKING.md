@@ -69,10 +69,10 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
-| 1 | [#48](https://github.com/vincentchalamon/bike-trip-planner/issues/48) | Profil cyclo + presets | M | 1 | — |
-| 2 | [#49](https://github.com/vincentchalamon/bike-trip-planner/issues/49) | Panneau configuration (sidebar) | M | 1 | [#48](https://github.com/vincentchalamon/bike-trip-planner/issues/48) |
-| 3 | [#36](https://github.com/vincentchalamon/bike-trip-planner/issues/36) | Filtre types d'hébergements | M | 1 | [#49](https://github.com/vincentchalamon/bike-trip-planner/issues/49) |
-| 4 | [#55](https://github.com/vincentchalamon/bike-trip-planner/issues/55) | Insertion jours de repos | M | 1 | — |
+| 1 | [#48](https://github.com/vincentchalamon/bike-trip-planner/issues/48) | Profil cyclo + presets | M | [#170](https://github.com/vincentchalamon/bike-trip-planner/pull/170) `feature/48` | — |
+| 2 | [#49](https://github.com/vincentchalamon/bike-trip-planner/issues/49) | Panneau configuration (sidebar) | M | [#172](https://github.com/vincentchalamon/bike-trip-planner/pull/172) `feature/49` | [#48](https://github.com/vincentchalamon/bike-trip-planner/issues/48) |
+| 3 | [#36](https://github.com/vincentchalamon/bike-trip-planner/issues/36) | Filtre types d'hébergements | M | [#173](https://github.com/vincentchalamon/bike-trip-planner/pull/173) `feature/36` | [#49](https://github.com/vincentchalamon/bike-trip-planner/issues/49) |
+| 4 | [#55](https://github.com/vincentchalamon/bike-trip-planner/issues/55) | Insertion jours de repos | M | [#171](https://github.com/vincentchalamon/bike-trip-planner/pull/171) `feature/55` | — |
 
 ### Recette Sprint 4
 
