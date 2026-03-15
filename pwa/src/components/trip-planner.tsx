@@ -46,6 +46,7 @@ export function TripPlanner() {
     handleSelectAccommodation,
     handleDeselectAccommodation,
     handleExpandAccommodationRadius,
+    handleInsertRestDay,
     clearNewAccKey,
   } = useTripPlanner();
 
@@ -154,6 +155,7 @@ export function TripPlanner() {
               onSelectAccommodation={handleSelectAccommodation}
               onDeselectAccommodation={handleDeselectAccommodation}
               onExpandAccommodationRadius={handleExpandAccommodationRadius}
+              onInsertRestDay={handleInsertRestDay}
               newAccKey={newAccKey}
               onClearNewAcc={clearNewAccKey}
             />

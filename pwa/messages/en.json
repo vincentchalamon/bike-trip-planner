@@ -105,6 +105,11 @@
     "add": "Add stage",
     "insufficientSpace": "Insufficient space to add a stage (minimum 5 km per stage)"
   },
+  "restDay": {
+    "add": "Add rest day",
+    "label": "Rest day",
+    "ariaLabel": "Insert a rest day after stage {dayNumber}"
+  },
   "pacing": {
     "profile": "Profile:",
     "preset_beginner": "Beginner",
@@ -155,6 +160,7 @@
     "retry": "Try again",
     "tripPlannerError": "Something went wrong while loading the trip planner.",
     "failedSelectAccommodation": "Failed to select accommodation.",
-    "failedDeselectAccommodation": "Failed to deselect accommodation."
+    "failedDeselectAccommodation": "Failed to deselect accommodation.",
+    "failedInsertRestDay": "Failed to insert rest day."
   }
 }

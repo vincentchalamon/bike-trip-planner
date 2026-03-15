@@ -51,7 +51,11 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
 
         $sourceType = $this->tripStateManager->getSourceType($tripId);
 
-        if ($sourceType === SourceType::KOMOOT_COLLECTION->value) {
+        if ($stages[$index]->isRestDay) {
+            // Rest days are just removed without merging
+            array_splice($stages, $index, 1);
+            $mergedIndex = null;
+        } elseif ($sourceType === SourceType::KOMOOT_COLLECTION->value) {
             // Single stage or collection: just remove
             array_splice($stages, $index, 1);
             $mergedIndex = null;

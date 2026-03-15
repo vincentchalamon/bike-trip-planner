@@ -13,6 +13,7 @@ export interface StagePayload {
   endPoint: CoordinatePayload;
   geometry: CoordinatePayload[];
   label: string | null;
+  isRestDay?: boolean;
 }
 
 export interface WeatherPayload {
