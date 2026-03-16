@@ -18,7 +18,7 @@ alert.calendar.sunday_nudge: "Stage %stage% falls on a Sunday. Some businesses m
 alert.resupply.timing_warning: "Shops exist on stage %stage%, but you would pass them outside typical opening hours."
 alert.steep_gradient.warning: "Steep climb detected: %gradient%% gradient over %distance%m. Tough with a loaded bike."
 alert.wind.warning: "Headwinds expected for %count%/%total% stages (>25 km/h). Allow extra time."
-alert.comfort.warning: "Poor cycling conditions (comfort index ≤ 40/100) on %count%/%total% stages. Consider adjusting your schedule."
+alert.comfort.warning: "Poor cycling conditions (comfort index < 40/100) on %count%/%total% stages. Consider adjusting your schedule."
 alert.accommodation.seasonal_warning: "All detected accommodations on stage %stage% may be closed during this period."
 alert.rest_day.nudge: "Stage %stage% is day %days% of cycling without a break. Consider inserting a rest day."
 stage.label: "Stage %day%"

@@ -39,7 +39,7 @@ Rules are executed in priority order (lower = higher priority):
 | **Calendar** | — | nudge | Stage falls on a French public holiday |
 | **Calendar** | — | nudge | Stage falls on a Sunday (businesses may be closed) |
 | **Wind** | — | warning | Headwind ≥ 25 km/h on ≥ 60 % of stages with weather data |
-| **Comfort** | — | warning | Poor comfort index (≤ 40/100) on at least one stage (combined score of temperature, wind, humidity, rain) |
+| **Comfort** | — | warning | Poor comfort index (< 40/100) on at least one stage (combined score of temperature, wind, humidity, rain) |
 | **Bike shops** | — | nudge | No repair shop within 2 km of stage midpoint (trips > 5 stages) |
 | **Bike shops** | — | nudge | Nearby shop sells bikes but does not offer repair service |
 | **Resupply** | — | nudge | Stage ≥ 40 km with no food/resupply POI along the route |
