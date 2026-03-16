@@ -10,13 +10,16 @@ use App\ApiResource\Stage;
 use App\Engine\RiderTimeEstimatorInterface;
 use App\Enum\AlertType;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class SunsetAlertAnalyzerTest extends TestCase
 {
     private TranslatorInterface $translator;
-    private RiderTimeEstimatorInterface $riderTimeEstimator;
+
+    private Stub&RiderTimeEstimatorInterface $riderTimeEstimator;
+
     private SunsetAlertAnalyzer $analyzer;
 
     #[\Override]
@@ -135,6 +138,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
             'fr',
         )->willReturn('Alerte coucher de soleil');
 
+        /** @var Stub&RiderTimeEstimatorInterface $riderTimeEstimator */
         $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
         $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(22.0);
 

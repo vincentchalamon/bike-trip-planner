@@ -49,8 +49,8 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         $request = $this->tripStateManager->getRequest($tripId);
         $ebikeMode = (bool) $request?->ebikeMode;
         $startDate = $request?->startDate;
-        $departureHour = $request?->departureHour ?? 8;
-        $averageSpeed = $request?->averageSpeed ?? 15.0;
+        $departureHour = $request instanceof \App\ApiResource\TripRequest ? $request->departureHour : 8;
+        $averageSpeed = $request instanceof \App\ApiResource\TripRequest ? $request->averageSpeed : 15.0;
 
         $this->executeWithTracking($tripId, ComputationName::TERRAIN, function () use ($tripId, $stages, $locale, $ebikeMode, $startDate, $departureHour, $averageSpeed): void {
             $waysByStage = $this->fetchOsmWaysByStage($tripId, $stages);

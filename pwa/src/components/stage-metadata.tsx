@@ -1,6 +1,14 @@
 "use client";
 
-import { ArrowUp, ArrowDown, Bike, Mountain, Clock, Sunrise, Sunset } from "lucide-react";
+import {
+  ArrowUp,
+  ArrowDown,
+  Bike,
+  Mountain,
+  Clock,
+  Sunrise,
+  Sunset,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WeatherIndicator } from "@/components/weather-indicator";
 import type { WeatherData } from "@/lib/validation/schemas";

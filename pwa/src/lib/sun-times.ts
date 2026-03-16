@@ -17,7 +17,10 @@ const RAD_TO_DEG = 180 / Math.PI;
 /**
  * Computes solar declination and equation of time for a given day of year.
  */
-function solarPosition(dayOfYear: number): { declination: number; eqTime: number } {
+function solarPosition(dayOfYear: number): {
+  declination: number;
+  eqTime: number;
+} {
   // Fractional year in radians
   const gamma = (2 * Math.PI * (dayOfYear - 1)) / 365;
 
@@ -49,7 +52,11 @@ function solarPosition(dayOfYear: number): { declination: number; eqTime: number
  *
  * Returns null for polar day or polar night.
  */
-function hourAngle(latRad: number, declination: number, zenithDeg: number): number | null {
+function hourAngle(
+  latRad: number,
+  declination: number,
+  zenithDeg: number,
+): number | null {
   const cosZenith = Math.cos(zenithDeg * DEG_TO_RAD);
   const cosLat = Math.cos(latRad);
   const sinLat = Math.sin(latRad);
@@ -84,7 +91,9 @@ export function computeSunTimes(
 } {
   // Day of year (1-365)
   const start = Date.UTC(date.getUTCFullYear(), 0, 0);
-  const diff = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) - start;
+  const diff =
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) -
+    start;
   const dayOfYear = Math.floor(diff / 86_400_000);
 
   const { declination, eqTime } = solarPosition(dayOfYear);
@@ -100,8 +109,10 @@ export function computeSunTimes(
 
   // Civil twilight: zenith = 96°
   const haCivil = hourAngle(latRad, declination, 96);
-  const civilTwilightBegin = haCivil !== null ? (solarNoon - 4 * haCivil) / 60 : null;
-  const civilTwilightEnd = haCivil !== null ? (solarNoon + 4 * haCivil) / 60 : null;
+  const civilTwilightBegin =
+    haCivil !== null ? (solarNoon - 4 * haCivil) / 60 : null;
+  const civilTwilightEnd =
+    haCivil !== null ? (solarNoon + 4 * haCivil) / 60 : null;
 
   return { sunrise, sunset, civilTwilightBegin, civilTwilightEnd };
 }
