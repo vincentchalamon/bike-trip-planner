@@ -66,7 +66,7 @@ test.describe("Alerts and weather", () => {
 
     // Stage 3 has headwind — relative wind label is shown
     await expect(mockedPage.getByTestId("stage-card-3")).toContainText(
-      /15 km\/h/,
+      /15 km\/h.*(Headwind|Vent de face)/,
     );
   });
 
