@@ -90,9 +90,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
-| 1 | [#43](https://github.com/vincentchalamon/bike-trip-planner/issues/43) | Météo étendue vent + confort | L | 2 | — |
-| 2 | [#61](https://github.com/vincentchalamon/bike-trip-planner/issues/61) | Estimation temps de parcours | M | 1 | [#48](https://github.com/vincentchalamon/bike-trip-planner/issues/48) |
-| 3 | [#62](https://github.com/vincentchalamon/bike-trip-planner/issues/62) | Horaires soleil + alerte nocturne | M | 1 | [#61](https://github.com/vincentchalamon/bike-trip-planner/issues/61) |
+| 1 | [#43](https://github.com/vincentchalamon/bike-trip-planner/issues/43) | Météo étendue vent + confort | L | [#177](https://github.com/vincentchalamon/bike-trip-planner/pull/177) `feature/43` | — |
+| 2 | [#61](https://github.com/vincentchalamon/bike-trip-planner/issues/61) | Estimation temps de parcours | M | [#178](https://github.com/vincentchalamon/bike-trip-planner/pull/178) `feature/61` | [#48](https://github.com/vincentchalamon/bike-trip-planner/issues/48) |
+| 3 | [#62](https://github.com/vincentchalamon/bike-trip-planner/issues/62) | Horaires soleil + alerte nocturne | M | [#179](https://github.com/vincentchalamon/bike-trip-planner/pull/179) `feature/62` | [#61](https://github.com/vincentchalamon/bike-trip-planner/issues/61) |
 
 ### Recette Sprint 5
 
@@ -308,7 +308,7 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 ## Récapitulatif
 
 | Sprint | Thème | Tickets | PRs estimées |
-|--------|-------|---------|--------------|
+|--------|-------|---------|---------------|
 | 1 | Quick Wins Alertes | 5 | 5 |
 | 2 | Alertes Frontend + UX | 3 | 3 |
 | 3 | Hébergements | 3 | 4 |
