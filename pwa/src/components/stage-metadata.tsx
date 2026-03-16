@@ -1,7 +1,14 @@
-import { ArrowUp, ArrowDown, Bike, Mountain } from "lucide-react";
+"use client";
+
+import { ArrowUp, ArrowDown, Bike, Mountain, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WeatherIndicator } from "@/components/weather-indicator";
 import type { WeatherData } from "@/lib/validation/schemas";
+import {
+  computeStageTimes,
+  formatDecimalHour,
+} from "@/lib/travel-time";
+import { useTranslations } from "next-intl";
 
 interface StageMetadataProps {
   distance: number | null;
@@ -9,6 +16,8 @@ interface StageMetadataProps {
   elevationLoss: number | null;
   weather: WeatherData | null;
   isProcessing?: boolean;
+  departureHour?: number;
+  averageSpeedKmh?: number;
 }
 
 export function StageMetadata({
@@ -17,7 +26,19 @@ export function StageMetadata({
   elevationLoss,
   weather,
   isProcessing,
+  departureHour,
+  averageSpeedKmh,
 }: StageMetadataProps) {
+  const t = useTranslations("stage");
+
+  const travelTime =
+    departureHour !== undefined &&
+    averageSpeedKmh !== undefined &&
+    distance !== null &&
+    distance > 0
+      ? computeStageTimes(departureHour, distance, averageSpeedKmh, elevation ?? 0)
+      : null;
+
   return (
     <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
       <div className="flex items-center gap-1.5">
@@ -41,6 +62,20 @@ export function StageMetadata({
           <Skeleton className="w-20 h-4" />
         )}
       </div>
+      {travelTime && (
+        <div
+          className="flex items-center gap-1.5"
+          title={t("travelTimeTooltip")}
+        >
+          <Clock className="h-4 w-4 text-indigo-500" />
+          <span>
+            {t("travelTime", {
+              departure: formatDecimalHour(travelTime.departureDecimal),
+              arrival: formatDecimalHour(travelTime.arrivalDecimal),
+            })}
+          </span>
+        </div>
+      )}
       {weather ? (
         <WeatherIndicator weather={weather} />
       ) : isProcessing ? (

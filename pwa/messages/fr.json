@@ -41,7 +41,9 @@
     "loadingAlerts": "Analyse de l'étape...",
     "editDistance": "Modifier la distance",
     "distanceLabel": "Distance (km)",
-    "saveDistance": "Enregistrer"
+    "saveDistance": "Enregistrer",
+    "travelTime": "Départ ~{departure} → Arrivée ~{arrival}",
+    "travelTimeTooltip": "Estimation basée sur la vitesse moyenne et le dénivelé (règle de Naismith adaptée au vélo)"
   },
   "stageLocations": {
     "searchDeparture": "Rechercher un départ...",
@@ -133,7 +135,10 @@
     "elevationLabel": "Indice de dénivelé",
     "ebikeMode": "Mode VAE",
     "ebikeModeTooltip": "Active les alertes d'autonomie pour les étapes en VAE (80 km de base, ajusté selon le dénivelé).",
-    "ebikeModeLabel": "Mode VAE"
+    "ebikeModeLabel": "Mode VAE",
+    "departureHour": "Heure de départ",
+    "departureHourTooltip": "Heure de départ habituelle, utilisée pour l'estimation des horaires de parcours.",
+    "departureHourLabel": "Heure de départ (0-23)"
   },
   "theme": {
     "system": "Système",

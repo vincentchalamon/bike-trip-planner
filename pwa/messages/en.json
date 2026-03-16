@@ -41,7 +41,9 @@
     "loadingAlerts": "Analyzing stage...",
     "editDistance": "Edit distance",
     "distanceLabel": "Distance (km)",
-    "saveDistance": "Save"
+    "saveDistance": "Save",
+    "travelTime": "Dep ~{departure} → Arr ~{arrival}",
+    "travelTimeTooltip": "Estimate based on average speed and elevation gain (Naismith rule adapted for cycling)"
   },
   "stageLocations": {
     "searchDeparture": "Search departure...",
@@ -133,7 +135,10 @@
     "elevationLabel": "Elevation index",
     "ebikeMode": "E-bike mode",
     "ebikeModeTooltip": "Enable range alerts for e-bike stages (80 km base range, adjusted for elevation).",
-    "ebikeModeLabel": "E-bike mode"
+    "ebikeModeLabel": "E-bike mode",
+    "departureHour": "Departure time",
+    "departureHourTooltip": "Typical departure hour, used for travel time estimates on each stage.",
+    "departureHourLabel": "Departure hour (0-23)"
   },
   "theme": {
     "system": "System",

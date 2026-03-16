@@ -5,25 +5,67 @@ declare(strict_types=1);
 namespace App\Engine;
 
 /**
- * Linear rider time estimator.
+ * Naismith-adapted rider time estimator for cycling.
  *
- * Models a rider departing at $departureHour and pedalling for 10 hours.
- * The position at any given moment is interpolated proportionally to the distance.
+ * Computes the effective cycling speed by applying an elevation penalty to the
+ * base average speed: -2 km/h per 500m of elevation gain (Naismith rule adapted
+ * for cyclists). A minimum effective speed floor of 5 km/h is enforced.
  *
- * Formula: estimatedTime = departureHour + (distanceKm / totalDistanceKm) * 10.0
+ * Effective speed formula: max(5, baseSpeed - 2 * (elevationGainM / 500))
+ *
+ * The estimated passage time at any distance marker is then:
+ *   estimatedTime = departureHour + (distanceKm / totalDistanceKm) * (totalDistanceKm / effectiveSpeed)
+ *                 = departureHour + distanceKm / effectiveSpeed
  */
 final readonly class RiderTimeEstimator implements RiderTimeEstimatorInterface
 {
-    private const float PEDALLING_HOURS = 10.0;
+    /** Minimum effective speed (km/h) to avoid division-by-zero and unrealistic values. */
+    private const float MIN_EFFECTIVE_SPEED_KMH = 5.0;
 
-    public function estimateTimeAtDistance(float $distanceKm, float $totalDistanceKm, int $departureHour = 8): float
-    {
+    /** Elevation penalty: -2 km/h per 500m of ascent. */
+    private const float ELEVATION_PENALTY_PER_500M = 2.0;
+
+    public function estimateTimeAtDistance(
+        float $distanceKm,
+        float $totalDistanceKm,
+        int $departureHour = 8,
+        float $averageSpeedKmh = 15.0,
+        float $elevationGainM = 0.0,
+    ): float {
         if ($totalDistanceKm <= 0.0) {
             return (float) $departureHour;
         }
 
         $ratio = min(1.0, max(0.0, $distanceKm / $totalDistanceKm));
+        $ridingDuration = $this->estimateRidingDuration($totalDistanceKm, $averageSpeedKmh, $elevationGainM);
 
-        return $departureHour + $ratio * self::PEDALLING_HOURS;
+        return $departureHour + $ratio * $ridingDuration;
+    }
+
+    public function estimateRidingDuration(
+        float $distanceKm,
+        float $averageSpeedKmh = 15.0,
+        float $elevationGainM = 0.0,
+    ): float {
+        if ($distanceKm <= 0.0) {
+            return 0.0;
+        }
+
+        $effectiveSpeed = $this->computeEffectiveSpeed($averageSpeedKmh, $elevationGainM);
+
+        return $distanceKm / $effectiveSpeed;
+    }
+
+    /**
+     * Computes effective cycling speed after applying the Naismith elevation penalty.
+     *
+     * Formula: max(MIN_FLOOR, baseSpeed - PENALTY_PER_500M * (elevationGainM / 500))
+     */
+    private function computeEffectiveSpeed(float $baseSpeedKmh, float $elevationGainM): float
+    {
+        $penalty = self::ELEVATION_PENALTY_PER_500M * ($elevationGainM / 500.0);
+        $effective = $baseSpeedKmh - $penalty;
+
+        return max(self::MIN_EFFECTIVE_SPEED_KMH, $effective);
     }
 }

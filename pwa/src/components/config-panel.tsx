@@ -26,6 +26,7 @@ interface ConfigPanelProps {
   maxDistancePerDay: number;
   averageSpeed: number;
   ebikeMode: boolean;
+  departureHour: number;
   enabledAccommodationTypes: AccommodationType[];
   onPacingUpdate: (
     fatigueFactor: number,
@@ -34,6 +35,7 @@ interface ConfigPanelProps {
     averageSpeed: number,
   ) => void;
   onEbikeModeChange: (ebikeMode: boolean) => void;
+  onDepartureHourChange: (departureHour: number) => void;
   onAccommodationTypesChange: (types: AccommodationType[]) => void;
 }
 
@@ -43,9 +45,11 @@ export function ConfigPanel({
   maxDistancePerDay,
   averageSpeed,
   ebikeMode,
+  departureHour,
   enabledAccommodationTypes,
   onPacingUpdate,
   onEbikeModeChange,
+  onDepartureHourChange,
   onAccommodationTypesChange,
 }: ConfigPanelProps) {
   const t = useTranslations("config");
@@ -172,8 +176,10 @@ export function ConfigPanel({
               maxDistancePerDay={maxDistancePerDay}
               averageSpeed={averageSpeed}
               ebikeMode={ebikeMode}
+              departureHour={departureHour}
               onUpdate={onPacingUpdate}
               onEbikeModeChange={onEbikeModeChange}
+              onDepartureHourChange={onDepartureHourChange}
             />
           </section>
 

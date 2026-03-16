@@ -57,6 +57,7 @@ export function useTripPlanner() {
   const averageSpeed = useTripStore((s) => s.averageSpeed);
   const ebikeMode = useTripStore((s) => s.ebikeMode);
   const departureHour = useTripStore((s) => s.departureHour);
+  const setDepartureHour = useTripStore((s) => s.setDepartureHour);
   const enabledAccommodationTypes = useTripStore(
     (s) => s.enabledAccommodationTypes,
   );
@@ -416,6 +417,10 @@ export function useTripPlanner() {
     );
   }
 
+  function handleDepartureHourChange(newDepartureHour: number) {
+    setDepartureHour(newDepartureHour);
+  }
+
   async function handleEbikeModeChange(newEbikeMode: boolean) {
     setEbikeMode(newEbikeMode);
     if (!newEbikeMode) {
@@ -603,6 +608,7 @@ export function useTripPlanner() {
     maxDistancePerDay,
     averageSpeed,
     ebikeMode,
+    departureHour,
     enabledAccommodationTypes,
     handleAccommodationTypesChange,
     updateTitle,
@@ -616,6 +622,7 @@ export function useTripPlanner() {
     handleDistanceChange,
     handlePacingChange,
     handleEbikeModeChange,
+    handleDepartureHourChange,
     handleAddAccommodation,
     handleSelectAccommodation,
     handleDeselectAccommodation,

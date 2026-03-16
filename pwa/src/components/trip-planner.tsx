@@ -33,6 +33,7 @@ export function TripPlanner() {
     maxDistancePerDay,
     averageSpeed,
     ebikeMode,
+    departureHour,
     enabledAccommodationTypes,
     handleAccommodationTypesChange,
     updateTitle,
@@ -46,6 +47,7 @@ export function TripPlanner() {
     handleDistanceChange,
     handlePacingChange,
     handleEbikeModeChange,
+    handleDepartureHourChange,
     handleAddAccommodation,
     handleSelectAccommodation,
     handleDeselectAccommodation,
@@ -199,9 +201,11 @@ export function TripPlanner() {
         maxDistancePerDay={maxDistancePerDay}
         averageSpeed={averageSpeed}
         ebikeMode={ebikeMode}
+        departureHour={departureHour}
         enabledAccommodationTypes={enabledAccommodationTypes}
         onPacingUpdate={handlePacingChange}
         onEbikeModeChange={handleEbikeModeChange}
+        onDepartureHourChange={handleDepartureHourChange}
         onAccommodationTypesChange={handleAccommodationTypesChange}
       />
     </main>
