@@ -24,7 +24,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
 
     private const float HEADWIND_RATIO_THRESHOLD = 0.6; // 60%
 
-    private const int COMFORT_INDEX_POOR_THRESHOLD = 40;
+    private const int COMFORT_INDEX_POOR_THRESHOLD = 39;
 
     public function __construct(
         ComputationTrackerInterface $computationTracker,
