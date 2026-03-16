@@ -16,11 +16,11 @@ interface RiderTimeEstimatorInterface
      * Estimates the decimal hour (e.g. 13.5 = 13:30) at which the rider
      * reaches $distanceKm along a stage of $totalDistanceKm.
      *
-     * @param float $distanceKm       Distance from stage start (km)
-     * @param float $totalDistanceKm  Total stage distance (km)
-     * @param int   $departureHour    Hour of departure (0-23, default 8)
-     * @param float $averageSpeedKmh  Base cycling speed in km/h (default 15)
-     * @param float $elevationGainM   Total elevation gain for the stage in metres (default 0)
+     * @param float $distanceKm      Distance from stage start (km)
+     * @param float $totalDistanceKm Total stage distance (km)
+     * @param int   $departureHour   Hour of departure (0-23, default 8)
+     * @param float $averageSpeedKmh Base cycling speed in km/h (default 15)
+     * @param float $elevationGainM  Total elevation gain for the stage in metres (default 0)
      */
     public function estimateTimeAtDistance(
         float $distanceKm,
