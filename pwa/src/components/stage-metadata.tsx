@@ -4,10 +4,7 @@ import { ArrowUp, ArrowDown, Bike, Mountain, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WeatherIndicator } from "@/components/weather-indicator";
 import type { WeatherData } from "@/lib/validation/schemas";
-import {
-  computeStageTimes,
-  formatDecimalHour,
-} from "@/lib/travel-time";
+import { computeStageTimes, formatDecimalHour } from "@/lib/travel-time";
 import { useTranslations } from "next-intl";
 
 interface StageMetadataProps {
@@ -36,7 +33,12 @@ export function StageMetadata({
     averageSpeedKmh !== undefined &&
     distance !== null &&
     distance > 0
-      ? computeStageTimes(departureHour, distance, averageSpeedKmh, elevation ?? 0)
+      ? computeStageTimes(
+          departureHour,
+          distance,
+          averageSpeedKmh,
+          elevation ?? 0,
+        )
       : null;
 
   return (
