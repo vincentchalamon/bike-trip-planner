@@ -205,4 +205,32 @@ final class AnalyzeWindHandlerTest extends TestCase
         $handler = $this->createHandler($tripStateManager, $publisher);
         $handler(new AnalyzeWind('trip-1'));
     }
+
+    #[Test]
+    public function comfortAlertBoundary(): void
+    {
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([
+            $this->createStage('trip-1', 1, $this->createWeather(comfortIndex: 40)), // exactly at yellow/red boundary → no alert
+            $this->createStage('trip-1', 2, $this->createWeather(comfortIndex: 39)), // one below threshold → alert fires
+        ]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::WIND_ALERTS,
+                $this->callback(static function (array $data): bool {
+                    $alerts = $data['alerts'];
+
+                    return 1 === \count($alerts)
+                        && str_contains((string) $alerts[0]['message'], 'Poor comfort on 1/2');
+                }),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher);
+        $handler(new AnalyzeWind('trip-1'));
+    }
 }
