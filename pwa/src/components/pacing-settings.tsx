@@ -17,6 +17,7 @@ interface PacingSettingsProps {
   maxDistancePerDay: number;
   averageSpeed: number;
   ebikeMode: boolean;
+  departureHour: number;
   onUpdate: (
     fatigueFactor: number,
     elevationPenalty: number,
@@ -24,6 +25,7 @@ interface PacingSettingsProps {
     averageSpeed: number,
   ) => void;
   onEbikeModeChange: (ebikeMode: boolean) => void;
+  onDepartureHourChange: (departureHour: number) => void;
 }
 
 interface RiderPreset {
@@ -87,8 +89,10 @@ export function PacingSettings({
   maxDistancePerDay,
   averageSpeed,
   ebikeMode,
+  departureHour,
   onUpdate,
   onEbikeModeChange,
+  onDepartureHourChange,
 }: PacingSettingsProps) {
   const t = useTranslations("pacing");
   const fatiguePercent = toFatiguePercent(fatigueFactor);
@@ -122,6 +126,10 @@ export function PacingSettings({
   function handleAverageSpeedChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = Number(e.target.value);
     onUpdate(fatigueFactor, elevationPenalty, maxDistancePerDay, value);
+  }
+
+  function handleDepartureHourChange(e: React.ChangeEvent<HTMLInputElement>) {
+    onDepartureHourChange(Number(e.target.value));
   }
 
   function handlePreset(preset: RiderPreset) {
@@ -246,6 +254,41 @@ export function PacingSettings({
           />
           <span className="text-muted-foreground tabular-nums w-16 text-right">
             {averageSpeed} km/h
+          </span>
+        </div>
+
+        {/* Departure hour */}
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="departure-hour"
+            className="text-muted-foreground truncate min-w-0"
+          >
+            {t("departureHour")}
+          </label>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="text-muted-foreground cursor-help"
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t("departureHourTooltip")}</TooltipContent>
+          </Tooltip>
+          <input
+            id="departure-hour"
+            type="range"
+            min={0}
+            max={23}
+            step={1}
+            value={departureHour}
+            onChange={handleDepartureHourChange}
+            className="h-2 w-24 accent-primary"
+            aria-label={t("departureHourLabel")}
+          />
+          <span className="text-muted-foreground tabular-nums w-12 text-right">
+            {String(departureHour).padStart(2, "0")}h00
           </span>
         </div>
 

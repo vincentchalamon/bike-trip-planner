@@ -84,6 +84,7 @@ interface TripState {
     maxDistancePerDay: number,
     averageSpeed: number,
   ) => void;
+  setDepartureHour: (departureHour: number) => void;
   setEbikeMode: (ebikeMode: boolean) => void;
   setEnabledAccommodationTypes: (types: AccommodationType[]) => void;
   setComputationStatus: (status: Record<string, string>) => void;
@@ -273,6 +274,11 @@ export const useTripStore = create<TripState>()(
         state.elevationPenalty = elevationPenalty;
         state.maxDistancePerDay = maxDistancePerDay;
         state.averageSpeed = averageSpeed;
+      }),
+
+    setDepartureHour: (departureHour) =>
+      set((state) => {
+        state.departureHour = departureHour;
       }),
 
     setEbikeMode: (ebikeMode) =>

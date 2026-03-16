@@ -57,6 +57,7 @@ export function useTripPlanner() {
   const averageSpeed = useTripStore((s) => s.averageSpeed);
   const ebikeMode = useTripStore((s) => s.ebikeMode);
   const departureHour = useTripStore((s) => s.departureHour);
+  const setDepartureHour = useTripStore((s) => s.setDepartureHour);
   const enabledAccommodationTypes = useTripStore(
     (s) => s.enabledAccommodationTypes,
   );
@@ -416,6 +417,37 @@ export function useTripPlanner() {
     );
   }
 
+  async function handleDepartureHourChange(newDepartureHour: number) {
+    setDepartureHour(newDepartureHour);
+    if (!tripId) return;
+
+    try {
+      const { error, response } = await apiClient.PATCH("/trips/{id}", {
+        params: { path: { id: tripId } },
+        headers: { "Content-Type": "application/merge-patch+json" },
+        body: {
+          fatigueFactor,
+          elevationPenalty,
+          maxDistancePerDay,
+          averageSpeed,
+          ebikeMode,
+          departureHour: newDepartureHour,
+          enabledAccommodationTypes,
+        },
+      });
+
+      if (error) {
+        const apiError = parseApiError(response.status, error);
+        toast.error(apiError.message);
+      } else {
+        setProcessing(true);
+        setAccommodationScanning(true);
+      }
+    } catch {
+      toast.error(t("errors.failedUpdatePacing"));
+    }
+  }
+
   async function handleEbikeModeChange(newEbikeMode: boolean) {
     setEbikeMode(newEbikeMode);
     if (!newEbikeMode) {
@@ -603,6 +635,7 @@ export function useTripPlanner() {
     maxDistancePerDay,
     averageSpeed,
     ebikeMode,
+    departureHour,
     enabledAccommodationTypes,
     handleAccommodationTypesChange,
     updateTitle,
@@ -616,6 +649,7 @@ export function useTripPlanner() {
     handleDistanceChange,
     handlePacingChange,
     handleEbikeModeChange,
+    handleDepartureHourChange,
     handleAddAccommodation,
     handleSelectAccommodation,
     handleDeselectAccommodation,

@@ -63,8 +63,9 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
         $request = $this->tripStateManager->getRequest($tripId);
         $departureHour = $request instanceof TripRequest ? $request->departureHour : 8;
+        $averageSpeed = $request instanceof TripRequest ? $request->averageSpeed : 15.0;
 
-        $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour): void {
+        $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour, $averageSpeed): void {
             // Single Overpass query using decimated route points (shared cache key with ScanAllOsmDataHandler)
             $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
@@ -135,7 +136,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
                 // Resupply timing warning: warn when all resupply POIs on this stage
                 // would be closed at the estimated rider passage time
-                if ($this->hasResupplyPoi($stage) && !$this->hasAnyOpenResupplyPoi($stage, $departureHour)) {
+                if ($this->hasResupplyPoi($stage) && !$this->hasAnyOpenResupplyPoi($stage, $departureHour, $averageSpeed)) {
                     $alert = new Alert(
                         type: AlertType::WARNING,
                         message: $this->translator->trans(
@@ -176,7 +177,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
      * Returns true when at least one resupply POI on the stage is open
      * at the estimated rider passage time.
      */
-    private function hasAnyOpenResupplyPoi(Stage $stage, int $departureHour): bool
+    private function hasAnyOpenResupplyPoi(Stage $stage, int $departureHour, float $averageSpeed): bool
     {
         $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
         $cumulativeDistances = $this->buildCumulativeDistances($geometry);
@@ -189,7 +190,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
             $nearestIndex = $this->findNearestGeometryIndex($geometry, $poi->lat, $poi->lon);
             $distanceFromStart = $cumulativeDistances[$nearestIndex];
-            $estimatedTime = $this->riderTimeEstimator->estimateTimeAtDistance($distanceFromStart, $totalDistance, $departureHour);
+            $estimatedTime = $this->riderTimeEstimator->estimateTimeAtDistance($distanceFromStart, $totalDistance, $departureHour, $averageSpeed, $stage->elevation);
             $schedule = $this->resolveSchedule($poi->category);
 
             if ($schedule->isOpenAt($estimatedTime)) {
