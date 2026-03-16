@@ -417,8 +417,35 @@ export function useTripPlanner() {
     );
   }
 
-  function handleDepartureHourChange(newDepartureHour: number) {
+  async function handleDepartureHourChange(newDepartureHour: number) {
     setDepartureHour(newDepartureHour);
+    if (!tripId) return;
+
+    try {
+      const { error, response } = await apiClient.PATCH("/trips/{id}", {
+        params: { path: { id: tripId } },
+        headers: { "Content-Type": "application/merge-patch+json" },
+        body: {
+          fatigueFactor,
+          elevationPenalty,
+          maxDistancePerDay,
+          averageSpeed,
+          ebikeMode,
+          departureHour: newDepartureHour,
+          enabledAccommodationTypes,
+        },
+      });
+
+      if (error) {
+        const apiError = parseApiError(response.status, error);
+        toast.error(apiError.message);
+      } else {
+        setProcessing(true);
+        setAccommodationScanning(true);
+      }
+    } catch {
+      toast.error(t("errors.failedUpdatePacing"));
+    }
   }
 
   async function handleEbikeModeChange(newEbikeMode: boolean) {
