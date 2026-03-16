@@ -170,6 +170,15 @@
     "shareLabel": "Share trip",
     "shareTooltip": "Requires persistent storage (coming soon)."
   },
+  "weather": {
+    "humidity": "Humidity",
+    "rain": "Rain",
+    "wind": "Wind",
+    "comfortIndex": "Comfort",
+    "relativeWind_headwind": "Headwind",
+    "relativeWind_tailwind": "Tailwind",
+    "relativeWind_crosswind": "Crosswind"
+  },
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",

@@ -144,13 +144,9 @@ test.describe("Rest day management", () => {
     });
 
     // The button after stage 0 (which precedes the rest day) must be hidden
-    await expect(
-      mockedPage.getByTestId("add-rest-day-button-0"),
-    ).toBeHidden();
+    await expect(mockedPage.getByTestId("add-rest-day-button-0")).toBeHidden();
     // The button after the rest day itself (index 1) must also be hidden
-    await expect(
-      mockedPage.getByTestId("add-rest-day-button-1"),
-    ).toBeHidden();
+    await expect(mockedPage.getByTestId("add-rest-day-button-1")).toBeHidden();
   });
 
   test("deletes a rest day without merging adjacent stages", async ({

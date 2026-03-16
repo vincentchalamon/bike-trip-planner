@@ -23,6 +23,11 @@ export const WeatherForecastSchema = z.object({
   windSpeed: z.number(),
   windDirection: z.string(),
   precipitationProbability: z.number(),
+  humidity: z.number().int().min(0).max(100).default(50),
+  comfortIndex: z.number().int().min(0).max(100).default(100),
+  relativeWindDirection: z
+    .enum(["headwind", "tailwind", "crosswind", "unknown"])
+    .default("unknown"),
 });
 
 export const PointOfInterestSchema = z.object({

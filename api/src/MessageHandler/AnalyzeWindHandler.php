@@ -24,8 +24,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
 
     private const float HEADWIND_RATIO_THRESHOLD = 0.6; // 60%
 
-    /** @var list<string> */
-    private const array HEADWIND_DIRECTIONS = ['N', 'NE', 'NO', 'O']; // Against typical cycling direction
+    private const int COMFORT_INDEX_POOR_THRESHOLD = 39;
 
     public function __construct(
         ComputationTrackerInterface $computationTracker,
@@ -50,6 +49,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
         $this->executeWithTracking($tripId, ComputationName::WIND, function () use ($tripId, $stages, $locale): void {
             $alerts = [];
             $headwindCount = 0;
+            $poorComfortCount = 0;
 
             foreach ($stages as $stage) {
                 if (null === $stage->weather) {
@@ -58,11 +58,17 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
 
                 $weather = $stage->weather;
 
+                // Count headwind stages using the pre-computed relativeWindDirection
                 if (
                     $weather->windSpeed >= self::WIND_SPEED_THRESHOLD_KMH
-                    && \in_array($weather->windDirection, self::HEADWIND_DIRECTIONS, true)
+                    && WeatherForecast::RELATIVE_WIND_HEADWIND === $weather->relativeWindDirection
                 ) {
                     ++$headwindCount;
+                }
+
+                // Count stages with poor comfort index
+                if ($weather->comfortIndex <= self::COMFORT_INDEX_POOR_THRESHOLD) {
+                    ++$poorComfortCount;
                 }
             }
 
@@ -75,6 +81,17 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                 $message = $this->translator->trans(
                     'alert.wind.warning',
                     ['%count%' => $headwindCount, '%total%' => $stagesWithWeather],
+                    'alerts',
+                    $locale,
+                );
+                $alert = new Alert(type: AlertType::WARNING, message: $message);
+                $alerts[] = ['type' => $alert->type->value, 'message' => $alert->message];
+            }
+
+            if ($stagesWithWeather > 0 && $poorComfortCount > 0) {
+                $message = $this->translator->trans(
+                    'alert.comfort.warning',
+                    ['%count%' => $poorComfortCount, '%total%' => $stagesWithWeather],
                     'alerts',
                     $locale,
                 );

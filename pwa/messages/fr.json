@@ -170,6 +170,15 @@
     "shareLabel": "Partager le voyage",
     "shareTooltip": "Nécessite la persistance en base de données (bientôt disponible)."
   },
+  "weather": {
+    "humidity": "Humidité",
+    "rain": "Pluie",
+    "wind": "Vent",
+    "comfortIndex": "Confort",
+    "relativeWind_headwind": "Vent de face",
+    "relativeWind_tailwind": "Vent arrière",
+    "relativeWind_crosswind": "Vent de côté"
+  },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",

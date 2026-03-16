@@ -121,7 +121,7 @@ export function StageProgressBar() {
         const isActive = activeDayNumber === dayNumber;
         const isPast = activeDayIndex >= 0 ? index < activeDayIndex : false;
         const isFuture = activeDayIndex >= 0 ? index > activeDayIndex : false;
-        const showLabel = (100 / dayNumbers.length) >= 8;
+        const showLabel = 100 / dayNumbers.length >= 8;
 
         return (
           <button

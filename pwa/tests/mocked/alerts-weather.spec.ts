@@ -51,6 +51,23 @@ test.describe("Alerts and weather", () => {
     await expect(mockedPage.getByTestId("stage-card-3")).toContainText(
       "Overcast, 12-22°C",
     );
+
+    // Comfort index badge is visible with correct value
+    const comfortBadge = mockedPage
+      .getByTitle(/Comfort: \d+\/100/)
+      .or(mockedPage.getByTitle(/Confort\s*: \d+\/100/))
+      .first();
+    await expect(comfortBadge).toBeVisible();
+
+    // Humidity is displayed
+    await expect(
+      mockedPage.getByTitle(/Humidity|Humidité/).first(),
+    ).toBeVisible();
+
+    // Stage 3 has headwind — relative wind label is shown
+    await expect(mockedPage.getByTestId("stage-card-3")).toContainText(
+      /15 km\/h.*(Headwind|Vent de face)/,
+    );
   });
 
   test("shows weather in summary bar", async ({

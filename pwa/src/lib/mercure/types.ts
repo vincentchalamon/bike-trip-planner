@@ -26,6 +26,9 @@ export interface WeatherPayload {
     windSpeed: number;
     windDirection: string;
     precipitationProbability: number;
+    humidity: number;
+    comfortIndex: number;
+    relativeWindDirection: "headwind" | "tailwind" | "crosswind" | "unknown";
   } | null;
 }
 

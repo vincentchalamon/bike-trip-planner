@@ -14,6 +14,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
 use App\Message\FetchWeather;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Weather\RelativeWindCalculator;
 use App\Weather\WeatherProviderInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
@@ -33,6 +34,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         private CacheItemPoolInterface $weatherCache,
         private MessageBusInterface $messageBus,
         private LoggerInterface $logger,
+        private RelativeWindCalculator $relativeWindCalculator = new RelativeWindCalculator(),
     ) {
         parent::__construct($computationTracker, $publisher);
     }
@@ -64,7 +66,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
 
                 $cacheItem = $this->weatherCache->getItem($cacheKey);
                 if ($cacheItem->isHit()) {
-                    /** @var array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int} $weatherData */
+                    /** @var array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int, humidity: int, comfortIndex: int} $weatherData */
                     $weatherData = $cacheItem->get();
 
                     $stage->weather = new WeatherForecast(
@@ -75,6 +77,9 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                         windSpeed: $weatherData['windSpeed'],
                         windDirection: $weatherData['windDirection'],
                         precipitationProbability: $weatherData['precipitationProbability'],
+                        humidity: $weatherData['humidity'] ?? 50,
+                        comfortIndex: $weatherData['comfortIndex'] ?? 100,
+                        relativeWindDirection: WeatherForecast::RELATIVE_WIND_UNKNOWN,
                     );
                 } else {
                     $uncachedLocations[$i] = ['lat' => $lat, 'lon' => $lon];
@@ -103,12 +108,46 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                             'windSpeed' => $forecast->windSpeed,
                             'windDirection' => $forecast->windDirection,
                             'precipitationProbability' => $forecast->precipitationProbability,
+                            'humidity' => $forecast->humidity,
+                            'comfortIndex' => $forecast->comfortIndex,
                         ]);
                         $cacheItem->expiresAfter(10800); // 3 hours
                         $this->weatherCache->save($cacheItem);
                     }
                 } catch (\Throwable $e) {
                     $this->logger->warning('Batch weather fetch failed.', ['error' => $e->getMessage()]);
+                }
+            }
+
+            // Phase 3: Compute relative wind direction for each stage
+            foreach ($stages as $stage) {
+                if (null === $stage->weather) {
+                    continue;
+                }
+
+                $bearing = $this->relativeWindCalculator->computeBearing(
+                    $stage->startPoint->lat,
+                    $stage->startPoint->lon,
+                    $stage->endPoint->lat,
+                    $stage->endPoint->lon,
+                );
+                if (null !== $bearing) {
+                    $relativeDir = $this->relativeWindCalculator->classify(
+                        $stage->weather->windDirection,
+                        $bearing,
+                    );
+                    $stage->weather = new WeatherForecast(
+                        icon: $stage->weather->icon,
+                        description: $stage->weather->description,
+                        tempMin: $stage->weather->tempMin,
+                        tempMax: $stage->weather->tempMax,
+                        windSpeed: $stage->weather->windSpeed,
+                        windDirection: $stage->weather->windDirection,
+                        precipitationProbability: $stage->weather->precipitationProbability,
+                        humidity: $stage->weather->humidity,
+                        comfortIndex: $stage->weather->comfortIndex,
+                        relativeWindDirection: $relativeDir,
+                    );
                 }
             }
 
@@ -130,6 +169,9 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                             'windSpeed' => round($s->weather->windSpeed, 1),
                             'windDirection' => $s->weather->windDirection,
                             'precipitationProbability' => $s->weather->precipitationProbability,
+                            'humidity' => $s->weather->humidity,
+                            'comfortIndex' => $s->weather->comfortIndex,
+                            'relativeWindDirection' => $s->weather->relativeWindDirection,
                         ] : null,
                     ],
                     $stages
