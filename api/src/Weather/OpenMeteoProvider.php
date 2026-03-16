@@ -24,13 +24,13 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
             'query' => [
                 'latitude' => $lat,
                 'longitude' => $lon,
-                'daily' => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant',
+                'daily' => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,relative_humidity_2m_mean',
                 'timezone' => 'auto',
                 'forecast_days' => 1,
             ],
         ]);
 
-        /** @var array{daily?: array{weather_code?: list<int>, temperature_2m_max?: list<float>, temperature_2m_min?: list<float>, precipitation_probability_max?: list<int>, wind_speed_10m_max?: list<float>, wind_direction_10m_dominant?: list<int>}} $data */
+        /** @var array{daily?: array{weather_code?: list<int>, temperature_2m_max?: list<float>, temperature_2m_min?: list<float>, precipitation_probability_max?: list<int>, wind_speed_10m_max?: list<float>, wind_direction_10m_dominant?: list<int>, relative_humidity_2m_mean?: list<int>}} $data */
         $data = $response->toArray();
 
         $daily = $data['daily'] ?? [];
@@ -40,6 +40,7 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
         $precipProb = ($daily['precipitation_probability_max'] ?? [0])[0];
         $windSpeed = ($daily['wind_speed_10m_max'] ?? [0.0])[0];
         $windDeg = (int) ($daily['wind_direction_10m_dominant'] ?? [0])[0];
+        $humidity = (int) ($daily['relative_humidity_2m_mean'] ?? [50])[0];
 
         return new WeatherForecast(
             icon: $this->wmoToIcon($weatherCode),
@@ -49,6 +50,9 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
             windSpeed: (float) $windSpeed,
             windDirection: $this->degToDirection($windDeg),
             precipitationProbability: (int) $precipProb,
+            humidity: $humidity,
+            comfortIndex: $this->computeComfortIndex((float) $tempMax, (float) $windSpeed, $humidity, (int) $precipProb),
+            relativeWindDirection: WeatherForecast::RELATIVE_WIND_UNKNOWN,
         );
     }
 
@@ -77,13 +81,13 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
             'query' => [
                 'latitude' => $latitudes,
                 'longitude' => $longitudes,
-                'daily' => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant',
+                'daily' => 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,relative_humidity_2m_mean',
                 'timezone' => 'auto',
                 'forecast_days' => 1,
             ],
         ]);
 
-        /** @var list<array{daily?: array{weather_code?: list<int>, temperature_2m_max?: list<float>, temperature_2m_min?: list<float>, precipitation_probability_max?: list<int>, wind_speed_10m_max?: list<float>, wind_direction_10m_dominant?: list<int>}}> $dataList */
+        /** @var list<array{daily?: array{weather_code?: list<int>, temperature_2m_max?: list<float>, temperature_2m_min?: list<float>, precipitation_probability_max?: list<int>, wind_speed_10m_max?: list<float>, wind_direction_10m_dominant?: list<int>, relative_humidity_2m_mean?: list<int>}}> $dataList */
         $dataList = $response->toArray();
 
         // @todo #89 SRP: extract parseForecastData() to eliminate duplication with fetchForecast()
@@ -96,6 +100,7 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
             $precipProb = ($daily['precipitation_probability_max'] ?? [0])[0];
             $windSpeed = ($daily['wind_speed_10m_max'] ?? [0.0])[0];
             $windDeg = (int) ($daily['wind_direction_10m_dominant'] ?? [0])[0];
+            $humidity = (int) ($daily['relative_humidity_2m_mean'] ?? [50])[0];
 
             $forecasts[] = new WeatherForecast(
                 icon: $this->wmoToIcon($weatherCode),
@@ -105,10 +110,52 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
                 windSpeed: (float) $windSpeed,
                 windDirection: $this->degToDirection($windDeg),
                 precipitationProbability: (int) $precipProb,
+                humidity: $humidity,
+                comfortIndex: $this->computeComfortIndex((float) $tempMax, (float) $windSpeed, $humidity, (int) $precipProb),
+                relativeWindDirection: WeatherForecast::RELATIVE_WIND_UNKNOWN,
             );
         }
 
         return $forecasts;
+    }
+
+    /**
+     * Compute a cyclist comfort index [0–100] from weather parameters.
+     *
+     * Score starts at 100 and is penalised by:
+     *  - High temperature (> 30 °C)  → up to -20 pts
+     *  - Cold temperature (< 5 °C)   → up to -20 pts
+     *  - High wind speed (> 20 km/h) → up to -30 pts
+     *  - High humidity (> 80 %)      → up to -20 pts
+     *  - Rain probability (> 20 %)   → up to -30 pts
+     */
+    private function computeComfortIndex(float $tempMax, float $windSpeed, int $humidity, int $precipProb): int
+    {
+        $score = 100;
+
+        // Temperature penalties
+        if ($tempMax > 30.0) {
+            $score -= (int) min(20, ($tempMax - 30.0) * 2);
+        } elseif ($tempMax < 5.0) {
+            $score -= (int) min(20, (5.0 - $tempMax) * 2);
+        }
+
+        // Wind penalty
+        if ($windSpeed > 20.0) {
+            $score -= (int) min(30, ($windSpeed - 20.0) * 1.5);
+        }
+
+        // Humidity penalty
+        if ($humidity > 80) {
+            $score -= (int) min(20, ($humidity - 80) * 0.5);
+        }
+
+        // Precipitation probability penalty
+        if ($precipProb > 20) {
+            $score -= (int) min(30, ($precipProb - 20) * 0.5);
+        }
+
+        return max(0, $score);
     }
 
     private function wmoToIcon(int $code): string

@@ -39,6 +39,7 @@ Rules are executed in priority order (lower = higher priority):
 | **Calendar** | — | nudge | Stage falls on a French public holiday |
 | **Calendar** | — | nudge | Stage falls on a Sunday (businesses may be closed) |
 | **Wind** | — | warning | Headwind ≥ 25 km/h on ≥ 60 % of stages with weather data |
+| **Comfort** | — | warning | Poor comfort index (≤ 40/100) on at least one stage (combined score of temperature, wind, humidity, rain) |
 | **Bike shops** | — | nudge | No repair shop within 2 km of stage midpoint (trips > 5 stages) |
 | **Bike shops** | — | nudge | Nearby shop sells bikes but does not offer repair service |
 | **Resupply** | — | nudge | Stage ≥ 40 km with no food/resupply POI along the route |
@@ -47,7 +48,7 @@ Rules are executed in priority order (lower = higher priority):
 | **Water points** | — | nudge | Stretch > 30 km without a detected drinking water source (cemeteries used as proxy — water tap required by French law) |
 | **Rest day** | 100 | nudge | Every N consecutive cycling days without a rest day (default: every 3 days) |
 
-**Terrain rules** (Continuity, Elevation, Steep gradient, Surface, Traffic, E-bike range, Rest day) implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`. Rules with `—` priority (Calendar, Wind, Bike shops, Resupply, Accommodation, Water points) are separate async Symfony Message handlers.
+**Terrain rules** (Continuity, Elevation, Steep gradient, Surface, Traffic, E-bike range, Rest day) implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`. Rules with `—` priority (Calendar, Wind, Comfort, Bike shops, Resupply, Accommodation, Water points) are separate async Symfony Message handlers.
 
 ## Architecture overview
 

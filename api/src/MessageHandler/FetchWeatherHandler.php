@@ -64,7 +64,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
 
                 $cacheItem = $this->weatherCache->getItem($cacheKey);
                 if ($cacheItem->isHit()) {
-                    /** @var array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int} $weatherData */
+                    /** @var array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int, humidity: int, comfortIndex: int} $weatherData */
                     $weatherData = $cacheItem->get();
 
                     $stage->weather = new WeatherForecast(
@@ -75,6 +75,9 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                         windSpeed: $weatherData['windSpeed'],
                         windDirection: $weatherData['windDirection'],
                         precipitationProbability: $weatherData['precipitationProbability'],
+                        humidity: $weatherData['humidity'] ?? 50,
+                        comfortIndex: $weatherData['comfortIndex'] ?? 100,
+                        relativeWindDirection: WeatherForecast::RELATIVE_WIND_UNKNOWN,
                     );
                 } else {
                     $uncachedLocations[$i] = ['lat' => $lat, 'lon' => $lon];
@@ -103,12 +106,26 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                             'windSpeed' => $forecast->windSpeed,
                             'windDirection' => $forecast->windDirection,
                             'precipitationProbability' => $forecast->precipitationProbability,
+                            'humidity' => $forecast->humidity,
+                            'comfortIndex' => $forecast->comfortIndex,
                         ]);
                         $cacheItem->expiresAfter(10800); // 3 hours
                         $this->weatherCache->save($cacheItem);
                     }
                 } catch (\Throwable $e) {
                     $this->logger->warning('Batch weather fetch failed.', ['error' => $e->getMessage()]);
+                }
+            }
+
+            // Phase 3: Compute relative wind direction for each stage
+            foreach ($stages as $stage) {
+                if (null === $stage->weather) {
+                    continue;
+                }
+
+                $bearing = $this->computeStageBearing($stage);
+                if (null !== $bearing) {
+                    $stage->weather = $this->withRelativeWindDirection($stage->weather, $bearing);
                 }
             }
 
@@ -130,6 +147,9 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                             'windSpeed' => round($s->weather->windSpeed, 1),
                             'windDirection' => $s->weather->windDirection,
                             'precipitationProbability' => $s->weather->precipitationProbability,
+                            'humidity' => $s->weather->humidity,
+                            'comfortIndex' => $s->weather->comfortIndex,
+                            'relativeWindDirection' => $s->weather->relativeWindDirection,
                         ] : null,
                     ],
                     $stages
@@ -138,5 +158,96 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
 
             $this->messageBus->dispatch(new AnalyzeWind($tripId));
         });
+    }
+
+    /**
+     * Compute the bearing (degrees, 0 = North, clockwise) from stage start to end.
+     * Returns null if start and end are identical (rest day or trivial stage).
+     */
+    private function computeStageBearing(Stage $stage): ?float
+    {
+        $lat1 = deg2rad($stage->startPoint->lat);
+        $lat2 = deg2rad($stage->endPoint->lat);
+        $deltaLon = deg2rad($stage->endPoint->lon - $stage->startPoint->lon);
+
+        $x = sin($deltaLon) * cos($lat2);
+        $y = cos($lat1) * sin($lat2) - sin($lat1) * cos($lat2) * cos($deltaLon);
+        $bearing = fmod(rad2deg(atan2($x, $y)) + 360, 360);
+
+        // If start and end are practically the same point, bearing is undefined
+        $dist = abs($stage->endPoint->lat - $stage->startPoint->lat)
+            + abs($stage->endPoint->lon - $stage->startPoint->lon);
+
+        if ($dist < 1e-6) {
+            return null;
+        }
+
+        return $bearing;
+    }
+
+    /**
+     * Compute the relative wind direction (headwind / tailwind / crosswind)
+     * given the stage bearing and the absolute wind direction (degrees from North).
+     *
+     * The wind direction from Open-Meteo indicates where the wind comes FROM.
+     * The cyclist travels in the direction of `$stageBearing`.
+     * Relative angle = |wind_from - (stage_bearing + 180°)|, normalised to [0, 180].
+     *   - 0° → pure headwind (wind comes from directly ahead)
+     *   - 180° → pure tailwind (wind comes from behind)
+     *   - 90° → pure crosswind
+     * Thresholds: headwind ≤ 60°, tailwind ≤ 60° (i.e. relative ≥ 120°), else crosswind.
+     */
+    private function withRelativeWindDirection(WeatherForecast $forecast, float $stageBearing): WeatherForecast
+    {
+        $windDeg = $this->directionToDeg($forecast->windDirection);
+        if (null === $windDeg) {
+            return $forecast;
+        }
+
+        // Angle between wind-from direction and cyclist's forward direction
+        // Wind comes FROM windDeg, cyclist goes TO stageBearing
+        $diff = fmod(abs($windDeg - $stageBearing), 360);
+        if ($diff > 180) {
+            $diff = 360 - $diff;
+        }
+
+        // diff: 0 = wind from same direction as travel (tailwind), 180 = headwind
+        $relativeWindDirection = match (true) {
+            $diff >= 120 => WeatherForecast::RELATIVE_WIND_HEADWIND,
+            $diff <= 60 => WeatherForecast::RELATIVE_WIND_TAILWIND,
+            default => WeatherForecast::RELATIVE_WIND_CROSSWIND,
+        };
+
+        return new WeatherForecast(
+            icon: $forecast->icon,
+            description: $forecast->description,
+            tempMin: $forecast->tempMin,
+            tempMax: $forecast->tempMax,
+            windSpeed: $forecast->windSpeed,
+            windDirection: $forecast->windDirection,
+            precipitationProbability: $forecast->precipitationProbability,
+            humidity: $forecast->humidity,
+            comfortIndex: $forecast->comfortIndex,
+            relativeWindDirection: $relativeWindDirection,
+        );
+    }
+
+    /**
+     * Convert compass direction string to degrees (where the wind comes FROM).
+     * Returns null for unknown strings.
+     */
+    private function directionToDeg(string $direction): ?float
+    {
+        return match ($direction) {
+            'N' => 0.0,
+            'NE' => 45.0,
+            'E' => 90.0,
+            'SE' => 135.0,
+            'S' => 180.0,
+            'SO' => 225.0,
+            'O' => 270.0,
+            'NO' => 315.0,
+            default => null,
+        };
     }
 }
