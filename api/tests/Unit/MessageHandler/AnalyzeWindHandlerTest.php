@@ -176,9 +176,7 @@ final class AnalyzeWindHandlerTest extends TestCase
             ->with(
                 'trip-1',
                 MercureEventType::WIND_ALERTS,
-                $this->callback(static function (array $data): bool {
-                    return 2 === \count($data['alerts']);
-                }),
+                $this->callback(static fn (array $data): bool => 2 === \count($data['alerts'])),
             );
 
         $handler = $this->createHandler($tripStateManager, $publisher);
