@@ -21,6 +21,7 @@ alert.wind.warning: "Vents de face attendus pour %count%/%total% étapes (>25 km
 alert.comfort.warning: "Conditions de cyclisme défavorables (indice de confort < 40/100) sur %count%/%total% étapes. Envisagez d'ajuster votre calendrier."
 alert.accommodation.seasonal_warning: "Tous les hébergements détectés à l'étape %stage% sont potentiellement fermés à cette période."
 alert.rest_day.nudge: "L'étape %stage% est le %days%e jour consécutif de vélo sans pause. Envisagez d'insérer un jour de repos."
+alert.sunset.warning: "Étape %stage% : arrivée estimée après le crépuscule civil (%twilight%, coucher %sunset%). Vous risquez de rouler de nuit."
 stage.label: "Étape %day%"
 weather.clear_sky: "Ciel dégagé"
 weather.mainly_clear: "Plutôt dégagé"

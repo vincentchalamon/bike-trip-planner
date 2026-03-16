@@ -1,10 +1,15 @@
 "use client";
 
-import { ArrowUp, ArrowDown, Bike, Mountain, Clock } from "lucide-react";
+import { ArrowUp, ArrowDown, Bike, Mountain, Clock, Sunrise, Sunset } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WeatherIndicator } from "@/components/weather-indicator";
 import type { WeatherData } from "@/lib/validation/schemas";
 import { computeStageTimes, formatDecimalHour } from "@/lib/travel-time";
+import {
+  computeSunTimes,
+  computeStageDate,
+  formatSunTime,
+} from "@/lib/sun-times";
 import { useTranslations } from "next-intl";
 
 interface StageMetadataProps {
@@ -15,6 +20,10 @@ interface StageMetadataProps {
   isProcessing?: boolean;
   departureHour?: number;
   averageSpeedKmh?: number;
+  endPointLat?: number;
+  endPointLon?: number;
+  startDate?: string | null;
+  stageIndex?: number;
 }
 
 export function StageMetadata({
@@ -25,6 +34,10 @@ export function StageMetadata({
   isProcessing,
   departureHour,
   averageSpeedKmh,
+  endPointLat,
+  endPointLon,
+  startDate,
+  stageIndex,
 }: StageMetadataProps) {
   const t = useTranslations("stage");
 
@@ -39,6 +52,18 @@ export function StageMetadata({
           averageSpeedKmh,
           elevation ?? 0,
         )
+      : null;
+
+  const sunTimes =
+    endPointLat !== undefined &&
+    endPointLon !== undefined &&
+    startDate !== undefined &&
+    stageIndex !== undefined
+      ? (() => {
+          const stageDate = computeStageDate(startDate ?? null, stageIndex);
+          if (!stageDate) return null;
+          return computeSunTimes(stageDate, endPointLat, endPointLon);
+        })()
       : null;
 
   return (
@@ -76,6 +101,17 @@ export function StageMetadata({
               arrival: formatDecimalHour(travelTime.arrivalDecimal),
             })}
           </span>
+        </div>
+      )}
+      {sunTimes && sunTimes.sunrise !== null && (
+        <div
+          className="flex items-center gap-1.5"
+          title={t("sunriseSunsetTooltip")}
+        >
+          <Sunrise className="h-4 w-4 text-amber-400" />
+          <span>{formatSunTime(sunTimes.sunrise)}</span>
+          <Sunset className="h-4 w-4 text-orange-400" />
+          <span>{formatSunTime(sunTimes.sunset)}</span>
         </div>
       )}
       {weather ? (
