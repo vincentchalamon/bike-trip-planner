@@ -436,6 +436,8 @@ export interface components {
             endPoint?: components["schemas"]["Coordinate.jsonld"];
             geometry?: components["schemas"]["Coordinate.jsonld"][];
             label?: string | null;
+            /** @default false */
+            isRestDay: boolean;
         };
         "Stage.StageSelectAccommodationRequest.jsonMergePatch": {
             /** @description Latitude of the accommodation to select. */
@@ -592,6 +594,9 @@ export interface components {
             windSpeed?: number;
             windDirection?: string;
             precipitationProbability?: number;
+            humidity?: number;
+            comfortIndex?: number;
+            relativeWindDirection?: string;
         };
         "WeatherForecast.gpx": {
             icon?: string;
@@ -601,6 +606,9 @@ export interface components {
             windSpeed?: number;
             windDirection?: string;
             precipitationProbability?: number;
+            humidity?: number;
+            comfortIndex?: number;
+            relativeWindDirection?: string;
         };
         "WeatherForecast.jsonld": {
             icon?: string;
@@ -610,6 +618,9 @@ export interface components {
             windSpeed?: number;
             windDirection?: string;
             precipitationProbability?: number;
+            humidity?: number;
+            comfortIndex?: number;
+            relativeWindDirection?: string;
         };
     };
     responses: never;
