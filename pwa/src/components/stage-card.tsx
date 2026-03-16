@@ -70,6 +70,7 @@ export function StageCard({
   const tripId = useTripStore((s) => s.trip?.id);
   const departureHour = useTripStore((s) => s.departureHour);
   const averageSpeed = useTripStore((s) => s.averageSpeed);
+  const startDate = useTripStore((s) => s.startDate);
   const [editingDistance, setEditingDistance] = useState(false);
   const difficulty = getDifficulty(stage.distance, stage.elevation);
 
@@ -146,6 +147,10 @@ export function StageCard({
                 isProcessing={isProcessing}
                 departureHour={stage.isRestDay ? undefined : departureHour}
                 averageSpeedKmh={stage.isRestDay ? undefined : averageSpeed}
+                endPointLat={stage.isRestDay ? undefined : stage.endPoint.lat}
+                endPointLon={stage.isRestDay ? undefined : stage.endPoint.lon}
+                startDate={stage.isRestDay ? undefined : startDate}
+                stageIndex={stage.isRestDay ? undefined : stageIndex}
               />
               {stage.distance !== null && (
                 <DifficultyGauge

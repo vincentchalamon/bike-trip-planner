@@ -46,9 +46,13 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         }
 
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-        $ebikeMode = (bool) $this->tripStateManager->getRequest($tripId)?->ebikeMode;
+        $request = $this->tripStateManager->getRequest($tripId);
+        $ebikeMode = (bool) $request?->ebikeMode;
+        $startDate = $request?->startDate;
+        $departureHour = $request?->departureHour ?? 8; // @phpstan-ignore nullsafe.neverNull
+        $averageSpeed = $request?->averageSpeed ?? 15.0; // @phpstan-ignore nullsafe.neverNull
 
-        $this->executeWithTracking($tripId, ComputationName::TERRAIN, function () use ($tripId, $stages, $locale, $ebikeMode): void {
+        $this->executeWithTracking($tripId, ComputationName::TERRAIN, function () use ($tripId, $stages, $locale, $ebikeMode, $startDate, $departureHour, $averageSpeed): void {
             $waysByStage = $this->fetchOsmWaysByStage($tripId, $stages);
             $stageCount = \count($stages);
 
@@ -61,6 +65,10 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                     'ebikeMode' => $ebikeMode,
                     'osmWays' => $waysByStage[$i] ?? [],
                     'allStages' => $stages,
+                    'startDate' => $startDate,
+                    'stageIndex' => $i,
+                    'departureHour' => $departureHour,
+                    'averageSpeed' => $averageSpeed,
                 ];
 
                 $stage->alerts = [];

@@ -43,7 +43,8 @@
     "distanceLabel": "Distance (km)",
     "saveDistance": "Save",
     "travelTime": "Dep ~{departure} → Arr ~{arrival}",
-    "travelTimeTooltip": "Estimate based on average speed and elevation gain (Naismith rule adapted for cycling)"
+    "travelTimeTooltip": "Estimate based on average speed and elevation gain (Naismith rule adapted for cycling)",
+    "sunriseSunsetTooltip": "Sunrise and sunset times at stage end point (UTC)"
   },
   "stageLocations": {
     "searchDeparture": "Search departure...",
