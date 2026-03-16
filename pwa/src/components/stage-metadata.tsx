@@ -111,7 +111,7 @@ export function StageMetadata({
           </span>
         </div>
       )}
-      {sunTimes && sunTimes.sunrise !== null && (
+      {sunTimes && sunTimes.sunrise !== null && sunTimes.sunset !== null && (
         <div
           className="flex items-center gap-1.5"
           title={t("sunriseSunsetTooltip")}
