@@ -180,6 +180,27 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $this->assertSame([], $alerts);
     }
 
+    #[Test]
+    public function noAlertForPolarNight(): void
+    {
+        // North Pole (89°N) in December — polar night, date_sun_info returns false for civil_twilight_end
+        $stage = $this->createStage(lat: 89.0, lon: 0.0);
+
+        // estimateTimeAtDistance should NOT be called for polar conditions
+        $riderTimeEstimator = $this->createMock(RiderTimeEstimatorInterface::class);
+        $riderTimeEstimator->expects($this->never())->method('estimateTimeAtDistance');
+        $analyzer = new SunsetAlertAnalyzer($riderTimeEstimator, $this->translator);
+
+        $alerts = $analyzer->analyze($stage, [
+            'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
+            'stageIndex' => 0,
+            'departureHour' => 8,
+            'averageSpeed' => 15.0,
+        ]);
+
+        $this->assertSame([], $alerts);
+    }
+
     private function createStage(
         float $lat = 45.0,
         float $lon = 5.0,

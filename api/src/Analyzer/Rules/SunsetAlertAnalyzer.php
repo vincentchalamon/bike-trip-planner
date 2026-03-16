@@ -66,7 +66,6 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
         );
 
         // Use civil twilight end as the "still light enough to ride" threshold
-        /** @var int|bool $civilTwilightEnd */
         $civilTwilightEnd = $sunInfo['civil_twilight_end'];
 
         // No civil twilight end means polar day (true) or polar night (false) — skip
@@ -95,7 +94,6 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
-        /** @var int|bool $rawSunset */
         $rawSunset = $sunInfo['sunset'];
         $sunsetTimestamp = \is_int($rawSunset) ? $rawSunset : $civilTwilightEnd;
         $sunsetDate = new \DateTimeImmutable('@'.$sunsetTimestamp, new \DateTimeZone('UTC'));
