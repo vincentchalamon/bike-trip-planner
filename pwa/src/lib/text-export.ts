@@ -24,10 +24,7 @@ function formatPriceRange(acc: AccommodationData): string | null {
   return `${min}-${max}€`;
 }
 
-function formatStageLine(
-  stage: StageData,
-  startDate: string | null,
-): string {
+function formatStageLine(stage: StageData, startDate: string | null): string {
   const date = formatDate(startDate, stage.dayNumber);
   const distance = `${Math.round(stage.distance)}km`;
   const elevUp = `⬆️ ${Math.round(stage.elevation)}m`;
