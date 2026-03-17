@@ -315,6 +315,48 @@ export function supplyTimelineEvent(stageIndex: number): MercureEvent {
   };
 }
 
+export function supplyTimelineClusterEvent(stageIndex = 0): MercureEvent {
+  return {
+    type: "supply_timeline",
+    data: {
+      stageIndex,
+      markers: [
+        {
+          type: "water",
+          distanceFromStart: 20,
+          lat: 48.1,
+          lon: 2.1,
+          water: [
+            {
+              name: "Fontaine A",
+              lat: 48.1,
+              lon: 2.1,
+              distanceFromStart: 20,
+            },
+          ],
+          food: [],
+        },
+        {
+          type: "food",
+          distanceFromStart: 22,
+          lat: 48.2,
+          lon: 2.2,
+          water: [],
+          food: [
+            {
+              name: "Boulangerie B",
+              category: "bakery",
+              lat: 48.2,
+              lon: 2.2,
+              distanceFromStart: 22,
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
 export function validationErrorEvent(): MercureEvent {
   return {
     type: "validation_error",

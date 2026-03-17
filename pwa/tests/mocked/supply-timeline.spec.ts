@@ -4,6 +4,7 @@ import {
   stagesComputedEvent,
   tripCompleteEvent,
   supplyTimelineEvent,
+  supplyTimelineClusterEvent,
 } from "../fixtures/mock-data";
 
 test.describe("Supply timeline", () => {
@@ -273,5 +274,85 @@ test.describe("Supply timeline", () => {
     await expect(
       mockedPage.getByTestId("stage-card-3").getByTestId("supply-timeline"),
     ).not.toBeVisible();
+  });
+});
+
+test.describe("supply timeline — marker clustering", () => {
+  test("two nearby markers are merged into a single cluster", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    // stageDistance = 72.5 km; markers at 20 km (27.6%) and 22 km (30.3%) → gap ~2.7% < 4%
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      supplyTimelineClusterEvent(0),
+      tripCompleteEvent(),
+    ]);
+
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Only one marker rendered (the cluster), not two separate markers
+    const stageCard1 = mockedPage.getByTestId("stage-card-1");
+    const markers = stageCard1.getByTestId(/^supply-marker-/);
+    await expect(markers).toHaveCount(1);
+  });
+
+  test("cluster badge shows count when merged", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      supplyTimelineClusterEvent(0),
+      tripCompleteEvent(),
+    ]);
+
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Cluster marker is at the averaged distance ~21 km
+    const stageCard1 = mockedPage.getByTestId("stage-card-1");
+    const marker = stageCard1.getByTestId(/^supply-marker-/);
+    // Badge should show the merged count before the popover is opened
+    await expect(marker.locator('span[aria-hidden="true"]')).toHaveText("2");
+    await marker.click();
+    const tooltip = mockedPage.getByTestId("supply-tooltip");
+    await expect(tooltip).toBeVisible();
+    // Both water and food sections should be present
+    await expect(tooltip.getByText("Fontaine A")).toBeVisible();
+    await expect(tooltip.getByText("Boulangerie B")).toBeVisible();
+  });
+
+  test("cluster of mixed types shows both emoji", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      supplyTimelineClusterEvent(0),
+      tripCompleteEvent(),
+    ]);
+
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
+      timeout: 10000,
+    });
+
+    const stageCard1 = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard1.getByTestId("supply-timeline")).toBeVisible();
+    // The merged cluster should show the "both" emoji (🏘️) since it has water + food
+    const marker = stageCard1.getByTestId(/^supply-marker-/);
+    await expect(marker).toContainText("🏘️");
   });
 });

@@ -1,13 +1,80 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
-import type { SupplyMarkerData } from "@/lib/validation/schemas";
+import type {
+  SupplyMarkerData,
+  SupplyWaterPointData,
+  SupplyFoodPointData,
+} from "@/lib/validation/schemas";
+
+/**
+ * Maximum gap between two consecutive markers (by timeline %) that causes
+ * them to be merged. Clusters may span more than this value when three or
+ * more markers chain together (single-linkage clustering).
+ */
+const CLUSTER_THRESHOLD_PCT = 4;
+
+interface ClusteredMarker {
+  type: SupplyMarkerData["type"];
+  /** Average distanceFromStart of all clustered markers (km). */
+  distanceFromStart: number;
+  /** Clamped [2, 98] position on the timeline (%). */
+  leftPct: number;
+  /** Number of original markers merged into this cluster. */
+  count: number;
+  water: SupplyWaterPointData[];
+  food: SupplyFoodPointData[];
+}
+
+function clusterMarkers(
+  markers: SupplyMarkerData[],
+  stageDistance: number,
+): ClusteredMarker[] {
+  if (markers.length === 0 || stageDistance <= 0) return [];
+
+  const sorted = [...markers].sort(
+    (a, b) => a.distanceFromStart - b.distanceFromStart,
+  );
+
+  const groups: SupplyMarkerData[][] = [];
+  let current: SupplyMarkerData[] = [sorted[0]!];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prevPct =
+      (current[current.length - 1]!.distanceFromStart / stageDistance) * 100;
+    const currPct = (sorted[i]!.distanceFromStart / stageDistance) * 100;
+
+    if (currPct - prevPct < CLUSTER_THRESHOLD_PCT) {
+      current.push(sorted[i]!);
+    } else {
+      groups.push(current);
+      current = [sorted[i]!];
+    }
+  }
+  groups.push(current);
+
+  return groups.map((group) => {
+    const avgDist =
+      group.reduce((sum, m) => sum + m.distanceFromStart, 0) / group.length;
+    const rawPct = (avgDist / stageDistance) * 100;
+    const allWater = group.every((m) => m.type === "water");
+    const allFood = group.every((m) => m.type === "food");
+    return {
+      type: allWater ? "water" : allFood ? "food" : "both",
+      distanceFromStart: avgDist,
+      leftPct: Math.min(Math.max(rawPct, 2), 98),
+      count: group.length,
+      water: group.flatMap((m) => m.water),
+      food: group.flatMap((m) => m.food),
+    };
+  });
+}
 
 interface SupplyTimelineProps {
   markers: SupplyMarkerData[];
@@ -41,35 +108,43 @@ function markerAriaLabel(
   }
 }
 
-interface MarkerTooltipProps {
-  marker: SupplyMarkerData;
+interface ClusterTooltipProps {
+  cluster: ClusteredMarker;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  leftPct: number;
 }
 
-function MarkerTooltip({
-  marker,
-  open,
-  onOpenChange,
-  leftPct,
-}: MarkerTooltipProps) {
+function ClusterTooltip({ cluster, open, onOpenChange }: ClusterTooltipProps) {
   const t = useTranslations("supplyTimeline");
-  const emoji = markerEmoji(marker.type);
+  const emoji = markerEmoji(cluster.type);
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"
-          data-testid={`supply-marker-${Math.round(marker.distanceFromStart)}`}
-          aria-label={markerAriaLabel(marker.type, marker.distanceFromStart, t)}
+          data-testid={`supply-marker-${Math.round(cluster.distanceFromStart)}`}
+          aria-label={markerAriaLabel(
+            cluster.type,
+            cluster.distanceFromStart,
+            t,
+          )}
           aria-pressed={open}
-          style={{ left: `${leftPct}%`, top: 0 }}
+          style={{ left: `${cluster.leftPct}%`, top: 0 }}
           className="absolute -translate-x-1/2 text-base leading-none cursor-pointer hover:scale-125 transition-transform duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-          title={markerAriaLabel(marker.type, marker.distanceFromStart, t)}
+          title={markerAriaLabel(cluster.type, cluster.distanceFromStart, t)}
         >
-          {emoji}
+          <span className="relative inline-block">
+            {emoji}
+            {cluster.count > 1 && (
+              <span
+                aria-hidden="true"
+                className="absolute -top-1 -right-1.5 text-[8px] font-bold bg-primary text-primary-foreground rounded-full w-3.5 h-3.5 flex items-center justify-center leading-none"
+              >
+                {cluster.count}
+              </span>
+            )}
+          </span>
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -80,14 +155,14 @@ function MarkerTooltip({
       >
         <div className="space-y-2">
           {/* Water section */}
-          {marker.water.length > 0 && (
+          {cluster.water.length > 0 && (
             <div>
               <div className="font-semibold text-xs mb-1 flex items-center gap-1">
                 <span>💧</span>
                 <span>{t("waterSection")}</span>
               </div>
               <ul className="space-y-0.5 max-h-32 overflow-y-auto">
-                {marker.water.map((w, idx) => (
+                {cluster.water.map((w, idx) => (
                   <li key={idx} className="flex justify-between gap-2">
                     <span className="text-muted-foreground truncate">
                       {w.name ?? t("unnamedWaterPoint")}
@@ -102,19 +177,19 @@ function MarkerTooltip({
           )}
 
           {/* Divider when both sections present */}
-          {marker.water.length > 0 && marker.food.length > 0 && (
+          {cluster.water.length > 0 && cluster.food.length > 0 && (
             <div className="border-t border-border" />
           )}
 
           {/* Food section */}
-          {marker.food.length > 0 && (
+          {cluster.food.length > 0 && (
             <div>
               <div className="font-semibold text-xs mb-1 flex items-center gap-1">
                 <span>🍴</span>
                 <span>{t("foodSection")}</span>
               </div>
               <ul className="space-y-0.5 max-h-32 overflow-y-auto">
-                {marker.food.map((f, idx) => (
+                {cluster.food.map((f, idx) => (
                   <li key={idx} className="flex justify-between gap-2">
                     <span className="text-muted-foreground truncate">
                       {f.name ??
@@ -143,22 +218,25 @@ function MarkerTooltip({
  * - 🍴 for food/shops only
  * - 🏘️ for both in the same zone
  *
- * Markers are positioned proportionally to their distance from stage start.
- * Clicking/tapping a marker opens a non-blocking popover with POI details.
+ * Nearby markers (within 4% of the timeline width) are automatically merged
+ * into a single cluster marker with a count badge. Clicking/tapping a marker
+ * opens a non-blocking popover with POI details for all merged points.
  */
 export function SupplyTimeline({
   markers,
   stageDistance,
 }: SupplyTimelineProps) {
   const t = useTranslations("supplyTimeline");
-  const [openMarkerIndex, setOpenMarkerIndex] = useState<number | null>(null);
+  const [openClusterIndex, setOpenClusterIndex] = useState<number | null>(null);
 
-  const handleMarkerOpenChange = useCallback(
-    (index: number, isOpen: boolean) => {
-      setOpenMarkerIndex(isOpen ? index : null);
-    },
-    [],
+  const clusters = useMemo(
+    () => clusterMarkers(markers, stageDistance),
+    [markers, stageDistance],
   );
+
+  const handleOpenChange = useCallback((index: number, isOpen: boolean) => {
+    setOpenClusterIndex(isOpen ? index : null);
+  }, []);
 
   if (markers.length === 0 || stageDistance <= 0) {
     return null;
@@ -193,22 +271,15 @@ export function SupplyTimeline({
         aria-hidden="true"
       />
 
-      {/* Supply markers */}
-      {markers.map((marker, index) => {
-        const leftPct = (marker.distanceFromStart / stageDistance) * 100;
-        // Clamp between 2% and 98% to avoid overflow
-        const clampedPct = Math.min(Math.max(leftPct, 2), 98);
-
-        return (
-          <MarkerTooltip
-            key={index}
-            marker={marker}
-            open={openMarkerIndex === index}
-            onOpenChange={(isOpen) => handleMarkerOpenChange(index, isOpen)}
-            leftPct={clampedPct}
-          />
-        );
-      })}
+      {/* Clustered supply markers */}
+      {clusters.map((cluster, index) => (
+        <ClusterTooltip
+          key={index}
+          cluster={cluster}
+          open={openClusterIndex === index}
+          onOpenChange={(isOpen) => handleOpenChange(index, isOpen)}
+        />
+      ))}
     </div>
   );
 }
