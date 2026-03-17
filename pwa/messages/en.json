@@ -187,6 +187,15 @@
     "relativeWind_tailwind": "Tailwind",
     "relativeWind_crosswind": "Crosswind"
   },
+  "textExport": {
+    "button": "Export",
+    "openLabel": "Export itinerary as text",
+    "dialogTitle": "Text export",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "copySuccess": "Text copied to clipboard",
+    "copyFailed": "Could not copy to clipboard"
+  },
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",
