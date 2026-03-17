@@ -13,7 +13,11 @@ import type {
   SupplyFoodPointData,
 } from "@/lib/validation/schemas";
 
-/** Cluster markers whose timeline positions are within this many percent. */
+/**
+ * Maximum gap between two consecutive markers (by timeline %) that causes
+ * them to be merged. Clusters may span more than this value when three or
+ * more markers chain together (single-linkage clustering).
+ */
 const CLUSTER_THRESHOLD_PCT = 4;
 
 interface ClusteredMarker {
@@ -120,7 +124,11 @@ function ClusterTooltip({ cluster, open, onOpenChange }: ClusterTooltipProps) {
         <button
           type="button"
           data-testid={`supply-marker-${Math.round(cluster.distanceFromStart)}`}
-          aria-label={markerAriaLabel(cluster.type, cluster.distanceFromStart, t)}
+          aria-label={markerAriaLabel(
+            cluster.type,
+            cluster.distanceFromStart,
+            t,
+          )}
           aria-pressed={open}
           style={{ left: `${cluster.leftPct}%`, top: 0 }}
           className="absolute -translate-x-1/2 text-base leading-none cursor-pointer hover:scale-125 transition-transform duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
@@ -226,12 +234,9 @@ export function SupplyTimeline({
     [markers, stageDistance],
   );
 
-  const handleOpenChange = useCallback(
-    (index: number, isOpen: boolean) => {
-      setOpenClusterIndex(isOpen ? index : null);
-    },
-    [],
-  );
+  const handleOpenChange = useCallback((index: number, isOpen: boolean) => {
+    setOpenClusterIndex(isOpen ? index : null);
+  }, []);
 
   if (markers.length === 0 || stageDistance <= 0) {
     return null;
