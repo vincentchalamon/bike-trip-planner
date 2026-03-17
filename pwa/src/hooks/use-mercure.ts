@@ -302,6 +302,7 @@ function dispatchEvent(event: MercureEvent): void {
         elevationGain: event.data.elevationGain,
         coordinates: event.data.coordinates,
       });
+      store.updateStageAlerts(event.data.stageIndex, [], "cultural_poi");
       useUiStore.getState().setProcessing(false);
       break;
     }
