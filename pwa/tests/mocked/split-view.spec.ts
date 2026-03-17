@@ -172,13 +172,27 @@ test.describe("swipe gestures (mobile)", () => {
         el.dispatchEvent(
           new TouchEvent("touchstart", {
             bubbles: true,
-            touches: [new Touch({ identifier: 1, target: el, clientX: startX, clientY: 300 })],
+            touches: [
+              new Touch({
+                identifier: 1,
+                target: el,
+                clientX: startX,
+                clientY: 300,
+              }),
+            ],
           }),
         );
         el.dispatchEvent(
           new TouchEvent("touchend", {
             bubbles: true,
-            changedTouches: [new Touch({ identifier: 1, target: el, clientX: endX, clientY: 300 })],
+            changedTouches: [
+              new Touch({
+                identifier: 1,
+                target: el,
+                clientX: endX,
+                clientY: 300,
+              }),
+            ],
           }),
         );
       },
