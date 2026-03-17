@@ -14,8 +14,8 @@ use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
@@ -93,8 +93,20 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             }
         }
 
+        // Fallback: the accommodation list may have been refreshed by a concurrent
+        // scan while the user was looking at the old list. Check selectedAccommodation
+        // (set by a previous selection that survived the re-scan) as a last resort.
+        if (null === $selected && null !== $stage->selectedAccommodation) {
+            $acc = $stage->selectedAccommodation;
+            if (abs($acc->lat - $lat) < 1e-6 && abs($acc->lon - $lon) < 1e-6) {
+                $selected = $acc;
+            }
+        }
+
         if (null === $selected) {
-            throw new UnprocessableEntityHttpException(\sprintf('Accommodation at coordinates (%F, %F) not found for stage %d.', $lat, $lon, $index));
+            // The frontend is showing stale accommodation data — a concurrent scan
+            // replaced the list. Return 409 so the frontend can refresh and retry.
+            throw new ConflictHttpException(\sprintf('Accommodation at (%F, %F) is no longer in the current list for stage %d. Accommodation data may have been refreshed; please retry.', $lat, $lon, $index));
         }
 
         // Keep only the selected accommodation (remove others)

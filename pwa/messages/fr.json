@@ -242,6 +242,7 @@
     "retry": "Réessayer",
     "tripPlannerError": "Une erreur est survenue lors du chargement du planificateur.",
     "failedSelectAccommodation": "Impossible de sélectionner l'hébergement.",
+    "accommodationStale": "La liste des hébergements a été mise à jour. Veuillez réessayer.",
     "failedDeselectAccommodation": "Impossible de désélectionner l'hébergement.",
     "failedUpdateAccommodationTypes": "Impossible de mettre à jour les filtres de types d'hébergements.",
     "failedInsertRestDay": "Impossible d'insérer le jour de repos."
