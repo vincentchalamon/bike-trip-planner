@@ -164,15 +164,20 @@ test.describe("swipe gestures (mobile)", () => {
     page: import("@playwright/test").Page,
     direction: "left" | "right",
   ) {
-    // Dispatch via CustomEvent (works in production builds, consistent with __test_mercure_event pattern).
-    // Native TouchEvents dispatched via evaluate() are not reliably processed by React's synthetic
-    // event system in production builds — the CustomEvent approach tests the actual behaviour.
-    const targetMode = direction === "left" ? "map" : "timeline";
-    await page.evaluate((mode) => {
-      window.dispatchEvent(
-        new CustomEvent("__test_set_view_mode", { detail: mode }),
-      );
-    }, targetMode);
+    // Dispatch touchstart/touchend on the split-view-container so React's onTouchStart/onTouchEnd
+    // handlers in the useSwipe hook are triggered. locator.dispatchEvent targets the element
+    // directly, so the event bubbles up to React's root listener as expected.
+    const startX = direction === "left" ? 300 : 100;
+    const endX = direction === "left" ? 100 : 300;
+    const container = page.getByTestId("split-view-container");
+    await container.dispatchEvent("touchstart", {
+      touches: [{ identifier: 1, clientX: startX, clientY: 300 }],
+      changedTouches: [{ identifier: 1, clientX: startX, clientY: 300 }],
+    });
+    await container.dispatchEvent("touchend", {
+      touches: [],
+      changedTouches: [{ identifier: 1, clientX: endX, clientY: 300 }],
+    });
   }
 
   test("swipe left switches viewMode to map", async ({
@@ -239,6 +244,29 @@ test.describe("ViewModeToggle — desktop default", () => {
     });
 
     await expect(mockedPage.getByTestId("view-mode-split")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  test("default mode on mobile (<1024px) is timeline-only", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    // Force a mobile viewport — below the 1024px breakpoint
+    await mockedPage.setViewportSize({ width: 375, height: 812 });
+    await createTripWithGeometry(submitUrl, injectEvent);
+    await expect(mockedPage.getByTestId("view-mode-toggle")).toBeVisible({
+      timeout: 5000,
+    });
+
+    // On mobile, ViewModeToggle sets viewMode to "timeline" on mount
+    await expect(mockedPage.locator("#timeline")).toBeVisible({
+      timeout: 3000,
+    });
+    await expect(mockedPage.getByTestId("map-container")).not.toBeVisible();
+    await expect(mockedPage.getByTestId("view-mode-timeline")).toHaveAttribute(
       "aria-pressed",
       "true",
     );
