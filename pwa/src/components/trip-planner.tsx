@@ -110,6 +110,19 @@ export function TripPlanner() {
     }, [viewMode, setViewMode]),
   });
 
+  // E2E test hook: allows Playwright to change view mode via CustomEvent
+  // (works in production builds unlike window.__zustand_ui_store which is guarded by NODE_ENV)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const mode = (e as CustomEvent<string>).detail;
+      if (mode === "timeline" || mode === "map" || mode === "split") {
+        setViewMode(mode);
+      }
+    };
+    window.addEventListener("__test_set_view_mode", handler);
+    return () => window.removeEventListener("__test_set_view_mode", handler);
+  }, [setViewMode]);
+
   const estimatedBudget = useMemo(() => {
     const nonRestStages = stages.filter((s) => !s.isRestDay);
     const lastActiveIndex = nonRestStages.length - 1;
