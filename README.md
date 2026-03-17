@@ -48,8 +48,9 @@ Rules are executed in priority order (lower = higher priority):
 | **Water points** | — | nudge | Stretch > 30 km without a detected drinking water source (cemeteries used as proxy — water tap required by French law) |
 | **Rest day** | 100 | nudge | Every N consecutive cycling days without a rest day (default: every 3 days) |
 | **Sunset** | 20 | warning | Estimated arrival time exceeds civil twilight end at stage end point |
+| **Cultural POI** | — | nudge | Museum, monument, castle, church, viewpoint, or attraction within 500 m of route — includes an "add to itinerary" action triggering route recalculation |
 
-**Terrain rules** (Continuity, Elevation, Steep gradient, Surface, Traffic, E-bike range, Sunset, Rest day) implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`. Rules with `—` priority (Calendar, Wind + Comfort, Bike shops, Resupply, Accommodation, Water points) are separate async Symfony Message handlers; Comfort is co-located with Wind inside `AnalyzeWindHandler`.
+**Terrain rules** (Continuity, Elevation, Steep gradient, Surface, Traffic, E-bike range, Sunset, Rest day) implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`. Rules with `—` priority (Calendar, Wind + Comfort, Bike shops, Resupply, Accommodation, Water points, Cultural POI) are separate async Symfony Message handlers; Comfort is co-located with Wind inside `AnalyzeWindHandler`.
 
 ## Architecture overview
 

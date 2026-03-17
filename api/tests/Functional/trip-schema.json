@@ -38,7 +38,8 @@
         "calendar",
         "wind",
         "bike_shops",
-        "water_points"
+        "water_points",
+        "cultural_pois"
       ],
       "additionalProperties": false,
       "properties": {
@@ -133,6 +134,15 @@
           ]
         },
         "water_points": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "cultural_pois": {
           "type": "string",
           "enum": [
             "pending",

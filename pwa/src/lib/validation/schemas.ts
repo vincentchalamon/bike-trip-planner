@@ -13,6 +13,12 @@ export const AlertSchema = z.object({
   lat: z.number().nullable().optional(),
   lon: z.number().nullable().optional(),
   source: z.string().optional(),
+  // Cultural POI alert extra fields
+  poiName: z.string().optional(),
+  poiType: z.string().optional(),
+  poiLat: z.number().optional(),
+  poiLon: z.number().optional(),
+  distanceFromRoute: z.number().optional(),
 });
 
 export const WeatherForecastSchema = z.object({

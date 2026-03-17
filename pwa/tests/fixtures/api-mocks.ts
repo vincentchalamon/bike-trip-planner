@@ -183,6 +183,16 @@ export async function mockAllApis(
       body: JSON.stringify(defaultTripResponse),
     });
   });
+
+  // POST /trips/{id}/stages/{index}/poi-waypoint — add POI as waypoint
+  await page.route("**/trips/*/stages/*/poi-waypoint", (route, request) => {
+    if (request.method() !== "POST") return route.fallback();
+    return route.fulfill({
+      status: 202,
+      contentType: "application/ld+json",
+      body: JSON.stringify({ "@type": "StageResponse" }),
+    });
+  });
 }
 
 function placeNameFromCoords(lat: number, lon: number): string {

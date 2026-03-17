@@ -226,6 +226,9 @@
     "elevationProfile": "Elevation profile",
     "elevationProfileAriaLabel": "Interactive elevation profile for the trip"
   },
+  "alertList": {
+    "addToItinerary": "Add to itinerary"
+  },
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",

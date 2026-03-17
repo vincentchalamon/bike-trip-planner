@@ -269,6 +269,44 @@ function dispatchEvent(event: MercureEvent): void {
       break;
     }
 
+    case "cultural_poi_alerts": {
+      const culturalPoiByStage = new Map<number, typeof event.data.alerts>();
+      for (const alert of event.data.alerts) {
+        const existing = culturalPoiByStage.get(alert.stageIndex) ?? [];
+        existing.push(alert);
+        culturalPoiByStage.set(alert.stageIndex, existing);
+      }
+      for (const [stageIndex, alerts] of culturalPoiByStage) {
+        store.updateStageAlerts(
+          stageIndex,
+          alerts.map((a) => ({
+            type: "nudge" as const,
+            message: a.message,
+            lat: a.lat,
+            lon: a.lon,
+            poiName: a.poiName,
+            poiType: a.poiType,
+            poiLat: a.poiLat,
+            poiLon: a.poiLon,
+            distanceFromRoute: a.distanceFromRoute,
+          })),
+          "cultural_poi",
+        );
+      }
+      break;
+    }
+
+    case "route_segment_recalculated": {
+      store.updateStageAfterRouteRecalculation(event.data.stageIndex, {
+        distance: event.data.distance,
+        elevationGain: event.data.elevationGain,
+        coordinates: event.data.coordinates,
+      });
+      store.updateStageAlerts(event.data.stageIndex, [], "cultural_poi");
+      useUiStore.getState().setProcessing(false);
+      break;
+    }
+
     case "trip_complete":
       store.setComputationStatus(event.data.computationStatus);
       useUiStore.getState().setProcessing(false);

@@ -185,6 +185,48 @@ export function terrainAlertsEvent(): MercureEvent {
   };
 }
 
+export function culturalPoiAlertsEvent(): MercureEvent {
+  return {
+    type: "cultural_poi_alerts",
+    data: {
+      alerts: [
+        {
+          stageIndex: 0,
+          dayNumber: 1,
+          type: "nudge",
+          message:
+            "Point d'intérêt culturel à proximité de l'étape 1 : Château de Ventadour (castle, 320m du tracé). L'ajouter à votre itinéraire ?",
+          lat: 44.71,
+          lon: 4.57,
+          poiName: "Château de Ventadour",
+          poiType: "castle",
+          poiLat: 44.71,
+          poiLon: 4.57,
+          distanceFromRoute: 320,
+        },
+      ],
+    },
+  };
+}
+
+export function routeSegmentRecalculatedEvent(stageIndex = 0): MercureEvent {
+  return {
+    type: "route_segment_recalculated",
+    data: {
+      stageIndex,
+      reason: "poi_detour",
+      distance: 75200,
+      elevationGain: 1240,
+      duration: 18000,
+      coordinates: [
+        { lat: 44.735, lon: 4.598, ele: 280 },
+        { lat: 44.71, lon: 4.57, ele: 320 },
+        { lat: 44.532, lon: 4.392, ele: 540 },
+      ],
+    },
+  };
+}
+
 export function tripCompleteEvent(): MercureEvent {
   return {
     type: "trip_complete",

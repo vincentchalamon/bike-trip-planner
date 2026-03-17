@@ -12,6 +12,7 @@ import {
   isNetworkError,
   uploadGpxFile,
   scanAccommodations,
+  addPoiWaypointToRoute,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
 import {
@@ -523,6 +524,30 @@ export function useTripPlanner() {
     }
   }
 
+  async function handleAddPoiWaypoint(
+    stageIndex: number,
+    poiLat: number,
+    poiLon: number,
+  ) {
+    if (!tripId) return;
+
+    try {
+      const ok = await addPoiWaypointToRoute(
+        tripId,
+        stageIndex,
+        poiLat,
+        poiLon,
+      );
+      if (ok) {
+        setProcessing(true);
+      } else {
+        toast.error(t("errors.unexpectedError"));
+      }
+    } catch {
+      toast.error(t("errors.unexpectedError"));
+    }
+  }
+
   function handleAddAccommodation(stageIndex: number) {
     const stage = stages[stageIndex];
     const accIndex = stage?.accommodations.length ?? 0;
@@ -656,6 +681,7 @@ export function useTripPlanner() {
     handleDeselectAccommodation,
     handleExpandAccommodationRadius,
     handleInsertRestDay,
+    handleAddPoiWaypoint,
     clearNewAccKey: () => setNewAccKey(null),
   };
 }

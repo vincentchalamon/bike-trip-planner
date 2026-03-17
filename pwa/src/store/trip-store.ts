@@ -95,6 +95,14 @@ interface TripState {
   setComputationStatus: (status: Record<string, string>) => void;
   deleteStage: (stageIndex: number) => void;
   insertRestDay: (afterIndex: number) => void;
+  updateStageAfterRouteRecalculation: (
+    stageIndex: number,
+    data: {
+      distance: number;
+      elevationGain: number;
+      coordinates: { lat: number; lon: number; ele: number }[];
+    },
+  ) => void;
   clearTrip: () => void;
 }
 
@@ -345,6 +353,15 @@ export const useTripStore = create<TripState>()(
         state.stages.forEach((s, i) => {
           s.dayNumber = i + 1;
         });
+      }),
+
+    updateStageAfterRouteRecalculation: (stageIndex, data) =>
+      set((state) => {
+        const stage = state.stages[stageIndex];
+        if (!stage) return;
+        stage.distance = data.distance / 1000; // metres → km
+        stage.elevation = data.elevationGain;
+        stage.geometry = data.coordinates;
       }),
 
     clearTrip: () =>

@@ -101,6 +101,26 @@ export interface ScrapedData {
 }
 
 /**
+ * Trigger a route segment recalculation with a POI waypoint insertion.
+ * Returns `true` on success, `false` when the trip is not found or the request fails.
+ */
+export async function addPoiWaypointToRoute(
+  tripId: string,
+  stageIndex: number,
+  waypointLat: number,
+  waypointLon: number,
+): Promise<boolean> {
+  const { response } = await apiClient.POST(
+    "/trips/{tripId}/stages/{index}/poi-waypoint",
+    {
+      params: { path: { tripId, index: String(stageIndex) } },
+      body: { waypointLat, waypointLon },
+    },
+  );
+  return response.ok;
+}
+
+/**
  * Trigger an accommodation re-scan with a custom radius.
  * When `stageIndex` is provided, only that stage's endpoint is scanned.
  * Returns `true` on success, `false` when the trip is not found or the request fails.

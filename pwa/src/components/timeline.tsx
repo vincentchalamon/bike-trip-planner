@@ -32,6 +32,11 @@ interface TimelineProps {
     stageIndex: number,
     currentRadiusKm: number,
   ) => Promise<boolean>;
+  onAddPoiWaypoint?: (
+    stageIndex: number,
+    poiLat: number,
+    poiLon: number,
+  ) => void;
   newAccKey?: string | null;
   onClearNewAcc?: () => void;
 }
@@ -67,6 +72,7 @@ export function Timeline({
   onSelectAccommodation,
   onDeselectAccommodation,
   onExpandAccommodationRadius,
+  onAddPoiWaypoint,
   newAccKey,
   onClearNewAcc,
 }: TimelineProps) {
@@ -252,6 +258,12 @@ export function Timeline({
                       onExpandAccommodationRadius={
                         onExpandAccommodationRadius
                           ? (r) => onExpandAccommodationRadius(originalIndex, r)
+                          : undefined
+                      }
+                      onAddPoiWaypoint={
+                        onAddPoiWaypoint
+                          ? (lat, lon) =>
+                              onAddPoiWaypoint(originalIndex, lat, lon)
                           : undefined
                       }
                       newAccKey={newAccKey}

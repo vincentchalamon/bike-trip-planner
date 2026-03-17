@@ -69,4 +69,12 @@ interface QueryBuilderInterface
      * @param list<Coordinate> $decimatedPoints
      */
     public function buildCemeteryQuery(array $decimatedPoints): string;
+
+    /**
+     * Queries cultural POIs (museums, monuments, churches, castles, viewpoints)
+     * within a given radius of each stage geometry point.
+     *
+     * @param list<Coordinate> $stageGeometry
+     */
+    public function buildCulturalPoiQuery(array $stageGeometry, int $radiusMeters = 500): string;
 }

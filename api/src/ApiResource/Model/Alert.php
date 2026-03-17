@@ -6,7 +6,7 @@ namespace App\ApiResource\Model;
 
 use App\Enum\AlertType;
 
-final readonly class Alert
+readonly class Alert
 {
     public function __construct(
         public AlertType $type,
