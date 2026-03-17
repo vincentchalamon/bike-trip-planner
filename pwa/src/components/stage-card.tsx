@@ -179,7 +179,10 @@ export function StageCard({
         {/* Alerts */}
         {stage.alerts.length > 0 && (
           <div className="mt-3">
-            <AlertList alerts={stage.alerts} onAddPoiWaypoint={onAddPoiWaypoint} />
+            <AlertList
+              alerts={stage.alerts}
+              onAddPoiWaypoint={onAddPoiWaypoint}
+            />
           </div>
         )}
         {isProcessing && stage.alerts.length === 0 && (

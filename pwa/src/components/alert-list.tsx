@@ -29,18 +29,13 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
     <div className="flex flex-col gap-2">
       {sorted.map((alert, index) => (
         <div key={`${alert.type}-${alert.source}-${index}`}>
-          <AlertBadge
-            type={alert.type}
-            message={alert.message}
-          />
+          <AlertBadge type={alert.type} message={alert.message} />
           {isCulturalPoiAlert(alert) && onAddPoiWaypoint && (
             <Button
               variant="outline"
               size="sm"
               className="mt-1 ml-1 h-6 px-2 text-xs text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-              onClick={() =>
-                onAddPoiWaypoint(alert.poiLat!, alert.poiLon!)
-              }
+              onClick={() => onAddPoiWaypoint(alert.poiLat!, alert.poiLon!)}
               data-testid="add-poi-to-itinerary"
             >
               <MapPin className="h-3 w-3 mr-1" />

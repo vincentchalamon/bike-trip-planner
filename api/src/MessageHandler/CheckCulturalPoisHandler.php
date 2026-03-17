@@ -179,10 +179,8 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
             };
         }
 
-        if (isset($tags['historic'])) {
-            if (\in_array($tags['historic'], self::NOTABLE_HISTORIC_VALUES, true)) {
-                return $tags['historic'];
-            }
+        if (isset($tags['historic']) && \in_array($tags['historic'], self::NOTABLE_HISTORIC_VALUES, true)) {
+            return $tags['historic'];
         }
 
         return null;

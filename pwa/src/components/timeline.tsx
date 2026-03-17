@@ -32,7 +32,11 @@ interface TimelineProps {
     stageIndex: number,
     currentRadiusKm: number,
   ) => Promise<boolean>;
-  onAddPoiWaypoint?: (stageIndex: number, poiLat: number, poiLon: number) => void;
+  onAddPoiWaypoint?: (
+    stageIndex: number,
+    poiLat: number,
+    poiLon: number,
+  ) => void;
   newAccKey?: string | null;
   onClearNewAcc?: () => void;
 }

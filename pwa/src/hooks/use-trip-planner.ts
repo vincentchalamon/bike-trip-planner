@@ -532,7 +532,12 @@ export function useTripPlanner() {
     if (!tripId) return;
 
     try {
-      const ok = await addPoiWaypointToRoute(tripId, stageIndex, poiLat, poiLon);
+      const ok = await addPoiWaypointToRoute(
+        tripId,
+        stageIndex,
+        poiLat,
+        poiLon,
+      );
       if (ok) {
         setProcessing(true);
       } else {

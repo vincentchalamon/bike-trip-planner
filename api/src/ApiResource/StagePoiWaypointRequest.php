@@ -19,7 +19,6 @@ final class StagePoiWaypointRequest
         #[Assert\Range(min: -90.0, max: 90.0)]
         #[ApiProperty(description: 'POI latitude to insert as waypoint.')]
         public ?float $waypointLat = null,
-
         #[Assert\NotNull]
         #[Assert\Range(min: -180.0, max: 180.0)]
         #[ApiProperty(description: 'POI longitude to insert as waypoint.')]

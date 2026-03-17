@@ -209,9 +209,7 @@ export function culturalPoiAlertsEvent(): MercureEvent {
   };
 }
 
-export function routeSegmentRecalculatedEvent(
-  stageIndex = 0,
-): MercureEvent {
+export function routeSegmentRecalculatedEvent(stageIndex = 0): MercureEvent {
   return {
     type: "route_segment_recalculated",
     data: {
