@@ -26,7 +26,9 @@ test.describe("Text export", () => {
     injectSequence,
     mockedPage,
   }) => {
-    await mockedPage.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await mockedPage
+      .context()
+      .grantPermissions(["clipboard-read", "clipboard-write"]);
     await submitUrl();
     await injectSequence([
       routeParsedEvent(),
@@ -35,9 +37,9 @@ test.describe("Text export", () => {
     ]);
     await mockedPage.getByTestId("text-export-button").click();
     await mockedPage.getByTestId("text-export-copy-button").click();
-    await expect(mockedPage.getByTestId("text-export-copy-button")).toContainText(
-      /Copié/,
-    );
+    await expect(
+      mockedPage.getByTestId("text-export-copy-button"),
+    ).toContainText(/Copié/);
   });
 
   test("last active stage has no accommodation in text preview", async ({

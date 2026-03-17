@@ -169,7 +169,7 @@
     "themeDescription": "Toggle light / dark mode",
     "splitViewTitle": "Split view",
     "splitViewLabel": "Map / timeline split view",
-    "splitViewTooltip": "Available in a future sprint (map feature).",
+    "splitViewTooltip": "The map is always visible next to the timeline. This toggle will allow manually hiding/showing the map.",
     "languageTitle": "Language",
     "languagePlaceholder": "Language switcher (coming soon)",
     "languageTooltip": "Language selection will be available soon.",
@@ -199,6 +199,16 @@
     "totalDistance": "Total distance",
     "totalElevation": "Total elevation",
     "budgetNote": "Estimated budget per stage: accommodation (selected or average of suggestions, excluding last stage) + ~12–20€/meal × 3 meals/day — except the first stage (no breakfast) and the last (no dinner)."
+  },
+  "map": {
+    "ariaLabel": "Interactive trip map",
+    "panelAriaLabel": "Map and elevation profile panel",
+    "loading": "Loading map...",
+    "startMarker": "Starting point",
+    "endMarker": "End point",
+    "resetView": "Global view",
+    "elevationProfile": "Elevation profile",
+    "elevationProfileAriaLabel": "Interactive elevation profile for the trip"
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",

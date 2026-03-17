@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Settings } from "lucide-react";
 import { MagicLinkInput } from "@/components/magic-link-input";
@@ -12,10 +12,15 @@ import { StageProgressBar } from "@/components/stage-progress-bar";
 import { Timeline } from "@/components/timeline";
 import { ConfigPanel } from "@/components/config-panel";
 import { TextExportButton } from "@/components/text-export-button";
+import { MapPanel } from "@/components/Map";
 import { Button } from "@/components/ui/button";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useUiStore } from "@/store/ui-store";
-import { MEAL_COST_MIN, MEAL_COST_MAX, mealsForStage } from "@/lib/budget-constants";
+import {
+  MEAL_COST_MIN,
+  MEAL_COST_MAX,
+  mealsForStage,
+} from "@/lib/budget-constants";
 
 export function TripPlanner() {
   const t = useTranslations();
@@ -60,16 +65,46 @@ export function TripPlanner() {
   } = useTripPlanner();
 
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
+  const focusedMapStageIndex = useUiStore((s) => s.focusedMapStageIndex);
+  const setFocusedMapStageIndex = useUiStore((s) => s.setFocusedMapStageIndex);
+  const activeStages = useMemo(
+    () => stages.filter((s) => !s.isRestDay),
+    [stages],
+  );
+  const hasMap = activeStages.length > 0;
+
+  const handleMapStageClick = useCallback(
+    (stageIndex: number) => {
+      setFocusedMapStageIndex(stageIndex);
+    },
+    [setFocusedMapStageIndex],
+  );
+
+  const handleMapResetView = useCallback(() => {
+    setFocusedMapStageIndex(null);
+  }, [setFocusedMapStageIndex]);
+
+  // E2E test hook: allows Playwright to set the focused map stage via CustomEvent
+  // (works in production builds unlike window.__zustand_ui_store which is guarded by NODE_ENV)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const index = (e as CustomEvent<number | null>).detail;
+      setFocusedMapStageIndex(typeof index === "number" ? index : null);
+    };
+    window.addEventListener("__test_set_focused_map_stage", handler);
+    return () =>
+      window.removeEventListener("__test_set_focused_map_stage", handler);
+  }, [setFocusedMapStageIndex]);
 
   const estimatedBudget = useMemo(() => {
-    const activeStages = stages.filter((s) => !s.isRestDay);
-    const lastActiveIndex = activeStages.length - 1;
+    const nonRestStages = stages.filter((s) => !s.isRestDay);
+    const lastActiveIndex = nonRestStages.length - 1;
     const restDayCount = stages.filter((s) => s.isRestDay).length;
     let accMin = 0;
     let accMax = 0;
     let foodMin = restDayCount * 3 * MEAL_COST_MIN;
     let foodMax = restDayCount * 3 * MEAL_COST_MAX;
-    activeStages.forEach((s, i) => {
+    nonRestStages.forEach((s, i) => {
       const isFirst = i === 0;
       const isLast = i === lastActiveIndex;
       foodMin += mealsForStage(isFirst, isLast) * MEAL_COST_MIN;
@@ -79,8 +114,12 @@ export function TripPlanner() {
           accMin += s.selectedAccommodation.estimatedPriceMin ?? 0;
           accMax += s.selectedAccommodation.estimatedPriceMax ?? 0;
         } else if (s.accommodations.length > 0) {
-          accMin += s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) / s.accommodations.length;
-          accMax += s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) / s.accommodations.length;
+          accMin +=
+            s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) /
+            s.accommodations.length;
+          accMax +=
+            s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) /
+            s.accommodations.length;
         }
       }
     });
@@ -215,25 +254,53 @@ export function TripPlanner() {
             </div>
           </div>
 
-          {/* Timeline */}
-          <div id="timeline">
-            <Timeline
-              stages={stages}
-              startDate={startDate}
-              isProcessing={isProcessing}
-              onDeleteStage={handleDeleteStage}
-              onAddStage={handleAddStage}
-              onDistanceChange={handleDistanceChange}
-              onAddAccommodation={handleAddAccommodation}
-              onUpdateAccommodation={updateLocalAccommodation}
-              onRemoveAccommodation={removeLocalAccommodation}
-              onSelectAccommodation={handleSelectAccommodation}
-              onDeselectAccommodation={handleDeselectAccommodation}
-              onExpandAccommodationRadius={handleExpandAccommodationRadius}
-              onInsertRestDay={handleInsertRestDay}
-              newAccKey={newAccKey}
-              onClearNewAcc={clearNewAccKey}
-            />
+          {/* Split view: timeline (left) + map (right, sticky) */}
+          <div
+            className={[
+              "flex gap-8",
+              hasMap ? "lg:flex-row flex-col" : "",
+            ].join(" ")}
+          >
+            {/* Timeline */}
+            <div
+              id="timeline"
+              className={hasMap ? "lg:flex-1 lg:min-w-0" : "w-full"}
+            >
+              <Timeline
+                stages={stages}
+                startDate={startDate}
+                isProcessing={isProcessing}
+                onDeleteStage={handleDeleteStage}
+                onAddStage={handleAddStage}
+                onDistanceChange={handleDistanceChange}
+                onAddAccommodation={handleAddAccommodation}
+                onUpdateAccommodation={updateLocalAccommodation}
+                onRemoveAccommodation={removeLocalAccommodation}
+                onSelectAccommodation={handleSelectAccommodation}
+                onDeselectAccommodation={handleDeselectAccommodation}
+                onExpandAccommodationRadius={handleExpandAccommodationRadius}
+                onInsertRestDay={handleInsertRestDay}
+                newAccKey={newAccKey}
+                onClearNewAcc={clearNewAccKey}
+              />
+            </div>
+
+            {/* Map panel — sticky on desktop, below timeline on mobile */}
+            {hasMap && (
+              <div className="lg:w-[520px] lg:shrink-0">
+                <div
+                  className="lg:sticky lg:top-4"
+                  style={{ height: "calc(100vh - 2rem)" }}
+                  data-testid="map-container"
+                >
+                  <MapPanel
+                    focusedStageIndex={focusedMapStageIndex}
+                    onStageClick={handleMapStageClick}
+                    onResetView={handleMapResetView}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

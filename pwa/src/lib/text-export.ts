@@ -1,5 +1,9 @@
 import type { StageData } from "@/lib/validation/schemas";
-import { MEAL_COST_MIN, MEAL_COST_MAX, mealsForStage } from "@/lib/budget-constants";
+import {
+  MEAL_COST_MIN,
+  MEAL_COST_MAX,
+  mealsForStage,
+} from "@/lib/budget-constants";
 
 function formatDate(startDate: string | null, dayNumber: number): string {
   const [year = 0, month = 0, day = 0] = (
@@ -112,7 +116,9 @@ export function buildTripText(params: TextExportParams): string {
 
   // Global stats
   if (totalDistance !== null) {
-    lines.push(`- 🚴‍ ${labels.totalDistance} : ${Math.round(totalDistance)}km`);
+    lines.push(
+      `- 🚴‍ ${labels.totalDistance} : ${Math.round(totalDistance)}km`,
+    );
   }
   if (totalElevation !== null) {
     lines.push(

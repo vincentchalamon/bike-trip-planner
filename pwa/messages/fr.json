@@ -169,7 +169,7 @@
     "themeDescription": "Basculer clair / sombre",
     "splitViewTitle": "Vue partagée",
     "splitViewLabel": "Vue partagée carte / timeline",
-    "splitViewTooltip": "Disponible dans un prochain sprint (fonctionnalité carte).",
+    "splitViewTooltip": "La carte est toujours visible à côté de la timeline. Ce toggle permettra de masquer/afficher la carte manuellement.",
     "languageTitle": "Langue",
     "languagePlaceholder": "Sélecteur de langue (bientôt disponible)",
     "languageTooltip": "La sélection de la langue sera disponible prochainement.",
@@ -199,6 +199,16 @@
     "totalDistance": "Distance totale",
     "totalElevation": "Dénivelé total",
     "budgetNote": "Budget estimé par étape : hébergement (sélectionné ou moyenne des propositions, hors dernière étape) + ~12–20€/repas × 3 repas/jour — sauf la 1ère étape (pas de petit-déjeuner) et la dernière (pas de dîner)."
+  },
+  "map": {
+    "ariaLabel": "Carte interactive du voyage",
+    "panelAriaLabel": "Panneau carte et profil altimétrique",
+    "loading": "Chargement de la carte...",
+    "startMarker": "Point de départ",
+    "endMarker": "Point d'arrivée",
+    "resetView": "Vue globale",
+    "elevationProfile": "Profil altimétrique",
+    "elevationProfileAriaLabel": "Profil altimétrique interactif du voyage"
   },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
