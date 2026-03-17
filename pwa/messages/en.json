@@ -177,7 +177,10 @@
     "duplicateLabel": "Duplicate trip",
     "duplicateTooltip": "Requires persistent storage (coming soon).",
     "shareLabel": "Share trip",
-    "shareTooltip": "Requires persistent storage (coming soon)."
+    "shareTooltip": "Requires persistent storage (coming soon).",
+    "foodBudgetTitle": "Food budget / day",
+    "foodBudgetMin": "Minimum (€)",
+    "foodBudgetMax": "Maximum (€)"
   },
   "weather": {
     "humidity": "Humidity",

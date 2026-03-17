@@ -28,6 +28,9 @@ interface ConfigPanelProps {
   ebikeMode: boolean;
   departureHour: number;
   enabledAccommodationTypes: AccommodationType[];
+  dailyFoodBudgetMin: number;
+  dailyFoodBudgetMax: number;
+  onDailyFoodBudgetChange: (min: number, max: number) => void;
   onPacingUpdate: (
     fatigueFactor: number,
     elevationPenalty: number,
@@ -47,6 +50,9 @@ export function ConfigPanel({
   ebikeMode,
   departureHour,
   enabledAccommodationTypes,
+  dailyFoodBudgetMin,
+  dailyFoodBudgetMax,
+  onDailyFoodBudgetChange,
   onPacingUpdate,
   onEbikeModeChange,
   onDepartureHourChange,
@@ -226,6 +232,56 @@ export function ConfigPanel({
                   </div>
                 );
               })}
+            </div>
+          </section>
+
+          <Separator />
+
+          {/* Food budget */}
+          <section aria-labelledby="config-food-budget-heading">
+            <h3
+              id="config-food-budget-heading"
+              className="text-sm font-medium mb-3"
+            >
+              {t("foodBudgetTitle")}
+            </h3>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1">
+                <label
+                  htmlFor="food-budget-min"
+                  className="text-sm text-muted-foreground"
+                >
+                  {t("foodBudgetMin")}
+                </label>
+                <input
+                  id="food-budget-min"
+                  type="number"
+                  min={0}
+                  value={dailyFoodBudgetMin}
+                  onChange={(e) =>
+                    onDailyFoodBudgetChange(Number(e.target.value), dailyFoodBudgetMax)
+                  }
+                  className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label
+                  htmlFor="food-budget-max"
+                  className="text-sm text-muted-foreground"
+                >
+                  {t("foodBudgetMax")}
+                </label>
+                <input
+                  id="food-budget-max"
+                  type="number"
+                  min={0}
+                  value={dailyFoodBudgetMax}
+                  onChange={(e) =>
+                    onDailyFoodBudgetChange(dailyFoodBudgetMin, Number(e.target.value))
+                  }
+                  className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
             </div>
           </section>
 

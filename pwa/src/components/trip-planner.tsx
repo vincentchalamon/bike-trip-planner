@@ -14,6 +14,7 @@ import { ConfigPanel } from "@/components/config-panel";
 import { TextExportButton } from "@/components/text-export-button";
 import { Button } from "@/components/ui/button";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
+import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 
 export function TripPlanner() {
@@ -59,15 +60,39 @@ export function TripPlanner() {
   } = useTripPlanner();
 
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
+  const dailyFoodBudgetMin = useTripStore((s) => s.dailyFoodBudgetMin);
+  const dailyFoodBudgetMax = useTripStore((s) => s.dailyFoodBudgetMax);
+  const setDailyFoodBudget = useTripStore((s) => s.setDailyFoodBudget);
 
-  const estimatedBudgetMin = useMemo(
-    () => stages.reduce((sum, s) => sum + (s.selectedAccommodation?.estimatedPriceMin ?? 0), 0),
-    [stages],
-  );
-  const estimatedBudgetMax = useMemo(
-    () => stages.reduce((sum, s) => sum + (s.selectedAccommodation?.estimatedPriceMax ?? 0), 0),
-    [stages],
-  );
+  const estimatedBudgetMin = useMemo(() => {
+    const activeStages = stages.filter((s) => !s.isRestDay);
+    const lastActiveIndex = activeStages.length - 1;
+    const accommodationCost = activeStages.reduce((sum, s, i) => {
+      if (i === lastActiveIndex) return sum; // no accommodation on last stage
+      if (s.selectedAccommodation) return sum + (s.selectedAccommodation.estimatedPriceMin ?? 0);
+      if (s.accommodations.length > 0) {
+        const avg = s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) / s.accommodations.length;
+        return sum + avg;
+      }
+      return sum;
+    }, 0);
+    return accommodationCost + dailyFoodBudgetMin * stages.length;
+  }, [stages, dailyFoodBudgetMin]);
+
+  const estimatedBudgetMax = useMemo(() => {
+    const activeStages = stages.filter((s) => !s.isRestDay);
+    const lastActiveIndex = activeStages.length - 1;
+    const accommodationCost = activeStages.reduce((sum, s, i) => {
+      if (i === lastActiveIndex) return sum; // no accommodation on last stage
+      if (s.selectedAccommodation) return sum + (s.selectedAccommodation.estimatedPriceMax ?? 0);
+      if (s.accommodations.length > 0) {
+        const avg = s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) / s.accommodations.length;
+        return sum + avg;
+      }
+      return sum;
+    }, 0);
+    return accommodationCost + dailyFoodBudgetMax * stages.length;
+  }, [stages, dailyFoodBudgetMax]);
 
   // Show the sticky progress bar only when its natural position has scrolled
   // off the top of the viewport. An IntersectionObserver watches an invisible
@@ -229,6 +254,9 @@ export function TripPlanner() {
         ebikeMode={ebikeMode}
         departureHour={departureHour}
         enabledAccommodationTypes={enabledAccommodationTypes}
+        dailyFoodBudgetMin={dailyFoodBudgetMin}
+        dailyFoodBudgetMax={dailyFoodBudgetMax}
+        onDailyFoodBudgetChange={setDailyFoodBudget}
         onPacingUpdate={handlePacingChange}
         onEbikeModeChange={handleEbikeModeChange}
         onDepartureHourChange={handleDepartureHourChange}
