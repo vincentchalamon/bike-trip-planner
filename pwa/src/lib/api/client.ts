@@ -207,6 +207,31 @@ export async function uploadGpxFile(
 }
 
 /**
+ * Download the full trip as a single GPX file containing all stages and trigger
+ * a browser save dialog.
+ * @throws {Error} When the server responds with a non-2xx status.
+ */
+export async function downloadTripGpx(
+  tripId: string,
+  tripTitle: string,
+): Promise<void> {
+  const res = await apiFetch(`${API_URL}/trips/${tripId}.gpx`);
+  if (!res.ok) {
+    throw new Error(`Download failed with status ${res.status}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const safeName = tripTitle.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
+  a.download = `${safeName}.gpx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
  * Download a stage file (GPX or FIT) and trigger a browser save dialog.
  * @throws {Error} When the server responds with a non-2xx status.
  */

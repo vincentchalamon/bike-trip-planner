@@ -7,6 +7,7 @@ import { MagicLinkInput } from "@/components/magic-link-input";
 import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { TripSummary } from "@/components/trip-summary";
 import { TripHeader } from "@/components/trip-header";
+import { TripDownloads } from "@/components/trip-downloads";
 import { StageProgressBar } from "@/components/stage-progress-bar";
 import { Timeline } from "@/components/timeline";
 import { ConfigPanel } from "@/components/config-panel";
@@ -149,7 +150,9 @@ export function TripPlanner() {
             onDatesChange={handleDatesChange}
             showTitleSuggestion={totalDistance !== null}
             isTitleLoading={isProcessing && totalDistance === null}
-          />
+          >
+            <TripDownloads tripId={trip.id} tripTitle={trip.title} />
+          </TripHeader>
 
           {/* Sentinel — marks the natural position of the progress bar in the
               flow. The sticky bar becomes visible once this exits the viewport. */}
