@@ -3,6 +3,8 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 
+export type ViewMode = "timeline" | "map" | "split";
+
 interface UiState {
   isProcessing: boolean;
   isAccommodationScanning: boolean;
@@ -13,6 +15,13 @@ interface UiState {
   activeDayNumber: number | null;
   /** Index (into active stages) of the stage currently focused on the map. null = global view. */
   focusedMapStageIndex: number | null;
+  /**
+   * Current view mode for the trip planner layout.
+   * - "timeline" — timeline only (mobile default)
+   * - "map" — map only
+   * - "split" — timeline + map side by side (desktop default)
+   */
+  viewMode: ViewMode;
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -22,6 +31,7 @@ interface UiState {
   setError: (error: { type: string; message: string } | null) => void;
   setActiveDayNumber: (dayNumber: number | null) => void;
   setFocusedMapStageIndex: (index: number | null) => void;
+  setViewMode: (mode: ViewMode) => void;
 }
 
 /**
@@ -37,6 +47,7 @@ interface UiState {
  *   (progress bar, map, elevation profile); `null` means no active day
  * - `focusedMapStageIndex` — which active-stage index is currently zoomed on
  *   the map; `null` means global view (all stages visible)
+ * - `viewMode` — current layout mode: "timeline", "map", or "split"
  *
  * This store is intentionally separate from {@link useTripStore} to avoid
  * unnecessary re-renders of trip-dependent components when only UI flags change.
@@ -55,6 +66,9 @@ export const useUiStore = create<UiState>()(
     error: null,
     activeDayNumber: null,
     focusedMapStageIndex: null,
+    // Default: "split". On mobile the ViewModeToggle component will override to "timeline"
+    // on first render via a useEffect that detects the viewport width.
+    viewMode: "split",
 
     setProcessing: (value) =>
       set((state) => {
@@ -94,6 +108,11 @@ export const useUiStore = create<UiState>()(
     setFocusedMapStageIndex: (index) =>
       set((state) => {
         state.focusedMapStageIndex = index;
+      }),
+
+    setViewMode: (mode) =>
+      set((state) => {
+        state.viewMode = mode;
       }),
   })),
 );
