@@ -298,8 +298,8 @@ export function TripPlanner() {
             {...(hasMap ? swipeHandlers : {})}
             data-testid="split-view-container"
           >
-            {/* Timeline — hidden in "map" mode */}
-            {(viewMode === "timeline" || viewMode === "split") && (
+            {/* Timeline — hidden in "map" mode (only when a map is available) */}
+            {(!hasMap || viewMode === "timeline" || viewMode === "split") && (
               <div
                 id="timeline"
                 className={
