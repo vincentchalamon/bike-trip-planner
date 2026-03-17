@@ -101,6 +101,10 @@ export function TextExportButton({
             ))}
           </div>
 
+          <p className="text-xs text-muted-foreground/70 leading-relaxed">
+            {t("budgetNote")}
+          </p>
+
           <div className="flex justify-end">
             <Button
               onClick={() => void handleCopy()}

@@ -177,10 +177,7 @@
     "duplicateLabel": "Duplicate trip",
     "duplicateTooltip": "Requires persistent storage (coming soon).",
     "shareLabel": "Share trip",
-    "shareTooltip": "Requires persistent storage (coming soon).",
-    "foodBudgetTitle": "Food budget / day",
-    "foodBudgetMin": "Minimum (€)",
-    "foodBudgetMax": "Maximum (€)"
+    "shareTooltip": "Requires persistent storage (coming soon)."
   },
   "weather": {
     "humidity": "Humidity",
@@ -200,7 +197,8 @@
     "copySuccess": "Text copied to clipboard",
     "copyFailed": "Could not copy to clipboard",
     "totalDistance": "Total distance",
-    "totalElevation": "Total elevation"
+    "totalElevation": "Total elevation",
+    "budgetNote": "Estimated budget: accommodation (selected or average of suggestions per stage, excluding last stage) + ~36–60€/day for food (~12–20€/meal × 3 meals)."
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",

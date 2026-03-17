@@ -14,7 +14,6 @@ import { ConfigPanel } from "@/components/config-panel";
 import { TextExportButton } from "@/components/text-export-button";
 import { Button } from "@/components/ui/button";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
-import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 
 export function TripPlanner() {
@@ -60,9 +59,10 @@ export function TripPlanner() {
   } = useTripPlanner();
 
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
-  const dailyFoodBudgetMin = useTripStore((s) => s.dailyFoodBudgetMin);
-  const dailyFoodBudgetMax = useTripStore((s) => s.dailyFoodBudgetMax);
-  const setDailyFoodBudget = useTripStore((s) => s.setDailyFoodBudget);
+
+  // Fixed food budget estimate: ~12–20€/meal × 3 meals/day
+  const DAILY_FOOD_BUDGET_MIN = 36;
+  const DAILY_FOOD_BUDGET_MAX = 60;
 
   const estimatedBudgetMin = useMemo(() => {
     const activeStages = stages.filter((s) => !s.isRestDay);
@@ -76,8 +76,8 @@ export function TripPlanner() {
       }
       return sum;
     }, 0);
-    return accommodationCost + dailyFoodBudgetMin * stages.length;
-  }, [stages, dailyFoodBudgetMin]);
+    return accommodationCost + DAILY_FOOD_BUDGET_MIN * stages.length;
+  }, [stages]);
 
   const estimatedBudgetMax = useMemo(() => {
     const activeStages = stages.filter((s) => !s.isRestDay);
@@ -91,8 +91,8 @@ export function TripPlanner() {
       }
       return sum;
     }, 0);
-    return accommodationCost + dailyFoodBudgetMax * stages.length;
-  }, [stages, dailyFoodBudgetMax]);
+    return accommodationCost + DAILY_FOOD_BUDGET_MAX * stages.length;
+  }, [stages]);
 
   // Show the sticky progress bar only when its natural position has scrolled
   // off the top of the viewport. An IntersectionObserver watches an invisible
@@ -254,9 +254,6 @@ export function TripPlanner() {
         ebikeMode={ebikeMode}
         departureHour={departureHour}
         enabledAccommodationTypes={enabledAccommodationTypes}
-        dailyFoodBudgetMin={dailyFoodBudgetMin}
-        dailyFoodBudgetMax={dailyFoodBudgetMax}
-        onDailyFoodBudgetChange={setDailyFoodBudget}
         onPacingUpdate={handlePacingChange}
         onEbikeModeChange={handleEbikeModeChange}
         onDepartureHourChange={handleDepartureHourChange}

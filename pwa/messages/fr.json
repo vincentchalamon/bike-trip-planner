@@ -177,10 +177,7 @@
     "duplicateLabel": "Dupliquer le voyage",
     "duplicateTooltip": "Nécessite la persistance en base de données (bientôt disponible).",
     "shareLabel": "Partager le voyage",
-    "shareTooltip": "Nécessite la persistance en base de données (bientôt disponible).",
-    "foodBudgetTitle": "Budget alimentation / jour",
-    "foodBudgetMin": "Minimum (€)",
-    "foodBudgetMax": "Maximum (€)"
+    "shareTooltip": "Nécessite la persistance en base de données (bientôt disponible)."
   },
   "weather": {
     "humidity": "Humidité",
@@ -200,7 +197,8 @@
     "copySuccess": "Texte copié dans le presse-papiers",
     "copyFailed": "Impossible de copier dans le presse-papiers",
     "totalDistance": "Distance totale",
-    "totalElevation": "Dénivelé total"
+    "totalElevation": "Dénivelé total",
+    "budgetNote": "Budget estimé : hébergement (sélectionné ou moyenne des propositions par étape, hors dernière étape) + ~36–60€/jour pour l'alimentation (~12–20€/repas × 3 repas)."
   },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",

@@ -34,8 +34,6 @@ interface TripState {
   ebikeMode: boolean;
   departureHour: number;
   enabledAccommodationTypes: AccommodationType[];
-  dailyFoodBudgetMin: number;
-  dailyFoodBudgetMax: number;
   stages: StageData[];
   computationStatus: Record<string, string>;
 
@@ -89,7 +87,6 @@ interface TripState {
   setDepartureHour: (departureHour: number) => void;
   setEbikeMode: (ebikeMode: boolean) => void;
   setEnabledAccommodationTypes: (types: AccommodationType[]) => void;
-  setDailyFoodBudget: (min: number, max: number) => void;
   setComputationStatus: (status: Record<string, string>) => void;
   deleteStage: (stageIndex: number) => void;
   insertRestDay: (afterIndex: number) => void;
@@ -113,8 +110,6 @@ const initialState = {
   enabledAccommodationTypes: [
     ...FILTERABLE_ACCOMMODATION_TYPES,
   ] as AccommodationType[],
-  dailyFoodBudgetMin: 25,
-  dailyFoodBudgetMax: 40,
   stages: [],
   computationStatus: {},
 };
@@ -294,12 +289,6 @@ export const useTripStore = create<TripState>()(
     setEnabledAccommodationTypes: (types) =>
       set((state) => {
         state.enabledAccommodationTypes = types;
-      }),
-
-    setDailyFoodBudget: (min, max) =>
-      set((state) => {
-        state.dailyFoodBudgetMin = min;
-        state.dailyFoodBudgetMax = max;
       }),
 
     setComputationStatus: (status) =>
