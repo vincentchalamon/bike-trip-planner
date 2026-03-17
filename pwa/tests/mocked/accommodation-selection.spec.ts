@@ -61,7 +61,7 @@ test.describe("Accommodation selection", () => {
     // The estimated budget should appear in the trip summary
     await expect(mockedPage.getByTestId("estimated-budget")).toBeVisible();
     await expect(mockedPage.getByTestId("estimated-budget")).toContainText(
-      "65€",
+      "140€ — 205€",
     );
   });
 
@@ -121,10 +121,13 @@ test.describe("Accommodation selection", () => {
     // "Sélectionné" badge should be gone
     await expect(stageCard).not.toContainText("Sélectionné");
 
-    // The estimated budget should no longer be visible after deselection
+    // The estimated budget is still visible (food costs remain), but no longer shows the selected accommodation amount
     await expect(
       mockedPage.getByTestId("estimated-budget"),
-    ).not.toBeVisible();
+    ).toBeVisible();
+    await expect(
+      mockedPage.getByTestId("estimated-budget"),
+    ).not.toContainText("205€");
   });
 
   test("no select button on last stage accommodation panel", async ({
