@@ -35,9 +35,9 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
     }
 
     /**
-     * @param StagePoiWaypointRequest             $data
-     * @param Post                                $operation
-     * @param array{tripId?: string, index?: int} $uriVariables
+     * @param StagePoiWaypointRequest                    $data
+     * @param Post                                       $operation
+     * @param array{tripId?: string, index?: int|string} $uriVariables
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): StageResponse
     {
@@ -58,14 +58,14 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
 
         $stage = $stages[$index];
 
-        // waypointLat and waypointLon are guaranteed non-null by #[Assert\NotNull] (validated before reaching this processor)
-        \assert(null !== $data->waypointLat && null !== $data->waypointLon);
+        $waypointLat = $data->waypointLat ?? throw new BadRequestHttpException('waypointLat is required.');
+        $waypointLon = $data->waypointLon ?? throw new BadRequestHttpException('waypointLon is required.');
 
         $this->messageBus->dispatch(new RecalculateRouteSegment(
             tripId: $tripId,
             stageIndex: $index,
-            waypointLat: $data->waypointLat,
-            waypointLon: $data->waypointLon,
+            waypointLat: $waypointLat,
+            waypointLon: $waypointLon,
             reason: 'poi_detour',
         ));
 
