@@ -165,9 +165,11 @@ test.describe("Map reset view button", () => {
     mockedPage,
   }) => {
     await createTripWithGeometry(submitUrl, injectEvent);
-    // Set focusedMapStageIndex directly on the Zustand store exposed for tests
+    // Trigger via CustomEvent (works in production builds, consistent with __test_mercure_event pattern)
     await mockedPage.evaluate(() => {
-      window.__zustand_ui_store?.setState({ focusedMapStageIndex: 0 });
+      window.dispatchEvent(
+        new CustomEvent("__test_set_focused_map_stage", { detail: 0 }),
+      );
     });
     await expect(mockedPage.getByTestId("map-reset-view")).toBeVisible({
       timeout: 3000,

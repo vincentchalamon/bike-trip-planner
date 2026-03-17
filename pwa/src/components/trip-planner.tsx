@@ -84,6 +84,18 @@ export function TripPlanner() {
     setFocusedMapStageIndex(null);
   }, [setFocusedMapStageIndex]);
 
+  // E2E test hook: allows Playwright to set the focused map stage via CustomEvent
+  // (works in production builds unlike window.__zustand_ui_store which is guarded by NODE_ENV)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const index = (e as CustomEvent<number | null>).detail;
+      setFocusedMapStageIndex(typeof index === "number" ? index : null);
+    };
+    window.addEventListener("__test_set_focused_map_stage", handler);
+    return () =>
+      window.removeEventListener("__test_set_focused_map_stage", handler);
+  }, [setFocusedMapStageIndex]);
+
   const estimatedBudget = useMemo(() => {
     const nonRestStages = stages.filter((s) => !s.isRestDay);
     const lastActiveIndex = nonRestStages.length - 1;

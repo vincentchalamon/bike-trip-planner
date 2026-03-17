@@ -2,7 +2,7 @@ import type { useUiStore } from "@/store/ui-store";
 
 declare global {
   interface Window {
-    /** Exposed in all environments for E2E test access via Playwright evaluate. */
+    /** Exposed in non-production environments only (NODE_ENV !== 'production'). */
     __zustand_ui_store?: typeof useUiStore;
   }
 }
