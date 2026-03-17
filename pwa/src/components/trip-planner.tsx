@@ -15,6 +15,7 @@ import { TextExportButton } from "@/components/text-export-button";
 import { Button } from "@/components/ui/button";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useUiStore } from "@/store/ui-store";
+import { MEAL_COST_MIN, MEAL_COST_MAX, mealsForStage } from "@/lib/budget-constants";
 
 export function TripPlanner() {
   const t = useTranslations();
@@ -60,14 +61,31 @@ export function TripPlanner() {
 
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
 
-  const estimatedBudgetMin = useMemo(
-    () => stages.reduce((sum, s) => sum + (s.selectedAccommodation?.estimatedPriceMin ?? 0), 0),
-    [stages],
-  );
-  const estimatedBudgetMax = useMemo(
-    () => stages.reduce((sum, s) => sum + (s.selectedAccommodation?.estimatedPriceMax ?? 0), 0),
-    [stages],
-  );
+  const estimatedBudget = useMemo(() => {
+    const activeStages = stages.filter((s) => !s.isRestDay);
+    const lastActiveIndex = activeStages.length - 1;
+    const restDayCount = stages.filter((s) => s.isRestDay).length;
+    let accMin = 0;
+    let accMax = 0;
+    let foodMin = restDayCount * 3 * MEAL_COST_MIN;
+    let foodMax = restDayCount * 3 * MEAL_COST_MAX;
+    activeStages.forEach((s, i) => {
+      const isFirst = i === 0;
+      const isLast = i === lastActiveIndex;
+      foodMin += mealsForStage(isFirst, isLast) * MEAL_COST_MIN;
+      foodMax += mealsForStage(isFirst, isLast) * MEAL_COST_MAX;
+      if (!isLast) {
+        if (s.selectedAccommodation) {
+          accMin += s.selectedAccommodation.estimatedPriceMin ?? 0;
+          accMax += s.selectedAccommodation.estimatedPriceMax ?? 0;
+        } else if (s.accommodations.length > 0) {
+          accMin += s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) / s.accommodations.length;
+          accMax += s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) / s.accommodations.length;
+        }
+      }
+    });
+    return { min: accMin + foodMin, max: accMax + foodMax };
+  }, [stages]);
 
   // Show the sticky progress bar only when its natural position has scrolled
   // off the top of the viewport. An IntersectionObserver watches an invisible
@@ -149,8 +167,8 @@ export function TripPlanner() {
             weather={firstWeather}
             isWeatherLoading={isWeatherLoading}
             isProcessing={isProcessing}
-            estimatedBudgetMin={estimatedBudgetMin}
-            estimatedBudgetMax={estimatedBudgetMax}
+            estimatedBudgetMin={estimatedBudget.min}
+            estimatedBudgetMax={estimatedBudget.max}
           />
 
           {/* Header: title + locations + calendar */}

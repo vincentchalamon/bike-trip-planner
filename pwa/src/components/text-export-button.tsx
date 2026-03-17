@@ -87,9 +87,23 @@ export function TextExportButton({
             <DialogTitle>{t("dialogTitle")}</DialogTitle>
           </DialogHeader>
 
-          <pre className="whitespace-pre-wrap break-words rounded-md bg-muted p-4 text-sm font-mono leading-relaxed max-h-[60vh] overflow-y-auto">
-            {text}
-          </pre>
+          <div className="whitespace-pre-wrap break-words rounded-md bg-muted p-4 text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
+            {text.split("\n").map((line, i) => (
+              <p key={i} className="min-h-[1em]">
+                {line.split(/(\*[^*]+\*)/).map((part, j) =>
+                  /^\*[^*]+\*$/.test(part) ? (
+                    <strong key={j}>{part.slice(1, -1)}</strong>
+                  ) : (
+                    part
+                  ),
+                )}
+              </p>
+            ))}
+          </div>
+
+          <p className="text-xs text-muted-foreground/70 leading-relaxed">
+            {t("budgetNote")}
+          </p>
 
           <div className="flex justify-end">
             <Button

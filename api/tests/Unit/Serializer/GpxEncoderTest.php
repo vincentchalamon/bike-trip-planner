@@ -21,15 +21,59 @@ final class GpxEncoderTest extends TestCase
     }
 
     #[Test]
-    public function encodeContainsWaypointsBeforeTrack(): void
+    public function encodeContainsXsiNamespaceAttributes(): void
     {
         $encoder = new GpxEncoder();
         $xml = $encoder->encode($this->sampleData(), 'gpx');
 
+        self::assertStringContainsString('xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"', $xml);
+        self::assertStringContainsString('xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd"', $xml);
+    }
+
+    #[Test]
+    public function encodeContainsMetadataWithName(): void
+    {
+        $encoder = new GpxEncoder();
+        $xml = $encoder->encode($this->sampleData(), 'gpx');
+
+        self::assertStringContainsString('<metadata>', $xml);
+        self::assertStringContainsString('<name>Stage 1</name>', $xml);
+    }
+
+    #[Test]
+    public function encodeContainsMetadataLinkWhenSourceUrlProvided(): void
+    {
+        $encoder = new GpxEncoder();
+        $data = $this->sampleData();
+        $data['sourceUrl'] = 'https://www.komoot.com/tour/12345';
+
+        $xml = $encoder->encode($data, 'gpx');
+
+        self::assertStringContainsString('<link href="https://www.komoot.com/tour/12345"', $xml);
+    }
+
+    #[Test]
+    public function encodeOmitsMetadataLinkWhenSourceUrlAbsent(): void
+    {
+        $encoder = new GpxEncoder();
+        $xml = $encoder->encode($this->sampleData(), 'gpx');
+
+        self::assertStringNotContainsString('<link', $xml);
+    }
+
+    #[Test]
+    public function encodeContainsMetadataBeforeWaypointsBeforeTrack(): void
+    {
+        $encoder = new GpxEncoder();
+        $xml = $encoder->encode($this->sampleData(), 'gpx');
+
+        $metaPos = strpos($xml, '<metadata>');
         $wptPos = strpos($xml, '<wpt');
         $trkPos = strpos($xml, '<trk>');
+        self::assertNotFalse($metaPos);
         self::assertNotFalse($wptPos);
         self::assertNotFalse($trkPos);
+        self::assertLessThan($wptPos, $metaPos);
         self::assertLessThan($trkPos, $wptPos);
     }
 

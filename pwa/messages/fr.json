@@ -197,7 +197,8 @@
     "copySuccess": "Texte copié dans le presse-papiers",
     "copyFailed": "Impossible de copier dans le presse-papiers",
     "totalDistance": "Distance totale",
-    "totalElevation": "Dénivelé total"
+    "totalElevation": "Dénivelé total",
+    "budgetNote": "Budget estimé par étape : hébergement (sélectionné ou moyenne des propositions, hors dernière étape) + ~12–20€/repas × 3 repas/jour — sauf la 1ère étape (pas de petit-déjeuner) et la dernière (pas de dîner)."
   },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",

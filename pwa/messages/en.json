@@ -197,7 +197,8 @@
     "copySuccess": "Text copied to clipboard",
     "copyFailed": "Could not copy to clipboard",
     "totalDistance": "Total distance",
-    "totalElevation": "Total elevation"
+    "totalElevation": "Total elevation",
+    "budgetNote": "Estimated budget per stage: accommodation (selected or average of suggestions, excluding last stage) + ~12–20€/meal × 3 meals/day — except the first stage (no breakfast) and the last (no dinner)."
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",
