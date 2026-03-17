@@ -223,9 +223,12 @@ export const MapView = memo(function MapView({
     mapRef.current.setStyle(tileStyle);
     mapRef.current.once("style.load", () => {
       if (!mapRef.current) return;
-      addSourceAndLayers(mapRef.current, buildRouteGeoJSON(activeStages));
+      addSourceAndLayers(
+        mapRef.current,
+        buildRouteGeoJSON(activeStagesRef.current),
+      );
     });
-  }, [tileStyle, mapReady, activeStages, addSourceAndLayers]);
+  }, [tileStyle, mapReady, addSourceAndLayers]);
 
   // Update route data when stages change
   useEffect(() => {
