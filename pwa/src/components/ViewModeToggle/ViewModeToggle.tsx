@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { LayoutList, Map, LayoutPanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,11 @@ const MOBILE_BREAKPOINT = 1024;
  * On first mount, defaults to "timeline" on mobile (< lg) and "split" on desktop.
  * The user can override at any time; the choice is kept in the Zustand UI store.
  */
-export function ViewModeToggle() {
+interface ViewModeToggleProps {
+  testId?: string;
+}
+
+export function ViewModeToggle({ testId = "view-mode-toggle" }: ViewModeToggleProps) {
   const t = useTranslations("viewMode");
   const viewMode = useUiStore((s) => s.viewMode);
   const setViewMode = useUiStore((s) => s.setViewMode);
@@ -31,16 +35,19 @@ export function ViewModeToggle() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const viewModeRef = useRef(viewMode);
+  viewModeRef.current = viewMode;
+
   // Switch from split to timeline when window shrinks below the breakpoint.
   useEffect(() => {
     function handleResize() {
-      if (window.innerWidth < MOBILE_BREAKPOINT && viewMode === "split") {
+      if (window.innerWidth < MOBILE_BREAKPOINT && viewModeRef.current === "split") {
         setViewMode("timeline");
       }
     }
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [viewMode, setViewMode]);
+  }, [setViewMode]);
 
   const modes: { value: ViewMode; icon: React.ReactNode; label: string }[] = [
     {
@@ -65,7 +72,7 @@ export function ViewModeToggle() {
       className="flex items-center gap-1 rounded-md border p-0.5 bg-muted"
       role="group"
       aria-label={t("ariaLabel")}
-      data-testid="view-mode-toggle"
+      data-testid={testId}
     >
       {modes.map(({ value, icon, label }) => (
         <Button

@@ -293,8 +293,8 @@ export function TripPlanner() {
                 </div>
               )}
               {hasMap && (
-                <div className={!hasMap || viewMode !== "map" ? "shrink-0" : "ml-auto"}>
-                  <ViewModeToggle />
+                <div className={viewMode !== "map" ? "shrink-0" : "ml-auto"}>
+                  <ViewModeToggle testId="view-mode-toggle-sticky" />
                 </div>
               )}
             </div>
