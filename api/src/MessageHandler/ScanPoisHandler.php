@@ -216,10 +216,12 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
                 $clusteredMarkers = $this->clusterSupplyMarkers($foodPoisWithDistance, $waterPointsWithDistance);
 
-                $this->publisher->publish($tripId, MercureEventType::SUPPLY_TIMELINE, [
-                    'stageIndex' => $i,
-                    'markers' => $clusteredMarkers,
-                ]);
+                if ([] !== $clusteredMarkers) {
+                    $this->publisher->publish($tripId, MercureEventType::SUPPLY_TIMELINE, [
+                        'stageIndex' => $i,
+                        'markers' => $clusteredMarkers,
+                    ]);
+                }
             }
 
             $this->tripStateManager->storeStages($tripId, $stages);
@@ -305,7 +307,9 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
     /**
      * Clusters food and water POIs within CLUSTER_RADIUS_METERS into single markers.
      *
-     * POIs within 500m of each other are grouped. The marker type is:
+     * Items are clustered by comparing each point to the first item of the nearest open cluster
+     * (anchor-based): a new item joins a cluster when its distance to that cluster's anchor is
+     * within CLUSTER_RADIUS_METERS. The marker type is:
      * - 'water'  when only water points are present
      * - 'food'   when only food/shop POIs are present
      * - 'both'   when both are present in the same zone
