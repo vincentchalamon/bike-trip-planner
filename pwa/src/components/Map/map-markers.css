@@ -15,9 +15,6 @@
   height: 28px;
   background-color: #16a34a;
   color: white;
-  /* triangle/play icon via clip-path */
-  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
-  clip-path: none;
   border-radius: 50%;
 }
 

@@ -40,6 +40,10 @@ interface UiState {
  *
  * This store is intentionally separate from {@link useTripStore} to avoid
  * unnecessary re-renders of trip-dependent components when only UI flags change.
+ *
+ * In test environments the store is exposed on `window.__zustand_ui_store` so
+ * that Playwright tests can call `setState` directly without relying on UI
+ * interactions.
  */
 export const useUiStore = create<UiState>()(
   immer((set) => ({
@@ -93,3 +97,11 @@ export const useUiStore = create<UiState>()(
       }),
   })),
 );
+
+// Expose the store for E2E tests so Playwright can manipulate UI state directly
+// without relying on user interactions.
+if (typeof window !== "undefined") {
+  (
+    window as Window & { __zustand_ui_store?: typeof useUiStore }
+  ).__zustand_ui_store = useUiStore;
+}

@@ -159,29 +159,18 @@ test.describe("Map reset view button", () => {
     await expect(mockedPage.getByTestId("map-reset-view")).not.toBeVisible();
   });
 
-  test("reset view button appears when a stage is focused via click", async ({
+  test("reset view button appears when a stage is focused", async ({
     submitUrl,
     injectEvent,
     mockedPage,
   }) => {
     await createTripWithGeometry(submitUrl, injectEvent);
-    // Programmatically set focusedMapStageIndex via the store
+    // Set focusedMapStageIndex directly on the Zustand store exposed for tests
     await mockedPage.evaluate(() => {
-      // Simulate focusing stage 0 by dispatching a custom store update
-      // We use a CustomEvent to interact with the Zustand store indirectly
-      const event = new CustomEvent("__test_set_focused_stage", {
-        detail: { stageIndex: 0 },
-      });
-      window.dispatchEvent(event);
+      window.__zustand_ui_store?.setState({ focusedMapStageIndex: 0 });
     });
-    // Since we cannot easily trigger the map click, verify the button
-    // appears when the store has a focused stage — test via direct store manipulation
-    await mockedPage.evaluate(() => {
-      // Access the zustand store's setState via window if exposed, otherwise skip
-      // This verifies the component re-renders when store changes
+    await expect(mockedPage.getByTestId("map-reset-view")).toBeVisible({
+      timeout: 3000,
     });
-    // The reset button only appears when focusedMapStageIndex !== null in the store.
-    // In this test, we verify the button is absent in the default state.
-    await expect(mockedPage.getByTestId("map-reset-view")).not.toBeVisible();
   });
 });

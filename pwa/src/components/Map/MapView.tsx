@@ -8,19 +8,7 @@ import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { useTripStore } from "@/store/trip-store";
 import type { StageData } from "@/lib/validation/schemas";
-
-const STAGE_COLORS = [
-  "#e63946",
-  "#2a9d8f",
-  "#e9c46a",
-  "#f4a261",
-  "#457b9d",
-  "#8338ec",
-  "#06d6a0",
-  "#fb5607",
-  "#3a86ff",
-  "#ff006e",
-];
+import { getStageColor } from "./stage-colors";
 
 const LIGHT_TILES =
   "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
@@ -30,10 +18,6 @@ const DARK_TILES =
 const emptySubscribe = () => () => {};
 const getTrue = () => true;
 const getFalse = () => false;
-
-function getStageColor(dayNumber: number): string {
-  return STAGE_COLORS[(dayNumber - 1) % STAGE_COLORS.length]!;
-}
 
 function buildRouteGeoJSON(
   stages: StageData[],
@@ -136,6 +120,16 @@ export const MapView = memo(function MapView({
     [stages],
   );
 
+  // Refs to avoid stale closures in map event handlers that are registered once
+  const activeStagesRef = useRef(activeStages);
+  const onStageClickRef = useRef(onStageClick);
+  useEffect(() => {
+    activeStagesRef.current = activeStages;
+  });
+  useEffect(() => {
+    onStageClickRef.current = onStageClick;
+  });
+
   const addSourceAndLayers = useCallback(
     (map: maplibregl.Map, data: GeoJSON.FeatureCollection) => {
       if (!map.getSource("route")) {
@@ -197,8 +191,10 @@ export const MapView = memo(function MapView({
           | number
           | undefined;
         if (dayNumber === undefined) return;
-        const idx = activeStages.findIndex((s) => s.dayNumber === dayNumber);
-        if (idx !== -1) onStageClick(idx);
+        const idx = activeStagesRef.current.findIndex(
+          (s) => s.dayNumber === dayNumber,
+        );
+        if (idx !== -1) onStageClickRef.current(idx);
       });
 
       map.on("mouseenter", "route-hover-target", () => {
@@ -355,6 +351,9 @@ export const MapView = memo(function MapView({
     if (!coord) return;
 
     const el = createMarkerElement("map-marker map-marker--hover-cursor", "");
+    const dot = document.createElement("div");
+    dot.className = "map-hover-dot";
+    el.appendChild(dot);
     const marker = new maplibregl.Marker({ element: el, anchor: "center" })
       .setLngLat([coord.lon, coord.lat])
       .addTo(mapRef.current);
