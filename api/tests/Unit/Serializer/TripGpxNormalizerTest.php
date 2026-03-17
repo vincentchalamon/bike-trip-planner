@@ -39,7 +39,7 @@ final class TripGpxNormalizerTest extends TestCase
             geometry: [new Coordinate(50.700, 3.100, 50.0), new Coordinate(50.800, 3.200, 60.0)],
         );
 
-        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $repository->method('getStages')->willReturn([$stage1, $stage2]);
 
         $normalizer = new TripGpxNormalizer($repository);
@@ -81,7 +81,7 @@ final class TripGpxNormalizerTest extends TestCase
         );
         $stage2->addAccommodation(new Accommodation('Hotel', 'hotel', 50.780, 3.190, 80.0, 120.0, false));
 
-        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $repository->method('getStages')->willReturn([$stage1, $stage2]);
 
         $normalizer = new TripGpxNormalizer($repository);
@@ -98,7 +98,7 @@ final class TripGpxNormalizerTest extends TestCase
     #[Test]
     public function normalizeWithEmptyStagesReturnsEmptySegmentsAndWaypoints(): void
     {
-        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $repository->method('getStages')->willReturn([]);
 
         $normalizer = new TripGpxNormalizer($repository);
