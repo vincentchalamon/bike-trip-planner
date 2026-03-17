@@ -61,46 +61,30 @@ export function TripPlanner() {
 
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
 
-  const estimatedBudgetMin = useMemo(() => {
+  const estimatedBudget = useMemo(() => {
     const activeStages = stages.filter((s) => !s.isRestDay);
     const lastActiveIndex = activeStages.length - 1;
-    const restDayFood = stages.filter((s) => s.isRestDay).length * 3 * MEAL_COST_MIN;
-    return (
-      activeStages.reduce((sum, s, i) => {
-        const isFirst = i === 0;
-        const isLast = i === lastActiveIndex;
-        const food = mealsForStage(isFirst, isLast) * MEAL_COST_MIN;
-        if (!isLast) {
-          if (s.selectedAccommodation) return sum + (s.selectedAccommodation.estimatedPriceMin ?? 0) + food;
-          if (s.accommodations.length > 0) {
-            const avg = s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) / s.accommodations.length;
-            return sum + avg + food;
-          }
+    const restDayCount = stages.filter((s) => s.isRestDay).length;
+    let accMin = 0;
+    let accMax = 0;
+    let foodMin = restDayCount * 3 * MEAL_COST_MIN;
+    let foodMax = restDayCount * 3 * MEAL_COST_MAX;
+    activeStages.forEach((s, i) => {
+      const isFirst = i === 0;
+      const isLast = i === lastActiveIndex;
+      foodMin += mealsForStage(isFirst, isLast) * MEAL_COST_MIN;
+      foodMax += mealsForStage(isFirst, isLast) * MEAL_COST_MAX;
+      if (!isLast) {
+        if (s.selectedAccommodation) {
+          accMin += s.selectedAccommodation.estimatedPriceMin ?? 0;
+          accMax += s.selectedAccommodation.estimatedPriceMax ?? 0;
+        } else if (s.accommodations.length > 0) {
+          accMin += s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) / s.accommodations.length;
+          accMax += s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) / s.accommodations.length;
         }
-        return sum + food;
-      }, 0) + restDayFood
-    );
-  }, [stages]);
-
-  const estimatedBudgetMax = useMemo(() => {
-    const activeStages = stages.filter((s) => !s.isRestDay);
-    const lastActiveIndex = activeStages.length - 1;
-    const restDayFood = stages.filter((s) => s.isRestDay).length * 3 * MEAL_COST_MAX;
-    return (
-      activeStages.reduce((sum, s, i) => {
-        const isFirst = i === 0;
-        const isLast = i === lastActiveIndex;
-        const food = mealsForStage(isFirst, isLast) * MEAL_COST_MAX;
-        if (!isLast) {
-          if (s.selectedAccommodation) return sum + (s.selectedAccommodation.estimatedPriceMax ?? 0) + food;
-          if (s.accommodations.length > 0) {
-            const avg = s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) / s.accommodations.length;
-            return sum + avg + food;
-          }
-        }
-        return sum + food;
-      }, 0) + restDayFood
-    );
+      }
+    });
+    return { min: accMin + foodMin, max: accMax + foodMax };
   }, [stages]);
 
   // Show the sticky progress bar only when its natural position has scrolled
@@ -183,8 +167,8 @@ export function TripPlanner() {
             weather={firstWeather}
             isWeatherLoading={isWeatherLoading}
             isProcessing={isProcessing}
-            estimatedBudgetMin={estimatedBudgetMin}
-            estimatedBudgetMax={estimatedBudgetMax}
+            estimatedBudgetMin={estimatedBudget.min}
+            estimatedBudgetMax={estimatedBudget.max}
           />
 
           {/* Header: title + locations + calendar */}

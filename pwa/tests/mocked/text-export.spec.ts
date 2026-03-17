@@ -51,11 +51,12 @@ test.describe("Text export", () => {
       stagesComputedEvent(),
       accommodationsFoundEvent(0),
       accommodationsFoundEvent(1),
+      accommodationsFoundEvent(2),
       tripCompleteEvent(),
     ]);
     await mockedPage.getByTestId("text-export-button").click();
     // Last stage line should not contain any accommodation name but should show food budget
-    const preview = mockedPage.locator('[role="dialog"] p').last();
+    const preview = mockedPage.locator('[role="dialog"] div p').last();
     await expect(preview).not.toContainText("Camping");
     await expect(preview).not.toContainText("Hotel");
     await expect(preview).toContainText("24-40€");
