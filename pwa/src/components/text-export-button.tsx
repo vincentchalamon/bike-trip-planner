@@ -45,6 +45,10 @@ export function TextExportButton({
     sourceUrl,
     stages,
     startDate,
+    labels: {
+      totalDistance: t("totalDistance"),
+      totalElevation: t("totalElevation"),
+    },
   });
 
   async function handleCopy() {

@@ -194,7 +194,9 @@
     "copy": "Copier",
     "copied": "Copié !",
     "copySuccess": "Texte copié dans le presse-papiers",
-    "copyFailed": "Impossible de copier dans le presse-papiers"
+    "copyFailed": "Impossible de copier dans le presse-papiers",
+    "totalDistance": "Distance totale",
+    "totalElevation": "Dénivelé total"
   },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",

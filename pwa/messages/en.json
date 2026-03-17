@@ -194,7 +194,9 @@
     "copy": "Copy",
     "copied": "Copied!",
     "copySuccess": "Text copied to clipboard",
-    "copyFailed": "Could not copy to clipboard"
+    "copyFailed": "Could not copy to clipboard",
+    "totalDistance": "Total distance",
+    "totalElevation": "Total elevation"
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",

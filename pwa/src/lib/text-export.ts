@@ -1,9 +1,15 @@
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 
 function formatDate(startDate: string | null, dayNumber: number): string {
-  const base = startDate ? new Date(startDate) : new Date();
-  const date = new Date(base);
-  date.setDate(date.getDate() + dayNumber - 1);
+  const [year, month, day] = (startDate ?? new Date().toISOString().slice(0, 10))
+    .split("-")
+    .map(Number);
+  const base = new Date(year, month - 1, day);
+  const date = new Date(
+    base.getFullYear(),
+    base.getMonth(),
+    base.getDate() + dayNumber - 1,
+  );
   return date.toLocaleDateString(undefined, {
     weekday: "short",
     day: "numeric",
@@ -30,7 +36,7 @@ function formatStageLine(stage: StageData, startDate: string | null): string {
   const elevUp = `⬆️ ${Math.round(stage.elevation)}m`;
   const elevDown = `⬇️ ${Math.round(stage.elevationLoss ?? 0)}m`;
 
-  let line = `**${date}** : ${distance}, ${elevUp} ${elevDown}`;
+  let line = `*${date}* : ${distance}, ${elevUp} ${elevDown}`;
 
   const acc = stage.selectedAccommodation ?? stage.accommodations[0] ?? null;
 
@@ -57,6 +63,10 @@ export interface TextExportParams {
   sourceUrl: string;
   stages: StageData[];
   startDate: string | null;
+  labels: {
+    totalDistance: string;
+    totalElevation: string;
+  };
 }
 
 export function buildTripText(params: TextExportParams): string {
@@ -68,21 +78,22 @@ export function buildTripText(params: TextExportParams): string {
     sourceUrl,
     stages,
     startDate,
+    labels,
   } = params;
 
   const lines: string[] = [];
 
   // Title
-  lines.push(`**${title}**`);
+  lines.push(`*${title}*`);
   lines.push("");
 
   // Global stats
   if (totalDistance !== null) {
-    lines.push(`- 🚴‍ Distance totale : ${Math.round(totalDistance)}km`);
+    lines.push(`- 🚴‍ ${labels.totalDistance} : ${Math.round(totalDistance)}km`);
   }
   if (totalElevation !== null) {
     lines.push(
-      `- 🏔 Dénivelé total : ⬆️ ${Math.round(totalElevation)}m ⬇️ ${Math.round(totalElevationLoss ?? 0)}m`,
+      `- 🏔 ${labels.totalElevation} : ⬆️ ${Math.round(totalElevation)}m ⬇️ ${Math.round(totalElevationLoss ?? 0)}m`,
     );
   }
   if (sourceUrl) {
