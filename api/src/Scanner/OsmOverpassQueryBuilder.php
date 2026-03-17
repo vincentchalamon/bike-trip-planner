@@ -136,6 +136,20 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         );
     }
 
+    /**
+     * @param list<Coordinate> $stageGeometry
+     */
+    public function buildCulturalPoiQuery(array $stageGeometry, int $radiusMeters = 500): string
+    {
+        $polyline = $this->buildPolyline($stageGeometry);
+
+        return \sprintf(
+            '[out:json][timeout:15];(nwr["tourism"="museum"](around:%1$d,%2$s);nwr["tourism"="attraction"](around:%1$d,%2$s);nwr["tourism"="viewpoint"](around:%1$d,%2$s);nwr["historic"](around:%1$d,%2$s););out center tags 100;',
+            $radiusMeters,
+            $polyline,
+        );
+    }
+
     /** @param list<Coordinate> $points */
     private function buildPolyline(array $points): string
     {

@@ -172,6 +172,35 @@ export type MercureEvent =
         markers: SupplyMarker[];
       };
     }
+  | {
+      type: "cultural_poi_alerts";
+      data: {
+        alerts: {
+          stageIndex: number;
+          dayNumber: number;
+          type: string;
+          message: string;
+          lat: number;
+          lon: number;
+          poiName: string;
+          poiType: string;
+          poiLat: number;
+          poiLon: number;
+          distanceFromRoute: number;
+        }[];
+      };
+    }
+  | {
+      type: "route_segment_recalculated";
+      data: {
+        stageIndex: number;
+        reason: string;
+        distance: number;
+        elevationGain: number;
+        duration: number;
+        coordinates: { lat: number; lon: number; ele: number }[];
+      };
+    }
   | { type: "validation_error"; data: { code: string; message: string } }
   | {
       type: "computation_error";

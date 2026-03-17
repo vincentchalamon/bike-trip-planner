@@ -20,6 +20,7 @@ use App\State\RestDayInsertProcessor;
 use App\State\StageCreateProcessor;
 use App\State\StageDeleteProcessor;
 use App\State\StageMoveProcessor;
+use App\State\StagePoiWaypointProcessor;
 use App\State\StageProvider;
 use App\State\StageSelectAccommodationProcessor;
 use App\State\StageUpdateProcessor;
@@ -114,6 +115,19 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
             output: StageResponse::class,
             provider: StageProvider::class,
             processor: StageSelectAccommodationProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/trips/{tripId}/stages/{index}/poi-waypoint{._format}',
+            uriVariables: [
+                'tripId' => new Link(fromClass: Stage::class),
+                'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
+            ],
+            status: 202,
+            openapi: new Operation(summary: 'Add a cultural POI as a waypoint to a stage, triggering async route recalculation via Valhalla.'),
+            input: StagePoiWaypointRequest::class,
+            output: StageResponse::class,
+            provider: StageProvider::class,
+            processor: StagePoiWaypointProcessor::class,
         ),
     ],
 )]

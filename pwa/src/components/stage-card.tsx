@@ -43,6 +43,7 @@ interface StageCardProps {
   onSelectAccommodation?: (accIndex: number) => void;
   onDeselectAccommodation?: () => void;
   onExpandAccommodationRadius?: (currentRadiusKm: number) => Promise<boolean>;
+  onAddPoiWaypoint?: (poiLat: number, poiLon: number) => void;
   newAccKey?: string | null;
   stageOriginalIndex?: number;
   onClearNewAcc?: () => void;
@@ -63,6 +64,7 @@ export function StageCard({
   onSelectAccommodation,
   onDeselectAccommodation,
   onExpandAccommodationRadius,
+  onAddPoiWaypoint,
   newAccKey,
   stageOriginalIndex,
   onClearNewAcc,
@@ -177,7 +179,7 @@ export function StageCard({
         {/* Alerts */}
         {stage.alerts.length > 0 && (
           <div className="mt-3">
-            <AlertList alerts={stage.alerts} />
+            <AlertList alerts={stage.alerts} onAddPoiWaypoint={onAddPoiWaypoint} />
           </div>
         )}
         {isProcessing && stage.alerts.length === 0 && (

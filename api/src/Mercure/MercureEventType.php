@@ -18,6 +18,7 @@ enum MercureEventType: string
     case WATER_POINT_ALERTS = 'water_point_alerts';
     case SUPPLY_TIMELINE = 'supply_timeline';
     case ROUTE_SEGMENT_RECALCULATED = 'route_segment_recalculated';
+    case CULTURAL_POI_ALERTS = 'cultural_poi_alerts';
     case VALIDATION_ERROR = 'validation_error';
     case COMPUTATION_ERROR = 'computation_error';
     case TRIP_COMPLETE = 'trip_complete';
