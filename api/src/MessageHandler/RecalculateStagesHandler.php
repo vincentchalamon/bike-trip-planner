@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mercure\MercureEventType;
@@ -64,6 +65,10 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
                     ],
                     'label' => $s->label,
                     'isRestDay' => $s->isRestDay,
+                    'geometry' => array_map(
+                        static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
+                        $s->geometry,
+                    ),
                 ],
                 $stages,
             ),
