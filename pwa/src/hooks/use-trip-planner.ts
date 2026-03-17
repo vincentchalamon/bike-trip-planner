@@ -594,10 +594,19 @@ export function useTripPlanner() {
         },
       );
       if (error) {
-        const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
-        // Rollback on error: restore accommodations from store snapshot
-        useTripStore.getState().setStages([...stages]);
+        // 409 Conflict: the backend accommodation list was refreshed by a concurrent
+        // scan — trigger a fresh scan for this stage so the user can retry.
+        if (response.status === 409) {
+          useTripStore.getState().setStages([...stages]);
+          toast.info(t("errors.accommodationStale"));
+          await scanAccommodations(tripId, DEFAULT_ACCOMMODATION_RADIUS_KM, stageIndex);
+          setAccommodationScanning(true);
+        } else {
+          const apiError = parseApiError(response.status, error);
+          toast.error(apiError.message);
+          // Rollback on error: restore accommodations from store snapshot
+          useTripStore.getState().setStages([...stages]);
+        }
       } else {
         setProcessing(true);
         setAccommodationScanning(true);

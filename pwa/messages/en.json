@@ -242,6 +242,7 @@
     "retry": "Try again",
     "tripPlannerError": "Something went wrong while loading the trip planner.",
     "failedSelectAccommodation": "Failed to select accommodation.",
+    "accommodationStale": "Accommodation list was refreshed. Please try again.",
     "failedDeselectAccommodation": "Failed to deselect accommodation.",
     "failedUpdateAccommodationTypes": "Failed to update accommodation type filters.",
     "failedInsertRestDay": "Failed to insert rest day."
