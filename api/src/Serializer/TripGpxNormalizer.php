@@ -32,7 +32,7 @@ final readonly class TripGpxNormalizer implements NormalizerInterface
         }
 
         /** @var list<Stage> $stages */
-        $stages = $this->tripStateManager->getStages($data->id) ?? [];
+        $stages = $context['trip_stages'] ?? $this->tripStateManager->getStages($data->id) ?? [];
 
         $segments = [];
         $waypoints = [];
@@ -66,7 +66,7 @@ final readonly class TripGpxNormalizer implements NormalizerInterface
         }
 
         return [
-            'trackName' => $data->id,
+            'trackName' => $this->tripStateManager->getTitle($data->id) ?? $data->id,
             'segments' => $segments,
             'waypoints' => $waypoints,
         ];

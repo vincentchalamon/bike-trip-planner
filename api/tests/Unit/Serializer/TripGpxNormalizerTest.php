@@ -41,13 +41,14 @@ final class TripGpxNormalizerTest extends TestCase
 
         $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $repository->method('getStages')->willReturn([$stage1, $stage2]);
+        $repository->method('getTitle')->willReturn('My Trip');
 
         $normalizer = new TripGpxNormalizer($repository);
         $trip = new Trip('trip-abc');
         $result = $normalizer->normalize($trip, 'gpx');
 
         self::assertIsArray($result);
-        self::assertSame('trip-abc', $result['trackName']);
+        self::assertSame('My Trip', $result['trackName']);
         self::assertArrayHasKey('segments', $result);
         /** @var list<list<array{lat: float, lon: float, ele: float|null}>> $segments */
         $segments = $result['segments'];

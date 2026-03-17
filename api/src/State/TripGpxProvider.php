@@ -14,8 +14,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * Provides a {@see Trip} resource for GPX export.
  *
  * Validates that the trip exists and has computed stages before returning
- * the Trip object. The {@see \App\Serializer\TripGpxNormalizer} will then
- * fetch the stages directly from the repository using the trip ID.
+ * the Trip object. The already-fetched stages are passed through the
+ * serialization context under the {@code trip_stages} key so that
+ * {@see \App\Serializer\TripGpxNormalizer} can reuse them without an
+ * additional Redis round-trip.
  *
  * @implements ProviderInterface<Trip>
  */
@@ -39,6 +41,8 @@ final readonly class TripGpxProvider implements ProviderInterface
         if (null === $stages) {
             throw new NotFoundHttpException(\sprintf('Trip "%s" not found or has expired.', $id));
         }
+
+        $context['trip_stages'] = $stages;
 
         return new Trip($id);
     }
