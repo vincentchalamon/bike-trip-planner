@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { FileText, Copy, Check } from "lucide-react";
@@ -37,19 +37,23 @@ export function TextExportButton({
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const text = buildTripText({
-    title,
-    totalDistance,
-    totalElevation,
-    totalElevationLoss,
-    sourceUrl,
-    stages,
-    startDate,
-    labels: {
-      totalDistance: t("totalDistance"),
-      totalElevation: t("totalElevation"),
-    },
-  });
+  const text = useMemo(
+    () =>
+      buildTripText({
+        title,
+        totalDistance,
+        totalElevation,
+        totalElevationLoss,
+        sourceUrl,
+        stages,
+        startDate,
+        labels: {
+          totalDistance: t("totalDistance"),
+          totalElevation: t("totalElevation"),
+        },
+      }),
+    [title, totalDistance, totalElevation, totalElevationLoss, sourceUrl, stages, startDate, t],
+  );
 
   async function handleCopy() {
     try {

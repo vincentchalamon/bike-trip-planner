@@ -1,7 +1,13 @@
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 
 function formatDate(startDate: string | null, dayNumber: number): string {
-  const [year, month, day] = (startDate ?? new Date().toISOString().slice(0, 10))
+  const [year, month, day] = (
+    startDate ??
+    (() => {
+      const n = new Date();
+      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+    })()
+  )
     .split("-")
     .map(Number);
   const base = new Date(year, month - 1, day);
