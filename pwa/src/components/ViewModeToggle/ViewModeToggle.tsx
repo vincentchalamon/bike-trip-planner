@@ -31,6 +31,17 @@ export function ViewModeToggle() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Switch from split to timeline when window shrinks below the breakpoint.
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth < MOBILE_BREAKPOINT && viewMode === "split") {
+        setViewMode("timeline");
+      }
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [viewMode, setViewMode]);
+
   const modes: { value: ViewMode; icon: React.ReactNode; label: string }[] = [
     {
       value: "timeline",
@@ -61,7 +72,10 @@ export function ViewModeToggle() {
           key={value}
           variant={viewMode === value ? "default" : "ghost"}
           size="sm"
-          className="h-7 px-2 cursor-pointer"
+          className={[
+            "h-7 px-2 cursor-pointer",
+            value === "split" ? "hidden lg:inline-flex" : "",
+          ].join(" ")}
           onClick={() => setViewMode(value)}
           aria-pressed={viewMode === value}
           aria-label={label}

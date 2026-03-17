@@ -114,6 +114,10 @@ export const MapView = memo(function MapView({
 
   const isDark = mounted && resolvedTheme === "dark";
   const tileStyle = isDark ? DARK_TILES : LIGHT_TILES;
+  // Track the last applied tile style to skip redundant setStyle() calls.
+  // Without this, the effect also fires when mapReady flips to true, which
+  // resets the style and briefly removes route sources/layers.
+  const appliedTileStyleRef = useRef(tileStyle);
 
   const activeStages = useMemo(
     () => stages.filter((s) => !s.isRestDay),
@@ -217,9 +221,13 @@ export const MapView = memo(function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update tile style on theme change
+  // Update tile style on theme change — but NOT on the initial mapReady flip.
+  // The map is already initialised with the correct style; calling setStyle()
+  // again at that point wipes sources/layers until "style.load" re-adds them.
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
+    if (tileStyle === appliedTileStyleRef.current) return;
+    appliedTileStyleRef.current = tileStyle;
     mapRef.current.setStyle(tileStyle);
     mapRef.current.once("style.load", () => {
       if (!mapRef.current) return;
