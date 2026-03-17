@@ -168,7 +168,10 @@ test.describe("swipe gestures (mobile)", () => {
     const endX = direction === "left" ? 100 : 300;
     await page.evaluate(
       ({ startX, endX }) => {
-        const el = document.body;
+        const el =
+          document.querySelector<HTMLElement>(
+            '[data-testid="split-view-container"]',
+          ) ?? document.body;
         el.dispatchEvent(
           new TouchEvent("touchstart", {
             bubbles: true,
