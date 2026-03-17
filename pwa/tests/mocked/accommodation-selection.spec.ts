@@ -127,9 +127,7 @@ test.describe("Accommodation selection", () => {
     ).toBeHidden();
 
     // The estimated budget is still visible (food + accommodation avg remain)
-    await expect(
-      mockedPage.getByTestId("estimated-budget"),
-    ).toBeVisible();
+    await expect(mockedPage.getByTestId("estimated-budget")).toBeVisible();
   });
 
   test("no select button on last stage accommodation panel", async ({

@@ -18,9 +18,9 @@ function stagesWithGeometryEvent(): MercureEvent {
           endPoint: { lat: 44.532, lon: 4.392, ele: 540 },
           geometry: [
             { lat: 44.735, lon: 4.598, ele: 280 },
-            { lat: 44.680, lon: 4.530, ele: 420 },
-            { lat: 44.620, lon: 4.460, ele: 650 },
-            { lat: 44.580, lon: 4.420, ele: 520 },
+            { lat: 44.68, lon: 4.53, ele: 420 },
+            { lat: 44.62, lon: 4.46, ele: 650 },
+            { lat: 44.58, lon: 4.42, ele: 520 },
             { lat: 44.532, lon: 4.392, ele: 540 },
           ],
           label: null,
@@ -34,8 +34,8 @@ function stagesWithGeometryEvent(): MercureEvent {
           endPoint: { lat: 44.295, lon: 4.087, ele: 360 },
           geometry: [
             { lat: 44.532, lon: 4.392, ele: 540 },
-            { lat: 44.460, lon: 4.300, ele: 700 },
-            { lat: 44.380, lon: 4.200, ele: 480 },
+            { lat: 44.46, lon: 4.3, ele: 700 },
+            { lat: 44.38, lon: 4.2, ele: 480 },
             { lat: 44.295, lon: 4.087, ele: 360 },
           ],
           label: null,
@@ -49,7 +49,7 @@ function stagesWithGeometryEvent(): MercureEvent {
           endPoint: { lat: 44.112, lon: 3.876, ele: 410 },
           geometry: [
             { lat: 44.295, lon: 4.087, ele: 360 },
-            { lat: 44.220, lon: 3.990, ele: 520 },
+            { lat: 44.22, lon: 3.99, ele: 520 },
             { lat: 44.112, lon: 3.876, ele: 410 },
           ],
           label: null,
@@ -134,9 +134,7 @@ test.describe("Elevation profile", () => {
       },
     });
     // elevation profile is not rendered when geometry is empty
-    await expect(
-      mockedPage.getByTestId("elevation-profile"),
-    ).not.toBeVisible();
+    await expect(mockedPage.getByTestId("elevation-profile")).not.toBeVisible();
   });
 
   test("elevation profile appears with geometry data", async ({
@@ -145,9 +143,9 @@ test.describe("Elevation profile", () => {
     mockedPage,
   }) => {
     await createTripWithGeometry(submitUrl, injectEvent);
-    await expect(
-      mockedPage.getByTestId("elevation-profile"),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(mockedPage.getByTestId("elevation-profile")).toBeVisible({
+      timeout: 5000,
+    });
   });
 });
 
@@ -158,9 +156,7 @@ test.describe("Map reset view button", () => {
     mockedPage,
   }) => {
     await createTripWithGeometry(submitUrl, injectEvent);
-    await expect(
-      mockedPage.getByTestId("map-reset-view"),
-    ).not.toBeVisible();
+    await expect(mockedPage.getByTestId("map-reset-view")).not.toBeVisible();
   });
 
   test("reset view button appears when a stage is focused via click", async ({
@@ -186,8 +182,6 @@ test.describe("Map reset view button", () => {
     });
     // The reset button only appears when focusedMapStageIndex !== null in the store.
     // In this test, we verify the button is absent in the default state.
-    await expect(
-      mockedPage.getByTestId("map-reset-view"),
-    ).not.toBeVisible();
+    await expect(mockedPage.getByTestId("map-reset-view")).not.toBeVisible();
   });
 });

@@ -16,7 +16,11 @@ import { MapPanel } from "@/components/Map";
 import { Button } from "@/components/ui/button";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useUiStore } from "@/store/ui-store";
-import { MEAL_COST_MIN, MEAL_COST_MAX, mealsForStage } from "@/lib/budget-constants";
+import {
+  MEAL_COST_MIN,
+  MEAL_COST_MAX,
+  mealsForStage,
+} from "@/lib/budget-constants";
 
 export function TripPlanner() {
   const t = useTranslations();
@@ -63,12 +67,18 @@ export function TripPlanner() {
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
   const focusedMapStageIndex = useUiStore((s) => s.focusedMapStageIndex);
   const setFocusedMapStageIndex = useUiStore((s) => s.setFocusedMapStageIndex);
-  const activeStages = useMemo(() => stages.filter((s) => !s.isRestDay), [stages]);
+  const activeStages = useMemo(
+    () => stages.filter((s) => !s.isRestDay),
+    [stages],
+  );
   const hasMap = activeStages.length > 0;
 
-  const handleMapStageClick = useCallback((stageIndex: number) => {
-    setFocusedMapStageIndex(stageIndex);
-  }, [setFocusedMapStageIndex]);
+  const handleMapStageClick = useCallback(
+    (stageIndex: number) => {
+      setFocusedMapStageIndex(stageIndex);
+    },
+    [setFocusedMapStageIndex],
+  );
 
   const handleMapResetView = useCallback(() => {
     setFocusedMapStageIndex(null);
@@ -92,8 +102,12 @@ export function TripPlanner() {
           accMin += s.selectedAccommodation.estimatedPriceMin ?? 0;
           accMax += s.selectedAccommodation.estimatedPriceMax ?? 0;
         } else if (s.accommodations.length > 0) {
-          accMin += s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) / s.accommodations.length;
-          accMax += s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) / s.accommodations.length;
+          accMin +=
+            s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) /
+            s.accommodations.length;
+          accMax +=
+            s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) /
+            s.accommodations.length;
         }
       }
     });
@@ -236,7 +250,10 @@ export function TripPlanner() {
             ].join(" ")}
           >
             {/* Timeline */}
-            <div id="timeline" className={hasMap ? "lg:flex-1 lg:min-w-0" : "w-full"}>
+            <div
+              id="timeline"
+              className={hasMap ? "lg:flex-1 lg:min-w-0" : "w-full"}
+            >
               <Timeline
                 stages={stages}
                 startDate={startDate}

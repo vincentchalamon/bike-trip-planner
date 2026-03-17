@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-  useState,
-  memo,
-} from "react";
+import { useEffect, useRef, useCallback, useMemo, useState, memo } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "next-themes";
@@ -63,7 +56,9 @@ function buildRouteGeoJSON(
   };
 }
 
-function computeBounds(stages: StageData[]): [[number, number], [number, number]] | null {
+function computeBounds(
+  stages: StageData[],
+): [[number, number], [number, number]] | null {
   let minLng = Infinity,
     maxLng = -Infinity,
     minLat = Infinity,
@@ -198,7 +193,9 @@ export const MapView = memo(function MapView({
       map.on("click", "route-hover-target", (e) => {
         const features = e.features;
         if (!features?.length) return;
-        const dayNumber = features[0]?.properties?.dayNumber as number | undefined;
+        const dayNumber = features[0]?.properties?.dayNumber as
+          | number
+          | undefined;
         if (dayNumber === undefined) return;
         const idx = activeStages.findIndex((s) => s.dayNumber === dayNumber);
         if (idx !== -1) onStageClick(idx);
@@ -237,7 +234,9 @@ export const MapView = memo(function MapView({
   // Update route data when stages change
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
-    const source = mapRef.current.getSource("route") as maplibregl.GeoJSONSource | undefined;
+    const source = mapRef.current.getSource("route") as
+      | maplibregl.GeoJSONSource
+      | undefined;
     if (source) {
       source.setData(buildRouteGeoJSON(activeStages));
     }
@@ -258,7 +257,10 @@ export const MapView = memo(function MapView({
     if (!firstStage || !lastStage) return;
 
     // Start marker
-    const startEl = createMarkerElement("map-marker map-marker--start", t("startMarker"));
+    const startEl = createMarkerElement(
+      "map-marker map-marker--start",
+      t("startMarker"),
+    );
     markersRef.current.push(
       new maplibregl.Marker({ element: startEl })
         .setLngLat([firstStage.startPoint.lon, firstStage.startPoint.lat])
@@ -266,7 +268,10 @@ export const MapView = memo(function MapView({
     );
 
     // End marker
-    const endEl = createMarkerElement("map-marker map-marker--end", t("endMarker"));
+    const endEl = createMarkerElement(
+      "map-marker map-marker--end",
+      t("endMarker"),
+    );
     markersRef.current.push(
       new maplibregl.Marker({ element: endEl })
         .setLngLat([lastStage.endPoint.lon, lastStage.endPoint.lat])
@@ -340,10 +345,7 @@ export const MapView = memo(function MapView({
       hoverMarkerRef.current = null;
     }
 
-    if (
-      highlightCoordIndex == null ||
-      highlightStageIndex == null
-    ) {
+    if (highlightCoordIndex == null || highlightStageIndex == null) {
       return;
     }
 

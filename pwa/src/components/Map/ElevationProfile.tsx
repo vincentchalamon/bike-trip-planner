@@ -56,7 +56,12 @@ function buildProfilePoints(
   const entries: { stage: StageData; stageIndex: number }[] =
     focusedStageIndex !== null
       ? activeStages[focusedStageIndex]
-        ? [{ stage: activeStages[focusedStageIndex]!, stageIndex: focusedStageIndex }]
+        ? [
+            {
+              stage: activeStages[focusedStageIndex]!,
+              stageIndex: focusedStageIndex,
+            },
+          ]
         : []
       : activeStages.map((stage, idx) => ({ stage, stageIndex: idx }));
 
