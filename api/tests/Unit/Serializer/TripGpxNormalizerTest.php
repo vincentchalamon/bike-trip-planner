@@ -40,7 +40,7 @@ final class TripGpxNormalizerTest extends TestCase
         );
 
         $repository = $this->createMock(TripRequestRepositoryInterface::class);
-        $repository->method('getStages')->with('trip-abc')->willReturn([$stage1, $stage2]);
+        $repository->method('getStages')->willReturn([$stage1, $stage2]);
 
         $normalizer = new TripGpxNormalizer($repository);
         $trip = new Trip('trip-abc');
@@ -49,11 +49,13 @@ final class TripGpxNormalizerTest extends TestCase
         self::assertIsArray($result);
         self::assertSame('trip-abc', $result['trackName']);
         self::assertArrayHasKey('segments', $result);
-        self::assertCount(2, $result['segments']);
-        self::assertCount(2, $result['segments'][0]);
-        self::assertCount(2, $result['segments'][1]);
-        self::assertSame(50.629, $result['segments'][0][0]['lat']);
-        self::assertSame(50.800, $result['segments'][1][1]['lat']);
+        /** @var list<list<array{lat: float, lon: float, ele: float|null}>> $segments */
+        $segments = $result['segments'];
+        self::assertCount(2, $segments);
+        self::assertCount(2, $segments[0]);
+        self::assertCount(2, $segments[1]);
+        self::assertSame(50.629, $segments[0][0]['lat']);
+        self::assertSame(50.800, $segments[1][1]['lat']);
     }
 
     #[Test]
@@ -80,22 +82,24 @@ final class TripGpxNormalizerTest extends TestCase
         $stage2->addAccommodation(new Accommodation('Hotel', 'hotel', 50.780, 3.190, 80.0, 120.0, false));
 
         $repository = $this->createMock(TripRequestRepositoryInterface::class);
-        $repository->method('getStages')->with('trip-abc')->willReturn([$stage1, $stage2]);
+        $repository->method('getStages')->willReturn([$stage1, $stage2]);
 
         $normalizer = new TripGpxNormalizer($repository);
         $trip = new Trip('trip-abc');
         $result = $normalizer->normalize($trip, 'gpx');
 
-        self::assertCount(2, $result['waypoints']);
-        self::assertSame('Bakery', $result['waypoints'][0]['name']);
-        self::assertSame('Hotel', $result['waypoints'][1]['name']);
+        /** @var list<array{name: string, lat: float, lon: float}> $waypoints */
+        $waypoints = $result['waypoints'];
+        self::assertCount(2, $waypoints);
+        self::assertSame('Bakery', $waypoints[0]['name']);
+        self::assertSame('Hotel', $waypoints[1]['name']);
     }
 
     #[Test]
     public function normalizeWithEmptyStagesReturnsEmptySegmentsAndWaypoints(): void
     {
         $repository = $this->createMock(TripRequestRepositoryInterface::class);
-        $repository->method('getStages')->with('trip-abc')->willReturn([]);
+        $repository->method('getStages')->willReturn([]);
 
         $normalizer = new TripGpxNormalizer($repository);
         $trip = new Trip('trip-abc');
@@ -108,7 +112,7 @@ final class TripGpxNormalizerTest extends TestCase
     #[Test]
     public function supportsOnlyTripInGpxFormat(): void
     {
-        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $normalizer = new TripGpxNormalizer($repository);
 
         $trip = new Trip('trip-abc');
@@ -122,10 +126,10 @@ final class TripGpxNormalizerTest extends TestCase
     #[Test]
     public function normalizeWithInvalidDataThrowsException(): void
     {
-        $repository = $this->createMock(TripRequestRepositoryInterface::class);
+        $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $normalizer = new TripGpxNormalizer($repository);
 
         $this->expectException(\InvalidArgumentException::class);
-        $normalizer->normalize('not a trip', 'gpx'); // @phpstan-ignore argument.type
+        $normalizer->normalize('not a trip', 'gpx');
     }
 }

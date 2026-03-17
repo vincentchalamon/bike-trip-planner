@@ -27,7 +27,7 @@ final readonly class TripGpxProvider implements ProviderInterface
     }
 
     /**
-     * @param array{id?: string} $uriVariables
+     * @param array{id?: string}   $uriVariables
      * @param array<string, mixed> $context
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): Trip

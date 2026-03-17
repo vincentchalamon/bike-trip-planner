@@ -49,7 +49,7 @@ final readonly class GpxEncoder implements EncoderInterface
         $xml->writeElement('name', $data['trackName']);
 
         /** @var list<list<array{lat: float, lon: float, ele: float}>> $segments */
-        $segments = isset($data['segments']) ? $data['segments'] : [$data['points'] ?? []];
+        $segments = $data['segments'] ?? [$data['points'] ?? []];
 
         foreach ($segments as $segmentPoints) {
             $xml->startElement('trkseg');
