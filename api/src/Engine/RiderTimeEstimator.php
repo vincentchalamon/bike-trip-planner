@@ -13,9 +13,13 @@ namespace App\Engine;
  *
  * Effective speed formula: max(5, baseSpeed - 2 * (elevationGainM / 500))
  *
+ * Breaks are added on top of riding time:
+ * - Short break: 10 min per 2 full riding hours
+ * - Lunch break: 1 h if noon falls within the riding window (departureHour < 12 < departureHour + ridingDuration)
+ *
  * The estimated passage time at any distance marker is then:
- *   estimatedTime = departureHour + (distanceKm / totalDistanceKm) * (totalDistanceKm / effectiveSpeed)
- *                 = departureHour + distanceKm / effectiveSpeed
+ *   totalDuration = ridingDuration + breakDuration
+ *   estimatedTime = departureHour + (distanceKm / totalDistanceKm) * totalDuration
  */
 final readonly class RiderTimeEstimator implements RiderTimeEstimatorInterface
 {
@@ -38,8 +42,9 @@ final readonly class RiderTimeEstimator implements RiderTimeEstimatorInterface
 
         $ratio = min(1.0, max(0.0, $distanceKm / $totalDistanceKm));
         $ridingDuration = $this->estimateRidingDuration($totalDistanceKm, $averageSpeedKmh, $elevationGainM);
+        $breakDuration = $this->computeBreakDuration($ridingDuration, $departureHour);
 
-        return $departureHour + $ratio * $ridingDuration;
+        return $departureHour + $ratio * ($ridingDuration + $breakDuration);
     }
 
     public function estimateRidingDuration(
@@ -54,6 +59,20 @@ final readonly class RiderTimeEstimator implements RiderTimeEstimatorInterface
         $effectiveSpeed = $this->computeEffectiveSpeed($averageSpeedKmh, $elevationGainM);
 
         return $distanceKm / $effectiveSpeed;
+    }
+
+    /**
+     * Computes total break duration for a stage.
+     *
+     * - Short break: 10 min per 2 full riding hours
+     * - Lunch break: 1 h if noon falls within the riding window
+     */
+    private function computeBreakDuration(float $ridingDurationH, int $departureHour): float
+    {
+        $shortBreaks = floor($ridingDurationH / 2.0) * (10.0 / 60.0);
+        $noonBreak = ($departureHour < 12 && $departureHour + $ridingDurationH > 12) ? 1.0 : 0.0;
+
+        return $shortBreaks + $noonBreak;
     }
 
     /**

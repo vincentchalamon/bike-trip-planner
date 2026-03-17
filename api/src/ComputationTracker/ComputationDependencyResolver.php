@@ -18,6 +18,8 @@ final class ComputationDependencyResolver
         'maxDistancePerDay' => [ComputationName::STAGES],    // cascade subtree
         'startDate' => [ComputationName::WEATHER, ComputationName::CALENDAR],
         'ebikeMode' => [ComputationName::TERRAIN],           // re-analyze only
+        'departureHour' => [ComputationName::TERRAIN],       // affects sunset arrival estimate
+        'averageSpeed' => [ComputationName::TERRAIN],        // affects sunset arrival estimate
         'enabledAccommodationTypes' => [ComputationName::ACCOMMODATIONS], // re-scan with new types
     ];
 
@@ -58,6 +60,8 @@ final class ComputationDependencyResolver
             'elevationPenalty' => $old->elevationPenalty !== $new->elevationPenalty,
             'maxDistancePerDay' => $old->maxDistancePerDay !== $new->maxDistancePerDay,
             'ebikeMode' => $old->ebikeMode !== $new->ebikeMode,
+            'departureHour' => $old->departureHour !== $new->departureHour,
+            'averageSpeed' => $old->averageSpeed !== $new->averageSpeed,
             'enabledAccommodationTypes' => $this->accommodationTypesChanged($old->enabledAccommodationTypes, $new->enabledAccommodationTypes),
             default => false,
         };

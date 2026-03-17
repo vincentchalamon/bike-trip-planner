@@ -4,7 +4,12 @@
  * Formula (adapted from Naismith's rule):
  *   effectiveSpeed = max(5, baseSpeed - 2 * (elevationGainM / 500))
  *   ridingDuration = distanceKm / effectiveSpeed   (hours)
- *   arrivalDecimalHour = departureHour + ridingDuration
+ *
+ * Breaks are added on top of riding time:
+ *   - Short break: 10 min per 2 full riding hours
+ *   - Lunch break: 1 h if noon falls within the riding window
+ *
+ *   arrivalDecimalHour = departureHour + ridingDuration + breakDuration
  *
  * The elevation penalty (-2 km/h per 500m D+) mirrors the backend RiderTimeEstimator.
  */
@@ -21,6 +26,22 @@ export function computeEffectiveSpeed(
 ): number {
   const penalty = ELEVATION_PENALTY_PER_500M * (elevationGainM / 500);
   return Math.max(MIN_EFFECTIVE_SPEED_KMH, baseSpeedKmh - penalty);
+}
+
+/**
+ * Computes total break duration in decimal hours for a stage.
+ *
+ * - Short break: 10 min per 2 full riding hours
+ * - Lunch break: 1 h if noon falls within the riding window
+ */
+export function computeBreakDuration(
+  ridingDurationH: number,
+  departureHour: number,
+): number {
+  const shortBreaks = Math.floor(ridingDurationH / 2) * (10 / 60);
+  const noonBreak =
+    departureHour < 12 && departureHour + ridingDurationH > 12 ? 1.0 : 0.0;
+  return shortBreaks + noonBreak;
 }
 
 /**
@@ -63,13 +84,14 @@ export function computeStageTimes(
   averageSpeedKmh: number,
   elevationGainM: number,
 ): { departureDecimal: number; arrivalDecimal: number } {
-  const duration = estimateRidingDuration(
+  const ridingDuration = estimateRidingDuration(
     distanceKm,
     averageSpeedKmh,
     elevationGainM,
   );
+  const breakDuration = computeBreakDuration(ridingDuration, departureHour);
   return {
     departureDecimal: departureHour,
-    arrivalDecimal: departureHour + duration,
+    arrivalDecimal: departureHour + ridingDuration + breakDuration,
   };
 }
