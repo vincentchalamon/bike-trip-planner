@@ -13,9 +13,11 @@ import { Timeline } from "@/components/timeline";
 import { ConfigPanel } from "@/components/config-panel";
 import { TextExportButton } from "@/components/text-export-button";
 import { MapPanel } from "@/components/Map";
+import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { Button } from "@/components/ui/button";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useUiStore } from "@/store/ui-store";
+import { useSwipe } from "@/hooks/use-swipe";
 import {
   MEAL_COST_MIN,
   MEAL_COST_MAX,
@@ -67,6 +69,8 @@ export function TripPlanner() {
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
   const focusedMapStageIndex = useUiStore((s) => s.focusedMapStageIndex);
   const setFocusedMapStageIndex = useUiStore((s) => s.setFocusedMapStageIndex);
+  const viewMode = useUiStore((s) => s.viewMode);
+  const setViewMode = useUiStore((s) => s.setViewMode);
   const activeStages = useMemo(
     () => stages.filter((s) => !s.isRestDay),
     [stages],
@@ -95,6 +99,16 @@ export function TripPlanner() {
     return () =>
       window.removeEventListener("__test_set_focused_map_stage", handler);
   }, [setFocusedMapStageIndex]);
+
+  // Mobile swipe: left → map, right → timeline (cycle: timeline ↔ map on mobile)
+  const swipeHandlers = useSwipe({
+    onSwipeLeft: useCallback(() => {
+      if (viewMode === "timeline") setViewMode("map");
+    }, [viewMode, setViewMode]),
+    onSwipeRight: useCallback(() => {
+      if (viewMode === "map") setViewMode("timeline");
+    }, [viewMode, setViewMode]),
+  });
 
   const estimatedBudget = useMemo(() => {
     const nonRestStages = stages.filter((s) => !s.isRestDay);
@@ -234,6 +248,13 @@ export function TripPlanner() {
             )}
           </TripHeader>
 
+          {/* View mode toggle — only relevant when a map is available */}
+          {hasMap && (
+            <div className="flex justify-end">
+              <ViewModeToggle />
+            </div>
+          )}
+
           {/* Sentinel — marks the natural position of the progress bar in the
               flow. The sticky bar becomes visible once this exits the viewport. */}
           <div ref={sentinelRef} aria-hidden="true" />
@@ -255,41 +276,56 @@ export function TripPlanner() {
           </div>
 
           {/* Split view: timeline (left) + map (right, sticky) */}
+          {/* Swipe handlers enable left/right swipe between map and timeline on mobile */}
           <div
             className={[
               "flex gap-8",
-              hasMap ? "lg:flex-row flex-col" : "",
+              hasMap && viewMode === "split" ? "lg:flex-row flex-col" : "",
             ].join(" ")}
+            {...(hasMap ? swipeHandlers : {})}
+            data-testid="split-view-container"
           >
-            {/* Timeline */}
-            <div
-              id="timeline"
-              className={hasMap ? "lg:flex-1 lg:min-w-0" : "w-full"}
-            >
-              <Timeline
-                stages={stages}
-                startDate={startDate}
-                isProcessing={isProcessing}
-                onDeleteStage={handleDeleteStage}
-                onAddStage={handleAddStage}
-                onDistanceChange={handleDistanceChange}
-                onAddAccommodation={handleAddAccommodation}
-                onUpdateAccommodation={updateLocalAccommodation}
-                onRemoveAccommodation={removeLocalAccommodation}
-                onSelectAccommodation={handleSelectAccommodation}
-                onDeselectAccommodation={handleDeselectAccommodation}
-                onExpandAccommodationRadius={handleExpandAccommodationRadius}
-                onInsertRestDay={handleInsertRestDay}
-                newAccKey={newAccKey}
-                onClearNewAcc={clearNewAccKey}
-              />
-            </div>
+            {/* Timeline — hidden in "map" mode (only when a map is available) */}
+            {(!hasMap || viewMode === "timeline" || viewMode === "split") && (
+              <div
+                id="timeline"
+                className={
+                  hasMap && viewMode === "split"
+                    ? "lg:flex-1 lg:min-w-0"
+                    : "w-full"
+                }
+              >
+                <Timeline
+                  stages={stages}
+                  startDate={startDate}
+                  isProcessing={isProcessing}
+                  onDeleteStage={handleDeleteStage}
+                  onAddStage={handleAddStage}
+                  onDistanceChange={handleDistanceChange}
+                  onAddAccommodation={handleAddAccommodation}
+                  onUpdateAccommodation={updateLocalAccommodation}
+                  onRemoveAccommodation={removeLocalAccommodation}
+                  onSelectAccommodation={handleSelectAccommodation}
+                  onDeselectAccommodation={handleDeselectAccommodation}
+                  onExpandAccommodationRadius={handleExpandAccommodationRadius}
+                  onInsertRestDay={handleInsertRestDay}
+                  newAccKey={newAccKey}
+                  onClearNewAcc={clearNewAccKey}
+                />
+              </div>
+            )}
 
-            {/* Map panel — sticky on desktop, below timeline on mobile */}
-            {hasMap && (
-              <div className="lg:w-[520px] lg:shrink-0">
+            {/* Map panel — hidden in "timeline" mode; sticky on desktop */}
+            {hasMap && (viewMode === "map" || viewMode === "split") && (
+              <div
+                className={
+                  viewMode === "split" ? "lg:w-[520px] lg:shrink-0" : "w-full"
+                }
+              >
                 <div
-                  className="lg:sticky lg:top-4"
+                  className={
+                    viewMode === "split" ? "lg:sticky lg:top-4" : "sticky top-4"
+                  }
                   style={{ height: "calc(100vh - 2rem)" }}
                   data-testid="map-container"
                 >

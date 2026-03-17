@@ -210,6 +210,12 @@
     "totalElevation": "Dénivelé total",
     "budgetNote": "Budget estimé par étape : hébergement (sélectionné ou moyenne des propositions, hors dernière étape) + ~12–20€/repas × 3 repas/jour — sauf la 1ère étape (pas de petit-déjeuner) et la dernière (pas de dîner)."
   },
+  "viewMode": {
+    "ariaLabel": "Mode d'affichage",
+    "timeline": "Timeline seule",
+    "map": "Carte seule",
+    "split": "Vue partagée carte / timeline"
+  },
   "map": {
     "ariaLabel": "Carte interactive du voyage",
     "panelAriaLabel": "Panneau carte et profil altimétrique",

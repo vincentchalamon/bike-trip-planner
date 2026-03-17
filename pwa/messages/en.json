@@ -210,6 +210,12 @@
     "totalElevation": "Total elevation",
     "budgetNote": "Estimated budget per stage: accommodation (selected or average of suggestions, excluding last stage) + ~12–20€/meal × 3 meals/day — except the first stage (no breakfast) and the last (no dinner)."
   },
+  "viewMode": {
+    "ariaLabel": "View mode",
+    "timeline": "Timeline only",
+    "map": "Map only",
+    "split": "Split view: map and timeline"
+  },
   "map": {
     "ariaLabel": "Interactive trip map",
     "panelAriaLabel": "Map and elevation profile panel",
