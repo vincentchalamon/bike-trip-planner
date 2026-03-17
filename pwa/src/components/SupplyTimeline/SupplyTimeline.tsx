@@ -36,7 +36,7 @@ function clusterMarkers(
   markers: SupplyMarkerData[],
   stageDistance: number,
 ): ClusteredMarker[] {
-  if (markers.length === 0) return [];
+  if (markers.length === 0 || stageDistance <= 0) return [];
 
   const sorted = [...markers].sort(
     (a, b) => a.distanceFromStart - b.distanceFromStart,
