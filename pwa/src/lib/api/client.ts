@@ -100,12 +100,6 @@ export interface ScrapedData {
   priceMax: number | null;
 }
 
-/** Request body for the POI waypoint insertion endpoint. */
-interface StagePoiWaypointRequestBody {
-  waypointLat: number;
-  waypointLon: number;
-}
-
 /**
  * Trigger a route segment recalculation with a POI waypoint insertion.
  * Returns `true` on success, `false` when the trip is not found or the request fails.
@@ -116,16 +110,14 @@ export async function addPoiWaypointToRoute(
   waypointLat: number,
   waypointLon: number,
 ): Promise<boolean> {
-  const body: StagePoiWaypointRequestBody = { waypointLat, waypointLon };
-  const res = await apiFetch(
-    `/trips/${encodeURIComponent(tripId)}/stages/${stageIndex}/poi-waypoint`,
+  const { response } = await apiClient.POST(
+    "/trips/{tripId}/stages/{index}/poi-waypoint",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/ld+json" },
-      body: JSON.stringify(body),
+      params: { path: { tripId, index: String(stageIndex) } },
+      body: { waypointLat, waypointLon },
     },
   );
-  return res.ok;
+  return response.ok;
 }
 
 /**

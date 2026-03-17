@@ -112,6 +112,26 @@ export interface paths {
         patch: operations["api_trips_tripIdstages_indexmove_patch"];
         trace?: never;
     };
+    "/trips/{tripId}/stages/{index}/poi-waypoint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a cultural POI as a waypoint to a stage, triggering async route recalculation via Valhalla.
+         * @description Creates a Stage resource.
+         */
+        post: operations["api_trips_tripIdstages_indexpoi-waypoint_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{tripId}/stages/{index}/rest-day": {
         parameters: {
             query?: never;
@@ -179,7 +199,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Download the full trip as a single GPX file containing all stages.
+         * @description Retrieves a Trip resource.
+         */
+        get: operations["api_trips_id_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -401,6 +425,12 @@ export interface components {
             lon?: number;
             distanceFromStart?: number | null;
         };
+        "Stage.StagePoiWaypointRequest": {
+            /** @description POI latitude to insert as waypoint. */
+            waypointLat: number | null;
+            /** @description POI longitude to insert as waypoint. */
+            waypointLon: number | null;
+        };
         "Stage.StageRequest": {
             position?: number | null;
             startPoint?: components["schemas"]["Coordinate"] | null;
@@ -578,6 +608,13 @@ export interface components {
              *     ]
              */
             enabledAccommodationTypes: string[];
+        };
+        "Trip.gpx": {
+            id?: string;
+            /** @description Map of ComputationName->value to status string */
+            computationStatus?: {
+                [key: string]: string;
+            };
         };
         "Trip.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
@@ -991,6 +1028,58 @@ export interface operations {
             };
         };
     };
+    "api_trips_tripIdstages_indexpoi-waypoint_post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stage identifier */
+                tripId: string;
+                /** @description Stage identifier */
+                index: string;
+            };
+            cookie?: never;
+        };
+        /** @description The new Stage resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["Stage.StagePoiWaypointRequest"];
+            };
+        };
+        responses: {
+            /** @description Stage resource created */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Stage.StageResponse.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
     "api_trips_tripIdstages_indexrest-day_post": {
         parameters: {
             query?: never;
@@ -1164,6 +1253,40 @@ export interface operations {
                     "application/json": {
                         error?: string;
                     };
+                };
+            };
+        };
+    };
+    api_trips_id_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Trip identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trip resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/gpx+xml": components["schemas"]["Trip.gpx"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
