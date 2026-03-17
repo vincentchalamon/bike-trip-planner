@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { ArrowUp, ArrowDown, Bike, Mountain, Info } from "lucide-react";
+import { ArrowUp, ArrowDown, Bike, Mountain, Info, Wallet } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { weatherIconMap, DefaultWeatherIcon } from "@/lib/weather-icons";
 import type { WeatherData } from "@/lib/validation/schemas";
@@ -11,6 +11,8 @@ interface TripSummaryProps {
   weather: WeatherData | null;
   isWeatherLoading?: boolean;
   isProcessing?: boolean;
+  estimatedBudgetMin?: number;
+  estimatedBudgetMax?: number;
 }
 
 export function TripSummary({
@@ -20,6 +22,8 @@ export function TripSummary({
   weather,
   isWeatherLoading,
   isProcessing,
+  estimatedBudgetMin,
+  estimatedBudgetMax,
 }: TripSummaryProps) {
   const t = useTranslations("tripSummary");
   const showSkeleton =
@@ -77,6 +81,17 @@ export function TripSummary({
             <Skeleton className="w-32 h-4" />
           ) : null}
         </div>
+        {estimatedBudgetMin !== undefined &&
+          estimatedBudgetMax !== undefined &&
+          (estimatedBudgetMin > 0 || estimatedBudgetMax > 0) && (
+            <div className="flex items-center gap-1.5">
+              <Wallet className="h-4 w-4 text-green-600" />
+              <span data-testid="estimated-budget">
+                {t("estimatedBudget")} {Math.round(estimatedBudgetMin)}€ —{" "}
+                {Math.round(estimatedBudgetMax)}€
+              </span>
+            </div>
+          )}
       </div>
       <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground/70">
         <Info className="h-3 w-3" />

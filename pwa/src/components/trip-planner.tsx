@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Settings } from "lucide-react";
 import { MagicLinkInput } from "@/components/magic-link-input";
@@ -58,6 +58,15 @@ export function TripPlanner() {
   } = useTripPlanner();
 
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
+
+  const estimatedBudgetMin = useMemo(
+    () => stages.reduce((sum, s) => sum + (s.selectedAccommodation?.estimatedPriceMin ?? 0), 0),
+    [stages],
+  );
+  const estimatedBudgetMax = useMemo(
+    () => stages.reduce((sum, s) => sum + (s.selectedAccommodation?.estimatedPriceMax ?? 0), 0),
+    [stages],
+  );
 
   // Show the sticky progress bar only when its natural position has scrolled
   // off the top of the viewport. An IntersectionObserver watches an invisible
@@ -139,6 +148,8 @@ export function TripPlanner() {
             weather={firstWeather}
             isWeatherLoading={isWeatherLoading}
             isProcessing={isProcessing}
+            estimatedBudgetMin={estimatedBudgetMin}
+            estimatedBudgetMax={estimatedBudgetMax}
           />
 
           {/* Header: title + locations + calendar */}

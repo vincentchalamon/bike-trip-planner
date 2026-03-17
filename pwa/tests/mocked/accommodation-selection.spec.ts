@@ -57,6 +57,12 @@ test.describe("Accommodation selection", () => {
     await expect(
       stageCard.getByRole("button", { name: "Désélectionner l'hébergement" }),
     ).toBeVisible();
+
+    // The estimated budget should appear in the trip summary
+    await expect(mockedPage.getByTestId("estimated-budget")).toBeVisible();
+    await expect(mockedPage.getByTestId("estimated-budget")).toContainText(
+      "65€",
+    );
   });
 
   test("selecting an accommodation keeps only that accommodation", async ({
@@ -114,6 +120,11 @@ test.describe("Accommodation selection", () => {
 
     // "Sélectionné" badge should be gone
     await expect(stageCard).not.toContainText("Sélectionné");
+
+    // The estimated budget should no longer be visible after deselection
+    await expect(
+      mockedPage.getByTestId("estimated-budget"),
+    ).not.toBeVisible();
   });
 
   test("no select button on last stage accommodation panel", async ({
