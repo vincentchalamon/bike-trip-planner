@@ -15,6 +15,7 @@
   "tripSummary": {
     "totalDistance": "Distance totale :",
     "totalElevation": "Dénivelé total :",
+    "estimatedBudget": "Budget estimé :",
     "disclaimer": "Les données détectées automatiquement peuvent contenir des erreurs.",
     "downloadGpx": "Télécharger le GPX complet",
     "downloadFailed": "Le téléchargement a échoué. Veuillez réessayer."

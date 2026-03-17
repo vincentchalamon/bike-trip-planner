@@ -15,6 +15,7 @@
   "tripSummary": {
     "totalDistance": "Total distance:",
     "totalElevation": "Total elevation:",
+    "estimatedBudget": "Estimated budget:",
     "disclaimer": "Automatically detected data may contain errors.",
     "downloadGpx": "Download full trip GPX",
     "downloadFailed": "Download failed. Please try again."

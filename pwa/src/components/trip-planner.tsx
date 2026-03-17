@@ -139,6 +139,16 @@ export function TripPlanner() {
             weather={firstWeather}
             isWeatherLoading={isWeatherLoading}
             isProcessing={isProcessing}
+            estimatedBudgetMin={stages.reduce(
+              (sum, s) =>
+                sum + (s.selectedAccommodation?.estimatedPriceMin ?? 0),
+              0,
+            )}
+            estimatedBudgetMax={stages.reduce(
+              (sum, s) =>
+                sum + (s.selectedAccommodation?.estimatedPriceMax ?? 0),
+              0,
+            )}
           />
 
           {/* Header: title + locations + calendar */}
