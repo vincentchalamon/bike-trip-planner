@@ -145,7 +145,9 @@ export function TripPlanner() {
   // off the top of the viewport. An IntersectionObserver watches an invisible
   // sentinel div placed where the bar would normally sit.
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const fixedHeaderRef = useRef<HTMLDivElement>(null);
   const [isScrolledPast, setIsScrolledPast] = useState(false);
+  const [fixedHeaderHeight, setFixedHeaderHeight] = useState(0);
   const hasTripData = !!trip;
   const scrollDirRef = useRef<"down" | "up">("down");
   const lastScrollYRef = useRef(0);
@@ -177,6 +179,17 @@ export function TripPlanner() {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [hasTripData]);
+
+  // Track the fixed header height so the sticky map can offset accordingly.
+  useEffect(() => {
+    const el = fixedHeaderRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setFixedHeaderHeight(entry?.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative">
@@ -249,6 +262,10 @@ export function TripPlanner() {
             )}
           </TripHeader>
 
+          {/* Sentinel — marks the natural position of the progress bar in the
+              flow. The sticky bar becomes visible once this exits the viewport. */}
+          <div ref={sentinelRef} aria-hidden="true" />
+
           {/* View mode toggle — only relevant when a map is available */}
           {hasMap && (
             <div className="flex justify-end">
@@ -256,23 +273,30 @@ export function TripPlanner() {
             </div>
           )}
 
-          {/* Sentinel — marks the natural position of the progress bar in the
-              flow. The sticky bar becomes visible once this exits the viewport. */}
-          <div ref={sentinelRef} aria-hidden="true" />
-
-          {/* Segmented progress bar — fixed, visible only after scrolling past
-              the sentinel so it does not duplicate the timeline start.
-              Fixed positioning avoids the sticky-layout glitch where the bar
-              briefly appears mid-content before snapping to the top. */}
+          {/* Fixed header — visible after scrolling past the sentinel.
+              Contains the segmented progress bar (timeline/split only) and
+              the view mode toggle (all modes), so both remain accessible
+              while the user is deep in the timeline. */}
           <div
+            ref={fixedHeaderRef}
             className={[
-              "fixed top-0 left-0 right-0 z-20 bg-background overflow-hidden",
+              "fixed top-0 left-0 right-0 z-20 bg-background border-b border-border",
               "transition-transform duration-200",
               isScrolledPast ? "" : "-translate-y-full pointer-events-none",
             ].join(" ")}
           >
-            <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-2">
-              <StageProgressBar />
+            <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-2 flex items-center gap-2">
+              {/* Progress bar — hidden in map-only mode */}
+              {(!hasMap || viewMode !== "map") && (
+                <div className="flex-1 min-w-0">
+                  <StageProgressBar />
+                </div>
+              )}
+              {hasMap && (
+                <div className={viewMode !== "map" ? "shrink-0" : "ml-auto"}>
+                  <ViewModeToggle testId="view-mode-toggle-sticky" />
+                </div>
+              )}
             </div>
           </div>
 
@@ -326,9 +350,12 @@ export function TripPlanner() {
               >
                 <div
                   className={
-                    viewMode === "split" ? "lg:sticky lg:top-4" : "sticky top-4"
+                    viewMode === "split" ? "lg:sticky" : "sticky"
                   }
-                  style={{ height: "calc(100vh - 2rem)" }}
+                  style={{
+                    top: isScrolledPast ? `${fixedHeaderHeight + 8}px` : "1rem",
+                    height: `calc(100vh - ${isScrolledPast ? fixedHeaderHeight + 8 : 16}px)`,
+                  }}
                   data-testid="map-container"
                 >
                   <MapPanel
