@@ -4,6 +4,7 @@ import {
   stagesComputedEvent,
   culturalPoiAlertsEvent,
   routeSegmentRecalculatedEvent,
+  terrainAlertsEvent,
   tripCompleteEvent,
 } from "../fixtures/mock-data";
 
@@ -70,5 +71,25 @@ test.describe("Cultural POI suggestions", () => {
 
     // Stage 1 distance should be updated (75.2 km from mock event)
     await expect(mockedPage.getByTestId("stage-card-1")).toContainText("75.2");
+  });
+});
+
+test.describe("Cultural POI — negative cases", () => {
+  test("non-cultural alerts do not show add-to-itinerary button", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      terrainAlertsEvent(),
+      tripCompleteEvent(),
+    ]);
+
+    await expect(
+      mockedPage.getByTestId("add-poi-to-itinerary"),
+    ).not.toBeVisible();
   });
 });
