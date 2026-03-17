@@ -389,13 +389,16 @@ final class ScanPoisHandlerTest extends TestCase
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturn([
-            0 => [
-                ['name' => 'Bistrot A', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
-                ['name' => 'Bistrot B', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2001],
-                ['name' => 'Remote Bistrot', 'category' => 'restaurant', 'lat' => 48.5, 'lon' => 2.5],
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
+            [
+                0 => [
+                    ['name' => 'Bistrot A', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
+                    ['name' => 'Bistrot B', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2001],
+                    ['name' => 'Remote Bistrot', 'category' => 'restaurant', 'lat' => 48.5, 'lon' => 2.5],
+                ],
             ],
-        ]);
+            [],
+        );
 
         [$queryBuilder, $riderTimeEstimator] = [$this->createStub(QueryBuilderInterface::class), $this->createStub(RiderTimeEstimatorInterface::class)];
         $queryBuilder->method('buildPoiQuery')->willReturn('query');
