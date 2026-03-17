@@ -298,8 +298,8 @@ final class StageSelectAccommodationTest extends ApiTestCase
         self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
             'json' => [
-                'selectedAccommodationLat' => 99.0,
-                'selectedAccommodationLon' => 99.0,
+                'selectedAccommodationLat' => 45.0,
+                'selectedAccommodationLon' => 5.0,
             ],
         ]);
 

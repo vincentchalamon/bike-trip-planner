@@ -599,8 +599,16 @@ export function useTripPlanner() {
         if (response.status === 409) {
           useTripStore.getState().setStages([...stages]);
           toast.info(t("errors.accommodationStale"));
-          await scanAccommodations(tripId, DEFAULT_ACCOMMODATION_RADIUS_KM, stageIndex);
-          setAccommodationScanning(true);
+          const ok = await scanAccommodations(
+            tripId,
+            DEFAULT_ACCOMMODATION_RADIUS_KM,
+            stageIndex,
+          );
+          if (ok) {
+            setAccommodationScanning(true);
+          } else {
+            toast.error(t("errors.unexpectedError"));
+          }
         } else {
           const apiError = parseApiError(response.status, error);
           toast.error(apiError.message);
