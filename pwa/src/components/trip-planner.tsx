@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Settings } from "lucide-react";
 import { MagicLinkInput } from "@/components/magic-link-input";
@@ -139,15 +139,23 @@ export function TripPlanner() {
             weather={firstWeather}
             isWeatherLoading={isWeatherLoading}
             isProcessing={isProcessing}
-            estimatedBudgetMin={stages.reduce(
-              (sum, s) =>
-                sum + (s.selectedAccommodation?.estimatedPriceMin ?? 0),
-              0,
+            estimatedBudgetMin={useMemo(
+              () =>
+                stages.reduce(
+                  (sum, s) =>
+                    sum + (s.selectedAccommodation?.estimatedPriceMin ?? 0),
+                  0,
+                ),
+              [stages],
             )}
-            estimatedBudgetMax={stages.reduce(
-              (sum, s) =>
-                sum + (s.selectedAccommodation?.estimatedPriceMax ?? 0),
-              0,
+            estimatedBudgetMax={useMemo(
+              () =>
+                stages.reduce(
+                  (sum, s) =>
+                    sum + (s.selectedAccommodation?.estimatedPriceMax ?? 0),
+                  0,
+                ),
+              [stages],
             )}
           />
 
