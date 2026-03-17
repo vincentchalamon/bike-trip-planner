@@ -9,7 +9,13 @@ use Symfony\Component\Serializer\Encoder\EncoderInterface;
 final readonly class GpxEncoder implements EncoderInterface
 {
     /**
-     * @param array{trackName: string, points: list<array{lat: float, lon: float, ele: float}>, waypoints: list<array{lat: float, lon: float, name: string, symbol: string, type: string}>} $data
+     * Encodes trip data to GPX format.
+     *
+     * Supports two shapes:
+     * - Single-segment: `{trackName, points, waypoints}` — one `<trkseg>` per track.
+     * - Multi-segment:  `{trackName, segments, waypoints}` — multiple `<trkseg>` (one per stage).
+     *
+     * @param array{trackName: string, points?: list<array{lat: float, lon: float, ele: float}>, segments?: list<list<array{lat: float, lon: float, ele: float}>>, waypoints: list<array{lat: float, lon: float, name: string, symbol: string, type: string}>} $data
      */
     public function encode(mixed $data, string $format, array $context = []): string
     {
@@ -42,18 +48,24 @@ final readonly class GpxEncoder implements EncoderInterface
         $xml->startElement('trk');
         $xml->writeElement('name', $data['trackName']);
 
-        $xml->startElement('trkseg');
+        /** @var list<list<array{lat: float, lon: float, ele: float}>> $segments */
+        $segments = $data['segments'] ?? [$data['points'] ?? []];
 
-        /** @var array{lat: float, lon: float, ele: float} $point */
-        foreach ($data['points'] as $point) {
-            $xml->startElement('trkpt');
-            $xml->writeAttribute('lat', (string) $point['lat']);
-            $xml->writeAttribute('lon', (string) $point['lon']);
-            $xml->writeElement('ele', (string) $point['ele']);
-            $xml->endElement(); // trkpt
+        foreach ($segments as $segmentPoints) {
+            $xml->startElement('trkseg');
+
+            /** @var array{lat: float, lon: float, ele: float} $point */
+            foreach ($segmentPoints as $point) {
+                $xml->startElement('trkpt');
+                $xml->writeAttribute('lat', (string) $point['lat']);
+                $xml->writeAttribute('lon', (string) $point['lon']);
+                $xml->writeElement('ele', (string) $point['ele']);
+                $xml->endElement(); // trkpt
+            }
+
+            $xml->endElement(); // trkseg
         }
 
-        $xml->endElement(); // trkseg
         $xml->endElement(); // trk
         $xml->endElement(); // gpx
 

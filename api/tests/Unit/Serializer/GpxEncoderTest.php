@@ -77,6 +77,33 @@ final class GpxEncoderTest extends TestCase
     }
 
     #[Test]
+    public function encodeWithSegmentsProducesMultipleTrksegs(): void
+    {
+        $encoder = new GpxEncoder();
+        $data = [
+            'trackName' => 'Full Trip',
+            'segments' => [
+                [
+                    ['lat' => 50.629, 'lon' => 3.057, 'ele' => 42.0],
+                    ['lat' => 50.700, 'lon' => 3.100, 'ele' => 50.0],
+                ],
+                [
+                    ['lat' => 50.700, 'lon' => 3.100, 'ele' => 50.0],
+                    ['lat' => 50.800, 'lon' => 3.200, 'ele' => 60.0],
+                ],
+            ],
+            'waypoints' => [],
+        ];
+
+        $xml = $encoder->encode($data, 'gpx');
+
+        $doc = new \DOMDocument();
+        self::assertTrue($doc->loadXML($xml));
+        self::assertSame(2, $doc->getElementsByTagName('trkseg')->length);
+        self::assertSame(1, $doc->getElementsByTagName('trk')->length);
+    }
+
+    #[Test]
     public function supportsGpxFormatOnly(): void
     {
         $encoder = new GpxEncoder();

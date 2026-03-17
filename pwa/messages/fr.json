@@ -15,7 +15,9 @@
   "tripSummary": {
     "totalDistance": "Distance totale :",
     "totalElevation": "Dénivelé total :",
-    "disclaimer": "Les données détectées automatiquement peuvent contenir des erreurs."
+    "disclaimer": "Les données détectées automatiquement peuvent contenir des erreurs.",
+    "downloadGpx": "Télécharger le GPX complet",
+    "downloadFailed": "Le téléchargement a échoué. Veuillez réessayer."
   },
   "tripTitle": {
     "fallback": "Mon voyage",
