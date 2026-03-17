@@ -24,6 +24,29 @@ function haversineKm(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/** Binary search for the point with the closest distanceKm to target. */
+function findClosestPoint<T extends { distanceKm: number }>(
+  points: T[],
+  target: number,
+): T {
+  let lo = 0;
+  let hi = points.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (points[mid]!.distanceKm < target) lo = mid + 1;
+    else hi = mid;
+  }
+  // Check lo-1 as well in case it's closer
+  if (
+    lo > 0 &&
+    Math.abs(points[lo - 1]!.distanceKm - target) <
+      Math.abs(points[lo]!.distanceKm - target)
+  ) {
+    return points[lo - 1]!;
+  }
+  return points[lo]!;
+}
+
 interface ProfilePoint {
   distanceKm: number;
   ele: number;
@@ -193,15 +216,7 @@ export const ElevationProfile = memo(function ElevationProfile({
       const svgX = ((e.clientX - rect.left) / rect.width) * VW;
       const distKm = ((svgX - PAD_L) / (VW - PAD_L - PAD_R)) * maxDist;
 
-      let best = points[0]!;
-      let bestDiff = Math.abs(best.distanceKm - distKm);
-      for (const pt of points) {
-        const diff = Math.abs(pt.distanceKm - distKm);
-        if (diff < bestDiff) {
-          bestDiff = diff;
-          best = pt;
-        }
-      }
+      const best = findClosestPoint(points, distKm);
       onHover(best.coordIndex, best.stageIndex);
     },
     [points, maxDist, onHover],
