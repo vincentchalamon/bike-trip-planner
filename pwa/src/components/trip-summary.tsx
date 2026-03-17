@@ -87,8 +87,8 @@ export function TripSummary({
             <div className="flex items-center gap-1.5">
               <Wallet className="h-4 w-4 text-green-600" />
               <span data-testid="estimated-budget">
-                {t("estimatedBudget")}{" "}
-                {Math.round(estimatedBudgetMin)}€ — {Math.round(estimatedBudgetMax)}€
+                {t("estimatedBudget")} {Math.round(estimatedBudgetMin)}€ —{" "}
+                {Math.round(estimatedBudgetMax)}€
               </span>
             </div>
           )}
