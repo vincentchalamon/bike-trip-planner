@@ -128,10 +128,10 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
-| 1 | [#30](https://github.com/vincentchalamon/bike-trip-planner/issues/30) | Carte interactive + profil altimétrique | XL | 5 | — |
-| 2 | [#31](https://github.com/vincentchalamon/bike-trip-planner/issues/31) | Split view carte / timeline | M | 1 | [#30](https://github.com/vincentchalamon/bike-trip-planner/issues/30) |
-| 3 | [#34](https://github.com/vincentchalamon/bike-trip-planner/issues/34) | Timeline ravitaillement | L | 2 | [#58](https://github.com/vincentchalamon/bike-trip-planner/issues/58) |
-| 4 | [#35](https://github.com/vincentchalamon/bike-trip-planner/issues/35) | Points d'intérêt culturels | M | 1 | — |
+| 1 | [#30](https://github.com/vincentchalamon/bike-trip-planner/issues/30) | Carte interactive + profil altimétrique | XL | [#187](https://github.com/vincentchalamon/bike-trip-planner/pull/187) `feature/30` | — |
+| 2 | [#31](https://github.com/vincentchalamon/bike-trip-planner/issues/31) | Split view carte / timeline | M | [#190](https://github.com/vincentchalamon/bike-trip-planner/pull/190) `feature/31` | [#30](https://github.com/vincentchalamon/bike-trip-planner/issues/30) |
+| 3 | [#34](https://github.com/vincentchalamon/bike-trip-planner/issues/34) | Timeline ravitaillement | L | [#189](https://github.com/vincentchalamon/bike-trip-planner/pull/189) `feature/34` | [#58](https://github.com/vincentchalamon/bike-trip-planner/issues/58) |
+| 4 | [#35](https://github.com/vincentchalamon/bike-trip-planner/issues/35) | Points d'intérêt culturels | M | [#188](https://github.com/vincentchalamon/bike-trip-planner/pull/188) `feature/35` | — |
 
 ### Recette Sprint 7
 
