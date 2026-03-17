@@ -59,6 +59,15 @@ export function TripPlanner() {
 
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
 
+  const estimatedBudgetMin = useMemo(
+    () => stages.reduce((sum, s) => sum + (s.selectedAccommodation?.estimatedPriceMin ?? 0), 0),
+    [stages],
+  );
+  const estimatedBudgetMax = useMemo(
+    () => stages.reduce((sum, s) => sum + (s.selectedAccommodation?.estimatedPriceMax ?? 0), 0),
+    [stages],
+  );
+
   // Show the sticky progress bar only when its natural position has scrolled
   // off the top of the viewport. An IntersectionObserver watches an invisible
   // sentinel div placed where the bar would normally sit.
@@ -139,24 +148,8 @@ export function TripPlanner() {
             weather={firstWeather}
             isWeatherLoading={isWeatherLoading}
             isProcessing={isProcessing}
-            estimatedBudgetMin={useMemo(
-              () =>
-                stages.reduce(
-                  (sum, s) =>
-                    sum + (s.selectedAccommodation?.estimatedPriceMin ?? 0),
-                  0,
-                ),
-              [stages],
-            )}
-            estimatedBudgetMax={useMemo(
-              () =>
-                stages.reduce(
-                  (sum, s) =>
-                    sum + (s.selectedAccommodation?.estimatedPriceMax ?? 0),
-                  0,
-                ),
-              [stages],
-            )}
+            estimatedBudgetMin={estimatedBudgetMin}
+            estimatedBudgetMax={estimatedBudgetMax}
           />
 
           {/* Header: title + locations + calendar */}
