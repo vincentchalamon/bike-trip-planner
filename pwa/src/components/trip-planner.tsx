@@ -289,7 +289,11 @@ export function TripPlanner() {
             {(viewMode === "timeline" || viewMode === "split") && (
               <div
                 id="timeline"
-                className={hasMap && viewMode === "split" ? "lg:flex-1 lg:min-w-0" : "w-full"}
+                className={
+                  hasMap && viewMode === "split"
+                    ? "lg:flex-1 lg:min-w-0"
+                    : "w-full"
+                }
               >
                 <Timeline
                   stages={stages}
@@ -313,9 +317,15 @@ export function TripPlanner() {
 
             {/* Map panel — hidden in "timeline" mode; sticky on desktop */}
             {hasMap && (viewMode === "map" || viewMode === "split") && (
-              <div className={viewMode === "split" ? "lg:w-[520px] lg:shrink-0" : "w-full"}>
+              <div
+                className={
+                  viewMode === "split" ? "lg:w-[520px] lg:shrink-0" : "w-full"
+                }
+              >
                 <div
-                  className={viewMode === "split" ? "lg:sticky lg:top-4" : "sticky top-4"}
+                  className={
+                    viewMode === "split" ? "lg:sticky lg:top-4" : "sticky top-4"
+                  }
                   style={{ height: "calc(100vh - 2rem)" }}
                   data-testid="map-container"
                 >

@@ -54,9 +54,7 @@ test.describe("ViewModeToggle visibility", () => {
   test("toggle is not visible before a trip is loaded", async ({
     mockedPage,
   }) => {
-    await expect(
-      mockedPage.getByTestId("view-mode-toggle"),
-    ).not.toBeVisible();
+    await expect(mockedPage.getByTestId("view-mode-toggle")).not.toBeVisible();
   });
 
   test("toggle appears after stages with geometry are computed", async ({
@@ -65,9 +63,9 @@ test.describe("ViewModeToggle visibility", () => {
     mockedPage,
   }) => {
     await createTripWithGeometry(submitUrl, injectEvent);
-    await expect(
-      mockedPage.getByTestId("view-mode-toggle"),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(mockedPage.getByTestId("view-mode-toggle")).toBeVisible({
+      timeout: 5000,
+    });
   });
 });
 
@@ -78,9 +76,9 @@ test.describe("ViewModeToggle — mode switching", () => {
     mockedPage,
   }) => {
     await createTripWithGeometry(submitUrl, injectEvent);
-    await expect(
-      mockedPage.getByTestId("view-mode-toggle"),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(mockedPage.getByTestId("view-mode-toggle")).toBeVisible({
+      timeout: 5000,
+    });
 
     await mockedPage.getByTestId("view-mode-map").click();
 
@@ -96,9 +94,9 @@ test.describe("ViewModeToggle — mode switching", () => {
     mockedPage,
   }) => {
     await createTripWithGeometry(submitUrl, injectEvent);
-    await expect(
-      mockedPage.getByTestId("view-mode-toggle"),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(mockedPage.getByTestId("view-mode-toggle")).toBeVisible({
+      timeout: 5000,
+    });
 
     // Switch to timeline-only mode
     await mockedPage.getByTestId("view-mode-timeline").click();
@@ -115,9 +113,9 @@ test.describe("ViewModeToggle — mode switching", () => {
     mockedPage,
   }) => {
     await createTripWithGeometry(submitUrl, injectEvent);
-    await expect(
-      mockedPage.getByTestId("view-mode-toggle"),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(mockedPage.getByTestId("view-mode-toggle")).toBeVisible({
+      timeout: 5000,
+    });
 
     // First switch away from split
     await mockedPage.getByTestId("view-mode-timeline").click();
@@ -140,21 +138,24 @@ test.describe("ViewModeToggle — mode switching", () => {
     mockedPage,
   }) => {
     await createTripWithGeometry(submitUrl, injectEvent);
-    await expect(
-      mockedPage.getByTestId("view-mode-toggle"),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(mockedPage.getByTestId("view-mode-toggle")).toBeVisible({
+      timeout: 5000,
+    });
 
     await mockedPage.getByTestId("view-mode-map").click();
 
-    await expect(
-      mockedPage.getByTestId("view-mode-map"),
-    ).toHaveAttribute("aria-pressed", "true");
-    await expect(
-      mockedPage.getByTestId("view-mode-timeline"),
-    ).toHaveAttribute("aria-pressed", "false");
-    await expect(
-      mockedPage.getByTestId("view-mode-split"),
-    ).toHaveAttribute("aria-pressed", "false");
+    await expect(mockedPage.getByTestId("view-mode-map")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(mockedPage.getByTestId("view-mode-timeline")).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    await expect(mockedPage.getByTestId("view-mode-split")).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 });
 
@@ -166,9 +167,9 @@ test.describe("ViewModeToggle — desktop default", () => {
   }) => {
     // Playwright default viewport is 1280×720 — desktop
     await createTripWithGeometry(submitUrl, injectEvent);
-    await expect(
-      mockedPage.getByTestId("view-mode-toggle"),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(mockedPage.getByTestId("view-mode-toggle")).toBeVisible({
+      timeout: 5000,
+    });
 
     // Both timeline and map should be visible in split mode
     await expect(mockedPage.locator("#timeline")).toBeVisible({
@@ -178,8 +179,9 @@ test.describe("ViewModeToggle — desktop default", () => {
       timeout: 3000,
     });
 
-    await expect(
-      mockedPage.getByTestId("view-mode-split"),
-    ).toHaveAttribute("aria-pressed", "true");
+    await expect(mockedPage.getByTestId("view-mode-split")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 });
