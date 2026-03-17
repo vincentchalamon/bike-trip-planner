@@ -68,6 +68,7 @@ final readonly class TripGpxNormalizer implements NormalizerInterface
 
         return [
             'trackName' => $this->tripStateManager->getTitle($data->id) ?? $data->id,
+            'sourceUrl' => $this->tripStateManager->getRequest($data->id)?->sourceUrl,
             'points' => $points,
             'waypoints' => $waypoints,
         ];

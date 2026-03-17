@@ -125,6 +125,22 @@ final class TripGpxNormalizerTest extends TestCase
     }
 
     #[Test]
+    public function normalizeIncludesSourceUrlFromRequest(): void
+    {
+        $request = new \App\ApiResource\TripRequest();
+        $request->sourceUrl = 'https://www.komoot.com/tour/12345';
+
+        $repository = $this->createStub(TripRequestRepositoryInterface::class);
+        $repository->method('getStages')->willReturn([]);
+        $repository->method('getRequest')->willReturn($request);
+
+        $normalizer = new TripGpxNormalizer($repository);
+        $result = $normalizer->normalize(new Trip('trip-abc'), 'gpx');
+
+        self::assertSame('https://www.komoot.com/tour/12345', $result['sourceUrl']);
+    }
+
+    #[Test]
     public function normalizeWithInvalidDataThrowsException(): void
     {
         $repository = $this->createStub(TripRequestRepositoryInterface::class);

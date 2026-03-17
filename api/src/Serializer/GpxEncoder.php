@@ -15,7 +15,7 @@ final readonly class GpxEncoder implements EncoderInterface
      * - Single-segment: `{trackName, points, waypoints}` — one `<trkseg>` per track.
      * - Multi-segment:  `{trackName, segments, waypoints}` — multiple `<trkseg>` (one per stage).
      *
-     * @param array{trackName: string, points?: list<array{lat: float, lon: float, ele: float}>, segments?: list<list<array{lat: float, lon: float, ele: float}>>, waypoints: list<array{lat: float, lon: float, name: string, symbol: string, type: string}>} $data
+     * @param array{trackName: string, sourceUrl?: string|null, points?: list<array{lat: float, lon: float, ele: float|null}>, segments?: list<list<array{lat: float, lon: float, ele: float|null}>>, waypoints: list<array{lat: float, lon: float, name: string, symbol: string, type: string}>} $data
      */
     public function encode(mixed $data, string $format, array $context = []): string
     {
@@ -33,6 +33,18 @@ final readonly class GpxEncoder implements EncoderInterface
         $xml->writeAttribute('version', '1.1');
         $xml->writeAttribute('creator', 'BikeTripPlanner');
         $xml->writeAttribute('xmlns', 'http://www.topografix.com/GPX/1/1');
+        $xml->writeAttribute('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance');
+        $xml->writeAttribute('xsi:schemaLocation', 'http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd');
+
+        $xml->startElement('metadata');
+        $xml->writeElement('name', $data['trackName']);
+        if (!empty($data['sourceUrl'])) {
+            $xml->startElement('link');
+            $xml->writeAttribute('href', $data['sourceUrl']);
+            $xml->endElement(); // link
+        }
+
+        $xml->endElement(); // metadata
 
         /** @var array{lat: float, lon: float, name: string, symbol: string, type: string} $waypoint */
         foreach ($data['waypoints'] as $waypoint) {
