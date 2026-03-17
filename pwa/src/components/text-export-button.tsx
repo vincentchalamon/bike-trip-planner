@@ -91,7 +91,7 @@ export function TextExportButton({
             {text.split("\n").map((line, i) => (
               <p key={i} className="min-h-[1em]">
                 {line.split(/(\*[^*]+\*)/).map((part, j) =>
-                  part.startsWith("*") && part.endsWith("*") ? (
+                  /^\*[^*]+\*$/.test(part) ? (
                     <strong key={j}>{part.slice(1, -1)}</strong>
                   ) : (
                     part

@@ -110,9 +110,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
-| 1 | [#47](https://github.com/vincentchalamon/bike-trip-planner/issues/47) | Exporter au format texte | S | [#184](https://github.com/vincentchalamon/bike-trip-planner/pull/184) `feature/47` | — |
-| 2 | [#64](https://github.com/vincentchalamon/bike-trip-planner/issues/64) | Téléchargement GPX global | S | [#182](https://github.com/vincentchalamon/bike-trip-planner/pull/182) `feature/64` | — |
-| 3 | [#59](https://github.com/vincentchalamon/bike-trip-planner/issues/59) | Budget récapitulatif | S | [#185](https://github.com/vincentchalamon/bike-trip-planner/pull/185) `feature/59` | — |
+| 1 | [#47](https://github.com/vincentchalamon/bike-trip-planner/issues/47) | Exporter au format texte | S | [#184](https://github.com/vincentchalamon/bike-trip-planner/pull/184) `feature/47`, [#186](https://github.com/vincentchalamon/bike-trip-planner/pull/186) `feature/export-display-fixes` | — |
+| 2 | [#64](https://github.com/vincentchalamon/bike-trip-planner/issues/64) | Téléchargement GPX global | S | [#182](https://github.com/vincentchalamon/bike-trip-planner/pull/182) `feature/64`, [#186](https://github.com/vincentchalamon/bike-trip-planner/pull/186) `feature/export-display-fixes` | — |
+| 3 | [#59](https://github.com/vincentchalamon/bike-trip-planner/issues/59) | Budget récapitulatif | S | [#185](https://github.com/vincentchalamon/bike-trip-planner/pull/185) `feature/59`, [#186](https://github.com/vincentchalamon/bike-trip-planner/pull/186) `feature/export-display-fixes` | — |
 
 ### Recette Sprint 6
 

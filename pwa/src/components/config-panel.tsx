@@ -257,6 +257,7 @@ export function ConfigPanel({
                   id="food-budget-min"
                   type="number"
                   min={0}
+                  max={dailyFoodBudgetMax}
                   value={dailyFoodBudgetMin}
                   onChange={(e) =>
                     onDailyFoodBudgetChange(Number(e.target.value), dailyFoodBudgetMax)
@@ -274,7 +275,7 @@ export function ConfigPanel({
                 <input
                   id="food-budget-max"
                   type="number"
-                  min={0}
+                  min={dailyFoodBudgetMin}
                   value={dailyFoodBudgetMax}
                   onChange={(e) =>
                     onDailyFoodBudgetChange(dailyFoodBudgetMin, Number(e.target.value))
