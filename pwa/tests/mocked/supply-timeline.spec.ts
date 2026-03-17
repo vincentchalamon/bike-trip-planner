@@ -322,6 +322,8 @@ test.describe("supply timeline — marker clustering", () => {
     // Cluster marker is at the averaged distance ~21 km
     const stageCard1 = mockedPage.getByTestId("stage-card-1");
     const marker = stageCard1.getByTestId(/^supply-marker-/);
+    // Badge should show the merged count before the popover is opened
+    await expect(marker.locator('span[aria-hidden="true"]')).toHaveText("2");
     await marker.click();
     const tooltip = mockedPage.getByTestId("supply-tooltip");
     await expect(tooltip).toBeVisible();
