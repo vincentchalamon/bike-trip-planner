@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Settings } from "lucide-react";
 import { MagicLinkInput } from "@/components/magic-link-input";
@@ -12,6 +12,7 @@ import { StageProgressBar } from "@/components/stage-progress-bar";
 import { Timeline } from "@/components/timeline";
 import { ConfigPanel } from "@/components/config-panel";
 import { TextExportButton } from "@/components/text-export-button";
+import { MapPanel } from "@/components/Map";
 import { Button } from "@/components/ui/button";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useUiStore } from "@/store/ui-store";
@@ -60,16 +61,28 @@ export function TripPlanner() {
   } = useTripPlanner();
 
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
+  const focusedMapStageIndex = useUiStore((s) => s.focusedMapStageIndex);
+  const setFocusedMapStageIndex = useUiStore((s) => s.setFocusedMapStageIndex);
+  const activeStages = useMemo(() => stages.filter((s) => !s.isRestDay), [stages]);
+  const hasMap = activeStages.length > 0;
+
+  const handleMapStageClick = useCallback((stageIndex: number) => {
+    setFocusedMapStageIndex(stageIndex);
+  }, [setFocusedMapStageIndex]);
+
+  const handleMapResetView = useCallback(() => {
+    setFocusedMapStageIndex(null);
+  }, [setFocusedMapStageIndex]);
 
   const estimatedBudget = useMemo(() => {
-    const activeStages = stages.filter((s) => !s.isRestDay);
-    const lastActiveIndex = activeStages.length - 1;
+    const nonRestStages = stages.filter((s) => !s.isRestDay);
+    const lastActiveIndex = nonRestStages.length - 1;
     const restDayCount = stages.filter((s) => s.isRestDay).length;
     let accMin = 0;
     let accMax = 0;
     let foodMin = restDayCount * 3 * MEAL_COST_MIN;
     let foodMax = restDayCount * 3 * MEAL_COST_MAX;
-    activeStages.forEach((s, i) => {
+    nonRestStages.forEach((s, i) => {
       const isFirst = i === 0;
       const isLast = i === lastActiveIndex;
       foodMin += mealsForStage(isFirst, isLast) * MEAL_COST_MIN;
@@ -215,25 +228,50 @@ export function TripPlanner() {
             </div>
           </div>
 
-          {/* Timeline */}
-          <div id="timeline">
-            <Timeline
-              stages={stages}
-              startDate={startDate}
-              isProcessing={isProcessing}
-              onDeleteStage={handleDeleteStage}
-              onAddStage={handleAddStage}
-              onDistanceChange={handleDistanceChange}
-              onAddAccommodation={handleAddAccommodation}
-              onUpdateAccommodation={updateLocalAccommodation}
-              onRemoveAccommodation={removeLocalAccommodation}
-              onSelectAccommodation={handleSelectAccommodation}
-              onDeselectAccommodation={handleDeselectAccommodation}
-              onExpandAccommodationRadius={handleExpandAccommodationRadius}
-              onInsertRestDay={handleInsertRestDay}
-              newAccKey={newAccKey}
-              onClearNewAcc={clearNewAccKey}
-            />
+          {/* Split view: timeline (left) + map (right, sticky) */}
+          <div
+            className={[
+              "flex gap-8",
+              hasMap ? "lg:flex-row flex-col" : "",
+            ].join(" ")}
+          >
+            {/* Timeline */}
+            <div id="timeline" className={hasMap ? "lg:flex-1 lg:min-w-0" : "w-full"}>
+              <Timeline
+                stages={stages}
+                startDate={startDate}
+                isProcessing={isProcessing}
+                onDeleteStage={handleDeleteStage}
+                onAddStage={handleAddStage}
+                onDistanceChange={handleDistanceChange}
+                onAddAccommodation={handleAddAccommodation}
+                onUpdateAccommodation={updateLocalAccommodation}
+                onRemoveAccommodation={removeLocalAccommodation}
+                onSelectAccommodation={handleSelectAccommodation}
+                onDeselectAccommodation={handleDeselectAccommodation}
+                onExpandAccommodationRadius={handleExpandAccommodationRadius}
+                onInsertRestDay={handleInsertRestDay}
+                newAccKey={newAccKey}
+                onClearNewAcc={clearNewAccKey}
+              />
+            </div>
+
+            {/* Map panel — sticky on desktop, below timeline on mobile */}
+            {hasMap && (
+              <div className="lg:w-[520px] lg:shrink-0">
+                <div
+                  className="lg:sticky lg:top-4"
+                  style={{ height: "calc(100vh - 2rem)" }}
+                  data-testid="map-container"
+                >
+                  <MapPanel
+                    focusedStageIndex={focusedMapStageIndex}
+                    onStageClick={handleMapStageClick}
+                    onResetView={handleMapResetView}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

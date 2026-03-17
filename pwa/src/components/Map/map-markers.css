@@ -1,0 +1,107 @@
+/* Map marker styles — used by MapView.tsx (DOM markers, no innerHTML) */
+
+.map-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2.5px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.map-marker--start {
+  width: 28px;
+  height: 28px;
+  background-color: #16a34a;
+  color: white;
+  /* triangle/play icon via clip-path */
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  clip-path: none;
+  border-radius: 50%;
+}
+
+.map-marker--start::after {
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 11px solid white;
+}
+
+.map-marker--end {
+  width: 28px;
+  height: 28px;
+  background-color: #dc2626;
+  color: white;
+  border-radius: 50%;
+}
+
+.map-marker--end::after {
+  content: "";
+  display: block;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 1px;
+}
+
+.map-marker--accommodation {
+  width: 22px;
+  height: 22px;
+  background-color: #7c3aed;
+  color: white;
+  border-radius: 50%;
+}
+
+.map-marker--accommodation::after {
+  content: "";
+  display: block;
+  width: 10px;
+  height: 10px;
+  background: white;
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+}
+
+.map-marker--alert {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.map-marker--alert-critical {
+  background-color: #dc2626;
+}
+
+.map-marker--alert-warning {
+  background-color: #d97706;
+}
+
+.map-marker--alert::after {
+  content: "!";
+  display: block;
+  color: white;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.map-marker--hover-cursor {
+  width: 16px;
+  height: 16px;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.map-hover-dot {
+  width: 10px;
+  height: 10px;
+  background-color: white;
+  border: 2px solid #1d4ed8;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.3);
+}

@@ -11,6 +11,8 @@ interface UiState {
   isConfigPanelOpen: boolean;
   error: { type: string; message: string } | null;
   activeDayNumber: number | null;
+  /** Index (into active stages) of the stage currently focused on the map. null = global view. */
+  focusedMapStageIndex: number | null;
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -19,6 +21,7 @@ interface UiState {
   setConfigPanelOpen: (value: boolean) => void;
   setError: (error: { type: string; message: string } | null) => void;
   setActiveDayNumber: (dayNumber: number | null) => void;
+  setFocusedMapStageIndex: (index: number | null) => void;
 }
 
 /**
@@ -32,6 +35,8 @@ interface UiState {
  * - `error` — global error banner state (type + message), or `null`
  * - `activeDayNumber` — the day number currently highlighted across the UI
  *   (progress bar, map, elevation profile); `null` means no active day
+ * - `focusedMapStageIndex` — which active-stage index is currently zoomed on
+ *   the map; `null` means global view (all stages visible)
  *
  * This store is intentionally separate from {@link useTripStore} to avoid
  * unnecessary re-renders of trip-dependent components when only UI flags change.
@@ -45,6 +50,7 @@ export const useUiStore = create<UiState>()(
     isConfigPanelOpen: false,
     error: null,
     activeDayNumber: null,
+    focusedMapStageIndex: null,
 
     setProcessing: (value) =>
       set((state) => {
@@ -79,6 +85,11 @@ export const useUiStore = create<UiState>()(
     setActiveDayNumber: (dayNumber) =>
       set((state) => {
         state.activeDayNumber = dayNumber;
+      }),
+
+    setFocusedMapStageIndex: (index) =>
+      set((state) => {
+        state.focusedMapStageIndex = index;
       }),
   })),
 );
