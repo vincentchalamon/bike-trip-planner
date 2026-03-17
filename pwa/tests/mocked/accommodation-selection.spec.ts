@@ -178,8 +178,12 @@ test.describe("Accommodation selection", () => {
     });
     await selectButtons.first().click();
 
-    // Info toast should appear
-    await expect(mockedPage.getByText("Accommodation list was refreshed. Please try again.")).toBeVisible();
+    // Info toast should appear (French locale)
+    await expect(
+      mockedPage.getByText(
+        "La liste des hébergements a été mise à jour. Veuillez réessayer.",
+      ),
+    ).toBeVisible();
 
     // A fresh scan should have been triggered
     await scanRequestPromise;
