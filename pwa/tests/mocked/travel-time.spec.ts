@@ -24,7 +24,10 @@ test.describe("Travel time estimation", () => {
 
     // Stage 1: 72.5 km, 1180m D+, default speed 15 km/h, departure 8h
     // Effective speed = 15 - 2*(1180/500) = 15 - 4.72 = 10.28 km/h
-    // Duration = 72.5 / 10.28 ≈ 7.05 h → arrival ≈ 15h03 → "15h03"
+    // Riding duration = 72.5 / 10.28 ≈ 7.05 h
+    // Short breaks: floor(7.05/2) × 10/60 = 3 × 10/60 ≈ 0.5 h
+    // Lunch break: 8 + 7.05 > 12 → +1 h
+    // Total ≈ 8.55 h → arrival ≈ 16h33
     const stageCard = mockedPage.getByTestId("stage-card-1");
     await expect(stageCard).toBeVisible();
 
@@ -33,6 +36,7 @@ test.describe("Travel time estimation", () => {
       "Estimation basée sur la vitesse moyenne et le dénivelé (règle de Naismith adaptée au vélo)",
     );
     await expect(travelTimeText).toBeVisible();
+    await expect(stageCard).toContainText("Arrivée ~16h33");
   });
 
   test("departure time shows 8h00 by default", async ({
