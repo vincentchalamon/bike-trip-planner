@@ -36,7 +36,11 @@ function formatPriceRange(acc: AccommodationData): string | null {
   return `${min}-${max}€`;
 }
 
-function formatStageLine(stage: StageData, startDate: string | null): string {
+function formatStageLine(
+  stage: StageData,
+  startDate: string | null,
+  isLastStage: boolean,
+): string {
   const date = formatDate(startDate, stage.dayNumber);
   const distance = `${Math.round(stage.distance)}km`;
   const elevUp = `⬆️ ${Math.round(stage.elevation)}m`;
@@ -44,7 +48,9 @@ function formatStageLine(stage: StageData, startDate: string | null): string {
 
   let line = `*${date}* : ${distance}, ${elevUp} ${elevDown}`;
 
-  const acc = stage.selectedAccommodation ?? stage.accommodations[0] ?? null;
+  const acc = isLastStage
+    ? null
+    : (stage.selectedAccommodation ?? stage.accommodations[0] ?? null);
 
   if (acc) {
     const price = formatPriceRange(acc);
@@ -110,8 +116,10 @@ export function buildTripText(params: TextExportParams): string {
   const activeStages = stages.filter((s) => !s.isRestDay);
   if (activeStages.length > 0) {
     lines.push("");
-    for (const stage of activeStages) {
-      lines.push(formatStageLine(stage, startDate));
+    for (let i = 0; i < activeStages.length; i++) {
+      lines.push(
+        formatStageLine(activeStages[i], startDate, i === activeStages.length - 1),
+      );
     }
   }
 
