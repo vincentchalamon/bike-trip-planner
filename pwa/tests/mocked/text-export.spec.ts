@@ -25,6 +25,7 @@ test.describe("Text export", () => {
     injectSequence,
     mockedPage,
   }) => {
+    await mockedPage.context().grantPermissions(["clipboard-read", "clipboard-write"]);
     await submitUrl();
     await injectSequence([
       routeParsedEvent(),
