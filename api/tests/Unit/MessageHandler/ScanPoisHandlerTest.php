@@ -143,22 +143,24 @@ final class ScanPoisHandlerTest extends TestCase
         // Return 16.0 (4 PM) → closed for both restaurants
         $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(16.0);
 
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->once())
-            ->method('publish')
-            ->with(
-                'trip-1',
-                MercureEventType::POIS_SCANNED,
-                $this->callback(static function (array $data): bool {
-                    $alerts = $data['alerts'] ?? [];
-
-                    // Expect at least one warning alert for resupply timing
-                    return array_any($alerts, static fn (array $a): bool => 'warning' === $a['type']);
-                }),
-            );
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
+            });
 
         $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
+
+        $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
+        self::assertCount(1, $poisScannedEvents);
+        $data = array_values($poisScannedEvents)[0]['payload'];
+        $alerts = $data['alerts'] ?? [];
+        self::assertTrue(
+            array_any($alerts, static fn (array $a): bool => 'warning' === $a['type']),
+            'Expected at least one warning alert for resupply timing',
+        );
     }
 
     #[Test]
@@ -189,22 +191,24 @@ final class ScanPoisHandlerTest extends TestCase
         // Return 15.0 (3 PM) → restaurant closed, but supermarket open (9-20)
         $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(15.0);
 
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->once())
-            ->method('publish')
-            ->with(
-                'trip-1',
-                MercureEventType::POIS_SCANNED,
-                $this->callback(static function (array $data): bool {
-                    $alerts = $data['alerts'] ?? [];
-
-                    // No timing warning since supermarket is open at 15:00
-                    return !array_any($alerts, static fn (array $a): bool => 'warning' === $a['type']);
-                }),
-            );
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
+            });
 
         $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
+
+        $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
+        self::assertCount(1, $poisScannedEvents);
+        $data = array_values($poisScannedEvents)[0]['payload'];
+        $alerts = $data['alerts'] ?? [];
+        self::assertFalse(
+            array_any($alerts, static fn (array $a): bool => 'warning' === $a['type']),
+            'Expected no timing warning since supermarket is open at 15:00',
+        );
     }
 
     #[Test]
@@ -231,22 +235,24 @@ final class ScanPoisHandlerTest extends TestCase
 
         [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->once())
-            ->method('publish')
-            ->with(
-                'trip-1',
-                MercureEventType::POIS_SCANNED,
-                $this->callback(static function (array $data): bool {
-                    $alerts = $data['alerts'] ?? [];
-
-                    // No timing warning when there are no resupply POIs
-                    return !array_any($alerts, static fn (array $a): bool => 'warning' === $a['type']);
-                }),
-            );
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
+            });
 
         $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
+
+        $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
+        self::assertCount(1, $poisScannedEvents);
+        $data = array_values($poisScannedEvents)[0]['payload'];
+        $alerts = $data['alerts'] ?? [];
+        self::assertFalse(
+            array_any($alerts, static fn (array $a): bool => 'warning' === $a['type']),
+            'Expected no timing warning when there are no resupply POIs',
+        );
     }
 
     #[Test]
@@ -281,21 +287,22 @@ final class ScanPoisHandlerTest extends TestCase
 
         [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->once())
-            ->method('publish')
-            ->with(
-                'trip-1',
-                MercureEventType::POIS_SCANNED,
-                $this->callback(static function (array $data): bool {
-                    $alerts = $data['alerts'] ?? [];
-
-                    return 1 === \count($alerts) && 'nudge' === $alerts[0]['type'];
-                }),
-            );
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
+            });
 
         $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
+
+        $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
+        self::assertCount(1, $poisScannedEvents);
+        $data = array_values($poisScannedEvents)[0]['payload'];
+        $alerts = $data['alerts'] ?? [];
+        self::assertCount(1, $alerts);
+        self::assertSame('nudge', $alerts[0]['type']);
     }
 
     #[Test]
@@ -325,21 +332,23 @@ final class ScanPoisHandlerTest extends TestCase
         // 10:00 AM → bakery open (7-13 slot)
         $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(10.0);
 
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->once())
-            ->method('publish')
-            ->with(
-                'trip-1',
-                MercureEventType::POIS_SCANNED,
-                $this->callback(static function (array $data): bool {
-                    $alerts = $data['alerts'] ?? [];
-
-                    // No timing warning since bakery is open at 10:00
-                    return !array_any($alerts, static fn (array $a): bool => 'warning' === $a['type']);
-                }),
-            );
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
+            });
 
         $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
+
+        $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
+        self::assertCount(1, $poisScannedEvents);
+        $data = array_values($poisScannedEvents)[0]['payload'];
+        $alerts = $data['alerts'] ?? [];
+        self::assertFalse(
+            array_any($alerts, static fn (array $a): bool => 'warning' === $a['type']),
+            'Expected no timing warning since bakery is open at 10:00',
+        );
     }
 }
