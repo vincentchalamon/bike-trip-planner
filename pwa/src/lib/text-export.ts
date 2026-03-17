@@ -1,7 +1,7 @@
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 
 function formatDate(startDate: string | null, dayNumber: number): string {
-  const [year, month, day] = (
+  const [year = 0, month = 0, day = 0] = (
     startDate ??
     (() => {
       const n = new Date();
