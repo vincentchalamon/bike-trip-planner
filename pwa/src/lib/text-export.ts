@@ -1,4 +1,5 @@
-import type { StageData, AccommodationData } from "@/lib/validation/schemas";
+import type { StageData } from "@/lib/validation/schemas";
+import { MEAL_COST_MIN, MEAL_COST_MAX, mealsForStage } from "@/lib/budget-constants";
 
 function formatDate(startDate: string | null, dayNumber: number): string {
   const [year = 0, month = 0, day = 0] = (
@@ -24,23 +25,14 @@ function formatDate(startDate: string | null, dayNumber: number): string {
   });
 }
 
-function formatPriceRange(acc: AccommodationData): string | null {
-  const min = Number(acc.estimatedPriceMin);
-  const max = Number(acc.estimatedPriceMax);
-
-  if (isNaN(min) || isNaN(max) || (min === 0 && max === 0)) return null;
-
-  if (acc.isExactPrice || min === max) {
-    return `${max}€`;
-  }
-  return `${min}-${max}€`;
-}
-
 function formatStageLine(
   stage: StageData,
   startDate: string | null,
-  isLastStage: boolean,
+  stageIndex: number,
+  totalActiveStages: number,
 ): string {
+  const isFirst = stageIndex === 0;
+  const isLast = stageIndex === totalActiveStages - 1;
   const date = formatDate(startDate, stage.dayNumber);
   const distance = `${Math.round(stage.distance)}km`;
   const elevUp = `⬆️ ${Math.round(stage.elevation)}m`;
@@ -48,20 +40,39 @@ function formatStageLine(
 
   let line = `*${date}* : ${distance}, ${elevUp} ${elevDown}`;
 
-  const acc = isLastStage
+  const acc = isLast
     ? null
     : (stage.selectedAccommodation ?? stage.accommodations[0] ?? null);
 
+  const meals = mealsForStage(isFirst, isLast);
+  const foodMin = meals * MEAL_COST_MIN;
+  const foodMax = meals * MEAL_COST_MAX;
+
   if (acc) {
-    const price = formatPriceRange(acc);
+    const accMin = Number(acc.estimatedPriceMin);
+    const accMax = Number(acc.estimatedPriceMax);
+    const hasAccPrice =
+      !isNaN(accMin) && !isNaN(accMax) && (accMin > 0 || accMax > 0);
+
     let accPart = acc.name;
     if (acc.url) {
       accPart = `${acc.name} (${acc.url})`;
     }
-    if (price) {
-      accPart = `${accPart} ${price}`;
+
+    if (hasAccPrice) {
+      const totalMin = Math.round(accMin + foodMin);
+      const totalMax = Math.round(accMax + foodMax);
+      const budgetStr =
+        acc.isExactPrice || totalMin === totalMax
+          ? `${totalMax}€`
+          : `${totalMin}-${totalMax}€`;
+      accPart = `${accPart} ${budgetStr}`;
     }
+
     line = `${line}, ${accPart}`;
+  } else {
+    // Last stage or no accommodation found: food budget only
+    line = `${line}, ${foodMin}-${foodMax}€`;
   }
 
   return line;
@@ -117,9 +128,7 @@ export function buildTripText(params: TextExportParams): string {
   if (activeStages.length > 0) {
     lines.push("");
     activeStages.forEach((stage, i) => {
-      lines.push(
-        formatStageLine(stage, startDate, i === activeStages.length - 1),
-      );
+      lines.push(formatStageLine(stage, startDate, i, activeStages.length));
     });
   }
 

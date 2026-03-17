@@ -54,9 +54,10 @@ test.describe("Text export", () => {
       tripCompleteEvent(),
     ]);
     await mockedPage.getByTestId("text-export-button").click();
-    // Last stage line should not contain any accommodation name
+    // Last stage line should not contain any accommodation name but should show food budget
     const preview = mockedPage.locator('[role="dialog"] p').last();
     await expect(preview).not.toContainText("Camping");
     await expect(preview).not.toContainText("Hotel");
+    await expect(preview).toContainText("24-40€");
   });
 });

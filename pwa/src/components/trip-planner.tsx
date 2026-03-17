@@ -15,6 +15,7 @@ import { TextExportButton } from "@/components/text-export-button";
 import { Button } from "@/components/ui/button";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useUiStore } from "@/store/ui-store";
+import { MEAL_COST_MIN, MEAL_COST_MAX, mealsForStage } from "@/lib/budget-constants";
 
 export function TripPlanner() {
   const t = useTranslations();
@@ -60,38 +61,46 @@ export function TripPlanner() {
 
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
 
-  // Fixed food budget estimate: ~12–20€/meal × 3 meals/day
-  const DAILY_FOOD_BUDGET_MIN = 36;
-  const DAILY_FOOD_BUDGET_MAX = 60;
-
   const estimatedBudgetMin = useMemo(() => {
     const activeStages = stages.filter((s) => !s.isRestDay);
     const lastActiveIndex = activeStages.length - 1;
-    const accommodationCost = activeStages.reduce((sum, s, i) => {
-      if (i === lastActiveIndex) return sum; // no accommodation on last stage
-      if (s.selectedAccommodation) return sum + (s.selectedAccommodation.estimatedPriceMin ?? 0);
-      if (s.accommodations.length > 0) {
-        const avg = s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) / s.accommodations.length;
-        return sum + avg;
-      }
-      return sum;
-    }, 0);
-    return accommodationCost + DAILY_FOOD_BUDGET_MIN * stages.length;
+    const restDayFood = stages.filter((s) => s.isRestDay).length * 3 * MEAL_COST_MIN;
+    return (
+      activeStages.reduce((sum, s, i) => {
+        const isFirst = i === 0;
+        const isLast = i === lastActiveIndex;
+        const food = mealsForStage(isFirst, isLast) * MEAL_COST_MIN;
+        if (!isLast) {
+          if (s.selectedAccommodation) return sum + (s.selectedAccommodation.estimatedPriceMin ?? 0) + food;
+          if (s.accommodations.length > 0) {
+            const avg = s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) / s.accommodations.length;
+            return sum + avg + food;
+          }
+        }
+        return sum + food;
+      }, 0) + restDayFood
+    );
   }, [stages]);
 
   const estimatedBudgetMax = useMemo(() => {
     const activeStages = stages.filter((s) => !s.isRestDay);
     const lastActiveIndex = activeStages.length - 1;
-    const accommodationCost = activeStages.reduce((sum, s, i) => {
-      if (i === lastActiveIndex) return sum; // no accommodation on last stage
-      if (s.selectedAccommodation) return sum + (s.selectedAccommodation.estimatedPriceMax ?? 0);
-      if (s.accommodations.length > 0) {
-        const avg = s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) / s.accommodations.length;
-        return sum + avg;
-      }
-      return sum;
-    }, 0);
-    return accommodationCost + DAILY_FOOD_BUDGET_MAX * stages.length;
+    const restDayFood = stages.filter((s) => s.isRestDay).length * 3 * MEAL_COST_MAX;
+    return (
+      activeStages.reduce((sum, s, i) => {
+        const isFirst = i === 0;
+        const isLast = i === lastActiveIndex;
+        const food = mealsForStage(isFirst, isLast) * MEAL_COST_MAX;
+        if (!isLast) {
+          if (s.selectedAccommodation) return sum + (s.selectedAccommodation.estimatedPriceMax ?? 0) + food;
+          if (s.accommodations.length > 0) {
+            const avg = s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) / s.accommodations.length;
+            return sum + avg + food;
+          }
+        }
+        return sum + food;
+      }, 0) + restDayFood
+    );
   }, [stages]);
 
   // Show the sticky progress bar only when its natural position has scrolled

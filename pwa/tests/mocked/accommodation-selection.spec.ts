@@ -61,7 +61,7 @@ test.describe("Accommodation selection", () => {
     // The estimated budget should appear in the trip summary
     await expect(mockedPage.getByTestId("estimated-budget")).toBeVisible();
     await expect(mockedPage.getByTestId("estimated-budget")).toContainText(
-      "173€ — 265€",
+      "149€ — 225€",
     );
   });
 
@@ -127,7 +127,7 @@ test.describe("Accommodation selection", () => {
     ).toBeVisible();
     await expect(
       mockedPage.getByTestId("estimated-budget"),
-    ).not.toContainText("265€");
+    ).not.toContainText("225€");
   });
 
   test("no select button on last stage accommodation panel", async ({

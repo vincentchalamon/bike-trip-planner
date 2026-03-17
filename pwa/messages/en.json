@@ -198,7 +198,7 @@
     "copyFailed": "Could not copy to clipboard",
     "totalDistance": "Total distance",
     "totalElevation": "Total elevation",
-    "budgetNote": "Estimated budget: accommodation (selected or average of suggestions per stage, excluding last stage) + ~36–60€/day for food (~12–20€/meal × 3 meals)."
+    "budgetNote": "Estimated budget per stage: accommodation (selected or average of suggestions, excluding last stage) + ~12–20€/meal × 3 meals/day — except the first stage (no breakfast) and the last (no dinner)."
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",
