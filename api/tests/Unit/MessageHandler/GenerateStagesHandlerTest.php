@@ -92,6 +92,7 @@ final class GenerateStagesHandlerTest extends TestCase
 
                     return \is_array($geometry)
                         && 1 === \count($geometry)
+                        && \is_array($geometry[0])
                         && 48.8566 === $geometry[0]['lat']
                         && 2.3522 === $geometry[0]['lon']
                         && 35.0 === $geometry[0]['ele'];
