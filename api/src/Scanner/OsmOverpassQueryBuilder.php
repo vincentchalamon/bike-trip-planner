@@ -144,7 +144,7 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         $polyline = $this->buildPolyline($stageGeometry);
 
         return \sprintf(
-            '[out:json][timeout:15];(nwr["tourism"="museum"](around:%1$d,%2$s);nwr["tourism"="attraction"](around:%1$d,%2$s);nwr["tourism"="viewpoint"](around:%1$d,%2$s);nwr["historic"](around:%1$d,%2$s););out center tags 100;',
+            '[out:json][timeout:15];(nwr["tourism"="museum"](around:%1$d,%2$s);nwr["tourism"="attraction"](around:%1$d,%2$s);nwr["tourism"="viewpoint"](around:%1$d,%2$s);nwr["historic"~"^(castle|monument|memorial|ruins|archaeological_site|church|cathedral|abbey|fort)$"](around:%1$d,%2$s););out center tags 100;',
             $radiusMeters,
             $polyline,
         );

@@ -79,7 +79,7 @@ export function StageMetadata({
       <div className="flex items-center gap-1.5">
         <Bike className="h-4 w-4 text-brand" />
         {distance !== null ? (
-          <span>{Math.round(distance)}km</span>
+          <span>{Number.isInteger(distance) ? distance : distance.toFixed(1)}km</span>
         ) : (
           <Skeleton className="w-12 h-4" />
         )}

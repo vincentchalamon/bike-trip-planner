@@ -226,6 +226,9 @@
     "elevationProfile": "Profil altimétrique",
     "elevationProfileAriaLabel": "Profil altimétrique interactif du voyage"
   },
+  "alertList": {
+    "addToItinerary": "Ajouter à l'itinéraire"
+  },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",

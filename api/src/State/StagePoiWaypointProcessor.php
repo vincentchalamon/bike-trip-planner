@@ -11,8 +11,8 @@ use App\ApiResource\StagePoiWaypointRequest;
 use App\ApiResource\StageResponse;
 use App\Message\RecalculateRouteSegment;
 use App\Repository\TripRequestRepositoryInterface;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
@@ -42,7 +42,13 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): StageResponse
     {
         $tripId = $uriVariables['tripId'] ?? '';
-        $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
+        $rawIndex = $uriVariables['index'] ?? null;
+
+        if (!\is_numeric($rawIndex)) {
+            throw new BadRequestHttpException('Stage index must be a valid integer.');
+        }
+
+        $index = (int) $rawIndex;
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
 
@@ -50,11 +56,10 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
             throw new NotFoundHttpException(\sprintf('Stage at index %d not found.', $index));
         }
 
-        if (null === $data->waypointLat || null === $data->waypointLon) {
-            throw new UnprocessableEntityHttpException('waypointLat and waypointLon are required.');
-        }
-
         $stage = $stages[$index];
+
+        // waypointLat and waypointLon are guaranteed non-null by #[Assert\NotNull] (validated before reaching this processor)
+        \assert(null !== $data->waypointLat && null !== $data->waypointLon);
 
         $this->messageBus->dispatch(new RecalculateRouteSegment(
             tripId: $tripId,

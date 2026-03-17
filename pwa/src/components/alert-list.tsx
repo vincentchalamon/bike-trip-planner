@@ -2,6 +2,7 @@ import { AlertBadge } from "@/components/alert-badge";
 import type { AlertData } from "@/lib/validation/schemas";
 import { Button } from "@/components/ui/button";
 import { MapPin } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const severityOrder = { critical: 0, warning: 1, nudge: 2 } as const;
 
@@ -19,6 +20,8 @@ function isCulturalPoiAlert(alert: AlertData): boolean {
 }
 
 export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
+  const t = useTranslations("alertList");
+
   if (alerts.length === 0) return null;
 
   const sorted = [...alerts].sort(
@@ -39,7 +42,7 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
               data-testid="add-poi-to-itinerary"
             >
               <MapPin className="h-3 w-3 mr-1" />
-              Ajouter à l&apos;itinéraire
+              {t("addToItinerary")}
             </Button>
           )}
         </div>
