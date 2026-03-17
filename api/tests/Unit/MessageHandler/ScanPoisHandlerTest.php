@@ -122,11 +122,14 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager([$stage]);
 
         $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Le Bistrot']],
-                ['lat' => 48.3, 'lon' => 2.3, 'tags' => ['amenity' => 'restaurant', 'name' => 'Chez Paul']],
+        $scanner->method('queryBatch')->willReturn([
+            'poi' => [
+                'elements' => [
+                    ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Le Bistrot']],
+                    ['lat' => 48.3, 'lon' => 2.3, 'tags' => ['amenity' => 'restaurant', 'name' => 'Chez Paul']],
+                ],
             ],
+            'cemetery' => ['elements' => []],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -155,7 +158,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
         self::assertCount(1, $poisScannedEvents);
-        $data = array_values($poisScannedEvents)[0]['payload'];
+        $data = array_first($poisScannedEvents)['payload'];
         $alerts = $data['alerts'] ?? [];
         self::assertTrue(
             array_any($alerts, static fn (array $a): bool => 'warning' === $a['type']),
@@ -171,11 +174,14 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager([$stage]);
 
         $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Le Bistrot']],
-                ['lat' => 48.3, 'lon' => 2.3, 'tags' => ['shop' => 'supermarket', 'name' => 'Carrefour']],
+        $scanner->method('queryBatch')->willReturn([
+            'poi' => [
+                'elements' => [
+                    ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Le Bistrot']],
+                    ['lat' => 48.3, 'lon' => 2.3, 'tags' => ['shop' => 'supermarket', 'name' => 'Carrefour']],
+                ],
             ],
+            'cemetery' => ['elements' => []],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -203,7 +209,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
         self::assertCount(1, $poisScannedEvents);
-        $data = array_values($poisScannedEvents)[0]['payload'];
+        $data = array_first($poisScannedEvents)['payload'];
         $alerts = $data['alerts'] ?? [];
         self::assertFalse(
             array_any($alerts, static fn (array $a): bool => 'warning' === $a['type']),
@@ -220,10 +226,13 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager([$stage]);
 
         $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['tourism' => 'viewpoint', 'name' => 'Belvedere']],
+        $scanner->method('queryBatch')->willReturn([
+            'poi' => [
+                'elements' => [
+                    ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['tourism' => 'viewpoint', 'name' => 'Belvedere']],
+                ],
             ],
+            'cemetery' => ['elements' => []],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -247,7 +256,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
         self::assertCount(1, $poisScannedEvents);
-        $data = array_values($poisScannedEvents)[0]['payload'];
+        $data = array_first($poisScannedEvents)['payload'];
         $alerts = $data['alerts'] ?? [];
         self::assertFalse(
             array_any($alerts, static fn (array $a): bool => 'warning' === $a['type']),
@@ -280,7 +289,10 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager([$stage]);
 
         $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn(['elements' => []]);
+        $scanner->method('queryBatch')->willReturn([
+            'poi' => ['elements' => []],
+            'cemetery' => ['elements' => []],
+        ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
@@ -299,7 +311,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
         self::assertCount(1, $poisScannedEvents);
-        $data = array_values($poisScannedEvents)[0]['payload'];
+        $data = array_first($poisScannedEvents)['payload'];
         $alerts = $data['alerts'] ?? [];
         self::assertCount(1, $alerts);
         self::assertSame('nudge', $alerts[0]['type']);
@@ -314,10 +326,13 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager([$stage]);
 
         $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['shop' => 'bakery', 'name' => 'Boulangerie']],
+        $scanner->method('queryBatch')->willReturn([
+            'poi' => [
+                'elements' => [
+                    ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['shop' => 'bakery', 'name' => 'Boulangerie']],
+                ],
             ],
+            'cemetery' => ['elements' => []],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -344,11 +359,83 @@ final class ScanPoisHandlerTest extends TestCase
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
         self::assertCount(1, $poisScannedEvents);
-        $data = array_values($poisScannedEvents)[0]['payload'];
+        $data = array_first($poisScannedEvents)['payload'];
         $alerts = $data['alerts'] ?? [];
         self::assertFalse(
             array_any($alerts, static fn (array $a): bool => 'warning' === $a['type']),
             'Expected no timing warning since bakery is open at 10:00',
         );
+    }
+
+    #[Test]
+    public function poisWithin500mAreClusteredIntoSingleMarker(): void
+    {
+        // Two restaurants very close (< 500m apart) → grouped into one marker
+        // One restaurant far away (> 500m from the others) → distinct marker
+        $stage = $this->createStage('trip-1', 1, 80.0);
+
+        $tripStateManager = $this->createTripStateManager([$stage]);
+
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('queryBatch')->willReturn([
+            'poi' => [
+                'elements' => [
+                    ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Bistrot A']],
+                    ['lat' => 48.2, 'lon' => 2.2001, 'tags' => ['amenity' => 'restaurant', 'name' => 'Bistrot B']],
+                    ['lat' => 48.5, 'lon' => 2.5, 'tags' => ['amenity' => 'restaurant', 'name' => 'Remote Bistrot']],
+                ],
+            ],
+            'cemetery' => ['elements' => []],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturn([
+            0 => [
+                ['name' => 'Bistrot A', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
+                ['name' => 'Bistrot B', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2001],
+                ['name' => 'Remote Bistrot', 'category' => 'restaurant', 'lat' => 48.5, 'lon' => 2.5],
+            ],
+        ]);
+
+        [$queryBuilder, $riderTimeEstimator] = [$this->createStub(QueryBuilderInterface::class), $this->createStub(RiderTimeEstimatorInterface::class)];
+        $queryBuilder->method('buildPoiQuery')->willReturn('query');
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        // inKilometers used for cumulative distances along geometry
+        $haversine->method('inKilometers')->willReturn(10.0);
+        // inMeters: return < 500 for nearby POIs, > 500 for distant ones
+        $haversine->method('inMeters')->willReturnCallback(
+            static function (float $lat1, float $lon1, float $lat2, float $lon2): float {
+                // Same coordinates or very close (Bistrot A & B)
+                if ($lat1 === $lat2 && abs($lon1 - $lon2) < 0.001) {
+                    return 10.0; // within 500m
+                }
+
+                // Distance between close cluster and remote POI
+                return 40000.0; // far apart (> 500m)
+            },
+        );
+
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
+            });
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler(new ScanPois('trip-1'));
+
+        $timelineEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::SUPPLY_TIMELINE === $e['type']);
+        self::assertCount(1, $timelineEvents);
+
+        $markers = array_first($timelineEvents)['payload']['markers'];
+
+        // Bistrot A and B are within 500m → one marker; Remote Bistrot is far → another marker
+        self::assertCount(2, $markers, 'Expected 2 markers: one cluster for close POIs, one for the remote POI');
+        self::assertSame('food', $markers[0]['type']);
+        self::assertCount(2, $markers[0]['food'], 'Expected 2 food items in the clustered marker');
+        self::assertSame('food', $markers[1]['type']);
+        self::assertCount(1, $markers[1]['food'], 'Expected 1 food item in the remote marker');
     }
 }

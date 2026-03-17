@@ -273,8 +273,8 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
      * Computes the distance from stage start for each supply point and returns
      * them sorted by distance.
      *
-     * @param list<Coordinate>                                 $geometry
-     * @param list<float>                                      $cumulativeDistances
+     * @param list<Coordinate>                                                         $geometry
+     * @param list<float>                                                              $cumulativeDistances
      * @param list<array{name: string|null, category: string, lat: float, lon: float}> $items
      *
      * @return list<array{name: string|null, category: string, lat: float, lon: float, distanceFromStart: float}>
