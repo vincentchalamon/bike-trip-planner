@@ -87,6 +87,10 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
                             'ele' => $s->endPoint->ele,
                         ],
                         'label' => $s->label,
+                        'geometry' => array_map(
+                            static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
+                            $s->geometry,
+                        ),
                     ],
                     $stages,
                 ),
