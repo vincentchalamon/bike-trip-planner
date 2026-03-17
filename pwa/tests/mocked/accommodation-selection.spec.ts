@@ -141,4 +141,50 @@ test.describe("Accommodation selection", () => {
       lastStage.getByRole("button", { name: "Sélectionner cet hébergement" }),
     ).toBeHidden();
   });
+
+  test("409 on select shows info toast and triggers rescan", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      accommodationsFoundEvent(0),
+      tripCompleteEvent(),
+    ]);
+
+    // Override accommodation PATCH to return 409 (stale data)
+    await mockedPage.route("**/trips/*/stages/*/accommodation", (route, request) => {
+      if (request.method() !== "PATCH") return route.fallback();
+      return route.fulfill({
+        status: 409,
+        contentType: "application/ld+json",
+        body: JSON.stringify({ detail: "Conflict" }),
+      });
+    });
+
+    // Track scan requests
+    const scanRequestPromise = mockedPage.waitForRequest(
+      (req) => req.url().includes("/accommodations/scan") && req.method() === "POST",
+    );
+
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard).toContainText("Camping Les Oliviers");
+
+    const selectButtons = stageCard.getByRole("button", {
+      name: "Sélectionner cet hébergement",
+    });
+    await selectButtons.first().click();
+
+    // Info toast should appear
+    await expect(mockedPage.getByText("Accommodation list was refreshed. Please try again.")).toBeVisible();
+
+    // A fresh scan should have been triggered
+    await scanRequestPromise;
+
+    // Selection should be rolled back (no "Sélectionné" badge)
+    await expect(stageCard).not.toContainText("Sélectionné");
+  });
 });
