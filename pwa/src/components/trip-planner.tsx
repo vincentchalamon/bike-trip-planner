@@ -11,6 +11,7 @@ import { TripDownloads } from "@/components/trip-downloads";
 import { StageProgressBar } from "@/components/stage-progress-bar";
 import { Timeline } from "@/components/timeline";
 import { ConfigPanel } from "@/components/config-panel";
+import { TextExportButton } from "@/components/text-export-button";
 import { Button } from "@/components/ui/button";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useUiStore } from "@/store/ui-store";
@@ -163,6 +164,17 @@ export function TripPlanner() {
             isTitleLoading={isProcessing && totalDistance === null}
           >
             <TripDownloads tripId={trip.id} tripTitle={trip.title} />
+            {totalDistance !== null && (
+              <TextExportButton
+                title={trip.title}
+                totalDistance={totalDistance}
+                totalElevation={totalElevation}
+                totalElevationLoss={totalElevationLoss}
+                sourceUrl={trip.sourceUrl}
+                stages={stages}
+                startDate={startDate}
+              />
+            )}
           </TripHeader>
 
           {/* Sentinel — marks the natural position of the progress bar in the

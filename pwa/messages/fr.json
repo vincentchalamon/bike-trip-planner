@@ -188,6 +188,17 @@
     "relativeWind_tailwind": "Vent arrière",
     "relativeWind_crosswind": "Vent de côté"
   },
+  "textExport": {
+    "button": "Exporter",
+    "openLabel": "Exporter l'itinéraire au format texte",
+    "dialogTitle": "Export texte",
+    "copy": "Copier",
+    "copied": "Copié !",
+    "copySuccess": "Texte copié dans le presse-papiers",
+    "copyFailed": "Impossible de copier dans le presse-papiers",
+    "totalDistance": "Distance totale",
+    "totalElevation": "Dénivelé total"
+  },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",
