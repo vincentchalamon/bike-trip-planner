@@ -17,7 +17,7 @@ use PHPUnit\Framework\TestCase;
 final class TripGpxNormalizerTest extends TestCase
 {
     #[Test]
-    public function normalizeReturnsTripIdAsTrackNameWithMultipleSegments(): void
+    public function normalizeReturnsTitleAsTrackNameWithFlatPoints(): void
     {
         $stage1 = new Stage(
             tripId: 'trip-abc',
@@ -49,14 +49,14 @@ final class TripGpxNormalizerTest extends TestCase
 
         self::assertIsArray($result);
         self::assertSame('My Trip', $result['trackName']);
-        self::assertArrayHasKey('segments', $result);
-        /** @var list<list<array{lat: float, lon: float, ele: float|null}>> $segments */
-        $segments = $result['segments'];
-        self::assertCount(2, $segments);
-        self::assertCount(2, $segments[0]);
-        self::assertCount(2, $segments[1]);
-        self::assertSame(50.629, $segments[0][0]['lat']);
-        self::assertSame(50.800, $segments[1][1]['lat']);
+        self::assertArrayHasKey('points', $result);
+        /** @var list<array{lat: float, lon: float, ele: float|null}> $points */
+        $points = $result['points'];
+        self::assertCount(4, $points);
+        self::assertSame(50.629, $points[0]['lat']);
+        self::assertSame(50.700, $points[1]['lat']);
+        self::assertSame(50.700, $points[2]['lat']);
+        self::assertSame(50.800, $points[3]['lat']);
     }
 
     #[Test]
@@ -97,7 +97,7 @@ final class TripGpxNormalizerTest extends TestCase
     }
 
     #[Test]
-    public function normalizeWithEmptyStagesReturnsEmptySegmentsAndWaypoints(): void
+    public function normalizeWithEmptyStagesReturnsEmptyPointsAndWaypoints(): void
     {
         $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $repository->method('getStages')->willReturn([]);
@@ -106,7 +106,7 @@ final class TripGpxNormalizerTest extends TestCase
         $trip = new Trip('trip-abc');
         $result = $normalizer->normalize($trip, 'gpx');
 
-        self::assertSame([], $result['segments']);
+        self::assertSame([], $result['points']);
         self::assertSame([], $result['waypoints']);
     }
 

@@ -12,9 +12,10 @@ use App\Serializer\Mapper\WaypointMapper;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
 /**
- * Normalizes a {@see Trip} resource into a multi-segment GPX structure.
+ * Normalizes a {@see Trip} resource into a single-track GPX structure.
  *
- * Each stage becomes a separate `<trkseg>` inside a single `<trk>` element.
+ * All stage geometries are merged into one continuous `<trkseg>` so that
+ * GPS devices and applications display the trip as a single valid tour.
  * Waypoints (POIs, accommodations) from all stages are merged into the global
  * `<wpt>` list.
  */
@@ -34,15 +35,15 @@ final readonly class TripGpxNormalizer implements NormalizerInterface
         /** @var list<Stage> $stages */
         $stages = $context['trip_stages'] ?? $this->tripStateManager->getStages($data->id) ?? [];
 
-        $segments = [];
+        $points = [];
         $waypoints = [];
 
         foreach ($stages as $stage) {
-            $points = array_map(
+            $stagePoints = array_map(
                 static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
                 $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
             );
-            $segments[] = $points;
+            array_push($points, ...$stagePoints);
 
             foreach ($stage->pois as $poi) {
                 $waypoints[] = [
@@ -67,7 +68,7 @@ final readonly class TripGpxNormalizer implements NormalizerInterface
 
         return [
             'trackName' => $this->tripStateManager->getTitle($data->id) ?? $data->id,
-            'segments' => $segments,
+            'points' => $points,
             'waypoints' => $waypoints,
         ];
     }
