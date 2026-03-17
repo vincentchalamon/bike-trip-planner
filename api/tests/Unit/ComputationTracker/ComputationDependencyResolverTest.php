@@ -138,6 +138,34 @@ final class ComputationDependencyResolverTest extends TestCase
     }
 
     #[Test]
+    public function departureHourChangeReturnsTerrain(): void
+    {
+        $old = $this->createRequest('https://www.komoot.com/tour/123');
+        $new = $this->createRequest('https://www.komoot.com/tour/123');
+        $old->departureHour = 8;
+        $new->departureHour = 17;
+
+        $result = $this->resolver->resolve($old, $new);
+
+        $this->assertContains(ComputationName::TERRAIN, $result);
+        $this->assertNotContains(ComputationName::STAGES, $result);
+    }
+
+    #[Test]
+    public function averageSpeedChangeReturnsTerrain(): void
+    {
+        $old = $this->createRequest('https://www.komoot.com/tour/123');
+        $new = $this->createRequest('https://www.komoot.com/tour/123');
+        $old->averageSpeed = 15.0;
+        $new->averageSpeed = 20.0;
+
+        $result = $this->resolver->resolve($old, $new);
+
+        $this->assertContains(ComputationName::TERRAIN, $result);
+        $this->assertNotContains(ComputationName::STAGES, $result);
+    }
+
+    #[Test]
     public function ebikeModeChangeReturnsTerrain(): void
     {
         $old = $this->createRequest('https://www.komoot.com/tour/123');

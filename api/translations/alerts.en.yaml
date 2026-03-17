@@ -21,7 +21,7 @@ alert.wind.warning: "Headwinds expected for %count%/%total% stages (>25 km/h). A
 alert.comfort.warning: "Poor cycling conditions (comfort index < 40/100) on %count%/%total% stages. Consider adjusting your schedule."
 alert.accommodation.seasonal_warning: "All detected accommodations on stage %stage% may be closed during this period."
 alert.rest_day.nudge: "Stage %stage% is day %days% of cycling without a break. Consider inserting a rest day."
-alert.sunset.warning: "Stage %stage%: estimated arrival after civil twilight end (%twilight%, sunset %sunset%). You may be riding in the dark."
+alert.sunset.warning: "Stage %stage%: estimated arrival after twilight end (%twilight%, sunset %sunset%). You may be riding in the dark."
 stage.label: "Stage %day%"
 weather.clear_sky: "Clear sky"
 weather.mainly_clear: "Mainly clear"
