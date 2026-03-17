@@ -29,6 +29,7 @@ const MERCURE_URL =
  * - `weather_fetched` — per-stage weather forecasts
  * - `pois_scanned` — points of interest with optional alerts
  * - `accommodations_found` — accommodation options per stage
+ * - `supply_timeline` — clustered supply markers per stage (water + food POIs)
  * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` / `water_point_alerts` — alert categories
  * - `trip_complete` — final computation status, stops processing spinner
  * - `validation_error` / `computation_error` — error toasts and recovery
@@ -82,6 +83,7 @@ function dispatchEvent(event: MercureEvent): void {
             weather: null,
             alerts: [],
             pois: [],
+            supplyTimeline: [],
             accommodations: existing?.accommodations ?? [],
             selectedAccommodation: existing?.selectedAccommodation ?? null,
             accommodationSearchRadiusKm:
@@ -120,6 +122,7 @@ function dispatchEvent(event: MercureEvent): void {
             weather: null,
             alerts: [],
             pois: [],
+            supplyTimeline: [],
             accommodations: endMatch ? prev.accommodations : [],
             accommodationSearchRadiusKm: endMatch
               ? (prev.accommodationSearchRadiusKm ??
@@ -160,6 +163,13 @@ function dispatchEvent(event: MercureEvent): void {
           "pois",
         );
       }
+      break;
+
+    case "supply_timeline":
+      store.updateStageSupplyTimeline(
+        event.data.stageIndex,
+        event.data.markers,
+      );
       break;
 
     case "accommodations_found":

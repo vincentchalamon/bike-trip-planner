@@ -150,6 +150,16 @@
     "dark": "Dark",
     "switchTo": "Switch to {label} theme"
   },
+  "supplyTimeline": {
+    "ariaLabel": "Stage supply points",
+    "waterMarkerAriaLabel": "Water point at {distance} km",
+    "foodMarkerAriaLabel": "Resupply at {distance} km",
+    "bothMarkerAriaLabel": "Water and resupply at {distance} km",
+    "waterSection": "Water points",
+    "foodSection": "Shops & restaurants",
+    "unnamedWaterPoint": "Cemetery (water tap)",
+    "unnamedFoodPoint": "{category}"
+  },
   "progressBar": {
     "ariaLabel": "Trip progress by day",
     "segmentAriaLabel": "Day {day} — {distance} km",

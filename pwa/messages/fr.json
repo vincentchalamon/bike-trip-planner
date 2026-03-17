@@ -150,6 +150,16 @@
     "dark": "Sombre",
     "switchTo": "Passer au thème {label}"
   },
+  "supplyTimeline": {
+    "ariaLabel": "Ravitaillement de l'étape",
+    "waterMarkerAriaLabel": "Point d'eau à {distance} km",
+    "foodMarkerAriaLabel": "Ravitaillement à {distance} km",
+    "bothMarkerAriaLabel": "Eau et ravitaillement à {distance} km",
+    "waterSection": "Points d'eau",
+    "foodSection": "Commerces & restaurants",
+    "unnamedWaterPoint": "Cimetière (eau)",
+    "unnamedFoodPoint": "{category}"
+  },
   "progressBar": {
     "ariaLabel": "Progression du voyage par jour",
     "segmentAriaLabel": "Jour {day} — {distance} km",

@@ -38,6 +38,30 @@ export const PointOfInterestSchema = z.object({
   distanceFromStart: z.number().nullable().optional(),
 });
 
+export const SupplyWaterPointSchema = z.object({
+  name: z.string().nullable(),
+  lat: z.number(),
+  lon: z.number(),
+  distanceFromStart: z.number(),
+});
+
+export const SupplyFoodPointSchema = z.object({
+  name: z.string().nullable(),
+  category: z.string(),
+  lat: z.number(),
+  lon: z.number(),
+  distanceFromStart: z.number(),
+});
+
+export const SupplyMarkerSchema = z.object({
+  type: z.enum(["water", "food", "both"]),
+  distanceFromStart: z.number(),
+  lat: z.number(),
+  lon: z.number(),
+  water: z.array(SupplyWaterPointSchema),
+  food: z.array(SupplyFoodPointSchema),
+});
+
 export const AccommodationSchema = z.object({
   name: z.string(),
   type: z.string(),
@@ -73,6 +97,7 @@ export const StageDataSchema = z.object({
     .positive()
     .default(DEFAULT_ACCOMMODATION_RADIUS_KM),
   isRestDay: z.boolean().default(false),
+  supplyTimeline: z.array(SupplyMarkerSchema).default([]),
 });
 
 export const TripStateSchema = z.object({
@@ -100,5 +125,8 @@ export type CoordinateData = z.infer<typeof CoordinateSchema>;
 export type AlertData = z.infer<typeof AlertSchema>;
 export type WeatherData = z.infer<typeof WeatherForecastSchema>;
 export type PoiData = z.infer<typeof PointOfInterestSchema>;
+export type SupplyWaterPointData = z.infer<typeof SupplyWaterPointSchema>;
+export type SupplyFoodPointData = z.infer<typeof SupplyFoodPointSchema>;
+export type SupplyMarkerData = z.infer<typeof SupplyMarkerSchema>;
 export type AccommodationData = z.infer<typeof AccommodationSchema>;
 export type StageData = z.infer<typeof StageDataSchema>;
