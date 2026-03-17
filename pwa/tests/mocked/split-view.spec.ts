@@ -279,4 +279,31 @@ test.describe("ViewModeToggle — desktop default", () => {
       "true",
     );
   });
+
+  test("narrows viewport below 1024 px while in split mode → switches to timeline", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    // Start at desktop width so split is the default
+    await mockedPage.setViewportSize({ width: 1280, height: 720 });
+    await createTripWithGeometry(submitUrl, injectEvent);
+    const toggle = mockedPage.getByTestId("view-mode-toggle");
+    await expect(toggle).toBeVisible({ timeout: 5000 });
+    await expect(toggle.getByTestId("view-mode-split")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    // Shrink below the 1024 px breakpoint — resize listener must fire
+    await mockedPage.setViewportSize({ width: 375, height: 812 });
+
+    // The resize handler switches split → timeline; view-mode-split button is
+    // CSS-hidden on mobile (hidden lg:inline-flex) but aria-pressed is still readable
+    await expect(toggle.getByTestId("view-mode-timeline")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(mockedPage.getByTestId("map-container")).not.toBeVisible();
+  });
 });
