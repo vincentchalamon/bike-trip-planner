@@ -1,8 +1,9 @@
 import { useRef, useCallback } from "react";
 
-interface SwipeHandlers {
+export interface SwipeHandlers {
   onTouchStart: (e: React.TouchEvent) => void;
   onTouchEnd: (e: React.TouchEvent) => void;
+  onTouchCancel: () => void;
 }
 
 interface UseSwipeOptions {
@@ -26,6 +27,10 @@ export function useSwipe({
 }: UseSwipeOptions): SwipeHandlers {
   const startXRef = useRef<number | null>(null);
 
+  const reset = useCallback(() => {
+    startXRef.current = null;
+  }, []);
+
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     startXRef.current = e.touches[0]?.clientX ?? null;
   }, []);
@@ -48,5 +53,5 @@ export function useSwipe({
     [onSwipeLeft, onSwipeRight, threshold],
   );
 
-  return { onTouchStart, onTouchEnd };
+  return { onTouchStart, onTouchEnd, onTouchCancel: reset };
 }

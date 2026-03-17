@@ -159,6 +159,76 @@ test.describe("ViewModeToggle — mode switching", () => {
   });
 });
 
+test.describe("swipe gestures (mobile)", () => {
+  async function swipeHorizontal(
+    page: import("@playwright/test").Page,
+    direction: "left" | "right",
+  ) {
+    const startX = direction === "left" ? 300 : 100;
+    const endX = direction === "left" ? 100 : 300;
+    await page.evaluate(
+      ({ startX, endX }) => {
+        const el = document.body;
+        el.dispatchEvent(
+          new TouchEvent("touchstart", {
+            bubbles: true,
+            touches: [new Touch({ identifier: 1, target: el, clientX: startX, clientY: 300 })],
+          }),
+        );
+        el.dispatchEvent(
+          new TouchEvent("touchend", {
+            bubbles: true,
+            changedTouches: [new Touch({ identifier: 1, target: el, clientX: endX, clientY: 300 })],
+          }),
+        );
+      },
+      { startX, endX },
+    );
+  }
+
+  test("swipe left switches viewMode to map", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await createTripWithGeometry(submitUrl, injectEvent);
+    await expect(mockedPage.getByTestId("view-mode-toggle")).toBeVisible({
+      timeout: 5000,
+    });
+
+    // Start from split (default on desktop) — switch to timeline first so swipe left → map makes sense
+    await mockedPage.getByTestId("view-mode-timeline").click();
+    await expect(mockedPage.getByTestId("map-container")).not.toBeVisible();
+
+    await swipeHorizontal(mockedPage, "left");
+
+    await expect(mockedPage.getByTestId("map-container")).toBeVisible({
+      timeout: 3000,
+    });
+  });
+
+  test("swipe right switches viewMode to timeline", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await createTripWithGeometry(submitUrl, injectEvent);
+    await expect(mockedPage.getByTestId("view-mode-toggle")).toBeVisible({
+      timeout: 5000,
+    });
+
+    // Start from map-only mode so swipe right → timeline makes sense
+    await mockedPage.getByTestId("view-mode-map").click();
+    await expect(mockedPage.locator("#timeline")).not.toBeVisible();
+
+    await swipeHorizontal(mockedPage, "right");
+
+    await expect(mockedPage.locator("#timeline")).toBeVisible({
+      timeout: 3000,
+    });
+  });
+});
+
 test.describe("ViewModeToggle — desktop default", () => {
   test("default mode on desktop (≥1024px) is split", async ({
     submitUrl,
