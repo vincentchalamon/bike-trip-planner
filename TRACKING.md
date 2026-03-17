@@ -236,9 +236,6 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 | 3 | [#79](https://github.com/vincentchalamon/bike-trip-planner/issues/79) | Frontend auth | M | 1 | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) |
 | 4 | [#77](https://github.com/vincentchalamon/bike-trip-planner/issues/77) | Sécurisation endpoints | M | 1 | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) |
 | 5 | [#78](https://github.com/vincentchalamon/bike-trip-planner/issues/78) | Sécurisation Mercure | M | 1 | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76), #77 |
-| 6 | [#80](https://github.com/vincentchalamon/bike-trip-planner/issues/80) | Partage trip lecture seule | M | 1 | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76), #77 |
-| 7 | [#42](https://github.com/vincentchalamon/bike-trip-planner/issues/42) | Bouton Partager | L | 2 | [#80](https://github.com/vincentchalamon/bike-trip-planner/issues/80) |
-| 8 | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Garmin Connect | L | 3 | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) |
 
 ### Recette Sprint 12
 
@@ -248,14 +245,30 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
   - [ ] Token expiré/utilisé → message d'erreur clair
   - [ ] Endpoints sécurisés (401 sans JWT)
   - [ ] Mercure : pas de fuite de données entre utilisateurs
-  - [ ] Partage en lecture seule fonctionnel (lien anonyme)
-  - [ ] Bouton Partager : infographie + texte + lien
-  - [ ] Garmin Connect : export course (si infra disponible)
   - [ ] Mobile : flux auth sur Capacitor
 
 ---
 
-## Sprint 13 — Mobile
+## Sprint 13 — Partage & Export Garmin
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | [#80](https://github.com/vincentchalamon/bike-trip-planner/issues/80) | Partage trip lecture seule | M | 1 | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76), #77 |
+| 2 | [#42](https://github.com/vincentchalamon/bike-trip-planner/issues/42) | Bouton Partager | L | 2 | [#80](https://github.com/vincentchalamon/bike-trip-planner/issues/80) |
+| 3 | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Garmin Connect | L | 3 | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) |
+
+### Recette Sprint 13
+
+- **Tests E2E :** `tests/recette/sprint-13.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Partage en lecture seule fonctionnel (lien anonyme)
+  - [ ] Révocation du lien par le propriétaire
+  - [ ] Bouton Partager : infographie + texte + lien
+  - [ ] Garmin Connect : export course (si infra disponible)
+
+---
+
+## Sprint 14 — Mobile
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
@@ -266,9 +279,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 | 5 | [#73](https://github.com/vincentchalamon/bike-trip-planner/issues/73) | CI APK Android | M | 1 | — |
 | 6 | [#51](https://github.com/vincentchalamon/bike-trip-planner/issues/51) | Consultation mobile | XL | 5 | [#69](https://github.com/vincentchalamon/bike-trip-planner/issues/69), #70, #71, #72, #73, #74 |
 
-### Recette Sprint 13
+### Recette Sprint 14
 
-- **Tests E2E :** `tests/recette/sprint-13.spec.ts`
+- **Tests E2E :** `tests/recette/sprint-14.spec.ts`
 - **Checklist manuelle :**
   - [ ] APK installable sur Android
   - [ ] Mode hors-ligne : consultation des données en cache
@@ -279,15 +292,15 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 ---
 
-## Sprint 14 — Persistance
+## Sprint 15 — Persistance
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
 | 1 | [#56](https://github.com/vincentchalamon/bike-trip-planner/issues/56) | Persistance BDD | XL | 5 | [#50](https://github.com/vincentchalamon/bike-trip-planner/issues/50), #45, #52, #76, #77, #80, #42, #65, #51 |
 
-### Recette Sprint 14
+### Recette Sprint 15
 
-- **Tests E2E :** `tests/recette/sprint-14.spec.ts`
+- **Tests E2E :** `tests/recette/sprint-15.spec.ts`
 - **Checklist manuelle :**
   - [ ] Trips persistés en PostgreSQL
   - [ ] Fermer le navigateur → rouvrir → trip retrouvé
@@ -320,7 +333,8 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 | 9 | Sources Routes & Infra | 3 | 5 |
 | 10 | i18n & Documentation | 5 | 7 |
 | 11 | Gestion Trips | 3 | 4 |
-| 12 | Auth & Sécurité | 8 | 14 |
-| 13 | Mobile | 6 | 11 |
-| 14 | Persistance | 1 | 5 |
-| **Total** | | **54** | **~82** |
+| 12 | Auth & Sécurité | 5 | 8 |
+| 13 | Partage & Export Garmin | 3 | 6 |
+| 14 | Mobile | 6 | 11 |
+| 15 | Persistance | 1 | 5 |
+| **Total** | | **57** | **~82** |
