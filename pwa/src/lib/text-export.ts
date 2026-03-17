@@ -116,11 +116,11 @@ export function buildTripText(params: TextExportParams): string {
   const activeStages = stages.filter((s) => !s.isRestDay);
   if (activeStages.length > 0) {
     lines.push("");
-    for (let i = 0; i < activeStages.length; i++) {
+    activeStages.forEach((stage, i) => {
       lines.push(
-        formatStageLine(activeStages[i], startDate, i === activeStages.length - 1),
+        formatStageLine(stage, startDate, i === activeStages.length - 1),
       );
-    }
+    });
   }
 
   return lines.join("\n");
