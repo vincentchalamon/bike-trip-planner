@@ -300,6 +300,7 @@ export function useTripPlanner() {
       pois: [],
       accommodations: [],
       accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
+      supplyTimeline: [],
       isRestDay: false,
     };
     const updatedStages = stages.map((s) => ({ ...s }));

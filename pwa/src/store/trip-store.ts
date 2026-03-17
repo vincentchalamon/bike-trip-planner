@@ -9,6 +9,7 @@ import type {
   PoiData,
   AccommodationData,
   AlertData,
+  SupplyMarkerData,
 } from "@/lib/validation/schemas";
 import type { AccommodationType } from "@/lib/accommodation-types";
 import { FILTERABLE_ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
@@ -48,6 +49,10 @@ interface TripState {
   setStages: (stages: StageData[]) => void;
   updateStageWeather: (dayNumber: number, weather: WeatherData) => void;
   updateStagePois: (stageIndex: number, pois: PoiData[]) => void;
+  updateStageSupplyTimeline: (
+    stageIndex: number,
+    markers: SupplyMarkerData[],
+  ) => void;
   updateStageAccommodations: (
     stageIndex: number,
     accs: AccommodationData[],
@@ -171,6 +176,13 @@ export const useTripStore = create<TripState>()(
       set((state) => {
         if (state.stages[stageIndex]) {
           state.stages[stageIndex].pois = pois;
+        }
+      }),
+
+    updateStageSupplyTimeline: (stageIndex, markers) =>
+      set((state) => {
+        if (state.stages[stageIndex]) {
+          state.stages[stageIndex].supplyTimeline = markers;
         }
       }),
 
@@ -326,6 +338,7 @@ export const useTripStore = create<TripState>()(
           accommodations: [],
           accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
           isRestDay: true,
+          supplyTimeline: [],
         };
 
         state.stages.splice(afterIndex + 1, 0, restDay);

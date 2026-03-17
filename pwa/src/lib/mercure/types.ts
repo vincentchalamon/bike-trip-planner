@@ -59,6 +59,30 @@ export interface AccommodationPayload {
   distanceToEndPoint: number;
 }
 
+export interface SupplyWaterPoint {
+  name: string | null;
+  lat: number;
+  lon: number;
+  distanceFromStart: number;
+}
+
+export interface SupplyFoodPoint {
+  name: string | null;
+  category: string;
+  lat: number;
+  lon: number;
+  distanceFromStart: number;
+}
+
+export interface SupplyMarker {
+  type: "water" | "food" | "both";
+  distanceFromStart: number;
+  lat: number;
+  lon: number;
+  water: SupplyWaterPoint[];
+  food: SupplyFoodPoint[];
+}
+
 export type MercureEvent =
   | {
       type: "route_parsed";
@@ -139,6 +163,13 @@ export type MercureEvent =
             distanceFromStart: number;
           }[];
         }[];
+      };
+    }
+  | {
+      type: "supply_timeline";
+      data: {
+        stageIndex: number;
+        markers: SupplyMarker[];
       };
     }
   | { type: "validation_error"; data: { code: string; message: string } }

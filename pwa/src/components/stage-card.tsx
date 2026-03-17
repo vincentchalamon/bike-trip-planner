@@ -13,6 +13,7 @@ import { AccommodationPanel } from "@/components/accommodation-panel";
 import { StageDownloads } from "@/components/stage-downloads";
 import { StageDistanceEditor } from "@/components/stage-distance-editor";
 import { DifficultyGauge } from "@/components/difficulty-gauge";
+import { SupplyTimeline } from "@/components/SupplyTimeline/SupplyTimeline";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 import { useTripStore } from "@/store/trip-store";
 import { getDifficulty } from "@/lib/constants";
@@ -162,6 +163,16 @@ export function StageCard({
             </>
           )}
         </div>
+
+        {/* Supply timeline */}
+        {stage.supplyTimeline && stage.supplyTimeline.length > 0 && (
+          <div className="mt-4">
+            <SupplyTimeline
+              markers={stage.supplyTimeline}
+              stageDistance={stage.distance}
+            />
+          </div>
+        )}
 
         {/* Alerts */}
         {stage.alerts.length > 0 && (
