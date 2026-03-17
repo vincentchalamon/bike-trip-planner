@@ -118,9 +118,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-06.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Export texte complet et formaté
-  - [ ] Téléchargement GPX global fonctionnel
-  - [ ] Budget récapitulatif avec totaux cohérents
+  - [x] Export texte complet et formaté
+  - [x] Téléchargement GPX global fonctionnel
+  - [x] Budget récapitulatif avec totaux cohérents
 
 ---
 
