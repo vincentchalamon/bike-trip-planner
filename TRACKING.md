@@ -98,11 +98,11 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-05.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Vent relatif (face/dos) affiché par étape
-  - [ ] Indice de confort cycliste visible
-  - [ ] Estimation du temps de parcours cohérente avec le profil cyclo
-  - [ ] Horaires lever/coucher de soleil affichés
-  - [ ] Alerte arrivée nocturne si applicable
+  - [x] Vent relatif (face/dos) affiché par étape
+  - [x] Indice de confort cycliste visible
+  - [x] Estimation du temps de parcours cohérente avec le profil cyclo
+  - [x] Horaires lever/coucher de soleil affichés
+  - [x] Alerte arrivée nocturne si applicable
 
 ---
 
