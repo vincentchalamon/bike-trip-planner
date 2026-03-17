@@ -121,13 +121,15 @@ test.describe("Accommodation selection", () => {
     // "Sélectionné" badge should be gone
     await expect(stageCard).not.toContainText("Sélectionné");
 
-    // The estimated budget is still visible (food costs remain), but no longer shows the selected accommodation amount
+    // The deselect button should be gone
+    await expect(
+      stageCard.getByRole("button", { name: "Désélectionner l'hébergement" }),
+    ).toBeHidden();
+
+    // The estimated budget is still visible (food + accommodation avg remain)
     await expect(
       mockedPage.getByTestId("estimated-budget"),
     ).toBeVisible();
-    await expect(
-      mockedPage.getByTestId("estimated-budget"),
-    ).not.toContainText("225€");
   });
 
   test("no select button on last stage accommodation panel", async ({
