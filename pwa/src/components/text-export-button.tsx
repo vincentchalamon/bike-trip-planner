@@ -52,7 +52,16 @@ export function TextExportButton({
           totalElevation: t("totalElevation"),
         },
       }),
-    [title, totalDistance, totalElevation, totalElevationLoss, sourceUrl, stages, startDate, t],
+    [
+      title,
+      totalDistance,
+      totalElevation,
+      totalElevationLoss,
+      sourceUrl,
+      stages,
+      startDate,
+      t,
+    ],
   );
 
   async function handleCopy() {
@@ -90,13 +99,15 @@ export function TextExportButton({
           <div className="whitespace-pre-wrap break-words rounded-md bg-muted p-4 text-sm leading-relaxed max-h-[60vh] overflow-y-auto">
             {text.split("\n").map((line, i) => (
               <p key={i} className="min-h-[1em]">
-                {line.split(/(\*[^*]+\*)/).map((part, j) =>
-                  /^\*[^*]+\*$/.test(part) ? (
-                    <strong key={j}>{part.slice(1, -1)}</strong>
-                  ) : (
-                    part
-                  ),
-                )}
+                {line
+                  .split(/(\*[^*]+\*)/)
+                  .map((part, j) =>
+                    /^\*[^*]+\*$/.test(part) ? (
+                      <strong key={j}>{part.slice(1, -1)}</strong>
+                    ) : (
+                      part
+                    ),
+                  )}
               </p>
             ))}
           </div>

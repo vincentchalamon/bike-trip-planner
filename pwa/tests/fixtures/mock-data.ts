@@ -213,7 +213,12 @@ export function supplyTimelineEvent(stageIndex: number): MercureEvent {
           lat: 44.62,
           lon: 4.51,
           water: [
-            { name: "Cimetière de Vals", lat: 44.62, lon: 4.51, distanceFromStart: 15.0 },
+            {
+              name: "Cimetière de Vals",
+              lat: 44.62,
+              lon: 4.51,
+              distanceFromStart: 15.0,
+            },
           ],
           food: [],
         },
@@ -224,8 +229,20 @@ export function supplyTimelineEvent(stageIndex: number): MercureEvent {
           lon: 4.48,
           water: [],
           food: [
-            { name: "Boulangerie du Village", category: "bakery", lat: 44.64, lon: 4.48, distanceFromStart: 42.3 },
-            { name: "Épicerie Centrale", category: "convenience", lat: 44.641, lon: 4.481, distanceFromStart: 42.5 },
+            {
+              name: "Boulangerie du Village",
+              category: "bakery",
+              lat: 44.64,
+              lon: 4.48,
+              distanceFromStart: 42.3,
+            },
+            {
+              name: "Épicerie Centrale",
+              category: "convenience",
+              lat: 44.641,
+              lon: 4.481,
+              distanceFromStart: 42.5,
+            },
           ],
         },
         {
@@ -234,10 +251,21 @@ export function supplyTimelineEvent(stageIndex: number): MercureEvent {
           lat: 44.55,
           lon: 4.42,
           water: [
-            { name: "Cimetière de Ruoms", lat: 44.55, lon: 4.42, distanceFromStart: 58.7 },
+            {
+              name: "Cimetière de Ruoms",
+              lat: 44.55,
+              lon: 4.42,
+              distanceFromStart: 58.7,
+            },
           ],
           food: [
-            { name: "Restaurant Les Gorges", category: "restaurant", lat: 44.551, lon: 4.421, distanceFromStart: 58.8 },
+            {
+              name: "Restaurant Les Gorges",
+              category: "restaurant",
+              lat: 44.551,
+              lon: 4.421,
+              distanceFromStart: 58.8,
+            },
           ],
         },
       ],

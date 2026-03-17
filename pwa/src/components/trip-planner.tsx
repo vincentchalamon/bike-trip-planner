@@ -15,7 +15,11 @@ import { TextExportButton } from "@/components/text-export-button";
 import { Button } from "@/components/ui/button";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useUiStore } from "@/store/ui-store";
-import { MEAL_COST_MIN, MEAL_COST_MAX, mealsForStage } from "@/lib/budget-constants";
+import {
+  MEAL_COST_MIN,
+  MEAL_COST_MAX,
+  mealsForStage,
+} from "@/lib/budget-constants";
 
 export function TripPlanner() {
   const t = useTranslations();
@@ -79,8 +83,12 @@ export function TripPlanner() {
           accMin += s.selectedAccommodation.estimatedPriceMin ?? 0;
           accMax += s.selectedAccommodation.estimatedPriceMax ?? 0;
         } else if (s.accommodations.length > 0) {
-          accMin += s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) / s.accommodations.length;
-          accMax += s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) / s.accommodations.length;
+          accMin +=
+            s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) /
+            s.accommodations.length;
+          accMax +=
+            s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) /
+            s.accommodations.length;
         }
       }
     });

@@ -241,9 +241,7 @@ test.describe("Supply timeline", () => {
 
     // Rest day card should not contain supply timeline
     const restDayCard = mockedPage.getByTestId("rest-day-card-1");
-    await expect(
-      restDayCard.getByTestId("supply-timeline"),
-    ).not.toBeVisible();
+    await expect(restDayCard.getByTestId("supply-timeline")).not.toBeVisible();
   });
 
   test("multiple stages each get their own supply timeline", async ({
@@ -273,9 +271,7 @@ test.describe("Supply timeline", () => {
     ).toBeVisible();
     // Stage 3 has no supply data
     await expect(
-      mockedPage
-        .getByTestId("stage-card-3")
-        .getByTestId("supply-timeline"),
+      mockedPage.getByTestId("stage-card-3").getByTestId("supply-timeline"),
     ).not.toBeVisible();
   });
 });

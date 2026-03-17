@@ -117,7 +117,8 @@ function MarkerTooltip({
                 {marker.food.map((f, idx) => (
                   <li key={idx} className="flex justify-between gap-2">
                     <span className="text-muted-foreground truncate">
-                      {f.name ?? t("unnamedFoodPoint", { category: f.category })}
+                      {f.name ??
+                        t("unnamedFoodPoint", { category: f.category })}
                     </span>
                     <span className="shrink-0 tabular-nums text-muted-foreground">
                       {f.distanceFromStart} km
