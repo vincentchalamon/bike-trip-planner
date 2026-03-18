@@ -6,6 +6,7 @@ namespace App\Tests\Unit\MessageHandler;
 
 use App\Accommodation\AccommodationMetadataExtractor;
 use App\Accommodation\SeasonalityCheckerInterface;
+use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -368,5 +369,76 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $handler(new ScanAccommodations('trip-2'));
 
         $this->assertCount(1, $stage->accommodations);
+    }
+
+    #[Test]
+    public function expandScanAccumulatesAccommodations(): void
+    {
+        $stage = $this->createStage('trip-3', 48.5, 2.5);
+
+        // Pre-populate the stage with one existing accommodation
+        $existing = new Accommodation(
+            name: 'Camping du Lac',
+            type: 'camp_site',
+            lat: 48.4,
+            lon: 2.4,
+            estimatedPriceMin: 8.0,
+            estimatedPriceMax: 25.0,
+            isExactPrice: false,
+            distanceToEndPoint: 3.0,
+        );
+        $stage->accommodations = [$existing];
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getRequest')->willReturn(null);
+
+        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
+        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
+
+        // Scanner returns a new accommodation (different coordinates — not a duplicate)
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('query')->willReturn([
+            'elements' => [
+                ['lat' => 48.7, 'lon' => 2.7, 'tags' => ['tourism' => 'hotel', 'name' => 'Hotel du Nord']],
+            ],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByEndpoint')->willReturn([
+            0 => [['name' => 'Hotel du Nord', 'type' => 'hotel', 'lat' => 48.7, 'lon' => 2.7,
+                'priceMin' => 60.0, 'priceMax' => 120.0, 'isExact' => false,
+                'url' => null, 'tagCount' => 2, 'hasWebsite' => false, 'tags' => []]],
+        ]);
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inKilometers')->willReturn(5.0);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-3',
+                MercureEventType::ACCOMMODATIONS_FOUND,
+                $this->callback(static function (array $data): bool {
+                    // Both the existing and the new accommodation must be present
+                    $accommodations = $data['accommodations'];
+                    if (2 !== \count($accommodations)) {
+                        return false;
+                    }
+
+                    $names = array_column($accommodations, 'name');
+
+                    return \in_array('Camping du Lac', $names, true)
+                        && \in_array('Hotel du Nord', $names, true);
+                }),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
+        $handler(new ScanAccommodations('trip-3', isExpandScan: true));
+
+        // Stage accommodations must contain both entries after the expand scan
+        $this->assertCount(2, $stage->accommodations);
     }
 }

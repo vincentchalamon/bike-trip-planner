@@ -6,10 +6,12 @@ namespace App\Tests\Unit\MessageHandler;
 
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
+use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateStages;
+use App\Message\ScanAccommodations;
 use App\MessageHandler\RecalculateStagesHandler;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -95,5 +97,58 @@ final class RecalculateStagesHandlerTest extends TestCase
         );
 
         $handler(new RecalculateStages(tripId: 'trip-1', affectedIndices: []));
+    }
+
+    #[Test]
+    public function stagesComputedDispatchesScanAccommodationsPerAffectedIndex(): void
+    {
+        $makeStage = static fn (int $day): Stage => new Stage(
+            tripId: 'trip-1',
+            dayNumber: $day,
+            distance: 80.0,
+            elevation: 500.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.5, 2.5),
+        );
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$makeStage(1), $makeStage(2), $makeStage(3)]);
+
+        $request = new TripRequest();
+        $tripStateManager->method('getRequest')->willReturn($request);
+
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+
+        /** @var list<object> $dispatched */
+        $dispatched = [];
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturnCallback(
+            static function (object $message) use (&$dispatched): Envelope {
+                $dispatched[] = $message;
+
+                return new Envelope($message);
+            }
+        );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $messageBus);
+
+        $handler(new RecalculateStages(tripId: 'trip-1', affectedIndices: [0, 2]));
+
+        $scanMessages = array_values(array_filter(
+            $dispatched,
+            static fn (object $m): bool => $m instanceof ScanAccommodations,
+        ));
+
+        $this->assertCount(2, $scanMessages);
+
+        /** @var ScanAccommodations $first */
+        $first = $scanMessages[0];
+        $this->assertSame(0, $first->stageIndex);
+        $this->assertFalse($first->isExpandScan);
+
+        /** @var ScanAccommodations $second */
+        $second = $scanMessages[1];
+        $this->assertSame(2, $second->stageIndex);
+        $this->assertFalse($second->isExpandScan);
     }
 }

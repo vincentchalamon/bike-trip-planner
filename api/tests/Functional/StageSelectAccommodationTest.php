@@ -227,6 +227,16 @@ final class StageSelectAccommodationTest extends ApiTestCase
         $this->assertContains(ScanAccommodations::class, $messageClasses);
         $this->assertContains(RecalculateStages::class, $messageClasses);
 
+        $scanMessages = array_values(array_filter(
+            $transport->getSent(),
+            static fn (Envelope $envelope): bool => $envelope->getMessage() instanceof ScanAccommodations,
+        ));
+        $this->assertCount(1, $scanMessages);
+        /** @var ScanAccommodations $scanMessage */
+        $scanMessage = $scanMessages[0]->getMessage();
+        $this->assertSame(0, $scanMessage->stageIndex);
+        $this->assertFalse($scanMessage->isExpandScan);
+
         $recalculateMessages = array_filter(
             $transport->getSent(),
             static fn (Envelope $envelope): bool => $envelope->getMessage() instanceof RecalculateStages,
