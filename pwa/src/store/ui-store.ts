@@ -11,6 +11,8 @@ interface UiState {
   sseConnected: boolean;
   expandedCalendar: boolean;
   isConfigPanelOpen: boolean;
+  /** Whether the keyboard shortcuts help modal is open. */
+  isHelpModalOpen: boolean;
   error: { type: string; message: string } | null;
   activeDayNumber: number | null;
   /** Index (into active stages) of the stage currently focused on the map. null = global view. */
@@ -28,6 +30,7 @@ interface UiState {
   setSseConnected: (value: boolean) => void;
   setExpandedCalendar: (value: boolean) => void;
   setConfigPanelOpen: (value: boolean) => void;
+  setHelpModalOpen: (value: boolean) => void;
   setError: (error: { type: string; message: string } | null) => void;
   setActiveDayNumber: (dayNumber: number | null) => void;
   setFocusedMapStageIndex: (index: number | null) => void;
@@ -42,6 +45,7 @@ interface UiState {
  * - `sseConnected` — whether the Mercure SSE connection is active
  * - `expandedCalendar` — whether the date picker panel is open
  * - `isConfigPanelOpen` — whether the configuration sidebar is open
+ * - `isHelpModalOpen` — whether the keyboard shortcuts help modal is open
  * - `error` — global error banner state (type + message), or `null`
  * - `activeDayNumber` — the day number currently highlighted across the UI
  *   (progress bar, map, elevation profile); `null` means no active day
@@ -63,6 +67,7 @@ export const useUiStore = create<UiState>()(
     sseConnected: false,
     expandedCalendar: false,
     isConfigPanelOpen: false,
+    isHelpModalOpen: false,
     error: null,
     activeDayNumber: null,
     focusedMapStageIndex: null,
@@ -93,6 +98,11 @@ export const useUiStore = create<UiState>()(
     setConfigPanelOpen: (value) =>
       set((state) => {
         state.isConfigPanelOpen = value;
+      }),
+
+    setHelpModalOpen: (value) =>
+      set((state) => {
+        state.isHelpModalOpen = value;
       }),
 
     setError: (error) =>

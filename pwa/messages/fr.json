@@ -248,6 +248,20 @@
     "redoTitle": "Rétablir (Ctrl+Y)",
     "redoLabel": "Rétablir l'action annulée"
   },
+  "keyboardHelp": {
+    "openButton": "Raccourcis clavier",
+    "title": "Raccourcis clavier",
+    "description": "Utilisez ces raccourcis pour naviguer plus rapidement.",
+    "sectionNavigation": "Navigation",
+    "sectionHistory": "Historique",
+    "sectionInterface": "Interface",
+    "nextStage": "Passer à l'étape suivante sur la carte",
+    "previousStage": "Revenir à l'étape précédente sur la carte",
+    "undo": "Annuler la dernière action",
+    "redo": "Rétablir l'action annulée",
+    "toggleHelp": "Afficher / masquer cette aide",
+    "closePanels": "Fermer le panneau ouvert"
+  },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",
