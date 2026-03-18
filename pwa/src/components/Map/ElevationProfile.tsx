@@ -100,7 +100,8 @@ function buildProfilePoints(
       let gradient = 0;
       if (prevEle !== null && prevDistKm !== null) {
         const deltaKm = distKm - prevDistKm;
-        if (deltaKm > 0) gradient = (currEle - prevEle) / (deltaKm * 1000) * 100;
+        if (deltaKm > 0)
+          gradient = ((currEle - prevEle) / (deltaKm * 1000)) * 100;
       }
       prevEle = currEle;
       prevDistKm = distKm;
@@ -159,12 +160,25 @@ export const ElevationProfile = memo(function ElevationProfile({
 
   const hasData = points.length >= 2;
 
-  const { minEle, maxEle, maxDist } = useMemo(() => {
-    if (!hasData) return { minEle: 0, maxEle: 0, maxDist: 0 };
+  const { maxDist, displayMinEle, displayMaxEle } = useMemo(() => {
+    if (!hasData)
+      return { maxDist: 0, displayMinEle: 0, displayMaxEle: 1000 };
+
+    const minEle = Math.min(...points.map((p) => p.ele));
+    const maxEle = Math.max(...points.map((p) => p.ele));
+    const dist = points[points.length - 1]?.distanceKm ?? 0;
+    const elevRange = maxEle - minEle;
+
+    // Enforce a minimum vertical span proportional to total distance.
+    // totalKm * 10 = elevation gain a 1% average gradient would produce,
+    // preventing small undulations from appearing as dramatic climbs.
+    const minRange = Math.max(elevRange, dist * 10);
+    const center = (minEle + maxEle) / 2;
+
     return {
-      minEle: Math.min(...points.map((p) => p.ele)),
-      maxEle: Math.max(...points.map((p) => p.ele)),
-      maxDist: points[points.length - 1]?.distanceKm ?? 0,
+      maxDist: dist,
+      displayMinEle: center - minRange / 2,
+      displayMaxEle: center + minRange / 2,
     };
   }, [points, hasData]);
 
@@ -176,10 +190,10 @@ export const ElevationProfile = memo(function ElevationProfile({
 
   const toY = useCallback(
     (ele: number) => {
-      const range = maxEle - minEle || 1;
-      return PAD_T + (1 - (ele - minEle) / range) * (VH - PAD_T - PAD_B);
+      const range = displayMaxEle - displayMinEle || 1;
+      return PAD_T + (1 - (ele - displayMinEle) / range) * (VH - PAD_T - PAD_B);
     },
-    [minEle, maxEle],
+    [displayMinEle, displayMaxEle],
   );
 
   // Build per-stage SVG area paths
@@ -308,9 +322,12 @@ export const ElevationProfile = memo(function ElevationProfile({
           }}
         >
           <div className="font-medium">
-            {hoveredPoint.gradient >= 0 ? "+" : ""}{hoveredPoint.gradient.toFixed(1)}%
+            {hoveredPoint.gradient >= 0 ? "+" : ""}
+            {hoveredPoint.gradient.toFixed(1)}%
           </div>
-          <div className="text-muted-foreground">{hoveredPoint.distance.toFixed(1)} km</div>
+          <div className="text-muted-foreground">
+            {hoveredPoint.distance.toFixed(1)} km
+          </div>
         </div>
       )}
     </div>
