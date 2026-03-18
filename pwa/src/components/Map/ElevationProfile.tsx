@@ -50,6 +50,8 @@ function findClosestPoint<T extends { distanceKm: number }>(
 interface ProfilePoint {
   distanceKm: number;
   ele: number;
+  cumulativeGain: number;
+  cumulativeLoss: number;
   stageIndex: number;
   coordIndex: number;
 }
@@ -74,13 +76,18 @@ function buildProfilePoints(
 
   const points: ProfilePoint[] = [];
   let cumulativeKm = 0;
+  let cumulativeGain = 0;
+  let cumulativeLoss = 0;
+  let prevEle: number | null = null;
 
   for (const { stage, stageIndex } of entries) {
     const coords = stage.geometry;
     if (coords.length < 2) continue;
 
     for (let ci = 0; ci < coords.length; ci++) {
+      const currEle = coords[ci]!.ele;
       let distKm = cumulativeKm;
+
       if (ci > 0) {
         const prev = coords[ci - 1]!;
         const curr = coords[ci]!;
@@ -90,9 +97,18 @@ function buildProfilePoints(
           haversineKm(prev.lat, prev.lon, curr.lat, curr.lon);
       }
 
+      if (prevEle !== null) {
+        const delta = currEle - prevEle;
+        if (delta > 0) cumulativeGain += delta;
+        else cumulativeLoss += Math.abs(delta);
+      }
+      prevEle = currEle;
+
       points.push({
         distanceKm: distKm,
-        ele: coords[ci]!.ele,
+        ele: currEle,
+        cumulativeGain,
+        cumulativeLoss,
         stageIndex,
         coordIndex: ci,
       });
@@ -127,7 +143,8 @@ export const ElevationProfile = memo(function ElevationProfile({
     x: number;
     screenX: number;
     flipLeft: boolean;
-    elevation: number;
+    gain: number;
+    loss: number;
     distance: number;
   } | null>(null);
   const stages = useTripStore((s) => s.stages);
@@ -218,7 +235,8 @@ export const ElevationProfile = memo(function ElevationProfile({
         x: toX(best.distanceKm),
         screenX,
         flipLeft: screenX > rect.width * 0.6,
-        elevation: best.ele,
+        gain: best.cumulativeGain,
+        loss: best.cumulativeLoss,
         distance: best.distanceKm,
       });
     },
@@ -240,9 +258,6 @@ export const ElevationProfile = memo(function ElevationProfile({
       data-testid="elevation-profile"
       aria-label={t("elevationProfileAriaLabel")}
     >
-      <p className="text-[10px] text-muted-foreground px-1 mb-0.5">
-        {t("elevationProfile")}
-      </p>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${VW} ${VH}`}
@@ -282,8 +297,7 @@ export const ElevationProfile = memo(function ElevationProfile({
         )}
       </svg>
 
-      {/* HTML tooltip — rendered outside the SVG so fonts use CSS units, not SVG viewBox units.
-          The SVG viewBox is 800×160 rendered at 80px height (scale 0.5), making SVG text tiny. */}
+      {/* HTML tooltip — rendered outside the SVG so fonts use CSS units, not SVG viewBox units. */}
       {hoveredPoint !== null && (
         <div
           data-testid="elevation-tooltip-bg"
@@ -295,7 +309,7 @@ export const ElevationProfile = memo(function ElevationProfile({
               : "translateX(8px)",
           }}
         >
-          <div className="font-medium">{Math.round(hoveredPoint.elevation)} m</div>
+          <div className="font-medium">↑ {Math.round(hoveredPoint.gain)} m · ↓ {Math.round(hoveredPoint.loss)} m</div>
           <div className="text-muted-foreground">{hoveredPoint.distance.toFixed(1)} km</div>
         </div>
       )}
