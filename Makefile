@@ -74,8 +74,8 @@ qa: qa-php qa-pwa ## Run all QA tools across both stacks
 
 ## --- 🧪 Testing ---
 test-php: ## Run PHPUnit tests
-	@docker compose exec php vendor/bin/phpunit
-	@docker compose --profile provisioning run --entrypoint "" provisioner vendor/bin/phpunit
+	@docker compose exec -e XDEBUG_MODE=off php vendor/bin/phpunit --no-coverage
+	@docker compose --profile provisioning run -e XDEBUG_MODE=off --entrypoint "" provisioner vendor/bin/phpunit --no-coverage
 
 phpunit: test-php ## Alias for "test-php"
 
