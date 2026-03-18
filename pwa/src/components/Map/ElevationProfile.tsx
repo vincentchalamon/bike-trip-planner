@@ -50,6 +50,8 @@ function findClosestPoint<T extends { distanceKm: number }>(
 interface ProfilePoint {
   distanceKm: number;
   ele: number;
+  /** Slope from the previous point to this one, in percent. 0 for the first point. */
+  gradient: number;
   stageIndex: number;
   coordIndex: number;
 }
@@ -74,13 +76,17 @@ function buildProfilePoints(
 
   const points: ProfilePoint[] = [];
   let cumulativeKm = 0;
+  let prevEle: number | null = null;
+  let prevDistKm: number | null = null;
 
   for (const { stage, stageIndex } of entries) {
     const coords = stage.geometry;
     if (coords.length < 2) continue;
 
     for (let ci = 0; ci < coords.length; ci++) {
+      const currEle = coords[ci]!.ele;
       let distKm = cumulativeKm;
+
       if (ci > 0) {
         const prev = coords[ci - 1]!;
         const curr = coords[ci]!;
@@ -90,9 +96,20 @@ function buildProfilePoints(
           haversineKm(prev.lat, prev.lon, curr.lat, curr.lon);
       }
 
+      // gradient = delta_ele_m / delta_dist_m * 100
+      let gradient = 0;
+      if (prevEle !== null && prevDistKm !== null) {
+        const deltaKm = distKm - prevDistKm;
+        if (deltaKm > 0)
+          gradient = ((currEle - prevEle) / (deltaKm * 1000)) * 100;
+      }
+      prevEle = currEle;
+      prevDistKm = distKm;
+
       points.push({
         distanceKm: distKm,
-        ele: coords[ci]!.ele,
+        ele: currEle,
+        gradient,
         stageIndex,
         coordIndex: ci,
       });
@@ -107,7 +124,7 @@ function buildProfilePoints(
 // SVG viewport constants
 const VW = 800;
 const VH = 160;
-const PAD_L = 32;
+const PAD_L = 4;
 const PAD_R = 8;
 const PAD_T = 8;
 const PAD_B = 20;
@@ -125,7 +142,9 @@ export const ElevationProfile = memo(function ElevationProfile({
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredPoint, setHoveredPoint] = useState<{
     x: number;
-    elevation: number;
+    screenX: number;
+    flipLeft: boolean;
+    gradient: number;
     distance: number;
   } | null>(null);
   const stages = useTripStore((s) => s.stages);
@@ -141,12 +160,25 @@ export const ElevationProfile = memo(function ElevationProfile({
 
   const hasData = points.length >= 2;
 
-  const { minEle, maxEle, maxDist } = useMemo(() => {
-    if (!hasData) return { minEle: 0, maxEle: 0, maxDist: 0 };
+  const { maxDist, displayMinEle, displayMaxEle } = useMemo(() => {
+    if (!hasData)
+      return { maxDist: 0, displayMinEle: 0, displayMaxEle: 1000 };
+
+    const minEle = Math.min(...points.map((p) => p.ele));
+    const maxEle = Math.max(...points.map((p) => p.ele));
+    const dist = points[points.length - 1]?.distanceKm ?? 0;
+    const elevRange = maxEle - minEle;
+
+    // Enforce a minimum vertical span proportional to total distance.
+    // totalKm * 10 = elevation gain a 1% average gradient would produce,
+    // preventing small undulations from appearing as dramatic climbs.
+    const minRange = Math.max(elevRange, dist * 10);
+    const center = (minEle + maxEle) / 2;
+
     return {
-      minEle: Math.min(...points.map((p) => p.ele)),
-      maxEle: Math.max(...points.map((p) => p.ele)),
-      maxDist: points[points.length - 1]?.distanceKm ?? 0,
+      maxDist: dist,
+      displayMinEle: center - minRange / 2,
+      displayMaxEle: center + minRange / 2,
     };
   }, [points, hasData]);
 
@@ -158,10 +190,10 @@ export const ElevationProfile = memo(function ElevationProfile({
 
   const toY = useCallback(
     (ele: number) => {
-      const range = maxEle - minEle || 1;
-      return PAD_T + (1 - (ele - minEle) / range) * (VH - PAD_T - PAD_B);
+      const range = displayMaxEle - displayMinEle || 1;
+      return PAD_T + (1 - (ele - displayMinEle) / range) * (VH - PAD_T - PAD_B);
     },
-    [minEle, maxEle],
+    [displayMinEle, displayMaxEle],
   );
 
   // Build per-stage SVG area paths
@@ -201,19 +233,6 @@ export const ElevationProfile = memo(function ElevationProfile({
     return result;
   }, [points, activeStages, toX, toY, hasData]);
 
-  // Y-axis grid labels
-  const yLabels = useMemo(() => {
-    if (!hasData) return [];
-    const range = maxEle - minEle;
-    const step = range > 800 ? 200 : range > 400 ? 100 : range > 200 ? 50 : 25;
-    const labels: { ele: number; y: number }[] = [];
-    const start = Math.ceil(minEle / step) * step;
-    for (let e = start; e <= maxEle; e += step) {
-      labels.push({ ele: e, y: toY(e) });
-    }
-    return labels;
-  }, [hasData, minEle, maxEle, toY]);
-
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
       if (!svgRef.current || points.length === 0) return;
@@ -223,9 +242,13 @@ export const ElevationProfile = memo(function ElevationProfile({
 
       const best = findClosestPoint(points, distKm);
       onHover(best.coordIndex, best.stageIndex);
+
+      const screenX = e.clientX - rect.left;
       setHoveredPoint({
         x: toX(best.distanceKm),
-        elevation: best.ele,
+        screenX,
+        flipLeft: screenX > rect.width * 0.6,
+        gradient: best.gradient,
         distance: best.distanceKm,
       });
     },
@@ -243,13 +266,10 @@ export const ElevationProfile = memo(function ElevationProfile({
 
   return (
     <div
-      className="w-full bg-background/80 backdrop-blur-sm border border-border rounded-xl px-2 py-1"
+      className="relative w-full bg-background/80 backdrop-blur-sm border border-border rounded-xl px-2 py-1"
       data-testid="elevation-profile"
       aria-label={t("elevationProfileAriaLabel")}
     >
-      <p className="text-[10px] text-muted-foreground px-1 mb-0.5">
-        {t("elevationProfile")}
-      </p>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${VW} ${VH}`}
@@ -261,31 +281,6 @@ export const ElevationProfile = memo(function ElevationProfile({
         role="img"
         aria-label={t("elevationProfileAriaLabel")}
       >
-        {/* Y-axis grid */}
-        {yLabels.map(({ ele, y }) => (
-          <g key={ele}>
-            <line
-              x1={PAD_L}
-              y1={y}
-              x2={VW - PAD_R}
-              y2={y}
-              stroke="currentColor"
-              strokeOpacity={0.1}
-              strokeWidth={0.5}
-            />
-            <text
-              x={PAD_L - 3}
-              y={y + 3}
-              textAnchor="end"
-              fontSize={9}
-              fill="currentColor"
-              fillOpacity={0.5}
-            >
-              {ele}m
-            </text>
-          </g>
-        ))}
-
         {/* Stage area fills */}
         {stagePaths.map(({ stageIndex, d, color }) => (
           <path
@@ -299,71 +294,42 @@ export const ElevationProfile = memo(function ElevationProfile({
           />
         ))}
 
-        {/* Hover crosshair + tooltip */}
-        {hoveredPoint !== null &&
-          (() => {
-            const tooltipW = 90;
-            const tooltipH = 28;
-            const tooltipPad = 6;
-            // Flip tooltip to left side when near the right edge
-            const tooltipX =
-              hoveredPoint.x + tooltipPad + tooltipW > VW - PAD_R
-                ? hoveredPoint.x - tooltipPad - tooltipW
-                : hoveredPoint.x + tooltipPad;
-            const tooltipY = PAD_T;
-
-            return (
-              <g>
-                {/* Vertical crosshair line */}
-                <line
-                  data-testid="elevation-crosshair"
-                  x1={hoveredPoint.x}
-                  y1={PAD_T}
-                  x2={hoveredPoint.x}
-                  y2={VH - PAD_B}
-                  stroke="currentColor"
-                  strokeWidth={1}
-                  opacity={0.5}
-                />
-                {/* Tooltip background */}
-                <rect
-                  data-testid="elevation-tooltip-bg"
-                  x={tooltipX}
-                  y={tooltipY}
-                  width={tooltipW}
-                  height={tooltipH}
-                  rx={4}
-                  fill="var(--background)"
-                  stroke="currentColor"
-                  strokeOpacity={0.2}
-                  strokeWidth={0.5}
-                />
-                {/* Elevation value */}
-                <text
-                  x={tooltipX + tooltipW / 2}
-                  y={tooltipY + 11}
-                  textAnchor="middle"
-                  fontSize={9}
-                  fill="currentColor"
-                  fillOpacity={0.9}
-                >
-                  {Math.round(hoveredPoint.elevation)}m
-                </text>
-                {/* Distance value */}
-                <text
-                  x={tooltipX + tooltipW / 2}
-                  y={tooltipY + 22}
-                  textAnchor="middle"
-                  fontSize={9}
-                  fill="currentColor"
-                  fillOpacity={0.6}
-                >
-                  {hoveredPoint.distance.toFixed(1)}km
-                </text>
-              </g>
-            );
-          })()}
+        {/* Vertical crosshair line */}
+        {hoveredPoint !== null && (
+          <line
+            data-testid="elevation-crosshair"
+            x1={hoveredPoint.x}
+            y1={PAD_T}
+            x2={hoveredPoint.x}
+            y2={VH - PAD_B}
+            stroke="currentColor"
+            strokeWidth={1}
+            opacity={0.5}
+          />
+        )}
       </svg>
+
+      {/* HTML tooltip — rendered outside the SVG so fonts use CSS units, not SVG viewBox units. */}
+      {hoveredPoint !== null && (
+        <div
+          data-testid="elevation-tooltip-bg"
+          className="absolute top-1 pointer-events-none z-10 bg-background border border-border/50 rounded px-2 py-1 text-xs shadow-sm whitespace-nowrap"
+          style={{
+            left: `${hoveredPoint.screenX}px`,
+            transform: hoveredPoint.flipLeft
+              ? "translateX(calc(-100% - 8px))"
+              : "translateX(8px)",
+          }}
+        >
+          <div className="font-medium">
+            {hoveredPoint.gradient >= 0 ? "+" : ""}
+            {hoveredPoint.gradient.toFixed(1)}%
+          </div>
+          <div className="text-muted-foreground">
+            {hoveredPoint.distance.toFixed(1)} km
+          </div>
+        </div>
+      )}
     </div>
   );
 });
