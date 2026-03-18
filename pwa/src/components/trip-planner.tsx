@@ -57,6 +57,7 @@ export function TripPlanner() {
     handleAddStage,
     handleDistanceChange,
     handlePacingChange,
+    handlePacingCommit,
     handleEbikeModeChange,
     handleDepartureHourChange,
     handleAddAccommodation,
@@ -369,6 +370,7 @@ export function TripPlanner() {
         departureHour={departureHour}
         enabledAccommodationTypes={enabledAccommodationTypes}
         onPacingUpdate={handlePacingChange}
+        onPacingCommit={handlePacingCommit}
         onEbikeModeChange={handleEbikeModeChange}
         onDepartureHourChange={handleDepartureHourChange}
         onAccommodationTypesChange={handleAccommodationTypesChange}

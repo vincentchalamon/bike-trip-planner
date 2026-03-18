@@ -24,6 +24,12 @@ interface PacingSettingsProps {
     maxDistancePerDay: number,
     averageSpeed: number,
   ) => void;
+  onCommit: (
+    fatigueFactor: number,
+    elevationPenalty: number,
+    maxDistancePerDay: number,
+    averageSpeed: number,
+  ) => void;
   onEbikeModeChange: (ebikeMode: boolean) => void;
   onDepartureHourChange: (departureHour: number) => void;
 }
@@ -91,6 +97,7 @@ export function PacingSettings({
   ebikeMode,
   departureHour,
   onUpdate,
+  onCommit,
   onEbikeModeChange,
   onDepartureHourChange,
 }: PacingSettingsProps) {
@@ -108,9 +115,29 @@ export function PacingSettings({
     );
   }
 
+  function handleFatigueCommit(e: React.PointerEvent<HTMLInputElement>) {
+    const percent = Number((e.target as HTMLInputElement).value);
+    onCommit(
+      fromFatiguePercent(percent),
+      elevationPenalty,
+      maxDistancePerDay,
+      averageSpeed,
+    );
+  }
+
   function handleElevationChange(e: React.ChangeEvent<HTMLInputElement>) {
     const percent = Number(e.target.value);
     onUpdate(
+      fatigueFactor,
+      fromElevationPercent(percent),
+      maxDistancePerDay,
+      averageSpeed,
+    );
+  }
+
+  function handleElevationCommit(e: React.PointerEvent<HTMLInputElement>) {
+    const percent = Number((e.target as HTMLInputElement).value);
+    onCommit(
       fatigueFactor,
       fromElevationPercent(percent),
       maxDistancePerDay,
@@ -123,9 +150,19 @@ export function PacingSettings({
     onUpdate(fatigueFactor, elevationPenalty, value, averageSpeed);
   }
 
+  function handleMaxDistanceCommit(e: React.PointerEvent<HTMLInputElement>) {
+    const value = Number((e.target as HTMLInputElement).value);
+    onCommit(fatigueFactor, elevationPenalty, value, averageSpeed);
+  }
+
   function handleAverageSpeedChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = Number(e.target.value);
     onUpdate(fatigueFactor, elevationPenalty, maxDistancePerDay, value);
+  }
+
+  function handleAverageSpeedCommit(e: React.PointerEvent<HTMLInputElement>) {
+    const value = Number((e.target as HTMLInputElement).value);
+    onCommit(fatigueFactor, elevationPenalty, maxDistancePerDay, value);
   }
 
   function handleDepartureHourChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -133,7 +170,7 @@ export function PacingSettings({
   }
 
   function handlePreset(preset: RiderPreset) {
-    onUpdate(
+    onCommit(
       fromFatiguePercent(preset.fatiguePercent),
       fromElevationPercent(preset.elevationPenaltyPercent),
       preset.maxDistancePerDay,
@@ -214,6 +251,7 @@ export function PacingSettings({
             step={5}
             value={maxDistancePerDay}
             onChange={handleMaxDistanceChange}
+            onPointerUp={handleMaxDistanceCommit}
             className="h-2 w-24 accent-primary"
             aria-label={t("maxDistanceLabel")}
           />
@@ -249,6 +287,7 @@ export function PacingSettings({
             step={1}
             value={averageSpeed}
             onChange={handleAverageSpeedChange}
+            onPointerUp={handleAverageSpeedCommit}
             className="h-2 w-24 accent-primary"
             aria-label={t("averageSpeedLabel")}
           />
@@ -320,6 +359,7 @@ export function PacingSettings({
             step={1}
             value={fatiguePercent}
             onChange={handleFatigueChange}
+            onPointerUp={handleFatigueCommit}
             className="h-2 w-24 accent-primary"
             aria-label={t("fatigueLabel")}
           />
@@ -355,6 +395,7 @@ export function PacingSettings({
             step={1}
             value={elevationPercent}
             onChange={handleElevationChange}
+            onPointerUp={handleElevationCommit}
             className="h-2 w-24 accent-primary"
             aria-label={t("elevationLabel")}
           />

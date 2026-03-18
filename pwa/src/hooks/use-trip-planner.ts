@@ -68,6 +68,10 @@ export function useTripPlanner() {
     (s) => s.enabledAccommodationTypes,
   );
   const updatePacingSettings = useTripStore((s) => s.updatePacingSettings);
+  const updatePacingSettingsInternal = useTripStore(
+    (s) => s.updatePacingSettingsInternal,
+  );
+  const updateDatesInternal = useTripStore((s) => s.updateDatesInternal);
   const setEbikeMode = useTripStore((s) => s.setEbikeMode);
   const setEnabledAccommodationTypes = useTripStore(
     (s) => s.setEnabledAccommodationTypes,
@@ -114,7 +118,7 @@ export function useTripPlanner() {
       }
 
       if (!startDate) {
-        updateDates(today, null);
+        updateDatesInternal(today, null);
       }
 
       setTrip({
@@ -158,7 +162,7 @@ export function useTripPlanner() {
       }
 
       if (!startDate) {
-        updateDates(today, null);
+        updateDatesInternal(today, null);
       }
 
       setTrip({
@@ -403,7 +407,21 @@ export function useTripPlanner() {
     }
   }
 
-  async function handlePacingChange(
+  function handlePacingChange(
+    newFatigue: number,
+    newElevation: number,
+    newMaxDistance: number,
+    newAverageSpeed: number,
+  ) {
+    updatePacingSettingsInternal(
+      newFatigue,
+      newElevation,
+      newMaxDistance,
+      newAverageSpeed,
+    );
+  }
+
+  async function handlePacingCommit(
     newFatigue: number,
     newElevation: number,
     newMaxDistance: number,
@@ -697,6 +715,7 @@ export function useTripPlanner() {
     handleAddStage,
     handleDistanceChange,
     handlePacingChange,
+    handlePacingCommit,
     handleEbikeModeChange,
     handleDepartureHourChange,
     handleAddAccommodation,

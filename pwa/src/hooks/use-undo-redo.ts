@@ -33,10 +33,7 @@ export function useUndoRedo() {
       if (ctrl && !e.shiftKey && e.key === "z") {
         e.preventDefault();
         undo();
-      } else if (
-        ctrl &&
-        (e.key === "y" || (e.shiftKey && e.key === "Z"))
-      ) {
+      } else if (ctrl && (e.key === "y" || (e.shiftKey && e.key === "Z"))) {
         e.preventDefault();
         redo();
       }
