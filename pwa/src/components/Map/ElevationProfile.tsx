@@ -107,7 +107,7 @@ function buildProfilePoints(
 // SVG viewport constants
 const VW = 800;
 const VH = 160;
-const PAD_L = 32;
+const PAD_L = 4;
 const PAD_R = 8;
 const PAD_T = 8;
 const PAD_B = 20;
@@ -203,19 +203,6 @@ export const ElevationProfile = memo(function ElevationProfile({
     return result;
   }, [points, activeStages, toX, toY, hasData]);
 
-  // Y-axis grid labels
-  const yLabels = useMemo(() => {
-    if (!hasData) return [];
-    const range = maxEle - minEle;
-    const step = range > 800 ? 200 : range > 400 ? 100 : range > 200 ? 50 : 25;
-    const labels: { ele: number; y: number }[] = [];
-    const start = Math.ceil(minEle / step) * step;
-    for (let e = start; e <= maxEle; e += step) {
-      labels.push({ ele: e, y: toY(e) });
-    }
-    return labels;
-  }, [hasData, minEle, maxEle, toY]);
-
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
       if (!svgRef.current || points.length === 0) return;
@@ -267,31 +254,6 @@ export const ElevationProfile = memo(function ElevationProfile({
         role="img"
         aria-label={t("elevationProfileAriaLabel")}
       >
-        {/* Y-axis grid */}
-        {yLabels.map(({ ele, y }) => (
-          <g key={ele}>
-            <line
-              x1={PAD_L}
-              y1={y}
-              x2={VW - PAD_R}
-              y2={y}
-              stroke="currentColor"
-              strokeOpacity={0.1}
-              strokeWidth={0.5}
-            />
-            <text
-              x={PAD_L - 3}
-              y={y + 3}
-              textAnchor="end"
-              fontSize={9}
-              fill="currentColor"
-              fillOpacity={0.5}
-            >
-              {ele}m
-            </text>
-          </g>
-        ))}
-
         {/* Stage area fills */}
         {stagePaths.map(({ stageIndex, d, color }) => (
           <path
