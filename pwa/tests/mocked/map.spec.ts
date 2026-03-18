@@ -165,12 +165,10 @@ test.describe("Elevation profile", () => {
     // hover() properly dispatches mousemove to the element
     await svg.hover();
 
-    // SVG <line> elements have zero geometric width (vertical line: x1 === x2),
-    // so getBoundingClientRect().width === 0 and Playwright considers them hidden.
-    // toBeAttached() verifies the element is rendered in the DOM (hover worked).
+    // SVG <line> crosshair — vertical line has zero geometric width, use toBeAttached()
     await expect(svg.getByTestId("elevation-crosshair")).toBeAttached();
-    // The tooltip <rect> has explicit dimensions (90×28 viewBox units) — toBeVisible() works.
-    await expect(svg.getByTestId("elevation-tooltip-bg")).toBeVisible();
+    // HTML tooltip div — rendered outside the SVG, scoped to the profile container
+    await expect(profile.getByTestId("elevation-tooltip-bg")).toBeVisible();
   });
 });
 

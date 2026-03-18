@@ -125,6 +125,8 @@ export const ElevationProfile = memo(function ElevationProfile({
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredPoint, setHoveredPoint] = useState<{
     x: number;
+    screenX: number;
+    flipLeft: boolean;
     elevation: number;
     distance: number;
   } | null>(null);
@@ -223,8 +225,12 @@ export const ElevationProfile = memo(function ElevationProfile({
 
       const best = findClosestPoint(points, distKm);
       onHover(best.coordIndex, best.stageIndex);
+
+      const screenX = e.clientX - rect.left;
       setHoveredPoint({
         x: toX(best.distanceKm),
+        screenX,
+        flipLeft: screenX > rect.width * 0.6,
         elevation: best.ele,
         distance: best.distanceKm,
       });
@@ -243,7 +249,7 @@ export const ElevationProfile = memo(function ElevationProfile({
 
   return (
     <div
-      className="w-full bg-background/80 backdrop-blur-sm border border-border rounded-xl px-2 py-1"
+      className="relative w-full bg-background/80 backdrop-blur-sm border border-border rounded-xl px-2 py-1"
       data-testid="elevation-profile"
       aria-label={t("elevationProfileAriaLabel")}
     >
@@ -299,71 +305,38 @@ export const ElevationProfile = memo(function ElevationProfile({
           />
         ))}
 
-        {/* Hover crosshair + tooltip */}
-        {hoveredPoint !== null &&
-          (() => {
-            const tooltipW = 90;
-            const tooltipH = 28;
-            const tooltipPad = 6;
-            // Flip tooltip to left side when near the right edge
-            const tooltipX =
-              hoveredPoint.x + tooltipPad + tooltipW > VW - PAD_R
-                ? hoveredPoint.x - tooltipPad - tooltipW
-                : hoveredPoint.x + tooltipPad;
-            const tooltipY = PAD_T;
-
-            return (
-              <g>
-                {/* Vertical crosshair line */}
-                <line
-                  data-testid="elevation-crosshair"
-                  x1={hoveredPoint.x}
-                  y1={PAD_T}
-                  x2={hoveredPoint.x}
-                  y2={VH - PAD_B}
-                  stroke="currentColor"
-                  strokeWidth={1}
-                  opacity={0.5}
-                />
-                {/* Tooltip background */}
-                <rect
-                  data-testid="elevation-tooltip-bg"
-                  x={tooltipX}
-                  y={tooltipY}
-                  width={tooltipW}
-                  height={tooltipH}
-                  rx={4}
-                  fill="var(--background)"
-                  stroke="currentColor"
-                  strokeOpacity={0.2}
-                  strokeWidth={0.5}
-                />
-                {/* Elevation value */}
-                <text
-                  x={tooltipX + tooltipW / 2}
-                  y={tooltipY + 11}
-                  textAnchor="middle"
-                  fontSize={9}
-                  fill="currentColor"
-                  fillOpacity={0.9}
-                >
-                  {Math.round(hoveredPoint.elevation)}m
-                </text>
-                {/* Distance value */}
-                <text
-                  x={tooltipX + tooltipW / 2}
-                  y={tooltipY + 22}
-                  textAnchor="middle"
-                  fontSize={9}
-                  fill="currentColor"
-                  fillOpacity={0.6}
-                >
-                  {hoveredPoint.distance.toFixed(1)}km
-                </text>
-              </g>
-            );
-          })()}
+        {/* Vertical crosshair line */}
+        {hoveredPoint !== null && (
+          <line
+            data-testid="elevation-crosshair"
+            x1={hoveredPoint.x}
+            y1={PAD_T}
+            x2={hoveredPoint.x}
+            y2={VH - PAD_B}
+            stroke="currentColor"
+            strokeWidth={1}
+            opacity={0.5}
+          />
+        )}
       </svg>
+
+      {/* HTML tooltip — rendered outside the SVG so fonts use CSS units, not SVG viewBox units.
+          The SVG viewBox is 800×160 rendered at 80px height (scale 0.5), making SVG text tiny. */}
+      {hoveredPoint !== null && (
+        <div
+          data-testid="elevation-tooltip-bg"
+          className="absolute top-1 pointer-events-none z-10 bg-background border border-border/50 rounded px-2 py-1 text-xs shadow-sm whitespace-nowrap"
+          style={{
+            left: `${hoveredPoint.screenX}px`,
+            transform: hoveredPoint.flipLeft
+              ? "translateX(calc(-100% - 8px))"
+              : "translateX(8px)",
+          }}
+        >
+          <div className="font-medium">{Math.round(hoveredPoint.elevation)} m</div>
+          <div className="text-muted-foreground">{hoveredPoint.distance.toFixed(1)} km</div>
+        </div>
+      )}
     </div>
   );
 });
