@@ -186,7 +186,9 @@
   text-shadow: none;
 }
 
-.driver-popover.onboarding-popover .driver-popover-navigation-btns button:hover {
+.driver-popover.onboarding-popover
+  .driver-popover-navigation-btns
+  button:hover {
   background-color: var(--accent);
   color: var(--accent-foreground);
 }

@@ -156,7 +156,10 @@ test.describe("Elevation profile", () => {
     await createTripWithGeometry(submitUrl, injectEvent);
 
     // Switch to map-only view so the elevation profile is fully visible
-    await mockedPage.getByTestId("view-mode-toggle").getByTestId("view-mode-map").click();
+    await mockedPage
+      .getByTestId("view-mode-toggle")
+      .getByTestId("view-mode-map")
+      .click();
 
     const profile = mockedPage.getByTestId("elevation-profile");
     await expect(profile).toBeVisible({ timeout: 5000 });

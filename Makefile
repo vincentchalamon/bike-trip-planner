@@ -43,7 +43,7 @@ rector: ## Run Rector
 
 phpstan: ## Run PHPStan
 	@docker compose run --rm --no-deps php sh -c "bin/console cache:warmup -e dev && vendor/bin/phpstan analyse -c phpstan.dist.neon"
-	@docker compose --profile provisioning run --rm --no-deps --entrypoint "" provisioner vendor/bin/phpstan analyse -c phpstan.dist.neon
+	@docker compose --profile provisioning run --rm --no-deps --entrypoint "" provisioner vendor/bin/phpstan analyse -c phpstan.dist.neon --memory-limit=256M
 
 eslint: ## Run Eslint
 	@docker compose run --rm --no-deps pwa npm run lint
