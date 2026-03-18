@@ -15,20 +15,13 @@ import { useUiStore } from "@/store/ui-store";
  * `useUndoRedo` to keep temporal concerns isolated.
  *
  * All shortcuts are suppressed when the user is typing in an input,
- * textarea, or contentEditable element.
+ * textarea, select, or contentEditable element.
  *
  * @param stageCount - Total number of active (non-rest) stages, used to
  *   clamp the focused stage index for J/K navigation. Pass `0` when no
  *   trip is loaded.
  */
 export function useKeyboardShortcuts(stageCount: number) {
-  const isConfigPanelOpen = useUiStore((s) => s.isConfigPanelOpen);
-  const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
-  const isHelpModalOpen = useUiStore((s) => s.isHelpModalOpen);
-  const setHelpModalOpen = useUiStore((s) => s.setHelpModalOpen);
-  const focusedMapStageIndex = useUiStore((s) => s.focusedMapStageIndex);
-  const setFocusedMapStageIndex = useUiStore((s) => s.setFocusedMapStageIndex);
-
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       // Ignore events when the user is typing
@@ -36,12 +29,22 @@ export function useKeyboardShortcuts(stageCount: number) {
       const isEditing =
         target.tagName === "INPUT" ||
         target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
         target.isContentEditable;
       if (isEditing) return;
 
       // Ignore modified keys (except Shift for ?) to avoid clashing with browser shortcuts
       const ctrl = e.ctrlKey || e.metaKey;
       if (ctrl || e.altKey) return;
+
+      const {
+        isConfigPanelOpen,
+        setConfigPanelOpen,
+        isHelpModalOpen,
+        setHelpModalOpen,
+        focusedMapStageIndex,
+        setFocusedMapStageIndex,
+      } = useUiStore.getState();
 
       switch (e.key) {
         case "Escape":
@@ -88,13 +91,5 @@ export function useKeyboardShortcuts(stageCount: number) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [
-    isConfigPanelOpen,
-    setConfigPanelOpen,
-    isHelpModalOpen,
-    setHelpModalOpen,
-    focusedMapStageIndex,
-    setFocusedMapStageIndex,
-    stageCount,
-  ]);
+  }, [stageCount]);
 }
