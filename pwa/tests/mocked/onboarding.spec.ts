@@ -82,7 +82,9 @@ test.describe("Onboarding tour", () => {
     // exercising the full persistence path without triggering side-effects from
     // clicking step 3 (which would open the config panel and block further clicks).
     await page.evaluate(() => {
-      (window as Window & { __onboardingDone?: () => void }).__onboardingDone?.();
+      (
+        window as Window & { __onboardingDone?: () => void }
+      ).__onboardingDone?.();
     });
 
     // onDestroyed should have fired markOnboardingDone → localStorage

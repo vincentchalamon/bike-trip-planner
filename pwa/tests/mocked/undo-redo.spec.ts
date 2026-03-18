@@ -155,4 +155,29 @@ test.describe("Undo/Redo", () => {
       timeout: 5000,
     });
   });
+
+  test("Ctrl+Z undoes a stage deletion and restores the stage count", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+    // Verify 3 stages loaded
+    await expect(mockedPage.getByTestId("stage-card-3")).toBeVisible();
+    // Delete stage 2
+    await mockedPage.getByTestId("delete-stage-2").click();
+    // Stage 3 disappears (stages renumber: old 3 → 2, so stage-card-3 is gone)
+    await expect(mockedPage.getByTestId("stage-card-3")).toBeHidden({
+      timeout: 5000,
+    });
+    await expect(mockedPage.getByTestId("undo-button")).toBeEnabled({
+      timeout: 5000,
+    });
+    // Undo — deleted stage should be restored
+    await mockedPage.keyboard.press("Control+z");
+    await expect(mockedPage.getByTestId("stage-card-3")).toBeVisible({
+      timeout: 5000,
+    });
+    // Redo button should now be enabled
+    await expect(mockedPage.getByTestId("redo-button")).toBeEnabled();
+  });
 });

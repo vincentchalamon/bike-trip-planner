@@ -115,7 +115,11 @@ export function PacingSettings({
     );
   }
 
-  function handleFatigueCommit(e: React.PointerEvent<HTMLInputElement>) {
+  function handleFatigueCommit(
+    e:
+      | React.PointerEvent<HTMLInputElement>
+      | React.KeyboardEvent<HTMLInputElement>,
+  ) {
     const percent = Number((e.target as HTMLInputElement).value);
     onCommit(
       fromFatiguePercent(percent),
@@ -135,7 +139,11 @@ export function PacingSettings({
     );
   }
 
-  function handleElevationCommit(e: React.PointerEvent<HTMLInputElement>) {
+  function handleElevationCommit(
+    e:
+      | React.PointerEvent<HTMLInputElement>
+      | React.KeyboardEvent<HTMLInputElement>,
+  ) {
     const percent = Number((e.target as HTMLInputElement).value);
     onCommit(
       fatigueFactor,
@@ -150,7 +158,11 @@ export function PacingSettings({
     onUpdate(fatigueFactor, elevationPenalty, value, averageSpeed);
   }
 
-  function handleMaxDistanceCommit(e: React.PointerEvent<HTMLInputElement>) {
+  function handleMaxDistanceCommit(
+    e:
+      | React.PointerEvent<HTMLInputElement>
+      | React.KeyboardEvent<HTMLInputElement>,
+  ) {
     const value = Number((e.target as HTMLInputElement).value);
     onCommit(fatigueFactor, elevationPenalty, value, averageSpeed);
   }
@@ -160,7 +172,11 @@ export function PacingSettings({
     onUpdate(fatigueFactor, elevationPenalty, maxDistancePerDay, value);
   }
 
-  function handleAverageSpeedCommit(e: React.PointerEvent<HTMLInputElement>) {
+  function handleAverageSpeedCommit(
+    e:
+      | React.PointerEvent<HTMLInputElement>
+      | React.KeyboardEvent<HTMLInputElement>,
+  ) {
     const value = Number((e.target as HTMLInputElement).value);
     onCommit(fatigueFactor, elevationPenalty, maxDistancePerDay, value);
   }
@@ -252,6 +268,7 @@ export function PacingSettings({
             value={maxDistancePerDay}
             onChange={handleMaxDistanceChange}
             onPointerUp={handleMaxDistanceCommit}
+            onKeyUp={handleMaxDistanceCommit}
             className="h-2 w-24 accent-primary"
             aria-label={t("maxDistanceLabel")}
           />
@@ -288,6 +305,7 @@ export function PacingSettings({
             value={averageSpeed}
             onChange={handleAverageSpeedChange}
             onPointerUp={handleAverageSpeedCommit}
+            onKeyUp={handleAverageSpeedCommit}
             className="h-2 w-24 accent-primary"
             aria-label={t("averageSpeedLabel")}
           />
@@ -360,6 +378,7 @@ export function PacingSettings({
             value={fatiguePercent}
             onChange={handleFatigueChange}
             onPointerUp={handleFatigueCommit}
+            onKeyUp={handleFatigueCommit}
             className="h-2 w-24 accent-primary"
             aria-label={t("fatigueLabel")}
           />
@@ -396,6 +415,7 @@ export function PacingSettings({
             value={elevationPercent}
             onChange={handleElevationChange}
             onPointerUp={handleElevationCommit}
+            onKeyUp={handleElevationCommit}
             className="h-2 w-24 accent-primary"
             aria-label={t("elevationLabel")}
           />
