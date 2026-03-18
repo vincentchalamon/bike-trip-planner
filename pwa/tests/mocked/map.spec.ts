@@ -162,11 +162,8 @@ test.describe("Elevation profile", () => {
     await expect(profile).toBeVisible({ timeout: 5000 });
 
     const svg = profile.locator("svg");
-    const box = await svg.boundingBox();
-    if (!box) throw new Error("SVG bounding box not found");
-
-    // Hover over the horizontal midpoint of the SVG
-    await mockedPage.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    // hover() properly dispatches mousemove to the element (mouse.move() doesn't trigger React's synthetic onMouseMove on SVG)
+    await svg.hover();
 
     // Crosshair line should appear
     await expect(svg.getByTestId("elevation-crosshair")).toBeVisible();
