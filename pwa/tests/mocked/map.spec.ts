@@ -147,6 +147,31 @@ test.describe("Elevation profile", () => {
       timeout: 5000,
     });
   });
+
+  test("crosshair and tooltip appear on hover", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await createTripWithGeometry(submitUrl, injectEvent);
+
+    // Switch to map-only view so the elevation profile is fully visible
+    await mockedPage.getByTestId("view-mode-toggle").getByTestId("view-mode-map").click();
+
+    const profile = mockedPage.getByTestId("elevation-profile");
+    await expect(profile).toBeVisible({ timeout: 5000 });
+
+    const svg = profile.locator("svg");
+    // hover() properly dispatches mousemove to the element
+    await svg.hover();
+
+    // SVG <line> elements have zero geometric width (vertical line: x1 === x2),
+    // so getBoundingClientRect().width === 0 and Playwright considers them hidden.
+    // toBeAttached() verifies the element is rendered in the DOM (hover worked).
+    await expect(svg.getByTestId("elevation-crosshair")).toBeAttached();
+    // The tooltip <rect> has explicit dimensions (90×28 viewBox units) — toBeVisible() works.
+    await expect(svg.getByTestId("elevation-tooltip-bg")).toBeVisible();
+  });
 });
 
 test.describe("Map reset view button", () => {

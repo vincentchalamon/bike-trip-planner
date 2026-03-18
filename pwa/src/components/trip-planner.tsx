@@ -149,30 +149,13 @@ export function TripPlanner() {
   const [isScrolledPast, setIsScrolledPast] = useState(false);
   const [fixedHeaderHeight, setFixedHeaderHeight] = useState(0);
   const hasTripData = !!trip;
-  const scrollDirRef = useRef<"down" | "up">("down");
-  const lastScrollYRef = useRef(0);
-
-  // Track scroll direction so the bar is only hidden when scrolling back up.
-  useEffect(() => {
-    function onScroll() {
-      const y = window.scrollY;
-      scrollDirRef.current = y >= lastScrollYRef.current ? "down" : "up";
-      lastScrollYRef.current = y;
-    }
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry?.isIntersecting) {
-          setIsScrolledPast(true);
-        } else if (scrollDirRef.current === "up") {
-          setIsScrolledPast(false);
-        }
+        setIsScrolledPast(!entry?.isIntersecting);
       },
       { threshold: 0 },
     );
@@ -185,14 +168,19 @@ export function TripPlanner() {
     const el = fixedHeaderRef.current;
     if (!el) return;
     const observer = new ResizeObserver(([entry]) => {
-      setFixedHeaderHeight(entry?.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight);
+      setFixedHeaderHeight(
+        entry?.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight,
+      );
     });
     observer.observe(el);
+    // Seed the height synchronously so that the map offset is correct on the
+    // very first scroll that triggers isScrolledPast, before ResizeObserver fires.
+    setFixedHeaderHeight(el.offsetHeight);
     return () => observer.disconnect();
   }, []);
 
   return (
-    <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative">
+    <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative overflow-x-clip">
       {/* Skip link */}
       <a
         href="#timeline"
@@ -285,15 +273,15 @@ export function TripPlanner() {
               isScrolledPast ? "" : "-translate-y-full pointer-events-none",
             ].join(" ")}
           >
-            <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-2 flex items-center gap-2">
+            <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-2 flex flex-col gap-1">
               {/* Progress bar — hidden in map-only mode */}
               {(!hasMap || viewMode !== "map") && (
-                <div className="flex-1 min-w-0">
+                <div className="w-full">
                   <StageProgressBar />
                 </div>
               )}
               {hasMap && (
-                <div className={viewMode !== "map" ? "shrink-0" : "ml-auto"}>
+                <div className="flex justify-end">
                   <ViewModeToggle testId="view-mode-toggle-sticky" />
                 </div>
               )}
@@ -349,9 +337,7 @@ export function TripPlanner() {
                 }
               >
                 <div
-                  className={
-                    viewMode === "split" ? "lg:sticky" : "sticky"
-                  }
+                  className={viewMode === "split" ? "lg:sticky" : "sticky"}
                   style={{
                     top: isScrolledPast ? `${fixedHeaderHeight + 8}px` : "1rem",
                     height: `calc(100vh - ${isScrolledPast ? fixedHeaderHeight + 8 : 16}px)`,
