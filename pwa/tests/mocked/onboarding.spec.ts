@@ -59,7 +59,9 @@ test.describe("Onboarding tour", () => {
     ).not.toBeVisible();
   });
 
-  test("markOnboardingDone writes to localStorage", async ({ page }) => {
+  test("completes tour and persists done flag to localStorage", async ({
+    page,
+  }) => {
     await enableOnboardingForTest(page);
     await mockAllApis(page);
     await page.goto("/");
@@ -70,11 +72,16 @@ test.describe("Onboarding tour", () => {
       page.locator(".driver-popover.onboarding-popover"),
     ).toBeVisible({ timeout: 3000 });
 
-    // Directly invoke markOnboardingDone via the window to simulate tour completion
-    await page.evaluate((key) => {
-      localStorage.setItem(key, "true");
-    }, ONBOARDING_KEY);
+    // Programmatically complete the tour via the test helper exposed by the
+    // component. This calls driverObj.destroy() → onDestroyed → markOnboardingDone,
+    // exercising the full persistence path without triggering side-effects from
+    // clicking step 3 (which would open the config panel and block further clicks).
+    await page.evaluate(() => {
+      (window as Window & { __onboardingDone?: () => void }).__onboardingDone?.();
+    });
 
+    // onDestroyed should have fired markOnboardingDone → localStorage
+    await page.waitForTimeout(300);
     const flag = await page.evaluate(
       (key) => localStorage.getItem(key),
       ONBOARDING_KEY,
