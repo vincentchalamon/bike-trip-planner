@@ -159,7 +159,7 @@ export interface UndoableSlice {
   averageSpeed: number;
 }
 
-function getUndoableSlice(state: {
+export function getUndoableSlice(state: {
   stages: StageData[];
   startDate: string | null;
   endDate: string | null;

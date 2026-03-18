@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { useTripStore, useTripTemporalStore } from "@/store/trip-store";
+import {
+  useTripStore,
+  useTripTemporalStore,
+  getUndoableSlice,
+} from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useMercure } from "@/hooks/use-mercure";
 import {
@@ -333,21 +337,8 @@ export function useTripPlanner() {
   async function handleDistanceChange(index: number, distance: number) {
     if (!tripId) return;
 
-    // Push a snapshot so the user can undo the distance change (the backend
-    // will recompute stages via SSE; we capture the current state first).
-    useTripTemporalStore.getState()._push(
-      JSON.parse(
-        JSON.stringify({
-          stages,
-          startDate,
-          endDate,
-          fatigueFactor,
-          elevationPenalty,
-          maxDistancePerDay,
-          averageSpeed,
-        }),
-      ),
-    );
+    // Capture state before the mutation so we can push it on success.
+    const snapshot = getUndoableSlice(useTripStore.getState());
 
     try {
       const { error, response } = await apiClient.PATCH(
@@ -362,6 +353,8 @@ export function useTripPlanner() {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
       } else {
+        // Push snapshot only after a successful PATCH to avoid phantom undo entries
+        useTripTemporalStore.getState()._push(snapshot);
         setProcessing(true);
         setAccommodationScanning(true);
       }

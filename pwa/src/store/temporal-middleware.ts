@@ -15,8 +15,6 @@
  *     - `canUndo` — whether there is history to undo
  *     - `canRedo` — whether there is history to redo
  *     - `clear()` — wipes all history (e.g. when loading a new trip)
- *     - `pause()` / `resume()` — temporarily disable recording (e.g. during
- *       SSE batch updates that should not be undoable)
  *
  * Implementation notes:
  *   • History limit: MAX_HISTORY entries (oldest are evicted).
@@ -35,10 +33,6 @@ export interface TemporalState {
   canRedo: boolean;
   undo: () => void;
   redo: () => void;
-  /** Call before a batch of non-undoable mutations (e.g. SSE events). */
-  pause: () => void;
-  /** Resume undo/redo recording after a pause. */
-  resume: () => void;
   /** Clears all history (past and future). Call when loading a new trip. */
   clear: () => void;
   /** @internal Push a new snapshot onto the past stack (clears redo stack). */
@@ -57,19 +51,10 @@ export function createTemporalStore(
 ) {
   let past: unknown[] = [];
   let future: unknown[] = [];
-  let paused = false;
 
   const store = create<TemporalState>()((set) => ({
     canUndo: false,
     canRedo: false,
-
-    pause: () => {
-      paused = true;
-    },
-
-    resume: () => {
-      paused = false;
-    },
 
     clear: () => {
       past = [];
@@ -78,7 +63,6 @@ export function createTemporalStore(
     },
 
     _push: (snapshot) => {
-      if (paused) return;
       if (past.length >= MAX_HISTORY) {
         past = past.slice(past.length - MAX_HISTORY + 1);
       }
