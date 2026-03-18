@@ -180,7 +180,7 @@ export function TripPlanner() {
   }, []);
 
   return (
-    <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative overflow-x-hidden">
+    <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative overflow-x-clip">
       {/* Skip link */}
       <a
         href="#timeline"

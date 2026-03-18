@@ -91,7 +91,7 @@ export function StageProgressBar() {
       aria-label={t("ariaLabel")}
       data-testid="stage-progress-bar"
       // Reserve vertical space: dot (16px) + label (~14px) + gap
-      className="relative w-full overflow-x-hidden"
+      className="relative w-full overflow-x-clip"
       style={{ height: 44 }}
     >
       {/* Horizontal line — inset by half-dot on each side so it runs dot-centre to dot-centre */}
