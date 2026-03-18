@@ -35,7 +35,9 @@ export function useUndoRedo() {
         undo();
       } else if (
         ctrl &&
-        (e.key === "y" || (e.shiftKey && e.key === "z") || (e.shiftKey && e.key === "Z"))
+        (e.key === "y" ||
+          (e.shiftKey && e.key === "z") ||
+          (e.shiftKey && e.key === "Z"))
       ) {
         e.preventDefault();
         redo();

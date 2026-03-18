@@ -335,21 +335,19 @@ export function useTripPlanner() {
 
     // Push a snapshot so the user can undo the distance change (the backend
     // will recompute stages via SSE; we capture the current state first).
-    useTripTemporalStore
-      .getState()
-      ._push(
-        JSON.parse(
-          JSON.stringify({
-            stages,
-            startDate,
-            endDate,
-            fatigueFactor,
-            elevationPenalty,
-            maxDistancePerDay,
-            averageSpeed,
-          }),
-        ),
-      );
+    useTripTemporalStore.getState()._push(
+      JSON.parse(
+        JSON.stringify({
+          stages,
+          startDate,
+          endDate,
+          fatigueFactor,
+          elevationPenalty,
+          maxDistancePerDay,
+          averageSpeed,
+        }),
+      ),
+    );
 
     try {
       const { error, response } = await apiClient.PATCH(
