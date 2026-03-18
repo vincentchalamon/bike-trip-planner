@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, memo } from "react";
+import { useCallback, useMemo, useRef, useState, memo } from "react";
 import { useTranslations } from "next-intl";
 import { useTripStore } from "@/store/trip-store";
 import type { StageData } from "@/lib/validation/schemas";
@@ -123,6 +123,11 @@ export const ElevationProfile = memo(function ElevationProfile({
 }: ElevationProfileProps) {
   const t = useTranslations("map");
   const svgRef = useRef<SVGSVGElement>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<{
+    x: number;
+    elevation: number;
+    distance: number;
+  } | null>(null);
   const stages = useTripStore((s) => s.stages);
   const activeStages = useMemo(
     () => stages.filter((s) => !s.isRestDay),
@@ -218,12 +223,18 @@ export const ElevationProfile = memo(function ElevationProfile({
 
       const best = findClosestPoint(points, distKm);
       onHover(best.coordIndex, best.stageIndex);
+      setHoveredPoint({
+        x: toX(best.distanceKm),
+        elevation: best.ele,
+        distance: best.distanceKm,
+      });
     },
-    [points, maxDist, onHover],
+    [points, maxDist, onHover, toX],
   );
 
   const handleMouseLeave = useCallback(() => {
     onHover(null, null);
+    setHoveredPoint(null);
   }, [onHover]);
 
   if (!hasData) {
@@ -287,6 +298,69 @@ export const ElevationProfile = memo(function ElevationProfile({
             strokeOpacity={0.8}
           />
         ))}
+
+        {/* Hover crosshair + tooltip */}
+        {hoveredPoint !== null &&
+          (() => {
+            const tooltipW = 90;
+            const tooltipH = 28;
+            const tooltipPad = 6;
+            // Flip tooltip to left side when near the right edge
+            const tooltipX =
+              hoveredPoint.x + tooltipPad + tooltipW > VW - PAD_R
+                ? hoveredPoint.x - tooltipPad - tooltipW
+                : hoveredPoint.x + tooltipPad;
+            const tooltipY = PAD_T;
+
+            return (
+              <g>
+                {/* Vertical crosshair line */}
+                <line
+                  x1={hoveredPoint.x}
+                  y1={PAD_T}
+                  x2={hoveredPoint.x}
+                  y2={VH - PAD_B}
+                  stroke="currentColor"
+                  strokeWidth={1}
+                  opacity={0.5}
+                />
+                {/* Tooltip background */}
+                <rect
+                  x={tooltipX}
+                  y={tooltipY}
+                  width={tooltipW}
+                  height={tooltipH}
+                  rx={4}
+                  fill="var(--background)"
+                  stroke="currentColor"
+                  strokeOpacity={0.2}
+                  strokeWidth={0.5}
+                />
+                {/* Elevation value */}
+                <text
+                  x={tooltipX + tooltipW / 2}
+                  y={tooltipY + 11}
+                  textAnchor="middle"
+                  fontSize={9}
+                  fill="currentColor"
+                  fillOpacity={0.9}
+                >
+                  {Math.round(hoveredPoint.elevation)}m
+                </text>
+                {/* Distance value */}
+                <text
+                  x={tooltipX + tooltipW / 2}
+                  y={tooltipY + 22}
+                  textAnchor="middle"
+                  fontSize={9}
+                  fill="currentColor"
+                  fillOpacity={0.6}
+                >
+                  {hoveredPoint.distance.toFixed(1)}km
+                </text>
+              </g>
+            );
+          })()}
       </svg>
     </div>
   );
