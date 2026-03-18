@@ -19,8 +19,14 @@ export function useOnboarding() {
   // Read from localStorage after hydration (in a microtask to satisfy lint rule)
   useEffect(() => {
     Promise.resolve().then(() => {
-      // Skip onboarding when controlled by a WebDriver (Playwright / Selenium)
-      if (navigator.webdriver) {
+      // Skip onboarding in automated test environments.
+      // navigator.webdriver is true in all Playwright/Selenium sessions;
+      // __PLAYWRIGHT_SHOW_ONBOARDING allows specific tests to opt back in.
+      const isAutomated = navigator.webdriver;
+      const forceShow =
+        (window as Window & { __PLAYWRIGHT_SHOW_ONBOARDING?: boolean })
+          .__PLAYWRIGHT_SHOW_ONBOARDING === true;
+      if (isAutomated && !forceShow) {
         setHasSeenOnboarding(true);
         return;
       }
@@ -43,14 +49,5 @@ export function useOnboarding() {
     setHasSeenOnboarding(true);
   }, []);
 
-  const resetOnboarding = useCallback(() => {
-    try {
-      localStorage.removeItem(ONBOARDING_STORAGE_KEY);
-    } catch {
-      // ignore
-    }
-    setHasSeenOnboarding(false);
-  }, []);
-
-  return { hasSeenOnboarding, markOnboardingDone, resetOnboarding };
+  return { hasSeenOnboarding, markOnboardingDone };
 }

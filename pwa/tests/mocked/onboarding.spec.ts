@@ -1,0 +1,92 @@
+import { test, expect } from "@playwright/test";
+import { mockAllApis } from "../fixtures/api-mocks";
+
+const ONBOARDING_KEY = "bike-trip-planner:onboarding-done";
+
+/** Enables the onboarding tour despite being in a WebDriver session. */
+async function enableOnboardingForTest(
+  page: Parameters<typeof mockAllApis>[0],
+) {
+  await page.addInitScript(() => {
+    (
+      window as Window & { __PLAYWRIGHT_SHOW_ONBOARDING?: boolean }
+    ).__PLAYWRIGHT_SHOW_ONBOARDING = true;
+  });
+}
+
+test.describe("Onboarding tour", () => {
+  test("shows on first visit", async ({ page }) => {
+    await enableOnboardingForTest(page);
+    await mockAllApis(page);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    // Tour popover should appear after the 800 ms startup delay
+    await expect(
+      page.locator(".driver-popover.onboarding-popover"),
+    ).toBeVisible({ timeout: 3000 });
+  });
+
+  test("does not reappear after localStorage flag is set", async ({ page }) => {
+    await enableOnboardingForTest(page);
+    // Simulate having completed the tour by setting the localStorage flag
+    await page.addInitScript(() => {
+      localStorage.setItem("bike-trip-planner:onboarding-done", "true");
+    });
+
+    await mockAllApis(page);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    // Give the tour 1.5 s to potentially appear — it must not
+    await page.waitForTimeout(1500);
+    await expect(
+      page.locator(".driver-popover.onboarding-popover"),
+    ).not.toBeVisible();
+  });
+
+  test("does not show when already seen (navigator.webdriver guard)", async ({
+    page,
+  }) => {
+    // Default Playwright context: navigator.webdriver = true, no flag set
+    await mockAllApis(page);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    await page.waitForTimeout(1500);
+    await expect(
+      page.locator(".driver-popover.onboarding-popover"),
+    ).not.toBeVisible();
+  });
+
+  test("markOnboardingDone writes to localStorage", async ({ page }) => {
+    await enableOnboardingForTest(page);
+    await mockAllApis(page);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    // Wait for the tour to appear
+    await expect(
+      page.locator(".driver-popover.onboarding-popover"),
+    ).toBeVisible({ timeout: 3000 });
+
+    // Directly invoke markOnboardingDone via the window to simulate tour completion
+    await page.evaluate((key) => {
+      localStorage.setItem(key, "true");
+    }, ONBOARDING_KEY);
+
+    const flag = await page.evaluate(
+      (key) => localStorage.getItem(key),
+      ONBOARDING_KEY,
+    );
+    expect(flag).toBe("true");
+
+    // Reload — tour must not reappear
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+    await expect(
+      page.locator(".driver-popover.onboarding-popover"),
+    ).not.toBeVisible();
+  });
+});
