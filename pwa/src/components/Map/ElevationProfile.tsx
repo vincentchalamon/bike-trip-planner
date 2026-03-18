@@ -169,16 +169,16 @@ export const ElevationProfile = memo(function ElevationProfile({
     const dist = points[points.length - 1]?.distanceKm ?? 0;
     const elevRange = maxEle - minEle;
 
-    // Enforce a minimum vertical span proportional to total distance.
-    // totalKm * 10 = elevation gain a 1% average gradient would produce,
-    // preventing small undulations from appearing as dramatic climbs.
-    const minRange = Math.max(elevRange, dist * 10);
-    const center = (minEle + maxEle) / 2;
+    // Small buffer below so the terrain doesn't sit flush with the baseline.
+    // Generous buffer above so peaks breathe — terrain occupies roughly the
+    // bottom third of the graph (Komoot-style), with min 100 m headroom.
+    const bufferBelow = Math.max(elevRange * 0.1, 10);
+    const bufferAbove = Math.max(elevRange * 1.5, 100);
 
     return {
       maxDist: dist,
-      displayMinEle: center - minRange / 2,
-      displayMaxEle: center + minRange / 2,
+      displayMinEle: minEle - bufferBelow,
+      displayMaxEle: maxEle + bufferAbove,
     };
   }, [points, hasData]);
 
@@ -275,7 +275,7 @@ export const ElevationProfile = memo(function ElevationProfile({
         viewBox={`0 0 ${VW} ${VH}`}
         preserveAspectRatio="none"
         className="w-full"
-        style={{ height: 80 }}
+        style={{ height: 100 }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         role="img"
