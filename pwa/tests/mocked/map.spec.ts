@@ -147,6 +147,28 @@ test.describe("Elevation profile", () => {
       timeout: 5000,
     });
   });
+
+  test("crosshair and tooltip appear on hover", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await createTripWithGeometry(submitUrl, injectEvent);
+    const profile = mockedPage.getByTestId("elevation-profile");
+    await expect(profile).toBeVisible({ timeout: 5000 });
+
+    const svg = profile.locator("svg");
+    const box = await svg.boundingBox();
+    if (!box) throw new Error("SVG bounding box not found");
+
+    // Hover over the horizontal midpoint of the SVG
+    await mockedPage.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+
+    // Crosshair line should appear
+    await expect(svg.getByTestId("elevation-crosshair")).toBeVisible();
+    // Tooltip background rect should appear
+    await expect(svg.locator("rect").last()).toBeVisible();
+  });
 });
 
 test.describe("Map reset view button", () => {

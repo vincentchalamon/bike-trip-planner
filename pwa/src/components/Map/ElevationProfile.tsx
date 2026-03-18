@@ -316,6 +316,7 @@ export const ElevationProfile = memo(function ElevationProfile({
               <g>
                 {/* Vertical crosshair line */}
                 <line
+                  data-testid="elevation-crosshair"
                   x1={hoveredPoint.x}
                   y1={PAD_T}
                   x2={hoveredPoint.x}
