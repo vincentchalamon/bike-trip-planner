@@ -72,6 +72,11 @@ test.describe("Onboarding tour", () => {
       page.locator(".driver-popover.onboarding-popover"),
     ).toBeVisible({ timeout: 3000 });
 
+    // Wait for driver.js animation to finish (400 ms transition) so that
+    // __activeElement / __activeStep are set in the rAF callback — destroy()
+    // only calls onDestroyed when those values are truthy.
+    await page.waitForTimeout(500);
+
     // Programmatically complete the tour via the test helper exposed by the
     // component. This calls driverObj.destroy() → onDestroyed → markOnboardingDone,
     // exercising the full persistence path without triggering side-effects from

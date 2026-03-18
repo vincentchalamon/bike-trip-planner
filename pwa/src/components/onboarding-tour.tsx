@@ -41,11 +41,15 @@ export function OnboardingTour() {
       animate: true,
       overlayOpacity: 0.6,
       popoverClass: "onboarding-popover",
+      disableActiveInteraction: true,
       nextBtnText: t("nextBtn"),
       prevBtnText: t("prevBtn"),
       doneBtnText: t("doneBtn"),
       onDestroyed: () => {
         markOnboardingDone();
+        // Clean up test helper if present
+        delete (window as Window & { __onboardingDone?: () => void })
+          .__onboardingDone;
       },
       steps: [
         {
@@ -88,6 +92,15 @@ export function OnboardingTour() {
         },
       ],
     });
+
+    // Expose a test helper so E2E tests can complete the tour programmatically
+    if (
+      (window as Window & { __PLAYWRIGHT_SHOW_ONBOARDING?: boolean })
+        .__PLAYWRIGHT_SHOW_ONBOARDING
+    ) {
+      (window as Window & { __onboardingDone?: () => void }).__onboardingDone =
+        () => driverObj.destroy();
+    }
 
     // Small delay so the page has fully painted before the tour starts
     const timeout = setTimeout(() => {
