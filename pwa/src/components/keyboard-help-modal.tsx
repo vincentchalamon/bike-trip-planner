@@ -25,10 +25,7 @@ export function KeyboardHelpModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setHelpModalOpen}>
-      <DialogContent
-        className="sm:max-w-md"
-        data-testid="keyboard-help-modal"
-      >
+      <DialogContent className="sm:max-w-md" data-testid="keyboard-help-modal">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Keyboard className="h-5 w-5" />
