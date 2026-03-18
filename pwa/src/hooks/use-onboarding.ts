@@ -19,6 +19,11 @@ export function useOnboarding() {
   // Read from localStorage after hydration (in a microtask to satisfy lint rule)
   useEffect(() => {
     Promise.resolve().then(() => {
+      // Skip onboarding when controlled by a WebDriver (Playwright / Selenium)
+      if (navigator.webdriver) {
+        setHasSeenOnboarding(true);
+        return;
+      }
       try {
         const stored = localStorage.getItem(ONBOARDING_STORAGE_KEY);
         setHasSeenOnboarding(stored === "true");
