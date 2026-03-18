@@ -435,11 +435,13 @@ export function useTripPlanner() {
     newAverageSpeed: number,
   ) {
     // Push the pre-drag snapshot so Ctrl+Z restores the value before the gesture.
-    const snapshot = preDragPacingSnapshot.current;
+    // For preset button clicks (no preceding onChange) fall back to current state,
+    // which is still the pre-change value since updatePacingSettingsInternal runs after.
+    const snapshot =
+      preDragPacingSnapshot.current ??
+      getUndoableSlice(useTripStore.getState());
     preDragPacingSnapshot.current = null;
-    if (snapshot) {
-      useTripTemporalStore.getState()._push(snapshot);
-    }
+    useTripTemporalStore.getState()._push(snapshot);
     updatePacingSettingsInternal(
       newFatigue,
       newElevation,
