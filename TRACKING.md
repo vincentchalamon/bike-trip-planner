@@ -137,12 +137,12 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-07.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Carte avec tracé coloré par étape
-  - [ ] Profil altimétrique interactif (survol → curseur sur carte)
-  - [ ] Synchronisation carte ↔ timeline
-  - [ ] Split view fonctionnel
-  - [ ] Timeline ravitaillement avec POI le long du tracé
-  - [ ] Mode sombre : tuiles sombres
+  - [x] Carte avec tracé coloré par étape
+  - [x] Profil altimétrique interactif (survol → curseur sur carte)
+  - [x] Synchronisation carte ↔ timeline
+  - [x] Split view fonctionnel
+  - [x] Timeline ravitaillement avec POI le long du tracé
+  - [x] Mode sombre : tuiles sombres
   - [ ] Responsive : carte sur mobile (tactile)
 
 ---
