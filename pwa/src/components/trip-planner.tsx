@@ -206,6 +206,7 @@ export function TripPlanner() {
           onClick={() => setConfigPanelOpen(true)}
           title={t("config.open")}
           aria-label={t("config.open")}
+          data-testid="config-open-button"
         >
           <Settings className="h-4 w-4" />
         </Button>

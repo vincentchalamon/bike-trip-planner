@@ -229,6 +229,19 @@
   "alertList": {
     "addToItinerary": "Add to itinerary"
   },
+  "onboarding": {
+    "nextBtn": "Next",
+    "prevBtn": "Back",
+    "doneBtn": "Get started",
+    "step1Title": "Paste your route link",
+    "step1Description": "Copy a link from <strong>Komoot</strong> (tour or collection) or <strong>Google My Maps</strong> and paste it here. Your trip will be computed automatically.",
+    "step2Title": "Or upload a GPX file",
+    "step2Description": "Already have a GPX file? Click this button to import it directly and plan your trip from existing route data.",
+    "step3Title": "Configure your rider profile",
+    "step3Description": "Open Settings to adjust your <strong>pacing</strong>, fatigue factor, elevation penalty, and accommodation preferences before computing your stages.",
+    "step4Title": "Explore your stages",
+    "step4Description": "Once your trip is loaded, stages appear in the <strong>timeline</strong>. Each stage shows distance, elevation, travel time, alerts, and accommodation suggestions. You can reorder, split, or add rest days as needed."
+  },
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",

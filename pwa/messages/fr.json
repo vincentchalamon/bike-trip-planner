@@ -229,6 +229,19 @@
   "alertList": {
     "addToItinerary": "Ajouter à l'itinéraire"
   },
+  "onboarding": {
+    "nextBtn": "Suivant",
+    "prevBtn": "Précédent",
+    "doneBtn": "Commencer",
+    "step1Title": "Collez votre lien d'itinéraire",
+    "step1Description": "Copiez un lien depuis <strong>Komoot</strong> (tour ou collection) ou <strong>Google My Maps</strong> et collez-le ici. Votre voyage sera calculé automatiquement.",
+    "step2Title": "Ou importez un fichier GPX",
+    "step2Description": "Vous avez déjà un fichier GPX ? Cliquez sur ce bouton pour l'importer directement et planifier votre voyage depuis vos données d'itinéraire existantes.",
+    "step3Title": "Configurez votre profil cyclo",
+    "step3Description": "Ouvrez les Paramètres pour ajuster le <strong>pacing</strong>, le facteur de fatigue, l'indice de dénivelé et vos préférences d'hébergements avant de calculer vos étapes.",
+    "step4Title": "Explorez vos étapes",
+    "step4Description": "Une fois votre voyage chargé, les étapes apparaissent dans la <strong>timeline</strong>. Chaque étape affiche distance, dénivelé, temps de trajet, alertes et suggestions d'hébergements. Vous pouvez réordonner, fractionner ou insérer des jours de repos."
+  },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",

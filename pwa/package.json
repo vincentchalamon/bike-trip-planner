@@ -16,6 +16,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "dayjs": "^1.11.19",
+    "driver.js": "^1.4.0",
     "immer": "^11.1.4",
     "lucide-react": "^0.577.0",
     "maplibre-gl": "^5.6.0",
