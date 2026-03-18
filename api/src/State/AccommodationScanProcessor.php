@@ -47,7 +47,7 @@ final readonly class AccommodationScanProcessor implements ProcessorInterface
         $enabledAccommodationTypes = $tripRequest->enabledAccommodationTypes;
 
         $this->computationTracker->resetComputation($tripId, ComputationName::ACCOMMODATIONS);
-        $this->messageBus->dispatch(new ScanAccommodations($tripId, $radiusMeters, $data->stageIndex, $enabledAccommodationTypes));
+        $this->messageBus->dispatch(new ScanAccommodations($tripId, $radiusMeters, $data->stageIndex, $enabledAccommodationTypes, isExpandScan: true));
 
         $statuses = $this->computationTracker->getStatuses($tripId) ?? [];
 

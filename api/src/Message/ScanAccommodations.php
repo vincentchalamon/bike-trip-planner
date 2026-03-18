@@ -16,6 +16,7 @@ final readonly class ScanAccommodations
         public int $radiusMeters = QueryBuilderInterface::DEFAULT_ACCOMMODATION_RADIUS_METERS,
         public ?int $stageIndex = null,
         public array $enabledAccommodationTypes = \App\ApiResource\TripRequest::ALL_ACCOMMODATION_TYPES,
+        public bool $isExpandScan = false,
     ) {
     }
 }

@@ -75,7 +75,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             // stage boundary until Valhalla (ADR-017) provides proper re-route.
             $request = $this->tripStateManager->getRequest($tripId);
             \assert($request instanceof \App\ApiResource\TripRequest);
-            $this->messageBus->dispatch(new ScanAccommodations($tripId, enabledAccommodationTypes: $request->enabledAccommodationTypes));
+            $this->messageBus->dispatch(new ScanAccommodations($tripId, stageIndex: $index, enabledAccommodationTypes: $request->enabledAccommodationTypes));
             $affectedDeselect = isset($stages[$index + 1]) ? [$index, $index + 1] : [$index];
             $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect, skipAccommodationScan: true));
 
