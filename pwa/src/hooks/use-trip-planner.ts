@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { useTripStore } from "@/store/trip-store";
+import { useTripStore, useTripTemporalStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useMercure } from "@/hooks/use-mercure";
 import {
@@ -52,6 +52,7 @@ export function useTripPlanner() {
   );
   const deleteStage = useTripStore((s) => s.deleteStage);
   const insertRestDay = useTripStore((s) => s.insertRestDay);
+  const insertStagePlaceholder = useTripStore((s) => s.insertStagePlaceholder);
   const fatigueFactor = useTripStore((s) => s.fatigueFactor);
   const elevationPenalty = useTripStore((s) => s.elevationPenalty);
   const maxDistancePerDay = useTripStore((s) => s.maxDistancePerDay);
@@ -304,12 +305,8 @@ export function useTripPlanner() {
       supplyTimeline: [],
       isRestDay: false,
     };
-    const updatedStages = stages.map((s) => ({ ...s }));
-    updatedStages.splice(afterIndex + 1, 0, placeholder);
-    updatedStages.forEach((s, i) => {
-      s.dayNumber = i + 1;
-    });
-    useTripStore.getState().setStages(updatedStages);
+    // insertStagePlaceholder pushes an undo snapshot internally before mutating.
+    insertStagePlaceholder(afterIndex, placeholder);
 
     try {
       const { error, response } = await apiClient.POST(
@@ -335,6 +332,24 @@ export function useTripPlanner() {
 
   async function handleDistanceChange(index: number, distance: number) {
     if (!tripId) return;
+
+    // Push a snapshot so the user can undo the distance change (the backend
+    // will recompute stages via SSE; we capture the current state first).
+    useTripTemporalStore
+      .getState()
+      ._push(
+        JSON.parse(
+          JSON.stringify({
+            stages,
+            startDate,
+            endDate,
+            fatigueFactor,
+            elevationPenalty,
+            maxDistancePerDay,
+            averageSpeed,
+          }),
+        ),
+      );
 
     try {
       const { error, response } = await apiClient.PATCH(
