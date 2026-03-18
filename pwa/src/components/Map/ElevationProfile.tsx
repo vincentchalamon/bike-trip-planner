@@ -327,6 +327,7 @@ export const ElevationProfile = memo(function ElevationProfile({
                 />
                 {/* Tooltip background */}
                 <rect
+                  data-testid="elevation-tooltip-bg"
                   x={tooltipX}
                   y={tooltipY}
                   width={tooltipW}
