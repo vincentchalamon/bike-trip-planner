@@ -15,6 +15,7 @@ import { TextExportButton } from "@/components/text-export-button";
 import { MapPanel } from "@/components/Map";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { Button } from "@/components/ui/button";
+import { UndoRedoButtons } from "@/components/undo-redo-buttons";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useUiStore } from "@/store/ui-store";
 import { useSwipe } from "@/hooks/use-swipe";
@@ -189,7 +190,7 @@ export function TripPlanner() {
         {t("layout.skipToTimeline")}
       </a>
 
-      {/* Toolbar: magic link + GPX upload + config button */}
+      {/* Toolbar: magic link + GPX upload + undo/redo + config button */}
       <div className="flex items-center gap-2">
         <div className="flex-1 min-w-0">
           <MagicLinkInput
@@ -199,6 +200,7 @@ export function TripPlanner() {
           />
         </div>
         <GpxUploadButton onUpload={handleGpxUpload} disabled={isProcessing} />
+        <UndoRedoButtons />
         <Button
           variant="ghost"
           size="icon"
