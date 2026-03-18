@@ -162,12 +162,14 @@ test.describe("Elevation profile", () => {
     await expect(profile).toBeVisible({ timeout: 5000 });
 
     const svg = profile.locator("svg");
-    // hover() properly dispatches mousemove to the element (mouse.move() doesn't trigger React's synthetic onMouseMove on SVG)
+    // hover() properly dispatches mousemove to the element
     await svg.hover();
 
-    // Crosshair line should appear
-    await expect(svg.getByTestId("elevation-crosshair")).toBeVisible();
-    // Tooltip background rect should appear
+    // SVG <line> elements have zero geometric width (vertical line: x1 === x2),
+    // so getBoundingClientRect().width === 0 and Playwright considers them hidden.
+    // toBeAttached() verifies the element is rendered in the DOM (hover worked).
+    await expect(svg.getByTestId("elevation-crosshair")).toBeAttached();
+    // The tooltip <rect> has explicit dimensions (90×28 viewBox units) — toBeVisible() works.
     await expect(svg.getByTestId("elevation-tooltip-bg")).toBeVisible();
   });
 });
