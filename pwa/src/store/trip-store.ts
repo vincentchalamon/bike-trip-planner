@@ -196,12 +196,13 @@ export const useTripStore = create<TripState>()(
 
     updateStageAccommodations: (stageIndex, accs, searchRadiusKm) =>
       set((state) => {
-        if (state.stages[stageIndex]) {
-          state.stages[stageIndex].accommodations = accs;
-          if (searchRadiusKm !== undefined) {
-            state.stages[stageIndex].accommodationSearchRadiusKm =
-              searchRadiusKm;
-          }
+        const stage = state.stages[stageIndex];
+        if (!stage) return;
+        if (!stage.selectedAccommodation) {
+          stage.accommodations = accs;
+        }
+        if (searchRadiusKm !== undefined) {
+          stage.accommodationSearchRadiusKm = searchRadiusKm;
         }
       }),
 

@@ -69,11 +69,11 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         $request = $this->tripStateManager->getRequest($tripId);
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
         $enabledAccommodationTypes = $message->enabledAccommodationTypes;
+        $isExpandScan = $message->isExpandScan;
 
-        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale, $radiusMeters, $stageIndex, $enabledAccommodationTypes): void {
+        $this->executeWithTracking($tripId, ComputationName::ACCOMMODATIONS, function () use ($tripId, $stages, $request, $locale, $radiusMeters, $stageIndex, $enabledAccommodationTypes, $isExpandScan): void {
             // Preserve original stage keys so distributor output maps directly without re-mapping
-            $isExpandScan = null !== $stageIndex;
-            $stagesToProcess = ($isExpandScan && isset($stages[$stageIndex]))
+            $stagesToProcess = (null !== $stageIndex && isset($stages[$stageIndex]))
                 ? [$stageIndex => $stages[$stageIndex]]
                 : $stages;
 
