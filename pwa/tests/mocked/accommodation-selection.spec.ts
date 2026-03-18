@@ -156,18 +156,22 @@ test.describe("Accommodation selection", () => {
     ]);
 
     // Override accommodation PATCH to return 409 (stale data)
-    await mockedPage.route("**/trips/*/stages/*/accommodation", (route, request) => {
-      if (request.method() !== "PATCH") return route.fallback();
-      return route.fulfill({
-        status: 409,
-        contentType: "application/ld+json",
-        body: JSON.stringify({ detail: "Conflict" }),
-      });
-    });
+    await mockedPage.route(
+      "**/trips/*/stages/*/accommodation",
+      (route, request) => {
+        if (request.method() !== "PATCH") return route.fallback();
+        return route.fulfill({
+          status: 409,
+          contentType: "application/ld+json",
+          body: JSON.stringify({ detail: "Conflict" }),
+        });
+      },
+    );
 
     // Track scan requests
     const scanRequestPromise = mockedPage.waitForRequest(
-      (req) => req.url().includes("/accommodations/scan") && req.method() === "POST",
+      (req) =>
+        req.url().includes("/accommodations/scan") && req.method() === "POST",
     );
 
     const stageCard = mockedPage.getByTestId("stage-card-1");

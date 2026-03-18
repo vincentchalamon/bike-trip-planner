@@ -22,7 +22,9 @@ interface ViewModeToggleProps {
   testId?: string;
 }
 
-export function ViewModeToggle({ testId = "view-mode-toggle" }: ViewModeToggleProps) {
+export function ViewModeToggle({
+  testId = "view-mode-toggle",
+}: ViewModeToggleProps) {
   const t = useTranslations("viewMode");
   const viewMode = useUiStore((s) => s.viewMode);
   const setViewMode = useUiStore((s) => s.setViewMode);
@@ -41,7 +43,10 @@ export function ViewModeToggle({ testId = "view-mode-toggle" }: ViewModeTogglePr
   // Switch from split to timeline when window shrinks below the breakpoint.
   useEffect(() => {
     function handleResize() {
-      if (window.innerWidth < MOBILE_BREAKPOINT && viewModeRef.current === "split") {
+      if (
+        window.innerWidth < MOBILE_BREAKPOINT &&
+        viewModeRef.current === "split"
+      ) {
         setViewMode("timeline");
       }
     }

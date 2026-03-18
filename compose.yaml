@@ -60,6 +60,7 @@ services:
       - .docker/php/:/usr/local/bin/docker
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
       - ./api/:/app
+      - ./README.md:/README.md:ro
       - /app/var
       # If you develop on Mac or Windows you can remove the vendor/ directory
       #  from the bind-mount for better performance by enabling the next line:

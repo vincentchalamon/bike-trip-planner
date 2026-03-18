@@ -161,8 +161,7 @@ export const ElevationProfile = memo(function ElevationProfile({
   const hasData = points.length >= 2;
 
   const { maxDist, displayMinEle, displayMaxEle } = useMemo(() => {
-    if (!hasData)
-      return { maxDist: 0, displayMinEle: 0, displayMaxEle: 1000 };
+    if (!hasData) return { maxDist: 0, displayMinEle: 0, displayMaxEle: 1000 };
 
     const minEle = Math.min(...points.map((p) => p.ele));
     const maxEle = Math.max(...points.map((p) => p.ele));
