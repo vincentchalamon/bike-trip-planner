@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
@@ -67,7 +67,6 @@ export function useTripPlanner() {
   const enabledAccommodationTypes = useTripStore(
     (s) => s.enabledAccommodationTypes,
   );
-  const updatePacingSettings = useTripStore((s) => s.updatePacingSettings);
   const updatePacingSettingsInternal = useTripStore(
     (s) => s.updatePacingSettingsInternal,
   );
@@ -84,6 +83,9 @@ export function useTripPlanner() {
   );
 
   const [newAccKey, setNewAccKey] = useState<string | null>(null);
+  const preDragPacingSnapshot = useRef<ReturnType<
+    typeof getUndoableSlice
+  > | null>(null);
 
   const tripId = trip?.id ?? null;
   useMercure(tripId);
@@ -413,6 +415,11 @@ export function useTripPlanner() {
     newMaxDistance: number,
     newAverageSpeed: number,
   ) {
+    // Capture the pre-drag snapshot on the very first onChange of each gesture,
+    // before any live-preview mutation touches the store.
+    if (preDragPacingSnapshot.current === null) {
+      preDragPacingSnapshot.current = getUndoableSlice(useTripStore.getState());
+    }
     updatePacingSettingsInternal(
       newFatigue,
       newElevation,
@@ -427,7 +434,13 @@ export function useTripPlanner() {
     newMaxDistance: number,
     newAverageSpeed: number,
   ) {
-    updatePacingSettings(
+    // Push the pre-drag snapshot so Ctrl+Z restores the value before the gesture.
+    const snapshot = preDragPacingSnapshot.current;
+    preDragPacingSnapshot.current = null;
+    if (snapshot) {
+      useTripTemporalStore.getState()._push(snapshot);
+    }
+    updatePacingSettingsInternal(
       newFatigue,
       newElevation,
       newMaxDistance,
