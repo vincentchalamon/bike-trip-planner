@@ -50,8 +50,8 @@ function findClosestPoint<T extends { distanceKm: number }>(
 interface ProfilePoint {
   distanceKm: number;
   ele: number;
-  cumulativeGain: number;
-  cumulativeLoss: number;
+  /** Slope from the previous point to this one, in percent. 0 for the first point. */
+  gradient: number;
   stageIndex: number;
   coordIndex: number;
 }
@@ -76,9 +76,8 @@ function buildProfilePoints(
 
   const points: ProfilePoint[] = [];
   let cumulativeKm = 0;
-  let cumulativeGain = 0;
-  let cumulativeLoss = 0;
   let prevEle: number | null = null;
+  let prevDistKm: number | null = null;
 
   for (const { stage, stageIndex } of entries) {
     const coords = stage.geometry;
@@ -97,18 +96,19 @@ function buildProfilePoints(
           haversineKm(prev.lat, prev.lon, curr.lat, curr.lon);
       }
 
-      if (prevEle !== null) {
-        const delta = currEle - prevEle;
-        if (delta > 0) cumulativeGain += delta;
-        else cumulativeLoss += Math.abs(delta);
+      // gradient = delta_ele_m / delta_dist_m * 100
+      let gradient = 0;
+      if (prevEle !== null && prevDistKm !== null) {
+        const deltaKm = distKm - prevDistKm;
+        if (deltaKm > 0) gradient = (currEle - prevEle) / (deltaKm * 1000) * 100;
       }
       prevEle = currEle;
+      prevDistKm = distKm;
 
       points.push({
         distanceKm: distKm,
         ele: currEle,
-        cumulativeGain,
-        cumulativeLoss,
+        gradient,
         stageIndex,
         coordIndex: ci,
       });
@@ -143,8 +143,7 @@ export const ElevationProfile = memo(function ElevationProfile({
     x: number;
     screenX: number;
     flipLeft: boolean;
-    gain: number;
-    loss: number;
+    gradient: number;
     distance: number;
   } | null>(null);
   const stages = useTripStore((s) => s.stages);
@@ -235,8 +234,7 @@ export const ElevationProfile = memo(function ElevationProfile({
         x: toX(best.distanceKm),
         screenX,
         flipLeft: screenX > rect.width * 0.6,
-        gain: best.cumulativeGain,
-        loss: best.cumulativeLoss,
+        gradient: best.gradient,
         distance: best.distanceKm,
       });
     },
@@ -309,7 +307,9 @@ export const ElevationProfile = memo(function ElevationProfile({
               : "translateX(8px)",
           }}
         >
-          <div className="font-medium">↑ {Math.round(hoveredPoint.gain)} m · ↓ {Math.round(hoveredPoint.loss)} m</div>
+          <div className="font-medium">
+            {hoveredPoint.gradient >= 0 ? "+" : ""}{hoveredPoint.gradient.toFixed(1)}%
+          </div>
           <div className="text-muted-foreground">{hoveredPoint.distance.toFixed(1)} km</div>
         </div>
       )}
