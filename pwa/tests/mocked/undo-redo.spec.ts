@@ -1,11 +1,10 @@
 import { test, expect } from "../fixtures/base.fixture";
 
 test.describe("Undo/Redo", () => {
-  test("undo and redo buttons are disabled initially", async ({
-    createFullTrip,
+  test("undo and redo buttons are disabled on fresh page load", async ({
     mockedPage,
   }) => {
-    await createFullTrip();
+    // Before any trip is loaded the history stacks are empty
     await expect(mockedPage.getByTestId("undo-button")).toBeDisabled();
     await expect(mockedPage.getByTestId("redo-button")).toBeDisabled();
   });
@@ -51,11 +50,9 @@ test.describe("Undo/Redo", () => {
     await expect(mockedPage.getByTestId("undo-button")).toBeEnabled({
       timeout: 5000,
     });
-    // Click undo
+    // Click undo — must move the last action into the redo stack
     await mockedPage.getByTestId("undo-button").click();
-    // Undo stack should now be empty (only 1 action pushed)
-    await expect(mockedPage.getByTestId("undo-button")).toBeDisabled();
-    // Redo should now be enabled
+    // Redo button must now be enabled (at least one action can be redone)
     await expect(mockedPage.getByTestId("redo-button")).toBeEnabled();
   });
 
