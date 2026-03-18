@@ -180,4 +180,26 @@ test.describe("Undo/Redo", () => {
     // Redo button should now be enabled
     await expect(mockedPage.getByTestId("redo-button")).toBeEnabled();
   });
+
+  test("Ctrl+Z undoes a pacing preset button change", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+    // Open the config panel
+    await mockedPage.getByTestId("config-open-button").click();
+    // Click a preset button — this calls onCommit directly (no preceding onChange)
+    await mockedPage
+      .getByRole("button", { name: /Expert/ })
+      .click();
+    // The preset change should be undoable
+    await expect(mockedPage.getByTestId("undo-button")).toBeEnabled({
+      timeout: 5000,
+    });
+    // Undo — pacing should revert and redo should become available
+    await mockedPage.keyboard.press("Control+z");
+    await expect(mockedPage.getByTestId("redo-button")).toBeEnabled({
+      timeout: 5000,
+    });
+  });
 });

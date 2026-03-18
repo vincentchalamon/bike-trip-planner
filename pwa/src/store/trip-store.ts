@@ -89,13 +89,6 @@ interface TripState {
     startDate: string | null,
     endDate: string | null,
   ) => void;
-  updatePacingSettings: (
-    fatigueFactor: number,
-    elevationPenalty: number,
-    maxDistancePerDay: number,
-    averageSpeed: number,
-  ) => void;
-  /** Internal setter — updates pacing WITHOUT pushing to the undo history. */
   updatePacingSettingsInternal: (
     fatigueFactor: number,
     elevationPenalty: number,
@@ -356,24 +349,6 @@ export const useTripStore = create<TripState>()(
         state.endDate = endDate;
       }),
 
-    updatePacingSettings: (
-      fatigueFactor,
-      elevationPenalty,
-      maxDistancePerDay,
-      averageSpeed,
-    ) => {
-      // Push snapshot before mutation so the user can undo pacing changes.
-      useTripTemporalStore
-        .getState()
-        ._push(getUndoableSlice(useTripStore.getState()));
-      set((state) => {
-        state.fatigueFactor = fatigueFactor;
-        state.elevationPenalty = elevationPenalty;
-        state.maxDistancePerDay = maxDistancePerDay;
-        state.averageSpeed = averageSpeed;
-      });
-    },
-
     updatePacingSettingsInternal: (
       fatigueFactor,
       elevationPenalty,
@@ -507,8 +482,7 @@ export const useTripTemporalStore = createTemporalStore(
     const store = useTripStore.getState();
     store.setStages(s.stages);
     // Use individual actions so that Immer processes each mutation correctly.
-    // updateDates and updatePacingSettings would re-push to history, so we
-    // call the lower-level setters that do NOT push to the undo stack.
+    // Use the Internal variants to avoid re-pushing to the undo history.
     store.updateDatesInternal(s.startDate, s.endDate);
     store.updatePacingSettingsInternal(
       s.fatigueFactor,
