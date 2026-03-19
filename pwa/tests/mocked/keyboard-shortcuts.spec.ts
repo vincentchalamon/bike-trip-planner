@@ -1,10 +1,5 @@
 import { test, expect } from "../fixtures/base.fixture";
-import {
-  routeParsedEvent,
-  stagesComputedEvent,
-  accommodationsFoundEvent,
-  tripCompleteEvent,
-} from "../fixtures/mock-data";
+import { routeParsedEvent } from "../fixtures/mock-data";
 
 test.describe("Keyboard shortcuts", () => {
   test("? key opens the help modal", async ({
@@ -14,10 +9,10 @@ test.describe("Keyboard shortcuts", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    // Defocus the magic-link input so the shortcut handler isn't suppressed
+    await mockedPage.locator("body").click();
     await mockedPage.keyboard.press("?");
-    await expect(
-      mockedPage.getByTestId("keyboard-help-modal"),
-    ).toBeVisible();
+    await expect(mockedPage.getByTestId("keyboard-help-modal")).toBeVisible();
   });
 
   test("? key closes the help modal when already open", async ({
@@ -27,6 +22,7 @@ test.describe("Keyboard shortcuts", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    await mockedPage.locator("body").click();
     // Open
     await mockedPage.keyboard.press("?");
     await expect(mockedPage.getByTestId("keyboard-help-modal")).toBeVisible();
@@ -44,6 +40,7 @@ test.describe("Keyboard shortcuts", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    await mockedPage.locator("body").click();
     await mockedPage.keyboard.press("?");
     await expect(mockedPage.getByTestId("keyboard-help-modal")).toBeVisible();
     await mockedPage.keyboard.press("Escape");
@@ -59,13 +56,14 @@ test.describe("Keyboard shortcuts", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
-    await mockedPage
-      .getByRole("button", { name: "Ouvrir les paramètres" })
-      .click();
-    const dialog = mockedPage.getByRole("dialog", { name: "Paramètres" });
-    await expect(dialog).toBeInViewport();
+    await mockedPage.getByTestId("config-open-button").click();
+    // The config panel is a dialog with aria-modal
+    const configPanel = mockedPage.locator(
+      '[role="dialog"][aria-modal="true"]',
+    );
+    await expect(configPanel).toBeInViewport();
     await mockedPage.keyboard.press("Escape");
-    await expect(dialog).not.toBeInViewport();
+    await expect(configPanel).not.toBeInViewport();
   });
 
   test("J key navigates to the next stage when a trip is loaded", async ({
@@ -73,46 +71,21 @@ test.describe("Keyboard shortcuts", () => {
     mockedPage,
   }) => {
     await createFullTrip();
-    // Initially focused index should be null
-    const initialIndex = await mockedPage.evaluate(() => {
-      const store = (
-        window as Window & {
-          __zustand_ui_store?: {
-            getState: () => { focusedMapStageIndex: number | null };
-          };
-        }
-      ).__zustand_ui_store;
-      return store?.getState().focusedMapStageIndex ?? null;
-    });
-    expect(initialIndex).toBeNull();
+    const mapContainer = mockedPage.getByTestId("map-container");
+
+    // Initially no focused stage
+    await expect(mapContainer).toHaveAttribute("data-focused-stage", "");
+
+    // Defocus any active element before pressing navigation keys
+    await mockedPage.locator("body").click();
 
     // Press J — should focus stage 0
-    await mockedPage.locator("body").press("j");
-    const afterFirstJ = await mockedPage.evaluate(() => {
-      const store = (
-        window as Window & {
-          __zustand_ui_store?: {
-            getState: () => { focusedMapStageIndex: number | null };
-          };
-        }
-      ).__zustand_ui_store;
-      return store?.getState().focusedMapStageIndex ?? null;
-    });
-    expect(afterFirstJ).toBe(0);
+    await mockedPage.keyboard.press("j");
+    await expect(mapContainer).toHaveAttribute("data-focused-stage", "0");
 
     // Press J again — should focus stage 1
-    await mockedPage.locator("body").press("j");
-    const afterSecondJ = await mockedPage.evaluate(() => {
-      const store = (
-        window as Window & {
-          __zustand_ui_store?: {
-            getState: () => { focusedMapStageIndex: number | null };
-          };
-        }
-      ).__zustand_ui_store;
-      return store?.getState().focusedMapStageIndex ?? null;
-    });
-    expect(afterSecondJ).toBe(1);
+    await mockedPage.keyboard.press("j");
+    await expect(mapContainer).toHaveAttribute("data-focused-stage", "1");
   });
 
   test("K key navigates to the previous stage", async ({
@@ -120,47 +93,27 @@ test.describe("Keyboard shortcuts", () => {
     mockedPage,
   }) => {
     await createFullTrip();
+    const mapContainer = mockedPage.getByTestId("map-container");
+
+    // Defocus any active element
+    await mockedPage.locator("body").click();
 
     // Press J twice to reach stage 1
-    await mockedPage.locator("body").press("j");
-    await mockedPage.locator("body").press("j");
-    const afterJJ = await mockedPage.evaluate(() => {
-      const store = (
-        window as Window & {
-          __zustand_ui_store?: {
-            getState: () => { focusedMapStageIndex: number | null };
-          };
-        }
-      ).__zustand_ui_store;
-      return store?.getState().focusedMapStageIndex ?? null;
-    });
-    expect(afterJJ).toBe(1);
+    await mockedPage.keyboard.press("j");
+    await mockedPage.keyboard.press("j");
+    await expect(mapContainer).toHaveAttribute("data-focused-stage", "1");
 
     // Press K — should go back to stage 0
-    await mockedPage.locator("body").press("k");
-    const afterK = await mockedPage.evaluate(() => {
-      const store = (
-        window as Window & {
-          __zustand_ui_store?: {
-            getState: () => { focusedMapStageIndex: number | null };
-          };
-        }
-      ).__zustand_ui_store;
-      return store?.getState().focusedMapStageIndex ?? null;
-    });
-    expect(afterK).toBe(0);
+    await mockedPage.keyboard.press("k");
+    await expect(mapContainer).toHaveAttribute("data-focused-stage", "0");
   });
 
   test("shortcuts are suppressed when focus is inside an <input>", async ({
-    submitUrl,
-    injectEvent,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
-    // Focus the trip title input (editable-field)
-    const titleField = mockedPage.getByTestId("trip-title");
-    await titleField.click();
+    // Focus the magic-link input (always an <input>)
+    const magicLinkInput = mockedPage.getByTestId("magic-link-input");
+    await magicLinkInput.focus();
     // Press ? — should NOT open the help modal
     await mockedPage.keyboard.press("?");
     await expect(
@@ -169,33 +122,19 @@ test.describe("Keyboard shortcuts", () => {
   });
 
   test("shortcuts are suppressed when focus is inside a <select>", async ({
-    submitUrl,
-    injectSequence,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectSequence([
-      routeParsedEvent(),
-      stagesComputedEvent(),
-      accommodationsFoundEvent(0),
-      tripCompleteEvent(),
-    ]);
-    // Open the edit form of the first accommodation to reveal the native <select>
-    const stageCard = mockedPage.getByTestId("stage-card-1");
-    await expect(stageCard).toContainText("Camping Les Oliviers");
-    await stageCard
-      .getByRole("button", { name: "Modifier l'hébergement" })
-      .first()
-      .click();
-
-    // The type select should now be visible
-    const typeSelect = stageCard.getByRole("combobox", {
-      name: "Type d'hébergement",
+    // Inject a temporary <select> to verify the SELECT tagName guard
+    await mockedPage.evaluate(() => {
+      const select = document.createElement("select");
+      select.id = "__test_select";
+      const option = document.createElement("option");
+      option.value = "a";
+      option.textContent = "A";
+      select.appendChild(option);
+      document.body.appendChild(select);
     });
-    await expect(typeSelect).toBeVisible();
-    await typeSelect.focus();
-
-    // Press ? — should NOT open the help modal while a select has focus
+    await mockedPage.locator("#__test_select").focus();
     await mockedPage.keyboard.press("?");
     await expect(
       mockedPage.getByTestId("keyboard-help-modal"),

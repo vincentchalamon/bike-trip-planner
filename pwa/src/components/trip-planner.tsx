@@ -364,6 +364,7 @@ export function TripPlanner() {
                     height: `calc(100vh - ${isScrolledPast ? fixedHeaderHeight + 8 : 16}px)`,
                   }}
                   data-testid="map-container"
+                  data-focused-stage={focusedMapStageIndex ?? ""}
                 >
                   <MapPanel
                     focusedStageIndex={focusedMapStageIndex}
