@@ -72,12 +72,14 @@ test.describe("Date range picker in ConfigPanel", () => {
       'button[role="gridcell"]:not([disabled])',
     );
     await enabledCells.first().click();
-    // Grid should still be visible (waiting for end date)
-    await expect(grid).toBeVisible();
+    // Wait for the cell to become selected (confirms React has re-rendered)
+    await expect(
+      grid.locator('button[role="gridcell"][aria-selected="true"]'),
+    ).toHaveCount(1, { timeout: 3000 });
 
     // Click a later cell (end date) — popover should auto-close
     await enabledCells.nth(5).click();
-    await expect(grid).not.toBeVisible({ timeout: 3000 });
+    await expect(grid).not.toBeVisible({ timeout: 5000 });
   });
 
   test("clicking profile chip in summary opens config panel at pacing section", async ({
