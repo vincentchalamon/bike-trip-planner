@@ -27,6 +27,8 @@ interface CalendarDay {
   isPast: boolean;
   isSelected: boolean;
   isInRange: boolean;
+  isPreviewRange: boolean;
+  isHovered: boolean;
   isStart: boolean;
   isEnd: boolean;
 }
@@ -35,6 +37,8 @@ function buildMonthWeeks(
   month: Dayjs,
   start: Dayjs | null,
   end: Dayjs | null,
+  hoveredDate: Dayjs | null,
+  selectingEnd: boolean,
 ): CalendarDay[][] {
   const firstDay = month.startOf("month");
   const lastDay = month.endOf("month");
@@ -60,6 +64,20 @@ function buildMonthWeeks(
         start && end
           ? current.isAfter(start, "day") && current.isBefore(end, "day")
           : false;
+      const isHovered = hoveredDate
+        ? current.isSame(hoveredDate, "day")
+        : false;
+      // Preview range: when start is selected and hovering after it
+      const isPreviewRange =
+        selectingEnd &&
+        !end &&
+        start &&
+        hoveredDate &&
+        hoveredDate.isAfter(start, "day")
+          ? current.isAfter(start, "day") &&
+            (current.isBefore(hoveredDate, "day") ||
+              current.isSame(hoveredDate, "day"))
+          : false;
 
       week.push({
         date: current,
@@ -68,6 +86,8 @@ function buildMonthWeeks(
         isPast: current.isBefore(today, "day"),
         isSelected: isStart || isEnd,
         isInRange,
+        isPreviewRange,
+        isHovered,
         isStart,
         isEnd,
       });
@@ -85,18 +105,26 @@ function MonthGrid({
   weekDayLabels,
   start,
   end,
+  hoveredDate,
+  selectingEnd,
   onSelectDate,
+  onHoverDate,
+  onLeave,
 }: {
   month: Dayjs;
   weekDayLabels: string[];
   start: Dayjs | null;
   end: Dayjs | null;
+  hoveredDate: Dayjs | null;
+  selectingEnd: boolean;
   onSelectDate: (date: Dayjs) => void;
+  onHoverDate: (date: Dayjs) => void;
+  onLeave: () => void;
 }) {
   const locale = useLocale();
   const weeks = useMemo(
-    () => buildMonthWeeks(month, start, end),
-    [month, start, end],
+    () => buildMonthWeeks(month, start, end, hoveredDate, selectingEnd),
+    [month, start, end, hoveredDate, selectingEnd],
   );
 
   return (
@@ -113,37 +141,74 @@ function MonthGrid({
             </div>
           ))}
         </div>
-        {weeks.map((week, weekIndex) => (
-          <div key={weekIndex} className="grid grid-cols-7" role="row">
-            {week.map((day) => (
-              <button
-                key={day.date.format("YYYY-MM-DD")}
-                role="gridcell"
-                aria-selected={day.isSelected}
-                aria-disabled={day.isPast}
-                disabled={day.isPast}
-                onClick={() => onSelectDate(day.date)}
-                className={cn(
-                  "relative h-8 w-full text-sm rounded-md transition-colors",
-                  day.isPast
-                    ? "text-muted-foreground/30 cursor-not-allowed"
-                    : "cursor-pointer hover:bg-accent",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  !day.isCurrentMonth &&
-                    !day.isPast &&
-                    "text-muted-foreground/40",
-                  day.isToday && "font-bold",
-                  day.isSelected &&
-                    "bg-brand text-white ring-2 ring-white font-bold",
-                  day.isInRange &&
-                    "bg-brand/10 border border-dashed border-brand",
-                )}
-              >
-                {day.date.date()}
-              </button>
-            ))}
-          </div>
-        ))}
+        <div onMouseLeave={onLeave}>
+          {weeks.map((week, weekIndex) => (
+            <div key={weekIndex} className="grid grid-cols-7" role="row">
+              {week.map((day) => {
+                const isEndCell =
+                  day.isEnd ||
+                  (day.isHovered && day.isPreviewRange && !day.isSelected);
+                const inRange =
+                  day.isInRange ||
+                  (day.isPreviewRange && !day.isSelected && !isEndCell);
+                const hasPreviewAfterStart =
+                  selectingEnd &&
+                  hoveredDate !== null &&
+                  start !== null &&
+                  hoveredDate.isAfter(start, "day");
+                const isStartWithRange =
+                  day.isStart &&
+                  (day.isInRange || !!end || hasPreviewAfterStart);
+                const isEndWithRange =
+                  isEndCell && (day.isInRange || day.isPreviewRange || !!start);
+
+                return (
+                  <button
+                    key={day.date.format("YYYY-MM-DD")}
+                    role="gridcell"
+                    aria-selected={day.isSelected}
+                    aria-disabled={day.isPast}
+                    disabled={day.isPast}
+                    onClick={() => onSelectDate(day.date)}
+                    onMouseEnter={() => !day.isPast && onHoverDate(day.date)}
+                    className={cn(
+                      "relative h-8 w-full text-sm transition-colors",
+                      day.isPast
+                        ? "text-muted-foreground/30 cursor-not-allowed"
+                        : "cursor-pointer",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      !day.isCurrentMonth &&
+                        !day.isPast &&
+                        "text-muted-foreground/40",
+                      day.isToday && "font-bold",
+                      // Range background (full cell width)
+                      inRange && "bg-brand/10",
+                      // Start date: range extends to the right half behind the circle
+                      isStartWithRange && "bg-gradient-to-l from-brand/10 to-transparent",
+                      // End date: range extends to the left half behind the circle
+                      isEndWithRange && "bg-gradient-to-r from-brand/10 to-transparent",
+                    )}
+                  >
+                    {/* Inner circle for selected/hovered dates */}
+                    <span
+                      className={cn(
+                        "relative z-10 flex items-center justify-center h-full w-full rounded-full",
+                        day.isSelected &&
+                          "bg-brand text-white ring-2 ring-brand font-bold",
+                        day.isHovered &&
+                          !day.isSelected &&
+                          !day.isPast &&
+                          "ring-1 ring-foreground/40",
+                      )}
+                    >
+                      {day.date.date()}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -158,6 +223,7 @@ export function DateRangePicker({
   const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [selectingEnd, setSelectingEnd] = useState(false);
+  const [hoveredDate, setHoveredDate] = useState<Dayjs | null>(null);
 
   const start = useMemo(
     () => (startDate ? dayjs(startDate) : null),
@@ -180,6 +246,7 @@ export function DateRangePicker({
     (isOpen: boolean) => {
       if (isOpen) {
         setSelectingEnd(!!startDate && !endDate);
+        setHoveredDate(null);
         if (startDate) {
           setCurrentMonth(dayjs(startDate).startOf("month"));
         } else {
@@ -199,20 +266,16 @@ export function DateRangePicker({
       const dateStr = date.format("YYYY-MM-DD");
 
       if (!selectingEnd || !start) {
-        // First click: set start date, wait for end
         onDatesChange(dateStr, null);
         setSelectingEnd(true);
       } else {
         if (date.isBefore(start, "day")) {
-          // Clicked before start: reset start
           onDatesChange(dateStr, null);
           setSelectingEnd(true);
         } else if (date.isSame(start, "day")) {
-          // Clicked same day: clear selection
           onDatesChange(null, null);
           setSelectingEnd(false);
         } else {
-          // Second click after start: set end date, auto-close
           onDatesChange(startDate, dateStr);
           setSelectingEnd(false);
           setOpen(false);
@@ -221,6 +284,14 @@ export function DateRangePicker({
     },
     [selectingEnd, start, startDate, onDatesChange],
   );
+
+  const handleHoverDate = useCallback((date: Dayjs) => {
+    setHoveredDate(date);
+  }, []);
+
+  const handleLeaveGrid = useCallback(() => {
+    setHoveredDate(null);
+  }, []);
 
   const goToPreviousMonth = useCallback(() => {
     setCurrentMonth((m) => m.subtract(1, "month"));
@@ -263,7 +334,7 @@ export function DateRangePicker({
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto p-4 max-w-[95vw]"
+        className="w-[var(--radix-popover-trigger-width)] p-4"
         align="start"
         sideOffset={8}
       >
@@ -298,7 +369,11 @@ export function DateRangePicker({
           weekDayLabels={weekDayLabels}
           start={start}
           end={endDate ? dayjs(endDate) : null}
+          hoveredDate={hoveredDate}
+          selectingEnd={selectingEnd}
           onSelectDate={handleSelectDate}
+          onHoverDate={handleHoverDate}
+          onLeave={handleLeaveGrid}
         />
       </PopoverContent>
     </Popover>
