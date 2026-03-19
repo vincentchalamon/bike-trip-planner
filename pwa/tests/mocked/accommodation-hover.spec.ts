@@ -28,15 +28,20 @@ test.describe("Accommodation hover — map markers", () => {
       mockedPage.locator(".map-marker--acc-highlighted"),
     ).toHaveCount(0);
 
-    // Set hover state via the Zustand store (Hotel du Pont = accIndex 1)
+    // Set hover state via the Zustand store action (not raw setState)
     await mockedPage.evaluate(() => {
-      (
+      const store = (
         window as Window & {
-          __zustand_ui_store?: { setState: (s: object) => void };
+          __zustand_ui_store?: {
+            getState: () => {
+              setHoveredAccommodation: (
+                v: { stageIndex: number; accIndex: number } | null,
+              ) => void;
+            };
+          };
         }
-      ).__zustand_ui_store?.setState({
-        hoveredAccommodation: { stageIndex: 0, accIndex: 1 },
-      });
+      ).__zustand_ui_store;
+      store?.getState().setHoveredAccommodation({ stageIndex: 0, accIndex: 1 });
     });
 
     // The corresponding map marker should be highlighted
@@ -46,16 +51,54 @@ test.describe("Accommodation hover — map markers", () => {
 
     // Clear hover state
     await mockedPage.evaluate(() => {
-      (
+      const store = (
         window as Window & {
-          __zustand_ui_store?: { setState: (s: object) => void };
+          __zustand_ui_store?: {
+            getState: () => {
+              setHoveredAccommodation: (
+                v: { stageIndex: number; accIndex: number } | null,
+              ) => void;
+            };
+          };
         }
-      ).__zustand_ui_store?.setState({
-        hoveredAccommodation: null,
-      });
+      ).__zustand_ui_store;
+      store?.getState().setHoveredAccommodation(null);
     });
 
     // Highlight should be removed
+    await expect(
+      mockedPage.locator(".map-marker--acc-highlighted"),
+    ).toHaveCount(0);
+  });
+
+  test("hovering an accommodation item in the timeline highlights its map marker", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      accommodationsFoundEvent(0),
+      tripCompleteEvent(),
+    ]);
+
+    // Wait for map markers to be created
+    await expect(mockedPage.locator(".map-marker--acc")).toHaveCount(2);
+
+    // Hover the first accommodation item in the timeline (Hotel du Pont — sorted first by distance)
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    const accItem = stageCard.getByTestId("accommodation-item").first();
+    await accItem.hover();
+
+    // The corresponding map marker should be highlighted
+    await expect(
+      mockedPage.locator(".map-marker--acc-highlighted"),
+    ).toHaveCount(1);
+
+    // Move mouse away → highlight removed
+    await mockedPage.mouse.move(0, 0);
     await expect(
       mockedPage.locator(".map-marker--acc-highlighted"),
     ).toHaveCount(0);

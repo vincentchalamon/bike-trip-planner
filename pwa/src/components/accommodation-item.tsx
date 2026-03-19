@@ -249,6 +249,7 @@ export function AccommodationItem({
   return (
     <div
       className={`relative group py-2 ${isSelected ? "rounded-md bg-primary/5 border border-primary/20 px-2" : ""}`}
+      data-testid="accommodation-item"
       onMouseEnter={onHoverStart}
       onMouseLeave={onHoverEnd}
     >
