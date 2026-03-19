@@ -72,9 +72,7 @@
     "expand": "Développer le calendrier",
     "ariaLabel": "Calendrier",
     "startDate": "Date de départ",
-    "endDate": "Date de retour",
-    "selectRange": "Sélectionner",
-    "cancel": "Annuler"
+    "endDate": "Date de retour"
   },
   "accommodation": {
     "type_hotel": "Hôtel",

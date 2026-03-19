@@ -76,14 +76,22 @@ export function TripSummary({
     ? tPacing(`preset_${activePresetKey}`)
     : t("customProfile");
 
-  const formatShortDate = (date: string) =>
-    dayjs(date).locale(locale).format("D MMM");
+  const formatDateRange = (start: string, end: string) => {
+    const s = dayjs(start).locale(locale);
+    const e = dayjs(end).locale(locale);
+    if (s.month() === e.month() && s.year() === e.year()) {
+      // Same month: "19 → 21 mars"
+      return `${s.date()} → ${e.format("D MMM")}`;
+    }
+    // Different months: "31 mars → 2 avril"
+    return `${s.format("D MMM")} → ${e.format("D MMM")}`;
+  };
 
   const datesDisplay =
     startDate && endDate
-      ? `${formatShortDate(startDate)} → ${formatShortDate(endDate)}`
+      ? formatDateRange(startDate, endDate)
       : startDate
-        ? formatShortDate(startDate)
+        ? dayjs(startDate).locale(locale).format("D MMM")
         : t("noDates");
 
   return (

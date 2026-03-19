@@ -100,10 +100,7 @@ function MonthGrid({
   );
 
   return (
-    <div className="flex-1 min-w-0">
-      <div className="text-center text-sm font-semibold mb-2">
-        {month.locale(locale).format("MMMM YYYY")}
-      </div>
+    <div>
       <div role="grid" aria-label={month.locale(locale).format("MMMM YYYY")}>
         <div className="grid grid-cols-7 mb-1" role="row">
           {weekDayLabels.map((label) => (
@@ -160,20 +157,12 @@ export function DateRangePicker({
   const t = useTranslations("calendar");
   const locale = useLocale();
   const [open, setOpen] = useState(false);
-
-  // Draft state for the popover (committed on "Select")
-  const [draftStart, setDraftStart] = useState<string | null>(null);
-  const [draftEnd, setDraftEnd] = useState<string | null>(null);
   const [selectingEnd, setSelectingEnd] = useState(false);
 
   const start = startDate ? dayjs(startDate) : null;
-  const [leftMonth, setLeftMonth] = useState(() =>
+  const [currentMonth, setCurrentMonth] = useState(() =>
     start ? start.startOf("month") : dayjs().startOf("month"),
   );
-  const rightMonth = leftMonth.add(1, "month");
-
-  const draftStartDayjs = draftStart ? dayjs(draftStart) : null;
-  const draftEndDayjs = draftEnd ? dayjs(draftEnd) : null;
 
   const weekDayLabels = useMemo(() => {
     // Anchor to a known Monday so headers always match the Mon-first grid,
@@ -187,14 +176,11 @@ export function DateRangePicker({
   const handleOpen = useCallback(
     (isOpen: boolean) => {
       if (isOpen) {
-        // Initialize draft from current dates
-        setDraftStart(startDate);
-        setDraftEnd(endDate);
         setSelectingEnd(!!startDate && !endDate);
         if (startDate) {
-          setLeftMonth(dayjs(startDate).startOf("month"));
+          setCurrentMonth(dayjs(startDate).startOf("month"));
         } else {
-          setLeftMonth(dayjs().startOf("month"));
+          setCurrentMonth(dayjs().startOf("month"));
         }
       }
       setOpen(isOpen);
@@ -209,43 +195,36 @@ export function DateRangePicker({
 
       const dateStr = date.format("YYYY-MM-DD");
 
-      if (!selectingEnd || !draftStartDayjs) {
-        setDraftStart(dateStr);
-        setDraftEnd(null);
+      if (!selectingEnd || !start) {
+        // First click: set start date, wait for end
+        onDatesChange(dateStr, null);
         setSelectingEnd(true);
       } else {
-        if (date.isBefore(draftStartDayjs, "day")) {
-          setDraftStart(dateStr);
-          setDraftEnd(null);
+        if (date.isBefore(start, "day")) {
+          // Clicked before start: reset start
+          onDatesChange(dateStr, null);
           setSelectingEnd(true);
-        } else if (date.isSame(draftStartDayjs, "day")) {
-          setDraftStart(null);
-          setDraftEnd(null);
+        } else if (date.isSame(start, "day")) {
+          // Clicked same day: clear selection
+          onDatesChange(null, null);
           setSelectingEnd(false);
         } else {
-          setDraftEnd(dateStr);
+          // Second click after start: set end date, auto-close
+          onDatesChange(startDate, dateStr);
           setSelectingEnd(false);
+          setOpen(false);
         }
       }
     },
-    [selectingEnd, draftStartDayjs],
+    [selectingEnd, start, startDate, onDatesChange],
   );
 
-  const handleConfirm = useCallback(() => {
-    onDatesChange(draftStart, draftEnd);
-    setOpen(false);
-  }, [draftStart, draftEnd, onDatesChange]);
-
-  const handleCancel = useCallback(() => {
-    setOpen(false);
-  }, []);
-
   const goToPreviousMonth = useCallback(() => {
-    setLeftMonth((m) => m.subtract(1, "month"));
+    setCurrentMonth((m) => m.subtract(1, "month"));
   }, []);
 
   const goToNextMonth = useCallback(() => {
-    setLeftMonth((m) => m.add(1, "month"));
+    setCurrentMonth((m) => m.add(1, "month"));
   }, []);
 
   const formatDisplayDate = (date: string | null) => {
@@ -296,6 +275,9 @@ export function DateRangePicker({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
+          <span className="text-sm font-semibold">
+            {currentMonth.locale(locale).format("MMMM YYYY")}
+          </span>
           <Button
             variant="ghost"
             size="icon"
@@ -307,35 +289,14 @@ export function DateRangePicker({
           </Button>
         </div>
 
-        {/* Double-month grid (single month on mobile) */}
-        <div className="flex gap-6">
-          <MonthGrid
-            month={leftMonth}
-            weekDayLabels={weekDayLabels}
-            start={draftStartDayjs}
-            end={draftEndDayjs}
-            onSelectDate={handleSelectDate}
-          />
-          <div className="hidden sm:block">
-            <MonthGrid
-              month={rightMonth}
-              weekDayLabels={weekDayLabels}
-              start={draftStartDayjs}
-              end={draftEndDayjs}
-              onSelectDate={handleSelectDate}
-            />
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
-          <Button variant="outline" size="sm" onClick={handleCancel}>
-            {t("cancel")}
-          </Button>
-          <Button size="sm" onClick={handleConfirm}>
-            {t("selectRange")}
-          </Button>
-        </div>
+        {/* Single month grid */}
+        <MonthGrid
+          month={currentMonth}
+          weekDayLabels={weekDayLabels}
+          start={start}
+          end={endDate ? dayjs(endDate) : null}
+          onSelectDate={handleSelectDate}
+        />
       </PopoverContent>
     </Popover>
   );

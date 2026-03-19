@@ -72,9 +72,7 @@
     "expand": "Expand calendar",
     "ariaLabel": "Calendar",
     "startDate": "Start date",
-    "endDate": "End date",
-    "selectRange": "Select",
-    "cancel": "Cancel"
+    "endDate": "End date"
   },
   "accommodation": {
     "type_hotel": "Hotel",
