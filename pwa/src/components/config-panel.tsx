@@ -73,7 +73,6 @@ export function ConfigPanel({
   const focusSection = useUiStore((s) => s.configPanelFocusSection);
   const setFocusSection = useUiStore((s) => s.setConfigPanelFocusSection);
   const panelRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const datesSectionRef = useRef<HTMLElement>(null);
   const pacingSectionRef = useRef<HTMLElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -195,10 +194,7 @@ export function ConfigPanel({
         </div>
 
         {/* Scrollable content */}
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-6"
-        >
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-6">
           {/* Dates */}
           <section ref={datesSectionRef} aria-labelledby="config-dates-heading">
             <h3 id="config-dates-heading" className="text-sm font-medium mb-3">
