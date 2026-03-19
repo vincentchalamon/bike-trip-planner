@@ -159,7 +159,10 @@ export function DateRangePicker({
   const [open, setOpen] = useState(false);
   const [selectingEnd, setSelectingEnd] = useState(false);
 
-  const start = startDate ? dayjs(startDate) : null;
+  const start = useMemo(
+    () => (startDate ? dayjs(startDate) : null),
+    [startDate],
+  );
   const [currentMonth, setCurrentMonth] = useState(() =>
     start ? start.startOf("month") : dayjs().startOf("month"),
   );
