@@ -108,6 +108,24 @@ test.describe("Keyboard shortcuts", () => {
     await expect(mapContainer).toHaveAttribute("data-focused-stage", "0");
   });
 
+  test("K key with no focused stage jumps to the last stage", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+    const mapContainer = mockedPage.getByTestId("map-container");
+
+    // Initially no focused stage
+    await expect(mapContainer).toHaveAttribute("data-focused-stage", "");
+
+    // Defocus any active element
+    await mockedPage.locator("body").click();
+
+    // Press K without any stage focused — should jump to last stage (index 2)
+    await mockedPage.keyboard.press("k");
+    await expect(mapContainer).toHaveAttribute("data-focused-stage", "2");
+  });
+
   test("shortcuts are suppressed when focus is inside an <input>", async ({
     mockedPage,
   }) => {

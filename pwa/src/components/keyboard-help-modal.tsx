@@ -18,6 +18,12 @@ import { useUiStore } from "@/store/ui-store";
  * which is toggled by pressing `?` (via `useKeyboardShortcuts`) or by clicking
  * the "Aide" button in the toolbar.
  */
+const modKey =
+  typeof navigator !== "undefined" &&
+  /Mac|iPhone|iPad/.test(navigator.userAgent)
+    ? "⌘"
+    : "Ctrl";
+
 export function KeyboardHelpModal() {
   const t = useTranslations("keyboardHelp");
   const isOpen = useUiStore((s) => s.isHelpModalOpen);
@@ -61,8 +67,8 @@ export function KeyboardHelpModal() {
             </h3>
             <ShortcutTable
               shortcuts={[
-                { keys: ["Ctrl", "Z"], label: t("undo") },
-                { keys: ["Ctrl", "Y"], label: t("redo") },
+                { keys: [modKey, "Z"], label: t("undo") },
+                { keys: [modKey, "Y"], label: t("redo") },
               ]}
             />
           </section>
