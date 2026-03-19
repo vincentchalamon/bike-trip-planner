@@ -174,7 +174,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         if ($request->endDate instanceof \DateTimeImmutable && $request->startDate instanceof \DateTimeImmutable) {
             $numberOfDays = (int) $request->startDate->diff($request->endDate)->days + 1;
         } else {
-            $numberOfDays = (int) ceil($totalDistance / 80);
+            $numberOfDays = (int) ceil($totalDistance / $request->maxDistancePerDay);
             $numberOfDays = max(1, $numberOfDays);
         }
 

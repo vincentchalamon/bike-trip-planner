@@ -117,6 +117,69 @@ final class GenerateStagesHandlerTest extends TestCase
     }
 
     #[Test]
+    public function numberOfDaysUsesMaxDistancePerDayFromProfile(): void
+    {
+        $coordinate = new Coordinate(48.8566, 2.3522, 35.0);
+
+        $tripRequest = new TripRequest();
+        $tripRequest->maxDistancePerDay = 45.0; // beginner profile
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getRequest')->willReturn($tripRequest);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
+        $tripStateManager->method('getDecimatedPoints')->willReturn([
+            ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
+            ['lat' => 49.0, 'lon' => 2.5, 'ele' => 50.0],
+        ]);
+        $tripStateManager->method('getRawPoints')->willReturn(null);
+
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        // 142km total → ceil(142/45) = 4 days (not ceil(142/80) = 2)
+        $distanceCalculator->method('calculateTotalDistance')->willReturn(142.0);
+
+        $pacingEngine = $this->createMock(PacingEngineInterface::class);
+        $pacingEngine->expects($this->once())
+            ->method('generateStages')
+            ->with(
+                'trip-1',
+                $this->anything(),
+                4, // numberOfDays: ceil(142/45)
+                142.0,
+                $this->anything(),
+                $this->anything(),
+                $this->anything(),
+                45.0,
+            )
+            ->willReturn([
+                new Stage(tripId: 'trip-1', dayNumber: 1, distance: 40.0, elevation: 100.0, startPoint: $coordinate, endPoint: $coordinate),
+                new Stage(tripId: 'trip-1', dayNumber: 2, distance: 40.0, elevation: 100.0, startPoint: $coordinate, endPoint: $coordinate),
+                new Stage(tripId: 'trip-1', dayNumber: 3, distance: 40.0, elevation: 100.0, startPoint: $coordinate, endPoint: $coordinate),
+                new Stage(tripId: 'trip-1', dayNumber: 4, distance: 22.0, elevation: 50.0, startPoint: $coordinate, endPoint: $coordinate),
+            ]);
+
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+
+        $computationTracker = $this->createStub(ComputationTrackerInterface::class);
+        $computationTracker->method('isAllComplete')->willReturn(false);
+
+        $handler = new GenerateStagesHandler(
+            $computationTracker,
+            $publisher,
+            $tripStateManager,
+            $distanceCalculator,
+            $this->createStub(ElevationCalculatorInterface::class),
+            $this->createStub(RouteSimplifierInterface::class),
+            $pacingEngine,
+            $messageBus,
+        );
+
+        $handler(new GenerateStages('trip-1'));
+    }
+
+    #[Test]
     public function noRequestReturnsEarly(): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
