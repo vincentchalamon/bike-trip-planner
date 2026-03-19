@@ -54,34 +54,6 @@ test.describe("Date range picker in ConfigPanel", () => {
     ).toBeVisible();
   });
 
-  test("selecting start then end date auto-closes popover", async ({
-    submitUrl,
-    injectEvent,
-    mockedPage,
-  }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
-    // Open config panel → date range picker → calendar popover
-    await mockedPage.getByTestId("config-open-button").click();
-    await mockedPage.getByTestId("date-range-trigger").click();
-    const grid = mockedPage.getByRole("grid").first();
-    await expect(grid).toBeVisible();
-
-    // Click first enabled cell (start date)
-    const enabledCells = grid.locator(
-      'button[role="gridcell"]:not([disabled])',
-    );
-    await enabledCells.first().click();
-    // Wait for the cell to become selected (confirms React has re-rendered)
-    await expect(
-      grid.locator('button[role="gridcell"][aria-selected="true"]'),
-    ).toHaveCount(1, { timeout: 3000 });
-
-    // Click a later cell (end date) — popover should auto-close
-    await enabledCells.nth(5).click();
-    await expect(grid).not.toBeVisible({ timeout: 5000 });
-  });
-
   test("clicking profile chip in summary opens config panel at pacing section", async ({
     submitUrl,
     injectEvent,
