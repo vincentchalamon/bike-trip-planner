@@ -28,6 +28,7 @@ interface AccommodationPanelProps {
   stageIndex?: number;
   onClearNewAcc?: () => void;
   searchRadiusKm?: number;
+  onAccommodationHover?: (accIndex: number | null) => void;
 }
 
 export function AccommodationPanel({
@@ -43,6 +44,7 @@ export function AccommodationPanel({
   stageIndex,
   onClearNewAcc,
   searchRadiusKm = DEFAULT_ACCOMMODATION_RADIUS_KM,
+  onAccommodationHover,
 }: AccommodationPanelProps) {
   const t = useTranslations("accommodation");
   const isAccommodationScanning = useUiStore((s) => s.isAccommodationScanning);
@@ -179,6 +181,16 @@ export function AccommodationPanel({
                 isAccommodationSelected(originalIndex) ? onDeselect : undefined
               }
               initialEditing={newAccKey === `${stageIndex}-${originalIndex}`}
+              onHoverStart={
+                onAccommodationHover
+                  ? () => onAccommodationHover(originalIndex)
+                  : undefined
+              }
+              onHoverEnd={
+                onAccommodationHover
+                  ? () => onAccommodationHover(null)
+                  : undefined
+              }
             />
           </div>
         );

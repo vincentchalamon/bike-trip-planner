@@ -52,6 +52,8 @@ interface AccommodationItemProps {
   onDeselect?: () => void;
   isSelected?: boolean;
   initialEditing?: boolean;
+  onHoverStart?: () => void;
+  onHoverEnd?: () => void;
 }
 
 export function AccommodationItem({
@@ -62,6 +64,8 @@ export function AccommodationItem({
   onDeselect,
   isSelected = false,
   initialEditing = false,
+  onHoverStart,
+  onHoverEnd,
 }: AccommodationItemProps) {
   const t = useTranslations("accommodation");
   const [editing, setEditing] = useState(initialEditing);
@@ -245,6 +249,9 @@ export function AccommodationItem({
   return (
     <div
       className={`relative group py-2 ${isSelected ? "rounded-md bg-primary/5 border border-primary/20 px-2" : ""}`}
+      data-testid="accommodation-item"
+      onMouseEnter={onHoverStart}
+      onMouseLeave={onHoverEnd}
     >
       {/* Action buttons */}
       <div className="absolute top-2 right-0 flex gap-0.5">

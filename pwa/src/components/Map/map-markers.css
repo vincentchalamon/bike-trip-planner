@@ -45,20 +45,65 @@
   border-radius: 1px;
 }
 
-.map-marker--accommodation {
-  width: 22px;
-  height: 22px;
-  background-color: #7c3aed;
-  color: white;
+/* Accommodation markers — categorized by type */
+.map-marker--acc {
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
   border-radius: 50%;
+  border: 2px solid white;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.map-marker--accommodation::after {
-  content: "";
-  display: block;
-  width: 10px;
-  height: 10px;
-  background: white;
+.map-marker--acc-building {
+  background-color: #7c3aed;
+}
+
+.map-marker--acc-camping {
+  background-color: #059669;
+}
+
+.map-marker--acc-hut {
+  background-color: #b45309;
+}
+
+.map-marker--acc-other {
+  background-color: #6b7280;
+}
+
+.map-marker--acc-building::after {
+  content: "🏠";
+}
+
+.map-marker--acc-camping::after {
+  content: "⛺";
+}
+
+.map-marker--acc-hut::after {
+  content: "🏔️";
+}
+
+.map-marker--acc-other::after {
+  content: "📍";
+}
+
+.map-marker--acc-highlighted {
+  transform: scale(1.8);
+  z-index: 10;
+  box-shadow:
+    0 0 0 4px rgba(59, 130, 246, 0.8),
+    0 0 12px 2px rgba(59, 130, 246, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.map-marker--acc-selected {
+  transform: scale(1.3);
+  box-shadow:
+    0 0 0 3px rgba(34, 197, 94, 0.6),
+    0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .map-marker--alert {

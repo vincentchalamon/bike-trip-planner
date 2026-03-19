@@ -86,6 +86,25 @@ export function TripPlanner() {
   // Register global keyboard shortcuts (Escape, ?, J/K)
   useKeyboardShortcuts(activeStages.length);
 
+  const setHoveredAccommodation = useUiStore((s) => s.setHoveredAccommodation);
+
+  const handleAccommodationHover = useCallback(
+    (stageOriginalIndex: number, accIndex: number | null) => {
+      if (accIndex === null) {
+        setHoveredAccommodation(null);
+        return;
+      }
+      // Convert originalIndex (in stages, including rest days) to activeStages index
+      let activeIdx = 0;
+      for (let i = 0; i < stages.length; i++) {
+        if (i === stageOriginalIndex) break;
+        if (!stages[i]?.isRestDay) activeIdx++;
+      }
+      setHoveredAccommodation({ stageIndex: activeIdx, accIndex });
+    },
+    [setHoveredAccommodation, stages],
+  );
+
   const handleMapStageClick = useCallback(
     (stageIndex: number) => {
       setFocusedMapStageIndex(stageIndex);
@@ -163,7 +182,17 @@ export function TripPlanner() {
     if (!sentinel) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setIsScrolledPast(!entry?.isIntersecting);
+        const scrolled = !entry?.isIntersecting;
+        setIsScrolledPast(scrolled);
+        // Re-read header height after the next paint so the DOM reflects
+        // the new translate state and any content changes.
+        if (scrolled) {
+          requestAnimationFrame(() => {
+            if (fixedHeaderRef.current) {
+              setFixedHeaderHeight(fixedHeaderRef.current.offsetHeight);
+            }
+          });
+        }
       },
       { threshold: 0 },
     );
@@ -171,7 +200,8 @@ export function TripPlanner() {
     return () => observer.disconnect();
   }, [hasTripData]);
 
-  // Track the fixed header height so the sticky map can offset accordingly.
+  // Keep fixedHeaderHeight in sync when the header content changes
+  // (e.g. progress bar appears/disappears depending on viewMode).
   useEffect(() => {
     const el = fixedHeaderRef.current;
     if (!el) return;
@@ -181,11 +211,9 @@ export function TripPlanner() {
       );
     });
     observer.observe(el);
-    // Seed the height synchronously so that the map offset is correct on the
-    // very first scroll that triggers isScrolledPast, before ResizeObserver fires.
     setFixedHeaderHeight(el.offsetHeight);
     return () => observer.disconnect();
-  }, []);
+  }, [hasMap, viewMode]);
 
   return (
     <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative overflow-x-clip">
@@ -197,8 +225,8 @@ export function TripPlanner() {
         {t("layout.skipToTimeline")}
       </a>
 
-      {/* Toolbar: magic link + GPX upload + undo/redo + config button */}
-      <div className="flex items-center gap-2">
+      {/* Toolbar: magic link + GPX upload on first row, action buttons wrap to second row on mobile */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
         <div className="flex-1 min-w-0">
           <MagicLinkInput
             onSubmit={handleMagicLink}
@@ -207,29 +235,46 @@ export function TripPlanner() {
           />
         </div>
         <GpxUploadButton onUpload={handleGpxUpload} disabled={isProcessing} />
-        <UndoRedoButtons />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 cursor-pointer"
-          onClick={() => setHelpModalOpen(true)}
-          title={t("keyboardHelp.openButton")}
-          aria-label={t("keyboardHelp.openButton")}
-          data-testid="help-button"
-        >
-          <HelpCircle className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 cursor-pointer"
-          onClick={() => setConfigPanelOpen(true)}
-          title={t("config.open")}
-          aria-label={t("config.open")}
-          data-testid="config-open-button"
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
+        {/* Force line break on mobile after magic link + GPX upload */}
+        <div className="basis-full h-0 md:hidden" aria-hidden="true" />
+        {/* Action buttons — single instance, centered on mobile row */}
+        <div className="flex items-center gap-1 mx-auto md:mx-0">
+          {trip && <TripDownloads tripId={trip.id} tripTitle={trip.title} />}
+          {trip && totalDistance !== null && (
+            <TextExportButton
+              title={trip.title}
+              totalDistance={totalDistance}
+              totalElevation={totalElevation}
+              totalElevationLoss={totalElevationLoss}
+              sourceUrl={trip.sourceUrl}
+              stages={stages}
+              startDate={startDate}
+            />
+          )}
+          <UndoRedoButtons />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 cursor-pointer"
+            onClick={() => setHelpModalOpen(true)}
+            title={t("keyboardHelp.openButton")}
+            aria-label={t("keyboardHelp.openButton")}
+            data-testid="help-button"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 cursor-pointer"
+            onClick={() => setConfigPanelOpen(true)}
+            title={t("config.open")}
+            aria-label={t("config.open")}
+            data-testid="config-open-button"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Trip content */}
@@ -256,20 +301,7 @@ export function TripPlanner() {
             onDatesChange={handleDatesChange}
             showTitleSuggestion={totalDistance !== null}
             isTitleLoading={isProcessing && totalDistance === null}
-          >
-            <TripDownloads tripId={trip.id} tripTitle={trip.title} />
-            {totalDistance !== null && (
-              <TextExportButton
-                title={trip.title}
-                totalDistance={totalDistance}
-                totalElevation={totalElevation}
-                totalElevationLoss={totalElevationLoss}
-                sourceUrl={trip.sourceUrl}
-                stages={stages}
-                startDate={startDate}
-              />
-            )}
-          </TripHeader>
+          />
 
           {/* Sentinel — marks the natural position of the progress bar in the
               flow. The sticky bar becomes visible once this exits the viewport. */}
@@ -344,6 +376,7 @@ export function TripPlanner() {
                   onExpandAccommodationRadius={handleExpandAccommodationRadius}
                   onInsertRestDay={handleInsertRestDay}
                   onAddPoiWaypoint={handleAddPoiWaypoint}
+                  onAccommodationHover={handleAccommodationHover}
                   newAccKey={newAccKey}
                   onClearNewAcc={clearNewAccKey}
                 />
@@ -360,8 +393,12 @@ export function TripPlanner() {
                 <div
                   className={viewMode === "split" ? "lg:sticky" : "sticky"}
                   style={{
-                    top: isScrolledPast ? `${fixedHeaderHeight + 8}px` : "1rem",
-                    height: `calc(100vh - ${isScrolledPast ? fixedHeaderHeight + 8 : 16}px)`,
+                    top: isScrolledPast
+                      ? `${fixedHeaderHeight + 12}px`
+                      : "0.5rem",
+                    height: isScrolledPast
+                      ? `calc(100dvh - ${fixedHeaderHeight + 12}px)`
+                      : "calc(100dvh - 0.5rem)",
                   }}
                   data-testid="map-container"
                   data-focused-stage={focusedMapStageIndex ?? ""}

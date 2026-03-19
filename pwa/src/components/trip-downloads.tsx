@@ -30,9 +30,9 @@ export function TripDownloads({ tripId, tripTitle }: TripDownloadsProps) {
 
   return (
     <Button
-      variant="outline"
-      size="sm"
-      className="gap-1.5 cursor-pointer"
+      variant="ghost"
+      size="icon"
+      className="h-9 w-9 cursor-pointer"
       disabled={!tripId || downloading}
       onClick={() => void handleDownload()}
       aria-label={t("downloadGpx")}
@@ -43,7 +43,6 @@ export function TripDownloads({ tripId, tripTitle }: TripDownloadsProps) {
       ) : (
         <Download className="h-4 w-4" />
       )}
-      GPX
     </Button>
   );
 }
