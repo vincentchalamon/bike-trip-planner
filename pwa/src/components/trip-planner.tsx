@@ -174,7 +174,6 @@ export function TripPlanner() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const fixedHeaderRef = useRef<HTMLDivElement>(null);
   const [isScrolledPast, setIsScrolledPast] = useState(false);
-  const [fixedHeaderHeight, setFixedHeaderHeight] = useState(0);
   const hasTripData = !!trip;
 
   useEffect(() => {
@@ -190,22 +189,20 @@ export function TripPlanner() {
     return () => observer.disconnect();
   }, [hasTripData]);
 
-  // Track the fixed header height so the sticky map can offset accordingly.
-  // Uses both a state (for React re-renders) and a CSS custom property on <html>
-  // (for immediate style updates without waiting for a React render cycle).
+  // Track the fixed header height via a CSS custom property on <html>.
+  // The sticky map reads `var(--fixed-header-h)` directly in its inline
+  // style, so it stays in sync without waiting for a React render cycle.
   useEffect(() => {
     const el = fixedHeaderRef.current;
     if (!el) return;
-    const update = (h: number) => {
-      setFixedHeaderHeight(h);
+    const setVar = (h: number) => {
       document.documentElement.style.setProperty("--fixed-header-h", `${h}px`);
     };
     const observer = new ResizeObserver(([entry]) => {
-      update(entry?.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight);
+      setVar(entry?.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight);
     });
     observer.observe(el);
-    // Seed synchronously so the map offset is correct on the very first scroll.
-    update(el.offsetHeight);
+    setVar(el.offsetHeight);
     return () => observer.disconnect();
   }, []);
 
@@ -384,9 +381,11 @@ export function TripPlanner() {
                   className={viewMode === "split" ? "lg:sticky" : "sticky"}
                   style={{
                     top: isScrolledPast
-                      ? `${fixedHeaderHeight + 16}px`
+                      ? "calc(var(--fixed-header-h, 0px) + 1rem)"
                       : "1rem",
-                    height: `calc(100vh - ${isScrolledPast ? fixedHeaderHeight + 16 : 16}px)`,
+                    height: isScrolledPast
+                      ? "calc(100vh - var(--fixed-header-h, 0px) - 1rem)"
+                      : "calc(100vh - 1rem)",
                   }}
                   data-testid="map-container"
                   data-focused-stage={focusedMapStageIndex ?? ""}
