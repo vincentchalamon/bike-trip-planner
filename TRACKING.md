@@ -151,9 +151,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
-| 1 | [#32](https://github.com/vincentchalamon/bike-trip-planner/issues/32) | Onboarding guide | S | 1 | — |
-| 2 | [#57](https://github.com/vincentchalamon/bike-trip-planner/issues/57) | Undo/Redo | L | 2 | — |
-| 3 | [#33](https://github.com/vincentchalamon/bike-trip-planner/issues/33) | Raccourcis clavier + aide | M | 1 | [#57](https://github.com/vincentchalamon/bike-trip-planner/issues/57) |
+| 1 | [#32](https://github.com/vincentchalamon/bike-trip-planner/issues/32) | Onboarding guide | S | [#200](https://github.com/vincentchalamon/bike-trip-planner/pull/200) `feature/32`, [#203](https://github.com/vincentchalamon/bike-trip-planner/pull/203) `fix/sprint-8` | — |
+| 2 | [#57](https://github.com/vincentchalamon/bike-trip-planner/issues/57) | Undo/Redo | L | [#201](https://github.com/vincentchalamon/bike-trip-planner/pull/201) `feature/57` | — |
+| 3 | [#33](https://github.com/vincentchalamon/bike-trip-planner/issues/33) | Raccourcis clavier + aide | M | [#202](https://github.com/vincentchalamon/bike-trip-planner/pull/202) `feature/33`, [#203](https://github.com/vincentchalamon/bike-trip-planner/pull/203) `fix/sprint-8` | [#57](https://github.com/vincentchalamon/bike-trip-planner/issues/57) |
 
 ### Recette Sprint 8
 
