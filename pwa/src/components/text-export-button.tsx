@@ -79,15 +79,14 @@ export function TextExportButton({
     <>
       <Button
         variant="ghost"
-        size="sm"
-        className="h-8 gap-1.5 text-muted-foreground cursor-pointer"
+        size="icon"
+        className="h-9 w-9 cursor-pointer"
         onClick={() => setOpen(true)}
         aria-label={t("openLabel")}
         title={t("openLabel")}
         data-testid="text-export-button"
       >
         <FileText className="h-4 w-4" />
-        <span className="text-xs">{t("button")}</span>
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>

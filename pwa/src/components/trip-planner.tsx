@@ -184,10 +184,14 @@ export function TripPlanner() {
       ([entry]) => {
         const scrolled = !entry?.isIntersecting;
         setIsScrolledPast(scrolled);
-        // Read header height synchronously when the bar appears, so the
-        // map offset is correct on the very same render cycle.
-        if (scrolled && fixedHeaderRef.current) {
-          setFixedHeaderHeight(fixedHeaderRef.current.offsetHeight);
+        // Re-read header height after the next paint so the DOM reflects
+        // the new translate state and any content changes.
+        if (scrolled) {
+          requestAnimationFrame(() => {
+            if (fixedHeaderRef.current) {
+              setFixedHeaderHeight(fixedHeaderRef.current.offsetHeight);
+            }
+          });
         }
       },
       { threshold: 0 },
@@ -232,8 +236,20 @@ export function TripPlanner() {
             />
           </div>
           <GpxUploadButton onUpload={handleGpxUpload} disabled={isProcessing} />
-          {/* Action buttons — inline on desktop, hidden here on mobile */}
+          {/* Action buttons — inline on desktop, second row on mobile */}
           <div className="hidden md:flex items-center gap-1">
+            {trip && <TripDownloads tripId={trip.id} tripTitle={trip.title} />}
+            {trip && totalDistance !== null && (
+              <TextExportButton
+                title={trip.title}
+                totalDistance={totalDistance}
+                totalElevation={totalElevation}
+                totalElevationLoss={totalElevationLoss}
+                sourceUrl={trip.sourceUrl}
+                stages={stages}
+                startDate={startDate}
+              />
+            )}
             <UndoRedoButtons />
             <Button
               variant="ghost"
@@ -261,6 +277,18 @@ export function TripPlanner() {
         </div>
         {/* Action buttons — second row on mobile only */}
         <div className="flex items-center justify-center gap-1 md:hidden">
+          {trip && <TripDownloads tripId={trip.id} tripTitle={trip.title} />}
+          {trip && totalDistance !== null && (
+            <TextExportButton
+              title={trip.title}
+              totalDistance={totalDistance}
+              totalElevation={totalElevation}
+              totalElevationLoss={totalElevationLoss}
+              sourceUrl={trip.sourceUrl}
+              stages={stages}
+              startDate={startDate}
+            />
+          )}
           <UndoRedoButtons />
           <Button
             variant="ghost"
@@ -309,20 +337,7 @@ export function TripPlanner() {
             onDatesChange={handleDatesChange}
             showTitleSuggestion={totalDistance !== null}
             isTitleLoading={isProcessing && totalDistance === null}
-          >
-            <TripDownloads tripId={trip.id} tripTitle={trip.title} />
-            {totalDistance !== null && (
-              <TextExportButton
-                title={trip.title}
-                totalDistance={totalDistance}
-                totalElevation={totalElevation}
-                totalElevationLoss={totalElevationLoss}
-                sourceUrl={trip.sourceUrl}
-                stages={stages}
-                startDate={startDate}
-              />
-            )}
-          </TripHeader>
+          />
 
           {/* Sentinel — marks the natural position of the progress bar in the
               flow. The sticky bar becomes visible once this exits the viewport. */}
