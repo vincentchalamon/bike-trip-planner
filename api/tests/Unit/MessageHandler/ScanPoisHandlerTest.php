@@ -101,6 +101,7 @@ final class ScanPoisHandlerTest extends TestCase
     {
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
         $queryBuilder->method('buildPoiQuery')->willReturn('query');
+        $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inKilometers')->willReturn(10.0);
@@ -123,7 +124,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi' => [
+            'poi_0' => [
                 'elements' => [
                     ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Le Bistrot']],
                     ['lat' => 48.3, 'lon' => 2.3, 'tags' => ['amenity' => 'restaurant', 'name' => 'Chez Paul']],
@@ -133,12 +134,13 @@ final class ScanPoisHandlerTest extends TestCase
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturn([
-            0 => [
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
+            [0 => [
                 ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
                 ['name' => 'Chez Paul', 'category' => 'restaurant', 'lat' => 48.3, 'lon' => 2.3],
-            ],
-        ]);
+            ]],
+            [],
+        );
 
         [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
@@ -175,7 +177,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi' => [
+            'poi_0' => [
                 'elements' => [
                     ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Le Bistrot']],
                     ['lat' => 48.3, 'lon' => 2.3, 'tags' => ['shop' => 'supermarket', 'name' => 'Carrefour']],
@@ -185,12 +187,13 @@ final class ScanPoisHandlerTest extends TestCase
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturn([
-            0 => [
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
+            [0 => [
                 ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
                 ['name' => 'Carrefour', 'category' => 'supermarket', 'lat' => 48.3, 'lon' => 2.3],
-            ],
-        ]);
+            ]],
+            [],
+        );
 
         [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
@@ -227,7 +230,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi' => [
+            'poi_0' => [
                 'elements' => [
                     ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['tourism' => 'viewpoint', 'name' => 'Belvedere']],
                 ],
@@ -236,11 +239,12 @@ final class ScanPoisHandlerTest extends TestCase
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturn([
-            0 => [
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
+            [0 => [
                 ['name' => 'Belvedere', 'category' => 'viewpoint', 'lat' => 48.2, 'lon' => 2.2],
-            ],
-        ]);
+            ]],
+            [],
+        );
 
         [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
@@ -290,7 +294,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi' => ['elements' => []],
+            'poi_0' => ['elements' => []],
             'cemetery' => ['elements' => []],
         ]);
 
@@ -327,7 +331,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi' => [
+            'poi_0' => [
                 'elements' => [
                     ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['shop' => 'bakery', 'name' => 'Boulangerie']],
                 ],
@@ -336,11 +340,12 @@ final class ScanPoisHandlerTest extends TestCase
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturn([
-            0 => [
+        $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
+            [0 => [
                 ['name' => 'Boulangerie', 'category' => 'bakery', 'lat' => 48.2, 'lon' => 2.2],
-            ],
-        ]);
+            ]],
+            [],
+        );
 
         [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
@@ -378,7 +383,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi' => [
+            'poi_0' => [
                 'elements' => [
                     ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Bistrot A']],
                     ['lat' => 48.2, 'lon' => 2.2001, 'tags' => ['amenity' => 'restaurant', 'name' => 'Bistrot B']],
@@ -390,18 +395,17 @@ final class ScanPoisHandlerTest extends TestCase
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
-            [
-                0 => [
-                    ['name' => 'Bistrot A', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
-                    ['name' => 'Bistrot B', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2001],
-                    ['name' => 'Remote Bistrot', 'category' => 'restaurant', 'lat' => 48.5, 'lon' => 2.5],
-                ],
-            ],
+            [0 => [
+                ['name' => 'Bistrot A', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
+                ['name' => 'Bistrot B', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2001],
+                ['name' => 'Remote Bistrot', 'category' => 'restaurant', 'lat' => 48.5, 'lon' => 2.5],
+            ]],
             [],
         );
 
         [$queryBuilder, $riderTimeEstimator] = [$this->createStub(QueryBuilderInterface::class), $this->createStub(RiderTimeEstimatorInterface::class)];
         $queryBuilder->method('buildPoiQuery')->willReturn('query');
+        $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         // inKilometers used for cumulative distances along geometry
@@ -443,6 +447,50 @@ final class ScanPoisHandlerTest extends TestCase
     }
 
     #[Test]
+    public function poiQueryIsBuiltPerStageNotGlobally(): void
+    {
+        $stage1 = $this->createStage('trip-1', 1, 50.0);
+        $stage2 = $this->createStage('trip-1', 2, 50.0);
+
+        $tripStateManager = $this->createTripStateManager([$stage1, $stage2]);
+
+        $queryBuilder = $this->createMock(QueryBuilderInterface::class);
+        // buildPoiQuery should be called twice: once per stage
+        $queryBuilder->expects($this->exactly(2))
+            ->method('buildPoiQuery')
+            ->willReturn('stage_query');
+        $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
+
+        $scanner = $this->createMock(ScannerInterface::class);
+        $scanner->expects($this->once())
+            ->method('queryBatch')
+            ->with($this->callback(
+                // Must have poi_0, poi_1, and cemetery keys
+                static fn (array $queries): bool => isset($queries['poi_0'], $queries['poi_1'], $queries['cemetery'])
+                && 3 === \count($queries)
+            ))
+            ->willReturn([
+                'poi_0' => ['elements' => []],
+                'poi_1' => ['elements' => []],
+                'cemetery' => ['elements' => []],
+            ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturn([]);
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inKilometers')->willReturn(10.0);
+        $haversine->method('inMeters')->willReturn(10000.0);
+
+        $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
+
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler(new ScanPois('trip-1'));
+    }
+
+    #[Test]
     public function chainedPoisBeyondAnchorRadiusAreNotMerged(): void
     {
         // Scenario: A (anchor, 0 km) → B (490m from A, within cluster) → C (490m from B but 980m from A)
@@ -453,19 +501,23 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi' => ['elements' => []],
+            'poi_0' => [
+                'elements' => [
+                    ['lat' => 48.0, 'lon' => 2.0, 'tags' => ['amenity' => 'restaurant', 'name' => 'POI A']],
+                    ['lat' => 48.0, 'lon' => 2.005, 'tags' => ['amenity' => 'restaurant', 'name' => 'POI B']],
+                    ['lat' => 48.0, 'lon' => 2.010, 'tags' => ['amenity' => 'restaurant', 'name' => 'POI C']],
+                ],
+            ],
             'cemetery' => ['elements' => []],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturnOnConsecutiveCalls(
-            [
-                0 => [
-                    ['name' => 'POI A', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.0],
-                    ['name' => 'POI B', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.005],
-                    ['name' => 'POI C', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.010],
-                ],
-            ],
+            [0 => [
+                ['name' => 'POI A', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.0],
+                ['name' => 'POI B', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.005],
+                ['name' => 'POI C', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.010],
+            ]],
             [],
         );
 
@@ -474,6 +526,7 @@ final class ScanPoisHandlerTest extends TestCase
             $this->createStub(RiderTimeEstimatorInterface::class),
         ];
         $queryBuilder->method('buildPoiQuery')->willReturn('query');
+        $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inKilometers')->willReturn(10.0);

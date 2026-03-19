@@ -71,50 +71,57 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         $averageSpeed = $request instanceof TripRequest ? $request->averageSpeed : 15.0;
 
         $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour, $averageSpeed): void {
-            // Single Overpass query using decimated route points (shared cache key with ScanAllOsmDataHandler)
-            $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
-            $points = null !== $decimatedData
-                ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
-                : array_merge(...array_map(
-                    static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
-                    $stages,
-                ));
+            // Build one POI query per stage + one global cemetery query (concurrent via queryBatch)
+            /** @var list<list<Coordinate>> $stageGeometries */
+            $stageGeometries = array_map(
+                static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
+                $stages,
+            );
 
-            // Fetch food POIs and water points (cemetery query) concurrently — results are cached
-            $results = $this->scanner->queryBatch([
-                'poi' => $this->queryBuilder->buildPoiQuery($points),
-                'cemetery' => $this->queryBuilder->buildCemeteryQuery($points),
-            ]);
+            $allPoints = array_merge(...$stageGeometries);
 
-            $poiResult = $results['poi'] ?? [];
-            $cemeteryResult = $results['cemetery'] ?? [];
-
-            /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
-            $elements = \is_array($poiResult['elements'] ?? null) ? $poiResult['elements'] : [];
-
-            // Parse all POI elements
-            $allPois = [];
-            foreach ($elements as $element) {
-                $tags = $element['tags'] ?? [];
-                $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
-
-                if (null === $lat || null === $lon) {
-                    continue;
-                }
-
-                $category = $tags['amenity'] ?? $tags['shop'] ?? $tags['tourism'] ?? 'unknown';
-                $name = $tags['name'] ?? $category;
-
-                $allPois[] = [
-                    'name' => $name,
-                    'category' => $category,
-                    'lat' => (float) $lat,
-                    'lon' => (float) $lon,
-                ];
+            /** @var array<string, string> $queries */
+            $queries = ['cemetery' => $this->queryBuilder->buildCemeteryQuery($allPoints)];
+            foreach ($stages as $i => $stage) {
+                $queries['poi_'.$i] = $this->queryBuilder->buildPoiQuery($stageGeometries[$i]);
             }
 
+            $results = $this->scanner->queryBatch($queries);
+
+            // Parse POIs per stage, then redistribute via geometry to deduplicate boundary overlaps
+            /** @var list<array{name: string, category: string, lat: float, lon: float}> $allPois */
+            $allPois = [];
+            foreach ($stages as $i => $stage) {
+                $poiResult = $results['poi_'.$i] ?? [];
+                /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
+                $elements = \is_array($poiResult['elements'] ?? null) ? $poiResult['elements'] : [];
+
+                foreach ($elements as $element) {
+                    $tags = $element['tags'] ?? [];
+                    $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
+                    $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
+
+                    if (null === $lat || null === $lon) {
+                        continue;
+                    }
+
+                    $category = $tags['amenity'] ?? $tags['shop'] ?? $tags['tourism'] ?? 'unknown';
+                    $name = $tags['name'] ?? $category;
+
+                    $allPois[] = [
+                        'name' => $name,
+                        'category' => $category,
+                        'lat' => (float) $lat,
+                        'lon' => (float) $lon,
+                    ];
+                }
+            }
+
+            /** @var array<int, list<array{name: string, category: string, lat: float, lon: float}>> $poisByStage */
+            $poisByStage = $this->distributor->distributeByGeometry($allPois, $stages);
+
             // Parse water points (cemeteries) for supply timeline
+            $cemeteryResult = $results['cemetery'] ?? [];
             /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $cemeteryElements */
             $cemeteryElements = \is_array($cemeteryResult['elements'] ?? null) ? $cemeteryResult['elements'] : [];
             $allWaterPoints = [];
@@ -134,10 +141,6 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     'lon' => (float) $lon,
                 ];
             }
-
-            // Distribute POIs to their nearest stage by geometry
-            /** @var array<int, list<array{name: string, category: string, lat: float, lon: float}>> $poisByStage */
-            $poisByStage = $this->distributor->distributeByGeometry($allPois, $stages);
 
             // Distribute water points to their nearest stage by geometry
             /** @var array<int, list<array{name: string|null, lat: float, lon: float}>> $waterByStage */

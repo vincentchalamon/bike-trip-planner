@@ -145,38 +145,37 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
         $stages[$index]->endPoint = $stagePoints[\count($stagePoints) - 1];
         $stages[$index]->geometry = $this->routeSimplifier->simplify($stagePoints);
 
-        // Redistribute remaining points among subsequent stages
-        $remainingStageCount = \count($stages) - $index - 1;
-        if ($remainingStageCount > 0 && [] !== $remaining) {
-            // Evenly split remaining distance among subsequent stages
-            $remainingDistance = $this->distanceCalculator->calculateTotalDistance($remaining);
-            $targetPerStage = $remainingDistance / $remainingStageCount;
+        // Report remaining km to the next stage, or create a new one
+        if ([] !== $remaining && \count($remaining) >= 2) {
+            if (isset($stages[$index + 1])) {
+                // Remaining km absorbed by the next stage (its startPoint changes, its endPoint stays)
+                $nextEndIdx = $this->distanceCalculator->findClosestIndex($decimatedPoints, $stages[$index + 1]->endPoint);
+                $newStartIdx = $this->distanceCalculator->findClosestIndex($decimatedPoints, $remaining[0]);
+                $nextPoints = \array_slice($decimatedPoints, $newStartIdx, $nextEndIdx - $newStartIdx + 1);
 
-            $currentRemaining = $remaining;
-            $counter = \count($stages);
-            for ($i = $index + 1; $i < $counter; ++$i) {
-                if ($i === \count($stages) - 1 || \count($currentRemaining) < 2) {
-                    // Last stage gets everything remaining
-                    $slicePoints = $currentRemaining;
-                    $currentRemaining = [];
+                if (\count($nextPoints) >= 2) {
+                    $stages[$index + 1]->startPoint = $nextPoints[0];
+                    $stages[$index + 1]->distance = $this->distanceCalculator->calculateTotalDistance($nextPoints);
+                    $stages[$index + 1]->elevation = $this->elevationCalculator->calculateTotalAscent($nextPoints);
+                    $stages[$index + 1]->elevationLoss = $this->elevationCalculator->calculateTotalDescent($nextPoints);
+                    $stages[$index + 1]->geometry = $this->routeSimplifier->simplify($nextPoints);
                 } else {
-                    [$slicePoints, $currentRemaining] = $this->distanceCalculator->splitAtDistance($currentRemaining, 0, $targetPerStage);
+                    // Fallback: keep stages contiguous even when index resolution collapses
+                    $stages[$index + 1]->startPoint = $stages[$index]->endPoint;
                 }
-
-                if (\count($slicePoints) < 2) {
-                    continue;
-                }
-
-                $stages[$i]->startPoint = $slicePoints[0];
-                $stages[$i]->endPoint = $slicePoints[\count($slicePoints) - 1];
-                $stages[$i]->distance = $this->distanceCalculator->calculateTotalDistance($slicePoints);
-                $stages[$i]->elevation = $this->elevationCalculator->calculateTotalAscent($slicePoints);
-                $stages[$i]->elevationLoss = $this->elevationCalculator->calculateTotalDescent($slicePoints);
-                $stages[$i]->geometry = $this->routeSimplifier->simplify($slicePoints);
+            } else {
+                // Last stage: create a new stage with the remaining points
+                $stages[] = new Stage(
+                    tripId: $tripId,
+                    dayNumber: $stages[$index]->dayNumber + 1,
+                    distance: $this->distanceCalculator->calculateTotalDistance($remaining),
+                    elevation: $this->elevationCalculator->calculateTotalAscent($remaining),
+                    startPoint: $remaining[0],
+                    endPoint: $remaining[\count($remaining) - 1],
+                    geometry: $this->routeSimplifier->simplify($remaining),
+                    elevationLoss: $this->elevationCalculator->calculateTotalDescent($remaining),
+                );
             }
-        } elseif (isset($stages[$index + 1])) {
-            // No remaining points: next stage starts at our new endpoint
-            $stages[$index + 1]->startPoint = $stages[$index]->endPoint;
         }
     }
 }
