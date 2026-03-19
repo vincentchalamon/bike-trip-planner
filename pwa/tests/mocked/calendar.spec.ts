@@ -67,27 +67,33 @@ test.describe("Date range picker in ConfigPanel", () => {
     const grid = mockedPage.getByRole("grid").first();
     await expect(grid).toBeVisible();
 
-    // Find future, enabled date buttons
-    const enabledCells = grid
-      .getByRole("gridcell")
-      .and(mockedPage.locator(":not([disabled])"));
-    const startCell = enabledCells.first();
-    await startCell.click();
+    // Collect all enabled gridcells
+    const enabledCells = grid.locator(
+      'button[role="gridcell"]:not([disabled])',
+    );
+    // Click the first enabled cell as start date
+    await enabledCells.first().click();
+    // Small wait for state update
+    await mockedPage.waitForTimeout(100);
 
-    // Hover a date a few cells later to trigger preview range
-    const laterCell = enabledCells.nth(5);
-    await laterCell.hover();
+    // Hover a cell further ahead to trigger preview
+    const hoverTarget = enabledCells.nth(5);
+    await hoverTarget.hover();
+    await mockedPage.waitForTimeout(100);
 
-    // A cell between start and hovered should have the preview background
+    // A cell between start and hovered should gain a bg-brand class (preview range)
     const middleCell = enabledCells.nth(3);
-    await expect(middleCell).toHaveClass(/bg-brand/);
+    await expect(middleCell).toHaveClass(/bg-brand/, { timeout: 3000 });
 
-    // Move mouse outside the grid to clear preview
+    // Move mouse out of the calendar grid to clear preview
     await mockedPage.locator('[data-slot="popover-content"]').hover({
-      position: { x: 5, y: 5 },
+      position: { x: 2, y: 2 },
+      force: true,
     });
-    // Preview should be cleared — middle cell should no longer have bg-brand
-    await expect(middleCell).not.toHaveClass(/bg-brand/);
+    await mockedPage.waitForTimeout(100);
+
+    // Preview should be cleared
+    await expect(middleCell).not.toHaveClass(/bg-brand/, { timeout: 3000 });
   });
 
   test("clicking profile chip in summary opens config panel at pacing section", async ({
