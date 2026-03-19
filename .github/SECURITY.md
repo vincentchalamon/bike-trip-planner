@@ -20,7 +20,7 @@ You will receive an acknowledgment within 48 hours. A fix will be prioritized ba
 
 The following areas are in scope for security reports:
 
-- **XML parsing** (GPX, KML) — XXE, billion laughs, entity expansion
+- **XML parsing** (GPX) — XXE, billion laughs, entity expansion
 - **URL handling** — SSRF via route fetcher (Komoot)
 - **File uploads** — path traversal, oversized payloads
 - **API endpoints** — injection, authentication bypass

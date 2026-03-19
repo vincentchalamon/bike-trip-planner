@@ -7,7 +7,7 @@ namespace App\RouteParser;
 /**
  * GPX-specific route parser that extends the base interface with title extraction.
  *
- * Follows ISP: only GPX parsers implement this; KML parsers use RouteParserInterface.
+ * Follows ISP: only GPX parsers implement this.
  */
 interface GpxRouteParserInterface extends RouteParserInterface
 {
