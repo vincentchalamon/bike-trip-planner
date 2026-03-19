@@ -18,8 +18,8 @@ import { useUiStore } from "@/store/ui-store";
  * textarea, select, or contentEditable element.
  *
  * @param stageCount - Total number of active (non-rest) stages, used to
- *   clamp the focused stage index for J/K navigation. Pass `0` when no
- *   trip is loaded.
+ *   determine J/K navigation boundaries. At the boundaries the focus wraps
+ *   to the global map view (null). Pass `0` when no trip is loaded.
  */
 export function useKeyboardShortcuts(stageCount: number) {
   useEffect(() => {
