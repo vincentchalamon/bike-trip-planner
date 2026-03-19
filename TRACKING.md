@@ -21,10 +21,10 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 - **Tests E2E :** `tests/recette/sprint-01.spec.ts`
 - **Checklist manuelle :**
   - [x] Alerte dimanche visible sur une étape tombant un dimanche
-  - [ ] Alerte pente raide visible sur une étape avec forte pente
+  - [ ] Alerte pente raide visible sur une étape avec forte pente (en attente de trace de test)
   - [x] Alerte point de charge VAE visible (si VAE activé)
-  - [ ] Points d'eau détectés et affichés par étape
-  - [ ] Dénivelés corrigés cohérents avec la trace GPX
+  - [x] Points d'eau détectés et affichés par étape
+  - [x] Dénivelés corrigés cohérents avec la trace GPX
 
 ---
 
@@ -143,7 +143,7 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
   - [x] Split view fonctionnel
   - [x] Timeline ravitaillement avec POI le long du tracé
   - [x] Mode sombre : tuiles sombres
-  - [ ] Responsive : carte sur mobile (tactile)
+  - [x] Responsive : carte sur mobile (tactile)
 
 ---
 
@@ -159,10 +159,10 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-08.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Onboarding guide affiché au premier lancement
-  - [ ] Raccourcis clavier fonctionnels (Ctrl+Z, Ctrl+Y, etc.)
-  - [ ] Bouton aide affichant la liste des raccourcis
-  - [ ] Undo/Redo sur les actions clés (suppression étape, modification distance)
+  - [x] Onboarding guide affiché au premier lancement
+  - [x] Raccourcis clavier fonctionnels (Ctrl+Z, Ctrl+Y, etc.)
+  - [x] Bouton aide affichant la liste des raccourcis
+  - [x] Undo/Redo sur les actions clés (suppression étape, modification distance)
 
 ---
 
