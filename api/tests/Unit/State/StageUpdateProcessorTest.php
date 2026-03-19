@@ -209,4 +209,62 @@ final class StageUpdateProcessorTest extends TestCase
         self::assertSame($p[3]->lat, $newStage->startPoint->lat, 'New stage should start at remaining[0]');
         self::assertSame($p[4]->lat, $newStage->endPoint->lat, 'New stage should end at remaining[-1]');
     }
+
+    #[Test]
+    public function shorteningMiddleStageWithCollapsedIndexKeepsStagesContiguous(): void
+    {
+        // Simulate findClosestIndex snapping remaining[0] to the same index as nextEndIdx,
+        // producing an empty/single-point slice → fallback branch (count($nextPoints) < 2)
+        $p = $this->decimatedPoints;
+
+        $stages = [
+            new Stage(tripId: 't', dayNumber: 1, distance: 30.0, elevation: 10.0, startPoint: $p[0], endPoint: $p[1]),
+            new Stage(tripId: 't', dayNumber: 2, distance: 60.0, elevation: 20.0, startPoint: $p[1], endPoint: $p[3]),
+        ];
+
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('splitAtDistance')->willReturn([[$p[0]], [$p[1]], 0.0]);
+        // Both calls return the same index → array_slice produces a single element
+        $distanceCalculator->method('findClosestIndex')->willReturn(2);
+        $distanceCalculator->method('calculateTotalDistance')->willReturn(0.0);
+
+        $elevationCalculator = $this->createStub(ElevationCalculatorInterface::class);
+        $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
+        $routeSimplifier->method('simplify')->willReturnArgument(0);
+
+        $storedStages = null;
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn($stages);
+        $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
+        $tripStateManager->method('getRequest')->willReturn(null);
+        $tripStateManager->method('storeStages')->willReturnCallback(
+            static function (string $tripId, array $stages) use (&$storedStages): void {
+                $storedStages = $stages;
+            },
+        );
+
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+
+        $objectMapper = $this->createStub(ObjectMapperInterface::class);
+        $objectMapper->method('map')->willReturn(new StageResponse());
+
+        $processor = new StageUpdateProcessor(
+            $tripStateManager,
+            $messageBus,
+            $distanceCalculator,
+            $elevationCalculator,
+            $routeSimplifier,
+            $objectMapper,
+        );
+
+        $request = new StageRequest();
+        $request->distance = 0.0;
+
+        $processor->process($request, new Patch(), ['tripId' => 't', 'index' => 0]);
+
+        self::assertNotNull($storedStages);
+        // Fallback: stage 1 startPoint must equal stage 0 endPoint to stay contiguous
+        self::assertSame($storedStages[0]->endPoint, $storedStages[1]->startPoint);
+    }
 }

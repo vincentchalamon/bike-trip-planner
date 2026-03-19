@@ -88,15 +88,14 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
             $results = $this->scanner->queryBatch($queries);
 
-            // Parse POIs per stage
-            /** @var array<int, list<array{name: string, category: string, lat: float, lon: float}>> $poisByStage */
-            $poisByStage = [];
+            // Parse POIs per stage, then redistribute via geometry to deduplicate boundary overlaps
+            /** @var list<array{name: string, category: string, lat: float, lon: float}> $allPois */
+            $allPois = [];
             foreach ($stages as $i => $stage) {
                 $poiResult = $results['poi_'.$i] ?? [];
                 /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
                 $elements = \is_array($poiResult['elements'] ?? null) ? $poiResult['elements'] : [];
 
-                $poisByStage[$i] = [];
                 foreach ($elements as $element) {
                     $tags = $element['tags'] ?? [];
                     $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
@@ -109,7 +108,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     $category = $tags['amenity'] ?? $tags['shop'] ?? $tags['tourism'] ?? 'unknown';
                     $name = $tags['name'] ?? $category;
 
-                    $poisByStage[$i][] = [
+                    $allPois[] = [
                         'name' => $name,
                         'category' => $category,
                         'lat' => (float) $lat,
@@ -117,6 +116,9 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     ];
                 }
             }
+
+            /** @var array<int, list<array{name: string, category: string, lat: float, lon: float}>> $poisByStage */
+            $poisByStage = $this->distributor->distributeByGeometry($allPois, $stages);
 
             // Parse water points (cemeteries) for supply timeline
             $cemeteryResult = $results['cemetery'] ?? [];
