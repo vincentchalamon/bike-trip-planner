@@ -57,7 +57,7 @@ export function OnboardingTour() {
           element: "[data-testid='magic-link-input']",
           popover: {
             title: t("step1Title"),
-            description: t("step1Description"),
+            description: t.raw("step1Description"),
             side: "bottom",
             align: "start",
           },
@@ -67,7 +67,7 @@ export function OnboardingTour() {
           element: "[data-testid='gpx-upload-button']",
           popover: {
             title: t("step2Title"),
-            description: t("step2Description"),
+            description: t.raw("step2Description"),
             side: "bottom",
             align: "center",
           },
@@ -77,7 +77,7 @@ export function OnboardingTour() {
           element: "[data-testid='config-open-button']",
           popover: {
             title: t("step3Title"),
-            description: t("step3Description"),
+            description: t.raw("step3Description"),
             side: "bottom",
             align: "end",
           },
@@ -86,7 +86,7 @@ export function OnboardingTour() {
           // Step 4 — centred modal describing what happens after a trip loads
           popover: {
             title: t("step4Title"),
-            description: t("step4Description"),
+            description: t.raw("step4Description"),
             side: "over",
           },
         },
