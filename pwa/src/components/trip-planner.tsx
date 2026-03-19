@@ -174,6 +174,7 @@ export function TripPlanner() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const fixedHeaderRef = useRef<HTMLDivElement>(null);
   const [isScrolledPast, setIsScrolledPast] = useState(false);
+  const [fixedHeaderHeight, setFixedHeaderHeight] = useState(0);
   const hasTripData = !!trip;
 
   useEffect(() => {
@@ -181,7 +182,13 @@ export function TripPlanner() {
     if (!sentinel) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setIsScrolledPast(!entry?.isIntersecting);
+        const scrolled = !entry?.isIntersecting;
+        setIsScrolledPast(scrolled);
+        // Read header height synchronously when the bar appears, so the
+        // map offset is correct on the very same render cycle.
+        if (scrolled && fixedHeaderRef.current) {
+          setFixedHeaderHeight(fixedHeaderRef.current.offsetHeight);
+        }
       },
       { threshold: 0 },
     );
@@ -189,24 +196,18 @@ export function TripPlanner() {
     return () => observer.disconnect();
   }, [hasTripData]);
 
-  // Keep the CSS custom property `--fixed-header-h` on <html> in sync with
-  // the fixed header's rendered height.  The sticky map reads this variable
-  // via `calc()` so it always sits right below the header.
-  //
-  // Re-run whenever the header content changes (hasMap / viewMode drive which
-  // children are rendered) so we always capture the correct height.
+  // Keep fixedHeaderHeight in sync when the header content changes
+  // (e.g. progress bar appears/disappears depending on viewMode).
   useEffect(() => {
     const el = fixedHeaderRef.current;
     if (!el) return;
-    const setVar = () => {
-      document.documentElement.style.setProperty(
-        "--fixed-header-h",
-        `${el.offsetHeight}px`,
+    const observer = new ResizeObserver(([entry]) => {
+      setFixedHeaderHeight(
+        entry?.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight,
       );
-    };
-    const observer = new ResizeObserver(() => setVar());
+    });
     observer.observe(el);
-    setVar();
+    setFixedHeaderHeight(el.offsetHeight);
     return () => observer.disconnect();
   }, [hasMap, viewMode]);
 
@@ -220,17 +221,46 @@ export function TripPlanner() {
         {t("layout.skipToTimeline")}
       </a>
 
-      {/* Toolbar: magic link + GPX upload on first row, action buttons on second row (mobile) */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex-1 min-w-0">
-          <MagicLinkInput
-            onSubmit={handleMagicLink}
-            isProcessing={isProcessing}
-            disabled={false}
-          />
+      {/* Toolbar: magic link + GPX upload, then action buttons */}
+      <div className="space-y-2 md:space-y-0">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <MagicLinkInput
+              onSubmit={handleMagicLink}
+              isProcessing={isProcessing}
+              disabled={false}
+            />
+          </div>
+          <GpxUploadButton onUpload={handleGpxUpload} disabled={isProcessing} />
+          {/* Action buttons — inline on desktop, hidden here on mobile */}
+          <div className="hidden md:flex items-center gap-1">
+            <UndoRedoButtons />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 cursor-pointer"
+              onClick={() => setHelpModalOpen(true)}
+              title={t("keyboardHelp.openButton")}
+              aria-label={t("keyboardHelp.openButton")}
+              data-testid="help-button"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 cursor-pointer"
+              onClick={() => setConfigPanelOpen(true)}
+              title={t("config.open")}
+              aria-label={t("config.open")}
+              data-testid="config-open-button"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <GpxUploadButton onUpload={handleGpxUpload} disabled={isProcessing} />
-        <div className="flex items-center gap-1 ml-auto">
+        {/* Action buttons — second row on mobile only */}
+        <div className="flex items-center justify-center gap-1 md:hidden">
           <UndoRedoButtons />
           <Button
             variant="ghost"
@@ -239,7 +269,6 @@ export function TripPlanner() {
             onClick={() => setHelpModalOpen(true)}
             title={t("keyboardHelp.openButton")}
             aria-label={t("keyboardHelp.openButton")}
-            data-testid="help-button"
           >
             <HelpCircle className="h-4 w-4" />
           </Button>
@@ -250,7 +279,6 @@ export function TripPlanner() {
             onClick={() => setConfigPanelOpen(true)}
             title={t("config.open")}
             aria-label={t("config.open")}
-            data-testid="config-open-button"
           >
             <Settings className="h-4 w-4" />
           </Button>
@@ -387,10 +415,10 @@ export function TripPlanner() {
                   className={viewMode === "split" ? "lg:sticky" : "sticky"}
                   style={{
                     top: isScrolledPast
-                      ? "calc(var(--fixed-header-h, 0px) + 12px)"
+                      ? `${fixedHeaderHeight + 12}px`
                       : "0.5rem",
                     height: isScrolledPast
-                      ? "calc(100dvh - var(--fixed-header-h, 0px) - 12px)"
+                      ? `calc(100dvh - ${fixedHeaderHeight + 12}px)`
                       : "calc(100dvh - 0.5rem)",
                   }}
                   data-testid="map-container"
