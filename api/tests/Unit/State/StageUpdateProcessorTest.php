@@ -76,10 +76,7 @@ final class StageUpdateProcessorTest extends TestCase
                         return $i;
                     }
                 }
-                // splitPoint (48.05) → closest to index 0
-                if ($target->lat < 48.1) {
-                    return 0;
-                }
+
 
                 return 0;
             },

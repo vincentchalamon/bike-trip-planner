@@ -159,6 +159,9 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
                     $stages[$index + 1]->elevation = $this->elevationCalculator->calculateTotalAscent($nextPoints);
                     $stages[$index + 1]->elevationLoss = $this->elevationCalculator->calculateTotalDescent($nextPoints);
                     $stages[$index + 1]->geometry = $this->routeSimplifier->simplify($nextPoints);
+                } else {
+                    // Fallback: keep stages contiguous even when index resolution collapses
+                    $stages[$index + 1]->startPoint = $stages[$index]->endPoint;
                 }
             } else {
                 // Last stage: create a new stage with the remaining points

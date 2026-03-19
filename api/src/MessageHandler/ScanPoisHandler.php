@@ -72,16 +72,18 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
         $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour, $averageSpeed): void {
             // Build one POI query per stage + one global cemetery query (concurrent via queryBatch)
-            $allPoints = array_merge(...array_map(
+            /** @var list<list<Coordinate>> $stageGeometries */
+            $stageGeometries = array_map(
                 static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
                 $stages,
-            ));
+            );
+
+            $allPoints = array_merge(...$stageGeometries);
 
             /** @var array<string, string> $queries */
             $queries = ['cemetery' => $this->queryBuilder->buildCemeteryQuery($allPoints)];
             foreach ($stages as $i => $stage) {
-                $stageGeometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
-                $queries["poi_$i"] = $this->queryBuilder->buildPoiQuery($stageGeometry);
+                $queries['poi_' . $i] = $this->queryBuilder->buildPoiQuery($stageGeometries[$i]);
             }
 
             $results = $this->scanner->queryBatch($queries);
@@ -90,7 +92,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             /** @var array<int, list<array{name: string, category: string, lat: float, lon: float}>> $poisByStage */
             $poisByStage = [];
             foreach ($stages as $i => $stage) {
-                $poiResult = $results["poi_$i"] ?? [];
+                $poiResult = $results['poi_' . $i] ?? [];
                 /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
                 $elements = \is_array($poiResult['elements'] ?? null) ? $poiResult['elements'] : [];
 

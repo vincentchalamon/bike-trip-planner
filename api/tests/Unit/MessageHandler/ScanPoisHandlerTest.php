@@ -434,11 +434,10 @@ final class ScanPoisHandlerTest extends TestCase
         $scanner = $this->createMock(ScannerInterface::class);
         $scanner->expects($this->once())
             ->method('queryBatch')
-            ->with($this->callback(static function (array $queries): bool {
+            ->with($this->callback(
                 // Must have poi_0, poi_1, and cemetery keys
-                return isset($queries['poi_0'], $queries['poi_1'], $queries['cemetery'])
-                    && 3 === \count($queries);
-            }))
+                static fn(array $queries): bool => isset($queries['poi_0'], $queries['poi_1'], $queries['cemetery'])
+                && 3 === \count($queries)))
             ->willReturn([
                 'poi_0' => ['elements' => []],
                 'poi_1' => ['elements' => []],
