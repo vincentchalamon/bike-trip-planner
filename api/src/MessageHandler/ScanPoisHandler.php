@@ -83,7 +83,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             /** @var array<string, string> $queries */
             $queries = ['cemetery' => $this->queryBuilder->buildCemeteryQuery($allPoints)];
             foreach ($stages as $i => $stage) {
-                $queries['poi_' . $i] = $this->queryBuilder->buildPoiQuery($stageGeometries[$i]);
+                $queries['poi_'.$i] = $this->queryBuilder->buildPoiQuery($stageGeometries[$i]);
             }
 
             $results = $this->scanner->queryBatch($queries);
@@ -92,7 +92,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             /** @var array<int, list<array{name: string, category: string, lat: float, lon: float}>> $poisByStage */
             $poisByStage = [];
             foreach ($stages as $i => $stage) {
-                $poiResult = $results['poi_' . $i] ?? [];
+                $poiResult = $results['poi_'.$i] ?? [];
                 /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
                 $elements = \is_array($poiResult['elements'] ?? null) ? $poiResult['elements'] : [];
 
