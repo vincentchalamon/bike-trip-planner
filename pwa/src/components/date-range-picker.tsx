@@ -28,6 +28,7 @@ interface CalendarDay {
   isSelected: boolean;
   isInRange: boolean;
   isPreviewRange: boolean;
+  isHovered: boolean;
   isStart: boolean;
   isEnd: boolean;
 }
@@ -36,7 +37,8 @@ function buildMonthWeeks(
   month: Dayjs,
   start: Dayjs | null,
   end: Dayjs | null,
-  previewEnd: Dayjs | null,
+  hoveredDate: Dayjs | null,
+  selectingEnd: boolean,
 ): CalendarDay[][] {
   const firstDay = month.startOf("month");
   const lastDay = month.endOf("month");
@@ -62,12 +64,19 @@ function buildMonthWeeks(
         start && end
           ? current.isAfter(start, "day") && current.isBefore(end, "day")
           : false;
-      // Preview range: when hovering after start but before clicking end
+      const isHovered = hoveredDate
+        ? current.isSame(hoveredDate, "day")
+        : false;
+      // Preview range: when start is selected and hovering after it
       const isPreviewRange =
-        !end && start && previewEnd && previewEnd.isAfter(start, "day")
+        selectingEnd &&
+        !end &&
+        start &&
+        hoveredDate &&
+        hoveredDate.isAfter(start, "day")
           ? current.isAfter(start, "day") &&
-            (current.isBefore(previewEnd, "day") ||
-              current.isSame(previewEnd, "day"))
+            (current.isBefore(hoveredDate, "day") ||
+              current.isSame(hoveredDate, "day"))
           : false;
 
       week.push({
@@ -78,6 +87,7 @@ function buildMonthWeeks(
         isSelected: isStart || isEnd,
         isInRange,
         isPreviewRange,
+        isHovered,
         isStart,
         isEnd,
       });
@@ -95,7 +105,8 @@ function MonthGrid({
   weekDayLabels,
   start,
   end,
-  previewEnd,
+  hoveredDate,
+  selectingEnd,
   onSelectDate,
   onHoverDate,
   onLeave,
@@ -104,15 +115,16 @@ function MonthGrid({
   weekDayLabels: string[];
   start: Dayjs | null;
   end: Dayjs | null;
-  previewEnd: Dayjs | null;
+  hoveredDate: Dayjs | null;
+  selectingEnd: boolean;
   onSelectDate: (date: Dayjs) => void;
   onHoverDate: (date: Dayjs) => void;
   onLeave: () => void;
 }) {
   const locale = useLocale();
   const weeks = useMemo(
-    () => buildMonthWeeks(month, start, end, previewEnd),
-    [month, start, end, previewEnd],
+    () => buildMonthWeeks(month, start, end, hoveredDate, selectingEnd),
+    [month, start, end, hoveredDate, selectingEnd],
   );
 
   return (
@@ -142,21 +154,27 @@ function MonthGrid({
                   onClick={() => onSelectDate(day.date)}
                   onMouseEnter={() => !day.isPast && onHoverDate(day.date)}
                   className={cn(
-                    "relative h-8 w-full text-sm rounded-md transition-colors",
+                    "relative h-8 w-full text-sm transition-colors",
                     day.isPast
                       ? "text-muted-foreground/30 cursor-not-allowed"
-                      : "cursor-pointer hover:bg-accent",
+                      : "cursor-pointer",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     !day.isCurrentMonth &&
                       !day.isPast &&
                       "text-muted-foreground/40",
                     day.isToday && "font-bold",
+                    // Confirmed selection (start/end)
                     day.isSelected &&
-                      "bg-brand text-white ring-2 ring-white font-bold",
-                    day.isInRange &&
-                      "bg-brand/10 border border-dashed border-brand",
-                    day.isPreviewRange &&
-                      "bg-brand/10 border border-dashed border-brand/50",
+                      "bg-brand text-white ring-2 ring-brand font-bold rounded-full",
+                    // Confirmed range (between start and end)
+                    day.isInRange && "bg-brand/10",
+                    // Preview range (hovering after start, before clicking end)
+                    day.isPreviewRange && !day.isSelected && "bg-brand/10",
+                    // Hover ring on any non-selected, non-past date
+                    day.isHovered &&
+                      !day.isSelected &&
+                      !day.isPast &&
+                      "ring-1 ring-foreground/40 rounded-full",
                   )}
                 >
                   {day.date.date()}
@@ -190,8 +208,6 @@ export function DateRangePicker({
   );
 
   const weekDayLabels = useMemo(() => {
-    // Anchor to a known Monday so headers always match the Mon-first grid,
-    // regardless of locale week-start convention.
     const monday = dayjs().day(1);
     return Array.from({ length: 7 }, (_, i) =>
       monday.add(i, "day").locale(locale).format("dd"),
@@ -222,26 +238,18 @@ export function DateRangePicker({
       const dateStr = date.format("YYYY-MM-DD");
 
       if (!selectingEnd || !start) {
-        // First click: set start date, wait for end
         onDatesChange(dateStr, null);
         setSelectingEnd(true);
-        setHoveredDate(null);
       } else {
         if (date.isBefore(start, "day")) {
-          // Clicked before start: reset start
           onDatesChange(dateStr, null);
           setSelectingEnd(true);
-          setHoveredDate(null);
         } else if (date.isSame(start, "day")) {
-          // Clicked same day: clear selection
           onDatesChange(null, null);
           setSelectingEnd(false);
-          setHoveredDate(null);
         } else {
-          // Second click after start: set end date, auto-close
           onDatesChange(startDate, dateStr);
           setSelectingEnd(false);
-          setHoveredDate(null);
           setOpen(false);
         }
       }
@@ -249,14 +257,9 @@ export function DateRangePicker({
     [selectingEnd, start, startDate, onDatesChange],
   );
 
-  const handleHoverDate = useCallback(
-    (date: Dayjs) => {
-      if (selectingEnd) {
-        setHoveredDate(date);
-      }
-    },
-    [selectingEnd],
-  );
+  const handleHoverDate = useCallback((date: Dayjs) => {
+    setHoveredDate(date);
+  }, []);
 
   const handleLeaveGrid = useCallback(() => {
     setHoveredDate(null);
@@ -338,7 +341,8 @@ export function DateRangePicker({
           weekDayLabels={weekDayLabels}
           start={start}
           end={endDate ? dayjs(endDate) : null}
-          previewEnd={selectingEnd ? hoveredDate : null}
+          hoveredDate={hoveredDate}
+          selectingEnd={selectingEnd}
           onSelectDate={handleSelectDate}
           onHoverDate={handleHoverDate}
           onLeave={handleLeaveGrid}
