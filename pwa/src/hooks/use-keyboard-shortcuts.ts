@@ -69,10 +69,10 @@ export function useKeyboardShortcuts(stageCount: number) {
           e.preventDefault();
           if (focusedMapStageIndex === null) {
             setFocusedMapStageIndex(0);
+          } else if (focusedMapStageIndex + 1 >= stageCount) {
+            setFocusedMapStageIndex(null);
           } else {
-            setFocusedMapStageIndex(
-              Math.min(focusedMapStageIndex + 1, stageCount - 1),
-            );
+            setFocusedMapStageIndex(focusedMapStageIndex + 1);
           }
           break;
 
@@ -82,8 +82,10 @@ export function useKeyboardShortcuts(stageCount: number) {
           e.preventDefault();
           if (focusedMapStageIndex === null) {
             setFocusedMapStageIndex(stageCount - 1);
+          } else if (focusedMapStageIndex - 1 < 0) {
+            setFocusedMapStageIndex(null);
           } else {
-            setFocusedMapStageIndex(Math.max(focusedMapStageIndex - 1, 0));
+            setFocusedMapStageIndex(focusedMapStageIndex - 1);
           }
           break;
       }

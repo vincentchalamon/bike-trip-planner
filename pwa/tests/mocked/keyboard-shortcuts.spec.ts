@@ -86,6 +86,14 @@ test.describe("Keyboard shortcuts", () => {
     // Press J again — should focus stage 1
     await mockedPage.keyboard.press("j");
     await expect(mapContainer).toHaveAttribute("data-focused-stage", "1");
+
+    // Press J to stage 2 (last stage with 3 stages)
+    await mockedPage.keyboard.press("j");
+    await expect(mapContainer).toHaveAttribute("data-focused-stage", "2");
+
+    // Press J past the last stage — should return to global view
+    await mockedPage.keyboard.press("j");
+    await expect(mapContainer).toHaveAttribute("data-focused-stage", "");
   });
 
   test("K key navigates to the previous stage", async ({
@@ -106,6 +114,10 @@ test.describe("Keyboard shortcuts", () => {
     // Press K — should go back to stage 0
     await mockedPage.keyboard.press("k");
     await expect(mapContainer).toHaveAttribute("data-focused-stage", "0");
+
+    // Press K before stage 0 — should return to global view
+    await mockedPage.keyboard.press("k");
+    await expect(mapContainer).toHaveAttribute("data-focused-stage", "");
   });
 
   test("K key with no focused stage jumps to the last stage", async ({
