@@ -64,30 +64,28 @@ test.describe("Date range picker in ConfigPanel", () => {
     // Open config panel → date range picker → calendar popover
     await mockedPage.getByTestId("config-open-button").click();
     await mockedPage.getByTestId("date-range-trigger").click();
-    await expect(mockedPage.getByRole("grid").first()).toBeVisible();
+    const grid = mockedPage.getByRole("grid").first();
+    await expect(grid).toBeVisible();
 
-    // Find a future, non-disabled date button to use as start
-    const gridCells = mockedPage
-      .getByRole("grid")
-      .first()
+    // Find future, enabled date buttons
+    const enabledCells = grid
       .getByRole("gridcell")
-      .filter({ hasNot: mockedPage.locator("[aria-disabled=true]") });
-    const startCell = gridCells.first();
+      .and(mockedPage.locator(":not([disabled])"));
+    const startCell = enabledCells.first();
     await startCell.click();
 
     // Hover a date a few cells later to trigger preview range
-    const laterCell = gridCells.nth(5);
+    const laterCell = enabledCells.nth(5);
     await laterCell.hover();
 
-    // Cells between start and hovered should have the preview background
-    const middleCell = gridCells.nth(3);
+    // A cell between start and hovered should have the preview background
+    const middleCell = enabledCells.nth(3);
     await expect(middleCell).toHaveClass(/bg-brand/);
 
     // Move mouse outside the grid to clear preview
-    await mockedPage
-      .getByRole("dialog")
-      .first()
-      .hover({ position: { x: 5, y: 5 } });
+    await mockedPage.locator('[data-slot="popover-content"]').hover({
+      position: { x: 5, y: 5 },
+    });
     // Preview should be cleared — middle cell should no longer have bg-brand
     await expect(middleCell).not.toHaveClass(/bg-brand/);
   });
