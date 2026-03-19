@@ -47,6 +47,7 @@ interface StageCardProps {
   newAccKey?: string | null;
   stageOriginalIndex?: number;
   onClearNewAcc?: () => void;
+  onAccommodationHover?: (accIndex: number | null) => void;
 }
 
 export function StageCard({
@@ -68,6 +69,7 @@ export function StageCard({
   newAccKey,
   stageOriginalIndex,
   onClearNewAcc,
+  onAccommodationHover,
 }: StageCardProps) {
   const t = useTranslations("stage");
   const tripId = useTripStore((s) => s.trip?.id);
@@ -212,6 +214,7 @@ export function StageCard({
                 stage.accommodationSearchRadiusKm ??
                 DEFAULT_ACCOMMODATION_RADIUS_KM
               }
+              onAccommodationHover={onAccommodationHover}
             />
           </>
         )}

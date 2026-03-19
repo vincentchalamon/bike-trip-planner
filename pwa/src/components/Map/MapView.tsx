@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { useTripStore } from "@/store/trip-store";
+import { useUiStore } from "@/store/ui-store";
 import type { StageData } from "@/lib/validation/schemas";
 import { getStageColor } from "./stage-colors";
 
@@ -86,6 +87,25 @@ function createMarkerElement(className: string, label: string): HTMLElement {
   return el;
 }
 
+function getAccommodationCategory(
+  type: string,
+): "building" | "camping" | "hut" | "other" {
+  switch (type) {
+    case "hotel":
+    case "hostel":
+    case "guest_house":
+    case "motel":
+    case "chalet":
+      return "building";
+    case "camp_site":
+      return "camping";
+    case "alpine_hut":
+      return "hut";
+    default:
+      return "other";
+  }
+}
+
 interface MapViewProps {
   focusedStageIndex: number | null;
   onStageClick: (stageIndex: number) => void;
@@ -106,9 +126,12 @@ export const MapView = memo(function MapView({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const hoverMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const accMarkerElementsRef = useRef<Map<string, HTMLElement>>(new Map());
   const [mapReady, setMapReady] = useState(false);
 
   const stages = useTripStore((s) => s.stages);
+  const hoveredAccommodation = useUiStore((s) => s.hoveredAccommodation);
+  const setHoveredAccommodation = useUiStore((s) => s.setHoveredAccommodation);
   const { resolvedTheme } = useTheme();
   const mounted = useSyncExternalStore(emptySubscribe, getTrue, getFalse);
 
@@ -127,11 +150,15 @@ export const MapView = memo(function MapView({
   // Refs to avoid stale closures in map event handlers that are registered once
   const activeStagesRef = useRef(activeStages);
   const onStageClickRef = useRef(onStageClick);
+  const setHoveredAccommodationRef = useRef(setHoveredAccommodation);
   useEffect(() => {
     activeStagesRef.current = activeStages;
   });
   useEffect(() => {
     onStageClickRef.current = onStageClick;
+  });
+  useEffect(() => {
+    setHoveredAccommodationRef.current = setHoveredAccommodation;
   });
 
   const addSourceAndLayers = useCallback(
@@ -188,6 +215,23 @@ export const MapView = memo(function MapView({
     map.on("load", () => {
       addSourceAndLayers(map, buildRouteGeoJSON(activeStages));
 
+      // Accommodation link dashed line (empty by default, updated on hover)
+      map.addSource("accommodation-link", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "accommodation-dashed-line",
+        type: "line",
+        source: "accommodation-link",
+        paint: {
+          "line-color": "#7c3aed",
+          "line-width": 1.5,
+          "line-dasharray": [4, 4],
+          "line-opacity": 0.6,
+        },
+      });
+
       map.on("click", "route-hover-target", (e) => {
         const features = e.features;
         if (!features?.length) return;
@@ -235,6 +279,24 @@ export const MapView = memo(function MapView({
         mapRef.current,
         buildRouteGeoJSON(activeStagesRef.current),
       );
+      // Re-add accommodation link source/layer after style change
+      if (!mapRef.current.getSource("accommodation-link")) {
+        mapRef.current.addSource("accommodation-link", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        mapRef.current.addLayer({
+          id: "accommodation-dashed-line",
+          type: "line",
+          source: "accommodation-link",
+          paint: {
+            "line-color": "#7c3aed",
+            "line-width": 1.5,
+            "line-dasharray": [4, 4],
+            "line-opacity": 0.6,
+          },
+        });
+      }
     });
   }, [tileStyle, mapReady, addSourceAndLayers]);
 
@@ -285,21 +347,55 @@ export const MapView = memo(function MapView({
         .addTo(map),
     );
 
-    // Accommodation markers
-    activeStages.forEach((stage, idx) => {
-      if (idx === activeStages.length - 1) return;
-      const acc = stage.selectedAccommodation ?? stage.accommodations[0];
-      if (!acc) return;
+    // Accommodation markers — per-accommodation with category styling
+    accMarkerElementsRef.current.clear();
+    activeStages.forEach((stage, stageIdx) => {
+      if (stageIdx === activeStages.length - 1) return;
 
-      const accEl = createMarkerElement(
-        "map-marker map-marker--accommodation",
-        acc.name,
-      );
-      markersRef.current.push(
-        new maplibregl.Marker({ element: accEl })
-          .setLngLat([acc.lon, acc.lat])
-          .addTo(map),
-      );
+      if (stage.selectedAccommodation) {
+        // Only show the selected accommodation for this stage
+        const cat = getAccommodationCategory(stage.selectedAccommodation.type);
+        const el = createMarkerElement(
+          `map-marker map-marker--acc map-marker--acc-${cat} map-marker--acc-selected`,
+          stage.selectedAccommodation.name,
+        );
+        markersRef.current.push(
+          new maplibregl.Marker({ element: el })
+            .setLngLat([
+              stage.selectedAccommodation.lon,
+              stage.selectedAccommodation.lat,
+            ])
+            .addTo(map),
+        );
+      } else {
+        // Show all accommodations for this stage
+        stage.accommodations.forEach((acc, accIdx) => {
+          const cat = getAccommodationCategory(acc.type);
+          const key = `${stageIdx}-${accIdx}`;
+          const el = createMarkerElement(
+            `map-marker map-marker--acc map-marker--acc-${cat}`,
+            acc.name,
+          );
+          accMarkerElementsRef.current.set(key, el);
+
+          // Bidirectional hover: map marker → store
+          el.addEventListener("mouseenter", () => {
+            setHoveredAccommodationRef.current({
+              stageIndex: stageIdx,
+              accIndex: accIdx,
+            });
+          });
+          el.addEventListener("mouseleave", () => {
+            setHoveredAccommodationRef.current(null);
+          });
+
+          markersRef.current.push(
+            new maplibregl.Marker({ element: el })
+              .setLngLat([acc.lon, acc.lat])
+              .addTo(map),
+          );
+        });
+      }
     });
 
     // Alert markers (one per stage, with coords)
@@ -342,6 +438,51 @@ export const MapView = memo(function MapView({
       }
     }
   }, [focusedStageIndex, activeStages, mapReady]);
+
+  // Hover highlight — toggle CSS class on accommodation markers without rebuilding
+  useEffect(() => {
+    for (const el of accMarkerElementsRef.current.values()) {
+      el.classList.remove("map-marker--acc-highlighted");
+    }
+    if (hoveredAccommodation) {
+      const key = `${hoveredAccommodation.stageIndex}-${hoveredAccommodation.accIndex}`;
+      const el = accMarkerElementsRef.current.get(key);
+      if (el) el.classList.add("map-marker--acc-highlighted");
+    }
+
+    // Update accommodation link dashed line
+    const source = mapRef.current?.getSource("accommodation-link") as
+      | maplibregl.GeoJSONSource
+      | undefined;
+    if (source) {
+      if (hoveredAccommodation) {
+        const stage = activeStages[hoveredAccommodation.stageIndex];
+        const acc = stage?.accommodations[hoveredAccommodation.accIndex];
+        if (acc && (acc.distanceToEndPoint ?? 0) > 0.2) {
+          source.setData({
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                  type: "LineString",
+                  coordinates: [
+                    [stage.endPoint.lon, stage.endPoint.lat],
+                    [acc.lon, acc.lat],
+                  ],
+                },
+              },
+            ],
+          });
+        } else {
+          source.setData({ type: "FeatureCollection", features: [] });
+        }
+      } else {
+        source.setData({ type: "FeatureCollection", features: [] });
+      }
+    }
+  }, [hoveredAccommodation, activeStages]);
 
   // Hover cursor from elevation profile
   useEffect(() => {

@@ -86,6 +86,25 @@ export function TripPlanner() {
   // Register global keyboard shortcuts (Escape, ?, J/K)
   useKeyboardShortcuts(activeStages.length);
 
+  const setHoveredAccommodation = useUiStore((s) => s.setHoveredAccommodation);
+
+  const handleAccommodationHover = useCallback(
+    (stageOriginalIndex: number, accIndex: number | null) => {
+      if (accIndex === null) {
+        setHoveredAccommodation(null);
+        return;
+      }
+      // Convert originalIndex (in stages, including rest days) to activeStages index
+      let activeIdx = 0;
+      for (let i = 0; i < stages.length; i++) {
+        if (i === stageOriginalIndex) break;
+        if (!stages[i]?.isRestDay) activeIdx++;
+      }
+      setHoveredAccommodation({ stageIndex: activeIdx, accIndex });
+    },
+    [setHoveredAccommodation, stages],
+  );
+
   const handleMapStageClick = useCallback(
     (stageIndex: number) => {
       setFocusedMapStageIndex(stageIndex);
@@ -344,6 +363,7 @@ export function TripPlanner() {
                   onExpandAccommodationRadius={handleExpandAccommodationRadius}
                   onInsertRestDay={handleInsertRestDay}
                   onAddPoiWaypoint={handleAddPoiWaypoint}
+                  onAccommodationHover={handleAccommodationHover}
                   newAccKey={newAccKey}
                   onClearNewAcc={clearNewAccKey}
                 />

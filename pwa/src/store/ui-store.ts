@@ -17,6 +17,8 @@ interface UiState {
   activeDayNumber: number | null;
   /** Index (into active stages) of the stage currently focused on the map. null = global view. */
   focusedMapStageIndex: number | null;
+  /** Currently hovered accommodation (from timeline or map marker). null = no hover. */
+  hoveredAccommodation: { stageIndex: number; accIndex: number } | null;
   /**
    * Current view mode for the trip planner layout.
    * - "timeline" — timeline only (mobile default)
@@ -34,6 +36,9 @@ interface UiState {
   setError: (error: { type: string; message: string } | null) => void;
   setActiveDayNumber: (dayNumber: number | null) => void;
   setFocusedMapStageIndex: (index: number | null) => void;
+  setHoveredAccommodation: (
+    value: { stageIndex: number; accIndex: number } | null,
+  ) => void;
   setViewMode: (mode: ViewMode) => void;
 }
 
@@ -71,6 +76,7 @@ export const useUiStore = create<UiState>()(
     error: null,
     activeDayNumber: null,
     focusedMapStageIndex: null,
+    hoveredAccommodation: null,
     // Default: "split". On mobile the ViewModeToggle component will override to "timeline"
     // on first render via a useEffect that detects the viewport width.
     viewMode: "split",
@@ -118,6 +124,11 @@ export const useUiStore = create<UiState>()(
     setFocusedMapStageIndex: (index) =>
       set((state) => {
         state.focusedMapStageIndex = index;
+      }),
+
+    setHoveredAccommodation: (value) =>
+      set((state) => {
+        state.hoveredAccommodation = value;
       }),
 
     setViewMode: (mode) =>

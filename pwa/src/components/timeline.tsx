@@ -37,6 +37,7 @@ interface TimelineProps {
     poiLat: number,
     poiLon: number,
   ) => void;
+  onAccommodationHover?: (stageIndex: number, accIndex: number | null) => void;
   newAccKey?: string | null;
   onClearNewAcc?: () => void;
 }
@@ -73,6 +74,7 @@ export function Timeline({
   onDeselectAccommodation,
   onExpandAccommodationRadius,
   onAddPoiWaypoint,
+  onAccommodationHover,
   newAccKey,
   onClearNewAcc,
 }: TimelineProps) {
@@ -269,6 +271,12 @@ export function Timeline({
                       newAccKey={newAccKey}
                       stageOriginalIndex={originalIndex}
                       onClearNewAcc={onClearNewAcc}
+                      onAccommodationHover={
+                        onAccommodationHover
+                          ? (accIdx) =>
+                              onAccommodationHover(originalIndex, accIdx)
+                          : undefined
+                      }
                     />
                   )}
                 </div>
