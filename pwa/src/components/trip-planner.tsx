@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Settings } from "lucide-react";
+import { Settings, HelpCircle } from "lucide-react";
 import { MagicLinkInput } from "@/components/magic-link-input";
 import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { TripSummary } from "@/components/trip-summary";
@@ -11,12 +11,14 @@ import { TripDownloads } from "@/components/trip-downloads";
 import { StageProgressBar } from "@/components/stage-progress-bar";
 import { Timeline } from "@/components/timeline";
 import { ConfigPanel } from "@/components/config-panel";
+import { KeyboardHelpModal } from "@/components/keyboard-help-modal";
 import { TextExportButton } from "@/components/text-export-button";
 import { MapPanel } from "@/components/Map";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { Button } from "@/components/ui/button";
 import { UndoRedoButtons } from "@/components/undo-redo-buttons";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useUiStore } from "@/store/ui-store";
 import { useSwipe } from "@/hooks/use-swipe";
 import {
@@ -70,6 +72,7 @@ export function TripPlanner() {
   } = useTripPlanner();
 
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
+  const setHelpModalOpen = useUiStore((s) => s.setHelpModalOpen);
   const focusedMapStageIndex = useUiStore((s) => s.focusedMapStageIndex);
   const setFocusedMapStageIndex = useUiStore((s) => s.setFocusedMapStageIndex);
   const viewMode = useUiStore((s) => s.viewMode);
@@ -79,6 +82,9 @@ export function TripPlanner() {
     [stages],
   );
   const hasMap = activeStages.length > 0;
+
+  // Register global keyboard shortcuts (Escape, ?, J/K)
+  useKeyboardShortcuts(activeStages.length);
 
   const handleMapStageClick = useCallback(
     (stageIndex: number) => {
@@ -202,6 +208,17 @@ export function TripPlanner() {
         </div>
         <GpxUploadButton onUpload={handleGpxUpload} disabled={isProcessing} />
         <UndoRedoButtons />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 cursor-pointer"
+          onClick={() => setHelpModalOpen(true)}
+          title={t("keyboardHelp.openButton")}
+          aria-label={t("keyboardHelp.openButton")}
+          data-testid="help-button"
+        >
+          <HelpCircle className="h-4 w-4" />
+        </Button>
         <Button
           variant="ghost"
           size="icon"
@@ -347,6 +364,7 @@ export function TripPlanner() {
                     height: `calc(100vh - ${isScrolledPast ? fixedHeaderHeight + 8 : 16}px)`,
                   }}
                   data-testid="map-container"
+                  data-focused-stage={focusedMapStageIndex ?? ""}
                 >
                   <MapPanel
                     focusedStageIndex={focusedMapStageIndex}
@@ -375,6 +393,9 @@ export function TripPlanner() {
         onDepartureHourChange={handleDepartureHourChange}
         onAccommodationTypesChange={handleAccommodationTypesChange}
       />
+
+      {/* Keyboard shortcuts help modal */}
+      <KeyboardHelpModal />
     </main>
   );
 }

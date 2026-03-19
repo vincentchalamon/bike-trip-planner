@@ -248,6 +248,20 @@
     "redoTitle": "Redo (Ctrl+Y)",
     "redoLabel": "Redo undone action"
   },
+  "keyboardHelp": {
+    "openButton": "Keyboard shortcuts",
+    "title": "Keyboard shortcuts",
+    "description": "Use these shortcuts to navigate faster.",
+    "sectionNavigation": "Navigation",
+    "sectionHistory": "History",
+    "sectionInterface": "Interface",
+    "nextStage": "Focus next stage on map",
+    "previousStage": "Focus previous stage on map",
+    "undo": "Undo last action",
+    "redo": "Redo undone action",
+    "toggleHelp": "Show / hide this help",
+    "closePanels": "Close open panel"
+  },
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",
