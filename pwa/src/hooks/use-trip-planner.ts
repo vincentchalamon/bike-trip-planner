@@ -236,6 +236,7 @@ export function useTripPlanner() {
       if (error) {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
+        useTripTemporalStore.getState()._pop();
         useTripStore.getState().setStages(snapshot);
       } else {
         setProcessing(true);
@@ -243,6 +244,7 @@ export function useTripPlanner() {
       }
     } catch {
       toast.error(t("errors.failedDeleteStage"));
+      useTripTemporalStore.getState()._pop();
       useTripStore.getState().setStages(snapshot);
     }
   }
@@ -265,12 +267,14 @@ export function useTripPlanner() {
       );
       if (!response.ok) {
         toast.error(t("errors.failedInsertRestDay"));
+        useTripTemporalStore.getState()._pop();
         useTripStore.getState().setStages(snapshot);
       } else {
         setProcessing(true);
       }
     } catch {
       toast.error(t("errors.failedInsertRestDay"));
+      useTripTemporalStore.getState()._pop();
       useTripStore.getState().setStages(snapshot);
     }
   }
@@ -329,6 +333,7 @@ export function useTripPlanner() {
       if (error) {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
+        useTripTemporalStore.getState()._pop();
         useTripStore.getState().setStages(stages);
       } else {
         setProcessing(true);
@@ -336,6 +341,7 @@ export function useTripPlanner() {
       }
     } catch {
       toast.error(t("errors.failedAddStage"));
+      useTripTemporalStore.getState()._pop();
       useTripStore.getState().setStages(stages);
     }
   }

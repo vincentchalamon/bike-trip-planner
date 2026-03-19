@@ -189,9 +189,7 @@ test.describe("Undo/Redo", () => {
     // Open the config panel
     await mockedPage.getByTestId("config-open-button").click();
     // Click a preset button — this calls onCommit directly (no preceding onChange)
-    await mockedPage
-      .getByRole("button", { name: /Expert/ })
-      .click();
+    await mockedPage.getByRole("button", { name: /Expert/ }).click();
     // The preset change should be undoable
     await expect(mockedPage.getByTestId("undo-button")).toBeEnabled({
       timeout: 5000,

@@ -37,6 +37,8 @@ export interface TemporalState {
   clear: () => void;
   /** @internal Push a new snapshot onto the past stack (clears redo stack). */
   _push: (snapshot: unknown) => void;
+  /** @internal Pop the most-recent past entry. Call on optimistic-rollback. */
+  _pop: () => void;
 }
 
 /**
@@ -69,6 +71,12 @@ export function createTemporalStore(
       past = [...past, snapshot];
       future = [];
       set({ canUndo: true, canRedo: false });
+    },
+
+    _pop: () => {
+      if (past.length === 0) return;
+      past = past.slice(0, -1);
+      set({ canUndo: past.length > 0 });
     },
 
     undo: () => {
