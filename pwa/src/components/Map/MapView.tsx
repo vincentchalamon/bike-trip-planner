@@ -106,6 +106,24 @@ function getAccommodationCategory(
   }
 }
 
+function addAccommodationLinkLayer(map: maplibregl.Map): void {
+  map.addSource("accommodation-link", {
+    type: "geojson",
+    data: { type: "FeatureCollection", features: [] },
+  });
+  map.addLayer({
+    id: "accommodation-dashed-line",
+    type: "line",
+    source: "accommodation-link",
+    paint: {
+      "line-color": "#7c3aed",
+      "line-width": 1.5,
+      "line-dasharray": [4, 4],
+      "line-opacity": 0.6,
+    },
+  });
+}
+
 interface MapViewProps {
   focusedStageIndex: number | null;
   onStageClick: (stageIndex: number) => void;
@@ -216,21 +234,7 @@ export const MapView = memo(function MapView({
       addSourceAndLayers(map, buildRouteGeoJSON(activeStages));
 
       // Accommodation link dashed line (empty by default, updated on hover)
-      map.addSource("accommodation-link", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
-      map.addLayer({
-        id: "accommodation-dashed-line",
-        type: "line",
-        source: "accommodation-link",
-        paint: {
-          "line-color": "#7c3aed",
-          "line-width": 1.5,
-          "line-dasharray": [4, 4],
-          "line-opacity": 0.6,
-        },
-      });
+      addAccommodationLinkLayer(map);
 
       map.on("click", "route-hover-target", (e) => {
         const features = e.features;
@@ -281,21 +285,7 @@ export const MapView = memo(function MapView({
       );
       // Re-add accommodation link source/layer after style change
       if (!mapRef.current.getSource("accommodation-link")) {
-        mapRef.current.addSource("accommodation-link", {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [] },
-        });
-        mapRef.current.addLayer({
-          id: "accommodation-dashed-line",
-          type: "line",
-          source: "accommodation-link",
-          paint: {
-            "line-color": "#7c3aed",
-            "line-width": 1.5,
-            "line-dasharray": [4, 4],
-            "line-opacity": 0.6,
-          },
-        });
+        addAccommodationLinkLayer(mapRef.current);
       }
     });
   }, [tileStyle, mapReady, addSourceAndLayers]);
@@ -458,7 +448,11 @@ export const MapView = memo(function MapView({
       if (hoveredAccommodation) {
         const stage = activeStages[hoveredAccommodation.stageIndex];
         const acc = stage?.accommodations[hoveredAccommodation.accIndex];
-        if (acc && (acc.distanceToEndPoint ?? 0) > 0.2) {
+        if (
+          acc &&
+          !stage.selectedAccommodation &&
+          (acc.distanceToEndPoint ?? 0) > 0.2
+        ) {
           source.setData({
             type: "FeatureCollection",
             features: [
