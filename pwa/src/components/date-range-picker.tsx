@@ -145,13 +145,20 @@ function MonthGrid({
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="grid grid-cols-7" role="row">
               {week.map((day) => {
-                const inRange =
-                  day.isInRange || (day.isPreviewRange && !day.isSelected);
-                const isStartWithRange =
-                  day.isStart && (day.isInRange || day.isPreviewRange || !!end);
                 const isEndCell =
                   day.isEnd ||
                   (day.isHovered && day.isPreviewRange && !day.isSelected);
+                const inRange =
+                  day.isInRange ||
+                  (day.isPreviewRange && !day.isSelected && !isEndCell);
+                const hasPreviewAfterStart =
+                  selectingEnd &&
+                  hoveredDate !== null &&
+                  start !== null &&
+                  hoveredDate.isAfter(start, "day");
+                const isStartWithRange =
+                  day.isStart &&
+                  (day.isInRange || !!end || hasPreviewAfterStart);
                 const isEndWithRange =
                   isEndCell && (day.isInRange || day.isPreviewRange || !!start);
 
@@ -227,6 +234,8 @@ export function DateRangePicker({
   );
 
   const weekDayLabels = useMemo(() => {
+    // Anchor to a known Monday so headers always match the Mon-first grid,
+    // regardless of locale week-start convention.
     const monday = dayjs().day(1);
     return Array.from({ length: 7 }, (_, i) =>
       monday.add(i, "day").locale(locale).format("dd"),
