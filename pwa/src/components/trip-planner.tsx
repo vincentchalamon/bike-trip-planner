@@ -189,22 +189,26 @@ export function TripPlanner() {
     return () => observer.disconnect();
   }, [hasTripData]);
 
-  // Track the fixed header height via a CSS custom property on <html>.
-  // The sticky map reads `var(--fixed-header-h)` directly in its inline
-  // style, so it stays in sync without waiting for a React render cycle.
+  // Keep the CSS custom property `--fixed-header-h` on <html> in sync with
+  // the fixed header's rendered height.  The sticky map reads this variable
+  // via `calc()` so it always sits right below the header.
+  //
+  // Re-run whenever the header content changes (hasMap / viewMode drive which
+  // children are rendered) so we always capture the correct height.
   useEffect(() => {
     const el = fixedHeaderRef.current;
     if (!el) return;
-    const setVar = (h: number) => {
-      document.documentElement.style.setProperty("--fixed-header-h", `${h}px`);
+    const setVar = () => {
+      document.documentElement.style.setProperty(
+        "--fixed-header-h",
+        `${el.offsetHeight}px`,
+      );
     };
-    const observer = new ResizeObserver(([entry]) => {
-      setVar(entry?.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight);
-    });
+    const observer = new ResizeObserver(() => setVar());
     observer.observe(el);
-    setVar(el.offsetHeight);
+    setVar();
     return () => observer.disconnect();
-  }, []);
+  }, [hasMap, viewMode]);
 
   return (
     <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative overflow-x-clip">
