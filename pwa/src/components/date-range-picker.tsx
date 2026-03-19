@@ -144,42 +144,61 @@ function MonthGrid({
         <div onMouseLeave={onLeave}>
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="grid grid-cols-7" role="row">
-              {week.map((day) => (
-                <button
-                  key={day.date.format("YYYY-MM-DD")}
-                  role="gridcell"
-                  aria-selected={day.isSelected}
-                  aria-disabled={day.isPast}
-                  disabled={day.isPast}
-                  onClick={() => onSelectDate(day.date)}
-                  onMouseEnter={() => !day.isPast && onHoverDate(day.date)}
-                  className={cn(
-                    "relative h-8 w-full text-sm transition-colors",
-                    day.isPast
-                      ? "text-muted-foreground/30 cursor-not-allowed"
-                      : "cursor-pointer",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    !day.isCurrentMonth &&
-                      !day.isPast &&
-                      "text-muted-foreground/40",
-                    day.isToday && "font-bold",
-                    // Confirmed selection (start/end)
-                    day.isSelected &&
-                      "bg-brand text-white ring-2 ring-brand font-bold rounded-full",
-                    // Confirmed range (between start and end)
-                    day.isInRange && "bg-brand/10",
-                    // Preview range (hovering after start, before clicking end)
-                    day.isPreviewRange && !day.isSelected && "bg-brand/10",
-                    // Hover ring on any non-selected, non-past date
-                    day.isHovered &&
-                      !day.isSelected &&
-                      !day.isPast &&
-                      "ring-1 ring-foreground/40 rounded-full",
-                  )}
-                >
-                  {day.date.date()}
-                </button>
-              ))}
+              {week.map((day) => {
+                const inRange =
+                  day.isInRange || (day.isPreviewRange && !day.isSelected);
+                const isStartWithRange =
+                  day.isStart && (day.isInRange || day.isPreviewRange || !!end);
+                const isEndCell =
+                  day.isEnd ||
+                  (day.isHovered && day.isPreviewRange && !day.isSelected);
+                const isEndWithRange =
+                  isEndCell && (day.isInRange || day.isPreviewRange || !!start);
+
+                return (
+                  <button
+                    key={day.date.format("YYYY-MM-DD")}
+                    role="gridcell"
+                    aria-selected={day.isSelected}
+                    aria-disabled={day.isPast}
+                    disabled={day.isPast}
+                    onClick={() => onSelectDate(day.date)}
+                    onMouseEnter={() => !day.isPast && onHoverDate(day.date)}
+                    className={cn(
+                      "relative h-8 w-full text-sm transition-colors",
+                      day.isPast
+                        ? "text-muted-foreground/30 cursor-not-allowed"
+                        : "cursor-pointer",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      !day.isCurrentMonth &&
+                        !day.isPast &&
+                        "text-muted-foreground/40",
+                      day.isToday && "font-bold",
+                      // Range background (full cell width)
+                      inRange && "bg-brand/10",
+                      // Start date: range extends to the right half behind the circle
+                      isStartWithRange && "bg-gradient-to-l from-brand/10 to-transparent",
+                      // End date: range extends to the left half behind the circle
+                      isEndWithRange && "bg-gradient-to-r from-brand/10 to-transparent",
+                    )}
+                  >
+                    {/* Inner circle for selected/hovered dates */}
+                    <span
+                      className={cn(
+                        "relative z-10 flex items-center justify-center h-full w-full rounded-full",
+                        day.isSelected &&
+                          "bg-brand text-white ring-2 ring-brand font-bold",
+                        day.isHovered &&
+                          !day.isSelected &&
+                          !day.isPast &&
+                          "ring-1 ring-foreground/40",
+                      )}
+                    >
+                      {day.date.date()}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           ))}
         </div>
