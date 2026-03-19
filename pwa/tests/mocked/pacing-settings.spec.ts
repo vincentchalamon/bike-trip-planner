@@ -31,7 +31,7 @@ test.describe("Pacing settings", () => {
     await expect(elevationSlider).toBeVisible();
   });
 
-  test("fatigue slider defaults to 10%", async ({
+  test("fatigue slider defaults to 20% (Intermediate preset)", async ({
     submitUrl,
     injectEvent,
     mockedPage,
@@ -42,8 +42,8 @@ test.describe("Pacing settings", () => {
     const fatigueSlider = mockedPage.getByRole("slider", {
       name: "Indice de fatigue accumulée",
     });
-    // Default fatigueFactor is 0.9, which is 10%
-    await expect(fatigueSlider).toHaveValue("10");
+    // Default fatigueFactor is 0.8, which is 20% (Intermediate preset)
+    await expect(fatigueSlider).toHaveValue("20");
   });
 
   test("shows max distance and average speed sliders", async ({

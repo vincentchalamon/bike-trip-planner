@@ -53,4 +53,24 @@ test.describe("Date range picker in ConfigPanel", () => {
       mockedPage.getByTestId("date-range-trigger"),
     ).toBeVisible();
   });
+
+  test("clicking profile chip in summary opens config panel at pacing section", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectEvent(routeParsedEvent());
+    // Click profile chip in summary
+    await mockedPage.getByTestId("summary-profile").click();
+    // Config panel should open
+    const configPanel = mockedPage.locator(
+      '[role="dialog"][aria-modal="true"]',
+    );
+    await expect(configPanel).toBeInViewport();
+    // Pacing section heading should be visible
+    await expect(
+      mockedPage.getByRole("heading", { name: /profil cyclo/i }),
+    ).toBeVisible();
+  });
 });
