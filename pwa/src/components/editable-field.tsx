@@ -72,7 +72,7 @@ export function EditableField({
       <span className={cn(!value && "text-muted-foreground/60")}>
         {value || placeholder}
       </span>
-      <Pencil className="h-3.5 w-3.5 text-muted-icon opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0" />
+      <Pencil className="h-3.5 w-3.5 text-muted-icon shrink-0" />
     </span>
   );
 }

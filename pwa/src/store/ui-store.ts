@@ -26,6 +26,8 @@ interface UiState {
    * - "split" — timeline + map side by side (desktop default)
    */
   viewMode: ViewMode;
+  /** Section to scroll to when ConfigPanel opens (e.g. from TripSummary chips). */
+  configPanelFocusSection: "dates" | "pacing" | null;
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -40,6 +42,8 @@ interface UiState {
     value: { stageIndex: number; accIndex: number } | null,
   ) => void;
   setViewMode: (mode: ViewMode) => void;
+  setConfigPanelFocusSection: (section: "dates" | "pacing" | null) => void;
+  openConfigPanelAt: (section: "dates" | "pacing") => void;
 }
 
 /**
@@ -80,6 +84,7 @@ export const useUiStore = create<UiState>()(
     // Default: "split". On mobile the ViewModeToggle component will override to "timeline"
     // on first render via a useEffect that detects the viewport width.
     viewMode: "split",
+    configPanelFocusSection: null,
 
     setProcessing: (value) =>
       set((state) => {
@@ -134,6 +139,17 @@ export const useUiStore = create<UiState>()(
     setViewMode: (mode) =>
       set((state) => {
         state.viewMode = mode;
+      }),
+
+    setConfigPanelFocusSection: (section) =>
+      set((state) => {
+        state.configPanelFocusSection = section;
+      }),
+
+    openConfigPanelAt: (section) =>
+      set((state) => {
+        state.configPanelFocusSection = section;
+        state.isConfigPanelOpen = true;
       }),
   })),
 );

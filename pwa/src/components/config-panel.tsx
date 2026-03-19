@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PacingSettings } from "@/components/pacing-settings";
+import { DateRangePicker } from "@/components/date-range-picker";
 import { useUiStore } from "@/store/ui-store";
 import { cn } from "@/lib/utils";
 import {
@@ -21,6 +22,9 @@ import {
 } from "@/lib/accommodation-types";
 
 interface ConfigPanelProps {
+  startDate: string | null;
+  endDate: string | null;
+  onDatesChange: (startDate: string | null, endDate: string | null) => void;
   fatigueFactor: number;
   elevationPenalty: number;
   maxDistancePerDay: number;
@@ -46,6 +50,9 @@ interface ConfigPanelProps {
 }
 
 export function ConfigPanel({
+  startDate,
+  endDate,
+  onDatesChange,
   fatigueFactor,
   elevationPenalty,
   maxDistancePerDay,
@@ -63,7 +70,11 @@ export function ConfigPanel({
   const tAccommodation = useTranslations("accommodation");
   const isOpen = useUiStore((s) => s.isConfigPanelOpen);
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
+  const focusSection = useUiStore((s) => s.configPanelFocusSection);
+  const setFocusSection = useUiStore((s) => s.setConfigPanelFocusSection);
   const panelRef = useRef<HTMLDivElement>(null);
+  const datesSectionRef = useRef<HTMLElement>(null);
+  const pacingSectionRef = useRef<HTMLElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // Restore focus to the trigger element when panel closes
@@ -74,6 +85,18 @@ export function ConfigPanel({
       previousFocusRef.current?.focus();
     }
   }, [isOpen]);
+
+  // Scroll to focused section when panel opens
+  useEffect(() => {
+    if (!isOpen || !focusSection) return;
+    // Wait for transition to complete
+    const timer = setTimeout(() => {
+      const ref = focusSection === "dates" ? datesSectionRef : pacingSectionRef;
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setFocusSection(null);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [isOpen, focusSection, setFocusSection]);
 
   // Close on Escape key
   useEffect(() => {
@@ -172,8 +195,25 @@ export function ConfigPanel({
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-6">
+          {/* Dates */}
+          <section ref={datesSectionRef} aria-labelledby="config-dates-heading">
+            <h3 id="config-dates-heading" className="text-sm font-medium mb-3">
+              {t("datesTitle")}
+            </h3>
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onDatesChange={onDatesChange}
+            />
+          </section>
+
+          <Separator />
+
           {/* Cyclo profile / pacing settings */}
-          <section aria-labelledby="config-pacing-heading">
+          <section
+            ref={pacingSectionRef}
+            aria-labelledby="config-pacing-heading"
+          >
             <h3 id="config-pacing-heading" className="text-sm font-medium mb-3">
               {t("pacingTitle")}
             </h3>

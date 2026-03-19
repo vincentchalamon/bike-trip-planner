@@ -18,7 +18,11 @@
     "estimatedBudget": "Budget estimé :",
     "disclaimer": "Les données détectées automatiquement peuvent contenir des erreurs.",
     "downloadGpx": "Télécharger le GPX complet",
-    "downloadFailed": "Le téléchargement a échoué. Veuillez réessayer."
+    "downloadFailed": "Le téléchargement a échoué. Veuillez réessayer.",
+    "datesLabel": "Dates du voyage",
+    "noDates": "Dates non définies",
+    "profileLabel": "Profil cyclo",
+    "customProfile": "Personnalisé"
   },
   "tripTitle": {
     "fallback": "Mon voyage",
@@ -66,7 +70,9 @@
     "nextMonth": "Mois suivant",
     "collapse": "Réduire le calendrier",
     "expand": "Développer le calendrier",
-    "ariaLabel": "Calendrier"
+    "ariaLabel": "Calendrier",
+    "startDate": "Date de départ",
+    "endDate": "Date de retour"
   },
   "accommodation": {
     "type_hotel": "Hôtel",
@@ -173,6 +179,7 @@
     "title": "Paramètres",
     "close": "Fermer les paramètres",
     "open": "Ouvrir les paramètres",
+    "datesTitle": "Dates",
     "pacingTitle": "Profil cyclo",
     "accommodationTitle": "Types d'hébergements",
     "themeTitle": "Thème",

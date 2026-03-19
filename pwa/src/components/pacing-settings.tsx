@@ -10,6 +10,15 @@ import {
 } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import {
+  PRESETS,
+  type RiderPreset,
+  toFatiguePercent,
+  fromFatiguePercent,
+  toElevationPercent,
+  fromElevationPercent,
+  getActivePresetKey,
+} from "@/lib/pacing-presets";
 
 interface PacingSettingsProps {
   fatigueFactor: number;
@@ -32,54 +41,6 @@ interface PacingSettingsProps {
   ) => void;
   onEbikeModeChange: (ebikeMode: boolean) => void;
   onDepartureHourChange: (departureHour: number) => void;
-}
-
-interface RiderPreset {
-  key: "beginner" | "intermediate" | "expert";
-  maxDistancePerDay: number;
-  averageSpeed: number;
-  elevationPenaltyPercent: number;
-  fatiguePercent: number;
-}
-
-const PRESETS: RiderPreset[] = [
-  {
-    key: "beginner",
-    maxDistancePerDay: 50,
-    averageSpeed: 10,
-    elevationPenaltyPercent: 30,
-    fatiguePercent: 30,
-  },
-  {
-    key: "intermediate",
-    maxDistancePerDay: 80,
-    averageSpeed: 15,
-    elevationPenaltyPercent: 20,
-    fatiguePercent: 20,
-  },
-  {
-    key: "expert",
-    maxDistancePerDay: 120,
-    averageSpeed: 20,
-    elevationPenaltyPercent: 10,
-    fatiguePercent: 10,
-  },
-];
-
-function toFatiguePercent(factor: number): number {
-  return Math.round((1 - factor) * 100);
-}
-
-function fromFatiguePercent(percent: number): number {
-  return 1 - percent / 100;
-}
-
-function toElevationPercent(penalty: number): number {
-  return Math.round(penalty / 5);
-}
-
-function fromElevationPercent(percent: number): number {
-  return percent * 5;
 }
 
 function isIncoherent(
@@ -196,14 +157,12 @@ export function PacingSettings({
 
   const showCoherenceWarning = isIncoherent(averageSpeed, maxDistancePerDay);
 
-  const activePresetKey =
-    PRESETS.find(
-      (p) =>
-        p.maxDistancePerDay === maxDistancePerDay &&
-        p.averageSpeed === averageSpeed &&
-        fromElevationPercent(p.elevationPenaltyPercent) === elevationPenalty &&
-        fromFatiguePercent(p.fatiguePercent) === fatigueFactor,
-    )?.key ?? null;
+  const activePresetKey = getActivePresetKey(
+    maxDistancePerDay,
+    averageSpeed,
+    elevationPenalty,
+    fatigueFactor,
+  );
 
   return (
     <TooltipProvider>
