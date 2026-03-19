@@ -387,10 +387,10 @@ export function TripPlanner() {
                   className={viewMode === "split" ? "lg:sticky" : "sticky"}
                   style={{
                     top: isScrolledPast
-                      ? "calc(var(--fixed-header-h, 0px) + 8px)"
+                      ? "calc(var(--fixed-header-h, 0px) + 12px)"
                       : "0.5rem",
                     height: isScrolledPast
-                      ? "calc(100dvh - var(--fixed-header-h, 0px) - 8px)"
+                      ? "calc(100dvh - var(--fixed-header-h, 0px) - 12px)"
                       : "calc(100dvh - 0.5rem)",
                   }}
                   data-testid="map-container"
