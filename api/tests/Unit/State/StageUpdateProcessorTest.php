@@ -222,11 +222,14 @@ final class StageUpdateProcessorTest extends TestCase
             new Stage(tripId: 't', dayNumber: 2, distance: 60.0, elevation: 20.0, startPoint: $p[1], endPoint: $p[3]),
         ];
 
+        $splitPoint = new Coordinate(48.05, 2.05, 5.0);
+
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
-        $distanceCalculator->method('splitAtDistance')->willReturn([[$p[0]], [$p[1]], 0.0]);
-        // Both calls return the same index → array_slice produces a single element
+        // Return 2 stagePoints (passes the count >= 2 guard) and 2 remaining points
+        $distanceCalculator->method('splitAtDistance')->willReturn([[$p[0], $splitPoint], [$splitPoint, $p[2]], 15.0]);
+        // Both calls return the same index (2) → array_slice($decimatedPoints, 2, 2-2+1) = 1 element → fallback
         $distanceCalculator->method('findClosestIndex')->willReturn(2);
-        $distanceCalculator->method('calculateTotalDistance')->willReturn(0.0);
+        $distanceCalculator->method('calculateTotalDistance')->willReturn(15.0);
 
         $elevationCalculator = $this->createStub(ElevationCalculatorInterface::class);
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
