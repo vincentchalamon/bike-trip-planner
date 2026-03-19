@@ -308,8 +308,6 @@ export function TripPlanner() {
                 isTitleLoading={isProcessing && totalDistance === null}
               />
             </div>
-            {/* Force line break on mobile after title */}
-            <div className="basis-full h-0 md:hidden" aria-hidden="true" />
             {actionButtons}
           </div>
 
