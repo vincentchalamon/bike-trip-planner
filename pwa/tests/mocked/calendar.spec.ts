@@ -54,6 +54,44 @@ test.describe("Date range picker in ConfigPanel", () => {
     ).toBeVisible();
   });
 
+  test("hovering a date after start shows preview range and leaving clears it", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectEvent(routeParsedEvent());
+    // Open config panel → date range picker → calendar popover
+    await mockedPage.getByTestId("config-open-button").click();
+    await mockedPage.getByTestId("date-range-trigger").click();
+    await expect(mockedPage.getByRole("grid").first()).toBeVisible();
+
+    // Find a future, non-disabled date button to use as start
+    const gridCells = mockedPage
+      .getByRole("grid")
+      .first()
+      .getByRole("gridcell")
+      .filter({ hasNot: mockedPage.locator("[aria-disabled=true]") });
+    const startCell = gridCells.first();
+    await startCell.click();
+
+    // Hover a date a few cells later to trigger preview range
+    const laterCell = gridCells.nth(5);
+    await laterCell.hover();
+
+    // Cells between start and hovered should have the preview background
+    const middleCell = gridCells.nth(3);
+    await expect(middleCell).toHaveClass(/bg-brand/);
+
+    // Move mouse outside the grid to clear preview
+    await mockedPage
+      .getByRole("dialog")
+      .first()
+      .hover({ position: { x: 5, y: 5 } });
+    // Preview should be cleared — middle cell should no longer have bg-brand
+    await expect(middleCell).not.toHaveClass(/bg-brand/);
+  });
+
   test("clicking profile chip in summary opens config panel at pacing section", async ({
     submitUrl,
     injectEvent,
