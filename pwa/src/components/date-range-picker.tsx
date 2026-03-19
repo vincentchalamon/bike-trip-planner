@@ -176,9 +176,11 @@ export function DateRangePicker({
   const draftEndDayjs = draftEnd ? dayjs(draftEnd) : null;
 
   const weekDayLabels = useMemo(() => {
-    const monday = dayjs().locale(locale).startOf("week");
+    // Anchor to a known Monday so headers always match the Mon-first grid,
+    // regardless of locale week-start convention.
+    const monday = dayjs().day(1);
     return Array.from({ length: 7 }, (_, i) =>
-      monday.add(i, "day").format("dd"),
+      monday.add(i, "day").locale(locale).format("dd"),
     );
   }, [locale]);
 
