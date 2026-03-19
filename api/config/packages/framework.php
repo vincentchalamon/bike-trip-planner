@@ -41,7 +41,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'base_uri' => 'https://api.open-meteo.com',
                     'timeout' => 10,
                 ],
-'routing.client' => [
+                'routing.client' => [
                     'base_uri' => 'http://valhalla:8002',
                     'timeout' => 5,
                 ],
