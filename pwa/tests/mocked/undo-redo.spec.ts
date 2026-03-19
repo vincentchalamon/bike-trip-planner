@@ -119,42 +119,9 @@ test.describe("Undo/Redo", () => {
     await expect(mockedPage.getByTestId("redo-button")).toBeDisabled();
   });
 
-  test("history is cleared after submitting a new URL (clearTrip)", async ({
-    createFullTrip,
-    mockedPage,
-  }) => {
-    await createFullTrip();
-    const stageCard = mockedPage.getByTestId("stage-card-1");
-    // Trigger an undo point
-    await stageCard
-      .getByRole("button", { name: "Modifier la distance" })
-      .click();
-    const distanceInput = stageCard.getByRole("spinbutton", {
-      name: "Distance (km)",
-    });
-    await distanceInput.fill("80");
-    await distanceInput.press("Enter");
-    await expect(mockedPage.getByTestId("undo-button")).toBeEnabled({
-      timeout: 5000,
-    });
-    // Submit a new URL — this internally calls clearTrip() which wipes history
-    const input = mockedPage.getByTestId("magic-link-input");
-    await input.fill("https://www.komoot.com/fr-fr/tour/9999999999");
-    await input.press("Enter");
-    // Wait for the new trip to start loading
-    await expect(
-      mockedPage
-        .getByTestId("trip-title-skeleton")
-        .or(mockedPage.getByTestId("trip-title")),
-    ).toBeVisible({ timeout: 5000 });
-    // Undo/redo should be disabled now that history was cleared
-    await expect(mockedPage.getByTestId("undo-button")).toBeDisabled({
-      timeout: 5000,
-    });
-    await expect(mockedPage.getByTestId("redo-button")).toBeDisabled({
-      timeout: 5000,
-    });
-  });
+  // Note: "history is cleared after submitting a new URL" test was removed
+  // because the magic-link input is no longer visible once a trip is loaded
+  // (3-state layout: welcome → loading → trip loaded).
 
   test("Ctrl+Z undoes a stage deletion and restores the stage count", async ({
     createFullTrip,

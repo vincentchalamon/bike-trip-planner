@@ -1,7 +1,21 @@
-import { useTranslations } from "next-intl";
-import { ArrowUp, ArrowDown, Bike, Mountain, Info, Wallet } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
+import dayjs from "dayjs";
+import "dayjs/locale/fr";
+import "dayjs/locale/en";
+import {
+  ArrowUp,
+  ArrowDown,
+  Bike,
+  Mountain,
+  Info,
+  Euro,
+  CalendarDays,
+  User,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { weatherIconMap, DefaultWeatherIcon } from "@/lib/weather-icons";
+import { getActivePresetKey } from "@/lib/pacing-presets";
+import { useUiStore } from "@/store/ui-store";
 import type { WeatherData } from "@/lib/validation/schemas";
 
 interface TripSummaryProps {
@@ -13,6 +27,12 @@ interface TripSummaryProps {
   isProcessing?: boolean;
   estimatedBudgetMin?: number;
   estimatedBudgetMax?: number;
+  startDate: string | null;
+  endDate: string | null;
+  fatigueFactor: number;
+  elevationPenalty: number;
+  maxDistancePerDay: number;
+  averageSpeed: number;
 }
 
 export function TripSummary({
@@ -24,8 +44,17 @@ export function TripSummary({
   isProcessing,
   estimatedBudgetMin,
   estimatedBudgetMax,
+  startDate,
+  endDate,
+  fatigueFactor,
+  elevationPenalty,
+  maxDistancePerDay,
+  averageSpeed,
 }: TripSummaryProps) {
   const t = useTranslations("tripSummary");
+  const tPacing = useTranslations("pacing");
+  const locale = useLocale();
+  const openConfigPanelAt = useUiStore((s) => s.openConfigPanelAt);
   const showSkeleton =
     isProcessing && totalDistance === null && totalElevation === null;
 
@@ -36,20 +65,38 @@ export function TripSummary({
     ? (weatherIconMap[weather.icon] ?? DefaultWeatherIcon)
     : DefaultWeatherIcon;
 
+  const activePresetKey = getActivePresetKey(
+    maxDistancePerDay,
+    averageSpeed,
+    elevationPenalty,
+    fatigueFactor,
+  );
+
+  const profileLabel = activePresetKey
+    ? tPacing(`preset_${activePresetKey}`)
+    : t("customProfile");
+
+  const formatShortDate = (date: string) =>
+    dayjs(date).locale(locale).format("D MMM");
+
+  const datesDisplay =
+    startDate && endDate
+      ? `${formatShortDate(startDate)} → ${formatShortDate(endDate)}`
+      : startDate
+        ? formatShortDate(startDate)
+        : t("noDates");
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <Bike className="h-4 w-4 text-brand" />
           {totalDistance !== null ? (
-            <span>
-              {t("totalDistance")}{" "}
-              <span data-testid="total-distance">
-                {Math.round(totalDistance)}km
-              </span>
+            <span data-testid="total-distance">
+              {Math.round(totalDistance)}km
             </span>
           ) : (
-            <Skeleton className="w-24 h-4" />
+            <Skeleton className="w-16 h-4" />
           )}
         </div>
         <div className="flex items-center gap-1.5">
@@ -87,13 +134,37 @@ export function TripSummary({
           estimatedBudgetMax !== undefined &&
           (estimatedBudgetMin > 0 || estimatedBudgetMax > 0) && (
             <div className="flex items-center gap-1.5">
-              <Wallet className="h-4 w-4 text-green-600" />
+              <Euro className="h-4 w-4 text-green-600" />
               <span data-testid="estimated-budget">
-                {t("estimatedBudget")} {Math.round(estimatedBudgetMin)}€ —{" "}
+                {Math.round(estimatedBudgetMin)}€ —{" "}
                 {Math.round(estimatedBudgetMax)}€
               </span>
             </div>
           )}
+        {/* Force line break on mobile */}
+        <div className="basis-full h-0 md:hidden" aria-hidden="true" />
+        {/* Dates chip — clickable → opens ConfigPanel dates section */}
+        <button
+          type="button"
+          className="flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
+          onClick={() => openConfigPanelAt("dates")}
+          aria-label={t("datesLabel")}
+          data-testid="summary-dates"
+        >
+          <CalendarDays className="h-4 w-4 text-brand" />
+          <span>{datesDisplay}</span>
+        </button>
+        {/* Cyclo profile chip — clickable → opens ConfigPanel pacing section */}
+        <button
+          type="button"
+          className="flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
+          onClick={() => openConfigPanelAt("pacing")}
+          aria-label={t("profileLabel")}
+          data-testid="summary-profile"
+        >
+          <User className="h-4 w-4 text-brand" />
+          <span>{profileLabel}</span>
+        </button>
       </div>
       <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground/70">
         <Info className="h-3 w-3" />

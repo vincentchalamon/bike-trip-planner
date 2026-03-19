@@ -18,7 +18,11 @@
     "estimatedBudget": "Estimated budget:",
     "disclaimer": "Automatically detected data may contain errors.",
     "downloadGpx": "Download full trip GPX",
-    "downloadFailed": "Download failed. Please try again."
+    "downloadFailed": "Download failed. Please try again.",
+    "datesLabel": "Trip dates",
+    "noDates": "Dates not set",
+    "profileLabel": "Rider profile",
+    "customProfile": "Custom"
   },
   "tripTitle": {
     "fallback": "My Trip",
@@ -66,7 +70,11 @@
     "nextMonth": "Next month",
     "collapse": "Collapse calendar",
     "expand": "Expand calendar",
-    "ariaLabel": "Calendar"
+    "ariaLabel": "Calendar",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "selectRange": "Select",
+    "cancel": "Cancel"
   },
   "accommodation": {
     "type_hotel": "Hotel",
@@ -173,6 +181,7 @@
     "title": "Settings",
     "close": "Close settings",
     "open": "Open settings",
+    "datesTitle": "Dates",
     "pacingTitle": "Rider profile",
     "accommodationTitle": "Accommodation types",
     "themeTitle": "Theme",

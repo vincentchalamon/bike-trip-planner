@@ -1,47 +1,56 @@
 import { test, expect } from "../fixtures/base.fixture";
 import { routeParsedEvent } from "../fixtures/mock-data";
 
-test.describe("Calendar widget", () => {
-  test("shows calendar after trip creation", async ({
+test.describe("Date range picker in ConfigPanel", () => {
+  test("shows date range picker when config panel opens", async ({
     submitUrl,
     injectEvent,
     mockedPage,
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    // Open config panel
+    await mockedPage.getByTestId("config-open-button").click();
+    // Date range trigger should be visible inside the panel
     await expect(
-      mockedPage.getByRole("grid", { name: "Calendrier" }),
+      mockedPage.getByTestId("date-range-trigger"),
     ).toBeVisible();
   });
 
-  test("expand and collapse calendar", async ({
+  test("opens calendar popover on date trigger click", async ({
     submitUrl,
     injectEvent,
     mockedPage,
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
-    // Calendar should be visible
-    const calendar = mockedPage.getByRole("grid", { name: "Calendrier" });
-    await expect(calendar).toBeVisible();
-    // Click expand button
-    const expandButton = mockedPage.getByRole("button", {
-      name: "Développer le calendrier",
-    });
-    await expandButton.click();
-    // After expand, collapse button should be visible
+    // Open config panel
+    await mockedPage.getByTestId("config-open-button").click();
+    // Click date range trigger
+    await mockedPage.getByTestId("date-range-trigger").click();
+    // Calendar grid should appear in the popover
     await expect(
-      mockedPage.getByRole("button", { name: "Réduire le calendrier" }),
+      mockedPage.getByRole("grid").first(),
     ).toBeVisible();
-    // Click collapse
-    await mockedPage
-      .getByRole("button", { name: "Réduire le calendrier" })
-      .click();
-    // Expand button should reappear
+  });
+
+  test("clicking dates chip in summary opens config panel at dates section", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectEvent(routeParsedEvent());
+    // Click dates chip in summary
+    await mockedPage.getByTestId("summary-dates").click();
+    // Config panel should open
+    const configPanel = mockedPage.locator(
+      '[role="dialog"][aria-modal="true"]',
+    );
+    await expect(configPanel).toBeInViewport();
+    // Date range trigger should be visible
     await expect(
-      mockedPage.getByRole("button", {
-        name: "Développer le calendrier",
-      }),
+      mockedPage.getByTestId("date-range-trigger"),
     ).toBeVisible();
   });
 });

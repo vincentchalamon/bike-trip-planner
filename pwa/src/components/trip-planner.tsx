@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Settings, HelpCircle } from "lucide-react";
+import { Settings, HelpCircle, Loader2 } from "lucide-react";
 import { MagicLinkInput } from "@/components/magic-link-input";
 import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { TripSummary } from "@/components/trip-summary";
@@ -215,6 +215,51 @@ export function TripPlanner() {
     return () => observer.disconnect();
   }, [hasMap, viewMode]);
 
+  // Derive the 3 UI states
+  const isWelcome = !trip && !isProcessing;
+  const isLoading = !trip && isProcessing;
+
+  // Action buttons shared across all states
+  const actionButtons = (
+    <div className="flex items-center gap-1">
+      {trip && <TripDownloads tripId={trip.id} tripTitle={trip.title} />}
+      {trip && totalDistance !== null && (
+        <TextExportButton
+          title={trip.title}
+          totalDistance={totalDistance}
+          totalElevation={totalElevation}
+          totalElevationLoss={totalElevationLoss}
+          sourceUrl={trip.sourceUrl}
+          stages={stages}
+          startDate={startDate}
+        />
+      )}
+      <UndoRedoButtons />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9 cursor-pointer"
+        onClick={() => setHelpModalOpen(true)}
+        title={t("keyboardHelp.openButton")}
+        aria-label={t("keyboardHelp.openButton")}
+        data-testid="help-button"
+      >
+        <HelpCircle className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9 cursor-pointer"
+        onClick={() => setConfigPanelOpen(true)}
+        title={t("config.open")}
+        aria-label={t("config.open")}
+        data-testid="config-open-button"
+      >
+        <Settings className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
   return (
     <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative overflow-x-clip">
       {/* Skip link */}
@@ -225,198 +270,186 @@ export function TripPlanner() {
         {t("layout.skipToTimeline")}
       </a>
 
-      {/* Toolbar: magic link + GPX upload on first row, action buttons wrap to second row on mobile */}
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
-        <div className="flex-1 min-w-0">
-          <MagicLinkInput
-            onSubmit={handleMagicLink}
-            isProcessing={isProcessing}
-            disabled={false}
-          />
+      {/* === State 1: Welcome (no trip, not processing) === */}
+      {isWelcome && (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2 w-full max-w-2xl">
+            <div className="flex-1 min-w-0">
+              <MagicLinkInput
+                onSubmit={handleMagicLink}
+                isProcessing={false}
+                disabled={false}
+              />
+            </div>
+            <GpxUploadButton onUpload={handleGpxUpload} disabled={false} />
+          </div>
+          {actionButtons}
         </div>
-        <GpxUploadButton onUpload={handleGpxUpload} disabled={isProcessing} />
-        {/* Force line break on mobile after magic link + GPX upload */}
-        <div className="basis-full h-0 md:hidden" aria-hidden="true" />
-        {/* Action buttons — single instance, centered on mobile row */}
-        <div className="flex items-center gap-1 mx-auto md:mx-0">
-          {trip && <TripDownloads tripId={trip.id} tripTitle={trip.title} />}
-          {trip && totalDistance !== null && (
-            <TextExportButton
-              title={trip.title}
+      )}
+
+      {/* === State 2: Loading (URL submitted or GPX uploading) === */}
+      {isLoading && (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+          <Loader2 className="h-10 w-10 text-brand animate-spin" />
+          {actionButtons}
+        </div>
+      )}
+
+      {/* === State 3: Trip loaded === */}
+      {trip && (
+        <>
+          {/* Top bar: title + action buttons */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <div className="flex-1 min-w-0">
+              <TripHeader
+                title={trip.title}
+                onTitleChange={updateTitle}
+                showTitleSuggestion={totalDistance !== null}
+                isTitleLoading={isProcessing && totalDistance === null}
+              />
+            </div>
+            {actionButtons}
+          </div>
+
+          <div className="mt-8 space-y-8">
+            {/* Summary */}
+            <TripSummary
               totalDistance={totalDistance}
               totalElevation={totalElevation}
               totalElevationLoss={totalElevationLoss}
-              sourceUrl={trip.sourceUrl}
-              stages={stages}
+              weather={firstWeather}
+              isWeatherLoading={isWeatherLoading}
+              isProcessing={isProcessing}
+              estimatedBudgetMin={estimatedBudget.min}
+              estimatedBudgetMax={estimatedBudget.max}
               startDate={startDate}
+              endDate={endDate}
+              fatigueFactor={fatigueFactor}
+              elevationPenalty={elevationPenalty}
+              maxDistancePerDay={maxDistancePerDay}
+              averageSpeed={averageSpeed}
             />
-          )}
-          <UndoRedoButtons />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 cursor-pointer"
-            onClick={() => setHelpModalOpen(true)}
-            title={t("keyboardHelp.openButton")}
-            aria-label={t("keyboardHelp.openButton")}
-            data-testid="help-button"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 cursor-pointer"
-            onClick={() => setConfigPanelOpen(true)}
-            title={t("config.open")}
-            aria-label={t("config.open")}
-            data-testid="config-open-button"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
 
-      {/* Trip content */}
-      {trip && (
-        <div className="mt-8 space-y-8">
-          {/* Summary */}
-          <TripSummary
-            totalDistance={totalDistance}
-            totalElevation={totalElevation}
-            totalElevationLoss={totalElevationLoss}
-            weather={firstWeather}
-            isWeatherLoading={isWeatherLoading}
-            isProcessing={isProcessing}
-            estimatedBudgetMin={estimatedBudget.min}
-            estimatedBudgetMax={estimatedBudget.max}
-          />
+            {/* Sentinel — marks the natural position of the progress bar in the
+                flow. The sticky bar becomes visible once this exits the viewport. */}
+            <div ref={sentinelRef} aria-hidden="true" />
 
-          {/* Header: title + locations + calendar */}
-          <TripHeader
-            title={trip.title}
-            onTitleChange={updateTitle}
-            startDate={startDate}
-            endDate={endDate}
-            onDatesChange={handleDatesChange}
-            showTitleSuggestion={totalDistance !== null}
-            isTitleLoading={isProcessing && totalDistance === null}
-          />
-
-          {/* Sentinel — marks the natural position of the progress bar in the
-              flow. The sticky bar becomes visible once this exits the viewport. */}
-          <div ref={sentinelRef} aria-hidden="true" />
-
-          {/* View mode toggle — only relevant when a map is available */}
-          {hasMap && (
-            <div className="flex justify-end">
-              <ViewModeToggle />
-            </div>
-          )}
-
-          {/* Fixed header — visible after scrolling past the sentinel.
-              Contains the segmented progress bar (timeline/split only) and
-              the view mode toggle (all modes), so both remain accessible
-              while the user is deep in the timeline. */}
-          <div
-            ref={fixedHeaderRef}
-            className={[
-              "fixed top-0 left-0 right-0 z-20 bg-background border-b border-border",
-              "transition-transform duration-200",
-              isScrolledPast ? "" : "-translate-y-full pointer-events-none",
-            ].join(" ")}
-          >
-            <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-2 flex flex-col gap-1">
-              {/* Progress bar — hidden in map-only mode */}
-              {(!hasMap || viewMode !== "map") && (
-                <div className="w-full">
-                  <StageProgressBar />
-                </div>
-              )}
-              {hasMap && (
-                <div className="flex justify-end">
-                  <ViewModeToggle testId="view-mode-toggle-sticky" />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Split view: timeline (left) + map (right, sticky) */}
-          {/* Swipe handlers enable left/right swipe between map and timeline on mobile */}
-          <div
-            className={[
-              "flex gap-8",
-              hasMap && viewMode === "split" ? "lg:flex-row flex-col" : "",
-            ].join(" ")}
-            {...(hasMap ? swipeHandlers : {})}
-            data-testid="split-view-container"
-          >
-            {/* Timeline — hidden in "map" mode (only when a map is available) */}
-            {(!hasMap || viewMode === "timeline" || viewMode === "split") && (
-              <div
-                id="timeline"
-                className={
-                  hasMap && viewMode === "split"
-                    ? "lg:flex-1 lg:min-w-0"
-                    : "w-full"
-                }
-              >
-                <Timeline
-                  stages={stages}
-                  startDate={startDate}
-                  isProcessing={isProcessing}
-                  onDeleteStage={handleDeleteStage}
-                  onAddStage={handleAddStage}
-                  onDistanceChange={handleDistanceChange}
-                  onAddAccommodation={handleAddAccommodation}
-                  onUpdateAccommodation={updateLocalAccommodation}
-                  onRemoveAccommodation={removeLocalAccommodation}
-                  onSelectAccommodation={handleSelectAccommodation}
-                  onDeselectAccommodation={handleDeselectAccommodation}
-                  onExpandAccommodationRadius={handleExpandAccommodationRadius}
-                  onInsertRestDay={handleInsertRestDay}
-                  onAddPoiWaypoint={handleAddPoiWaypoint}
-                  onAccommodationHover={handleAccommodationHover}
-                  newAccKey={newAccKey}
-                  onClearNewAcc={clearNewAccKey}
-                />
+            {/* View mode toggle — only relevant when a map is available */}
+            {hasMap && (
+              <div className="flex justify-end">
+                <ViewModeToggle />
               </div>
             )}
 
-            {/* Map panel — hidden in "timeline" mode; sticky on desktop */}
-            {hasMap && (viewMode === "map" || viewMode === "split") && (
-              <div
-                className={
-                  viewMode === "split" ? "lg:w-[520px] lg:shrink-0" : "w-full"
-                }
-              >
+            {/* Fixed header — visible after scrolling past the sentinel.
+                Contains the segmented progress bar (timeline/split only) and
+                the view mode toggle (all modes), so both remain accessible
+                while the user is deep in the timeline. */}
+            <div
+              ref={fixedHeaderRef}
+              className={[
+                "fixed top-0 left-0 right-0 z-20 bg-background border-b border-border",
+                "transition-transform duration-200",
+                isScrolledPast ? "" : "-translate-y-full pointer-events-none",
+              ].join(" ")}
+            >
+              <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-2 flex flex-col gap-1">
+                {/* Progress bar — hidden in map-only mode */}
+                {(!hasMap || viewMode !== "map") && (
+                  <div className="w-full">
+                    <StageProgressBar />
+                  </div>
+                )}
+                {hasMap && (
+                  <div className="flex justify-end">
+                    <ViewModeToggle testId="view-mode-toggle-sticky" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Split view: timeline (left) + map (right, sticky) */}
+            {/* Swipe handlers enable left/right swipe between map and timeline on mobile */}
+            <div
+              className={[
+                "flex gap-8",
+                hasMap && viewMode === "split" ? "lg:flex-row flex-col" : "",
+              ].join(" ")}
+              {...(hasMap ? swipeHandlers : {})}
+              data-testid="split-view-container"
+            >
+              {/* Timeline — hidden in "map" mode (only when a map is available) */}
+              {(!hasMap || viewMode === "timeline" || viewMode === "split") && (
                 <div
-                  className={viewMode === "split" ? "lg:sticky" : "sticky"}
-                  style={{
-                    top: isScrolledPast
-                      ? `${fixedHeaderHeight + 12}px`
-                      : "0.5rem",
-                    height: isScrolledPast
-                      ? `calc(100dvh - ${fixedHeaderHeight + 12}px)`
-                      : "calc(100dvh - 0.5rem)",
-                  }}
-                  data-testid="map-container"
-                  data-focused-stage={focusedMapStageIndex ?? ""}
+                  id="timeline"
+                  className={
+                    hasMap && viewMode === "split"
+                      ? "lg:flex-1 lg:min-w-0"
+                      : "w-full"
+                  }
                 >
-                  <MapPanel
-                    focusedStageIndex={focusedMapStageIndex}
-                    onStageClick={handleMapStageClick}
-                    onResetView={handleMapResetView}
+                  <Timeline
+                    stages={stages}
+                    startDate={startDate}
+                    isProcessing={isProcessing}
+                    onDeleteStage={handleDeleteStage}
+                    onAddStage={handleAddStage}
+                    onDistanceChange={handleDistanceChange}
+                    onAddAccommodation={handleAddAccommodation}
+                    onUpdateAccommodation={updateLocalAccommodation}
+                    onRemoveAccommodation={removeLocalAccommodation}
+                    onSelectAccommodation={handleSelectAccommodation}
+                    onDeselectAccommodation={handleDeselectAccommodation}
+                    onExpandAccommodationRadius={
+                      handleExpandAccommodationRadius
+                    }
+                    onInsertRestDay={handleInsertRestDay}
+                    onAddPoiWaypoint={handleAddPoiWaypoint}
+                    onAccommodationHover={handleAccommodationHover}
+                    newAccKey={newAccKey}
+                    onClearNewAcc={clearNewAccKey}
                   />
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Map panel — hidden in "timeline" mode; sticky on desktop */}
+              {hasMap && (viewMode === "map" || viewMode === "split") && (
+                <div
+                  className={
+                    viewMode === "split" ? "lg:w-[520px] lg:shrink-0" : "w-full"
+                  }
+                >
+                  <div
+                    className={viewMode === "split" ? "lg:sticky" : "sticky"}
+                    style={{
+                      top: isScrolledPast
+                        ? `${fixedHeaderHeight + 12}px`
+                        : "0.5rem",
+                      height: isScrolledPast
+                        ? `calc(100dvh - ${fixedHeaderHeight + 12}px)`
+                        : "calc(100dvh - 0.5rem)",
+                    }}
+                    data-testid="map-container"
+                    data-focused-stage={focusedMapStageIndex ?? ""}
+                  >
+                    <MapPanel
+                      focusedStageIndex={focusedMapStageIndex}
+                      onStageClick={handleMapStageClick}
+                      onResetView={handleMapResetView}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Configuration panel (sidebar drawer) */}
       <ConfigPanel
+        startDate={startDate}
+        endDate={endDate}
+        onDatesChange={handleDatesChange}
         fatigueFactor={fatigueFactor}
         elevationPenalty={elevationPenalty}
         maxDistancePerDay={maxDistancePerDay}
