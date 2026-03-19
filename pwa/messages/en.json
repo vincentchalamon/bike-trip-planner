@@ -242,6 +242,12 @@
     "step4Title": "Explore your stages",
     "step4Description": "Once your trip is loaded, stages appear in the <strong>timeline</strong>. Each stage shows distance, elevation, travel time, alerts, and accommodation suggestions. You can reorder, split, or add rest days as needed."
   },
+  "undoRedo": {
+    "undoTitle": "Undo (Ctrl+Z)",
+    "undoLabel": "Undo last action",
+    "redoTitle": "Redo (Ctrl+Y)",
+    "redoLabel": "Redo undone action"
+  },
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",

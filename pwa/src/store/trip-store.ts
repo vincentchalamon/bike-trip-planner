@@ -13,6 +13,7 @@ import type {
 } from "@/lib/validation/schemas";
 import type { AccommodationType } from "@/lib/accommodation-types";
 import { FILTERABLE_ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
+import { createTemporalStore } from "@/store/temporal-middleware";
 
 interface TripIdentity {
   id: string;
@@ -83,7 +84,12 @@ interface TripState {
   deselectAccommodation: (stageIndex: number) => void;
   updateTitle: (title: string) => void;
   updateDates: (startDate: string | null, endDate: string | null) => void;
-  updatePacingSettings: (
+  /** Internal setter — updates dates WITHOUT pushing to the undo history. */
+  updateDatesInternal: (
+    startDate: string | null,
+    endDate: string | null,
+  ) => void;
+  updatePacingSettingsInternal: (
     fatigueFactor: number,
     elevationPenalty: number,
     maxDistancePerDay: number,
@@ -95,6 +101,8 @@ interface TripState {
   setComputationStatus: (status: Record<string, string>) => void;
   deleteStage: (stageIndex: number) => void;
   insertRestDay: (afterIndex: number) => void;
+  /** Optimistically inserts a stage placeholder at `afterIndex + 1`. Undoable. */
+  insertStagePlaceholder: (afterIndex: number, placeholder: StageData) => void;
   updateStageAfterRouteRecalculation: (
     stageIndex: number,
     data: {
@@ -128,6 +136,46 @@ const initialState = {
 };
 
 /**
+ * The undoable slice of the trip store — the fields that users can accidentally
+ * mutate and want to recover via Ctrl+Z.  Derived/computed fields (weather,
+ * alerts, POIs, supply timelines, computationStatus) are intentionally excluded
+ * because they are populated asynchronously by the backend and do not represent
+ * intentional user actions.
+ */
+export interface UndoableSlice {
+  stages: StageData[];
+  startDate: string | null;
+  endDate: string | null;
+  fatigueFactor: number;
+  elevationPenalty: number;
+  maxDistancePerDay: number;
+  averageSpeed: number;
+}
+
+export function getUndoableSlice(state: {
+  stages: StageData[];
+  startDate: string | null;
+  endDate: string | null;
+  fatigueFactor: number;
+  elevationPenalty: number;
+  maxDistancePerDay: number;
+  averageSpeed: number;
+}): UndoableSlice {
+  // Deep clone via JSON to ensure Immer draft proxies are not captured.
+  return JSON.parse(
+    JSON.stringify({
+      stages: state.stages,
+      startDate: state.startDate,
+      endDate: state.endDate,
+      fatigueFactor: state.fatigueFactor,
+      elevationPenalty: state.elevationPenalty,
+      maxDistancePerDay: state.maxDistancePerDay,
+      averageSpeed: state.averageSpeed,
+    }),
+  ) as UndoableSlice;
+}
+
+/**
  * Central Zustand store for all trip-related state (local-first, in-memory).
  *
  * Holds the trip identity, route metadata, stages, and per-stage derived data
@@ -148,6 +196,12 @@ const initialState = {
  *
  * **Lifecycle:** `clearTrip()` resets all state to initial values. There is
  * no persistence layer — data lives only in memory for the current session.
+ *
+ * **Undo/Redo:** User-facing mutations (stage add/delete, distance change,
+ * date update, pacing adjustment) push a snapshot of {@link UndoableSlice}
+ * onto the temporal history before applying the mutation.  The companion
+ * {@link useTripTemporalStore} exposes `undo()`, `redo()`, `canUndo`, and
+ * `canRedo`.
  */
 export const useTripStore = create<TripState>()(
   immer((set) => ({
@@ -278,13 +332,24 @@ export const useTripStore = create<TripState>()(
         if (state.trip) state.trip.title = title;
       }),
 
-    updateDates: (startDate, endDate) =>
+    updateDates: (startDate, endDate) => {
+      // Push snapshot before mutation so the user can undo date changes.
+      useTripTemporalStore
+        .getState()
+        ._push(getUndoableSlice(useTripStore.getState()));
+      set((state) => {
+        state.startDate = startDate;
+        state.endDate = endDate;
+      });
+    },
+
+    updateDatesInternal: (startDate, endDate) =>
       set((state) => {
         state.startDate = startDate;
         state.endDate = endDate;
       }),
 
-    updatePacingSettings: (
+    updatePacingSettingsInternal: (
       fatigueFactor,
       elevationPenalty,
       maxDistancePerDay,
@@ -317,15 +382,24 @@ export const useTripStore = create<TripState>()(
         state.computationStatus = status;
       }),
 
-    deleteStage: (stageIndex) =>
+    deleteStage: (stageIndex) => {
+      // Push snapshot before deletion so the user can undo accidental removal.
+      useTripTemporalStore
+        .getState()
+        ._push(getUndoableSlice(useTripStore.getState()));
       set((state) => {
         state.stages.splice(stageIndex, 1);
         state.stages.forEach((s, i) => {
           s.dayNumber = i + 1;
         });
-      }),
+      });
+    },
 
-    insertRestDay: (afterIndex) =>
+    insertRestDay: (afterIndex) => {
+      // Push snapshot before insertion so the user can undo rest-day addition.
+      useTripTemporalStore
+        .getState()
+        ._push(getUndoableSlice(useTripStore.getState()));
       set((state) => {
         const afterStage = state.stages[afterIndex];
         if (!afterStage) return;
@@ -354,7 +428,21 @@ export const useTripStore = create<TripState>()(
         state.stages.forEach((s, i) => {
           s.dayNumber = i + 1;
         });
-      }),
+      });
+    },
+
+    insertStagePlaceholder: (afterIndex, placeholder) => {
+      // Push snapshot before insertion so the user can undo stage addition.
+      useTripTemporalStore
+        .getState()
+        ._push(getUndoableSlice(useTripStore.getState()));
+      set((state) => {
+        state.stages.splice(afterIndex + 1, 0, placeholder);
+        state.stages.forEach((s, i) => {
+          s.dayNumber = i + 1;
+        });
+      });
+    },
 
     updateStageAfterRouteRecalculation: (stageIndex, data) =>
       set((state) => {
@@ -365,9 +453,42 @@ export const useTripStore = create<TripState>()(
         stage.geometry = data.coordinates;
       }),
 
-    clearTrip: () =>
+    clearTrip: () => {
+      // Clear undo/redo history when starting a fresh trip — history from a
+      // previous trip session is no longer meaningful.
+      useTripTemporalStore.getState().clear();
       set((state) => {
         Object.assign(state, initialState);
-      }),
+      });
+    },
   })),
+);
+
+/**
+ * Companion temporal store that provides undo/redo for the trip store.
+ *
+ * Tracks the {@link UndoableSlice} (stages, dates, pacing settings).
+ * Mutations that should be undoable push a snapshot via `_push()` before
+ * applying their change.  `undo()` restores the previous snapshot by calling
+ * `setStages` / updating individual fields on the trip store.
+ */
+export const useTripTemporalStore = createTemporalStore(
+  // Read the current undoable slice from the trip store.
+  () => getUndoableSlice(useTripStore.getState()),
+  // Restore a snapshot into the trip store via internal store actions
+  // (which go through the Immer-wrapped `set`) to maintain state integrity.
+  (snapshot) => {
+    const s = snapshot as UndoableSlice;
+    const store = useTripStore.getState();
+    store.setStages(s.stages);
+    // Use individual actions so that Immer processes each mutation correctly.
+    // Use the Internal variants to avoid re-pushing to the undo history.
+    store.updateDatesInternal(s.startDate, s.endDate);
+    store.updatePacingSettingsInternal(
+      s.fatigueFactor,
+      s.elevationPenalty,
+      s.maxDistancePerDay,
+      s.averageSpeed,
+    );
+  },
 );

@@ -242,6 +242,12 @@
     "step4Title": "Explorez vos étapes",
     "step4Description": "Une fois votre voyage chargé, les étapes apparaissent dans la <strong>timeline</strong>. Chaque étape affiche distance, dénivelé, temps de trajet, alertes et suggestions d'hébergements. Vous pouvez réordonner, fractionner ou insérer des jours de repos."
   },
+  "undoRedo": {
+    "undoTitle": "Annuler (Ctrl+Z)",
+    "undoLabel": "Annuler la dernière action",
+    "redoTitle": "Rétablir (Ctrl+Y)",
+    "redoLabel": "Rétablir l'action annulée"
+  },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",

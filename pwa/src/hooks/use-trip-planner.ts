@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { useTripStore } from "@/store/trip-store";
+import {
+  useTripStore,
+  useTripTemporalStore,
+  getUndoableSlice,
+} from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useMercure } from "@/hooks/use-mercure";
 import {
@@ -52,6 +56,7 @@ export function useTripPlanner() {
   );
   const deleteStage = useTripStore((s) => s.deleteStage);
   const insertRestDay = useTripStore((s) => s.insertRestDay);
+  const insertStagePlaceholder = useTripStore((s) => s.insertStagePlaceholder);
   const fatigueFactor = useTripStore((s) => s.fatigueFactor);
   const elevationPenalty = useTripStore((s) => s.elevationPenalty);
   const maxDistancePerDay = useTripStore((s) => s.maxDistancePerDay);
@@ -62,7 +67,10 @@ export function useTripPlanner() {
   const enabledAccommodationTypes = useTripStore(
     (s) => s.enabledAccommodationTypes,
   );
-  const updatePacingSettings = useTripStore((s) => s.updatePacingSettings);
+  const updatePacingSettingsInternal = useTripStore(
+    (s) => s.updatePacingSettingsInternal,
+  );
+  const updateDatesInternal = useTripStore((s) => s.updateDatesInternal);
   const setEbikeMode = useTripStore((s) => s.setEbikeMode);
   const setEnabledAccommodationTypes = useTripStore(
     (s) => s.setEnabledAccommodationTypes,
@@ -75,6 +83,9 @@ export function useTripPlanner() {
   );
 
   const [newAccKey, setNewAccKey] = useState<string | null>(null);
+  const preDragPacingSnapshot = useRef<ReturnType<
+    typeof getUndoableSlice
+  > | null>(null);
 
   const tripId = trip?.id ?? null;
   useMercure(tripId);
@@ -109,7 +120,7 @@ export function useTripPlanner() {
       }
 
       if (!startDate) {
-        updateDates(today, null);
+        updateDatesInternal(today, null);
       }
 
       setTrip({
@@ -153,7 +164,7 @@ export function useTripPlanner() {
       }
 
       if (!startDate) {
-        updateDates(today, null);
+        updateDatesInternal(today, null);
       }
 
       setTrip({
@@ -225,6 +236,7 @@ export function useTripPlanner() {
       if (error) {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
+        useTripTemporalStore.getState()._pop();
         useTripStore.getState().setStages(snapshot);
       } else {
         setProcessing(true);
@@ -232,6 +244,7 @@ export function useTripPlanner() {
       }
     } catch {
       toast.error(t("errors.failedDeleteStage"));
+      useTripTemporalStore.getState()._pop();
       useTripStore.getState().setStages(snapshot);
     }
   }
@@ -254,12 +267,14 @@ export function useTripPlanner() {
       );
       if (!response.ok) {
         toast.error(t("errors.failedInsertRestDay"));
+        useTripTemporalStore.getState()._pop();
         useTripStore.getState().setStages(snapshot);
       } else {
         setProcessing(true);
       }
     } catch {
       toast.error(t("errors.failedInsertRestDay"));
+      useTripTemporalStore.getState()._pop();
       useTripStore.getState().setStages(snapshot);
     }
   }
@@ -304,12 +319,8 @@ export function useTripPlanner() {
       supplyTimeline: [],
       isRestDay: false,
     };
-    const updatedStages = stages.map((s) => ({ ...s }));
-    updatedStages.splice(afterIndex + 1, 0, placeholder);
-    updatedStages.forEach((s, i) => {
-      s.dayNumber = i + 1;
-    });
-    useTripStore.getState().setStages(updatedStages);
+    // insertStagePlaceholder pushes an undo snapshot internally before mutating.
+    insertStagePlaceholder(afterIndex, placeholder);
 
     try {
       const { error, response } = await apiClient.POST(
@@ -322,6 +333,7 @@ export function useTripPlanner() {
       if (error) {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
+        useTripTemporalStore.getState()._pop();
         useTripStore.getState().setStages(stages);
       } else {
         setProcessing(true);
@@ -329,12 +341,16 @@ export function useTripPlanner() {
       }
     } catch {
       toast.error(t("errors.failedAddStage"));
+      useTripTemporalStore.getState()._pop();
       useTripStore.getState().setStages(stages);
     }
   }
 
   async function handleDistanceChange(index: number, distance: number) {
     if (!tripId) return;
+
+    // Capture state before the mutation so we can push it on success.
+    const snapshot = getUndoableSlice(useTripStore.getState());
 
     try {
       const { error, response } = await apiClient.PATCH(
@@ -349,6 +365,8 @@ export function useTripPlanner() {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
       } else {
+        // Push snapshot only after a successful PATCH to avoid phantom undo entries
+        useTripTemporalStore.getState()._push(snapshot);
         setProcessing(true);
         setAccommodationScanning(true);
       }
@@ -397,13 +415,40 @@ export function useTripPlanner() {
     }
   }
 
-  async function handlePacingChange(
+  function handlePacingChange(
     newFatigue: number,
     newElevation: number,
     newMaxDistance: number,
     newAverageSpeed: number,
   ) {
-    updatePacingSettings(
+    // Capture the pre-drag snapshot on the very first onChange of each gesture,
+    // before any live-preview mutation touches the store.
+    if (preDragPacingSnapshot.current === null) {
+      preDragPacingSnapshot.current = getUndoableSlice(useTripStore.getState());
+    }
+    updatePacingSettingsInternal(
+      newFatigue,
+      newElevation,
+      newMaxDistance,
+      newAverageSpeed,
+    );
+  }
+
+  async function handlePacingCommit(
+    newFatigue: number,
+    newElevation: number,
+    newMaxDistance: number,
+    newAverageSpeed: number,
+  ) {
+    // Push the pre-drag snapshot so Ctrl+Z restores the value before the gesture.
+    // For preset button clicks (no preceding onChange) fall back to current state,
+    // which is still the pre-change value since updatePacingSettingsInternal runs after.
+    const snapshot =
+      preDragPacingSnapshot.current ??
+      getUndoableSlice(useTripStore.getState());
+    preDragPacingSnapshot.current = null;
+    useTripTemporalStore.getState()._push(snapshot);
+    updatePacingSettingsInternal(
       newFatigue,
       newElevation,
       newMaxDistance,
@@ -691,6 +736,7 @@ export function useTripPlanner() {
     handleAddStage,
     handleDistanceChange,
     handlePacingChange,
+    handlePacingCommit,
     handleEbikeModeChange,
     handleDepartureHourChange,
     handleAddAccommodation,
