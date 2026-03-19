@@ -6,7 +6,7 @@
   },
   "magicLink": {
     "placeholder": "Enter your Komoot link here...",
-    "ariaLabel": "Komoot or Google My Maps URL",
+    "ariaLabel": "Komoot URL",
     "invalidUrl": "Please enter a valid URL."
   },
   "gpxUpload": {
@@ -234,7 +234,7 @@
     "prevBtn": "Back",
     "doneBtn": "Get started",
     "step1Title": "Paste your route link",
-    "step1Description": "Copy a link from <strong>Komoot</strong> (tour or collection) or <strong>Google My Maps</strong> and paste it here. Your trip will be computed automatically.",
+    "step1Description": "Copy a link from <strong>Komoot</strong> (tour or collection) and paste it here. Your trip will be computed automatically.",
     "step2Title": "Or upload a GPX file",
     "step2Description": "Already have a GPX file? Click this button to import it directly and plan your trip from existing route data.",
     "step3Title": "Configure your rider profile",

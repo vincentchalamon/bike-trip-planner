@@ -32,6 +32,6 @@ final readonly class RouteFetcherRegistry implements RouteFetcherRegistryInterfa
             }
         }
 
-        throw new \RuntimeException('No route fetcher supports the provided URL. Supported formats: Komoot Tour, Komoot Collection, Google My Maps.');
+        throw new \RuntimeException('No route fetcher supports the provided URL. Supported formats: Komoot Tour, Komoot Collection.');
     }
 }

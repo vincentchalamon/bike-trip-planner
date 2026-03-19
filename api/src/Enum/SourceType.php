@@ -8,6 +8,5 @@ enum SourceType: string
 {
     case KOMOOT_TOUR = 'komoot_tour';
     case KOMOOT_COLLECTION = 'komoot_collection';
-    case GOOGLE_MYMAPS = 'google_mymaps';
-    case GPX_UPLOAD = 'gpx_upload';
+case GPX_UPLOAD = 'gpx_upload';
 }

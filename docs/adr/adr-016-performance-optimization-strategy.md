@@ -164,7 +164,7 @@ ROUTE ──┬── STAGES ──── [7 leaves] (Overpass queries → insta
 
 ---
 
-### Option D: Route Fetch Caching (Komoot/Google)
+### Option D: Route Fetch Caching (Komoot)
 
 **Principle:** Add a Redis cache layer on parsed route data (`RouteFetchResult`), keyed by normalized source URL, with 24h TTL.
 
@@ -174,7 +174,6 @@ ROUTE ──┬── STAGES ──── [7 leaves] (Overpass queries → insta
 
 * Tour: `route_fetch.komoot_tour.{tourId}`
 * Collection: `route_fetch.komoot_collection.{collectionId}`
-* Google MyMaps: `route_fetch.google_mymaps.{mapId}`
 
 **Expected improvement:** 150ms-3s on repeat submissions. Especially impactful for collections (N tours cached individually).
 
@@ -185,7 +184,6 @@ ROUTE ──┬── STAGES ──── [7 leaves] (Overpass queries → insta
 * `api/config/packages/cache.php` — add `cache.route_fetch` pool (Redis, 86400s TTL)
 * `api/src/RouteFetcher/KomootTourRouteFetcher.php` — cache wrapper
 * `api/src/RouteFetcher/KomootCollectionRouteFetcher.php` — cache per individual tour
-* `api/src/RouteFetcher/GoogleMyMapsRouteFetcher.php` — cache wrapper
 
 ---
 
