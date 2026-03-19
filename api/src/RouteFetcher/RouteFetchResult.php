@@ -10,7 +10,7 @@ use App\Enum\SourceType;
 final readonly class RouteFetchResult
 {
     /**
-     * @param list<list<Coordinate>> $tracks 1 track for Tour/MyMaps, N tracks for Collection (1 per tour = 1 stage)
+     * @param list<list<Coordinate>> $tracks 1 track for Tour, N tracks for Collection (1 per tour = 1 stage)
      */
     public function __construct(
         public SourceType $sourceType,

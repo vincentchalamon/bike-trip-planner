@@ -6,7 +6,7 @@
   },
   "magicLink": {
     "placeholder": "Collez votre lien Komoot ici...",
-    "ariaLabel": "URL Komoot ou Google My Maps",
+    "ariaLabel": "URL Komoot",
     "invalidUrl": "Veuillez entrer une URL valide."
   },
   "gpxUpload": {
@@ -234,7 +234,7 @@
     "prevBtn": "Précédent",
     "doneBtn": "Commencer",
     "step1Title": "Collez votre lien d'itinéraire",
-    "step1Description": "Copiez un lien depuis <strong>Komoot</strong> (tour ou collection) ou <strong>Google My Maps</strong> et collez-le ici. Votre voyage sera calculé automatiquement.",
+    "step1Description": "Copiez un lien depuis <strong>Komoot</strong> (tour ou collection) et collez-le ici. Votre voyage sera calculé automatiquement.",
     "step2Title": "Ou importez un fichier GPX",
     "step2Description": "Vous avez déjà un fichier GPX ? Cliquez sur ce bouton pour l'importer directement et planifier votre voyage depuis vos données d'itinéraire existantes.",
     "step3Title": "Configurez votre profil cyclo",

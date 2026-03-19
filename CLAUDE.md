@@ -91,7 +91,6 @@ Backend PHP DTOs define the schema → API Platform exports OpenAPI spec → `np
 - Supported source URLs (Strategy pattern via `RouteFetcherRegistry`):
   - Komoot tour: `^https://www\.komoot\.com/([a-z]{2}-[a-z]{2}/)?tour/\d+`
   - Komoot collection: `^https://www\.komoot\.com/([a-z]{2}-[a-z]{2}/)?collection/\d+`
-  - Google MyMaps: `^https://www\.google\.com/maps/d/` and `^https://maps\.app\.goo\.gl/`
 - HTTP clients scoped to specific base URIs, max 2 redirects, 10s timeout
 - XMLReader hardened with `LIBXML_NONET` + `LIBXML_NOENT` (XXE prevention)
 - Upload limits: 15MB (Caddy + PHP), 128MB PHP memory limit

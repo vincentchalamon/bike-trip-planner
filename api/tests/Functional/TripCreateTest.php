@@ -75,42 +75,6 @@ final class TripCreateTest extends ApiTestCase
     }
 
     #[Test]
-    public function createTripWithGoogleMyMapsUrl(): void
-    {
-        $response = self::createClient()->request('POST', '/trips', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => [
-                'sourceUrl' => 'https://www.google.com/maps/d/viewer?mid=abc123',
-            ],
-        ]);
-
-        $this->assertResponseStatusCodeSame(202);
-        $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
-
-        $data = $response->toArray(false);
-        $this->assertNotEmpty($data['id']);
-        $this->assertSame('Trip', $data['@type']);
-    }
-
-    #[Test]
-    public function createTripWithMapsShortUrl(): void
-    {
-        $response = self::createClient()->request('POST', '/trips', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => [
-                'sourceUrl' => 'https://maps.app.goo.gl/abc123xyz',
-            ],
-        ]);
-
-        $this->assertResponseStatusCodeSame(202);
-        $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/trip-schema.json'));
-
-        $data = $response->toArray(false);
-        $this->assertNotEmpty($data['id']);
-        $this->assertSame('Trip', $data['@type']);
-    }
-
-    #[Test]
     public function createTripWithAllOptionalFields(): void
     {
         $response = self::createClient()->request('POST', '/trips', [

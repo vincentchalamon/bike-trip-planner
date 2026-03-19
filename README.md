@@ -6,7 +6,7 @@ A local-first bikepacking trip planner. Paste a Komoot tour URL, get a structure
 
 ## What it does
 
-- **Magic Link ingestion** — Provide a Komoot tour/collection URL or Google MyMaps link; the backend fetches the route, parses elevation data, and computes a full trip plan asynchronously.
+- **Magic Link ingestion** — Provide a Komoot tour/collection URL; the backend fetches the route, parses elevation data, and computes a full trip plan asynchronously.
 - **Pacing engine** — Distributes distance across days accounting for cumulative fatigue and elevation gain, with a configurable minimum daily threshold.
 - **Alert engine** — Rule-based system with three severity levels (`critical`, `warning`, `nudge`) covering continuity gaps, elevation, steep gradients, surface type, traffic danger, and e-bike range. See [Alert engine](#alert-engine) for the full rule catalogue.
 - **Accommodation scanner** — Queries OpenStreetMap Overpass for bivouac spots, refuges, and gîtes near each stage end, with heuristic pricing.

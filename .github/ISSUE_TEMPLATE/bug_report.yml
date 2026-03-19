@@ -47,7 +47,7 @@ body:
     id: source-url
     attributes:
       label: Source URL used
-      description: The Komoot/MyMaps URL that triggered the issue (if applicable).
+      description: The Komoot URL that triggered the issue (if applicable).
       placeholder: https://www.komoot.com/tour/...
 
   - type: dropdown

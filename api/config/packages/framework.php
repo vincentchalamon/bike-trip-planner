@@ -41,11 +41,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'base_uri' => 'https://api.open-meteo.com',
                     'timeout' => 10,
                 ],
-                'google_mymaps.client' => [
-                    'base_uri' => 'https://www.google.com',
-                    'max_redirects' => 5,
-                    'timeout' => 15,
-                ],
                 'routing.client' => [
                     'base_uri' => 'http://valhalla:8002',
                     'timeout' => 5,

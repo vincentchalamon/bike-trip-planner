@@ -11,7 +11,7 @@ import { useOnboarding } from "@/hooks/use-onboarding";
  *
  * On first visit (no localStorage flag), automatically starts a 4-step
  * driver.js tour that walks the user through the core workflow:
- *   1. Paste a Komoot / Google MyMaps link
+ *   1. Paste a Komoot link
  *   2. Upload a GPX file (alternative input)
  *   3. Configure the rider profile (pacing / fatigue)
  *   4. Read stages in the timeline (shown after a trip loads)
