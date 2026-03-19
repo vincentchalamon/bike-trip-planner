@@ -225,58 +225,20 @@ export function TripPlanner() {
         {t("layout.skipToTimeline")}
       </a>
 
-      {/* Toolbar: magic link + GPX upload, then action buttons */}
-      <div className="space-y-2 md:space-y-0">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            <MagicLinkInput
-              onSubmit={handleMagicLink}
-              isProcessing={isProcessing}
-              disabled={false}
-            />
-          </div>
-          <GpxUploadButton onUpload={handleGpxUpload} disabled={isProcessing} />
-          {/* Action buttons — inline on desktop, second row on mobile */}
-          <div className="hidden md:flex items-center gap-1">
-            {trip && <TripDownloads tripId={trip.id} tripTitle={trip.title} />}
-            {trip && totalDistance !== null && (
-              <TextExportButton
-                title={trip.title}
-                totalDistance={totalDistance}
-                totalElevation={totalElevation}
-                totalElevationLoss={totalElevationLoss}
-                sourceUrl={trip.sourceUrl}
-                stages={stages}
-                startDate={startDate}
-              />
-            )}
-            <UndoRedoButtons />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 cursor-pointer"
-              onClick={() => setHelpModalOpen(true)}
-              title={t("keyboardHelp.openButton")}
-              aria-label={t("keyboardHelp.openButton")}
-              data-testid="help-button"
-            >
-              <HelpCircle className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 cursor-pointer"
-              onClick={() => setConfigPanelOpen(true)}
-              title={t("config.open")}
-              aria-label={t("config.open")}
-              data-testid="config-open-button"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-          </div>
+      {/* Toolbar: magic link + GPX upload on first row, action buttons wrap to second row on mobile */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+        <div className="flex-1 min-w-0">
+          <MagicLinkInput
+            onSubmit={handleMagicLink}
+            isProcessing={isProcessing}
+            disabled={false}
+          />
         </div>
-        {/* Action buttons — second row on mobile only */}
-        <div className="flex items-center justify-center gap-1 md:hidden">
+        <GpxUploadButton onUpload={handleGpxUpload} disabled={isProcessing} />
+        {/* Force line break on mobile after magic link + GPX upload */}
+        <div className="basis-full h-0 md:hidden" aria-hidden="true" />
+        {/* Action buttons — single instance, centered on mobile row */}
+        <div className="flex items-center gap-1 mx-auto md:mx-0">
           {trip && <TripDownloads tripId={trip.id} tripTitle={trip.title} />}
           {trip && totalDistance !== null && (
             <TextExportButton
@@ -297,6 +259,7 @@ export function TripPlanner() {
             onClick={() => setHelpModalOpen(true)}
             title={t("keyboardHelp.openButton")}
             aria-label={t("keyboardHelp.openButton")}
+            data-testid="help-button"
           >
             <HelpCircle className="h-4 w-4" />
           </Button>
@@ -307,6 +270,7 @@ export function TripPlanner() {
             onClick={() => setConfigPanelOpen(true)}
             title={t("config.open")}
             aria-label={t("config.open")}
+            data-testid="config-open-button"
           >
             <Settings className="h-4 w-4" />
           </Button>
