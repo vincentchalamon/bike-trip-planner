@@ -298,9 +298,9 @@ export function TripPlanner() {
       {/* === State 3: Trip loaded === */}
       {trip && (
         <>
-          {/* Top bar: title + action buttons */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <div className="flex-1 min-w-0">
+          {/* Top bar: title on first row, action buttons on second row */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+            <div className="basis-full min-w-0">
               <TripHeader
                 title={trip.title}
                 onTitleChange={updateTitle}
@@ -308,6 +308,8 @@ export function TripPlanner() {
                 isTitleLoading={isProcessing && totalDistance === null}
               />
             </div>
+            {/* Force line break on mobile after title */}
+            <div className="basis-full h-0 md:hidden" aria-hidden="true" />
             {actionButtons}
           </div>
 

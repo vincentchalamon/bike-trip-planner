@@ -263,7 +263,7 @@ export function DateRangePicker({
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto p-4 max-w-[95vw]"
+        className="w-[var(--radix-popover-trigger-width)] p-4"
         align="start"
         sideOffset={8}
       >
