@@ -220,8 +220,8 @@ export function TripPlanner() {
         {t("layout.skipToTimeline")}
       </a>
 
-      {/* Toolbar: magic link + GPX upload + undo/redo + config button */}
-      <div className="flex items-center gap-2">
+      {/* Toolbar: magic link + GPX upload on first row, action buttons on second row (mobile) */}
+      <div className="flex flex-wrap items-center gap-2">
         <div className="flex-1 min-w-0">
           <MagicLinkInput
             onSubmit={handleMagicLink}
@@ -230,29 +230,31 @@ export function TripPlanner() {
           />
         </div>
         <GpxUploadButton onUpload={handleGpxUpload} disabled={isProcessing} />
-        <UndoRedoButtons />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 cursor-pointer"
-          onClick={() => setHelpModalOpen(true)}
-          title={t("keyboardHelp.openButton")}
-          aria-label={t("keyboardHelp.openButton")}
-          data-testid="help-button"
-        >
-          <HelpCircle className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 cursor-pointer"
-          onClick={() => setConfigPanelOpen(true)}
-          title={t("config.open")}
-          aria-label={t("config.open")}
-          data-testid="config-open-button"
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1 ml-auto">
+          <UndoRedoButtons />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 cursor-pointer"
+            onClick={() => setHelpModalOpen(true)}
+            title={t("keyboardHelp.openButton")}
+            aria-label={t("keyboardHelp.openButton")}
+            data-testid="help-button"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 cursor-pointer"
+            onClick={() => setConfigPanelOpen(true)}
+            title={t("config.open")}
+            aria-label={t("config.open")}
+            data-testid="config-open-button"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Trip content */}

@@ -38,7 +38,7 @@ export function TripSummary({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <Bike className="h-4 w-4 text-brand" />
           {totalDistance !== null ? (
@@ -68,6 +68,8 @@ export function TripSummary({
             <Skeleton className="w-24 h-4" />
           )}
         </div>
+        {/* Force line break on mobile after distance+elevation */}
+        <div className="basis-full h-0 md:hidden" aria-hidden="true" />
         <div className="flex items-center gap-1.5">
           {weather ? (
             <>
