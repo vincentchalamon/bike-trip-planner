@@ -191,18 +191,21 @@ export function TripPlanner() {
   }, [hasTripData]);
 
   // Track the fixed header height so the sticky map can offset accordingly.
+  // Uses both a state (for React re-renders) and a CSS custom property on <html>
+  // (for immediate style updates without waiting for a React render cycle).
   useEffect(() => {
     const el = fixedHeaderRef.current;
     if (!el) return;
+    const update = (h: number) => {
+      setFixedHeaderHeight(h);
+      document.documentElement.style.setProperty("--fixed-header-h", `${h}px`);
+    };
     const observer = new ResizeObserver(([entry]) => {
-      setFixedHeaderHeight(
-        entry?.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight,
-      );
+      update(entry?.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight);
     });
     observer.observe(el);
-    // Seed the height synchronously so that the map offset is correct on the
-    // very first scroll that triggers isScrolledPast, before ResizeObserver fires.
-    setFixedHeaderHeight(el.offsetHeight);
+    // Seed synchronously so the map offset is correct on the very first scroll.
+    update(el.offsetHeight);
     return () => observer.disconnect();
   }, []);
 
@@ -380,8 +383,10 @@ export function TripPlanner() {
                 <div
                   className={viewMode === "split" ? "lg:sticky" : "sticky"}
                   style={{
-                    top: isScrolledPast ? `${fixedHeaderHeight + 8}px` : "1rem",
-                    height: `calc(100vh - ${isScrolledPast ? fixedHeaderHeight + 8 : 16}px)`,
+                    top: isScrolledPast
+                      ? `${fixedHeaderHeight + 16}px`
+                      : "1rem",
+                    height: `calc(100vh - ${isScrolledPast ? fixedHeaderHeight + 16 : 16}px)`,
                   }}
                   data-testid="map-container"
                   data-focused-stage={focusedMapStageIndex ?? ""}
