@@ -95,7 +95,9 @@ test.describe("GPX upload flow", () => {
     ).toBeVisible({ timeout: 5000 });
   });
 
-  test("drag & drop: overlay appears on drag enter", async ({ mockedPage }) => {
+  test("drag & drop: overlay appears on drag enter and disappears on drag leave", async ({
+    mockedPage,
+  }) => {
     await mockedPage.evaluate(() => {
       const dt = new DataTransfer();
       dt.items.add(
@@ -111,6 +113,41 @@ test.describe("GPX upload flow", () => {
     await expect(
       mockedPage.getByText("Déposez votre fichier GPX ici"),
     ).toBeVisible();
+
+    // Drag leave hides overlay
+    await mockedPage.evaluate(() => {
+      window.dispatchEvent(
+        new DragEvent("dragleave", { bubbles: true }),
+      );
+    });
+
+    await expect(
+      mockedPage.getByText("Déposez votre fichier GPX ici"),
+    ).not.toBeVisible();
+  });
+
+  test("drag & drop: non-GPX file drop is silently ignored", async ({
+    mockedPage,
+  }) => {
+    let uploadCalled = false;
+    await mockedPage.route("**/trips/gpx-upload", (route) => {
+      uploadCalled = true;
+      return route.abort();
+    });
+
+    await mockedPage.evaluate(() => {
+      const dt = new DataTransfer();
+      dt.items.add(
+        new File(["not gpx"], "photo.jpg", { type: "image/jpeg" }),
+      );
+      window.dispatchEvent(
+        new DragEvent("drop", { dataTransfer: dt, bubbles: true }),
+      );
+    });
+
+    // No upload should be triggered — magic link input still visible
+    await expect(mockedPage.getByTestId("magic-link-input")).toBeVisible();
+    expect(uploadCalled).toBe(false);
   });
 
   test("shows error toast on API 400 response", async ({ mockedPage }) => {
