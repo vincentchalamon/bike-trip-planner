@@ -23,14 +23,16 @@ test.describe("GPX upload flow", () => {
           id: "test-trip-abc-123",
           computationStatus: { route: "done", stages: "pending" },
           title: "Mon Tour GPX",
+          totalDistance: 187.3,
+          totalElevation: 2850,
+          totalElevationLoss: 2720,
         }),
       });
     });
   });
 
-  test("happy path: upload GPX file, receive SSE events, trip displayed", async ({
+  test("happy path: upload GPX file, metrics from response, stages from SSE", async ({
     mockedPage,
-    injectEvent,
     injectSequence,
   }) => {
     // Upload a GPX file
@@ -44,24 +46,12 @@ test.describe("GPX upload flow", () => {
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
 
-    // Inject route_parsed SSE event with gpx_upload source type
-    await injectEvent({
-      type: "route_parsed",
-      data: {
-        totalDistance: 187.3,
-        totalElevation: 2850,
-        totalElevationLoss: 2720,
-        sourceType: "gpx_upload",
-        title: "Mon Tour GPX",
-      },
-    });
-
-    // Total distance should be displayed
+    // Metrics available immediately from HTTP response — no SSE needed
     await expect(mockedPage.getByTestId("total-distance")).toContainText(
       "187km",
     );
 
-    // Inject stages computed
+    // Inject stages computed (still via SSE)
     await injectSequence([stagesComputedEvent()]);
 
     // Stage cards should appear
@@ -87,6 +77,9 @@ test.describe("GPX upload flow", () => {
           "@type": "Trip",
           id: "test-trip-abc-123",
           computationStatus: { route: "done", stages: "pending" },
+          totalDistance: 187.3,
+          totalElevation: 2850,
+          totalElevationLoss: 2720,
         }),
       });
     });
@@ -100,6 +93,24 @@ test.describe("GPX upload flow", () => {
         .getByTestId("trip-title-skeleton")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
+  });
+
+  test("drag & drop: overlay appears on drag enter", async ({ mockedPage }) => {
+    await mockedPage.evaluate(() => {
+      const dt = new DataTransfer();
+      dt.items.add(
+        new File(["<gpx></gpx>"], "route.gpx", {
+          type: "application/gpx+xml",
+        }),
+      );
+      window.dispatchEvent(
+        new DragEvent("dragenter", { dataTransfer: dt, bubbles: true }),
+      );
+    });
+
+    await expect(
+      mockedPage.getByText("Déposez votre fichier GPX ici"),
+    ).toBeVisible();
   });
 
   test("shows error toast on API 400 response", async ({ mockedPage }) => {

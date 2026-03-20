@@ -54,6 +54,17 @@ final class GpxUploadTest extends ApiTestCase
         // Route computation should already be done (parsed synchronously)
         $this->assertSame('done', $data['computationStatus']['route']);
 
+        // Route metrics should be included in the response
+        $this->assertArrayHasKey('totalDistance', $data);
+        $this->assertIsFloat($data['totalDistance']);
+        $this->assertGreaterThan(0, $data['totalDistance']);
+
+        $this->assertArrayHasKey('totalElevation', $data);
+        $this->assertIsInt($data['totalElevation']);
+
+        $this->assertArrayHasKey('totalElevationLoss', $data);
+        $this->assertIsInt($data['totalElevationLoss']);
+
         // Other computations should be pending
         foreach (ComputationName::pipeline() as $computation) {
             if (ComputationName::ROUTE === $computation) {
