@@ -170,9 +170,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
-| 1 | [#60](https://github.com/vincentchalamon/bike-trip-planner/issues/60) | Sources routes supplémentaires | L | 3 | — |
-| 2 | [#53](https://github.com/vincentchalamon/bike-trip-planner/issues/53) | Création trip via URL | S | 1 | — |
-| 3 | [#46](https://github.com/vincentchalamon/bike-trip-planner/issues/46) | Invalidation messages Messenger | M | 1 | — |
+| 1 | [#60](https://github.com/vincentchalamon/bike-trip-planner/issues/60) | Sources routes supplémentaires | L | [#214](https://github.com/vincentchalamon/bike-trip-planner/pull/214) `feature/60` | — |
+| 2 | [#53](https://github.com/vincentchalamon/bike-trip-planner/issues/53) | Création trip via URL | S | [#213](https://github.com/vincentchalamon/bike-trip-planner/pull/213) `feature/53` | — |
+| 3 | [#46](https://github.com/vincentchalamon/bike-trip-planner/issues/46) | Invalidation messages Messenger | M | [#215](https://github.com/vincentchalamon/bike-trip-planner/pull/215) `feature/46` | — |
 
 ### Recette Sprint 9
 
