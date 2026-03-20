@@ -1,7 +1,7 @@
 "use client";
 
+import { useEffect, useCallback } from "react";
 import { Pencil } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { useEditable } from "@/hooks/use-editable";
 import { cn } from "@/lib/utils";
 
@@ -32,16 +32,32 @@ export function EditableField({
     handleKeyDown,
   } = useEditable({ value, onChange });
 
+  // Auto-resize textarea to fit content
+  const autoResize = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [inputRef]);
+
+  useEffect(() => {
+    if (isEditing) autoResize();
+  }, [isEditing, editValue, autoResize]);
+
   if (isEditing) {
     return (
-      <Input
-        ref={inputRef}
+      <textarea
+        ref={inputRef as React.RefObject<HTMLTextAreaElement>}
         value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
+        onChange={(e) => {
+          setEditValue(e.target.value);
+          autoResize();
+        }}
         onBlur={stopEditing}
         onKeyDown={handleKeyDown}
+        rows={1}
         className={cn(
-          "bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto",
+          "bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto w-full resize-none overflow-hidden",
           className,
         )}
         placeholder={placeholder}
@@ -63,16 +79,16 @@ export function EditableField({
         }
       }}
       className={cn(
-        "group inline-flex items-center gap-2 cursor-pointer",
+        "group inline-flex items-start gap-2 cursor-pointer",
         className,
       )}
       aria-label={ariaLabel}
       data-testid={testId}
     >
-      <span className={cn(!value && "text-muted-foreground/60")}>
+      <span className={cn("break-words", !value && "text-muted-foreground/60")}>
         {value || placeholder}
       </span>
-      <Pencil className="h-3.5 w-3.5 text-muted-icon shrink-0" />
+      <Pencil className="h-3.5 w-3.5 text-muted-icon shrink-0 mt-1.5" />
     </span>
   );
 }

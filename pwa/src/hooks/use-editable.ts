@@ -14,7 +14,7 @@ interface UseEditableReturn {
   stopEditing: () => void;
   cancel: () => void;
   setEditValue: (value: string) => void;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
   handleKeyDown: (e: React.KeyboardEvent) => void;
 }
 
@@ -36,7 +36,7 @@ export function useEditable({
 }: UseEditableOptions): UseEditableReturn {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const prevValueRef = useRef(value);
 
   // Sync editValue with external value when not editing (replaces useEffect)

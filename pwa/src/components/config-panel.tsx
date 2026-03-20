@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { X, Map, Languages, Copy, Share2 } from "lucide-react";
+import { X, Languages, Copy, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -290,39 +290,6 @@ export function ConfigPanel({
                 {t("themeDescription")}
               </span>
             </div>
-          </section>
-
-          <Separator />
-
-          {/* Split view — placeholder (Sprint 7) */}
-          <section aria-labelledby="config-splitview-heading">
-            <h3
-              id="config-splitview-heading"
-              className="text-sm font-medium mb-3"
-            >
-              {t("splitViewTitle")}
-            </h3>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-2 opacity-50">
-                  <Switch
-                    id="split-view-toggle"
-                    size="sm"
-                    checked={false}
-                    disabled
-                    aria-label={t("splitViewLabel")}
-                  />
-                  <label
-                    htmlFor="split-view-toggle"
-                    className="text-sm cursor-not-allowed flex items-center gap-1.5"
-                  >
-                    <Map className="h-3.5 w-3.5" />
-                    {t("splitViewLabel")}
-                  </label>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>{t("splitViewTooltip")}</TooltipContent>
-            </Tooltip>
           </section>
 
           <Separator />
