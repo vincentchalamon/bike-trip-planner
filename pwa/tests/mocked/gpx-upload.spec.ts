@@ -116,9 +116,7 @@ test.describe("GPX upload flow", () => {
 
     // Drag leave hides overlay
     await mockedPage.evaluate(() => {
-      window.dispatchEvent(
-        new DragEvent("dragleave", { bubbles: true }),
-      );
+      window.dispatchEvent(new DragEvent("dragleave", { bubbles: true }));
     });
 
     await expect(
@@ -137,9 +135,7 @@ test.describe("GPX upload flow", () => {
 
     await mockedPage.evaluate(() => {
       const dt = new DataTransfer();
-      dt.items.add(
-        new File(["not gpx"], "photo.jpg", { type: "image/jpeg" }),
-      );
+      dt.items.add(new File(["not gpx"], "photo.jpg", { type: "image/jpeg" }));
       window.dispatchEvent(
         new DragEvent("drop", { dataTransfer: dt, bubbles: true }),
       );
