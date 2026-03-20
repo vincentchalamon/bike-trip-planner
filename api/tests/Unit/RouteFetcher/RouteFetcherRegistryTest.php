@@ -14,7 +14,7 @@ final class RouteFetcherRegistryTest extends TestCase
     #[Test]
     public function getReturnsMatchingFetcher(): void
     {
-        $fetcher = $this->createMock(RouteFetcherInterface::class);
+        $fetcher = $this->createStub(RouteFetcherInterface::class);
         $fetcher->method('supports')->willReturn(true);
 
         $registry = new RouteFetcherRegistry(new \ArrayIterator([$fetcher]));
@@ -25,7 +25,7 @@ final class RouteFetcherRegistryTest extends TestCase
     #[Test]
     public function getThrowsWhenNoFetcherMatches(): void
     {
-        $fetcher = $this->createMock(RouteFetcherInterface::class);
+        $fetcher = $this->createStub(RouteFetcherInterface::class);
         $fetcher->method('supports')->willReturn(false);
 
         $registry = new RouteFetcherRegistry(new \ArrayIterator([$fetcher]));

@@ -49,7 +49,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
             ],
         ];
 
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('getStatusCode')->willReturn(200);
         $response->method('toArray')->willReturn($jsonData);
 
@@ -59,9 +59,9 @@ final class RideWithGpsRouteFetcherTest extends TestCase
             ->with('GET', '/routes/123456.json')
             ->willReturn($response);
 
-        $cache = $this->createMock(CacheInterface::class);
+        $cache = $this->createStub(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createStub(ItemInterface::class)),
         );
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
@@ -79,15 +79,15 @@ final class RideWithGpsRouteFetcherTest extends TestCase
     #[Test]
     public function fetchThrowsOn404(): void
     {
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('getStatusCode')->willReturn(404);
 
-        $client = $this->createMock(HttpClientInterface::class);
+        $client = $this->createStub(HttpClientInterface::class);
         $client->method('request')->willReturn($response);
 
-        $cache = $this->createMock(CacheInterface::class);
+        $cache = $this->createStub(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createStub(ItemInterface::class)),
         );
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
@@ -101,15 +101,15 @@ final class RideWithGpsRouteFetcherTest extends TestCase
     #[Test]
     public function fetchThrowsOn403(): void
     {
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('getStatusCode')->willReturn(403);
 
-        $client = $this->createMock(HttpClientInterface::class);
+        $client = $this->createStub(HttpClientInterface::class);
         $client->method('request')->willReturn($response);
 
-        $cache = $this->createMock(CacheInterface::class);
+        $cache = $this->createStub(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createStub(ItemInterface::class)),
         );
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
@@ -123,7 +123,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
     #[Test]
     public function fetchThrowsOnEmptyTrackPoints(): void
     {
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('getStatusCode')->willReturn(200);
         $response->method('toArray')->willReturn([
             'route' => [
@@ -132,12 +132,12 @@ final class RideWithGpsRouteFetcherTest extends TestCase
             ],
         ]);
 
-        $client = $this->createMock(HttpClientInterface::class);
+        $client = $this->createStub(HttpClientInterface::class);
         $client->method('request')->willReturn($response);
 
-        $cache = $this->createMock(CacheInterface::class);
+        $cache = $this->createStub(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createStub(ItemInterface::class)),
         );
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
@@ -162,16 +162,16 @@ final class RideWithGpsRouteFetcherTest extends TestCase
             ],
         ];
 
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('getStatusCode')->willReturn(200);
         $response->method('toArray')->willReturn($jsonData);
 
-        $client = $this->createMock(HttpClientInterface::class);
+        $client = $this->createStub(HttpClientInterface::class);
         $client->method('request')->willReturn($response);
 
-        $cache = $this->createMock(CacheInterface::class);
+        $cache = $this->createStub(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createStub(ItemInterface::class)),
         );
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
