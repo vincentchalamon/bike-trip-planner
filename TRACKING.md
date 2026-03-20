@@ -179,9 +179,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 - **Tests E2E :** `tests/recette/sprint-09.spec.ts`
 - **Checklist manuelle :**
   - [ ] Upload GPX direct fonctionnel (drag & drop)
-  - [ ] Import depuis Strava/RideWithGPS (si implémenté)
-  - [ ] Création de trip via URL avec paramètre link
-  - [ ] Invalidation Messenger : pas de messages orphelins
+  - [ ] Import depuis Strava/RideWithGPS (si implémenté) (en attente de trace de test)
+  - [x] Création de trip via URL avec paramètre link
+  - [ ] Invalidation Messenger : pas de messages orphelins (comment tester ?)
 
 ---
 
