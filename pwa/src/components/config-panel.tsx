@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { X, Languages, Copy, Share2 } from "lucide-react";
+import { X, Copy, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -12,6 +12,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { PacingSettings } from "@/components/pacing-settings";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { useUiStore } from "@/store/ui-store";
@@ -294,7 +295,7 @@ export function ConfigPanel({
 
           <Separator />
 
-          {/* Language — placeholder */}
+          {/* Language */}
           <section aria-labelledby="config-language-heading">
             <h3
               id="config-language-heading"
@@ -302,15 +303,7 @@ export function ConfigPanel({
             >
               {t("languageTitle")}
             </h3>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-2 opacity-50">
-                  <Languages className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{t("languagePlaceholder")}</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>{t("languageTooltip")}</TooltipContent>
-            </Tooltip>
+            <LocaleSwitcher />
           </section>
 
           <Separator />

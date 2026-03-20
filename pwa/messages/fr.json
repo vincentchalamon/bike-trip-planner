@@ -60,7 +60,8 @@
     "departure": "Départ étape {n}",
     "searchArrival": "Rechercher une arrivée...",
     "searchArrivalLabel": "Rechercher l'arrivée de l'étape",
-    "arrival": "Arrivée étape {n}"
+    "arrival": "Arrivée étape {n}",
+    "noResults": "Aucun résultat trouvé"
   },
   "timeline": {
     "loadingStages": "Chargement des étapes",
@@ -189,8 +190,7 @@
     "splitViewLabel": "Vue partagée carte / timeline",
     "splitViewTooltip": "La carte est toujours visible à côté de la timeline. Ce toggle permettra de masquer/afficher la carte manuellement.",
     "languageTitle": "Langue",
-    "languagePlaceholder": "Sélecteur de langue (bientôt disponible)",
-    "languageTooltip": "La sélection de la langue sera disponible prochainement.",
+    "switchLanguage": "Passer en {language}",
     "tripActionsTitle": "Actions sur le voyage",
     "duplicateLabel": "Dupliquer le voyage",
     "duplicateTooltip": "Nécessite la persistance en base de données (bientôt disponible).",

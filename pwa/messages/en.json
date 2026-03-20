@@ -60,7 +60,8 @@
     "departure": "Stage {n} departure",
     "searchArrival": "Search arrival...",
     "searchArrivalLabel": "Search stage arrival",
-    "arrival": "Stage {n} arrival"
+    "arrival": "Stage {n} arrival",
+    "noResults": "No results found"
   },
   "timeline": {
     "loadingStages": "Loading stages",
@@ -189,8 +190,7 @@
     "splitViewLabel": "Map / timeline split view",
     "splitViewTooltip": "The map is always visible next to the timeline. This toggle will allow manually hiding/showing the map.",
     "languageTitle": "Language",
-    "languagePlaceholder": "Language switcher (coming soon)",
-    "languageTooltip": "Language selection will be available soon.",
+    "switchLanguage": "Switch to {language}",
     "tripActionsTitle": "Trip actions",
     "duplicateLabel": "Duplicate trip",
     "duplicateTooltip": "Requires persistent storage (coming soon).",
