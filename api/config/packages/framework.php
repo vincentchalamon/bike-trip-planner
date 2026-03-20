@@ -34,7 +34,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'max_redirects' => 2,
                     'timeout' => 10,
                     'headers' => [
-                        'Accept' => 'text/html',
+                        'Accept' => 'application/gpx+xml',
                         'User-Agent' => 'BikeTripPlanner/1.0',
                     ],
                 ],

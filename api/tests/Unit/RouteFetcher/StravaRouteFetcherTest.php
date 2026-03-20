@@ -127,6 +127,32 @@ final class StravaRouteFetcherTest extends TestCase
         $fetcher->fetch('https://www.strava.com/routes/123456');
     }
 
+    #[Test]
+    public function fetchThrowsOnEmptyCoordinates(): void
+    {
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('getStatusCode')->willReturn(200);
+        $response->method('getContent')->willReturn('<gpx/>');
+
+        $client = $this->createStub(HttpClientInterface::class);
+        $client->method('request')->willReturn($response);
+
+        $gpxParser = $this->createStub(GpxRouteParserInterface::class);
+        $gpxParser->method('parse')->willReturn([]);
+
+        $cache = $this->createStub(CacheInterface::class);
+        $cache->method('get')->willReturnCallback(
+            fn (string $key, callable $callback) => $callback($this->createStub(ItemInterface::class)),
+        );
+
+        $fetcher = new StravaRouteFetcher($client, $gpxParser, $cache);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('no valid coordinates');
+
+        $fetcher->fetch('https://www.strava.com/routes/123456');
+    }
+
     private function createFetcher(): StravaRouteFetcher
     {
         return new StravaRouteFetcher(
