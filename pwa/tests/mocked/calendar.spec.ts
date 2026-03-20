@@ -12,9 +12,7 @@ test.describe("Date range picker in ConfigPanel", () => {
     // Open config panel
     await mockedPage.getByTestId("config-open-button").click();
     // Date range trigger should be visible inside the panel
-    await expect(
-      mockedPage.getByTestId("date-range-trigger"),
-    ).toBeVisible();
+    await expect(mockedPage.getByTestId("date-range-trigger")).toBeVisible();
   });
 
   test("opens calendar popover on date trigger click", async ({
@@ -29,9 +27,7 @@ test.describe("Date range picker in ConfigPanel", () => {
     // Click date range trigger
     await mockedPage.getByTestId("date-range-trigger").click();
     // Calendar grid should appear in the popover
-    await expect(
-      mockedPage.getByRole("grid").first(),
-    ).toBeVisible();
+    await expect(mockedPage.getByRole("grid").first()).toBeVisible();
   });
 
   test("clicking dates chip in summary opens config panel at dates section", async ({
@@ -49,9 +45,7 @@ test.describe("Date range picker in ConfigPanel", () => {
     );
     await expect(configPanel).toBeInViewport();
     // Date range trigger should be visible
-    await expect(
-      mockedPage.getByTestId("date-range-trigger"),
-    ).toBeVisible();
+    await expect(mockedPage.getByTestId("date-range-trigger")).toBeVisible();
   });
 
   test("clicking profile chip in summary opens config panel at pacing section", async ({

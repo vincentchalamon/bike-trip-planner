@@ -61,7 +61,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
 
         $cache = $this->createMock(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            static fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
         );
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
@@ -87,7 +87,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
 
         $cache = $this->createMock(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            static fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
         );
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
@@ -109,7 +109,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
 
         $cache = $this->createMock(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            static fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
         );
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
@@ -137,7 +137,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
 
         $cache = $this->createMock(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            static fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
         );
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
@@ -171,7 +171,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
 
         $cache = $this->createMock(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            static fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
         );
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
@@ -184,8 +184,8 @@ final class RideWithGpsRouteFetcherTest extends TestCase
     private function createFetcher(): RideWithGpsRouteFetcher
     {
         return new RideWithGpsRouteFetcher(
-            $this->createMock(HttpClientInterface::class),
-            $this->createMock(CacheInterface::class),
+            $this->createStub(HttpClientInterface::class),
+            $this->createStub(CacheInterface::class),
         );
     }
 }

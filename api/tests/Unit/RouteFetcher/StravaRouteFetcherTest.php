@@ -52,16 +52,18 @@ final class StravaRouteFetcherTest extends TestCase
             ->willReturn($response);
 
         $gpxParser = $this->createMock(GpxRouteParserInterface::class);
-        $gpxParser->method('parse')
+        $gpxParser->expects(self::once())
+            ->method('parse')
             ->with($gpxContent)
             ->willReturn([new \App\ApiResource\Model\Coordinate(44.0, 5.0, 100.0)]);
-        $gpxParser->method('extractTitle')
+        $gpxParser->expects(self::once())
+            ->method('extractTitle')
             ->with($gpxContent)
             ->willReturn('My Strava Route');
 
         $cache = $this->createMock(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            static fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
         );
 
         $fetcher = new StravaRouteFetcher($client, $gpxParser, $cache);
@@ -84,12 +86,12 @@ final class StravaRouteFetcherTest extends TestCase
 
         $cache = $this->createMock(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            static fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
         );
 
         $fetcher = new StravaRouteFetcher(
             $client,
-            $this->createMock(GpxRouteParserInterface::class),
+            $this->createStub(GpxRouteParserInterface::class),
             $cache,
         );
 
@@ -110,12 +112,12 @@ final class StravaRouteFetcherTest extends TestCase
 
         $cache = $this->createMock(CacheInterface::class);
         $cache->method('get')->willReturnCallback(
-            static fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
+            fn (string $key, callable $callback) => $callback($this->createMock(ItemInterface::class)),
         );
 
         $fetcher = new StravaRouteFetcher(
             $client,
-            $this->createMock(GpxRouteParserInterface::class),
+            $this->createStub(GpxRouteParserInterface::class),
             $cache,
         );
 
@@ -128,9 +130,9 @@ final class StravaRouteFetcherTest extends TestCase
     private function createFetcher(): StravaRouteFetcher
     {
         return new StravaRouteFetcher(
-            $this->createMock(HttpClientInterface::class),
-            $this->createMock(GpxRouteParserInterface::class),
-            $this->createMock(CacheInterface::class),
+            $this->createStub(HttpClientInterface::class),
+            $this->createStub(GpxRouteParserInterface::class),
+            $this->createStub(CacheInterface::class),
         );
     }
 }
