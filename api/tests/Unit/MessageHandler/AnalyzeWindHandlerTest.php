@@ -58,6 +58,7 @@ final class AnalyzeWindHandlerTest extends TestCase
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
+        ?TripGenerationTrackerInterface $generationTracker = null,
     ): AnalyzeWindHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
@@ -71,12 +72,10 @@ final class AnalyzeWindHandlerTest extends TestCase
             },
         );
 
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-
         return new AnalyzeWindHandler(
             $computationTracker,
             $publisher,
-            $generationTracker,
+            $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
             $translator,
@@ -210,6 +209,21 @@ final class AnalyzeWindHandlerTest extends TestCase
 
         $handler = $this->createHandler($tripStateManager, $publisher);
         $handler(new AnalyzeWind('trip-1'));
+    }
+
+    #[Test]
+    public function staleMessageIsDiscardedViaExecuteWithTracking(): void
+    {
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->never())->method('publish');
+
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('current')->willReturn(5);
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $generationTracker);
+        $handler(new AnalyzeWind('trip-1', generation: 3));
     }
 
     #[Test]
