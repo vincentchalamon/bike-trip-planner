@@ -184,9 +184,11 @@ function MonthGrid({
                       // Range background (full cell width)
                       inRange && "bg-brand/10",
                       // Start date: range extends to the right half behind the circle
-                      isStartWithRange && "bg-gradient-to-l from-brand/10 to-transparent",
+                      isStartWithRange &&
+                        "bg-gradient-to-l from-brand/10 to-transparent",
                       // End date: range extends to the left half behind the circle
-                      isEndWithRange && "bg-gradient-to-r from-brand/10 to-transparent",
+                      isEndWithRange &&
+                        "bg-gradient-to-r from-brand/10 to-transparent",
                     )}
                   >
                     {/* Inner circle for selected/hovered dates */}

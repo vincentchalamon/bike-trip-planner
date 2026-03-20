@@ -24,7 +24,6 @@ use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
-use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -67,8 +66,6 @@ final class ScanAccommodationsHandlerTest extends TestCase
 
         $scraperClient = $this->createStub(HttpClientInterface::class);
 
-        $logger = $this->createStub(LoggerInterface::class);
-
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         return new ScanAccommodationsHandler(
@@ -86,7 +83,6 @@ final class ScanAccommodationsHandlerTest extends TestCase
             $seasonalityChecker,
             $translator,
             $scraperClient,
-            $logger,
         );
     }
 
