@@ -150,6 +150,40 @@ test.describe("Trip creation flow", () => {
     ).toBeVisible({ timeout: 5000 });
   });
 
+  test("auto-creates trip from ?link= query parameter", async ({
+    mockedPage,
+  }) => {
+    // Navigate to URL with link query param
+    await mockedPage.goto(
+      "/?link=" +
+        encodeURIComponent("https://www.komoot.com/fr-fr/tour/2795080048"),
+    );
+    // Trip creation should start automatically
+    await expect(
+      mockedPage
+        .getByTestId("trip-title-skeleton")
+        .or(mockedPage.getByTestId("trip-title")),
+    ).toBeVisible({ timeout: 5000 });
+    // The ?link= param should be consumed (URL cleaned)
+    await expect(mockedPage).toHaveURL("/");
+  });
+
+  test("ignores invalid ?link= param without creating a trip", async ({
+    mockedPage,
+  }) => {
+    await mockedPage.goto("/?link=not-a-valid-url");
+    // Invalid URL is silently ignored — no trip created
+    await expect(mockedPage).toHaveURL("/");
+    await expect(
+      mockedPage.getByTestId("magic-link-input"),
+    ).toBeVisible();
+    await expect(
+      mockedPage
+        .getByTestId("trip-title-skeleton")
+        .or(mockedPage.getByTestId("trip-title")),
+    ).not.toBeVisible();
+  });
+
   test("shows stage locations after geocode resolves", async ({
     submitUrl,
     injectSequence,
