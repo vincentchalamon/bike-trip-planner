@@ -1,13 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SUPPORTED_LOCALES, type SupportedLocale } from "@/i18n/locale";
-import { setLocale } from "@/i18n/set-locale";
+import { useSwitchLocale } from "@/components/client-intl-provider";
 
 const LOCALE_LABELS: Record<SupportedLocale, string> = {
   fr: "Français",
@@ -17,26 +15,20 @@ const LOCALE_LABELS: Record<SupportedLocale, string> = {
 export function LocaleSwitcher() {
   const t = useTranslations("config");
   const currentLocale = useLocale();
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const switchLocale = useSwitchLocale();
 
   function handleLocaleChange(locale: SupportedLocale) {
     if (locale === currentLocale) return;
-
-    startTransition(async () => {
-      await setLocale(locale);
-      router.refresh();
-    });
+    switchLocale(locale);
   }
 
   return (
-    <div className="flex items-center gap-2" role="group" aria-label={t("languageTitle")}>
-      <Languages
-        className={cn(
-          "h-4 w-4 text-muted-foreground shrink-0",
-          isPending && "animate-spin",
-        )}
-      />
+    <div
+      className="flex items-center gap-2"
+      role="group"
+      aria-label={t("languageTitle")}
+    >
+      <Languages className="h-4 w-4 text-muted-foreground shrink-0" />
       <div className="flex gap-1">
         {SUPPORTED_LOCALES.map((locale) => {
           const isActive = locale === currentLocale;
@@ -49,7 +41,6 @@ export function LocaleSwitcher() {
                 "h-7 px-2.5 text-xs cursor-pointer",
                 isActive && "pointer-events-none",
               )}
-              disabled={isPending}
               onClick={() => handleLocaleChange(locale)}
               aria-label={t("switchLanguage", {
                 language: LOCALE_LABELS[locale],

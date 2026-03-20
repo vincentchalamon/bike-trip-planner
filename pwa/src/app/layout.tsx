@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import "./globals.css";
+import { ClientIntlProvider } from "@/components/client-intl-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -18,29 +17,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("layout");
+export const metadata: Metadata = {
+  title: "Bike Trip Planner",
+  description: "Plan your bikepacking trips with ease",
+};
 
-  return {
-    title: t("title"),
-    description: t("description"),
-  };
-}
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getLocale();
-  const messages = await getMessages();
-
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-x-hidden`}
       >
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <ClientIntlProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -51,7 +43,7 @@ export default async function RootLayout({
             <OnboardingTour />
             <Toaster richColors position="top-right" />
           </ThemeProvider>
-        </NextIntlClientProvider>
+        </ClientIntlProvider>
       </body>
     </html>
   );

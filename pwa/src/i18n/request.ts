@@ -1,14 +1,14 @@
-import { cookies } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
-import { SUPPORTED_LOCALES, type SupportedLocale } from "@/i18n/locale";
+import { DEFAULT_LOCALE } from "@/i18n/locale";
 
+/**
+ * Server-side request config for next-intl.
+ * Uses a static default locale to avoid cookies() — the actual locale
+ * detection and switching happens client-side via ClientIntlProvider.
+ * This keeps the build compatible with `output: 'export'` (Capacitor).
+ */
 export default getRequestConfig(async () => {
-  const store = await cookies();
-  const raw = store.get("locale")?.value;
-  const locale: SupportedLocale =
-    raw && SUPPORTED_LOCALES.includes(raw as SupportedLocale)
-      ? (raw as SupportedLocale)
-      : "fr";
+  const locale = DEFAULT_LOCALE;
 
   return {
     locale,
