@@ -18,6 +18,7 @@ import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { Button } from "@/components/ui/button";
 import { UndoRedoButtons } from "@/components/undo-redo-buttons";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
+import { useLinkParam } from "@/hooks/use-link-param";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useUiStore } from "@/store/ui-store";
 import { useSwipe } from "@/hooks/use-swipe";
@@ -70,6 +71,9 @@ export function TripPlanner() {
     handleAddPoiWaypoint,
     clearNewAccKey,
   } = useTripPlanner();
+
+  // Auto-submit when ?link= query param is present
+  useLinkParam(handleMagicLink);
 
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
   const setHelpModalOpen = useUiStore((s) => s.setHelpModalOpen);
