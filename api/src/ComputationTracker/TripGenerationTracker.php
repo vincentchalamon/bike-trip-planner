@@ -24,9 +24,15 @@ final readonly class TripGenerationTracker implements TripGenerationTrackerInter
 
     public function increment(string $tripId): int
     {
-        $current = $this->current($tripId) ?? 0;
+        $item = $this->tripStateCache->getItem($this->key($tripId));
+        /** @var int|null $cached */
+        $cached = $item->get();
+        $current = $item->isHit() ? $cached : 0;
         $next = $current + 1;
-        $this->set($tripId, $next);
+        $item->set($next);
+        $item->expiresAfter(self::TTL);
+
+        $this->tripStateCache->save($item);
 
         return $next;
     }
@@ -38,10 +44,6 @@ final readonly class TripGenerationTracker implements TripGenerationTrackerInter
         if (!$item->isHit()) {
             return null;
         }
-
-        // Refresh TTL on access
-        $item->expiresAfter(self::TTL);
-        $this->tripStateCache->save($item);
 
         /** @var int $value */
         $value = $item->get();

@@ -49,7 +49,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $this->computationTracker->initializeComputations($tripId, $computations);
 
         $this->generationTracker->initialize($tripId);
-        $generation = $this->generationTracker->current($tripId);
+        $generation = 1;
 
         $this->messageBus->dispatch(new FetchAndParseRoute($tripId, $generation));
 
