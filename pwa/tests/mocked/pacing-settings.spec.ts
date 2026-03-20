@@ -158,4 +158,36 @@ test.describe("Pacing settings", () => {
       mockedPage.getByRole("alert").filter({ hasText: "vitesse" }),
     ).toBeVisible();
   });
+
+  test("pacing settings are preserved after submitting a new trip", async ({
+    mockedPage,
+    submitUrl,
+    injectEvent,
+  }) => {
+    // Open config panel from welcome screen and select Débutant preset
+    await mockedPage.getByTestId("config-open-button").click();
+    await expect(
+      mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    ).toBeInViewport();
+    await mockedPage
+      .getByRole("button", { name: "Appliquer le profil Débutant" })
+      .click();
+    // Close config panel
+    await mockedPage.keyboard.press("Escape");
+
+    // Submit a URL — this calls clearTrip() internally
+    await submitUrl();
+    await injectEvent(routeParsedEvent());
+
+    // Re-open config panel and verify settings are still Débutant
+    await openConfigPanel(mockedPage);
+    await expect(
+      mockedPage.getByRole("slider", {
+        name: "Distance maximale par jour (km)",
+      }),
+    ).toHaveValue("50");
+    await expect(
+      mockedPage.getByRole("slider", { name: "Vitesse moyenne (km/h)" }),
+    ).toHaveValue("10");
+  });
 });
