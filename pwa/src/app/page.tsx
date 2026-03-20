@@ -7,7 +7,7 @@ export default function Page() {
   return (
     <HydrationBoundary>
       <TripPlannerErrorBoundary>
-        <Suspense>
+        <Suspense fallback={null}>
           <TripPlanner />
         </Suspense>
       </TripPlannerErrorBoundary>

@@ -12,6 +12,10 @@ export function useLinkParam(onSubmit: (url: string) => Promise<void>) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const consumedRef = useRef(false);
+  const onSubmitRef = useRef(onSubmit);
+  useEffect(() => {
+    onSubmitRef.current = onSubmit;
+  });
 
   useEffect(() => {
     if (consumedRef.current) return;
@@ -21,6 +25,6 @@ export function useLinkParam(onSubmit: (url: string) => Promise<void>) {
 
     consumedRef.current = true;
     router.replace("/", { scroll: false });
-    void onSubmit(link);
-  }, [searchParams, router, onSubmit]);
+    void onSubmitRef.current(link);
+  }, [searchParams, router]);
 }
