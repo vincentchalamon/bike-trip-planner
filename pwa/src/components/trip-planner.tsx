@@ -299,8 +299,8 @@ export function TripPlanner() {
       {trip && (
         <>
           {/* Top bar: title on first row, action buttons on second row */}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
-            <div className="basis-full min-w-0">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-2 gap-y-2">
+            <div className="basis-full min-w-0 text-center md:text-left">
               <TripHeader
                 title={trip.title}
                 onTitleChange={updateTitle}

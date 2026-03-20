@@ -458,7 +458,20 @@ export const useTripStore = create<TripState>()(
       // previous trip session is no longer meaningful.
       useTripTemporalStore.getState().clear();
       set((state) => {
-        Object.assign(state, initialState);
+        // Preserve user-configured pacing settings, accommodation filters,
+        // and dates across trip reloads — only reset trip data.
+        const preserved = {
+          fatigueFactor: state.fatigueFactor,
+          elevationPenalty: state.elevationPenalty,
+          maxDistancePerDay: state.maxDistancePerDay,
+          averageSpeed: state.averageSpeed,
+          ebikeMode: state.ebikeMode,
+          departureHour: state.departureHour,
+          enabledAccommodationTypes: state.enabledAccommodationTypes,
+          startDate: state.startDate,
+          endDate: state.endDate,
+        };
+        Object.assign(state, initialState, preserved);
       });
     },
   })),
