@@ -174,9 +174,7 @@ test.describe("Trip creation flow", () => {
     await mockedPage.goto("/?link=not-a-valid-url");
     // Invalid URL is silently ignored — no trip created
     await expect(mockedPage).toHaveURL("/");
-    await expect(
-      mockedPage.getByTestId("magic-link-input"),
-    ).toBeVisible();
+    await expect(mockedPage.getByTestId("magic-link-input")).toBeVisible();
     await expect(
       mockedPage
         .getByTestId("trip-title-skeleton")

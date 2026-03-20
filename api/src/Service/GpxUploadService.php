@@ -66,7 +66,7 @@ final readonly class GpxUploadService
      *
      * @param list<Coordinate> $points
      *
-     * @return array{tripId: string, computationStatus: array<string, string>}
+     * @return array{tripId: string, computationStatus: array<string, string>, totalDistance: float, totalElevation: int, totalElevationLoss: int}
      */
     public function createTrip(
         array $points,
@@ -83,12 +83,20 @@ final readonly class GpxUploadService
         $this->computationTracker->initializeComputations($tripId, $computations);
 
         $this->storeRouteData($tripId, $points, $title);
-        $this->publishRouteEvent($tripId, $points, $title);
+
+        $totalDistance = round($this->distanceCalculator->calculateTotalDistance($points), 1);
+        $totalElevation = (int) $this->elevationCalculator->calculateTotalAscent($points);
+        $totalElevationLoss = (int) $this->elevationCalculator->calculateTotalDescent($points);
+
+        $this->publishRouteEvent($tripId, $totalDistance, $totalElevation, $totalElevationLoss, $title);
         $this->dispatchDownstreamMessages($tripId);
 
         return [
             'tripId' => $tripId,
             'computationStatus' => $this->buildComputationStatus($computations),
+            'totalDistance' => $totalDistance,
+            'totalElevation' => $totalElevation,
+            'totalElevationLoss' => $totalElevationLoss,
         ];
     }
 
@@ -112,22 +120,15 @@ final readonly class GpxUploadService
         ));
     }
 
-    /**
-     * @param list<Coordinate> $points
-     */
-    private function publishRouteEvent(string $tripId, array $points, ?string $title): void
+    private function publishRouteEvent(string $tripId, float $totalDistance, int $totalElevation, int $totalElevationLoss, ?string $title): void
     {
-        $totalDistance = $this->distanceCalculator->calculateTotalDistance($points);
-        $totalElevation = $this->elevationCalculator->calculateTotalAscent($points);
-        $totalElevationLoss = $this->elevationCalculator->calculateTotalDescent($points);
-
         $this->computationTracker->markRunning($tripId, ComputationName::ROUTE);
         $this->computationTracker->markDone($tripId, ComputationName::ROUTE);
 
         $this->publisher->publish($tripId, MercureEventType::ROUTE_PARSED, [
-            'totalDistance' => round($totalDistance, 1),
-            'totalElevation' => (int) $totalElevation,
-            'totalElevationLoss' => (int) $totalElevationLoss,
+            'totalDistance' => $totalDistance,
+            'totalElevation' => $totalElevation,
+            'totalElevationLoss' => $totalElevationLoss,
             'sourceType' => SourceType::GPX_UPLOAD->value,
             'title' => $title,
         ]);
