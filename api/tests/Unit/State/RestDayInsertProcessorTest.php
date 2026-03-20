@@ -12,6 +12,7 @@ use App\ApiResource\TripRequest;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\RestDayInsertProcessor;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -42,10 +43,14 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->objectMapper = $this->createMock(ObjectMapperInterface::class);
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('increment')->willReturn(2);
+
         $this->processor = new RestDayInsertProcessor(
             $this->tripStateManager,
             $this->messageBus,
             $this->objectMapper,
+            $generationTracker,
         );
     }
 

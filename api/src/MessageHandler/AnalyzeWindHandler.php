@@ -8,12 +8,14 @@ use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
 use App\Repository\TripRequestRepositoryInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -29,15 +31,18 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
+        TripGenerationTrackerInterface $generationTracker,
+        LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private TranslatorInterface $translator,
     ) {
-        parent::__construct($computationTracker, $publisher);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
 
     public function __invoke(AnalyzeWind $message): void
     {
         $tripId = $message->tripId;
+        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -102,6 +107,6 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
             $this->publisher->publish($tripId, MercureEventType::WIND_ALERTS, [
                 'alerts' => $alerts,
             ]);
-        });
+        }, $generation);
     }
 }

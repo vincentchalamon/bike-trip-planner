@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\StageResponse;
 use App\ApiResource\StageSelectAccommodationRequest;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
@@ -45,6 +46,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private ObjectMapperInterface $objectMapper,
+        private TripGenerationTrackerInterface $generationTracker,
     ) {
     }
 
@@ -75,9 +77,10 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             // stage boundary until Valhalla (ADR-017) provides proper re-route.
             $request = $this->tripStateManager->getRequest($tripId);
             \assert($request instanceof \App\ApiResource\TripRequest);
-            $this->messageBus->dispatch(new ScanAccommodations($tripId, stageIndex: $index, enabledAccommodationTypes: $request->enabledAccommodationTypes));
+            $generation = $this->generationTracker->increment($tripId);
+            $this->messageBus->dispatch(new ScanAccommodations($tripId, stageIndex: $index, enabledAccommodationTypes: $request->enabledAccommodationTypes, generation: $generation));
             $affectedDeselect = isset($stages[$index + 1]) ? [$index, $index + 1] : [$index];
-            $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect, skipAccommodationScan: true));
+            $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect, skipAccommodationScan: true, generation: $generation));
 
             return $this->objectMapper->map($stage, StageResponse::class);
         }
@@ -134,12 +137,14 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             $affectedIndices[] = $index + 1;
         }
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipAccommodationScan: true));
+        $generation = $this->generationTracker->increment($tripId);
+
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipAccommodationScan: true, generation: $generation));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
-            $this->messageBus->dispatch(new FetchWeather($tripId));
-            $this->messageBus->dispatch(new CheckCalendar($tripId));
+            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
+            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }
 
         return $this->objectMapper->map($stage, StageResponse::class);

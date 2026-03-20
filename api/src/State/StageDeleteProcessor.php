@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Stage;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\SourceType;
 use App\Message\CheckCalendar;
@@ -27,6 +28,7 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
+        private TripGenerationTrackerInterface $generationTracker,
     ) {
     }
 
@@ -73,11 +75,13 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
 
         $this->tripStateManager->storeStages($tripId, $stages);
 
-        $affectedIndices = null !== $mergedIndex ? [$mergedIndex] : [];
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: $isRestDayDeletion));
+        $generation = $this->generationTracker->increment($tripId);
 
-        $this->messageBus->dispatch(new FetchWeather($tripId));
-        $this->messageBus->dispatch(new CheckCalendar($tripId));
+        $affectedIndices = null !== $mergedIndex ? [$mergedIndex] : [];
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: $isRestDayDeletion, generation: $generation));
+
+        $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
+        $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
     }
 
     /**

@@ -5,15 +5,40 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\TripUpdatePublisherInterface;
+use Psr\Log\LoggerInterface;
 
 abstract readonly class AbstractTripMessageHandler
 {
     public function __construct(
         protected ComputationTrackerInterface $computationTracker,
         protected TripUpdatePublisherInterface $publisher,
+        protected TripGenerationTrackerInterface $generationTracker,
+        protected LoggerInterface $logger,
     ) {
+    }
+
+    /**
+     * Returns true when the message generation is outdated.
+     *
+     * A null generation means the message was dispatched without versioning
+     * (e.g. cascading child messages) — these are never considered stale.
+     */
+    protected function isStale(string $tripId, ?int $messageGeneration): bool
+    {
+        if (null === $messageGeneration) {
+            return false;
+        }
+
+        $current = $this->generationTracker->current($tripId);
+
+        if (null === $current) {
+            return false;
+        }
+
+        return $messageGeneration < $current;
     }
 
     /**
@@ -27,7 +52,19 @@ abstract readonly class AbstractTripMessageHandler
         string $tripId,
         ComputationName $computation,
         callable $callback,
+        ?int $messageGeneration = null,
     ): void {
+        if ($this->isStale($tripId, $messageGeneration)) {
+            $this->logger->info('Discarding stale message.', [
+                'tripId' => $tripId,
+                'computation' => $computation->value,
+                'messageGeneration' => $messageGeneration,
+                'currentGeneration' => $this->generationTracker->current($tripId),
+            ]);
+
+            return;
+        }
+
         $this->computationTracker->markRunning($tripId, $computation);
 
         try {

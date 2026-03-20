@@ -11,6 +11,7 @@ use App\ApiResource\Trip;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationDependencyResolver;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckCalendar;
@@ -34,6 +35,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         private ComputationTrackerInterface $computationTracker,
         private ComputationDependencyResolver $dependencyResolver,
         private IdempotencyCheckerInterface $idempotencyChecker,
+        private TripGenerationTrackerInterface $generationTracker,
         private RequestStack $requestStack,
     ) {
     }
@@ -78,9 +80,14 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         // Determine which computations to re-trigger
         $computationsToTrigger = $this->dependencyResolver->resolve($oldRequest, $data);
 
-        foreach ($computationsToTrigger as $computation) {
-            $this->computationTracker->resetComputation($id, $computation);
-            $this->dispatchComputation($id, $computation);
+        if ([] !== $computationsToTrigger) {
+            // Criteria changed: bump generation so in-flight messages become stale
+            $generation = $this->generationTracker->increment($id);
+
+            foreach ($computationsToTrigger as $computation) {
+                $this->computationTracker->resetComputation($id, $computation);
+                $this->dispatchComputation($id, $computation, $generation);
+            }
         }
 
         $statuses = $this->computationTracker->getStatuses($id) ?? [];
@@ -91,15 +98,15 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         );
     }
 
-    private function dispatchComputation(string $tripId, ComputationName $computation): void
+    private function dispatchComputation(string $tripId, ComputationName $computation, int $generation): void
     {
         match ($computation) {
-            ComputationName::ROUTE => $this->messageBus->dispatch(new FetchAndParseRoute($tripId)),
-            ComputationName::STAGES => $this->messageBus->dispatch(new GenerateStages($tripId)),
-            ComputationName::TERRAIN => $this->messageBus->dispatch(new AnalyzeTerrain($tripId)),
-            ComputationName::WEATHER => $this->messageBus->dispatch(new FetchWeather($tripId)),
-            ComputationName::CALENDAR => $this->messageBus->dispatch(new CheckCalendar($tripId)),
-            ComputationName::ACCOMMODATIONS => $this->dispatchAccommodationsScan($tripId),
+            ComputationName::ROUTE => $this->messageBus->dispatch(new FetchAndParseRoute($tripId, $generation)),
+            ComputationName::STAGES => $this->messageBus->dispatch(new GenerateStages($tripId, $generation)),
+            ComputationName::TERRAIN => $this->messageBus->dispatch(new AnalyzeTerrain($tripId, $generation)),
+            ComputationName::WEATHER => $this->messageBus->dispatch(new FetchWeather($tripId, $generation)),
+            ComputationName::CALENDAR => $this->messageBus->dispatch(new CheckCalendar($tripId, $generation)),
+            ComputationName::ACCOMMODATIONS => $this->dispatchAccommodationsScan($tripId, $generation),
             // These computations are cascaded internally by their parent handlers,
             // not dispatched directly as root computations from a PATCH operation.
             // If a new ComputationName appears here unexpectedly, fail-fast to surface the gap.
@@ -107,7 +114,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         };
     }
 
-    private function dispatchAccommodationsScan(string $tripId): void
+    private function dispatchAccommodationsScan(string $tripId, int $generation): void
     {
         $request = $this->tripStateManager->getRequest($tripId);
         \assert($request instanceof TripRequest);
@@ -115,6 +122,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         $this->messageBus->dispatch(new ScanAccommodations(
             $tripId,
             enabledAccommodationTypes: $request->enabledAccommodationTypes,
+            generation: $generation,
         ));
     }
 }

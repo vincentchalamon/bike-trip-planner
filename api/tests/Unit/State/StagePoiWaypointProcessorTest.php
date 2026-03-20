@@ -10,6 +10,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\StagePoiWaypointRequest;
 use App\ApiResource\StageResponse;
 use App\Message\RecalculateRouteSegment;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StagePoiWaypointProcessor;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -40,10 +41,14 @@ final class StagePoiWaypointProcessorTest extends TestCase
         $this->messageBus = $this->createMock(MessageBusInterface::class);
         $this->objectMapper = $this->createMock(ObjectMapperInterface::class);
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('current')->willReturn(1);
+
         $this->processor = new StagePoiWaypointProcessor(
             $this->tripStateManager,
             $this->messageBus,
             $this->objectMapper,
+            $generationTracker,
         );
     }
 

@@ -11,6 +11,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
@@ -34,6 +35,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
         private ElevationCalculatorInterface $elevationCalculator,
         private RouteSimplifierInterface $routeSimplifier,
         private ObjectMapperInterface $objectMapper,
+        private TripGenerationTrackerInterface $generationTracker,
     ) {
     }
 
@@ -70,6 +72,9 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
             $stage->label = $data->label;
         }
 
+        // Bump generation: stage edits invalidate in-flight computations
+        $generation = $this->generationTracker->increment($tripId);
+
         // Distance-based editing: walk along decimated route to find new endPoint
         if (null !== $data->distance) {
             $this->applyDistanceChange($tripId, $stages, $index, $data->distance);
@@ -77,12 +82,12 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
 
             // Recalculate all affected stages (current and subsequent)
             $affected = range($index, \count($stages) - 1);
-            $this->messageBus->dispatch(new RecalculateStages($tripId, $affected));
+            $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, generation: $generation));
 
             $tripRequest = $this->tripStateManager->getRequest($tripId);
             if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
-                $this->messageBus->dispatch(new FetchWeather($tripId));
-                $this->messageBus->dispatch(new CheckCalendar($tripId));
+                $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
+                $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
             }
 
             return $this->objectMapper->map($stages[$index], StageResponse::class);
@@ -99,12 +104,12 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
         $stages[$index] = $stage;
         $this->tripStateManager->storeStages($tripId, $stages);
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, [$index]));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, [$index], generation: $generation));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
-            $this->messageBus->dispatch(new FetchWeather($tripId));
-            $this->messageBus->dispatch(new CheckCalendar($tripId));
+            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
+            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }
 
         return $this->objectMapper->map($stage, StageResponse::class);

@@ -9,6 +9,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
@@ -107,6 +108,9 @@ final class StageUpdateProcessorTest extends TestCase
         $objectMapper = $this->createStub(ObjectMapperInterface::class);
         $objectMapper->method('map')->willReturn(new StageResponse());
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('increment')->willReturn(2);
+
         $processor = new StageUpdateProcessor(
             $tripStateManager,
             $messageBus,
@@ -114,6 +118,7 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $objectMapper,
+            $generationTracker,
         );
 
         $request = new StageRequest();
@@ -187,6 +192,9 @@ final class StageUpdateProcessorTest extends TestCase
         $objectMapper = $this->createStub(ObjectMapperInterface::class);
         $objectMapper->method('map')->willReturn(new StageResponse());
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('increment')->willReturn(2);
+
         $processor = new StageUpdateProcessor(
             $tripStateManager,
             $messageBus,
@@ -194,6 +202,7 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $objectMapper,
+            $generationTracker,
         );
 
         $request = new StageRequest();
@@ -252,6 +261,9 @@ final class StageUpdateProcessorTest extends TestCase
         $objectMapper = $this->createStub(ObjectMapperInterface::class);
         $objectMapper->method('map')->willReturn(new StageResponse());
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('increment')->willReturn(2);
+
         $processor = new StageUpdateProcessor(
             $tripStateManager,
             $messageBus,
@@ -259,6 +271,7 @@ final class StageUpdateProcessorTest extends TestCase
             $elevationCalculator,
             $routeSimplifier,
             $objectMapper,
+            $generationTracker,
         );
 
         $request = new StageRequest();

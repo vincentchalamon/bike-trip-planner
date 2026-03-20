@@ -10,6 +10,7 @@ use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\PricingHeuristicEngine;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
@@ -22,6 +23,7 @@ use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -67,9 +69,13 @@ final class ScanAccommodationsHandlerTest extends TestCase
 
         $logger = $this->createStub(LoggerInterface::class);
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         return new ScanAccommodationsHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $scanner,
             $queryBuilder,

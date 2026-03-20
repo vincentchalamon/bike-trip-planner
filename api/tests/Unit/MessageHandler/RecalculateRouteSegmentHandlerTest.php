@@ -7,6 +7,7 @@ namespace App\Tests\Unit\MessageHandler;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateRouteSegment;
@@ -16,6 +17,7 @@ use App\Routing\RoutingProviderInterface;
 use App\Routing\RoutingResult;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 
 final class RecalculateRouteSegmentHandlerTest extends TestCase
 {
@@ -63,9 +65,13 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         $handler = new RecalculateRouteSegmentHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $routingProvider,
         );
@@ -91,9 +97,13 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         $handler = new RecalculateRouteSegmentHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $routingProvider,
         );
@@ -128,9 +138,13 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         $handler = new RecalculateRouteSegmentHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $routingProvider,
         );

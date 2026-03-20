@@ -12,6 +12,7 @@ final readonly class RecalculateRouteSegment
         public float $waypointLat,
         public float $waypointLon,
         public string $reason,
+        public ?int $generation = null,
     ) {
     }
 }

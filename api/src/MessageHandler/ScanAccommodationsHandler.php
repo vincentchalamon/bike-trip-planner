@@ -11,6 +11,7 @@ use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\PricingHeuristicEngine;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
@@ -39,6 +40,8 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
+        TripGenerationTrackerInterface $generationTracker,
+        LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
@@ -50,14 +53,14 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         private TranslatorInterface $translator,
         #[Autowire(service: 'accommodation_scraper.client')]
         private HttpClientInterface $scraperClient,
-        private LoggerInterface $logger,
     ) {
-        parent::__construct($computationTracker, $publisher);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
 
     public function __invoke(ScanAccommodations $message): void
     {
         $tripId = $message->tripId;
+        $generation = $message->generation;
         $radiusMeters = $message->radiusMeters;
         $stageIndex = $message->stageIndex;
         $stages = $this->tripStateManager->getStages($tripId);
@@ -211,7 +214,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             }
 
             $this->tripStateManager->storeStages($tripId, array_values($stages));
-        });
+        }, $generation);
     }
 
     /**

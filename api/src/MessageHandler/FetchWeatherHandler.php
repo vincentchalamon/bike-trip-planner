@@ -8,6 +8,7 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -28,20 +29,22 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
+        TripGenerationTrackerInterface $generationTracker,
+        LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private WeatherProviderInterface $weatherProvider,
         #[Autowire(service: 'cache.weather')]
         private CacheItemPoolInterface $weatherCache,
         private MessageBusInterface $messageBus,
-        private LoggerInterface $logger,
         private RelativeWindCalculator $relativeWindCalculator = new RelativeWindCalculator(),
     ) {
-        parent::__construct($computationTracker, $publisher);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
 
     public function __invoke(FetchWeather $message): void
     {
         $tripId = $message->tripId;
+        $generation = $message->generation;
         $request = $this->tripStateManager->getRequest($tripId);
         $stages = $this->tripStateManager->getStages($tripId);
 
@@ -51,7 +54,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
 
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
-        $this->executeWithTracking($tripId, ComputationName::WEATHER, function () use ($tripId, $stages, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::WEATHER, function () use ($tripId, $stages, $locale, $generation): void {
             // Phase 1: Check cache for each stage, collect misses
             /** @var array<int, string> $cacheKeys */
             $cacheKeys = [];
@@ -178,7 +181,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                 ),
             ]);
 
-            $this->messageBus->dispatch(new AnalyzeWind($tripId));
-        });
+            $this->messageBus->dispatch(new AnalyzeWind($tripId, $generation));
+        }, $generation);
     }
 }

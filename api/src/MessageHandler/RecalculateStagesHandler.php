@@ -7,6 +7,7 @@ namespace App\MessageHandler;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
@@ -15,6 +16,7 @@ use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -24,15 +26,29 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
+        TripGenerationTrackerInterface $generationTracker,
+        LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
 
     public function __invoke(RecalculateStages $message): void
     {
         $tripId = $message->tripId;
+        $generation = $message->generation;
+
+        if ($this->isStale($tripId, $generation)) {
+            $this->logger->info('Discarding stale RecalculateStages message.', [
+                'tripId' => $tripId,
+                'messageGeneration' => $generation,
+                'currentGeneration' => $this->generationTracker->current($tripId),
+            ]);
+
+            return;
+        }
+
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -77,7 +93,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
 
         // Dispatch POI/Accommodation/BikeShop scans for affected stages
         if ([] !== $affectedIndices && !$message->skipGeographicScans) {
-            $this->messageBus->dispatch(new ScanPois($tripId));
+            $this->messageBus->dispatch(new ScanPois($tripId, $generation));
             if (!$message->skipAccommodationScan) {
                 $request = $this->tripStateManager->getRequest($tripId);
                 \assert($request instanceof \App\ApiResource\TripRequest);
@@ -86,12 +102,13 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
                         $tripId,
                         stageIndex: $idx,
                         enabledAccommodationTypes: $request->enabledAccommodationTypes,
+                        generation: $generation,
                     ));
                 }
             }
 
-            $this->messageBus->dispatch(new CheckBikeShops($tripId));
-            $this->messageBus->dispatch(new AnalyzeTerrain($tripId));
+            $this->messageBus->dispatch(new CheckBikeShops($tripId, $generation));
+            $this->messageBus->dispatch(new AnalyzeTerrain($tripId, $generation));
         }
     }
 }

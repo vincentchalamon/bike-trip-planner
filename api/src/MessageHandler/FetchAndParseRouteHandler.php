@@ -7,6 +7,7 @@ namespace App\MessageHandler;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
@@ -18,6 +19,7 @@ use App\Message\GenerateStages;
 use App\Message\ScanAllOsmData;
 use App\Repository\TripRequestRepositoryInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -27,6 +29,8 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
+        TripGenerationTrackerInterface $generationTracker,
+        LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private RouteFetcherRegistryInterface $routeFetcherRegistry,
         private DistanceCalculatorInterface $distanceCalculator,
@@ -34,12 +38,13 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
         private RouteSimplifierInterface $routeSimplifier,
         private MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
 
     public function __invoke(FetchAndParseRoute $message): void
     {
         $tripId = $message->tripId;
+        $generation = $message->generation;
         $request = $this->tripStateManager->getRequest($tripId);
 
         if (!$request instanceof TripRequest || null === $request->sourceUrl) {
@@ -48,7 +53,7 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
 
         $sourceUrl = $request->sourceUrl;
 
-        $this->executeWithTracking($tripId, ComputationName::ROUTE, function () use ($tripId, $sourceUrl): void {
+        $this->executeWithTracking($tripId, ComputationName::ROUTE, function () use ($tripId, $sourceUrl, $generation): void {
             $fetcher = $this->routeFetcherRegistry->get($sourceUrl);
             $result = $fetcher->fetch($sourceUrl);
 
@@ -106,8 +111,8 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
                 $this->tripStateManager->storeTracksData($tripId, $tracksData);
             }
 
-            $this->messageBus->dispatch(new GenerateStages($tripId));
-            $this->messageBus->dispatch(new ScanAllOsmData($tripId));
-        });
+            $this->messageBus->dispatch(new GenerateStages($tripId, $generation));
+            $this->messageBus->dispatch(new ScanAllOsmData($tripId, $generation));
+        }, $generation);
     }
 }

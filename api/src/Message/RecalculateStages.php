@@ -18,6 +18,7 @@ final readonly class RecalculateStages
         public array $affectedIndices,
         public bool $skipAccommodationScan = false,
         public bool $skipGeographicScans = false,
+        public ?int $generation = null,
     ) {
     }
 }

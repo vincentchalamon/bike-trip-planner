@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\PacingEngineInterface;
@@ -26,6 +27,7 @@ use App\Message\GenerateStages;
 use App\Message\ScanAccommodations;
 use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -35,6 +37,8 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
+        TripGenerationTrackerInterface $generationTracker,
+        LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private DistanceCalculatorInterface $distanceCalculator,
         private ElevationCalculatorInterface $elevationCalculator,
@@ -42,19 +46,20 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         private PacingEngineInterface $pacingEngine,
         private MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
 
     public function __invoke(GenerateStages $message): void
     {
         $tripId = $message->tripId;
+        $generation = $message->generation;
         $request = $this->tripStateManager->getRequest($tripId);
 
         if (!$request instanceof TripRequest) {
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::STAGES, function () use ($tripId, $request): void {
+        $this->executeWithTracking($tripId, ComputationName::STAGES, function () use ($tripId, $request, $generation): void {
             $sourceType = $this->tripStateManager->getSourceType($tripId);
 
             if ($sourceType === SourceType::KOMOOT_COLLECTION->value) {
@@ -96,15 +101,15 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
                 ),
             ]);
 
-            $this->messageBus->dispatch(new ScanPois($tripId));
-            $this->messageBus->dispatch(new ScanAccommodations($tripId, enabledAccommodationTypes: $request->enabledAccommodationTypes));
-            $this->messageBus->dispatch(new AnalyzeTerrain($tripId));
-            $this->messageBus->dispatch(new FetchWeather($tripId));
-            $this->messageBus->dispatch(new CheckCalendar($tripId));
-            $this->messageBus->dispatch(new CheckBikeShops($tripId));
-            $this->messageBus->dispatch(new CheckWaterPoints($tripId));
-            $this->messageBus->dispatch(new CheckCulturalPois($tripId));
-        });
+            $this->messageBus->dispatch(new ScanPois($tripId, $generation));
+            $this->messageBus->dispatch(new ScanAccommodations($tripId, enabledAccommodationTypes: $request->enabledAccommodationTypes, generation: $generation));
+            $this->messageBus->dispatch(new AnalyzeTerrain($tripId, $generation));
+            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
+            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
+            $this->messageBus->dispatch(new CheckBikeShops($tripId, $generation));
+            $this->messageBus->dispatch(new CheckWaterPoints($tripId, $generation));
+            $this->messageBus->dispatch(new CheckCulturalPois($tripId, $generation));
+        }, $generation);
     }
 
     /** @return list<Stage> */

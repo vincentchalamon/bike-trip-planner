@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\StagePoiWaypointRequest;
 use App\ApiResource\StageResponse;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\RecalculateRouteSegment;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -31,6 +32,7 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private ObjectMapperInterface $objectMapper,
+        private TripGenerationTrackerInterface $generationTracker,
     ) {
     }
 
@@ -61,12 +63,15 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
         $waypointLat = $data->waypointLat ?? throw new BadRequestHttpException('waypointLat is required.');
         $waypointLon = $data->waypointLon ?? throw new BadRequestHttpException('waypointLon is required.');
 
+        $generation = $this->generationTracker->current($tripId);
+
         $this->messageBus->dispatch(new RecalculateRouteSegment(
             tripId: $tripId,
             stageIndex: $index,
             waypointLat: $waypointLat,
             waypointLon: $waypointLon,
             reason: 'poi_detour',
+            generation: $generation,
         ));
 
         return $this->objectMapper->map($stage, StageResponse::class);

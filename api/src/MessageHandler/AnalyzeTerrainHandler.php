@@ -9,6 +9,7 @@ use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
@@ -18,6 +19,7 @@ use App\Message\AnalyzeTerrain;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
@@ -26,6 +28,8 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
+        TripGenerationTrackerInterface $generationTracker,
+        LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private AnalyzerRegistryInterface $analyzerRegistry,
         private ScannerInterface $scanner,
@@ -33,12 +37,13 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $geoDistance,
     ) {
-        parent::__construct($computationTracker, $publisher);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
 
     public function __invoke(AnalyzeTerrain $message): void
     {
         $tripId = $message->tripId;
+        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages || [] === $stages) {
@@ -91,7 +96,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
             $this->publisher->publish($tripId, MercureEventType::TERRAIN_ALERTS, [
                 'alertsByStage' => $alertsData,
             ]);
-        });
+        }, $generation);
     }
 
     /**

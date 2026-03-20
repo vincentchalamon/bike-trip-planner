@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateStages;
@@ -16,6 +17,7 @@ use App\MessageHandler\RecalculateStagesHandler;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -29,9 +31,13 @@ final class RecalculateStagesHandlerTest extends TestCase
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         return new RecalculateStagesHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $messageBus,
         );

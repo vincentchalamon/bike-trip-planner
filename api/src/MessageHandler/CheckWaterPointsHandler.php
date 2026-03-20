@@ -7,6 +7,7 @@ namespace App\MessageHandler;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
@@ -17,6 +18,7 @@ use App\Message\CheckWaterPoints;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -28,6 +30,8 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
+        TripGenerationTrackerInterface $generationTracker,
+        LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
@@ -35,12 +39,13 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
     ) {
-        parent::__construct($computationTracker, $publisher);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
 
     public function __invoke(CheckWaterPoints $message): void
     {
         $tripId = $message->tripId;
+        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -109,7 +114,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                 'alerts' => $alerts,
                 'waterPointsByStage' => $waterPointsByStage,
             ]);
-        });
+        }, $generation);
     }
 
     /**

@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
@@ -27,6 +28,7 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private ObjectMapperInterface $objectMapper,
+        private TripGenerationTrackerInterface $generationTracker,
     ) {
     }
 
@@ -77,14 +79,16 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
 
         $this->tripStateManager->storeStages($tripId, $stages);
 
+        $generation = $this->generationTracker->increment($tripId);
+
         $insertedIndex = $index + 1;
         $affectedIndices = range($insertedIndex, count($stages) - 1);
-        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: true));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: true, generation: $generation));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
-            $this->messageBus->dispatch(new FetchWeather($tripId));
-            $this->messageBus->dispatch(new CheckCalendar($tripId));
+            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
+            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }
 
         return $this->objectMapper->map($restDay, StageResponse::class);
