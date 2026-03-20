@@ -168,13 +168,20 @@ test.describe("Trip creation flow", () => {
     await expect(mockedPage).toHaveURL("/");
   });
 
-  test("shows validation error for invalid ?link= param", async ({
+  test("ignores invalid ?link= param without creating a trip", async ({
     mockedPage,
   }) => {
     await mockedPage.goto("/?link=not-a-valid-url");
+    // Invalid URL is silently ignored — no trip created
+    await expect(mockedPage).toHaveURL("/");
     await expect(
-      mockedPage.getByText("Veuillez entrer une URL valide."),
-    ).toBeVisible({ timeout: 5000 });
+      mockedPage.getByTestId("magic-link-input"),
+    ).toBeVisible();
+    await expect(
+      mockedPage
+        .getByTestId("trip-title-skeleton")
+        .or(mockedPage.getByTestId("trip-title")),
+    ).not.toBeVisible();
   });
 
   test("shows stage locations after geocode resolves", async ({

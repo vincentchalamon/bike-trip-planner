@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { isValidUrl } from "@/lib/validation/url";
 
 /**
  * Reads the `?link=` query parameter on mount.
@@ -25,6 +26,9 @@ export function useLinkParam(onSubmit: (url: string) => Promise<void>) {
 
     consumedRef.current = true;
     router.replace("/", { scroll: false });
+
+    if (!isValidUrl(link)) return;
+
     void onSubmitRef.current(link);
   }, [searchParams, router]);
 }
