@@ -214,6 +214,29 @@ final class RideWithGpsRouteFetcherTest extends TestCase
         $fetcher->fetch('https://ridewithgps.com/routes/123456');
     }
 
+    #[Test]
+    public function fetchThrowsWhenRouteDataIsMissing(): void
+    {
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('getStatusCode')->willReturn(200);
+        $response->method('toArray')->willReturn(['other_key' => 'value']);
+
+        $client = $this->createStub(HttpClientInterface::class);
+        $client->method('request')->willReturn($response);
+
+        $cache = $this->createStub(CacheInterface::class);
+        $cache->method('get')->willReturnCallback(
+            fn (string $key, callable $callback) => $callback($this->createStub(ItemInterface::class)),
+        );
+
+        $fetcher = new RideWithGpsRouteFetcher($client, $cache);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('has no route data');
+
+        $fetcher->fetch('https://ridewithgps.com/routes/123456');
+    }
+
     private function createFetcher(): RideWithGpsRouteFetcher
     {
         return new RideWithGpsRouteFetcher(
