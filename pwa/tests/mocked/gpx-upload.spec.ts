@@ -150,6 +150,34 @@ test.describe("GPX upload flow", () => {
     expect(uploadCalled).toBe(false);
   });
 
+  test("drag & drop: GPX file drop triggers upload and displays metrics from response", async ({
+    mockedPage,
+  }) => {
+    await mockedPage.evaluate(() => {
+      const dt = new DataTransfer();
+      dt.items.add(
+        new File(["<gpx></gpx>"], "route.gpx", {
+          type: "application/gpx+xml",
+        }),
+      );
+      window.dispatchEvent(
+        new DragEvent("drop", { dataTransfer: dt, bubbles: true }),
+      );
+    });
+
+    // Trip title should appear from the HTTP response
+    await expect(
+      mockedPage
+        .getByTestId("trip-title-skeleton")
+        .or(mockedPage.getByTestId("trip-title")),
+    ).toBeVisible({ timeout: 5000 });
+
+    // Metrics available immediately from HTTP response — no SSE injection needed
+    await expect(mockedPage.getByTestId("total-distance")).toContainText(
+      "187km",
+    );
+  });
+
   test("shows error toast on API 400 response", async ({ mockedPage }) => {
     // Override mock to return 400
     await mockedPage.route("**/trips/gpx-upload", (route, request) => {
