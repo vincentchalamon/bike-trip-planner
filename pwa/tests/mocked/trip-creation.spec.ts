@@ -14,7 +14,7 @@ test.describe("Trip creation flow", () => {
     const input = mockedPage.getByTestId("magic-link-input");
     await expect(input).toHaveAttribute(
       "placeholder",
-      "Collez votre lien Komoot ici...",
+      "Collez votre lien Komoot, Strava ou RideWithGPS ici...",
     );
   });
 

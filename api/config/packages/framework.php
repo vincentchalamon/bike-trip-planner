@@ -29,6 +29,24 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'User-Agent' => 'BikeTripPlanner/1.0',
                     ],
                 ],
+                'strava.client' => [
+                    'base_uri' => 'https://www.strava.com',
+                    'max_redirects' => 2,
+                    'timeout' => 10,
+                    'headers' => [
+                        'Accept' => 'application/gpx+xml',
+                        'User-Agent' => 'BikeTripPlanner/1.0',
+                    ],
+                ],
+                'ridewithgps.client' => [
+                    'base_uri' => 'https://ridewithgps.com',
+                    'max_redirects' => 2,
+                    'timeout' => 10,
+                    'headers' => [
+                        'Accept' => 'application/json',
+                        'User-Agent' => 'BikeTripPlanner/1.0',
+                    ],
+                ],
                 'overpass.local.client' => [
                     'base_uri' => 'http://overpass:80',
                     'timeout' => 5,

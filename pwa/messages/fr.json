@@ -5,8 +5,8 @@
     "skipToTimeline": "Aller à la timeline"
   },
   "magicLink": {
-    "placeholder": "Collez votre lien Komoot ici...",
-    "ariaLabel": "URL Komoot",
+    "placeholder": "Collez votre lien Komoot, Strava ou RideWithGPS ici...",
+    "ariaLabel": "URL de route (Komoot, Strava, RideWithGPS)",
     "invalidUrl": "Veuillez entrer une URL valide."
   },
   "gpxUpload": {
