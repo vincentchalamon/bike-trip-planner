@@ -1,5 +1,7 @@
 # Recommended Claude Code Tools for Bike Trip Planner
 
+*[Version francaise](claude-code-tooling.fr.md)*
+
 ## Context
 
 Bike Trip Planner is a local-first project (PHP/Symfony 8 backend + Next.js 16 frontend). This document lists the Claude Code tools (MCP servers, hooks, skills) configured for this project and recommends additional ones.

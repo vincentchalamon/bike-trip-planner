@@ -1,5 +1,7 @@
 # Getting Started
 
+*[Version francaise](getting-started.fr.md)*
+
 This guide walks you through installing, configuring, and running Bike Trip Planner on your local machine.
 
 ---
