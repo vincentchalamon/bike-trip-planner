@@ -10,6 +10,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
@@ -29,6 +30,7 @@ final readonly class StageCreateProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
         private ObjectMapperInterface $objectMapper,
+        private TripGenerationTrackerInterface $generationTracker,
     ) {
     }
 
@@ -72,12 +74,14 @@ final readonly class StageCreateProcessor implements ProcessorInterface
 
         $this->tripStateManager->storeStages($tripId, $stages);
 
-        $this->messageBus->dispatch(new RecalculateStages($tripId, [$position]));
+        $generation = $this->generationTracker->increment($tripId);
+
+        $this->messageBus->dispatch(new RecalculateStages($tripId, [$position], generation: $generation));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
-            $this->messageBus->dispatch(new FetchWeather($tripId));
-            $this->messageBus->dispatch(new CheckCalendar($tripId));
+            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
+            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }
 
         return $this->objectMapper->map($newStage, StageResponse::class);

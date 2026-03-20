@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCalendar;
@@ -15,6 +16,7 @@ use App\MessageHandler\CheckCalendarHandler;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CheckCalendarHandlerTest extends TestCase
@@ -48,9 +50,13 @@ final class CheckCalendarHandlerTest extends TestCase
             },
         );
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         return new CheckCalendarHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $translator,
         );

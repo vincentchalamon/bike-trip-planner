@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
@@ -15,6 +16,7 @@ use App\MessageHandler\AnalyzeWindHandler;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class AnalyzeWindHandlerTest extends TestCase
@@ -56,6 +58,7 @@ final class AnalyzeWindHandlerTest extends TestCase
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
+        ?TripGenerationTrackerInterface $generationTracker = null,
     ): AnalyzeWindHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
@@ -72,6 +75,8 @@ final class AnalyzeWindHandlerTest extends TestCase
         return new AnalyzeWindHandler(
             $computationTracker,
             $publisher,
+            $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class),
+            new NullLogger(),
             $tripStateManager,
             $translator,
         );
@@ -204,6 +209,21 @@ final class AnalyzeWindHandlerTest extends TestCase
 
         $handler = $this->createHandler($tripStateManager, $publisher);
         $handler(new AnalyzeWind('trip-1'));
+    }
+
+    #[Test]
+    public function staleMessageIsDiscardedViaExecuteWithTracking(): void
+    {
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->never())->method('publish');
+
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('current')->willReturn(5);
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $generationTracker);
+        $handler(new AnalyzeWind('trip-1', generation: 3));
     }
 
     #[Test]

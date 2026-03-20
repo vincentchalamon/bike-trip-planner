@@ -17,6 +17,7 @@ final readonly class ScanAccommodations
         public ?int $stageIndex = null,
         public array $enabledAccommodationTypes = \App\ApiResource\TripRequest::ALL_ACCOMMODATION_TYPES,
         public bool $isExpandScan = false,
+        public ?int $generation = null,
     ) {
     }
 }

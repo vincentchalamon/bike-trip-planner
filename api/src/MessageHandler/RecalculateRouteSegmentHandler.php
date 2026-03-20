@@ -6,12 +6,14 @@ namespace App\MessageHandler;
 
 use App\ApiResource\Model\Coordinate;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateRouteSegment;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Routing\RoutingProviderInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
@@ -20,15 +22,18 @@ final readonly class RecalculateRouteSegmentHandler extends AbstractTripMessageH
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
+        TripGenerationTrackerInterface $generationTracker,
+        LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private RoutingProviderInterface $routingProvider,
     ) {
-        parent::__construct($computationTracker, $publisher);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
 
     public function __invoke(RecalculateRouteSegment $message): void
     {
         $tripId = $message->tripId;
+        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -56,6 +61,6 @@ final readonly class RecalculateRouteSegmentHandler extends AbstractTripMessageH
                     $result->coordinates,
                 ),
             ]);
-        });
+        }, $generation);
     }
 }

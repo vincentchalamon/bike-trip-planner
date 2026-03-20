@@ -10,6 +10,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Trip;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
@@ -26,6 +27,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
+        private TripGenerationTrackerInterface $generationTracker,
         private RequestStack $requestStack,
     ) {
     }
@@ -46,7 +48,10 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $computations = ComputationName::pipeline();
         $this->computationTracker->initializeComputations($tripId, $computations);
 
-        $this->messageBus->dispatch(new FetchAndParseRoute($tripId));
+        $this->generationTracker->initialize($tripId);
+        $generation = 1;
+
+        $this->messageBus->dispatch(new FetchAndParseRoute($tripId, $generation));
 
         return new Trip(
             id: $tripId,

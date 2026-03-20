@@ -6,11 +6,13 @@ namespace App\MessageHandler;
 
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCalendar;
 use App\Repository\TripRequestRepositoryInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Yasumi\Yasumi;
@@ -21,15 +23,18 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
+        TripGenerationTrackerInterface $generationTracker,
+        LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private TranslatorInterface $translator,
     ) {
-        parent::__construct($computationTracker, $publisher);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
 
     public function __invoke(CheckCalendar $message): void
     {
         $tripId = $message->tripId;
+        $generation = $message->generation;
         $request = $this->tripStateManager->getRequest($tripId);
         $stages = $this->tripStateManager->getStages($tripId);
 
@@ -95,6 +100,6 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
             $this->publisher->publish($tripId, MercureEventType::CALENDAR_ALERTS, [
                 'nudges' => $nudges,
             ]);
-        });
+        }, $generation);
     }
 }

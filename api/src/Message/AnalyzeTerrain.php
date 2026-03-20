@@ -8,6 +8,7 @@ final readonly class AnalyzeTerrain
 {
     public function __construct(
         public string $tripId,
+        public ?int $generation = null,
     ) {
     }
 }

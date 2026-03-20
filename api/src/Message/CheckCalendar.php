@@ -8,6 +8,7 @@ final readonly class CheckCalendar
 {
     public function __construct(
         public string $tripId,
+        public ?int $generation = null,
     ) {
     }
 }

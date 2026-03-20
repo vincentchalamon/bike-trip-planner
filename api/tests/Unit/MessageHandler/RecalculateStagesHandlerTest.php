@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateStages;
@@ -16,6 +17,7 @@ use App\MessageHandler\RecalculateStagesHandler;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -25,6 +27,7 @@ final class RecalculateStagesHandlerTest extends TestCase
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
         MessageBusInterface $messageBus,
+        ?TripGenerationTrackerInterface $generationTracker = null,
     ): RecalculateStagesHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
@@ -32,6 +35,8 @@ final class RecalculateStagesHandlerTest extends TestCase
         return new RecalculateStagesHandler(
             $computationTracker,
             $publisher,
+            $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class),
+            new NullLogger(),
             $tripStateManager,
             $messageBus,
         );
@@ -97,6 +102,25 @@ final class RecalculateStagesHandlerTest extends TestCase
         );
 
         $handler(new RecalculateStages(tripId: 'trip-1', affectedIndices: []));
+    }
+
+    #[Test]
+    public function staleMessageIsDiscardedWithoutProcessing(): void
+    {
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->never())->method('publish');
+
+        $messageBus = $this->createMock(MessageBusInterface::class);
+        $messageBus->expects($this->never())->method('dispatch');
+
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('current')->willReturn(5);
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $messageBus, $generationTracker);
+
+        $handler(new RecalculateStages('trip-1', [], generation: 3));
     }
 
     #[Test]

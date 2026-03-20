@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Post;
 use App\ApiResource\AccommodationScanRequest;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
@@ -30,7 +31,9 @@ final class AccommodationScanProcessorTest extends TestCase
         $messageBus = $this->createStub(MessageBusInterface::class);
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
 
-        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker);
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('current')->willReturn(1);
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker);
 
         $this->expectException(NotFoundHttpException::class);
 
@@ -63,7 +66,9 @@ final class AccommodationScanProcessorTest extends TestCase
             ->with($this->callback(static fn (ScanAccommodations $message): bool => $message->tripId === $tripId && $message->radiusMeters === $expectedRadiusMeters))
             ->willReturn(new Envelope(new ScanAccommodations($tripId, $expectedRadiusMeters)));
 
-        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker);
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('current')->willReturn(1);
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker);
 
         $data = new AccommodationScanRequest();
         $data->radiusKm = $radiusKm;
@@ -91,7 +96,9 @@ final class AccommodationScanProcessorTest extends TestCase
             ->with($this->callback(static fn (ScanAccommodations $message): bool => QueryBuilderInterface::DEFAULT_ACCOMMODATION_RADIUS_METERS === $message->radiusMeters))
             ->willReturn(new Envelope(new ScanAccommodations($tripId)));
 
-        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker);
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('current')->willReturn(1);
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker);
 
         $processor->process(new AccommodationScanRequest(), new Post(), ['tripId' => $tripId]);
     }
@@ -117,7 +124,9 @@ final class AccommodationScanProcessorTest extends TestCase
             ->with($this->callback(static fn (ScanAccommodations $message): bool => $message->enabledAccommodationTypes === $enabledTypes))
             ->willReturn(new Envelope(new ScanAccommodations($tripId)));
 
-        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker);
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('current')->willReturn(1);
+        $processor = new AccommodationScanProcessor($messageBus, $tripStateManager, $computationTracker, $generationTracker);
 
         $processor->process(new AccommodationScanRequest(), new Post(), ['tripId' => $tripId]);
     }

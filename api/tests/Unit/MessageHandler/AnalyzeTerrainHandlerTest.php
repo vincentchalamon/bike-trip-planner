@@ -10,6 +10,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertType;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
@@ -22,6 +23,7 @@ use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 
 final class AnalyzeTerrainHandlerTest extends TestCase
 {
@@ -54,9 +56,13 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         return new AnalyzeTerrainHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $analyzerRegistry,
             $scanner,

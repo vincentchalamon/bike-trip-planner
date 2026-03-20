@@ -6,6 +6,7 @@ namespace App\MessageHandler;
 
 use App\ApiResource\Model\Coordinate;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
@@ -15,6 +16,7 @@ use App\Message\CheckCulturalPois;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -57,18 +59,21 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
+        TripGenerationTrackerInterface $generationTracker,
+        LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
     ) {
-        parent::__construct($computationTracker, $publisher);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
 
     public function __invoke(CheckCulturalPois $message): void
     {
         $tripId = $message->tripId;
+        $generation = $message->generation;
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -159,7 +164,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
             $this->publisher->publish($tripId, MercureEventType::CULTURAL_POI_ALERTS, [
                 'alerts' => $alerts,
             ]);
-        });
+        }, $generation);
     }
 
     /**

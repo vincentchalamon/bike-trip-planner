@@ -10,6 +10,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\AccommodationScanRequest;
 use App\ApiResource\Trip;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
@@ -25,6 +26,7 @@ final readonly class AccommodationScanProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
+        private TripGenerationTrackerInterface $generationTracker,
     ) {
     }
 
@@ -46,8 +48,10 @@ final readonly class AccommodationScanProcessor implements ProcessorInterface
 
         $enabledAccommodationTypes = $tripRequest->enabledAccommodationTypes;
 
+        $generation = $this->generationTracker->current($tripId);
+
         $this->computationTracker->resetComputation($tripId, ComputationName::ACCOMMODATIONS);
-        $this->messageBus->dispatch(new ScanAccommodations($tripId, $radiusMeters, $data->stageIndex, $enabledAccommodationTypes, isExpandScan: true));
+        $this->messageBus->dispatch(new ScanAccommodations($tripId, $radiusMeters, $data->stageIndex, $enabledAccommodationTypes, isExpandScan: true, generation: $generation));
 
         $statuses = $this->computationTracker->getStatuses($tripId) ?? [];
 

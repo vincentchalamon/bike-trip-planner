@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Patch;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationDependencyResolver;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\IdempotencyCheckerInterface;
@@ -44,12 +45,17 @@ final class TripUpdateProcessorTest extends TestCase
         $requestStack = $this->createStub(RequestStack::class);
         $requestStack->method('getCurrentRequest')->willReturn(null);
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('increment')->willReturn(2);
+        $generationTracker->method('current')->willReturn(1);
+
         $this->processor = new TripUpdateProcessor(
             $this->messageBus,
             $this->tripStateManager,
             $this->computationTracker,
             new ComputationDependencyResolver(),
             $this->idempotencyChecker,
+            $generationTracker,
             $requestStack,
         );
     }

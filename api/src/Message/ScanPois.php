@@ -8,6 +8,7 @@ final readonly class ScanPois
 {
     public function __construct(
         public string $tripId,
+        public ?int $generation = null,
     ) {
     }
 }

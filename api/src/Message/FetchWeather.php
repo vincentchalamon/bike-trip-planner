@@ -8,6 +8,7 @@ final readonly class FetchWeather
 {
     public function __construct(
         public string $tripId,
+        public ?int $generation = null,
     ) {
     }
 }

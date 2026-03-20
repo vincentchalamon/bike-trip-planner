@@ -7,6 +7,7 @@ namespace App\Tests\Unit\MessageHandler;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
@@ -18,6 +19,7 @@ use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CheckWaterPointsHandlerTest extends TestCase
@@ -58,9 +60,13 @@ final class CheckWaterPointsHandlerTest extends TestCase
             static fn (string $id, array $params): string => \sprintf('No cemetery on stage %s for 30+ km.', $params['%stage%']),
         );
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         return new CheckWaterPointsHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $scanner,
             $queryBuilder,

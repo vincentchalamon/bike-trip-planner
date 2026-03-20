@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\RiderTimeEstimatorInterface;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
@@ -20,6 +21,7 @@ use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ScanPoisHandlerTest extends TestCase
@@ -61,9 +63,13 @@ final class ScanPoisHandlerTest extends TestCase
             static fn (string $id, array $params): string => $id.': '.json_encode($params),
         );
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         return new ScanPoisHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $scanner,
             $queryBuilder,

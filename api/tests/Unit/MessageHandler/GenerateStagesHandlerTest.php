@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\PacingEngineInterface;
@@ -20,6 +21,7 @@ use App\MessageHandler\GenerateStagesHandler;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -34,9 +36,13 @@ final class GenerateStagesHandlerTest extends TestCase
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         return new GenerateStagesHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $this->createStub(DistanceCalculatorInterface::class),
             $this->createStub(ElevationCalculatorInterface::class),
@@ -102,9 +108,13 @@ final class GenerateStagesHandlerTest extends TestCase
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         $handler = new GenerateStagesHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $distanceCalculator,
             $this->createStub(ElevationCalculatorInterface::class),
@@ -165,9 +175,13 @@ final class GenerateStagesHandlerTest extends TestCase
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         $handler = new GenerateStagesHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $distanceCalculator,
             $this->createStub(ElevationCalculatorInterface::class),

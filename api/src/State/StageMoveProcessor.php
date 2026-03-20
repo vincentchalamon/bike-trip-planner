@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
@@ -27,6 +28,7 @@ final readonly class StageMoveProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private ObjectMapperInterface $objectMapper,
+        private TripGenerationTrackerInterface $generationTracker,
     ) {
     }
 
@@ -72,13 +74,16 @@ final readonly class StageMoveProcessor implements ProcessorInterface
 
         $this->tripStateManager->storeStages($tripId, $stages);
 
+        // Bump generation: stage moves invalidate in-flight computations
+        $generation = $this->generationTracker->increment($tripId);
+
         // Dispatch continuity check for all stages; weather/calendar for all stages
-        $this->messageBus->dispatch(new RecalculateStages($tripId, []));
+        $this->messageBus->dispatch(new RecalculateStages($tripId, [], generation: $generation));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
-            $this->messageBus->dispatch(new FetchWeather($tripId));
-            $this->messageBus->dispatch(new CheckCalendar($tripId));
+            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
+            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }
 
         return $this->objectMapper->map($stage, StageResponse::class);

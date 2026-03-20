@@ -7,6 +7,7 @@ namespace App\Tests\Unit\MessageHandler;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -17,6 +18,7 @@ use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CheckBikeShopsHandlerTest extends TestCase
@@ -60,9 +62,13 @@ final class CheckBikeShopsHandlerTest extends TestCase
             },
         );
 
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
         return new CheckBikeShopsHandler(
             $computationTracker,
             $publisher,
+            $generationTracker,
+            new NullLogger(),
             $tripStateManager,
             $scanner,
             $queryBuilder,

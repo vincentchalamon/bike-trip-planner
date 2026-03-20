@@ -8,6 +8,7 @@ final readonly class CheckCulturalPois
 {
     public function __construct(
         public string $tripId,
+        public ?int $generation = null,
     ) {
     }
 }
