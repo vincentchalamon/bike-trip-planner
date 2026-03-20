@@ -181,6 +181,39 @@ final class RideWithGpsRouteFetcherTest extends TestCase
         self::assertCount(2, $result->tracks[0]);
     }
 
+    #[Test]
+    public function fetchThrowsWhenAllCoordinatesAreInvalid(): void
+    {
+        $jsonData = [
+            'route' => [
+                'name' => 'Invalid Route',
+                'track_points' => [
+                    ['lat' => 'invalid', 'lng' => 5.0, 'e' => 100.0],
+                    ['lat' => 'bad', 'lng' => 5.1, 'e' => 150.0],
+                ],
+            ],
+        ];
+
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('getStatusCode')->willReturn(200);
+        $response->method('toArray')->willReturn($jsonData);
+
+        $client = $this->createStub(HttpClientInterface::class);
+        $client->method('request')->willReturn($response);
+
+        $cache = $this->createStub(CacheInterface::class);
+        $cache->method('get')->willReturnCallback(
+            fn (string $key, callable $callback) => $callback($this->createStub(ItemInterface::class)),
+        );
+
+        $fetcher = new RideWithGpsRouteFetcher($client, $cache);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('no valid coordinates');
+
+        $fetcher->fetch('https://ridewithgps.com/routes/123456');
+    }
+
     private function createFetcher(): RideWithGpsRouteFetcher
     {
         return new RideWithGpsRouteFetcher(
