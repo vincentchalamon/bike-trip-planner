@@ -10,7 +10,8 @@
     "invalidUrl": "Veuillez entrer une URL valide."
   },
   "gpxUpload": {
-    "ariaLabel": "Importer un fichier GPX"
+    "ariaLabel": "Importer un fichier GPX",
+    "dropZone": "Déposez votre fichier GPX ici"
   },
   "tripSummary": {
     "totalDistance": "Distance totale :",

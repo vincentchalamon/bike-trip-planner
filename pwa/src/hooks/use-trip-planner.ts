@@ -37,6 +37,7 @@ export function useTripPlanner() {
   const startDate = useTripStore((s) => s.startDate);
   const endDate = useTripStore((s) => s.endDate);
   const setTrip = useTripStore((s) => s.setTrip);
+  const updateRouteData = useTripStore((s) => s.updateRouteData);
   const updateTitle = useTripStore((s) => s.updateTitle);
   const updateDates = useTripStore((s) => s.updateDates);
   const clearTrip = useTripStore((s) => s.clearTrip);
@@ -171,6 +172,14 @@ export function useTripPlanner() {
         id: data.id,
         title: data.title ?? file.name.replace(/\.gpx$/i, ""),
         sourceUrl: "",
+      });
+
+      updateRouteData({
+        totalDistance: data.totalDistance,
+        totalElevation: data.totalElevation,
+        totalElevationLoss: data.totalElevationLoss,
+        sourceType: "gpx_upload",
+        title: data.title ?? null,
       });
     } catch (err) {
       if (isNetworkError(err)) {

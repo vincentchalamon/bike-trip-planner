@@ -108,6 +108,9 @@ final readonly class GpxUploadController
             '@type' => 'Trip',
             'id' => $result['tripId'],
             'computationStatus' => $result['computationStatus'],
+            'totalDistance' => $result['totalDistance'],
+            'totalElevation' => $result['totalElevation'],
+            'totalElevationLoss' => $result['totalElevationLoss'],
         ];
 
         if (null !== $title) {

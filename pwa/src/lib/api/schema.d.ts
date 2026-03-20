@@ -1230,6 +1230,12 @@ export interface operations {
                         };
                         /** @description Title extracted from GPX metadata */
                         title?: string;
+                        /** @description Total route distance in km */
+                        totalDistance: number;
+                        /** @description Total elevation gain in meters */
+                        totalElevation: number;
+                        /** @description Total elevation loss in meters */
+                        totalElevationLoss: number;
                     };
                 };
             };
