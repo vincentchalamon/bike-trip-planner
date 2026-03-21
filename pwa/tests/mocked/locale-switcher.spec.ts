@@ -69,6 +69,29 @@ test.describe("LocaleSwitcher", () => {
     expect(lang).toBe("en");
   });
 
+  test("detects navigator.language on first visit", async ({
+    mockedPage,
+  }) => {
+    // Clear any stored locale to simulate first visit
+    await mockedPage.evaluate(() => localStorage.removeItem("locale"));
+
+    // Set navigator.language to English and reload
+    await mockedPage.evaluate(() => {
+      Object.defineProperty(navigator, "language", {
+        get: () => "en-US",
+        configurable: true,
+      });
+    });
+    await mockedPage.reload();
+    await mockedPage.waitForLoadState("networkidle");
+
+    // The app should detect "en" from navigator.language
+    const lang = await mockedPage.evaluate(
+      () => document.documentElement.lang,
+    );
+    expect(lang).toBe("en");
+  });
+
   test("locale group has correct ARIA role", async ({
     submitUrl,
     injectEvent,

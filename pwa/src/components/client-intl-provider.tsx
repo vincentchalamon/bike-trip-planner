@@ -54,6 +54,16 @@ function initLocale() {
 
 initLocale();
 
+/* ── Context for locale switching ──────────────────────────────── */
+
+type SwitchLocaleFn = (locale: SupportedLocale) => void;
+
+const ClientIntlContext = createContext<SwitchLocaleFn>(() => {});
+
+export function useSwitchLocale(): SwitchLocaleFn {
+  return useContext(ClientIntlContext);
+}
+
 /**
  * Client-side i18n provider that detects and manages locale without
  * server-side cookies. Compatible with static export (Capacitor).
@@ -83,14 +93,4 @@ export function ClientIntlProvider({ children }: { children: ReactNode }) {
       </NextIntlClientProvider>
     </ClientIntlContext.Provider>
   );
-}
-
-/* ── Context for locale switching ──────────────────────────────── */
-
-type SwitchLocaleFn = (locale: SupportedLocale) => void;
-
-const ClientIntlContext = createContext<SwitchLocaleFn>(() => {});
-
-export function useSwitchLocale(): SwitchLocaleFn {
-  return useContext(ClientIntlContext);
 }
