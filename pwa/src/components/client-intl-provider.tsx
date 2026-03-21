@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useSyncExternalStore, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { NextIntlClientProvider } from "next-intl";
 import en from "../../messages/en.json";
 import fr from "../../messages/fr.json";
@@ -79,8 +85,6 @@ export function ClientIntlProvider({ children }: { children: ReactNode }) {
 }
 
 /* ── Context for locale switching ──────────────────────────────── */
-
-import { createContext, useContext } from "react";
 
 type SwitchLocaleFn = (locale: SupportedLocale) => void;
 
