@@ -38,7 +38,7 @@
 
 ## Features
 
-**Import your route in seconds** — Paste a link from Komoot, Strava, or RideWithGPS, or upload a GPX/FIT file directly. The backend fetches, parses, and processes everything asynchronously.
+**Import your route in seconds** — Paste a link from Komoot, Strava, or RideWithGPS, or upload a GPX file directly. The backend fetches, parses, and processes everything asynchronously.
 
 **Smart pacing engine** — Automatically distributes distance across days, accounting for cumulative fatigue and elevation gain. Configurable daily targets with a safety minimum threshold.
 
