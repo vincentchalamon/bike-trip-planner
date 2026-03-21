@@ -75,8 +75,8 @@ test.describe("LocaleSwitcher", () => {
     // Clear any stored locale to simulate first visit
     await mockedPage.evaluate(() => localStorage.removeItem("locale"));
 
-    // Set navigator.language to English and reload
-    await mockedPage.evaluate(() => {
+    // Patch navigator.language before page scripts execute
+    await mockedPage.addInitScript(() => {
       Object.defineProperty(navigator, "language", {
         get: () => "en-US",
         configurable: true,
