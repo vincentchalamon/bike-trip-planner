@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import {
   Popover,
@@ -31,6 +32,7 @@ export function LocationCombobox({
   placeholder = "Search a place...",
   "aria-label": ariaLabel,
 }: LocationComboboxProps) {
+  const t = useTranslations("stageLocations");
   const [open, setOpen] = useState(true);
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<GeocodeResult[]>([]);
@@ -95,7 +97,7 @@ export function LocationCombobox({
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             )}
-            <CommandEmpty>{loading ? "" : "No results found"}</CommandEmpty>
+            <CommandEmpty>{loading ? "" : t("noResults")}</CommandEmpty>
             {results.map((result) => (
               <CommandItem
                 key={`${result.lat}-${result.lon}`}

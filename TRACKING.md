@@ -20,11 +20,11 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-01.spec.ts`
 - **Checklist manuelle :**
-    - [x] Alerte dimanche visible sur une étape tombant un dimanche
-    - [ ] Alerte pente raide visible sur une étape avec forte pente (en attente de trace de test)
-    - [x] Alerte point de charge VAE visible (si VAE activé)
-    - [x] Points d'eau détectés et affichés par étape
-    - [x] Dénivelés corrigés cohérents avec la trace GPX
+  - [x] Alerte dimanche visible sur une étape tombant un dimanche
+  - [ ] Alerte pente raide visible sur une étape avec forte pente (en attente de trace de test)
+  - [x] Alerte point de charge VAE visible (si VAE activé)
+  - [x] Points d'eau détectés et affichés par étape
+  - [x] Dénivelés corrigés cohérents avec la trace GPX
 
 ---
 
@@ -40,9 +40,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-02.spec.ts`
 - **Checklist manuelle :**
-    - [ ] ~~Résumé des alertes visible dans le panneau trip~~
-    - [x] Badge de difficulté avec jauge colorée par étape
-    - [x] Barre de progression reflétant l'avancement du trip
+  - [ ] ~~Résumé des alertes visible dans le panneau trip~~
+  - [x] Badge de difficulté avec jauge colorée par étape
+  - [x] Barre de progression reflétant l'avancement du trip
 
 ---
 
@@ -58,10 +58,10 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-03.spec.ts`
 - **Checklist manuelle :**
-    - [x] Distance hébergement-endPoint affichée
-    - [x] Modification du rayon de recherche + résultats mis à jour
-    - [x] Sélection d'un hébergement → recalcul itinéraire (endPoint + startPoint étape suivante)
-    - [x] Responsive : vérifier sur mobile
+  - [x] Distance hébergement-endPoint affichée
+  - [x] Modification du rayon de recherche + résultats mis à jour
+  - [x] Sélection d'un hébergement → recalcul itinéraire (endPoint + startPoint étape suivante)
+  - [x] Responsive : vérifier sur mobile
 
 ---
 
@@ -78,11 +78,11 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-04.spec.ts`
 - **Checklist manuelle :**
-    - [x] Presets cyclo sélectionnables (sportif, touring, etc.)
-    - [x] Panneau de configuration accessible et fonctionnel
-    - [x] Filtrage par type d'hébergement dans le panneau de configuration
-    - [x] Insertion d'un jour de repos → recalcul des étapes suivantes
-    - [x] Responsive : sidebar sur mobile
+  - [x] Presets cyclo sélectionnables (sportif, touring, etc.)
+  - [x] Panneau de configuration accessible et fonctionnel
+  - [x] Filtrage par type d'hébergement dans le panneau de configuration
+  - [x] Insertion d'un jour de repos → recalcul des étapes suivantes
+  - [x] Responsive : sidebar sur mobile
 
 ---
 
@@ -98,11 +98,11 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-05.spec.ts`
 - **Checklist manuelle :**
-    - [x] Vent relatif (face/dos) affiché par étape
-    - [x] Indice de confort cycliste visible
-    - [x] Estimation du temps de parcours cohérente avec le profil cyclo
-    - [x] Horaires lever/coucher de soleil affichés
-    - [x] Alerte arrivée nocturne si applicable
+  - [x] Vent relatif (face/dos) affiché par étape
+  - [x] Indice de confort cycliste visible
+  - [x] Estimation du temps de parcours cohérente avec le profil cyclo
+  - [x] Horaires lever/coucher de soleil affichés
+  - [x] Alerte arrivée nocturne si applicable
 
 ---
 
@@ -118,9 +118,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-06.spec.ts`
 - **Checklist manuelle :**
-    - [x] Export texte complet et formaté
-    - [x] Téléchargement GPX global fonctionnel
-    - [x] Budget récapitulatif avec totaux cohérents
+  - [x] Export texte complet et formaté
+  - [x] Téléchargement GPX global fonctionnel
+  - [x] Budget récapitulatif avec totaux cohérents
 
 ---
 
@@ -137,13 +137,13 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-07.spec.ts`
 - **Checklist manuelle :**
-    - [x] Carte avec tracé coloré par étape
-    - [x] Profil altimétrique interactif (survol → curseur sur carte)
-    - [x] Synchronisation carte ↔ timeline
-    - [x] Split view fonctionnel
-    - [x] Timeline ravitaillement avec POI le long du tracé
-    - [x] Mode sombre : tuiles sombres
-    - [x] Responsive : carte sur mobile (tactile)
+  - [x] Carte avec tracé coloré par étape
+  - [x] Profil altimétrique interactif (survol → curseur sur carte)
+  - [x] Synchronisation carte ↔ timeline
+  - [x] Split view fonctionnel
+  - [x] Timeline ravitaillement avec POI le long du tracé
+  - [x] Mode sombre : tuiles sombres
+  - [x] Responsive : carte sur mobile (tactile)
 
 ---
 
@@ -159,10 +159,10 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-08.spec.ts`
 - **Checklist manuelle :**
-    - [x] Onboarding guide affiché au premier lancement
-    - [x] Raccourcis clavier fonctionnels (Ctrl+Z, Ctrl+Y, etc.)
-    - [x] Bouton aide affichant la liste des raccourcis
-    - [x] Undo/Redo sur les actions clés (suppression étape, modification distance)
+  - [x] Onboarding guide affiché au premier lancement
+  - [x] Raccourcis clavier fonctionnels (Ctrl+Z, Ctrl+Y, etc.)
+  - [x] Bouton aide affichant la liste des raccourcis
+  - [x] Undo/Redo sur les actions clés (suppression étape, modification distance)
 
 ---
 
@@ -178,10 +178,10 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-09.spec.ts`
 - **Checklist manuelle :**
-    - [x] Upload GPX direct fonctionnel (drag & drop)
-    - [ ] Import depuis Strava/RideWithGPS (si implémenté) (en attente de trace de test)
-    - [x] Création de trip via URL avec paramètre link
-    - [ ] Invalidation Messenger : pas de messages orphelins (comment tester ?)
+  - [x] Upload GPX direct fonctionnel (drag & drop)
+  - [ ] Import depuis Strava/RideWithGPS (si implémenté) (en attente de trace de test)
+  - [x] Création de trip via URL avec paramètre link
+  - [ ] Invalidation Messenger : pas de messages orphelins (comment tester ?)
 
 ---
 
@@ -199,11 +199,11 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-10.spec.ts`
 - **Checklist manuelle :**
-    - [ ] Switcher fr/en fonctionnel
-    - [ ] Tous les textes traduits (pas de clés i18n visibles)
-    - [ ] Export statique compatible i18n
-    - [ ] Documentation en français complète
-    - [ ] Licence mise à jour
+  - [ ] Switcher fr/en fonctionnel
+  - [ ] Tous les textes traduits (pas de clés i18n visibles)
+  - [ ] Export statique compatible i18n
+  - [ ] Documentation en français complète
+  - [ ] Licence mise à jour
 
 ---
 
@@ -219,11 +219,11 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-11.spec.ts`
 - **Checklist manuelle :**
-    - [ ] Liste des trips paginée et filtrable
-    - [ ] Navigation liste → détail → retour
-    - [ ] Duplication de trip fonctionnelle
-    - [ ] Verrouillage automatique des trips passés (lecture seule)
-    - [ ] Responsive : liste sur mobile
+  - [ ] Liste des trips paginée et filtrable
+  - [ ] Navigation liste → détail → retour
+  - [ ] Duplication de trip fonctionnelle
+  - [ ] Verrouillage automatique des trips passés (lecture seule)
+  - [ ] Responsive : liste sur mobile
 
 ---
 
@@ -241,11 +241,11 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-12.spec.ts`
 - **Checklist manuelle :**
-    - [ ] Flux magic link complet : demande → email → clic → connecté
-    - [ ] Token expiré/utilisé → message d'erreur clair
-    - [ ] Endpoints sécurisés (401 sans JWT)
-    - [ ] Mercure : pas de fuite de données entre utilisateurs
-    - [ ] Mobile : flux auth sur Capacitor
+  - [ ] Flux magic link complet : demande → email → clic → connecté
+  - [ ] Token expiré/utilisé → message d'erreur clair
+  - [ ] Endpoints sécurisés (401 sans JWT)
+  - [ ] Mercure : pas de fuite de données entre utilisateurs
+  - [ ] Mobile : flux auth sur Capacitor
 
 ---
 
@@ -261,10 +261,10 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-13.spec.ts`
 - **Checklist manuelle :**
-    - [ ] Partage en lecture seule fonctionnel (lien anonyme)
-    - [ ] Révocation du lien par le propriétaire
-    - [ ] Bouton Partager : infographie + texte + lien
-    - [ ] Garmin Connect : export course (si infra disponible)
+  - [ ] Partage en lecture seule fonctionnel (lien anonyme)
+  - [ ] Révocation du lien par le propriétaire
+  - [ ] Bouton Partager : infographie + texte + lien
+  - [ ] Garmin Connect : export course (si infra disponible)
 
 ---
 
@@ -283,12 +283,12 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-14.spec.ts`
 - **Checklist manuelle :**
-    - [ ] APK installable sur Android
-    - [ ] Mode hors-ligne : consultation des données en cache
-    - [ ] Bannière offline/online
-    - [ ] Navigation tactile fluide
-    - [ ] Retour en ligne : rafraîchissement automatique
-    - [ ] Test sur vrai appareil Android
+  - [ ] APK installable sur Android
+  - [ ] Mode hors-ligne : consultation des données en cache
+  - [ ] Bannière offline/online
+  - [ ] Navigation tactile fluide
+  - [ ] Retour en ligne : rafraîchissement automatique
+  - [ ] Test sur vrai appareil Android
 
 ---
 
@@ -302,10 +302,10 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-15.spec.ts`
 - **Checklist manuelle :**
-    - [ ] Trips persistés en PostgreSQL
-    - [ ] Fermer le navigateur → rouvrir → trip retrouvé
-    - [ ] Migrations Doctrine appliquées sans erreur
-    - [ ] Performances acceptables (liste de trips, chargement d'un trip)
+  - [ ] Trips persistés en PostgreSQL
+  - [ ] Fermer le navigateur → rouvrir → trip retrouvé
+  - [ ] Migrations Doctrine appliquées sans erreur
+  - [ ] Performances acceptables (liste de trips, chargement d'un trip)
 
 ---
 
