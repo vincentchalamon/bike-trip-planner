@@ -14,11 +14,3 @@ export async function setLocale(locale: SupportedLocale): Promise<void> {
   });
 }
 
-export async function getCurrentLocale(): Promise<SupportedLocale> {
-  const store = await cookies();
-  const value = store.get("locale")?.value;
-  if (value && SUPPORTED_LOCALES.includes(value as SupportedLocale)) {
-    return value as SupportedLocale;
-  }
-  return "fr";
-}

@@ -57,7 +57,7 @@ export function LocaleSwitcher() {
               aria-label={t("switchLanguage", {
                 language: LOCALE_LABELS[locale],
               })}
-              aria-current={isActive ? "true" : undefined}
+              aria-pressed={isActive}
               data-testid={`locale-switch-${locale}`}
             >
               {LOCALE_LABELS[locale]}
