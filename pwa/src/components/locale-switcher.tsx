@@ -33,7 +33,7 @@ export function LocaleSwitcher() {
   }
 
   return (
-    <div className="flex items-center gap-2" aria-label={t("languageTitle")}>
+    <div className="flex items-center gap-2" role="group" aria-label={t("languageTitle")}>
       <Languages
         className={cn(
           "h-4 w-4 text-muted-foreground shrink-0",
