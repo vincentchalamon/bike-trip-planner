@@ -49,6 +49,7 @@ function initLocale() {
   } else {
     currentLocale = detectLocale();
   }
+  document.documentElement.lang = currentLocale;
 }
 
 initLocale();

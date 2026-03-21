@@ -42,6 +42,33 @@ test.describe("LocaleSwitcher", () => {
     await englishButton.click();
   });
 
+  test("persists locale choice in localStorage", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectEvent(routeParsedEvent());
+
+    // Open config panel and switch to English
+    await mockedPage
+      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .click();
+    await mockedPage.getByTestId("locale-switch-en").click();
+
+    // Verify localStorage was set
+    const stored = await mockedPage.evaluate(() =>
+      localStorage.getItem("locale"),
+    );
+    expect(stored).toBe("en");
+
+    // Verify document.documentElement.lang was updated
+    const lang = await mockedPage.evaluate(
+      () => document.documentElement.lang,
+    );
+    expect(lang).toBe("en");
+  });
+
   test("locale group has correct ARIA role", async ({
     submitUrl,
     injectEvent,
