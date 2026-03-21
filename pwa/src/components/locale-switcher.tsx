@@ -6,11 +6,8 @@ import { useRouter } from "next/navigation";
 import { Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  SUPPORTED_LOCALES,
-  setLocale,
-  type SupportedLocale,
-} from "@/i18n/locale";
+import { SUPPORTED_LOCALES, type SupportedLocale } from "@/i18n/locale";
+import { setLocale } from "@/i18n/set-locale";
 
 const LOCALE_LABELS: Record<SupportedLocale, string> = {
   fr: "Français",
