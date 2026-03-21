@@ -127,7 +127,7 @@ La securite des types est appliquee de bout en bout : les DTO PHP definissent le
 | Backend | PHP 8.5, Symfony 8, API Platform 4.2, Caddy |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript (strict) |
 | Etat | Zustand + Immer (en memoire), Mercure SSE (temps reel) |
-| Carte | Leaflet, react-leaflet |
+| Carte | MapLibre GL |
 | Style | Tailwind CSS, shadcn/ui |
 | Tests | PHPUnit 13 (backend), Playwright 1.58 (E2E) |
 | Qualite | PHPStan niveau 9, PHP-CS-Fixer, Rector, ESLint, Prettier |
