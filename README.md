@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/assets/logo-placeholder.png" alt="Bike Trip Planner" width="120" />
-</p>
-
 <h1 align="center">Bike Trip Planner</h1>
 
 <p align="center">
@@ -28,23 +24,15 @@
 
 ## Screenshots
 
-> **Desktop view** — Full roadbook with interactive map, day-by-day stages, and contextual alerts.
+> **Desktop** — Split view with day-by-day timeline, contextual alerts, and interactive map.
 
-<!-- TODO: Replace with actual screenshot -->
-<!-- ![Desktop - Trip overview](docs/assets/screenshots/desktop-trip-overview.png) -->
-_Screenshot placeholder: desktop trip overview with map and stage list_
+![Desktop - Split view](docs/assets/screenshots/desktop-split-view.png)
 
-> **Mobile view** — Responsive interface optimized for on-the-go trip review.
+> **Mobile** — Responsive timeline with weather, difficulty badge, and supply points.
 
 <p align="center">
-  <!-- TODO: Replace with actual screenshots -->
-  <!-- <img src="docs/assets/screenshots/mobile-trip-overview.png" alt="Mobile - Trip overview" width="280" /> -->
-  <!-- <img src="docs/assets/screenshots/mobile-stage-detail.png" alt="Mobile - Stage detail" width="280" /> -->
+  <img src="docs/assets/screenshots/mobile-timeline.png" alt="Mobile - Timeline" width="300" />
 </p>
-
-_Screenshot placeholder: mobile views of trip overview and stage detail_
-
-> To add screenshots, place images in `docs/assets/screenshots/` and uncomment the image tags above.
 
 ---
 
@@ -62,9 +50,7 @@ _Screenshot placeholder: mobile views of trip overview and stage detail_
 
 **Real-time processing** — Async workers compute your trip in parallel; live status updates stream to the browser via Mercure SSE. No page reload needed.
 
-**PDF roadbook export** — Generate a print-ready, day-by-day roadbook with maps, elevation profiles, and all alerts.
-
-**Garmin/GPX export** — Export enriched GPX files with waypoints for accommodation, water points, and POIs — ready for your GPS device.
+**Multi-format export** — Export enriched GPX files with waypoints for accommodation, water points, and POIs — ready for your GPS device. Download per-stage FIT files for Garmin, or generate a text roadbook summary.
 
 **100% local-first** — No account, no cloud database. Trip data lives entirely in your browser during the session. Your routes stay yours.
 
@@ -74,10 +60,10 @@ _Screenshot placeholder: mobile views of trip overview and stage detail_
 
 | Platform | Supported URL formats |
 |---|---|
-| **Komoot** | `komoot.com/tour/123` and `komoot.com/collection/123` (with locale prefix support) |
+| **Komoot** | `komoot.com/[xx-xx/]tour/123` and `komoot.com/[xx-xx/]collection/123` |
 | **Strava** | `strava.com/routes/123` |
 | **RideWithGPS** | `ridewithgps.com/routes/123` |
-| **GPX / FIT upload** | Direct file upload (up to 15 MB) |
+| **GPX upload** | Direct file upload (up to 15 MB) |
 
 ---
 
@@ -86,7 +72,7 @@ _Screenshot placeholder: mobile views of trip overview and stage detail_
 ```bash
 git clone https://github.com/vincentchalamon/bike-trip-planner.git
 cd bike-trip-planner
-make start
+make start-dev
 ```
 
 The app is available at:
@@ -148,8 +134,6 @@ Browser (Next.js 16)           PHP Backend (API Platform 4.2)
   openapi-fetch (typed)          OSM Overpass + weather APIs
   Mercure SSE (real-time)  <--   Async workers (Symfony Messenger)
                                  Redis cache + Mercure publisher
-                                 |
-                            Headless Chromium via Twig (PDF)
 ```
 
 The frontend sends a trip request via REST; the backend processes it asynchronously across multiple workers and pushes status updates via Mercure SSE. No database — Redis cache for transient state, filesystem cache for external API responses.

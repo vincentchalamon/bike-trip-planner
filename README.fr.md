@@ -112,8 +112,6 @@ Navigateur (Next.js 16)        Backend PHP (API Platform 4.2)
   openapi-fetch (type)           APIs OSM Overpass + meteo
   Mercure SSE (temps reel) <--   Workers asynchrones (Symfony Messenger)
                                  Cache Redis + publisher Mercure
-                                 |
-                            Chromium headless via Twig (PDF)
 ```
 
 Le frontend envoie une requete de voyage via REST ; le backend la traite de maniere asynchrone sur plusieurs workers et pousse les mises a jour de statut via Mercure SSE. Pas de base de donnees -- cache Redis pour l'etat transitoire, cache filesystem pour les reponses d'API externes.
@@ -152,9 +150,9 @@ La securite des types est appliquee de bout en bout : les DTO PHP definissent le
 ## Demarrage rapide
 
 ```bash
-git clone <repo-url> bike-trip-planner
+git clone https://github.com/vincentchalamon/bike-trip-planner.git
 cd bike-trip-planner
-make start
+make start-dev
 ```
 
 L'application est disponible sur `https://localhost` (PWA) et `https://localhost/docs` (API).
@@ -167,8 +165,8 @@ Voir [Demarrage rapide](docs/getting-started.fr.md) pour les prerequis et la con
 
 | Source | Format d'URL |
 |--------|--------------|
-| Tour Komoot | `https://www.komoot.com/tour/<id>` |
-| Collection Komoot | `https://www.komoot.com/collection/<id>` |
+| Tour Komoot | `https://www.komoot.com/[xx-xx/]tour/<id>` |
+| Collection Komoot | `https://www.komoot.com/[xx-xx/]collection/<id>` |
 | Route Strava | `https://www.strava.com/routes/<id>` |
 | Route RideWithGPS | `https://ridewithgps.com/routes/<id>` |
 | Import de fichier GPX | Glisser-deposer ou selecteur de fichiers (jusqu'a 15 Mo) |
@@ -177,4 +175,4 @@ Voir [Demarrage rapide](docs/getting-started.fr.md) pour les prerequis et la con
 
 ## Licence
 
-MIT
+Ce projet est sous licence [GNU Affero General Public License v3.0](LICENSE).
