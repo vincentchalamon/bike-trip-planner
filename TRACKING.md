@@ -199,11 +199,11 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-10.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Switcher fr/en fonctionnel
-  - [ ] Tous les textes traduits (pas de clés i18n visibles)
-  - [ ] Export statique compatible i18n
-  - [ ] Documentation en français complète
-  - [ ] Licence mise à jour
+  - [x] Switcher fr/en fonctionnel
+  - [x] Tous les textes traduits (pas de clés i18n visibles)
+  - [x] Export statique compatible i18n
+  - [x] Documentation en français complète
+  - [x] Licence mise à jour
 
 ---
 
