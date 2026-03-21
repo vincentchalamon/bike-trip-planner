@@ -1,77 +1,77 @@
-# Outils Claude Code recommandes pour Bike Trip Planner
+# Outils Claude Code recommandés pour Bike Trip Planner
 
 *[English version](claude-code-tooling.md)*
 
 ## Contexte
 
-Bike Trip Planner est un projet local-first (backend PHP/Symfony 8 + frontend Next.js 16). Ce document liste les outils Claude Code (serveurs MCP, hooks, skills) configures pour ce projet et en recommande d'autres.
+Bike Trip Planner est un projet local-first (backend PHP/Symfony 8 + frontend Next.js 16). Ce document liste les outils Claude Code (serveurs MCP, hooks, skills) configurés pour ce projet et en recommande d'autres.
 
 ---
 
 ## 1. Serveurs MCP
 
-### 1.1 Serveur MCP Playwright (DEJA INSTALLE)
+### 1.1 Serveur MCP Playwright (DÉJÀ INSTALLÉ)
 
-**Objectif :** Automatise les interactions navigateur -- tests E2E, validation UI, remplissage de formulaires, captures d'ecran. Essentiel pour les tests Playwright du projet (ADR-009).
+**Objectif :** Automatise les interactions navigateur — tests E2E, validation UI, remplissage de formulaires, captures d'écran. Essentiel pour les tests Playwright du projet (ADR-009).
 
 - **Source :** <https://github.com/microsoft/playwright-mcp>
-- **Statut :** Deja active dans les plugins (`playwright@claude-plugins-official`)
+- **Statut :** Déjà activé dans les plugins (`playwright@claude-plugins-official`)
 - **Utilisation :** Disponible directement via les outils `browser_*` (snapshot, click, navigate, etc.)
 
 ---
 
-### 1.2 Context7 (DEJA INSTALLE)
+### 1.2 Context7 (DÉJÀ INSTALLÉ)
 
-**Objectif :** Interroge la documentation a jour de n'importe quelle librairie (Symfony, Next.js, API Platform, Zustand, etc.) directement dans le contexte Claude Code. Empeche les hallucinations sur les API recentes.
+**Objectif :** Interroge la documentation à jour de n'importe quelle librairie (Symfony, Next.js, API Platform, Zustand, etc.) directement dans le contexte Claude Code. Empêche les hallucinations sur les API récentes.
 
 - **Source :** <https://github.com/upstash/context7>
-- **Statut :** Deja active (`context7@claude-plugins-official`)
-- **Utilisation :** `resolve-library-id` puis `query-docs` pour obtenir la documentation a jour
+- **Statut :** Déjà activé (`context7@claude-plugins-official`)
+- **Utilisation :** `resolve-library-id` puis `query-docs` pour obtenir la documentation à jour
 
 ---
 
-### 1.3 Serveur MCP GitHub (DEJA INSTALLE)
+### 1.3 Serveur MCP GitHub (DÉJÀ INSTALLÉ)
 
 **Objectif :** Gestion native des PR, issues, revues de code et GitHub Actions depuis Claude Code.
 
 - **Source :** <https://github.com/github/github-mcp-server>
-- **Statut :** Deja active (authentifie via OAuth)
-- **Utilisation :** Disponible via les outils `mcp__github__*` (creer/merger des PR, commenter des issues, rechercher du code, lire les resultats CI)
+- **Statut :** Déjà activé (authentifié via OAuth)
+- **Utilisation :** Disponible via les outils `mcp__github__*` (créer/merger des PR, commenter des issues, rechercher du code, lire les résultats CI)
 
 ---
 
-### 1.4 Serveur MCP Apidog (DEJA INSTALLE)
+### 1.4 Serveur MCP Apidog (DÉJÀ INSTALLÉ)
 
-**Objectif :** Charge la spec OpenAPI du backend comme contexte pour Claude. Permet de generer du code frontend type-safe directement depuis la spec, valider la coherence DTO/TypeScript, et explorer les endpoints.
+**Objectif :** Charge la spec OpenAPI du backend comme contexte pour Claude. Permet de générer du code frontend type-safe directement depuis la spec, valider la cohérence DTO/TypeScript, et explorer les endpoints.
 
 - **Source :** <https://docs.apidog.com/apidog-mcp-server>
-- **Statut :** Configure dans `.mcp.json` a la racine du projet (serveur `openapi-spec` pointant vers `https://localhost/docs.json`)
-- **Prerequis :** Le backend PHP doit tourner (`make start-dev`) pour que le serveur puisse recuperer la spec
-- **Pertinence :** Le contrat de types (ADR-002) repose sur la spec OpenAPI. Avoir la spec dans le contexte Claude aide a maintenir la coherence backend/frontend.
+- **Statut :** Configuré dans `.mcp.json` à la racine du projet (serveur `openapi-spec` pointant vers `https://localhost/docs.json`)
+- **Prérequis :** Le backend PHP doit tourner (`make start-dev`) pour que le serveur puisse récupérer la spec
+- **Pertinence :** Le contrat de types (ADR-002) repose sur la spec OpenAPI. Avoir la spec dans le contexte Claude aide à maintenir la cohérence backend/frontend.
 
 ---
 
 ### 1.5 Docker MCP / Portainer MCP (OPTIONNEL)
 
-**Objectif :** Interagir avec les conteneurs Docker (logs, exec, inspect) en langage naturel. Utile pour debugger les 3 conteneurs du projet (php, pwa).
+**Objectif :** Interagir avec les conteneurs Docker (logs, exec, inspect) en langage naturel. Utile pour déboguer les 3 conteneurs du projet (php, pwa).
 
 - **Source :** <https://github.com/portainer/portainer-mcp>
-- **Alternative :** Docker Desktop MCP -- <https://www.docker.com/blog/introducing-docker-hub-mcp-server/>
-- **Note :** Pour ce projet, `make php-shell` / `make pwa-shell` + commandes Bash sont souvent suffisants. A envisager si le debug Docker devient frequent.
+- **Alternative :** Docker Desktop MCP — <https://www.docker.com/blog/introducing-docker-hub-mcp-server/>
+- **Note :** Pour ce projet, `make php-shell` / `make pwa-shell` + commandes Bash sont souvent suffisants. À envisager si le debug Docker devient fréquent.
 
 ---
 
 ## 2. Hooks
 
-Les hooks sont des commandes shell deterministes declenchees a des points specifiques du cycle de vie de Claude Code. Configures dans `.claude/settings.json` (projet) ou `~/.claude/settings.json` (global).
+Les hooks sont des commandes shell déterministes déclenchées à des points spécifiques du cycle de vie de Claude Code. Configurés dans `.claude/settings.json` (projet) ou `~/.claude/settings.json` (global).
 
 **Documentation :** <https://code.claude.com/docs/en/hooks-guide>
 **Exemples (20+) :** <https://aiorg.dev/blog/claude-code-hooks>
 **Blog Anthropic :** <https://claude.com/blog/how-to-configure-hooks>
 
-### 2.1 PostToolUse -- Auto-format/refactoring a l'ecriture (RECOMMANDE)
+### 2.1 PostToolUse — Auto-format/refactoring à l'écriture (RECOMMANDÉ)
 
-**Objectif :** Un seul hook qui formate et refactorise automatiquement les fichiers edites par Claude : PHP-CS-Fixer + Rector pour les fichiers `.php`, Prettier pour les fichiers `.ts`/`.tsx`.
+**Objectif :** Un seul hook qui formate et refactorise automatiquement les fichiers édités par Claude : PHP-CS-Fixer + Rector pour les fichiers `.php`, Prettier pour les fichiers `.ts`/`.tsx`.
 
 ```json
 {
@@ -93,9 +93,9 @@ Les hooks sont des commandes shell deterministes declenchees a des points specif
 
 ---
 
-### 2.4 PreToolUse -- Proteger les fichiers sensibles (RECOMMANDE)
+### 2.4 PreToolUse — Protéger les fichiers sensibles (RECOMMANDÉ)
 
-**Objectif :** Empeche Claude de modifier `.env`, `.env.local`, `compose.override.yml`, ou les fichiers generes (`schema.d.ts`).
+**Objectif :** Empêche Claude de modifier `.env`, `.env.local`, `compose.override.yml`, ou les fichiers générés (`schema.d.ts`).
 
 ```json
 {
@@ -117,9 +117,9 @@ Les hooks sont des commandes shell deterministes declenchees a des points specif
 
 ---
 
-### 2.5 SessionStart -- Rappel de contexte apres compaction (OPTIONNEL)
+### 2.5 SessionStart — Rappel de contexte après compaction (OPTIONNEL)
 
-**Objectif :** Lorsque le contexte est compacte (sessions longues), reinjecte des rappels critiques du projet.
+**Objectif :** Lorsque le contexte est compacté (sessions longues), réinjecte des rappels critiques du projet.
 
 ```json
 {
@@ -141,76 +141,76 @@ Les hooks sont des commandes shell deterministes declenchees a des points specif
 
 ---
 
-## 3. Skills (commandes slash personnalisees)
+## 3. Skills (commandes slash personnalisées)
 
 Les skills sont des fichiers `.claude/skills/<nom>/SKILL.md` dans le projet. Ils ajoutent des commandes `/nom` invocables dans Claude Code.
 
 **Documentation :** <https://code.claude.com/docs/en/skills>
 
-### 3.1 Skill `/pick` (DEJA INSTALLE)
+### 3.1 Skill `/pick` (DÉJÀ INSTALLÉ)
 
-**Objectif :** Implemente une issue GitHub de bout en bout : cree une branche de fonctionnalite, code la solution, lance les tests, ouvre une PR, surveille la CI, et rapporte le resultat.
+**Objectif :** Implémente une issue GitHub de bout en bout : crée une branche de fonctionnalité, code la solution, lance les tests, ouvre une PR, surveille la CI, et rapporte le résultat.
 
 - **Emplacement :** `.claude/skills/pick/SKILL.md`
-- **Utilisation :** `/pick <numero-issue> [branche-base]`
+- **Utilisation :** `/pick <numéro-issue> [branche-base]`
 - **Aussi disponible depuis GitHub :** Commentez `@claude pick [branche-base]` sur une issue (voir section 6)
 
 ---
 
-### 3.2 Skill `/sprint` (DEJA INSTALLE)
+### 3.2 Skill `/sprint` (DÉJÀ INSTALLÉ)
 
-**Objectif :** Implemente toutes les issues d'un sprint en parallele en utilisant des agents worktree, avec un ordonnancement tenant compte des dependances et un monitoring CI.
+**Objectif :** Implémente toutes les issues d'un sprint en parallèle en utilisant des agents worktree, avec un ordonnancement tenant compte des dépendances et un monitoring CI.
 
 - **Emplacement :** `.claude/skills/sprint/SKILL.md`
-- **Utilisation :** `/sprint <numero-sprint>`
+- **Utilisation :** `/sprint <numéro-sprint>`
 
 ---
 
 ## 4. Workflows GitHub (automatisation CI)
 
-Deux workflows GitHub Actions permettent l'automatisation Claude directement depuis GitHub, sans necessiter de session Claude Code locale.
+Deux workflows GitHub Actions permettent l'automatisation Claude directement depuis GitHub, sans nécessiter de session Claude Code locale.
 
-### 4.1 `claude.yml` -- Assistant issue & PR
+### 4.1 `claude.yml` — Assistant issue & PR
 
-**Declencheurs :**
+**Déclencheurs :**
 
-| Commentaire | Ou | Job declenche | Description |
+| Commentaire | Où | Job déclenché | Description |
 |-------------|-----|---------------|-------------|
-| `@claude pick [branche-base]` | Issue | `pick` | Implementation complete : branche -> code -> PR -> monitoring CI |
+| `@claude pick [branche-base]` | Issue | `pick` | Implémentation complète : branche -> code -> PR -> monitoring CI |
 | `@claude <instruction>` | Issue ou PR | `claude` | Libre : suit l'instruction du commentaire |
 
-Le job `pick` reproduit le workflow du skill `/pick` en CI (sans Docker). Il parse une branche base optionnelle depuis le commentaire, cree `feature/<numero-issue>`, implemente la solution, ouvre une PR, surveille la CI (jusqu'a 3 cycles de correction), et rapporte sur l'issue.
+Le job `pick` reproduit le workflow du skill `/pick` en CI (sans Docker). Il parse une branche base optionnelle depuis le commentaire, crée `feature/<numéro-issue>`, implémente la solution, ouvre une PR, surveille la CI (jusqu'à 3 cycles de correction), et rapporte sur l'issue.
 
-### 4.2 `claude-code-review.yml` -- Revue de code automatisee des PR
+### 4.2 `claude-code-review.yml` — Revue de code automatisée des PR
 
-Se declenche automatiquement sur chaque PR (ouverture, synchronisation, reouverture, pret pour revue). Effectue une revue de code multi-etapes au format Conventional Comments, incluant des verifications de securite, performance, architecture et couverture de tests.
+Se déclenche automatiquement sur chaque PR (ouverture, synchronisation, réouverture, prêt pour revue). Effectue une revue de code multi-étapes au format Conventional Comments, incluant des vérifications de sécurité, performance, architecture et couverture de tests.
 
 ---
 
-## 5. Resume par priorite
+## 5. Résumé par priorité
 
-| Priorite | Outil | Type | Statut |
+| Priorité | Outil | Type | Statut |
 |----------|-------|------|--------|
-| Installe | Playwright MCP | Serveur MCP | Installe |
-| Installe | Context7 | Serveur MCP | Installe |
-| Installe | GitHub MCP | Serveur MCP | Installe |
-| Installe | Apidog MCP (OpenAPI) | Serveur MCP | Installe |
-| Installe | Auto-format/refactoring (hook) | Hook PostToolUse | Configure |
-| Installe | Protection de fichiers (hook) | Hook PreToolUse | Configure |
-| Installe | Skill `/pick` | Skill personnalise | Installe |
-| Installe | Skill `/sprint` | Skill personnalise | Installe |
-| Installe | Workflow `@claude pick` | GitHub Actions | Configure |
-| Installe | Revue de code automatisee | GitHub Actions | Configure |
+| Installé | Playwright MCP | Serveur MCP | Installé |
+| Installé | Context7 | Serveur MCP | Installé |
+| Installé | GitHub MCP | Serveur MCP | Installé |
+| Installé | Apidog MCP (OpenAPI) | Serveur MCP | Installé |
+| Installé | Auto-format/refactoring (hook) | Hook PostToolUse | Configuré |
+| Installé | Protection de fichiers (hook) | Hook PreToolUse | Configuré |
+| Installé | Skill `/pick` | Skill personnalisé | Installé |
+| Installé | Skill `/sprint` | Skill personnalisé | Installé |
+| Installé | Workflow `@claude pick` | GitHub Actions | Configuré |
+| Installé | Revue de code automatisée | GitHub Actions | Configuré |
 | Optionnel | Rappel post-compaction | Hook SessionStart | Optionnel |
 | Optionnel | Docker/Portainer MCP | Serveur MCP | Optionnel |
 
 ---
 
-## 6. References
+## 6. Références
 
-- [Documentation officielle Claude Code -- MCP](https://code.claude.com/docs/en/mcp)
-- [Documentation officielle Claude Code -- Hooks](https://code.claude.com/docs/en/hooks-guide)
-- [Documentation officielle Claude Code -- Skills](https://code.claude.com/docs/en/skills)
+- [Documentation officielle Claude Code — MCP](https://code.claude.com/docs/en/mcp)
+- [Documentation officielle Claude Code — Hooks](https://code.claude.com/docs/en/hooks-guide)
+- [Documentation officielle Claude Code — Skills](https://code.claude.com/docs/en/skills)
 - [GitHub MCP Server](https://github.com/github/github-mcp-server)
 - [Playwright MCP Server](https://github.com/microsoft/playwright-mcp)
 - [Context7](https://github.com/upstash/context7)
@@ -220,4 +220,4 @@ Se declenche automatiquement sur chaque PR (ouverture, synchronisation, reouvert
 - [Awesome Claude Skills](https://github.com/travisvn/awesome-claude-skills)
 - [Awesome MCP Servers](https://github.com/punkpeye/awesome-mcp-servers)
 - [Exemples de hooks (20+)](https://aiorg.dev/blog/claude-code-hooks)
-- [Blog Anthropic -- Comment configurer les hooks](https://claude.com/blog/how-to-configure-hooks)
+- [Blog Anthropic — Comment configurer les hooks](https://claude.com/blog/how-to-configure-hooks)
