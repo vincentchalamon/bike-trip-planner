@@ -1,5 +1,7 @@
 # Contributing
 
+*[Version francaise](contributing.fr.md)*
+
 This guide covers everything you need to contribute to Bike Trip Planner: setting up your development environment, configuring AI-assisted tooling, and following the project's quality standards.
 
 ---
@@ -34,8 +36,6 @@ make php-shell    # Enter the PHP container
 make pwa-shell    # Enter the Node container
 make qa           # Run the full QA pipeline
 make test         # Run QA + PHPUnit + Playwright
-make php-shell    # Bash inside the PHP container
-make pwa-shell    # Bash inside the Node container
 ```
 
 See `make help` for the full list of available targets.
@@ -155,6 +155,7 @@ TypeScript compilation will fail until types are regenerated — this is intenti
 |--------------|--------------------------|---------------------|
 | PHPStan      | Level 9 (strict)         | `make phpstan`      |
 | PHP-CS-Fixer | PSR-12 + Symfony rules   | `make php-cs-fixer` |
+| Rector       | Automated refactoring    | `make rector`       |
 | PHPUnit      | Unit + integration tests | `make test-php`     |
 
 **Key conventions:**
@@ -253,11 +254,24 @@ bike-trip-planner/
 │   ├── src/
 │   │   ├── ApiResource/          # API Platform DTOs (single source of truth)
 │   │   ├── State/                # State Providers & Processors
-│   │   ├── Spatial/              # GPX parsing, decimation
-│   │   ├── Pacing/               # Stage generation algorithm
+│   │   ├── Engine/               # Computation engines (distance, elevation, pacing)
+│   │   ├── Analyzer/             # Alert engine (Chain of Responsibility)
+│   │   ├── Scanner/              # OSM scanner (accommodations, POIs)
+│   │   ├── Weather/              # Open-Meteo weather provider
+│   │   ├── Serializer/           # GPX/FIT encoders + WaypointMapper
+│   │   ├── RouteFetcher/         # Route fetchers (Komoot, Strava, RWGPS)
+│   │   ├── MessageHandler/       # Async message handlers
+│   │   ├── Mercure/              # Mercure event publishing
+│   │   ├── Geo/                  # Geospatial utilities
+│   │   ├── Routing/              # Valhalla routing
 │   │   ├── Osm/                  # Overpass API queries
 │   │   ├── Pricing/              # Accommodation heuristic pricing
-│   │   └── Analyzer/             # Alert engine (Chain of Responsibility)
+│   │   ├── Enum/                 # Enumerations
+│   │   ├── Controller/           # Special controllers (file exports)
+│   │   ├── Service/              # Business services
+│   │   ├── Repository/           # Redis repositories
+│   │   ├── ComputationTracker/   # Computation progress tracking
+│   │   └── Command/              # CLI commands
 │   └── templates/                # Twig templates
 ├── pwa/                          # Next.js frontend
 │   ├── src/
@@ -265,17 +279,27 @@ bike-trip-planner/
 │   │   ├── store/                # Zustand stores (in-memory, Immer)
 │   │   ├── lib/
 │   │   │   ├── api/              # Generated types (schema.d.ts) + openapi-fetch client
-│   │   │   └── validation/       # Zod schemas
-│   │   └── components/           # React components
+│   │   │   ├── validation/       # Zod schemas
+│   │   │   └── mercure/          # Mercure SSE client
+│   │   ├── components/           # React components
+│   │   │   ├── Map/              # Interactive map + elevation profile
+│   │   │   ├── ViewModeToggle/   # Timeline/map/split toggle
+│   │   │   ├── SupplyTimeline/   # Supply timeline visualization
+│   │   │   └── ui/               # shadcn/ui components
+│   │   └── hooks/                # Custom React hooks
+│   ├── messages/                 # i18n files (en.json, fr.json)
 │   └── tests/                    # Playwright E2E tests
 │       ├── fixtures/             # Test fixtures, API mocks, SSE helpers
 │       ├── mocked/               # Deterministic tests (mocked API + SSE)
 │       └── integration/          # Smoke test against real backend
 ├── docs/
 │   ├── adr/                      # Architecture Decision Records
-│   ├── getting-started.md
-│   ├── contributing.md           # This file
-│   └── claude-code-tooling.md
+│   ├── getting-started.md        # Getting started guide (EN)
+│   ├── getting-started.fr.md     # Getting started guide (FR)
+│   ├── contributing.md           # This file (EN)
+│   ├── contributing.fr.md        # Contributing guide (FR)
+│   ├── claude-code-tooling.md    # Claude Code tooling (EN)
+│   └── claude-code-tooling.fr.md # Claude Code tooling (FR)
 ├── .github/
 │   └── workflows/
 │       ├── claude.yml              # @claude pick + free-form on issues/PRs
