@@ -76,8 +76,9 @@ make start-dev
 ```
 
 The app is available at:
-- **https://localhost** — Web application
-- **https://localhost/docs** — API documentation (Swagger UI)
+
+- **<https://localhost>** — Web application
+- **<https://localhost/docs>** — API documentation (Swagger UI)
 
 See [Getting Started](docs/getting-started.md) for prerequisites and detailed setup instructions.
 
@@ -127,6 +128,7 @@ Rules are executed in priority order (lower = higher priority):
 
 ## Architecture overview
 
+<!-- markdownlint-disable MD040 -->
 ```
 Browser (Next.js 16)           PHP Backend (API Platform 4.2)
   Zustand + Immer (in-memory)    Stateless computation
