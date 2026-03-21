@@ -1,45 +1,105 @@
-# Bike Trip Planner
+<p align="center">
+  <img src="docs/assets/logo-placeholder.png" alt="Bike Trip Planner" width="120" />
+</p>
 
-*[Version francaise](README.fr.md)*
+<h1 align="center">Bike Trip Planner</h1>
 
-A local-first bikepacking trip planner. Paste a Komoot, Strava, or RideWithGPS route URL (or upload a GPX file), get a structured day-by-day roadbook with pacing, elevation alerts, and accommodation suggestions -- all without an account or cloud storage.
+<p align="center">
+  <strong>Plan your bikepacking adventures with confidence — no account required.</strong>
+</p>
+
+<p align="center">
+  Paste a route URL, upload a GPX file, and get a structured day-by-day roadbook<br />
+  with smart pacing, safety alerts, and accommodation suggestions — all running locally in your browser.
+</p>
+
+<p align="center">
+  <a href="https://github.com/vincentchalamon/bike-trip-planner/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License" /></a>
+  <img src="https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white" alt="PHP 8.5" />
+  <img src="https://img.shields.io/badge/Symfony-8-000000?logo=symfony&logoColor=white" alt="Symfony 8" />
+  <img src="https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/API%20Platform-4.2-38B2AC?logo=api-platform&logoColor=white" alt="API Platform 4.2" />
+  <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker" />
+</p>
+
+---
+
+## Screenshots
+
+> **Desktop view** — Full roadbook with interactive map, day-by-day stages, and contextual alerts.
+
+<!-- TODO: Replace with actual screenshot -->
+<!-- ![Desktop - Trip overview](docs/assets/screenshots/desktop-trip-overview.png) -->
+_Screenshot placeholder: desktop trip overview with map and stage list_
+
+> **Mobile view** — Responsive interface optimized for on-the-go trip review.
+
+<p align="center">
+  <!-- TODO: Replace with actual screenshots -->
+  <!-- <img src="docs/assets/screenshots/mobile-trip-overview.png" alt="Mobile - Trip overview" width="280" /> -->
+  <!-- <img src="docs/assets/screenshots/mobile-stage-detail.png" alt="Mobile - Stage detail" width="280" /> -->
+</p>
+
+_Screenshot placeholder: mobile views of trip overview and stage detail_
+
+> To add screenshots, place images in `docs/assets/screenshots/` and uncomment the image tags above.
 
 ---
 
 ## Features
 
-### Route ingestion
+**Import your route in seconds** — Paste a link from Komoot, Strava, or RideWithGPS, or upload a GPX/FIT file directly. The backend fetches, parses, and processes everything asynchronously.
 
-- **Magic Link** -- Paste a Komoot tour/collection, Strava route, or RideWithGPS route URL; the backend fetches the route, parses elevation data, and computes a full trip plan asynchronously.
-- **GPX upload** -- Drag and drop or select a GPX file directly (up to 15 MB). The file is stream-parsed with constant memory usage.
-- **Shareable link** -- A `?link=` query parameter auto-creates a trip from any supported URL, allowing you to share a direct link to a trip plan.
+**Smart pacing engine** — Automatically distributes distance across days, accounting for cumulative fatigue and elevation gain. Configurable daily targets with a safety minimum threshold.
 
-### Trip planning
+**20+ safety & comfort alerts** — A rule-based alert engine analyzes each stage for steep gradients, dangerous traffic, headwinds, surface quality, e-bike range, sunset timing, resupply gaps, and more — with three severity levels (critical, warning, nudge).
 
-- **Pacing engine** -- Distributes distance across days accounting for cumulative fatigue and elevation gain, with configurable maximum distance per day, fatigue factor, elevation penalty, and average speed.
-- **E-bike mode** -- Dedicated mode that adjusts range calculations for electric bicycles (effective range = 80 km minus elevation/25).
-- **Date range picker** -- Set departure and return dates to enable calendar-aware alerts (public holidays, Sundays) and weather forecasts.
-- **Departure hour** -- Configure the daily start time to enable sunset arrival alerts.
-- **Rest day insertion** -- Add rest days between stages; a nudge alert reminds you every N consecutive cycling days.
-- **Stage editing** -- Split, merge, add, or delete stages. Rename stage start and end locations via inline editing with geocoding. Adjust stage distances with a visual editor.
-- **Undo/redo** -- Full undo/redo history for all trip modifications (Ctrl+Z / Ctrl+Y).
+**Accommodation finder** — Discovers bivouac spots, refuges, and gites near each stage endpoint via OpenStreetMap, with heuristic pricing estimates.
 
-### Interactive map
+**Cultural points of interest** — Detects museums, monuments, castles, viewpoints, and other attractions along the route with an "add to itinerary" action.
 
-- **Route visualization** -- Interactive Leaflet map showing the full route with color-coded stages.
-- **Elevation profile** -- Synchronized elevation chart with hover cross-referencing between map and profile.
-- **Stage markers** -- Click a stage on the map or the timeline to focus on it; click again to reset to the global view.
-- **View modes** -- Three layouts: timeline only, map only, or split (timeline + map side by side). Defaults to timeline on mobile, split on desktop.
+**Real-time processing** — Async workers compute your trip in parallel; live status updates stream to the browser via Mercure SSE. No page reload needed.
 
-### Weather and environment
+**PDF roadbook export** — Generate a print-ready, day-by-day roadbook with maps, elevation profiles, and all alerts.
 
-- **Weather forecast** -- Open-Meteo integration providing temperature, precipitation, wind speed, and weather conditions per stage.
-- **Comfort index** -- Combined score (0-100) of temperature, wind, humidity, and rain for each stage.
-- **Relative wind** -- Calculates headwind/tailwind/crosswind based on stage bearing and wind direction.
+**Garmin/GPX export** — Export enriched GPX files with waypoints for accommodation, water points, and POIs — ready for your GPS device.
 
-### Alert engine
+**100% local-first** — No account, no cloud database. Trip data lives entirely in your browser during the session. Your routes stay yours.
 
-The backend runs a pipeline of analyzers on each stage. Three severity levels:
+---
+
+## Supported route sources
+
+| Platform | Supported URL formats |
+|---|---|
+| **Komoot** | `komoot.com/tour/123` and `komoot.com/collection/123` (with locale prefix support) |
+| **Strava** | `strava.com/routes/123` |
+| **RideWithGPS** | `ridewithgps.com/routes/123` |
+| **GPX / FIT upload** | Direct file upload (up to 15 MB) |
+
+---
+
+## Quick start
+
+```bash
+git clone https://github.com/vincentchalamon/bike-trip-planner.git
+cd bike-trip-planner
+make start
+```
+
+The app is available at:
+- **https://localhost** — Web application
+- **https://localhost/docs** — API documentation (Swagger UI)
+
+See [Getting Started](docs/getting-started.md) for prerequisites and detailed setup instructions.
+
+---
+
+## Alert engine
+
+The backend runs a pipeline of analyzers on each stage. Three severity levels are used:
 
 | Level | Color | Description |
 |-------|-------|-------------|
@@ -62,7 +122,6 @@ Rules are executed in priority order (lower = higher priority):
 | **Traffic** | 20 | nudge | Secondary road, speed limit <= 50 km/h |
 | **E-bike range** | 20 | warning | Day distance > effective range (80 km - elevation / 25) |
 | **Sunset** | 20 | warning | Estimated arrival time exceeds civil twilight end at stage end point |
-| **Rest day** | 100 | nudge | Every N consecutive cycling days without a rest day (default: every 3 days) |
 | **Calendar** | -- | nudge | Stage falls on a French public holiday |
 | **Calendar** | -- | nudge | Stage falls on a Sunday (businesses may be closed) |
 | **Wind** | -- | warning | Headwind >= 25 km/h on >= 60 % of stages with weather data |
@@ -73,38 +132,15 @@ Rules are executed in priority order (lower = higher priority):
 | **Resupply** | -- | warning | All resupply POIs on the stage are closed at estimated passage time |
 | **Accommodation** | -- | warning | All detected accommodations on the stage are likely closed due to seasonality |
 | **Water points** | -- | nudge | Stretch > 30 km without a detected drinking water source |
-| **Cultural POI** | -- | nudge | Museum, monument, castle, church, viewpoint, or attraction within 500 m of route -- includes an "add to itinerary" action triggering route recalculation |
+| **Rest day** | 100 | nudge | Every N consecutive cycling days without a rest day (default: every 3 days) |
+| **Cultural POI** | -- | nudge | Museum, monument, castle, church, viewpoint, or attraction within 500 m of route |
 
 **Terrain rules** (Continuity, Elevation, Steep gradient, Surface, Traffic, E-bike range, Sunset, Rest day) implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`. Rules with `--` priority (Calendar, Wind + Comfort, Bike shops, Resupply, Accommodation, Water points, Cultural POI) are separate async Symfony Message handlers; Comfort is co-located with Wind inside `AnalyzeWindHandler`.
-
-### Points of interest
-
-- **Accommodation scanner** -- Queries OpenStreetMap Overpass for bivouac spots, refuges, and gites near each stage end, with heuristic pricing. Filter accommodations by type.
-- **Supply timeline** -- Visual timeline showing water and food resupply points along each stage, with clustering for readability.
-- **Bike shops** -- Detects repair shops near each stage midpoint.
-- **Cultural POIs** -- Museums, monuments, castles, churches, viewpoints, and attractions near the route with an "add to itinerary" action.
-
-### Exports
-
-- **GPX export** -- Download each stage as an individual GPX file with enriched waypoints (POIs, water points, food stops, accommodations).
-- **FIT export** -- Download each stage as a Garmin-compatible FIT file with course points.
-- **Full trip GPX** -- Download the entire trip as a single GPX file.
-- **Text export** -- Copy/paste-friendly plain text summary of the entire trip (stages, distances, elevations, accommodations).
-
-### User experience
-
-- **Onboarding tour** -- Guided 4-step tour on first visit using driver.js, walking through the core workflow.
-- **Keyboard shortcuts** -- Navigate stages (J/K), undo/redo (Ctrl+Z/Y), toggle help (?), close panels (Esc).
-- **Dark mode** -- Theme toggle with system preference detection.
-- **Internationalization** -- Full French and English UI via next-intl.
-- **Responsive design** -- Mobile-first with adaptive view mode (timeline/map/split).
-- **Swipe navigation** -- Swipe between stages on mobile devices.
 
 ---
 
 ## Architecture overview
 
-<!-- markdownlint-disable MD040 -->
 ```
 Browser (Next.js 16)           PHP Backend (API Platform 4.2)
   Zustand + Immer (in-memory)    Stateless computation
@@ -116,7 +152,7 @@ Browser (Next.js 16)           PHP Backend (API Platform 4.2)
                             Headless Chromium via Twig (PDF)
 ```
 
-The frontend sends a trip request via REST; the backend processes it asynchronously across multiple workers and pushes status updates via Mercure SSE. No database -- Redis cache for transient state, filesystem cache for external API responses.
+The frontend sends a trip request via REST; the backend processes it asynchronously across multiple workers and pushes status updates via Mercure SSE. No database — Redis cache for transient state, filesystem cache for external API responses.
 
 Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform exports an OpenAPI spec -> `npm run typegen` generates TypeScript types -> `openapi-fetch` provides type-safe API calls. A schema change on the backend intentionally causes a TypeScript compilation failure.
 
@@ -125,14 +161,13 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 ## Tech stack
 
 | Layer | Technology |
-|-------|------------|
+|---|---|
 | Backend | PHP 8.5, Symfony 8, API Platform 4.2, Caddy |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript (strict) |
 | State | Zustand + Immer (in-memory), Mercure SSE (real-time) |
-| Map | Leaflet, react-leaflet |
-| Styling | Tailwind CSS, shadcn/ui |
+| Styling | Tailwind CSS |
 | Testing | PHPUnit 13 (backend), Playwright 1.58 (E2E) |
-| Quality | PHPStan level 9, PHP-CS-Fixer, Rector, ESLint, Prettier |
+| Quality | PHPStan level 9, PHP-CS-Fixer, ESLint, Prettier |
 | Async | Symfony Messenger, Redis transport, 5 workers |
 | Runtime | Docker (Caddy, Mercure, Redis, Node) |
 
@@ -141,40 +176,26 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 ## Documentation
 
 | Document | Description |
-|----------|-------------|
+|---|---|
 | [Getting Started](docs/getting-started.md) | Requirements, installation, and local setup |
 | [Contributing](docs/contributing.md) | Development workflow, standards, and tooling |
-| [Architecture Decisions](docs/adr/) | ADRs explaining every major technical choice |
+| [Architecture Decisions](docs/adr/) | 21 ADRs explaining every major technical choice |
 | [Claude Code Tooling](docs/claude-code-tooling.md) | MCP servers, hooks, and skills for AI-assisted development |
 
 ---
 
-## Quick start
+## Contributing
+
+Contributions are welcome! Please read the [Contributing Guide](docs/contributing.md) before submitting a pull request.
 
 ```bash
-git clone <repo-url> bike-trip-planner
-cd bike-trip-planner
-make start
+make start-dev    # Boot Docker environment
+make qa           # Run full QA suite (linting, static analysis, formatting)
+make test         # Run all tests (QA + PHPUnit + Playwright)
 ```
-
-The app is available at `https://localhost` (PWA) and `https://localhost/docs` (API).
-
-See [Getting Started](docs/getting-started.md) for prerequisites and detailed setup.
-
----
-
-## Supported route sources
-
-| Source | URL pattern |
-|--------|-------------|
-| Komoot tour | `https://www.komoot.com/tour/<id>` |
-| Komoot collection | `https://www.komoot.com/collection/<id>` |
-| Strava route | `https://www.strava.com/routes/<id>` |
-| RideWithGPS route | `https://ridewithgps.com/routes/<id>` |
-| GPX file upload | Drag and drop or file picker (up to 15 MB) |
 
 ---
 
 ## License
 
-MIT
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
