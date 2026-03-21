@@ -9,6 +9,7 @@ export async function setLocale(locale: SupportedLocale): Promise<void> {
     path: "/",
     maxAge: 60 * 60 * 24 * 365, // 1 year
     sameSite: "lax",
+    secure: true,
     httpOnly: true,
   });
 }
