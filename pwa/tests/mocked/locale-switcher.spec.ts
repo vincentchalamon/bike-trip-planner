@@ -67,6 +67,11 @@ test.describe("LocaleSwitcher", () => {
       () => document.documentElement.lang,
     );
     expect(lang).toBe("en");
+
+    // Verify the UI re-renders in English
+    await expect(
+      mockedPage.getByRole("button", { name: /open settings/i }),
+    ).toBeVisible();
   });
 
   test("detects navigator.language on first visit", async ({
