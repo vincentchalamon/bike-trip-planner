@@ -273,6 +273,31 @@
   "tripLocked": {
     "banner": "This trip is underway or has passed — view only. Use \"Duplicate\" to plan a new variant."
   },
+  "tripList": {
+    "title": "My Trips",
+    "newTrip": "New trip",
+    "backToList": "Back to trips",
+    "noTrips": "No trips yet. Create your first trip!",
+    "loading": "Loading trips...",
+    "loadingError": "Failed to load trips.",
+    "stages": "{count, plural, one {# stage} other {# stages}}",
+    "noDates": "Dates not set",
+    "filterPlaceholder": "Search by title...",
+    "startDateFilter": "Start date (from)",
+    "endDateFilter": "End date (to)",
+    "shareTrip": "Share trip",
+    "duplicateTrip": "Duplicate trip",
+    "deleteTrip": "Delete trip",
+    "deleteTripConfirmTitle": "Delete trip?",
+    "deleteTripConfirmDescription": "This action is irreversible. All stages and data for \"{title}\" will be permanently deleted.",
+    "deleteTripConfirm": "Delete",
+    "deleteTripCancel": "Cancel",
+    "deleteSuccess": "Trip deleted.",
+    "deleteError": "Failed to delete trip. Please try again.",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "page": "Page {current} of {total}"
+  },
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",

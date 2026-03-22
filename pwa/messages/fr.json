@@ -273,6 +273,31 @@
   "tripLocked": {
     "banner": "Ce trip est en cours ou passé — consultation uniquement. Utilisez « Dupliquer » pour planifier une nouvelle variante."
   },
+  "tripList": {
+    "title": "Mes voyages",
+    "newTrip": "Nouveau voyage",
+    "backToList": "Retour aux voyages",
+    "noTrips": "Aucun voyage pour l'instant. Créez votre premier voyage !",
+    "loading": "Chargement des voyages...",
+    "loadingError": "Impossible de charger les voyages.",
+    "stages": "{count, plural, one {# étape} other {# étapes}}",
+    "noDates": "Dates non définies",
+    "filterPlaceholder": "Rechercher par titre...",
+    "startDateFilter": "Date de début (à partir du)",
+    "endDateFilter": "Date de fin (jusqu'au)",
+    "shareTrip": "Partager le voyage",
+    "duplicateTrip": "Dupliquer le voyage",
+    "deleteTrip": "Supprimer le voyage",
+    "deleteTripConfirmTitle": "Supprimer le voyage ?",
+    "deleteTripConfirmDescription": "Cette action est irréversible. Toutes les étapes et données de « {title} » seront définitivement supprimées.",
+    "deleteTripConfirm": "Supprimer",
+    "deleteTripCancel": "Annuler",
+    "deleteSuccess": "Voyage supprimé.",
+    "deleteError": "Impossible de supprimer le voyage. Veuillez réessayer.",
+    "previousPage": "Page précédente",
+    "nextPage": "Page suivante",
+    "page": "Page {current} sur {total}"
+  },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",
