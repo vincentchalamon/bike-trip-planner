@@ -54,7 +54,7 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
-      DATABASE_URL: "postgresql://app:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/bike_trip_planner?serverVersion=17&charset=utf8"
+      DATABASE_URL: "postgresql://app:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/bike_trip_planner?serverVersion=18&charset=utf8"
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -109,7 +109,7 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
-      DATABASE_URL: "postgresql://app:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/bike_trip_planner?serverVersion=17&charset=utf8"
+      DATABASE_URL: "postgresql://app:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/bike_trip_planner?serverVersion=18&charset=utf8"
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -192,7 +192,7 @@ services:
       start_period: 600s
 
   database:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: bike_trip_planner
