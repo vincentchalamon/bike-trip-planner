@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Bike Trip Planner — a local-first bikepacking trip planner. Decoupled architecture: PHP backend (API Platform on Symfony 8) provides stateless computation via async workers, Next.js 16 frontend manages presentation and in-memory state. No persistent cloud database; trip data lives in-memory (Zustand) during a session and is recomputed on demand.
+Bike Trip Planner — a bikepacking trip planner. Decoupled architecture: PHP backend (API Platform on Symfony 8) provides stateless computation via async workers, Next.js 16 frontend manages presentation and state. PostgreSQL persists trip data (via Doctrine ORM); Redis handles transient computation state, Messenger transport, and external API caches.
 
 ## Tech Stack
 
-- **Backend:** PHP 8.5, API Platform 4.2, Symfony 8, Caddy (Docker)
+- **Backend:** PHP 8.5, API Platform 4.2, Symfony 8, Doctrine ORM 3, PostgreSQL 18, Caddy (Docker)
 - **Frontend:** Next.js 16 (App Router), React 19, TypeScript (strict), Zustand + Immer, Tailwind CSS
 - **Testing:** PHPUnit 13 (backend), Playwright 1.58 (E2E)
 - **Quality:** PHPStan Level 9, PHP-CS-Fixer (PSR-12/Symfony), ESLint, Prettier
@@ -77,11 +77,12 @@ Backend PHP DTOs define the schema → API Platform exports OpenAPI spec → `np
 
 ### Key Patterns
 
-- **Stateless backend:** No Doctrine ORM. State Providers/Processors instead of controllers+repositories. DTOs use `Request`/`Response` suffixes.
+- **Stateless backend:** Custom State Providers/Processors (not Doctrine auto-generated). `TripRequest` serves as both API Platform input DTO and Doctrine entity (dual role). DTOs use `Request`/`Response` suffixes. Stage entity stores computed data as JSONB.
 - **Local-first frontend:** Zustand (in-memory, no persist) + Zod validation. Trip state is managed entirely in-memory via Zustand + Immer; computation results arrive via Mercure SSE events.
 - **GPX processing:** XMLReader stream parsing (O(constant) memory) → elevation smoothing (3m threshold) → Douglas-Peucker decimation (20m tolerance, ~25k→1.5k points).
 - **Async processing:** Symfony Messenger with Redis transport. Trip computations run asynchronously across 5 workers; status updates are pushed to the frontend via Mercure SSE.
-- **External API caching:** Redis cache for trip state (30min TTL). Filesystem cache for OSM data (24h) and weather (3h). Scoped HTTP clients prevent SSRF.
+- **Persistence:** PostgreSQL (Doctrine ORM) for trip configuration and stages. Redis for transient data (raw/decimated points, computation tracking, Messenger transport). External API caches: OSM data (24h), weather (3h). See ADR-022.
+- **External API caching:** Scoped HTTP clients prevent SSRF.
 - **Pacing formula:** `target_day_n = base_target * (0.9 ^ (n-1)) - (elevation_gain / 50)` with 30km minimum threshold.
 - **Alert engine:** New rules implement `StageAnalyzerInterface` and are auto-discovered via `#[AutowireIterator]`. Priority integers control execution order. Standalone async checks live in `MessageHandler/Check*Handler.php` and `MessageHandler/Analyze*Handler.php`. **Whenever an alert rule is added, modified, or removed, you must update both `README.md` (alert-engine table) and `ALERT_RULE_MAP` in `api/tests/Unit/AlertDocumentationTest.php`.**
 - **E2E testing:** Mocked tests use `page.route()` for API interception and `CustomEvent('__test_mercure_event')` for SSE injection. Integration smoke test runs against the real backend.
