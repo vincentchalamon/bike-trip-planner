@@ -154,7 +154,7 @@ Two Doctrine entities, intentionally minimal:
 
 | Entity | Key columns | JSONB columns |
 |--------|-------------|---------------|
-| `Trip` | id (UUID v7), source_url, title, start_date, end_date, fatigue_factor, elevation_penalty, ebike_mode, departure_hour, max_distance_per_day, average_speed, enabled_accommodation_types, source_type, locale, created_at, updated_at | enabled_accommodation_types |
+| `Trip` | id (UUID v7), source_url, title, start_date, end_date, fatigue_factor, elevation_penalty, ebike_mode, departure_hour, max_distance_per_day, average_speed, source_type, locale, created_at, updated_at | enabled_accommodation_types |
 | `Stage` | id (UUID v7), trip_id (FK), position, day_number, distance, elevation, elevation_loss, start_lat/lon/ele, end_lat/lon/ele, label, is_rest_day | geometry, weather, alerts, pois, accommodations, selected_accommodation |
 
 Entities are **separate from ApiResource DTOs**. The existing DTOs (`Trip`, `TripRequest`, `Stage`, `StageRequest`, `StageResponse`) remain the API contract. State Providers map Entity → DTO; State Processors map DTO → Entity.
@@ -169,6 +169,7 @@ The migration is split into 6 incremental PRs to minimize review complexity:
 4. **State Processors** — Updated to persist via Doctrine EntityManager
 5. **Functional tests** — Test database setup, updated assertions
 6. **Foundry factories + dev fixtures** — Zenstruck Foundry factories, seedable dev data
+7. **CLAUDE.md update** — Revise the architecture description to reflect the new PostgreSQL-backed persistence layer
 
 Redis remains fully operational throughout the migration for Messenger transport, computation tracking, and external API caching.
 
