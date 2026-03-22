@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
@@ -51,7 +50,7 @@ class Stage
     private float $endEle = 0.0;
 
     /** @var list<array{lat: float, lon: float, ele: float}> */
-    #[ORM\Column(type: Types::JSON)]
+    #[ORM\Column(type: 'jsonb')]
     private array $geometry = [];
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -61,23 +60,23 @@ class Stage
     private bool $isRestDay = false;
 
     /** @var array<string, mixed>|null */
-    #[ORM\Column(type: Types::JSON, nullable: true)]
+    #[ORM\Column(type: 'jsonb', nullable: true)]
     private ?array $weather = null;
 
     /** @var list<array<string, mixed>> */
-    #[ORM\Column(type: Types::JSON)]
+    #[ORM\Column(type: 'jsonb')]
     private array $alerts = [];
 
     /** @var list<array<string, mixed>> */
-    #[ORM\Column(type: Types::JSON)]
+    #[ORM\Column(type: 'jsonb')]
     private array $pois = [];
 
     /** @var list<array<string, mixed>> */
-    #[ORM\Column(type: Types::JSON)]
+    #[ORM\Column(type: 'jsonb')]
     private array $accommodations = [];
 
     /** @var array<string, mixed>|null */
-    #[ORM\Column(type: Types::JSON, nullable: true)]
+    #[ORM\Column(type: 'jsonb', nullable: true)]
     private ?array $selectedAccommodation = null;
 
     public function __construct(#[ORM\ManyToOne(targetEntity: Trip::class, inversedBy: 'stages')]

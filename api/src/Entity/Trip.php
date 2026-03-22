@@ -50,7 +50,7 @@ class Trip
     private float $averageSpeed = 15.0;
 
     /** @var list<string> */
-    #[ORM\Column(type: Types::JSON)]
+    #[ORM\Column(type: 'text[]')]
     private array $enabledAccommodationTypes = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel'];
 
     #[ORM\Column(length: 50, nullable: true)]

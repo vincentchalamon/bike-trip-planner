@@ -2,13 +2,28 @@
 
 declare(strict_types=1);
 
+use MartinGeorgiev\Doctrine\DBAL\Types\Jsonb;
+use MartinGeorgiev\Doctrine\DBAL\Types\TextArray;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
     $containerConfigurator->extension('doctrine', [
         'dbal' => [
-            'url' => '%env(resolve:DATABASE_URL)%',
-            'profiling_collect_backtrace' => '%kernel.debug%',
+            'types' => [
+                'jsonb' => Jsonb::class,
+                'text[]' => TextArray::class,
+            ],
+            'connections' => [
+                'default' => [
+                    'url' => '%env(resolve:DATABASE_URL)%',
+                    'profiling_collect_backtrace' => '%kernel.debug%',
+                    'mapping_types' => [
+                        'jsonb' => 'jsonb',
+                        '_text' => 'text[]',
+                        'text[]' => 'text[]',
+                    ],
+                ],
+            ],
         ],
         'orm' => [
             'validate_xml_mapping' => true,
@@ -35,7 +50,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     if ('test' === $containerConfigurator->env()) {
         $containerConfigurator->extension('doctrine', [
             'dbal' => [
-                'dbname_suffix' => '_test%env(default::TEST_TOKEN)%',
+                'connections' => [
+                    'default' => [
+                        'dbname_suffix' => '_test%env(default::TEST_TOKEN)%',
+                    ],
+                ],
             ],
         ]);
     }
