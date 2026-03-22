@@ -93,7 +93,7 @@ Use PostgreSQL as the storage engine with Doctrine ORM for entity mapping, but s
 - **Full Symfony ecosystem.** Doctrine Migrations for schema versioning, Zenstruck Foundry for test factories and dev fixtures, PHPStan Doctrine extensions, Symfony Maker recipes — all work out of the box.
 - **Minimal ORM overhead.** The project already uses custom State Providers/Processors; Doctrine is used purely as a hydration/persistence mapper, not as a framework. No auto-generated providers, no lazy loading (explicit `JOIN FETCH`), no lifecycle listeners beyond `PreUpdate` for timestamps.
 - **PostgreSQL JSONB** provides the document-model flexibility of MongoDB for nested computed data, with the added benefit of indexable JSON paths if needed later.
-- **Lightweight Docker footprint.** `postgres:17-alpine` uses ~50 MB RAM at idle.
+- **Lightweight Docker footprint.** `postgres:18-alpine` uses ~50 MB RAM at idle.
 - **Future-proof.** `User → Trip` ownership (Sprint 12), shared-trip tokens (Sprint 14), and trip listing with pagination (Sprint 13) are natural relational operations.
 
 **Disadvantages:**
@@ -105,7 +105,7 @@ Use PostgreSQL as the storage engine with Doctrine ORM for entity mapping, but s
 
 ## Decision Outcome
 
-**Chosen: Option C — PostgreSQL 17 + Doctrine ORM with JSONB strategy.**
+**Chosen: Option C — PostgreSQL 18 + Doctrine ORM with JSONB strategy.**
 
 ### Architecture
 
@@ -126,7 +126,7 @@ Use PostgreSQL as the storage engine with Doctrine ORM for entity mapping, but s
     │ (User)  │              │ Tracks data   │
     └────┬────┘              │ Computation   │
          │                   │   tracking    │
-    PostgreSQL 17            │ Generation    │
+    PostgreSQL 18            │ Generation    │
                              │   tracking    │
                              └───────┬───────┘
                                   Redis 8
@@ -199,7 +199,7 @@ Redis remains fully operational throughout the migration for Messenger transport
 
 ## Sources
 
-- [PostgreSQL JSONB Documentation](https://www.postgresql.org/docs/17/datatype-json.html)
+- [PostgreSQL JSONB Documentation](https://www.postgresql.org/docs/18/datatype-json.html)
 - [Doctrine ORM 3.x Documentation](https://www.doctrine-project.org/projects/doctrine-orm/en/3.4/index.html)
 - [Zenstruck Foundry](https://github.com/zenstruck/foundry)
 - [Pomm Project (archived)](https://github.com/pomm-project/Foundation) — last activity 2020
