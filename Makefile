@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision coverage coverage-ci
+.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision coverage coverage-ci migration migrate db-create
 
 help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -111,6 +111,16 @@ test: qa test-php test-e2e openapi-lint security-check ## Run full test suite (R
 ## --- 🗺️ OSM Provisioning ---
 provision: ensure-default-pbf ## Provision OSM regions interactively
 	@docker compose --profile provisioning run --rm provisioner
+
+## --- 🗄️ Database ---
+migration: ## Generate a Doctrine migration
+	@docker compose exec php bin/console doctrine:migrations:diff
+
+migrate: ## Run Doctrine migrations
+	@docker compose exec php bin/console doctrine:migrations:migrate --no-interaction
+
+db-create: ## Create the database
+	@docker compose exec php bin/console doctrine:database:create --if-not-exists
 
 ## --- 💻 Interactive Shells ---
 php-shell: ## Open a bash shell inside the PHP container

@@ -38,6 +38,7 @@ services:
     user: root
     restart: unless-stopped
     depends_on:
+      - database
       - mercure
       - redis
     environment:
@@ -50,6 +51,7 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
+      DATABASE_URL: "postgresql://app:!ChangeMe!@database:5432/bike_trip_planner?serverVersion=17&charset=utf8"
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -82,6 +84,7 @@ services:
     deploy:
       replicas: ${WORKER_REPLICAS:-5}
     depends_on:
+      - database
       - mercure
       - overpass
       - php
@@ -97,6 +100,7 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
+      DATABASE_URL: "postgresql://app:!ChangeMe!@database:5432/bike_trip_planner?serverVersion=17&charset=utf8"
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -178,6 +182,21 @@ services:
       retries: 3
       start_period: 600s
 
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bike_trip_planner
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: "!ChangeMe!"
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "bike_trip_planner", "-U", "app"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
   redis:
     image: redis:8-alpine
     restart: unless-stopped
@@ -218,6 +237,7 @@ services:
 volumes:
   caddy_data: ~
   caddy_config: ~
+  database_data: ~
   overpass-data: ~
   valhalla-tiles: ~
   pwa_node_modules: ~
