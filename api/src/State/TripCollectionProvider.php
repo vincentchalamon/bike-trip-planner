@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
-use ApiPlatform\State\Pagination\ArrayPaginator;
 use ApiPlatform\State\Pagination\Pagination;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripListItem;
@@ -33,10 +32,8 @@ final readonly class TripCollectionProvider implements ProviderInterface
 
     /**
      * @param array<string, mixed> $context
-     *
-     * @return ArrayPaginator<TripListItem>
      */
-    public function provide(Operation $operation, array $uriVariables = [], array $context = []): ArrayPaginator
+    public function provide(Operation $operation, array $uriVariables = [], array $context = []): TripListPaginator
     {
         $rawFilters = $context['filters'] ?? [];
         /** @var array<string, mixed> $filters */
@@ -77,16 +74,25 @@ final readonly class TripCollectionProvider implements ProviderInterface
             }
         }
 
-        // Fetch all matching entities (without pagination) so that ArrayPaginator
-        // can compute the correct total item count from the full dataset.
+        // Count total matching items at the SQL level (without LIMIT/OFFSET).
+        $countQb = clone $qb;
+        $countQb->select('COUNT(DISTINCT t.id)');
+
+        $totalItems = (int) $countQb->getQuery()->getSingleScalarResult();
+
+        // Fetch only the current page using SQL LIMIT/OFFSET, and JOIN FETCH
+        // stages to avoid N+1 queries when computing totals in toListItem().
+        $qb->leftJoin('t.stages', 's')
+            ->addSelect('s')
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit);
+
         /** @var list<TripRequest> $entities */
         $entities = $qb->getQuery()->getResult();
 
         $items = array_map($this->toListItem(...), $entities);
 
-        $firstResult = ($page - 1) * $limit;
-
-        return new ArrayPaginator($items, $firstResult, $limit);
+        return new TripListPaginator($items, $page, $limit, $totalItems);
     }
 
     private function toListItem(TripRequest $entity): TripListItem

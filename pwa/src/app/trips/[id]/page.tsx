@@ -14,22 +14,9 @@ import { apiFetch } from "@/lib/api/client";
 import { API_URL } from "@/lib/constants";
 import type { StageData } from "@/lib/validation/schemas";
 import type { AccommodationType } from "@/lib/accommodation-types";
+import type { components } from "@/lib/api/schema";
 
-interface TripDetailResponse {
-  id: string;
-  title: string | null;
-  sourceUrl: string | null;
-  startDate: string | null;
-  endDate: string | null;
-  fatigueFactor: number;
-  elevationPenalty: number;
-  maxDistancePerDay: number;
-  averageSpeed: number;
-  ebikeMode: boolean;
-  departureHour: number;
-  enabledAccommodationTypes: string[];
-  stages: Array<Record<string, unknown>>;
-}
+type TripDetailResponse = components["schemas"]["TripDetail.jsonld"];
 
 function TripLoader({ tripId }: { tripId: string }) {
   const t = useTranslations("tripList");
@@ -70,7 +57,7 @@ function TripLoader({ tripId }: { tripId: string }) {
 
         // Hydrate the Zustand store with persisted data
         setTrip({
-          id: data.id,
+          id: data.id ?? "",
           title: data.title ?? "",
           sourceUrl: data.sourceUrl ?? "",
         });
@@ -85,50 +72,53 @@ function TripLoader({ tripId }: { tripId: string }) {
         );
 
         updatePacingSettingsInternal(
-          data.fatigueFactor,
-          data.elevationPenalty,
-          data.maxDistancePerDay,
-          data.averageSpeed,
+          data.fatigueFactor ?? 0.9,
+          data.elevationPenalty ?? 50,
+          data.maxDistancePerDay ?? 80,
+          data.averageSpeed ?? 15,
         );
 
-        setEbikeMode(data.ebikeMode);
-        setDepartureHour(data.departureHour);
+        setEbikeMode(data.ebikeMode ?? false);
+        setDepartureHour(data.departureHour ?? 8);
         setEnabledAccommodationTypes(
-          data.enabledAccommodationTypes as AccommodationType[],
+          (data.enabledAccommodationTypes ?? []) as AccommodationType[],
         );
 
         // Convert stages to Zustand StageData shape
-        const stages: StageData[] = data.stages.map((s) => ({
-          dayNumber: (s.dayNumber as number) ?? 0,
-          distance: (s.distance as number) ?? 0,
-          elevation: (s.elevation as number) ?? 0,
-          elevationLoss: (s.elevationLoss as number) ?? 0,
-          startPoint: (s.startPoint as StageData["startPoint"]) ?? {
-            lat: 0,
-            lon: 0,
-            ele: 0,
-          },
-          endPoint: (s.endPoint as StageData["endPoint"]) ?? {
-            lat: 0,
-            lon: 0,
-            ele: 0,
-          },
-          geometry: (s.geometry as StageData["geometry"]) ?? [],
-          label: (s.label as string | null) ?? null,
-          startLabel: null,
-          endLabel: null,
-          weather: (s.weather as StageData["weather"]) ?? null,
-          alerts: (s.alerts as StageData["alerts"]) ?? [],
-          pois: (s.pois as StageData["pois"]) ?? [],
-          accommodations:
-            (s.accommodations as StageData["accommodations"]) ?? [],
-          selectedAccommodation:
-            (s.selectedAccommodation as StageData["selectedAccommodation"]) ??
-            null,
-          accommodationSearchRadiusKm: 5,
-          isRestDay: (s.isRestDay as boolean) ?? false,
-          supplyTimeline: [],
-        }));
+        const stages: StageData[] = (data.stages ?? []).map((s) => {
+          const stage = s as Record<string, unknown>;
+          return {
+            dayNumber: (stage.dayNumber as number) ?? 0,
+            distance: (stage.distance as number) ?? 0,
+            elevation: (stage.elevation as number) ?? 0,
+            elevationLoss: (stage.elevationLoss as number) ?? 0,
+            startPoint: (stage.startPoint as StageData["startPoint"]) ?? {
+              lat: 0,
+              lon: 0,
+              ele: 0,
+            },
+            endPoint: (stage.endPoint as StageData["endPoint"]) ?? {
+              lat: 0,
+              lon: 0,
+              ele: 0,
+            },
+            geometry: (stage.geometry as StageData["geometry"]) ?? [],
+            label: (stage.label as string | null) ?? null,
+            startLabel: null,
+            endLabel: null,
+            weather: (stage.weather as StageData["weather"]) ?? null,
+            alerts: (stage.alerts as StageData["alerts"]) ?? [],
+            pois: (stage.pois as StageData["pois"]) ?? [],
+            accommodations:
+              (stage.accommodations as StageData["accommodations"]) ?? [],
+            selectedAccommodation:
+              (stage.selectedAccommodation as StageData["selectedAccommodation"]) ??
+              null,
+            accommodationSearchRadiusKm: 5,
+            isRestDay: (stage.isRestDay as boolean) ?? false,
+            supplyTimeline: [],
+          };
+        });
 
         setStages(stages);
 

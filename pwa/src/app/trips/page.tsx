@@ -19,29 +19,12 @@ import {
 import { apiFetch } from "@/lib/api/client";
 import { formatDistanceKm } from "@/lib/formatters";
 import { API_URL } from "@/lib/constants";
+import type { components } from "@/lib/api/schema";
 
-interface TripListItem {
-  id: string;
-  title: string | null;
-  startDate: string | null;
-  endDate: string | null;
-  totalDistance: number;
-  stageCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface HydraCollection {
-  "hydra:member": TripListItem[];
-  "hydra:totalItems": number;
-  "hydra:view"?: {
-    "@id"?: string;
-    "hydra:first"?: string;
-    "hydra:last"?: string;
-    "hydra:next"?: string;
-    "hydra:previous"?: string;
-  };
-}
+type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
+type TripCollection = components["schemas"]["HydraCollectionBaseSchema"] & {
+  member: TripListItem[];
+};
 
 const ITEMS_PER_PAGE = 20;
 
@@ -86,9 +69,9 @@ export default function TripsPage() {
         return;
       }
 
-      const data = (await res.json()) as HydraCollection;
-      setTrips(data["hydra:member"] ?? []);
-      setTotalItems(data["hydra:totalItems"] ?? 0);
+      const data = (await res.json()) as TripCollection;
+      setTrips(data.member ?? []);
+      setTotalItems(data.totalItems ?? 0);
     } catch {
       setLoadError(true);
     } finally {
@@ -106,7 +89,7 @@ export default function TripsPage() {
     setIsDeleting(true);
     try {
       const res = await apiFetch(
-        `${API_URL}/trips/${encodeURIComponent(deleteTarget.id)}`,
+        `${API_URL}/trips/${encodeURIComponent(deleteTarget.id ?? "")}`,
         { method: "DELETE" },
       );
 
@@ -168,7 +151,7 @@ export default function TripsPage() {
         <div className="text-center py-16">
           <p className="text-destructive mb-4">{t("loadingError")}</p>
           <Button variant="outline" onClick={() => void fetchTrips()}>
-            {t("loading")}
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -191,20 +174,20 @@ export default function TripsPage() {
                   <button
                     type="button"
                     className="flex-1 text-left min-w-0 cursor-pointer"
-                    onClick={() => router.push(`/trips/${trip.id}`)}
+                    onClick={() => router.push(`/trips/${trip.id ?? ""}`)}
                   >
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span className="font-semibold truncate">
                         {trip.title ?? t("noDates")}
                       </span>
-                      {trip.stageCount > 0 && (
+                      {(trip.stageCount ?? 0) > 0 && (
                         <span className="text-sm text-muted-foreground">
-                          {t("stages", { count: trip.stageCount })}
+                          {t("stages", { count: trip.stageCount ?? 0 })}
                         </span>
                       )}
-                      {trip.totalDistance > 0 && (
+                      {(trip.totalDistance ?? 0) > 0 && (
                         <span className="text-sm text-muted-foreground">
-                          {formatDistanceKm(trip.totalDistance)}
+                          {formatDistanceKm(trip.totalDistance ?? 0)}
                         </span>
                       )}
                     </div>

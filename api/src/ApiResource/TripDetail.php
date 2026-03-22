@@ -26,7 +26,7 @@ use App\State\TripDetailProvider;
         ),
     ],
 )]
-final class TripDetail
+final readonly class TripDetail
 {
     /**
      * @param list<array<string, mixed>> $stages Serialized stage DTOs
