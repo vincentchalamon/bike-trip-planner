@@ -14,7 +14,6 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
-use App\State\TripLocker;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Uid\Uuid;

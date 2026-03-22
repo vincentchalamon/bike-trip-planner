@@ -25,7 +25,7 @@ final class TripLocker
 
     public function isLocked(TripRequest $request): bool
     {
-        if (null === $request->startDate) {
+        if (!$request->startDate instanceof \DateTimeImmutable) {
             return false;
         }
 

@@ -12,7 +12,6 @@ use App\ApiResource\StageResponse;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\RecalculateRouteSegment;
 use App\Repository\TripRequestRepositoryInterface;
-use App\State\TripLocker;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;

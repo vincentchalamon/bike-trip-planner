@@ -25,6 +25,9 @@
     "id": {
       "type": "string"
     },
+    "isLocked": {
+      "type": "boolean"
+    },
     "computationStatus": {
       "type": "object",
       "required": [

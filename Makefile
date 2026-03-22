@@ -135,7 +135,7 @@ pwa-shell: ## Open a bash shell inside the Next.js container
 ## --- 💻 Tooling ---
 openapigen: ## Generate OpenAPI
 	@docker compose run --rm --no-deps php bin/console api:openapi:export > pwa/openapi.json
-	@docker compose run --rm --no-deps bin/console api:openapi:export --yaml > pwa/openapi.yaml
+	@docker compose run --rm --no-deps php bin/console api:openapi:export --yaml > pwa/openapi.yaml
 
 typegen: openapigen ## Run Typegen
 	@docker compose run --rm --no-deps pwa npm run typegen

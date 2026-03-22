@@ -15,6 +15,7 @@ use App\Message\RecalculateStages;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\RestDayInsertProcessor;
+use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -51,6 +52,7 @@ final class RestDayInsertProcessorTest extends TestCase
             $this->messageBus,
             $this->objectMapper,
             $generationTracker,
+            new TripLocker(),
         );
     }
 

@@ -20,7 +20,6 @@ use App\Message\FetchWeather;
 use App\Message\GenerateStages;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
-use App\State\TripLocker;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;

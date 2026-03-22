@@ -19,7 +19,6 @@ use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
-use App\State\TripLocker;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\ObjectMapper\ObjectMapperInterface;
