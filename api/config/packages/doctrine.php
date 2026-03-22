@@ -40,6 +40,13 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'prefix' => 'App\Entity',
                     'alias' => 'App',
                 ],
+                'ApiResource' => [
+                    'type' => 'attribute',
+                    'is_bundle' => false,
+                    'dir' => '%kernel.project_dir%/src/ApiResource',
+                    'prefix' => 'App\ApiResource',
+                    'alias' => 'ApiResource',
+                ],
             ],
             'controller_resolver' => [
                 'auto_mapping' => false,

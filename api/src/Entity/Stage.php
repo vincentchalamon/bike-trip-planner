@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\ApiResource\TripRequest;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
@@ -79,9 +80,9 @@ class Stage
     #[ORM\Column(type: 'jsonb', nullable: true)]
     private ?array $selectedAccommodation = null;
 
-    public function __construct(#[ORM\ManyToOne(targetEntity: Trip::class, inversedBy: 'stages')]
+    public function __construct(#[ORM\ManyToOne(targetEntity: TripRequest::class, inversedBy: 'stages')]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-        private Trip $trip, ?Uuid $id = null)
+        private TripRequest $trip, ?Uuid $id = null)
     {
         $this->id = $id ?? Uuid::v7();
     }
@@ -91,7 +92,7 @@ class Stage
         return $this->id;
     }
 
-    public function getTrip(): Trip
+    public function getTrip(): TripRequest
     {
         return $this->trip;
     }

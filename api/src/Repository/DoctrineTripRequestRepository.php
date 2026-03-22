@@ -13,7 +13,6 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\Stage as StageEntity;
-use App\Entity\Trip;
 use App\Enum\AlertType;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
@@ -35,66 +34,60 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
 
     public function initializeTrip(string $tripId, TripRequest $request): void
     {
-        $trip = $this->findTrip($tripId);
-        if (!$trip instanceof Trip) {
-            $trip = new Trip(Uuid::fromString($tripId));
-            $this->entityManager->persist($trip);
+        $existing = $this->findTripRequest($tripId);
+        if ($existing instanceof TripRequest) {
+            $this->copyModifiableFields($existing, $request);
+        } else {
+            $request->id = Uuid::fromString($tripId);
+            $this->entityManager->persist($request);
         }
 
-        $this->applyRequestToTrip($trip, $request);
         $this->entityManager->flush();
     }
 
     public function getRequest(string $tripId): ?TripRequest
     {
-        $trip = $this->findTrip($tripId);
-        if (!$trip instanceof Trip) {
-            return null;
-        }
-
-        return $this->tripToRequest($trip);
+        return $this->findTripRequest($tripId);
     }
 
     public function storeRequest(string $tripId, TripRequest $request): void
     {
-        $trip = $this->findTrip($tripId);
-        if (!$trip instanceof Trip) {
+        $managed = $this->findTripRequest($tripId);
+        if (!$managed instanceof TripRequest) {
             return;
         }
 
-        $this->applyRequestToTrip($trip, $request);
+        $this->copyModifiableFields($managed, $request);
         $this->entityManager->flush();
     }
 
     public function getTitle(string $tripId): ?string
     {
-        $trip = $this->findTrip($tripId);
-
-        return $trip?->getTitle();
+        return $this->findTripRequest($tripId)?->title;
     }
 
     public function storeTitle(string $tripId, ?string $title): void
     {
-        $trip = $this->findTrip($tripId);
-        if (!$trip instanceof Trip) {
+        $trip = $this->findTripRequest($tripId);
+        if (!$trip instanceof TripRequest) {
             return;
         }
 
-        $trip->setTitle($title);
+        $trip->title = $title;
         $this->entityManager->flush();
     }
 
     /** @param list<array{lat: float, lon: float, ele: float}> $rawPoints */
     public function storeRawPoints(string $tripId, array $rawPoints): void
     {
-        $this->cacheSet(sprintf('trip.%s.raw_points', $tripId), $rawPoints);
+        $this->cacheSet(\sprintf('trip.%s.raw_points', $tripId), $rawPoints);
     }
 
     /** @return list<array{lat: float, lon: float, ele: float}>|null */
     public function getRawPoints(string $tripId): ?array
     {
         /** @var list<array{lat: float, lon: float, ele: float}>|null $value */
-        $value = $this->cacheGet(sprintf('trip.%s.raw_points', $tripId));
+        $value = $this->cacheGet(\sprintf('trip.%s.raw_points', $tripId));
 
         return $value;
     }
@@ -102,14 +95,14 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
     /** @param list<array{lat: float, lon: float, ele: float}> $decimatedPoints */
     public function storeDecimatedPoints(string $tripId, array $decimatedPoints): void
     {
-        $this->cacheSet(sprintf('trip.%s.decimated_points', $tripId), $decimatedPoints);
+        $this->cacheSet(\sprintf('trip.%s.decimated_points', $tripId), $decimatedPoints);
     }
 
     /** @return list<array{lat: float, lon: float, ele: float}>|null */
     public function getDecimatedPoints(string $tripId): ?array
     {
         /** @var list<array{lat: float, lon: float, ele: float}>|null $value */
-        $value = $this->cacheGet(sprintf('trip.%s.decimated_points', $tripId));
+        $value = $this->cacheGet(\sprintf('trip.%s.decimated_points', $tripId));
 
         return $value;
     }
@@ -119,59 +112,55 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
      */
     public function storeTracksData(string $tripId, array $tracksData): void
     {
-        $this->cacheSet(sprintf('trip.%s.tracks_data', $tripId), $tracksData);
+        $this->cacheSet(\sprintf('trip.%s.tracks_data', $tripId), $tracksData);
     }
 
     /** @return list<list<array{lat: float, lon: float, ele: float}>>|null */
     public function getTracksData(string $tripId): ?array
     {
         /** @var list<list<array{lat: float, lon: float, ele: float}>>|null $value */
-        $value = $this->cacheGet(sprintf('trip.%s.tracks_data', $tripId));
+        $value = $this->cacheGet(\sprintf('trip.%s.tracks_data', $tripId));
 
         return $value;
     }
 
     public function storeSourceType(string $tripId, string $sourceType): void
     {
-        $trip = $this->findTrip($tripId);
-        if (!$trip instanceof Trip) {
+        $trip = $this->findTripRequest($tripId);
+        if (!$trip instanceof TripRequest) {
             return;
         }
 
-        $trip->setSourceType($sourceType);
+        $trip->sourceType = $sourceType;
         $this->entityManager->flush();
     }
 
     public function getSourceType(string $tripId): ?string
     {
-        $trip = $this->findTrip($tripId);
-
-        return $trip?->getSourceType();
+        return $this->findTripRequest($tripId)?->sourceType;
     }
 
     public function storeLocale(string $tripId, string $locale): void
     {
-        $trip = $this->findTrip($tripId);
-        if (!$trip instanceof Trip) {
+        $trip = $this->findTripRequest($tripId);
+        if (!$trip instanceof TripRequest) {
             return;
         }
 
-        $trip->setLocale($locale);
+        $trip->locale = $locale;
         $this->entityManager->flush();
     }
 
     public function getLocale(string $tripId): ?string
     {
-        $trip = $this->findTrip($tripId);
-
-        return $trip?->getLocale();
+        return $this->findTripRequest($tripId)?->locale;
     }
 
     /** @param list<StageDto> $stages */
     public function storeStages(string $tripId, array $stages): void
     {
-        $trip = $this->findTrip($tripId);
-        if (!$trip instanceof Trip) {
+        $trip = $this->findTripRequest($tripId);
+        if (!$trip instanceof TripRequest) {
             return;
         }
 
@@ -192,12 +181,12 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
     /** @return list<StageDto>|null */
     public function getStages(string $tripId): ?array
     {
-        $trip = $this->findTrip($tripId);
-        if (!$trip instanceof Trip) {
+        $trip = $this->findTripRequest($tripId);
+        if (!$trip instanceof TripRequest) {
             return null;
         }
 
-        $stages = $trip->getStages();
+        $stages = $trip->stages;
         if ($stages->isEmpty()) {
             return [];
         }
@@ -212,47 +201,33 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
 
     // --- Private helpers ---
 
-    private function findTrip(string $tripId): ?Trip
+    private function findTripRequest(string $tripId): ?TripRequest
     {
         if (!Uuid::isValid($tripId)) {
             return null;
         }
 
-        return $this->entityManager->find(Trip::class, Uuid::fromString($tripId));
+        return $this->entityManager->find(TripRequest::class, Uuid::fromString($tripId));
     }
 
-    private function applyRequestToTrip(Trip $trip, TripRequest $request): void
+    /**
+     * Copies user-modifiable fields from a deserialized TripRequest to the managed entity.
+     */
+    private function copyModifiableFields(TripRequest $managed, TripRequest $source): void
     {
-        $trip->setSourceUrl($request->sourceUrl);
-        $trip->setStartDate($request->startDate);
-        $trip->setEndDate($request->endDate);
-        $trip->setFatigueFactor($request->fatigueFactor);
-        $trip->setElevationPenalty($request->elevationPenalty);
-        $trip->setEbikeMode($request->ebikeMode);
-        $trip->setDepartureHour($request->departureHour);
-        $trip->setMaxDistancePerDay($request->maxDistancePerDay);
-        $trip->setAverageSpeed($request->averageSpeed);
-        $trip->setEnabledAccommodationTypes($request->enabledAccommodationTypes);
+        $managed->sourceUrl = $source->sourceUrl;
+        $managed->startDate = $source->startDate;
+        $managed->endDate = $source->endDate;
+        $managed->fatigueFactor = $source->fatigueFactor;
+        $managed->elevationPenalty = $source->elevationPenalty;
+        $managed->ebikeMode = $source->ebikeMode;
+        $managed->departureHour = $source->departureHour;
+        $managed->maxDistancePerDay = $source->maxDistancePerDay;
+        $managed->averageSpeed = $source->averageSpeed;
+        $managed->enabledAccommodationTypes = $source->enabledAccommodationTypes;
     }
 
-    private function tripToRequest(Trip $trip): TripRequest
-    {
-        $request = new TripRequest();
-        $request->sourceUrl = $trip->getSourceUrl();
-        $request->startDate = $trip->getStartDate();
-        $request->endDate = $trip->getEndDate();
-        $request->fatigueFactor = $trip->getFatigueFactor();
-        $request->elevationPenalty = $trip->getElevationPenalty();
-        $request->ebikeMode = $trip->isEbikeMode();
-        $request->departureHour = $trip->getDepartureHour();
-        $request->maxDistancePerDay = $trip->getMaxDistancePerDay();
-        $request->averageSpeed = $trip->getAverageSpeed();
-        $request->enabledAccommodationTypes = $trip->getEnabledAccommodationTypes();
-
-        return $request;
-    }
-
-    private function stageDtoToEntity(StageDto $dto, Trip $trip, int $position): StageEntity
+    private function stageDtoToEntity(StageDto $dto, TripRequest $trip, int $position): StageEntity
     {
         $entity = new StageEntity($trip);
         $entity->setPosition($position);
@@ -316,8 +291,11 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
 
     private function stageEntityToDto(StageEntity $entity): StageDto
     {
+        $tripId = $entity->getTrip()->id;
+        \assert($tripId instanceof Uuid);
+
         $dto = new StageDto(
-            tripId: $entity->getTrip()->getId()->toRfc4122(),
+            tripId: $tripId->toRfc4122(),
             dayNumber: $entity->getDayNumber(),
             distance: $entity->getDistance(),
             elevation: $entity->getElevation(),

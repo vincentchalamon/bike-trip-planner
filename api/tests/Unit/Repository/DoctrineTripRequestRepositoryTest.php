@@ -12,7 +12,6 @@ use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
-use App\Entity\Trip;
 use App\Enum\AlertType;
 use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -61,29 +60,28 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $request->averageSpeed = 18.0;
         $request->enabledAccommodationTypes = ['camp_site', 'hotel'];
 
-        // Capture the persisted Trip entity
-        $persistedTrip = null;
+        // initializeTrip persists the TripRequest directly (with id set)
         $this->entityManager->expects(self::once())
             ->method('persist')
-            ->willReturnCallback(function (Trip $trip) use (&$persistedTrip): void {
-                $persistedTrip = $trip;
-            });
+            ->with($request);
         $this->entityManager->expects(self::once())
             ->method('flush');
 
         $this->repository->initializeTrip($tripId, $request);
 
-        self::assertInstanceOf(Trip::class, $persistedTrip);
+        // Verify id was set
+        self::assertNotNull($request->id);
+        self::assertSame($tripId, $request->id->toRfc4122());
 
-        // Now test getRequest by having find() return the persisted entity
+        // Now test getRequest by having find() return the same persisted request
         $em2 = $this->createMock(EntityManagerInterface::class);
         $em2->method('find')
-            ->willReturn($persistedTrip);
+            ->willReturn($request);
 
         $repo2 = new DoctrineTripRequestRepository($em2, $this->cache);
         $result = $repo2->getRequest($tripId);
 
-        self::assertNotNull($result);
+        self::assertSame($request, $result);
         self::assertSame('https://www.komoot.com/tour/123456789', $result->sourceUrl);
         self::assertSame('2026-07-01', $result->startDate?->format('Y-m-d'));
         self::assertSame('2026-07-10', $result->endDate?->format('Y-m-d'));
@@ -100,7 +98,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     public function storeAndGetStagesWithAllData(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new Trip(Uuid::fromString($tripId));
+        $trip = new TripRequest(Uuid::fromString($tripId));
 
         $this->entityManager->method('find')
             ->willReturn($trip);
@@ -290,7 +288,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     public function culturalPoiAlertRoundtrip(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new Trip(Uuid::fromString($tripId));
+        $trip = new TripRequest(Uuid::fromString($tripId));
 
         $this->entityManager->method('find')
             ->willReturn($trip);
@@ -344,13 +342,12 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     public function rawPointsUsesCache(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $cacheKey = sprintf('trip.%s.raw_points', $tripId);
+        $cacheKey = \sprintf('trip.%s.raw_points', $tripId);
         $rawPoints = [
             ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
             ['lat' => 47.9983, 'lon' => 3.5736, 'ele' => 180.0],
         ];
 
-        // Store: mock cache item for save
         $cacheItem = $this->createMock(CacheItemInterface::class);
         $cacheItem->expects(self::once())
             ->method('set')
@@ -367,7 +364,6 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             ->method('save')
             ->with($cacheItem);
 
-        // EntityManager should NOT be called for raw points
         $this->entityManager->expects(self::never())
             ->method('find');
         $this->entityManager->expects(self::never())
@@ -382,7 +378,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     public function getRawPointsReturnsCachedData(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $cacheKey = sprintf('trip.%s.raw_points', $tripId);
+        $cacheKey = \sprintf('trip.%s.raw_points', $tripId);
         $rawPoints = [
             ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
         ];
@@ -405,7 +401,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     public function getRawPointsReturnsNullOnCacheMiss(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $cacheKey = sprintf('trip.%s.raw_points', $tripId);
+        $cacheKey = \sprintf('trip.%s.raw_points', $tripId);
 
         $cacheItem = $this->createMock(CacheItemInterface::class);
         $cacheItem->method('isHit')->willReturn(false);
@@ -424,7 +420,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     public function storeTitleUpdatesEntity(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new Trip(Uuid::fromString($tripId));
+        $trip = new TripRequest(Uuid::fromString($tripId));
 
         $this->entityManager->method('find')
             ->willReturn($trip);
@@ -433,18 +429,18 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->repository->storeTitle($tripId, 'Mon voyage');
 
-        self::assertSame('Mon voyage', $trip->getTitle());
+        self::assertSame('Mon voyage', $trip->title);
     }
 
     #[Test]
     public function storeRequestUpdatesExistingTrip(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new Trip(Uuid::fromString($tripId));
-        $trip->setSourceUrl('https://www.komoot.com/tour/111');
+        $managed = new TripRequest(Uuid::fromString($tripId));
+        $managed->sourceUrl = 'https://www.komoot.com/tour/111';
 
         $this->entityManager->method('find')
-            ->willReturn($trip);
+            ->willReturn($managed);
         $this->entityManager->expects(self::once())
             ->method('flush');
 
@@ -454,8 +450,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->repository->storeRequest($tripId, $request);
 
-        self::assertSame('https://www.komoot.com/tour/222', $trip->getSourceUrl());
-        self::assertSame(0.8, $trip->getFatigueFactor());
+        self::assertSame('https://www.komoot.com/tour/222', $managed->sourceUrl);
+        self::assertSame(0.8, $managed->fatigueFactor);
     }
 
     #[Test]
@@ -475,7 +471,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     public function getStagesReturnsEmptyArrayForTripWithNoStages(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new Trip(Uuid::fromString($tripId));
+        $trip = new TripRequest(Uuid::fromString($tripId));
 
         $this->entityManager->method('find')
             ->willReturn($trip);
@@ -489,7 +485,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     public function storeSourceType(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new Trip(Uuid::fromString($tripId));
+        $trip = new TripRequest(Uuid::fromString($tripId));
 
         $this->entityManager->method('find')
             ->willReturn($trip);
@@ -497,14 +493,14 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             ->method('flush');
 
         $this->repository->storeSourceType($tripId, 'komoot');
-        self::assertSame('komoot', $trip->getSourceType());
+        self::assertSame('komoot', $trip->sourceType);
     }
 
     #[Test]
     public function storeLocale(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $trip = new Trip(Uuid::fromString($tripId));
+        $trip = new TripRequest(Uuid::fromString($tripId));
 
         $this->entityManager->method('find')
             ->willReturn($trip);
@@ -512,7 +508,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             ->method('flush');
 
         $this->repository->storeLocale($tripId, 'fr');
-        self::assertSame('fr', $trip->getLocale());
+        self::assertSame('fr', $trip->locale);
     }
 
     #[Test]

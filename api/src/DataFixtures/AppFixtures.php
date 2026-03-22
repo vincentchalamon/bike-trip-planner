@@ -14,7 +14,7 @@ final class AppFixtures extends Fixture
     public function load(ObjectManager $manager): void
     {
         // Trip 1: Tour de France bikepacking
-        $trip1 = TripFactory::createOne([
+        $trip1 = TripFactory::createOne([ // @phpstan-ignore staticMethod.unresolvableReturnType
             'title' => 'Tour de France Bikepacking',
             'sourceUrl' => 'https://www.komoot.com/tour/123456789',
             'startDate' => new \DateTimeImmutable('2026-07-01'),
@@ -72,7 +72,7 @@ final class AppFixtures extends Fixture
         ]);
 
         // Trip 2: E-bike Alpine adventure
-        $trip2 = TripFactory::createOne([
+        $trip2 = TripFactory::createOne([ // @phpstan-ignore staticMethod.unresolvableReturnType
             'title' => 'Alpine E-Bike Adventure',
             'sourceUrl' => 'https://www.komoot.com/tour/987654321',
             'startDate' => new \DateTimeImmutable('2026-08-15'),

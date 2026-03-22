@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Factory;
 
-use App\Entity\Trip;
+use App\ApiResource\TripRequest;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Persistence\PersistentProxyObjectFactory;
 
 /**
- * @extends PersistentProxyObjectFactory<Trip>
+ * @extends PersistentProxyObjectFactory<TripRequest>
  */
 final class TripFactory extends PersistentProxyObjectFactory
 {
     public static function class(): string
     {
-        return Trip::class;
+        return TripRequest::class;
     }
 
     /** @return array<string, mixed> */
