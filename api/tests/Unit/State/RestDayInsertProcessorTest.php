@@ -59,6 +59,7 @@ final class RestDayInsertProcessorTest extends TestCase
     #[Test]
     public function throwsNotFoundWhenIndexIsOutOfBounds(): void
     {
+        $this->tripStateManager->method('getRequest')->willReturn(new TripRequest());
         $this->tripStateManager->method('getStages')->willReturn([]);
 
         $this->expectException(NotFoundHttpException::class);
@@ -73,6 +74,7 @@ final class RestDayInsertProcessorTest extends TestCase
         $restDay = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 0.0, elevation: 0.0, startPoint: $coord, endPoint: $coord, isRestDay: true);
         $stage1 = new Stage(tripId: 'trip-1', dayNumber: 2, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
 
+        $this->tripStateManager->method('getRequest')->willReturn(new TripRequest());
         $this->tripStateManager->method('getStages')->willReturn([$restDay, $stage1]);
 
         $this->expectException(UnprocessableEntityHttpException::class);
@@ -88,6 +90,7 @@ final class RestDayInsertProcessorTest extends TestCase
         $restDay = new Stage(tripId: 'trip-1', dayNumber: 2, distance: 0.0, elevation: 0.0, startPoint: $coord, endPoint: $coord, isRestDay: true);
         $stage2 = new Stage(tripId: 'trip-1', dayNumber: 3, distance: 90.0, elevation: 600.0, startPoint: $coord, endPoint: $coord);
 
+        $this->tripStateManager->method('getRequest')->willReturn(new TripRequest());
         $this->tripStateManager->method('getStages')->willReturn([$stage0, $restDay, $stage2]);
 
         $this->expectException(UnprocessableEntityHttpException::class);
@@ -113,7 +116,7 @@ final class RestDayInsertProcessorTest extends TestCase
 
                 return true;
             }));
-        $this->tripStateManager->method('getRequest')->willReturn(null);
+        $this->tripStateManager->method('getRequest')->willReturn(new TripRequest());
         $this->messageBus->method('dispatch')->willReturnCallback(static fn (object $msg): Envelope => new Envelope($msg));
 
         $this->objectMapper->method('map')->willReturn(new StageResponse());
@@ -141,7 +144,7 @@ final class RestDayInsertProcessorTest extends TestCase
         $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
 
         $this->tripStateManager->method('getStages')->willReturn([$stage0]);
-        $this->tripStateManager->method('getRequest')->willReturn(null);
+        $this->tripStateManager->method('getRequest')->willReturn(new TripRequest());
         $this->messageBus->method('dispatch')->willReturnCallback(static fn (object $msg): Envelope => new Envelope($msg));
 
         $expectedResponse = new StageResponse();
@@ -167,7 +170,7 @@ final class RestDayInsertProcessorTest extends TestCase
         $stage2 = new Stage(tripId: 'trip-1', dayNumber: 3, distance: 70.0, elevation: 400.0, startPoint: $coord, endPoint: $coord);
 
         $this->tripStateManager->method('getStages')->willReturn([$stage0, $stage1, $stage2]);
-        $this->tripStateManager->method('getRequest')->willReturn(null);
+        $this->tripStateManager->method('getRequest')->willReturn(new TripRequest());
 
         $dispatchedMessages = [];
         $this->messageBus->expects($this->atLeastOnce())

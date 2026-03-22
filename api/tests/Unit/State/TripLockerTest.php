@@ -62,10 +62,12 @@ final class TripLockerTest extends TestCase
         $request = new TripRequest();
         $request->startDate = new \DateTimeImmutable('yesterday', new \DateTimeZone('UTC'));
 
-        $this->expectException(HttpException::class);
-        $this->expectExceptionCode(423);
-
-        $this->locker->assertNotLocked($request);
+        try {
+            $this->locker->assertNotLocked($request);
+            $this->fail('Expected HttpException to be thrown.');
+        } catch (HttpException $httpException) {
+            $this->assertSame(423, $httpException->getStatusCode());
+        }
     }
 
     #[Test]
