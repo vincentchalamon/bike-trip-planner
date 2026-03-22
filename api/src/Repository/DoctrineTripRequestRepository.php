@@ -44,7 +44,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
     public function getRequest(string $tripId): ?TripRequest
     {
         $trip = $this->findTrip($tripId);
-        if (!$trip) {
+        if (!$trip instanceof Trip) {
             return null;
         }
 
@@ -54,7 +54,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
     public function storeRequest(string $tripId, TripRequest $request): void
     {
         $trip = $this->findTrip($tripId);
-        if (!$trip) {
+        if (!$trip instanceof Trip) {
             return;
         }
 
@@ -72,7 +72,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
     public function storeTitle(string $tripId, ?string $title): void
     {
         $trip = $this->findTrip($tripId);
-        if (!$trip) {
+        if (!$trip instanceof Trip) {
             return;
         }
 
@@ -83,14 +83,14 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
     /** @param list<array{lat: float, lon: float, ele: float}> $rawPoints */
     public function storeRawPoints(string $tripId, array $rawPoints): void
     {
-        $this->cacheSet("trip.{$tripId}.raw_points", $rawPoints);
+        $this->cacheSet(sprintf('trip.%s.raw_points', $tripId), $rawPoints);
     }
 
     /** @return list<array{lat: float, lon: float, ele: float}>|null */
     public function getRawPoints(string $tripId): ?array
     {
         /** @var list<array{lat: float, lon: float, ele: float}>|null $value */
-        $value = $this->cacheGet("trip.{$tripId}.raw_points");
+        $value = $this->cacheGet(sprintf('trip.%s.raw_points', $tripId));
 
         return $value;
     }
@@ -98,14 +98,14 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
     /** @param list<array{lat: float, lon: float, ele: float}> $decimatedPoints */
     public function storeDecimatedPoints(string $tripId, array $decimatedPoints): void
     {
-        $this->cacheSet("trip.{$tripId}.decimated_points", $decimatedPoints);
+        $this->cacheSet(sprintf('trip.%s.decimated_points', $tripId), $decimatedPoints);
     }
 
     /** @return list<array{lat: float, lon: float, ele: float}>|null */
     public function getDecimatedPoints(string $tripId): ?array
     {
         /** @var list<array{lat: float, lon: float, ele: float}>|null $value */
-        $value = $this->cacheGet("trip.{$tripId}.decimated_points");
+        $value = $this->cacheGet(sprintf('trip.%s.decimated_points', $tripId));
 
         return $value;
     }
@@ -115,14 +115,14 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
      */
     public function storeTracksData(string $tripId, array $tracksData): void
     {
-        $this->cacheSet("trip.{$tripId}.tracks_data", $tracksData);
+        $this->cacheSet(sprintf('trip.%s.tracks_data', $tripId), $tracksData);
     }
 
     /** @return list<list<array{lat: float, lon: float, ele: float}>>|null */
     public function getTracksData(string $tripId): ?array
     {
         /** @var list<list<array{lat: float, lon: float, ele: float}>>|null $value */
-        $value = $this->cacheGet("trip.{$tripId}.tracks_data");
+        $value = $this->cacheGet(sprintf('trip.%s.tracks_data', $tripId));
 
         return $value;
     }
@@ -130,7 +130,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
     public function storeSourceType(string $tripId, string $sourceType): void
     {
         $trip = $this->findTrip($tripId);
-        if (!$trip) {
+        if (!$trip instanceof Trip) {
             return;
         }
 
@@ -148,7 +148,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
     public function storeLocale(string $tripId, string $locale): void
     {
         $trip = $this->findTrip($tripId);
-        if (!$trip) {
+        if (!$trip instanceof Trip) {
             return;
         }
 
@@ -167,7 +167,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
     public function storeStages(string $tripId, array $stages): void
     {
         $trip = $this->findTrip($tripId);
-        if (!$trip) {
+        if (!$trip instanceof Trip) {
             return;
         }
 
@@ -187,7 +187,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
     public function getStages(string $tripId): ?array
     {
         $trip = $this->findTrip($tripId);
-        if (!$trip) {
+        if (!$trip instanceof Trip) {
             return null;
         }
 
@@ -208,6 +208,10 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
 
     private function findTrip(string $tripId): ?Trip
     {
+        if (!Uuid::isValid($tripId)) {
+            return null;
+        }
+
         return $this->entityManager->find(Trip::class, Uuid::fromString($tripId));
     }
 
@@ -264,10 +268,11 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         foreach ($dto->geometry as $coord) {
             $geometry[] = ['lat' => $coord->lat, 'lon' => $coord->lon, 'ele' => $coord->ele];
         }
+
         $entity->setGeometry($geometry);
 
         // Weather: WeatherForecast|null → array|null
-        if ($dto->weather !== null) {
+        if ($dto->weather instanceof WeatherForecast) {
             $entity->setWeather($this->weatherToArray($dto->weather));
         }
 
@@ -276,6 +281,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         foreach ($dto->alerts as $alert) {
             $alerts[] = $this->alertToArray($alert);
         }
+
         $entity->setAlerts($alerts);
 
         // POIs: PointOfInterest[] → list<array>
@@ -283,6 +289,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         foreach ($dto->pois as $poi) {
             $pois[] = $this->poiToArray($poi);
         }
+
         $entity->setPois($pois);
 
         // Accommodations: Accommodation[] → list<array>
@@ -290,10 +297,11 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         foreach ($dto->accommodations as $accommodation) {
             $accommodations[] = $this->accommodationToArray($accommodation);
         }
+
         $entity->setAccommodations($accommodations);
 
         // Selected accommodation
-        if ($dto->selectedAccommodation !== null) {
+        if ($dto->selectedAccommodation instanceof Accommodation) {
             $entity->setSelectedAccommodation($this->accommodationToArray($dto->selectedAccommodation));
         }
 
@@ -319,29 +327,37 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         );
 
         // Weather
+        /** @var array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int, humidity: int, comfortIndex: int, relativeWindDirection: string}|null $weatherData */
         $weatherData = $entity->getWeather();
-        if ($weatherData !== null) {
+        if (null !== $weatherData) {
             $dto->weather = $this->arrayToWeather($weatherData);
         }
 
         // Alerts
-        foreach ($entity->getAlerts() as $alertData) {
+        /** @var list<array{type: string, message: string, lat?: ?float, lon?: ?float, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int}> $alertsData */
+        $alertsData = $entity->getAlerts();
+        foreach ($alertsData as $alertData) {
             $dto->addAlert($this->arrayToAlert($alertData));
         }
 
         // POIs
-        foreach ($entity->getPois() as $poiData) {
+        /** @var list<array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float}> $poisData */
+        $poisData = $entity->getPois();
+        foreach ($poisData as $poiData) {
             $dto->addPoi($this->arrayToPoi($poiData));
         }
 
         // Accommodations
-        foreach ($entity->getAccommodations() as $accData) {
+        /** @var list<array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url?: ?string, possibleClosed?: bool, distanceToEndPoint?: float}> $accommodationsData */
+        $accommodationsData = $entity->getAccommodations();
+        foreach ($accommodationsData as $accData) {
             $dto->addAccommodation($this->arrayToAccommodation($accData));
         }
 
         // Selected accommodation
+        /** @var array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url?: ?string, possibleClosed?: bool, distanceToEndPoint?: float}|null $selectedData */
         $selectedData = $entity->getSelectedAccommodation();
-        if ($selectedData !== null) {
+        if (null !== $selectedData) {
             $dto->selectedAccommodation = $this->arrayToAccommodation($selectedData);
         }
 
@@ -367,24 +383,24 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         ];
     }
 
-    /** @param array<string, mixed> $data */
+    /** @param array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int, humidity: int, comfortIndex: int, relativeWindDirection: string} $data */
     private function arrayToWeather(array $data): WeatherForecast
     {
         return new WeatherForecast(
-            icon: (string) $data['icon'],
-            description: (string) $data['description'],
-            tempMin: (float) $data['tempMin'],
-            tempMax: (float) $data['tempMax'],
-            windSpeed: (float) $data['windSpeed'],
-            windDirection: (string) $data['windDirection'],
-            precipitationProbability: (int) $data['precipitationProbability'],
-            humidity: (int) $data['humidity'],
-            comfortIndex: (int) $data['comfortIndex'],
-            relativeWindDirection: (string) $data['relativeWindDirection'],
+            icon: $data['icon'],
+            description: $data['description'],
+            tempMin: $data['tempMin'],
+            tempMax: $data['tempMax'],
+            windSpeed: $data['windSpeed'],
+            windDirection: $data['windDirection'],
+            precipitationProbability: $data['precipitationProbability'],
+            humidity: $data['humidity'],
+            comfortIndex: $data['comfortIndex'],
+            relativeWindDirection: $data['relativeWindDirection'],
         );
     }
 
-    /** @return array<string, mixed> */
+    /** @return array{type: string, message: string, lat: ?float, lon: ?float, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int} */
     private function alertToArray(Alert $alert): array
     {
         $data = [
@@ -406,13 +422,13 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         return $data;
     }
 
-    /** @param array<string, mixed> $data */
+    /** @param array{type: string, message: string, lat?: ?float, lon?: ?float, _class?: string, poiName?: string, poiType?: string, poiLat?: float, poiLon?: float, distanceFromRoute?: int} $data */
     private function arrayToAlert(array $data): Alert
     {
-        $type = AlertType::from((string) $data['type']);
-        $message = (string) $data['message'];
-        $lat = isset($data['lat']) ? (float) $data['lat'] : null;
-        $lon = isset($data['lon']) ? (float) $data['lon'] : null;
+        $type = AlertType::from($data['type']);
+        $message = $data['message'];
+        $lat = $data['lat'] ?? null;
+        $lon = $data['lon'] ?? null;
 
         if (($data['_class'] ?? null) === 'CulturalPoiAlert') {
             return new CulturalPoiAlert(
@@ -420,11 +436,11 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
                 message: $message,
                 lat: $lat,
                 lon: $lon,
-                poiName: (string) ($data['poiName'] ?? ''),
-                poiType: (string) ($data['poiType'] ?? ''),
-                poiLat: (float) ($data['poiLat'] ?? 0.0),
-                poiLon: (float) ($data['poiLon'] ?? 0.0),
-                distanceFromRoute: (int) ($data['distanceFromRoute'] ?? 0),
+                poiName: $data['poiName'] ?? '',
+                poiType: $data['poiType'] ?? '',
+                poiLat: $data['poiLat'] ?? 0.0,
+                poiLon: $data['poiLon'] ?? 0.0,
+                distanceFromRoute: $data['distanceFromRoute'] ?? 0,
             );
         }
 
@@ -436,7 +452,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         );
     }
 
-    /** @return array<string, mixed> */
+    /** @return array{name: string, category: string, lat: float, lon: float, distanceFromStart: ?float} */
     private function poiToArray(PointOfInterest $poi): array
     {
         return [
@@ -448,19 +464,19 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         ];
     }
 
-    /** @param array<string, mixed> $data */
+    /** @param array{name: string, category: string, lat: float, lon: float, distanceFromStart?: ?float} $data */
     private function arrayToPoi(array $data): PointOfInterest
     {
         return new PointOfInterest(
-            name: (string) $data['name'],
-            category: (string) $data['category'],
-            lat: (float) $data['lat'],
-            lon: (float) $data['lon'],
-            distanceFromStart: isset($data['distanceFromStart']) ? (float) $data['distanceFromStart'] : null,
+            name: $data['name'],
+            category: $data['category'],
+            lat: $data['lat'],
+            lon: $data['lon'],
+            distanceFromStart: $data['distanceFromStart'] ?? null,
         );
     }
 
-    /** @return array<string, mixed> */
+    /** @return array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url: ?string, possibleClosed: bool, distanceToEndPoint: float} */
     private function accommodationToArray(Accommodation $acc): array
     {
         return [
@@ -477,20 +493,20 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         ];
     }
 
-    /** @param array<string, mixed> $data */
+    /** @param array{name: string, type: string, lat: float, lon: float, estimatedPriceMin: float, estimatedPriceMax: float, isExactPrice: bool, url?: ?string, possibleClosed?: bool, distanceToEndPoint?: float} $data */
     private function arrayToAccommodation(array $data): Accommodation
     {
         return new Accommodation(
-            name: (string) $data['name'],
-            type: (string) $data['type'],
-            lat: (float) $data['lat'],
-            lon: (float) $data['lon'],
-            estimatedPriceMin: (float) $data['estimatedPriceMin'],
-            estimatedPriceMax: (float) $data['estimatedPriceMax'],
-            isExactPrice: (bool) $data['isExactPrice'],
-            url: isset($data['url']) ? (string) $data['url'] : null,
-            possibleClosed: (bool) ($data['possibleClosed'] ?? false),
-            distanceToEndPoint: (float) ($data['distanceToEndPoint'] ?? 0.0),
+            name: $data['name'],
+            type: $data['type'],
+            lat: $data['lat'],
+            lon: $data['lon'],
+            estimatedPriceMin: $data['estimatedPriceMin'],
+            estimatedPriceMax: $data['estimatedPriceMax'],
+            isExactPrice: $data['isExactPrice'],
+            url: $data['url'] ?? null,
+            possibleClosed: $data['possibleClosed'] ?? false,
+            distanceToEndPoint: $data['distanceToEndPoint'] ?? 0.0,
         );
     }
 
@@ -501,6 +517,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         $item = $this->tripStateCache->getItem($key);
         $item->set($value);
         $item->expiresAfter(self::CACHE_TTL);
+
         $this->tripStateCache->save($item);
     }
 
