@@ -38,9 +38,12 @@ services:
     user: root
     restart: unless-stopped
     depends_on:
-      - database
-      - mercure
-      - redis
+      database:
+        condition: service_healthy
+      mercure:
+        condition: service_started
+      redis:
+        condition: service_started
     environment:
       APP_ENV: dev
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
@@ -51,7 +54,7 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
-      DATABASE_URL: "postgresql://app:!ChangeMe!@database:5432/bike_trip_planner?serverVersion=17&charset=utf8"
+      DATABASE_URL: "postgresql://app:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/bike_trip_planner?serverVersion=17&charset=utf8"
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -84,12 +87,18 @@ services:
     deploy:
       replicas: ${WORKER_REPLICAS:-5}
     depends_on:
-      - database
-      - mercure
-      - overpass
-      - php
-      - redis
-      - valhalla
+      database:
+        condition: service_healthy
+      mercure:
+        condition: service_started
+      overpass:
+        condition: service_started
+      php:
+        condition: service_started
+      redis:
+        condition: service_started
+      valhalla:
+        condition: service_started
     environment:
       APP_ENV: dev
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
@@ -100,7 +109,7 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
-      DATABASE_URL: "postgresql://app:!ChangeMe!@database:5432/bike_trip_planner?serverVersion=17&charset=utf8"
+      DATABASE_URL: "postgresql://app:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/bike_trip_planner?serverVersion=17&charset=utf8"
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -188,7 +197,7 @@ services:
     environment:
       POSTGRES_DB: bike_trip_planner
       POSTGRES_USER: app
-      POSTGRES_PASSWORD: "!ChangeMe!"
+      POSTGRES_PASSWORD: "${DATABASE_PASSWORD:-!ChangeMe!}"
     volumes:
       - database_data:/var/lib/postgresql/data
     healthcheck:
