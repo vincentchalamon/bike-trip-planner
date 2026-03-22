@@ -13,9 +13,11 @@ if [ "$1" = 'symfony' ] || [ "$1" = 'php' ] || [ "$1" = 'bin/console' ]; then
 	setfacl -R -m u:www-data:rwX -m u:"$(whoami)":rwX var
 	setfacl -dR -m u:www-data:rwX -m u:"$(whoami)":rwX var
 
-	# Run pending Doctrine migrations
-	bin/console doctrine:migrations:migrate --no-interaction
-	echo "✅ Doctrine migrations applied"
+	# Run pending Doctrine migrations (only for the web server, not workers)
+	if [ "$1" = 'symfony' ]; then
+		bin/console doctrine:migrations:migrate --no-interaction
+		echo "✅ Doctrine migrations applied"
+	fi
 
 	echo 'PHP app ready!'
 fi
