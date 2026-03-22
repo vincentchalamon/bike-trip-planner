@@ -430,6 +430,10 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             );
         }
 
+        if (null !== ($data['_class'] ?? null)) {
+            throw new \LogicException(\sprintf('Unhandled Alert subclass "%s" in %s. Register it alongside CulturalPoiAlert.', $data['_class'], __METHOD__));
+        }
+
         return new Alert(
             type: $type,
             message: $message,
