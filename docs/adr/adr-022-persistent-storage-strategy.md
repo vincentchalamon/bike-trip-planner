@@ -36,11 +36,11 @@ Before evaluating storage engines, it is important to characterize the data:
 
 ## Decision Drivers
 
-* **Durability** — Trip data must survive indefinitely, not expire after 30 minutes.
-* **Ecosystem fit** — Must integrate cleanly with Symfony 8, API Platform 4.2, and the existing State Provider/Processor pattern.
-* **Operational simplicity** — Minimal additional infrastructure for a single-developer project.
-* **Future-proofing** — Must support relational patterns (User → Trip) introduced in Sprint 12.
-* **Performance** — Concurrent writes from async workers must not degrade under normal load.
+- **Durability** — Trip data must survive indefinitely, not expire after 30 minutes.
+- **Ecosystem fit** — Must integrate cleanly with Symfony 8, API Platform 4.2, and the existing State Provider/Processor pattern.
+- **Operational simplicity** — Minimal additional infrastructure for a single-developer project.
+- **Future-proofing** — Must support relational patterns (User → Trip) introduced in Sprint 12.
+- **Performance** — Concurrent writes from async workers must not degrade under normal load.
 
 ---
 
@@ -51,11 +51,13 @@ Before evaluating storage engines, it is important to characterize the data:
 Use MongoDB as the primary store with Doctrine ODM for object mapping.
 
 **Advantages:**
+
 - The Trip→Stages→Weather/Alerts/POIs data model is naturally document-shaped — a Trip document containing embedded Stage sub-documents maps directly to the current DTO structure.
 - No schema migrations required when adding new computed fields to stages.
 - API Platform provides native MongoDB ODM support (automatic providers/processors).
 
 **Disadvantages:**
+
 - **Overkill for the data volume.** MongoDB's strengths (horizontal sharding, massive throughput, flexible schema at scale) are irrelevant for an application where a fully computed trip is under 200 KB and the expected user count is in the hundreds, not millions.
 - **Heavier Docker footprint.** The official MongoDB image consumes ~400 MB RAM at idle vs. ~50 MB for PostgreSQL Alpine.
 - **Weaker relational support.** Sprint 12 introduces `User → Trip` ownership, Sprint 14 adds shared-trip tokens with revocation. These are classic relational patterns. MongoDB's `$lookup` aggregation is significantly more complex and less performant than a SQL JOIN for these use cases.
@@ -67,11 +69,13 @@ Use MongoDB as the primary store with Doctrine ODM for object mapping.
 Use PostgreSQL as the storage engine but bypass Doctrine ORM entirely, using Pomm Project for direct SQL access with minimal abstraction.
 
 **Advantages:**
+
 - Direct access to PostgreSQL features (JSONB operators, CTEs, window functions) without ORM translation overhead.
 - No Unit of Work, no proxy objects, no lazy-loading surprises — queries do exactly what you write.
 - Since the project already uses custom State Providers/Processors (not Doctrine auto-generated ones), API Platform compatibility is not a concern.
 
 **Disadvantages:**
+
 - **Pomm is abandoned.** The last commit on `pomm-project/foundation` dates from 2020. There is no support for PHP 8.1+, let alone PHP 8.5 or Symfony 8. The project is effectively dead.
 - **No migration tooling.** Schema changes would require hand-written SQL files with no diffing or version tracking.
 - **No ecosystem.** No Foundry factory integration, no PHPStan extensions, no Symfony Flex recipes, no Maker bundle support.
@@ -84,6 +88,7 @@ The underlying philosophy (thin SQL layer, no ORM magic) has merit, but Pomm is 
 Use PostgreSQL as the storage engine with Doctrine ORM for entity mapping, but store deeply nested computed data (weather, alerts, POIs, accommodations) as JSONB columns rather than normalized relational tables.
 
 **Advantages:**
+
 - **Hybrid approach.** Relational structure for Trip and Stage entities (enabling JOINs, foreign keys, indexes for Sprint 12+ features), combined with JSONB for computed sub-objects that are always read/written atomically.
 - **Full Symfony ecosystem.** Doctrine Migrations for schema versioning, Zenstruck Foundry for test factories and dev fixtures, PHPStan Doctrine extensions, Symfony Maker recipes — all work out of the box.
 - **Minimal ORM overhead.** The project already uses custom State Providers/Processors; Doctrine is used purely as a hydration/persistence mapper, not as a framework. No auto-generated providers, no lazy loading (explicit `JOIN FETCH`), no lifecycle listeners beyond `PreUpdate` for timestamps.
@@ -92,6 +97,7 @@ Use PostgreSQL as the storage engine with Doctrine ORM for entity mapping, but s
 - **Future-proof.** `User → Trip` ownership (Sprint 12), shared-trip tokens (Sprint 14), and trip listing with pagination (Sprint 13) are natural relational operations.
 
 **Disadvantages:**
+
 - Doctrine ORM adds a dependency layer. However, at this data scale (hundreds of trips, not millions), the Unit of Work overhead is negligible.
 - JSONB columns sacrifice strict database-level schema validation for computed sub-objects. This is mitigated by the fact that these objects are always serialized/deserialized through typed PHP DTOs.
 
@@ -127,12 +133,14 @@ Use PostgreSQL as the storage engine with Doctrine ORM for entity mapping, but s
 ```
 
 **What moves to PostgreSQL:**
+
 - Trip configuration (source URL, dates, pacing parameters, locale, title)
 - Stage data (geometry, distance, elevation, labels, rest-day flag)
 - Stage computed data (weather, alerts, POIs, accommodations) as JSONB columns
 - Future: User entity, shared-trip tokens
 
 **What stays in Redis:**
+
 - Raw and decimated route points (computation artifacts, re-fetchable)
 - Multi-track data (Komoot Collection intermediary)
 - Computation status tracking (transient lifecycle: pending → running → done)
