@@ -161,7 +161,7 @@ Entities are **separate from ApiResource DTOs**. The existing DTOs (`Trip`, `Tri
 
 ### Migration Strategy
 
-The migration is split into 6 incremental PRs to minimize review complexity:
+The migration is split into 7 incremental PRs to minimize review complexity:
 
 1. **Entities + migrations** — Doctrine setup, PostgreSQL Docker service, Entity classes, initial migration
 2. **Repositories** — Doctrine-backed `TripRequestRepositoryInterface` implementation replacing Redis
