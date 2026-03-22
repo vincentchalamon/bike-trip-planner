@@ -40,7 +40,7 @@ final readonly class MockKomootClientFactory
             }
 
             if (!is_file($fixtureFile)) {
-                return new MockResponse('Not Found', ['http_code' => 404]);
+                throw new \RuntimeException(\sprintf('Komoot fixture not found: %s. Create the HTML fixture file to mock this tour in tests. See api/tests/fixtures/komoot/tour-2795080048.html for an example.', $fixtureFile));
             }
 
             $content = file_get_contents($fixtureFile);
