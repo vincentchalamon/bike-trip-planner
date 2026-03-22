@@ -12,7 +12,7 @@ services:
       redis:
         condition: service_started
     environment:
-      APP_ENV: prod
+      APP_ENV: ${APP_ENV:-prod}
       CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
       CADDY_EXTRA_CONFIG: ${CADDY_EXTRA_CONFIG:-}
       # Serve HTTPS (self-signed for localhost) for browsers on :443,
@@ -76,7 +76,7 @@ services:
         condition: service_healthy
         required: false
     environment:
-      APP_ENV: prod
+      APP_ENV: ${APP_ENV:-prod}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
       MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
