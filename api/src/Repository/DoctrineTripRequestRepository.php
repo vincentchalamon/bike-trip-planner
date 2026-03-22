@@ -35,9 +35,13 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
 
     public function initializeTrip(string $tripId, TripRequest $request): void
     {
-        $trip = new Trip(Uuid::fromString($tripId));
+        $trip = $this->findTrip($tripId);
+        if (!$trip instanceof Trip) {
+            $trip = new Trip(Uuid::fromString($tripId));
+            $this->entityManager->persist($trip);
+        }
+
         $this->applyRequestToTrip($trip, $request);
-        $this->entityManager->persist($trip);
         $this->entityManager->flush();
     }
 
@@ -528,10 +532,6 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         if (!$item->isHit()) {
             return null;
         }
-
-        // Refresh TTL on access
-        $item->expiresAfter(self::CACHE_TTL);
-        $this->tripStateCache->save($item);
 
         return $item->get();
     }
