@@ -175,16 +175,18 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
             return;
         }
 
-        $trip->clearStages();
-        // Must flush to execute orphan removal before adding new stages
-        $this->entityManager->flush();
+        $this->entityManager->wrapInTransaction(function () use ($trip, $stages): void {
+            $trip->clearStages();
+            // Must flush to execute orphan removal before adding new stages
+            $this->entityManager->flush();
 
-        foreach ($stages as $index => $stageDto) {
-            $stageEntity = $this->stageDtoToEntity($stageDto, $trip, $index);
-            $trip->addStage($stageEntity);
-        }
+            foreach ($stages as $index => $stageDto) {
+                $stageEntity = $this->stageDtoToEntity($stageDto, $trip, $index);
+                $trip->addStage($stageEntity);
+            }
 
-        $this->entityManager->flush();
+            $this->entityManager->flush();
+        });
     }
 
     /** @return list<StageDto>|null */
