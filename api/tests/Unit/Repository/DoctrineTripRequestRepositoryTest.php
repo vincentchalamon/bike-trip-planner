@@ -537,4 +537,59 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->repository->storeStages($tripId, []);
     }
+
+    #[Test]
+    public function initializeTripIsIdempotent(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $existing = new TripRequest(Uuid::fromString($tripId));
+        $existing->sourceUrl = 'https://www.komoot.com/tour/111';
+        $existing->fatigueFactor = 0.9;
+
+        $this->entityManager->method('find')
+            ->willReturn($existing);
+        $this->entityManager->expects(self::never())
+            ->method('persist');
+        $this->entityManager->expects(self::once())
+            ->method('flush');
+
+        $updated = new TripRequest();
+        $updated->sourceUrl = 'https://www.komoot.com/tour/222';
+        $updated->fatigueFactor = 0.8;
+
+        $this->repository->initializeTrip($tripId, $updated);
+
+        self::assertSame('https://www.komoot.com/tour/222', $existing->sourceUrl);
+        self::assertSame(0.8, $existing->fatigueFactor);
+    }
+
+    #[Test]
+    public function arrayToAlertThrowsOnUnknownClassDiscriminator(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+
+        // Manually set stages with a fake _class discriminator via entity
+        $stageEntity = new \App\Entity\Stage($trip);
+        $stageEntity->setPosition(0);
+        $stageEntity->setDayNumber(1);
+        $stageEntity->setDistance(10.0);
+        $stageEntity->setElevation(100.0);
+        $stageEntity->setStartLat(48.0);
+        $stageEntity->setStartLon(2.0);
+        $stageEntity->setEndLat(48.1);
+        $stageEntity->setEndLon(2.1);
+        $stageEntity->setAlerts([
+            ['type' => 'warning', 'message' => 'test', '_class' => 'UnknownAlertType'],
+        ]);
+        $trip->addStage($stageEntity);
+
+        $this->entityManager->method('find')
+            ->willReturn($trip);
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Unhandled Alert subclass "UnknownAlertType"');
+
+        $this->repository->getStages($tripId);
+    }
 }
