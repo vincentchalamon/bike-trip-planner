@@ -14,6 +14,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
+use App\State\TripLocker;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Uid\Uuid;
@@ -29,6 +30,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
         private RequestStack $requestStack,
+        private TripLocker $tripLocker,
     ) {
     }
 
@@ -56,6 +58,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         return new Trip(
             id: $tripId,
             computationStatus: $this->buildInitialStatus($computations),
+            isLocked: $this->tripLocker->isLocked($data),
         );
     }
 

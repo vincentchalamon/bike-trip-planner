@@ -20,6 +20,7 @@ use App\Message\FetchWeather;
 use App\Message\GenerateStages;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
+use App\State\TripLocker;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -37,6 +38,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         private IdempotencyCheckerInterface $idempotencyChecker,
         private TripGenerationTrackerInterface $generationTracker,
         private RequestStack $requestStack,
+        private TripLocker $tripLocker,
     ) {
     }
 
@@ -54,14 +56,19 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
             throw new UnprocessableEntityHttpException('End date must be after start date.');
         }
 
+        // Retrieve existing request to check the persisted startDate (before applying the PATCH body)
+        $existingRequest = $this->tripStateManager->getRequest($id);
+        \assert($existingRequest instanceof TripRequest);
+        $this->tripLocker->assertNotLocked($existingRequest);
+
         // Refresh locale on each PATCH
         $locale = $this->requestStack->getCurrentRequest()?->getPreferredLanguage(['en', 'fr']) ?? 'en';
         $this->tripStateManager->storeLocale($id, $locale);
 
         // Provider (TripRequestProvider) already threw 404 if the trip doesn't exist;
         // the processor only runs when $data is a valid, non-null TripRequest.
-        $oldRequest = $this->tripStateManager->getRequest($id);
-        \assert($oldRequest instanceof TripRequest);
+        // Reuse the request already fetched above for the lock check.
+        $oldRequest = $existingRequest;
 
         // Check idempotency
         if (!$this->idempotencyChecker->hasChanged($id, $data)) {
@@ -70,6 +77,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
             return new Trip(
                 id: $id,
                 computationStatus: $statuses,
+                isLocked: $this->tripLocker->isLocked($existingRequest),
             );
         }
 
@@ -95,6 +103,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         return new Trip(
             id: $id,
             computationStatus: $statuses,
+            isLocked: $this->tripLocker->isLocked($data),
         );
     }
 

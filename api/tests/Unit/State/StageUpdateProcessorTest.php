@@ -15,6 +15,7 @@ use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageUpdateProcessor;
+use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
@@ -119,6 +120,7 @@ final class StageUpdateProcessorTest extends TestCase
             $routeSimplifier,
             $objectMapper,
             $generationTracker,
+            new TripLocker(),
         );
 
         $request = new StageRequest();
@@ -203,6 +205,7 @@ final class StageUpdateProcessorTest extends TestCase
             $routeSimplifier,
             $objectMapper,
             $generationTracker,
+            new TripLocker(),
         );
 
         $request = new StageRequest();
@@ -272,6 +275,7 @@ final class StageUpdateProcessorTest extends TestCase
             $routeSimplifier,
             $objectMapper,
             $generationTracker,
+            new TripLocker(),
         );
 
         $request = new StageRequest();

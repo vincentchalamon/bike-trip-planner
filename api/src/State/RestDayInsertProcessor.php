@@ -14,6 +14,7 @@ use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
+use App\State\TripLocker;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -29,6 +30,7 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private ObjectMapperInterface $objectMapper,
         private TripGenerationTrackerInterface $generationTracker,
+        private TripLocker $tripLocker,
     ) {
     }
 
@@ -40,6 +42,11 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
     {
         $tripId = $uriVariables['tripId'] ?? '';
         $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
+
+        $tripRequest = $this->tripStateManager->getRequest($tripId);
+        if ($tripRequest instanceof \App\ApiResource\TripRequest) {
+            $this->tripLocker->assertNotLocked($tripRequest);
+        }
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
 

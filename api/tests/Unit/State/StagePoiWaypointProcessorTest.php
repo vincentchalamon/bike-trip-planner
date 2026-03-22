@@ -13,6 +13,7 @@ use App\Message\RecalculateRouteSegment;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StagePoiWaypointProcessor;
+use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -44,11 +45,15 @@ final class StagePoiWaypointProcessorTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('current')->willReturn(1);
 
+        // Return null for getRequest so lock check is skipped
+        $this->tripStateManager->method('getRequest')->willReturn(null);
+
         $this->processor = new StagePoiWaypointProcessor(
             $this->tripStateManager,
             $this->messageBus,
             $this->objectMapper,
             $generationTracker,
+            new TripLocker(),
         );
     }
 

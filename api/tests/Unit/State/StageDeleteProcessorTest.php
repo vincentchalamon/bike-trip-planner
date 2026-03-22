@@ -12,8 +12,10 @@ use App\Engine\DistanceCalculatorInterface;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
+use App\ApiResource\TripRequest;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageDeleteProcessor;
+use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -43,11 +45,17 @@ final class StageDeleteProcessorTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('increment')->willReturn(2);
 
+        // Return a non-locked request by default (startDate in the future)
+        $unlockedRequest = new TripRequest();
+        $unlockedRequest->startDate = new \DateTimeImmutable('+30 days');
+        $this->tripStateManager->method('getRequest')->willReturn($unlockedRequest);
+
         $this->processor = new StageDeleteProcessor(
             $this->tripStateManager,
             $this->messageBus,
             $this->distanceCalculator,
             $generationTracker,
+            new TripLocker(),
         );
     }
 

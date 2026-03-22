@@ -16,6 +16,7 @@ use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
+use App\State\TripLocker;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\ObjectMapper\ObjectMapperInterface;
@@ -31,6 +32,7 @@ final readonly class StageCreateProcessor implements ProcessorInterface
         private DistanceCalculatorInterface $distanceCalculator,
         private ObjectMapperInterface $objectMapper,
         private TripGenerationTrackerInterface $generationTracker,
+        private TripLocker $tripLocker,
     ) {
     }
 
@@ -42,6 +44,11 @@ final readonly class StageCreateProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): StageResponse
     {
         $tripId = $uriVariables['tripId'] ?? '';
+
+        $tripRequest = $this->tripStateManager->getRequest($tripId);
+        if ($tripRequest instanceof \App\ApiResource\TripRequest) {
+            $this->tripLocker->assertNotLocked($tripRequest);
+        }
 
         if (null === $data->startPoint || null === $data->endPoint) {
             throw new UnprocessableEntityHttpException('startPoint and endPoint are required to create a stage.');

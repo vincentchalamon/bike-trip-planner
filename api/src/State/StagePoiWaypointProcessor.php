@@ -12,6 +12,7 @@ use App\ApiResource\StageResponse;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\RecalculateRouteSegment;
 use App\Repository\TripRequestRepositoryInterface;
+use App\State\TripLocker;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -33,6 +34,7 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private ObjectMapperInterface $objectMapper,
         private TripGenerationTrackerInterface $generationTracker,
+        private TripLocker $tripLocker,
     ) {
     }
 
@@ -51,6 +53,11 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
         }
 
         $index = (int) $rawIndex;
+
+        $tripRequest = $this->tripStateManager->getRequest($tripId);
+        if ($tripRequest instanceof \App\ApiResource\TripRequest) {
+            $this->tripLocker->assertNotLocked($tripRequest);
+        }
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
 

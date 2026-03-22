@@ -15,6 +15,7 @@ use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
+use App\State\TripLocker;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -47,6 +48,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         private MessageBusInterface $messageBus,
         private ObjectMapperInterface $objectMapper,
         private TripGenerationTrackerInterface $generationTracker,
+        private TripLocker $tripLocker,
     ) {
     }
 
@@ -59,6 +61,11 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
     {
         $tripId = $uriVariables['tripId'] ?? '';
         $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
+
+        $request = $this->tripStateManager->getRequest($tripId);
+        if ($request instanceof \App\ApiResource\TripRequest) {
+            $this->tripLocker->assertNotLocked($request);
+        }
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
 
@@ -75,7 +82,6 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             $this->tripStateManager->storeStages($tripId, $stages);
             // Note: endPoint intentionally not reverted — accommodation coords serve as
             // stage boundary until Valhalla (ADR-017) provides proper re-route.
-            $request = $this->tripStateManager->getRequest($tripId);
             \assert($request instanceof \App\ApiResource\TripRequest);
             $generation = $this->generationTracker->increment($tripId);
             $this->messageBus->dispatch(new ScanAccommodations($tripId, stageIndex: $index, enabledAccommodationTypes: $request->enabledAccommodationTypes, generation: $generation));

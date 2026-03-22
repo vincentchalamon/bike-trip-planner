@@ -12,6 +12,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\IdempotencyCheckerInterface;
+use App\State\TripLocker;
 use App\State\TripUpdateProcessor;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -57,6 +58,7 @@ final class TripUpdateProcessorTest extends TestCase
             $this->idempotencyChecker,
             $generationTracker,
             $requestStack,
+            new TripLocker(),
         );
     }
 

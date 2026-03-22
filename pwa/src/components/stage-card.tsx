@@ -34,6 +34,8 @@ interface StageCardProps {
   onDelete: () => void;
   onDistanceChange?: (distance: number) => void;
   isProcessing?: boolean;
+  /** When true, all edit controls are hidden (trip is locked). */
+  readOnly?: boolean;
   onAddAccommodation: () => void;
   onUpdateAccommodation: (
     accIndex: number,
@@ -59,6 +61,7 @@ export function StageCard({
   onDelete,
   onDistanceChange,
   isProcessing,
+  readOnly = false,
   onAddAccommodation,
   onUpdateAccommodation,
   onRemoveAccommodation,
@@ -85,32 +88,36 @@ export function StageCard({
       data-testid={`stage-card-${stage.dayNumber}`}
     >
       <CardContent className="p-4 md:p-6">
-        {/* Close button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-3 right-3 h-6 w-6 text-muted-icon cursor-pointer"
-          onClick={onDelete}
-          disabled={!canDelete}
-          title={
-            !canDelete
-              ? t("minStagesReached")
-              : t("deleteStage", { dayNumber: stage.dayNumber })
-          }
-          aria-label={t("deleteStage", { dayNumber: stage.dayNumber })}
-          data-testid={`delete-stage-${stage.dayNumber}`}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        {/* Close button — hidden in read-only mode */}
+        {!readOnly && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-3 right-3 h-6 w-6 text-muted-icon cursor-pointer"
+            onClick={onDelete}
+            disabled={!canDelete}
+            title={
+              !canDelete
+                ? t("minStagesReached")
+                : t("deleteStage", { dayNumber: stage.dayNumber })
+            }
+            aria-label={t("deleteStage", { dayNumber: stage.dayNumber })}
+            data-testid={`delete-stage-${stage.dayNumber}`}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
 
         {/* Action buttons */}
-        <div className="absolute top-3 right-10 flex gap-0.5">
+        <div
+          className={`absolute top-3 flex gap-0.5 ${readOnly ? "right-3" : "right-10"}`}
+        >
           <StageDownloads
             tripId={tripId}
             stageIndex={stageIndex}
             dayNumber={stage.dayNumber}
           />
-          {onDistanceChange && (
+          {!readOnly && onDistanceChange && (
             <Button
               variant="ghost"
               size="icon"

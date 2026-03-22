@@ -270,6 +270,9 @@
     "toggleHelp": "Show / hide this help",
     "closePanels": "Close open panel"
   },
+  "tripLocked": {
+    "banner": "This trip is underway or has passed — view only. Use \"Duplicate\" to plan a new variant."
+  },
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",

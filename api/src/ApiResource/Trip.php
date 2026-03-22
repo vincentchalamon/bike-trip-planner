@@ -51,6 +51,7 @@ final readonly class Trip
     public function __construct(
         public string $id,
         public array $computationStatus = [],
+        public bool $isLocked = false,
     ) {
     }
 }
