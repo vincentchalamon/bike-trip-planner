@@ -24,6 +24,7 @@
         <ini name="error_reporting" value="-1" />
         <server name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
+        <env name="KERNEL_CLASS" value="App\Kernel" force="true" />
         <!-- Override environment variables set in Docker Compose -->
         <env name="MESSENGER_TRANSPORT_DSN" value="in-memory://" force="true" />
         <env name="MESSENGER_FAILED_DSN" value="in-memory://" force="true" />
