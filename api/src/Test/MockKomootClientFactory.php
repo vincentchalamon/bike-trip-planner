@@ -14,7 +14,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * Returns fixture HTML files from api/tests/fixtures/komoot/ based on the URL path.
  * Falls through with a 404 if no fixture exists for the requested path.
  *
- * @internal used only in test/CI to make the integration smoke test deterministic
+ * Used only in test/CI to make the integration smoke test deterministic.
  */
 final readonly class MockKomootClientFactory
 {
