@@ -38,7 +38,9 @@ final readonly class TripCollectionProvider implements ProviderInterface
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): ArrayPaginator
     {
-        $filters = $context['filters'] ?? [];
+        $rawFilters = $context['filters'] ?? [];
+        /** @var array<string, mixed> $filters */
+        $filters = is_array($rawFilters) ? $rawFilters : [];
 
         [$page, , $limit] = $this->pagination->getPagination($operation, $context);
 
@@ -48,15 +50,15 @@ final readonly class TripCollectionProvider implements ProviderInterface
             ->orderBy('t.createdAt', 'DESC');
 
         // Filter by title (partial, case-insensitive)
-        if (!empty($filters['title'])) {
+        if (!empty($filters['title']) && is_string($filters['title'])) {
             $qb->andWhere('LOWER(t.title) LIKE LOWER(:title)')
-                ->setParameter('title', '%'.(string) $filters['title'].'%');
+                ->setParameter('title', '%'.$filters['title'].'%');
         }
 
         // Filter by startDate (trips starting on or after this date)
-        if (!empty($filters['startDate'])) {
+        if (!empty($filters['startDate']) && is_string($filters['startDate'])) {
             try {
-                $start = new \DateTimeImmutable((string) $filters['startDate']);
+                $start = new \DateTimeImmutable($filters['startDate']);
                 $qb->andWhere('t.startDate >= :startDate')
                     ->setParameter('startDate', $start);
             } catch (\Exception) {
@@ -65,9 +67,9 @@ final readonly class TripCollectionProvider implements ProviderInterface
         }
 
         // Filter by endDate (trips ending on or before this date)
-        if (!empty($filters['endDate'])) {
+        if (!empty($filters['endDate']) && is_string($filters['endDate'])) {
             try {
-                $end = new \DateTimeImmutable((string) $filters['endDate']);
+                $end = new \DateTimeImmutable($filters['endDate']);
                 $qb->andWhere('t.endDate <= :endDate')
                     ->setParameter('endDate', $end);
             } catch (\Exception) {
@@ -80,7 +82,7 @@ final readonly class TripCollectionProvider implements ProviderInterface
         /** @var list<TripRequest> $entities */
         $entities = $qb->getQuery()->getResult();
 
-        $items = array_map([$this, 'toListItem'], $entities);
+        $items = array_map($this->toListItem(...), $entities);
 
         $firstResult = ($page - 1) * $limit;
 

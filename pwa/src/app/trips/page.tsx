@@ -77,10 +77,9 @@ export default function TripsPage() {
     if (debouncedTitle) params.set("title", debouncedTitle);
 
     try {
-      const res = await apiFetch(
-        `${API_URL}/trips?${params.toString()}`,
-        { headers: { Accept: "application/ld+json" } },
-      );
+      const res = await apiFetch(`${API_URL}/trips?${params.toString()}`, {
+        headers: { Accept: "application/ld+json" },
+      });
 
       if (!res.ok) {
         setLoadError(true);

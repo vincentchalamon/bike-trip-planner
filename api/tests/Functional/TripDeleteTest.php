@@ -45,12 +45,12 @@ final class TripDeleteTest extends ApiTestCase
         $client->request('DELETE', \sprintf('/trips/%s', self::TRIP_ID));
         $this->assertResponseStatusCodeSame(204);
 
-        $client->request('GET', '/trips', [
+        $response = $client->request('GET', '/trips', [
             'headers' => ['Accept' => 'application/ld+json'],
         ]);
         $this->assertResponseIsSuccessful();
 
-        $data = $client->getResponse()->toArray(false);
+        $data = $response->toArray(false);
         $ids = array_column($data['hydra:member'], 'id');
         $this->assertNotContains(self::TRIP_ID, $ids);
     }

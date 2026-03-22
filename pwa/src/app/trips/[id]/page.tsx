@@ -77,10 +77,10 @@ function TripLoader({ tripId }: { tripId: string }) {
 
         updateDatesInternal(
           data.startDate
-            ? new Date(data.startDate).toISOString().split("T")[0] ?? null
+            ? (new Date(data.startDate).toISOString().split("T")[0] ?? null)
             : null,
           data.endDate
-            ? new Date(data.endDate).toISOString().split("T")[0] ?? null
+            ? (new Date(data.endDate).toISOString().split("T")[0] ?? null)
             : null,
         );
 
@@ -120,7 +120,8 @@ function TripLoader({ tripId }: { tripId: string }) {
           weather: (s.weather as StageData["weather"]) ?? null,
           alerts: (s.alerts as StageData["alerts"]) ?? [],
           pois: (s.pois as StageData["pois"]) ?? [],
-          accommodations: (s.accommodations as StageData["accommodations"]) ?? [],
+          accommodations:
+            (s.accommodations as StageData["accommodations"]) ?? [],
           selectedAccommodation:
             (s.selectedAccommodation as StageData["selectedAccommodation"]) ??
             null,
