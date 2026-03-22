@@ -43,9 +43,8 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
-        if ($tripRequest instanceof \App\ApiResource\TripRequest) {
-            $this->tripLocker->assertNotLocked($tripRequest);
-        }
+        \assert($tripRequest instanceof \App\ApiResource\TripRequest);
+        $this->tripLocker->assertNotLocked($tripRequest);
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
 
