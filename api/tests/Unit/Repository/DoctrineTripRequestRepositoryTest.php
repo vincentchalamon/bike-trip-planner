@@ -38,6 +38,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
+        $this->entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $this->cache = $this->createMock(CacheItemPoolInterface::class);
         $this->repository = new DoctrineTripRequestRepository($this->entityManager, $this->cache);
     }
@@ -484,18 +486,30 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     }
 
     #[Test]
-    public function storeSourceTypeAndLocale(): void
+    public function storeSourceType(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new Trip(Uuid::fromString($tripId));
 
         $this->entityManager->method('find')
             ->willReturn($trip);
-        $this->entityManager->expects(self::exactly(2))
+        $this->entityManager->expects(self::once())
             ->method('flush');
 
         $this->repository->storeSourceType($tripId, 'komoot');
         self::assertSame('komoot', $trip->getSourceType());
+    }
+
+    #[Test]
+    public function storeLocale(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new Trip(Uuid::fromString($tripId));
+
+        $this->entityManager->method('find')
+            ->willReturn($trip);
+        $this->entityManager->expects(self::once())
+            ->method('flush');
 
         $this->repository->storeLocale($tripId, 'fr');
         self::assertSame('fr', $trip->getLocale());
