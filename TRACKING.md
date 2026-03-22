@@ -232,29 +232,7 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 ---
 
-## Sprint 12 — Auth & Sécurité
-
-| Ordre | ID                                                                    | Titre                         | Effort | PRs | Dépend de                                                                                                                     |
-|-------|-----------------------------------------------------------------------|-------------------------------|--------|-----|-------------------------------------------------------------------------------------------------------------------------------|
-| 1     | [#75](https://github.com/vincentchalamon/bike-trip-planner/issues/75) | ADR auth passwordless         | S      | 1   | —                                                                                                                             |
-| 2     | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) | Auth backend JWT + magic link | L      | 4   | [#75](https://github.com/vincentchalamon/bike-trip-planner/issues/75), [#56](https://github.com/vincentchalamon/bike-trip-planner/issues/56) |
-| 3     | [#79](https://github.com/vincentchalamon/bike-trip-planner/issues/79) | Frontend auth                 | M      | 1   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76)                                                         |
-| 4     | [#77](https://github.com/vincentchalamon/bike-trip-planner/issues/77) | Sécurisation endpoints        | M      | 1   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76)                                                         |
-| 5     | [#78](https://github.com/vincentchalamon/bike-trip-planner/issues/78) | Sécurisation Mercure          | M      | 1   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76), [#77](https://github.com/vincentchalamon/bike-trip-planner/issues/77) |
-
-### Recette Sprint 12
-
-- **Tests E2E :** `tests/recette/sprint-12.spec.ts`
-- **Checklist manuelle :**
-  - [ ] Flux magic link complet : demande → email → clic → connecté
-  - [ ] Token expiré/utilisé → message d'erreur clair
-  - [ ] Endpoints sécurisés (401 sans JWT)
-  - [ ] Mercure : pas de fuite de données entre utilisateurs
-  - [ ] Mobile : flux auth sur Capacitor
-
----
-
-## Sprint 13 — Gestion des Trips
+## Sprint 12 — Gestion des Trips
 
 | Ordre | ID                                                                    | Titre                     | Effort | PRs | Dépend de                                                             |
 |-------|-----------------------------------------------------------------------|---------------------------|--------|-----|-----------------------------------------------------------------------|
@@ -262,9 +240,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 | 2     | [#45](https://github.com/vincentchalamon/bike-trip-planner/issues/45) | Duplication de trip       | M      | 1   | [#56](https://github.com/vincentchalamon/bike-trip-planner/issues/56) |
 | 3     | [#52](https://github.com/vincentchalamon/bike-trip-planner/issues/52) | Verrouillage trips passés | M      | 1   | [#56](https://github.com/vincentchalamon/bike-trip-planner/issues/56) |
 
-### Recette Sprint 13
+### Recette Sprint 12
 
-- **Tests E2E :** `tests/recette/sprint-13.spec.ts`
+- **Tests E2E :** `tests/recette/sprint-12.spec.ts`
 - **Checklist manuelle :**
   - [ ] Liste des trips paginée et filtrable
   - [ ] Navigation liste → détail → retour
@@ -274,13 +252,34 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 ---
 
-## Sprint 14 — Partage & Export Garmin
+## Sprint 13 — Auth & Sécurité
+
+| Ordre | ID                                                                    | Titre                         | Effort | PRs | Dépend de                                                                                                                     |
+|-------|-----------------------------------------------------------------------|-------------------------------|--------|-----|-------------------------------------------------------------------------------------------------------------------------------|
+| 1     | [#75](https://github.com/vincentchalamon/bike-trip-planner/issues/75) | ADR auth passwordless         | S      | 1   | —                                                                                                                             |
+| 2     | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) | Auth backend JWT + magic link | L      | 4   | [#75](https://github.com/vincentchalamon/bike-trip-planner/issues/75), [#56](https://github.com/vincentchalamon/bike-trip-planner/issues/56) |
+| 3     | [#79](https://github.com/vincentchalamon/bike-trip-planner/issues/79) | Frontend auth                 | M      | 1   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76)                                                         |
+| 4     | [#77](https://github.com/vincentchalamon/bike-trip-planner/issues/77) | Sécurisation endpoints        | M      | 1   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76)                                                         |
+| 5     | [#78](https://github.com/vincentchalamon/bike-trip-planner/issues/78) | Sécurisation Mercure          | M      | 1   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76), [#77](https://github.com/vincentchalamon/bike-trip-planner/issues/77) |
+
+### Recette Sprint 13
+
+- **Tests E2E :** `tests/recette/sprint-13.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Flux magic link complet : demande → email → clic → connecté
+  - [ ] Token expiré/utilisé → message d'erreur clair
+  - [ ] Endpoints sécurisés (401 sans JWT)
+  - [ ] Mercure : pas de fuite de données entre utilisateurs
+  - [ ] Mobile : flux auth sur Capacitor
+
+---
+
+## Sprint 14 — Partage
 
 | Ordre | ID                                                                    | Titre                      | Effort | PRs | Dépend de                                                                                                                     |
 |-------|-----------------------------------------------------------------------|----------------------------|--------|-----|-------------------------------------------------------------------------------------------------------------------------------|
 | 1     | [#80](https://github.com/vincentchalamon/bike-trip-planner/issues/80) | Partage trip lecture seule | M      | 1   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76), [#77](https://github.com/vincentchalamon/bike-trip-planner/issues/77) |
 | 2     | [#42](https://github.com/vincentchalamon/bike-trip-planner/issues/42) | Bouton Partager            | L      | 2   | [#80](https://github.com/vincentchalamon/bike-trip-planner/issues/80)                                                         |
-| 3     | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Garmin Connect             | L      | 3   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76)                                                         |
 
 ### Recette Sprint 14
 
@@ -289,7 +288,6 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
   - [ ] Partage en lecture seule fonctionnel (lien anonyme)
   - [ ] Révocation du lien par le propriétaire
   - [ ] Bouton Partager : infographie + texte + lien
-  - [ ] Garmin Connect : export course (si infra disponible)
 
 ---
 
@@ -317,6 +315,54 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 ---
 
+## Sprint 16 — Garmin Connect
+
+Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase 2). Voir [ADR-018](docs/adr/adr-018-garmin-export-and-device-sync-strategy.md). Test local via ngrok pour le callback OAuth.
+
+> **Prérequis :** s'inscrire au [Garmin Developer Program](https://developer.garmin.com/) quelques sprints en avance (~2 jours d'approbation).
+
+| Ordre | ID                                                                    | Titre          | Effort | PRs | Dépend de                                                             |
+|-------|-----------------------------------------------------------------------|----------------|--------|-----|-----------------------------------------------------------------------|
+| 1     | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Garmin Connect | L      | 3   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) |
+
+### Recette Sprint 16
+
+- **Tests E2E :** `tests/recette/sprint-16.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Export FIT téléchargeable par étape
+  - [ ] Flux OAuth Garmin Connect complet (via ngrok)
+  - [ ] Push course vers Garmin Connect fonctionnel
+  - [ ] Gestion erreurs : token expiré, API indisponible
+
+---
+
+## Sprint 17 — Déploiement
+
+Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructure-strategy.md). Issues GitHub à créer au moment venu.
+
+| Ordre | Étape                                              | Effort |
+|-------|----------------------------------------------------|--------|
+| 1     | CI/CD pipeline production                          | M      |
+| 2     | Oracle Cloud (OCI) Always Free provisioning        | M      |
+| 3     | Coolify installation + configuration               | M      |
+| 4     | Configuration DNS (FreeDNS)                        | S      |
+| 5     | Docker configs production (PostgreSQL, Redis, Mercure, Caddy) | L      |
+| 6     | Monitoring & healthchecks                          | M      |
+| 7     | Migration données + smoke test production          | M      |
+
+### Recette Sprint 17
+
+- **Checklist manuelle :**
+  - [ ] Application accessible via URL publique
+  - [ ] HTTPS fonctionnel (certificat TLS auto Caddy)
+  - [ ] PostgreSQL + Redis opérationnels en production
+  - [ ] Mercure SSE fonctionnel en production
+  - [ ] CI/CD : déploiement automatique sur push main
+  - [ ] Monitoring : healthchecks + alertes basiques
+  - [ ] Garmin Connect : callback OAuth sur URL production
+
+---
+
 ## Hors Sprints
 
 | ID  | Titre                            | Note                     |
@@ -328,21 +374,23 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 ## Récapitulatif
 
-| Sprint    | Thème                   | Tickets | PRs estimées |
-|-----------|-------------------------|---------|--------------|
-| 1         | Quick Wins Alertes      | 5       | 5            |
-| 2         | Alertes Frontend + UX   | 3       | 3            |
-| 3         | Hébergements            | 3       | 4            |
-| 4         | Configuration & Profil  | 4       | 4            |
-| 5         | Météo & Temps           | 3       | 4            |
-| 6         | Export                  | 3       | 3            |
-| 7         | Carte Interactive       | 4       | 9            |
-| 8         | UX & Onboarding         | 3       | 4            |
-| 9         | Sources Routes & Infra  | 3       | 5            |
-| 10        | i18n & Documentation    | 5       | 7            |
-| 11        | Persistance             | 1       | 6            |
-| 12        | Auth & Sécurité         | 5       | 8            |
-| 13        | Gestion Trips           | 3       | 4            |
-| 14        | Partage & Export Garmin | 3       | 6            |
-| 15        | Mobile                  | 6       | 11           |
-| **Total** |                         | **57**  | **~83**      |
+| Sprint    | Thème                  | Tickets | PRs estimées |
+|-----------|------------------------|---------|--------------|
+| 1         | Quick Wins Alertes     | 5       | 5            |
+| 2         | Alertes Frontend + UX  | 3       | 3            |
+| 3         | Hébergements           | 3       | 4            |
+| 4         | Configuration & Profil | 4       | 4            |
+| 5         | Météo & Temps          | 3       | 4            |
+| 6         | Export                 | 3       | 3            |
+| 7         | Carte Interactive      | 4       | 9            |
+| 8         | UX & Onboarding        | 3       | 4            |
+| 9         | Sources Routes & Infra | 3       | 5            |
+| 10        | i18n & Documentation   | 5       | 7            |
+| 11        | Persistance            | 1       | 6            |
+| 12        | Gestion Trips          | 3       | 4            |
+| 13        | Auth & Sécurité        | 5       | 8            |
+| 14        | Partage                | 2       | 3            |
+| 15        | Mobile                 | 6       | 11           |
+| 16        | Garmin Connect         | 1       | 3            |
+| 17        | Déploiement            | 7       | ~7           |
+| **Total** |                        | **61**  | **~90**      |
