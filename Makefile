@@ -122,8 +122,8 @@ migrate: ## Run Doctrine migrations
 db-create: ## Create the database
 	@docker compose exec php bin/console doctrine:database:create --if-not-exists
 
-fixtures: ## Load Doctrine fixtures
-	@docker compose exec php bin/console doctrine:fixtures:load --no-interaction
+fixtures: ## Load Foundry dev fixtures
+	@docker compose exec php bin/console foundry:load-stories --no-interaction
 
 ## --- 💻 Interactive Shells ---
 php-shell: ## Open a bash shell inside the PHP container

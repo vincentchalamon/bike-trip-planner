@@ -14,22 +14,27 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\Stage as StageEntity;
 use App\Enum\AlertType;
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsAlias;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Uid\Uuid;
 
+/**
+ * @extends ServiceEntityRepository<TripRequest>
+ */
 #[AsAlias(TripRequestRepositoryInterface::class)]
-final readonly class DoctrineTripRequestRepository implements TripRequestRepositoryInterface
+final class DoctrineTripRequestRepository extends ServiceEntityRepository implements TripRequestRepositoryInterface
 {
     private const int CACHE_TTL = 1800; // 30 minutes for transient data
 
     public function __construct(
-        private EntityManagerInterface $entityManager,
+        ManagerRegistry $registry,
         #[Autowire(service: 'cache.trip_state')]
-        private CacheItemPoolInterface $tripStateCache,
+        private readonly CacheItemPoolInterface $tripStateCache,
     ) {
+        parent::__construct($registry, TripRequest::class);
     }
 
     public function initializeTrip(string $tripId, TripRequest $request): void
@@ -39,10 +44,10 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
             $this->copyModifiableFields($existing, $request);
         } else {
             $request->id = Uuid::fromString($tripId);
-            $this->entityManager->persist($request);
+            $this->getEntityManager()->persist($request);
         }
 
-        $this->entityManager->flush();
+        $this->getEntityManager()->flush();
     }
 
     public function getRequest(string $tripId): ?TripRequest
@@ -58,7 +63,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         }
 
         $this->copyModifiableFields($managed, $request);
-        $this->entityManager->flush();
+        $this->getEntityManager()->flush();
     }
 
     public function getTitle(string $tripId): ?string
@@ -74,7 +79,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         }
 
         $trip->title = $title;
-        $this->entityManager->flush();
+        $this->getEntityManager()->flush();
     }
 
     /** @param list<array{lat: float, lon: float, ele: float}> $rawPoints */
@@ -132,7 +137,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         }
 
         $trip->sourceType = $sourceType;
-        $this->entityManager->flush();
+        $this->getEntityManager()->flush();
     }
 
     public function getSourceType(string $tripId): ?string
@@ -148,7 +153,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
         }
 
         $trip->locale = $locale;
-        $this->entityManager->flush();
+        $this->getEntityManager()->flush();
     }
 
     public function getLocale(string $tripId): ?string
@@ -164,17 +169,17 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
             return;
         }
 
-        $this->entityManager->wrapInTransaction(function () use ($trip, $stages): void {
+        $this->getEntityManager()->wrapInTransaction(function () use ($trip, $stages): void {
             $trip->clearStages();
             // Must flush to execute orphan removal before adding new stages
-            $this->entityManager->flush();
+            $this->getEntityManager()->flush();
 
             foreach ($stages as $index => $stageDto) {
                 $stageEntity = $this->stageDtoToEntity($stageDto, $trip, $index);
                 $trip->addStage($stageEntity);
             }
 
-            $this->entityManager->flush();
+            $this->getEntityManager()->flush();
         });
     }
 
@@ -202,7 +207,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
             return null;
         }
 
-        return $this->entityManager->find(TripRequest::class, Uuid::fromString($tripId));
+        return $this->find(Uuid::fromString($tripId));
     }
 
     /**

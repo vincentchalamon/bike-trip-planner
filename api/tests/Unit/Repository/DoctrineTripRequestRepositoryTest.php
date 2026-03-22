@@ -15,6 +15,7 @@ use App\ApiResource\TripRequest;
 use App\Enum\AlertType;
 use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -40,7 +41,11 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('wrapInTransaction')
             ->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $this->cache = $this->createMock(CacheItemPoolInterface::class);
-        $this->repository = new DoctrineTripRequestRepository($this->entityManager, $this->cache);
+
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManagerForClass')->willReturn($this->entityManager);
+
+        $this->repository = new DoctrineTripRequestRepository($registry, $this->cache);
     }
 
     #[Test]
@@ -78,7 +83,10 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $em2->method('find')
             ->willReturn($request);
 
-        $repo2 = new DoctrineTripRequestRepository($em2, $this->cache);
+        $registry2 = $this->createMock(ManagerRegistry::class);
+        $registry2->method('getManagerForClass')->willReturn($em2);
+
+        $repo2 = new DoctrineTripRequestRepository($registry2, $this->cache);
         $result = $repo2->getRequest($tripId);
 
         self::assertSame($request, $result);
