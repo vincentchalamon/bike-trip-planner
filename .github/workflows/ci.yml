@@ -271,7 +271,7 @@ jobs:
             pwa.cache-from=type=gha,scope=pwa-main
             pwa.cache-to=type=gha,scope=pwa,mode=max
       - name: Start services
-        run: docker compose up -d php pwa worker redis --no-build --wait
+        run: docker compose up -d database php pwa worker redis --no-build --wait
       - name: Run Playwright
         run: >-
           docker run --network host
