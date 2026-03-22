@@ -272,6 +272,8 @@ jobs:
             pwa.cache-to=type=gha,scope=pwa,mode=max
       - name: Start services
         run: docker compose up -d database php pwa worker redis --no-build --wait
+        env:
+          MOCK_EXTERNAL_HTTP: "true"
       - name: Run Playwright
         run: >-
           docker run --network host
