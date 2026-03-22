@@ -7,52 +7,75 @@ namespace App\Test;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Replaces the real komoot.client with a MockHttpClient in test environment.
+ * Decorates the real komoot.client to serve local HTML fixtures when MOCK_EXTERNAL_HTTP=true.
  *
- * Returns fixture HTML files from api/tests/fixtures/komoot/ based on the URL path.
- * Falls through with a 404 if no fixture exists for the requested path.
- *
- * Used only in test/CI to make the integration smoke test deterministic.
+ * Activated at runtime via environment variable (not at container compile time),
+ * so it works with precompiled prod containers in CI.
  */
-final readonly class MockKomootClientFactory
+final readonly class MockKomootClientFactory implements HttpClientInterface
 {
     private const string FIXTURES_DIR = __DIR__.'/../../tests/fixtures/komoot';
 
-    public static function create(): HttpClientInterface
+    public function __construct(
+        private HttpClientInterface $inner,
+    ) {
+    }
+
+    /** @param array<string, mixed> $options */
+    public function request(string $method, string $url, array $options = []): ResponseInterface
     {
-        return new MockHttpClient(static function (string $method, string $url): MockResponse {
-            $path = parse_url($url, \PHP_URL_PATH);
+        if ('true' !== ($_SERVER['MOCK_EXTERNAL_HTTP'] ?? $_ENV['MOCK_EXTERNAL_HTTP'] ?? null)) {
+            return $this->inner->request($method, $url, $options);
+        }
 
-            if (!\is_string($path)) {
-                return new MockResponse('Not Found', ['http_code' => 404]);
-            }
+        $path = parse_url($url, \PHP_URL_PATH);
 
-            // Map URL path to fixture file: /tour/2795080048 → tour-2795080048.html
-            // Also handles /fr-fr/tour/2795080048 → tour-2795080048.html
-            if (preg_match('#/(?:[a-z]{2}-[a-z]{2}/)?tour/(\d+)#', $path, $matches)) {
-                $fixtureFile = self::FIXTURES_DIR.\sprintf('/tour-%s.html', $matches[1]);
-            } elseif (preg_match('#/(?:[a-z]{2}-[a-z]{2}/)?collection/(\d+)#', $path, $matches)) {
-                $fixtureFile = self::FIXTURES_DIR.\sprintf('/collection-%s.html', $matches[1]);
-            } else {
-                return new MockResponse('Not Found', ['http_code' => 404]);
-            }
+        if (!\is_string($path)) {
+            return $this->createMockResponse('Not Found', 404);
+        }
 
-            if (!is_file($fixtureFile)) {
-                throw new \RuntimeException(\sprintf('Komoot fixture not found: %s. Create the HTML fixture file to mock this tour in tests. See api/tests/fixtures/komoot/tour-2795080048.html for an example.', $fixtureFile));
-            }
+        if (preg_match('#/(?:[a-z]{2}-[a-z]{2}/)?tour/(\d+)#', $path, $matches)) {
+            $fixtureFile = self::FIXTURES_DIR.\sprintf('/tour-%s.html', $matches[1]);
+        } elseif (preg_match('#/(?:[a-z]{2}-[a-z]{2}/)?collection/(\d+)#', $path, $matches)) {
+            $fixtureFile = self::FIXTURES_DIR.\sprintf('/collection-%s.html', $matches[1]);
+        } else {
+            return $this->createMockResponse('Not Found', 404);
+        }
 
-            $content = file_get_contents($fixtureFile);
+        if (!is_file($fixtureFile)) {
+            throw new \RuntimeException(\sprintf('Komoot fixture not found: %s. Create the HTML fixture file to mock this tour in tests. See api/tests/fixtures/komoot/tour-2795080048.html for an example.', $fixtureFile));
+        }
 
-            if (false === $content) {
-                return new MockResponse('Internal Server Error', ['http_code' => 500]);
-            }
+        $content = file_get_contents($fixtureFile);
 
-            return new MockResponse($content, [
-                'http_code' => 200,
-                'response_headers' => ['Content-Type' => 'text/html; charset=utf-8'],
-            ]);
-        }, 'https://www.komoot.com');
+        if (false === $content) {
+            return $this->createMockResponse('Internal Server Error', 500);
+        }
+
+        return $this->createMockResponse($content, 200);
+    }
+
+    public function stream(ResponseInterface|iterable $responses, ?float $timeout = null): \Symfony\Contracts\HttpClient\ResponseStreamInterface
+    {
+        return $this->inner->stream($responses, $timeout);
+    }
+
+    /** @param array<string, mixed> $options */
+    public function withOptions(array $options): static
+    {
+        return new self($this->inner->withOptions($options));
+    }
+
+    private function createMockResponse(string $body, int $statusCode): ResponseInterface
+    {
+        $client = new MockHttpClient(new MockResponse($body, [
+            'http_code' => $statusCode,
+            'response_headers' => ['Content-Type' => 'text/html; charset=utf-8'],
+        ]));
+
+        return $client->request('GET', 'https://mock');
     }
 }
