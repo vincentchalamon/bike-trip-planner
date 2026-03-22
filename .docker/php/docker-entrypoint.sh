@@ -15,8 +15,9 @@ if [ "$1" = 'symfony' ] || [ "$1" = 'php' ] || [ "$1" = 'bin/console' ]; then
 
 	# Run pending Doctrine migrations (only for the web server, not workers)
 	if [ "$1" = 'symfony' ]; then
-		bin/console doctrine:migrations:migrate --no-interaction
-		echo "✅ Doctrine migrations applied"
+		if [ "$( find ./migrations -iname '*.php' -print -quit )" ]; then
+			bin/console doctrine:migrations:migrate --no-interaction --all-or-nothing || exit 1
+		fi
 	fi
 
 	echo 'PHP app ready!'
