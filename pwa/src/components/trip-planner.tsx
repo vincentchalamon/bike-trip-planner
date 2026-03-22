@@ -72,6 +72,7 @@ export function TripPlanner() {
     handleExpandAccommodationRadius,
     handleInsertRestDay,
     handleAddPoiWaypoint,
+    handleDuplicateTrip,
     clearNewAccKey,
   } = useTripPlanner();
 
@@ -483,6 +484,8 @@ export function TripPlanner() {
           onDepartureHourChange={handleDepartureHourChange}
           onAccommodationTypesChange={handleAccommodationTypesChange}
           readOnly={isLocked}
+          hasTripLoaded={!!trip}
+          onDuplicate={handleDuplicateTrip}
         />
 
         {/* Keyboard shortcuts help modal */}

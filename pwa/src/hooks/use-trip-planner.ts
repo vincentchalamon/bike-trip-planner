@@ -17,6 +17,7 @@ import {
   uploadGpxFile,
   scanAccommodations,
   addPoiWaypointToRoute,
+  duplicateTrip,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
 import {
@@ -606,6 +607,30 @@ export function useTripPlanner() {
     }
   }
 
+  async function handleDuplicateTrip(): Promise<string | null> {
+    if (!tripId || !trip) return null;
+
+    try {
+      const result = await duplicateTrip(tripId);
+      if (!result) {
+        toast.error(t("config.duplicateFailed"));
+        return null;
+      }
+
+      // Switch trip identity to the duplicate while preserving in-memory stages
+      setTrip({ id: result.id, title: trip.title, sourceUrl: trip.sourceUrl });
+      toast.success(t("config.duplicateSuccess"));
+      return result.id;
+    } catch (err) {
+      if (isNetworkError(err)) {
+        toast.error(t("errors.networkError"));
+      } else {
+        toast.error(t("config.duplicateFailed"));
+      }
+      return null;
+    }
+  }
+
   function handleAddAccommodation(stageIndex: number) {
     const stage = stages[stageIndex];
     const accIndex = stage?.accommodations.length ?? 0;
@@ -759,6 +784,7 @@ export function useTripPlanner() {
     handleExpandAccommodationRadius,
     handleInsertRestDay,
     handleAddPoiWaypoint,
+    handleDuplicateTrip,
     clearNewAccKey: () => setNewAccKey(null),
   };
 }
