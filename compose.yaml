@@ -38,8 +38,12 @@ services:
     user: root
     restart: unless-stopped
     depends_on:
-      - mercure
-      - redis
+      database:
+        condition: service_healthy
+      mercure:
+        condition: service_started
+      redis:
+        condition: service_started
     environment:
       APP_ENV: dev
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
@@ -50,6 +54,7 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
+      DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -82,11 +87,18 @@ services:
     deploy:
       replicas: ${WORKER_REPLICAS:-5}
     depends_on:
-      - mercure
-      - overpass
-      - php
-      - redis
-      - valhalla
+      database:
+        condition: service_healthy
+      mercure:
+        condition: service_started
+      overpass:
+        condition: service_started
+      php:
+        condition: service_started
+      redis:
+        condition: service_started
+      valhalla:
+        condition: service_started
     environment:
       APP_ENV: dev
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
@@ -97,6 +109,7 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
+      DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -178,6 +191,22 @@ services:
       retries: 3
       start_period: 600s
 
+  database:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${DATABASE_NAME:-bike_trip_planner}"
+      POSTGRES_USER: "${DATABASE_USERNAME:-app}"
+      POSTGRES_PASSWORD: "${DATABASE_PASSWORD:-!ChangeMe!}"
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
   redis:
     image: redis:8-alpine
     restart: unless-stopped
@@ -218,6 +247,7 @@ services:
 volumes:
   caddy_data: ~
   caddy_config: ~
+  database_data: ~
   overpass-data: ~
   valhalla-tiles: ~
   pwa_node_modules: ~

@@ -8,8 +8,13 @@
         "ext-ctype": "*",
         "ext-iconv": "*",
         "ext-xmlreader": "*",
+        "api-platform/doctrine-orm": "^4.3",
         "api-platform/symfony": "^4.2.19",
         "azuyalabs/yasumi": "^2.10",
+        "doctrine/doctrine-bundle": "^3.2",
+        "doctrine/doctrine-migrations-bundle": "^4.0",
+        "doctrine/orm": "^3.4",
+        "martin-georgiev/postgresql-for-doctrine": "^4.4",
         "mjaschen/phpgeo": "^6.0.2",
         "nelmio/cors-bundle": "^2.6.1",
         "phpdocumentor/reflection-docblock": "^6.0.2",
@@ -112,6 +117,7 @@
         "roave/security-advisories": "dev-latest",
         "symfony/browser-kit": "8.0.*",
         "symfony/stopwatch": "8.0.*",
-        "symfony/web-profiler-bundle": "8.0.*"
+        "symfony/web-profiler-bundle": "8.0.*",
+        "zenstruck/foundry": "^2.9.2"
     }
 }

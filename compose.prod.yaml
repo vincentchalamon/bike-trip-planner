@@ -7,7 +7,10 @@ services:
       target: frankenphp_prod
     restart: unless-stopped
     depends_on:
-      - redis
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       APP_ENV: prod
       CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
@@ -28,6 +31,7 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
+      DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
     tty: true
     ports:
       - target: 80
@@ -59,6 +63,8 @@ services:
     deploy:
       replicas: ${WORKER_REPLICAS:-5}
     depends_on:
+      database:
+        condition: service_healthy
       overpass:
         condition: service_healthy
         required: false
@@ -79,6 +85,7 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
+      DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
     volumes:
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/20-app.prod.ini
@@ -153,6 +160,22 @@ services:
       retries: 3
       start_period: 600s
 
+  database:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${DATABASE_NAME:-bike_trip_planner}"
+      POSTGRES_USER: "${DATABASE_USERNAME:-app}"
+      POSTGRES_PASSWORD: "${DATABASE_PASSWORD:-!ChangeMe!}"
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
   redis:
     image: redis:8-alpine
     restart: unless-stopped
@@ -174,6 +197,7 @@ services:
 volumes:
   caddy_data: ~
   caddy_config: ~
+  database_data: ~
   overpass-data: ~
   valhalla-tiles: ~
   pwa_node_modules: ~
