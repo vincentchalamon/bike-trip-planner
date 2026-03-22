@@ -77,6 +77,7 @@ export function useTripPlanner() {
   const setEnabledAccommodationTypes = useTripStore(
     (s) => s.setEnabledAccommodationTypes,
   );
+  const setComputationStatus = useTripStore((s) => s.setComputationStatus);
   const updateStageAlerts = useTripStore((s) => s.updateStageAlerts);
   const isLocked = useTripStore((s) => s.isLocked);
   const setIsLocked = useTripStore((s) => s.setIsLocked);
@@ -619,6 +620,7 @@ export function useTripPlanner() {
 
       // Switch trip identity to the duplicate while preserving in-memory stages
       setTrip({ id: result.id, title: trip.title, sourceUrl: trip.sourceUrl });
+      setComputationStatus(result.computationStatus ?? {});
       toast.success(t("config.duplicateSuccess"));
       return result.id;
     } catch (err) {

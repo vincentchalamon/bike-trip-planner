@@ -15,7 +15,6 @@ use App\Entity\Stage;
 use App\Enum\ComputationName;
 use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -30,7 +29,6 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         private EntityManagerInterface $entityManager,
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
-        private RequestStack $requestStack,
     ) {
     }
 
@@ -59,8 +57,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $duplicate->enabledAccommodationTypes = $source->enabledAccommodationTypes;
         $duplicate->title = $source->title;
         $duplicate->sourceType = $source->sourceType;
-        // Locale from current request, with fallback to source locale
-        $duplicate->locale = $this->requestStack->getCurrentRequest()?->getPreferredLanguage(['en', 'fr']) ?? $source->locale;
+        $duplicate->locale = $source->locale;
 
         $newTripId = $duplicate->id;
         \assert($newTripId instanceof Uuid);
@@ -78,7 +75,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $this->entityManager->flush();
 
         // Copy transient Redis data from source trip to duplicate
-        $this->copyTransientData($sourceId, $newTripIdString);
+        $this->copyTransientData($sourceId, $newTripIdString, $duplicate);
 
         // Initialize computation tracker as done (all computations are inherited from source)
         $computations = ComputationName::pipeline();
@@ -124,8 +121,12 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         return $clone;
     }
 
-    private function copyTransientData(string $sourceId, string $newTripId): void
+    private function copyTransientData(string $sourceId, string $newTripId, TripRequest $duplicate): void
     {
+        // Persist the duplicate TripRequest in Redis so that subsequent operations
+        // (getRequest) can find it and do not return 404.
+        $this->tripRepository->storeRequest($newTripId, $duplicate);
+
         $rawPoints = $this->tripRepository->getRawPoints($sourceId);
         if (null !== $rawPoints) {
             $this->tripRepository->storeRawPoints($newTripId, $rawPoints);
