@@ -8,6 +8,7 @@ use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
+use App\Repository\DoctrineTripRequestRepository;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\IdempotencyCheckerInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -99,10 +100,10 @@ final class TripDuplicateTest extends ApiTestCase
         $newId = $data['id'];
         $this->assertNotEmpty($newId);
 
-        // Verify the duplicated trip exists in the repository
+        // Verify the duplicated trip exists in Doctrine (duplicate is persisted via Doctrine, not Redis)
         $container = self::getContainer();
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = $container->get(TripRequestRepositoryInterface::class);
+        /** @var DoctrineTripRequestRepository $repo */
+        $repo = $container->get(DoctrineTripRequestRepository::class);
         $duplicated = $repo->getRequest($newId);
 
         $this->assertInstanceOf(TripRequest::class, $duplicated);
