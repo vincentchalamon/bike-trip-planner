@@ -117,6 +117,8 @@
         "roave/security-advisories": "dev-latest",
         "symfony/browser-kit": "8.0.*",
         "symfony/stopwatch": "8.0.*",
-        "symfony/web-profiler-bundle": "8.0.*"
+        "doctrine/doctrine-fixtures-bundle": "^4.0",
+        "symfony/web-profiler-bundle": "8.0.*",
+        "zenstruck/foundry": "^2.6"
     }
 }

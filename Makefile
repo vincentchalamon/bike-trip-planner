@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision coverage coverage-ci migration migrate db-create
+.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision coverage coverage-ci migration migrate db-create fixtures
 
 help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -121,6 +121,9 @@ migrate: ## Run Doctrine migrations
 
 db-create: ## Create the database
 	@docker compose exec php bin/console doctrine:database:create --if-not-exists
+
+fixtures: ## Load Doctrine fixtures
+	@docker compose exec php bin/console doctrine:fixtures:load --no-interaction
 
 ## --- 💻 Interactive Shells ---
 php-shell: ## Open a bash shell inside the PHP container
