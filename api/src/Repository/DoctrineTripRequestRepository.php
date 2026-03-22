@@ -186,13 +186,8 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
             return null;
         }
 
-        $stages = $trip->stages;
-        if ($stages->isEmpty()) {
-            return [];
-        }
-
         $result = [];
-        foreach ($stages as $stageEntity) {
+        foreach ($trip->stages as $stageEntity) {
             $result[] = $this->stageEntityToDto($stageEntity);
         }
 
