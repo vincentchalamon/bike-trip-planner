@@ -21,6 +21,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     if ('test' === $containerConfigurator->env()) {
         $services->alias(TripUpdatePublisherInterface::class, NullTripUpdatePublisher::class);
         // Use Redis-backed repository in tests (no database available)
+        // TODO (#56 step 7): update CLAUDE.md architecture section to reflect Doctrine ORM (ADR-022)
         $services->alias(TripRequestRepositoryInterface::class, RedisTripRequestRepository::class);
     } else {
         $services->alias(TripUpdatePublisherInterface::class, TripUpdatePublisher::class);
