@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Factory;
 
 use App\Entity\Stage;
-use App\Entity\Trip;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Persistence\PersistentProxyObjectFactory;
 

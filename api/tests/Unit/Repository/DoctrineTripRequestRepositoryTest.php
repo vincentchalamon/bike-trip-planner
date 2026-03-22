@@ -12,11 +12,9 @@ use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
-use App\Entity\Stage as StageEntity;
 use App\Entity\Trip;
 use App\Enum\AlertType;
 use App\Repository\DoctrineTripRequestRepository;
-use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -28,8 +26,10 @@ use Symfony\Component\Uid\Uuid;
 #[CoversClass(DoctrineTripRequestRepository::class)]
 final class DoctrineTripRequestRepositoryTest extends TestCase
 {
-    private EntityManagerInterface $entityManager;
-    private CacheItemPoolInterface $cache;
+    private EntityManagerInterface&\PHPUnit\Framework\MockObject\MockObject $entityManager;
+
+    private CacheItemPoolInterface&\PHPUnit\Framework\MockObject\MockObject $cache;
+
     private DoctrineTripRequestRepository $repository;
 
     #[\Override]
@@ -73,7 +73,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         // Now test getRequest by having find() return the persisted entity
         $em2 = $this->createMock(EntityManagerInterface::class);
-        $em2->method('find')
+        $em2->expects(self::any())->method('find')
             ->with(Trip::class, Uuid::fromString($tripId))
             ->willReturn($persistedTrip);
 
@@ -82,8 +82,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         self::assertNotNull($result);
         self::assertSame('https://www.komoot.com/tour/123456789', $result->sourceUrl);
-        self::assertEquals(new \DateTimeImmutable('2026-07-01'), $result->startDate);
-        self::assertEquals(new \DateTimeImmutable('2026-07-10'), $result->endDate);
+        self::assertSame('2026-07-01', $result->startDate?->format('Y-m-d'));
+        self::assertSame('2026-07-10', $result->endDate?->format('Y-m-d'));
         self::assertSame(0.85, $result->fatigueFactor);
         self::assertSame(40.0, $result->elevationPenalty);
         self::assertTrue($result->ebikeMode);
@@ -99,7 +99,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new Trip(Uuid::fromString($tripId));
 
-        $this->entityManager->method('find')
+        $this->entityManager->expects(self::any())->method('find')
             ->with(Trip::class, Uuid::fromString($tripId))
             ->willReturn($trip);
         $this->entityManager->expects(self::exactly(2))
@@ -276,7 +276,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     {
         $tripId = Uuid::v7()->toRfc4122();
 
-        $this->entityManager->method('find')
+        $this->entityManager->expects(self::any())->method('find')
             ->with(Trip::class, Uuid::fromString($tripId))
             ->willReturn(null);
 
@@ -291,7 +291,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new Trip(Uuid::fromString($tripId));
 
-        $this->entityManager->method('find')
+        $this->entityManager->expects(self::any())->method('find')
             ->with(Trip::class, Uuid::fromString($tripId))
             ->willReturn($trip);
         $this->entityManager->expects(self::exactly(2))
@@ -432,7 +432,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new Trip(Uuid::fromString($tripId));
 
-        $this->entityManager->method('find')
+        $this->entityManager->expects(self::any())->method('find')
             ->with(Trip::class, Uuid::fromString($tripId))
             ->willReturn($trip);
         $this->entityManager->expects(self::once())
@@ -450,7 +450,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $trip = new Trip(Uuid::fromString($tripId));
         $trip->setSourceUrl('https://www.komoot.com/tour/111');
 
-        $this->entityManager->method('find')
+        $this->entityManager->expects(self::any())->method('find')
             ->with(Trip::class, Uuid::fromString($tripId))
             ->willReturn($trip);
         $this->entityManager->expects(self::once())
@@ -471,7 +471,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     {
         $tripId = Uuid::v7()->toRfc4122();
 
-        $this->entityManager->method('find')
+        $this->entityManager->expects(self::any())->method('find')
             ->with(Trip::class, Uuid::fromString($tripId))
             ->willReturn(null);
 
@@ -486,7 +486,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new Trip(Uuid::fromString($tripId));
 
-        $this->entityManager->method('find')
+        $this->entityManager->expects(self::any())->method('find')
             ->with(Trip::class, Uuid::fromString($tripId))
             ->willReturn($trip);
 
@@ -501,7 +501,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new Trip(Uuid::fromString($tripId));
 
-        $this->entityManager->method('find')
+        $this->entityManager->expects(self::any())->method('find')
             ->with(Trip::class, Uuid::fromString($tripId))
             ->willReturn($trip);
         $this->entityManager->expects(self::exactly(2))
@@ -519,7 +519,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     {
         $tripId = Uuid::v7()->toRfc4122();
 
-        $this->entityManager->method('find')
+        $this->entityManager->expects(self::any())->method('find')
             ->with(Trip::class, Uuid::fromString($tripId))
             ->willReturn(null);
         $this->entityManager->expects(self::never())
