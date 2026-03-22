@@ -40,6 +40,10 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->entityManager->method('wrapInTransaction')
             ->willReturnCallback(static fn (callable $callback): mixed => $callback());
+
+        $classMetadata = new \Doctrine\ORM\Mapping\ClassMetadata(TripRequest::class);
+        $this->entityManager->method('getClassMetadata')->willReturn($classMetadata);
+
         $this->cache = $this->createMock(CacheItemPoolInterface::class);
 
         $registry = $this->createMock(ManagerRegistry::class);
@@ -82,6 +86,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $em2 = $this->createMock(EntityManagerInterface::class);
         $em2->method('find')
             ->willReturn($request);
+        $em2->method('getClassMetadata')
+            ->willReturn(new \Doctrine\ORM\Mapping\ClassMetadata(TripRequest::class));
 
         $registry2 = $this->createMock(ManagerRegistry::class);
         $registry2->method('getManagerForClass')->willReturn($em2);
