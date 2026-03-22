@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Integration smoke test", () => {
-  test("backend accepts and processes a real Komoot tour", async ({ page }) => {
+  test("backend accepts and processes a real Komoot tour @integration", async ({ page }) => {
     test.slow();
 
     let capturedTripId: string | null = null;
