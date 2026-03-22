@@ -199,7 +199,7 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
 
         $stages = $trip->getStages();
         if ($stages->isEmpty()) {
-            return null;
+            return [];
         }
 
         $result = [];
@@ -423,6 +423,8 @@ final readonly class DoctrineTripRequestRepository implements TripRequestReposit
             $data['poiLat'] = $alert->poiLat;
             $data['poiLon'] = $alert->poiLon;
             $data['distanceFromRoute'] = $alert->distanceFromRoute;
+        } elseif (Alert::class !== $alert::class) {
+            throw new \LogicException(\sprintf('Unhandled Alert subclass "%s" in %s. Register it alongside CulturalPoiAlert.', $alert::class, __METHOD__));
         }
 
         return $data;
