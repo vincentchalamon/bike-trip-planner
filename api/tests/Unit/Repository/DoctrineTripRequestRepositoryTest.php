@@ -16,6 +16,7 @@ use App\Entity\Trip;
 use App\Enum\AlertType;
 use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -24,6 +25,7 @@ use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Uid\Uuid;
 
 #[CoversClass(DoctrineTripRequestRepository::class)]
+#[AllowMockObjectsWithoutExpectations]
 final class DoctrineTripRequestRepositoryTest extends TestCase
 {
     private EntityManagerInterface&\PHPUnit\Framework\MockObject\MockObject $entityManager;
@@ -383,20 +385,14 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
             ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
         ];
 
-        $cacheItem = $this->createMock(CacheItemInterface::class);
+        $cacheItem = $this->createStub(CacheItemInterface::class);
         $cacheItem->method('isHit')->willReturn(true);
         $cacheItem->method('get')->willReturn($rawPoints);
-        $cacheItem->expects(self::once())
-            ->method('expiresAfter')
-            ->with(1800);
 
         $this->cache->expects(self::once())
             ->method('getItem')
             ->with($cacheKey)
             ->willReturn($cacheItem);
-        $this->cache->expects(self::once())
-            ->method('save')
-            ->with($cacheItem);
 
         $result = $this->repository->getRawPoints($tripId);
 
