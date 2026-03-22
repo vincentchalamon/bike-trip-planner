@@ -472,7 +472,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     }
 
     #[Test]
-    public function getStagesReturnsNullForTripWithNoStages(): void
+    public function getStagesReturnsEmptyArrayForTripWithNoStages(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new Trip(Uuid::fromString($tripId));
@@ -482,7 +482,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $result = $this->repository->getStages($tripId);
 
-        self::assertNull($result);
+        self::assertSame([], $result);
     }
 
     #[Test]
