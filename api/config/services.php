@@ -10,6 +10,8 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Test\MockKomootClientFactory;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
+use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
+
 return static function (ContainerConfigurator $containerConfigurator): void {
     $services = $containerConfigurator->services();
 
@@ -23,12 +25,13 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         $services->alias(TripUpdatePublisherInterface::class, NullTripUpdatePublisher::class);
         // Use Redis-backed repository in tests (no database available)
         $services->alias(TripRequestRepositoryInterface::class, RedisTripRequestRepository::class);
-
-        // Replace komoot.client with a MockHttpClient that serves local HTML fixtures,
-        // making the integration smoke test deterministic and independent of external network.
-        $services->set('komoot.client', Symfony\Contracts\HttpClient\HttpClientInterface::class)
-            ->factory([MockKomootClientFactory::class, 'create']);
     } else {
         $services->alias(TripUpdatePublisherInterface::class, TripUpdatePublisher::class);
     }
+
+    // Decorate komoot.client to serve local HTML fixtures when MOCK_EXTERNAL_HTTP=true.
+    // Runtime check (not compile-time) so it works with precompiled prod Docker images in CI.
+    $services->set(MockKomootClientFactory::class)
+        ->decorate('komoot.client')
+        ->args([service('.inner')]);
 };
