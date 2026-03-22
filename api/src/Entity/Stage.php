@@ -10,16 +10,12 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'stage')]
-#[ORM\Index(columns: ['trip_id', 'position'], name: 'idx_stage_trip_position')]
+#[ORM\Index(name: 'idx_stage_trip_position', columns: ['trip_id', 'position'])]
 class Stage
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid')]
     private Uuid $id;
-
-    #[ORM\ManyToOne(targetEntity: Trip::class, inversedBy: 'stages')]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private Trip $trip;
 
     #[ORM\Column]
     private int $position;
@@ -84,10 +80,11 @@ class Stage
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $selectedAccommodation = null;
 
-    public function __construct(Trip $trip, ?Uuid $id = null)
+    public function __construct(#[ORM\ManyToOne(targetEntity: Trip::class, inversedBy: 'stages')]
+        #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+        private Trip $trip, ?Uuid $id = null)
     {
         $this->id = $id ?? Uuid::v7();
-        $this->trip = $trip;
     }
 
     public function getId(): Uuid
