@@ -9,7 +9,7 @@ use App\ApiResource\TripRequest;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
-final readonly class TripRequestRepository implements TripRequestRepositoryInterface
+final readonly class RedisTripRequestRepository implements TripRequestRepositoryInterface
 {
     private const int TTL = 1800; // 30 minutes
 
