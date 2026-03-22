@@ -73,8 +73,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         // Now test getRequest by having find() return the persisted entity
         $em2 = $this->createMock(EntityManagerInterface::class);
-        $em2->expects(self::any())->method('find')
-            ->with(Trip::class, Uuid::fromString($tripId))
+        $em2->method('find')
             ->willReturn($persistedTrip);
 
         $repo2 = new DoctrineTripRequestRepository($em2, $this->cache);
@@ -99,8 +98,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new Trip(Uuid::fromString($tripId));
 
-        $this->entityManager->expects(self::any())->method('find')
-            ->with(Trip::class, Uuid::fromString($tripId))
+        $this->entityManager->method('find')
             ->willReturn($trip);
         $this->entityManager->expects(self::exactly(2))
             ->method('flush');
@@ -276,8 +274,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     {
         $tripId = Uuid::v7()->toRfc4122();
 
-        $this->entityManager->expects(self::any())->method('find')
-            ->with(Trip::class, Uuid::fromString($tripId))
+        $this->entityManager->method('find')
             ->willReturn(null);
 
         $result = $this->repository->getRequest($tripId);
@@ -291,8 +288,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new Trip(Uuid::fromString($tripId));
 
-        $this->entityManager->expects(self::any())->method('find')
-            ->with(Trip::class, Uuid::fromString($tripId))
+        $this->entityManager->method('find')
             ->willReturn($trip);
         $this->entityManager->expects(self::exactly(2))
             ->method('flush');
@@ -432,8 +428,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new Trip(Uuid::fromString($tripId));
 
-        $this->entityManager->expects(self::any())->method('find')
-            ->with(Trip::class, Uuid::fromString($tripId))
+        $this->entityManager->method('find')
             ->willReturn($trip);
         $this->entityManager->expects(self::once())
             ->method('flush');
@@ -450,8 +445,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $trip = new Trip(Uuid::fromString($tripId));
         $trip->setSourceUrl('https://www.komoot.com/tour/111');
 
-        $this->entityManager->expects(self::any())->method('find')
-            ->with(Trip::class, Uuid::fromString($tripId))
+        $this->entityManager->method('find')
             ->willReturn($trip);
         $this->entityManager->expects(self::once())
             ->method('flush');
@@ -471,8 +465,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     {
         $tripId = Uuid::v7()->toRfc4122();
 
-        $this->entityManager->expects(self::any())->method('find')
-            ->with(Trip::class, Uuid::fromString($tripId))
+        $this->entityManager->method('find')
             ->willReturn(null);
 
         $result = $this->repository->getStages($tripId);
@@ -486,8 +479,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new Trip(Uuid::fromString($tripId));
 
-        $this->entityManager->expects(self::any())->method('find')
-            ->with(Trip::class, Uuid::fromString($tripId))
+        $this->entityManager->method('find')
             ->willReturn($trip);
 
         $result = $this->repository->getStages($tripId);
@@ -501,8 +493,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new Trip(Uuid::fromString($tripId));
 
-        $this->entityManager->expects(self::any())->method('find')
-            ->with(Trip::class, Uuid::fromString($tripId))
+        $this->entityManager->method('find')
             ->willReturn($trip);
         $this->entityManager->expects(self::exactly(2))
             ->method('flush');
@@ -519,8 +510,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     {
         $tripId = Uuid::v7()->toRfc4122();
 
-        $this->entityManager->expects(self::any())->method('find')
-            ->with(Trip::class, Uuid::fromString($tripId))
+        $this->entityManager->method('find')
             ->willReturn(null);
         $this->entityManager->expects(self::never())
             ->method('flush');
