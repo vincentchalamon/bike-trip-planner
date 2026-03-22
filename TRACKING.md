@@ -213,12 +213,12 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 ### Sous-PRs
 
-- [ ] PR1: Doctrine entities + migrations
-- [ ] PR2: Repositories
-- [ ] PR3: Migration state providers
-- [ ] PR4: Migration state processors
-- [ ] PR5: Tests fonctionnels
-- [ ] PR6: Factories Foundry (Zenstruck Foundry) + fixtures dev
+- [x] PR1: Doctrine entities + migrations
+- [x] PR2: Repositories
+- [x] PR3: Migration state providers
+- [x] PR4: Migration state processors
+- [x] PR5: Tests fonctionnels
+- [x] PR6: Factories Foundry (Zenstruck Foundry) + fixtures dev
 
 ### Recette Sprint 11
 
