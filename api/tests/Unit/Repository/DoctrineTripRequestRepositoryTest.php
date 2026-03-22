@@ -116,7 +116,9 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->entityManager->method('find')
             ->willReturn($trip);
-        $this->entityManager->expects(self::exactly(2))
+        $this->entityManager->method('createQuery')
+            ->willReturn($this->createStub(\Doctrine\ORM\Query::class));
+        $this->entityManager->expects(self::once())
             ->method('flush');
 
         $weather = new WeatherForecast(
@@ -306,7 +308,9 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->entityManager->method('find')
             ->willReturn($trip);
-        $this->entityManager->expects(self::exactly(2))
+        $this->entityManager->method('createQuery')
+            ->willReturn($this->createStub(\Doctrine\ORM\Query::class));
+        $this->entityManager->expects(self::once())
             ->method('flush');
 
         $culturalAlert = new CulturalPoiAlert(

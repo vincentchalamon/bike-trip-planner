@@ -170,9 +170,12 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         }
 
         $this->getEntityManager()->wrapInTransaction(function () use ($trip, $stages): void {
-            $trip->clearStages();
-            // Must flush to execute orphan removal before adding new stages
-            $this->getEntityManager()->flush();
+            // Bulk delete: O(1) vs O(N) orphan-removal DELETEs (1 SELECT + N DELETE)
+            $this->getEntityManager()
+                ->createQuery('DELETE FROM App\Entity\Stage s WHERE s.trip = :trip')
+                ->setParameter('trip', $trip)
+                ->execute();
+            $trip->clearStages(); // Keep UoW in sync with the deleted rows
 
             foreach ($stages as $index => $stageDto) {
                 $stageEntity = $this->stageDtoToEntity($stageDto, $trip, $index);

@@ -20,7 +20,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
 
     if ('test' === $containerConfigurator->env()) {
         $services->alias(TripUpdatePublisherInterface::class, NullTripUpdatePublisher::class);
-        // Use Redis-backed repository in tests (no database available)
+        // Use Redis-backed repository in tests (no database available in PHPUnit).
+        // TODO: add Foundry-based KernelTestCase integration tests with a real test database
+        // to cover JSONB round-trips, UUID handling, and migration correctness (#56).
         $services->alias(TripRequestRepositoryInterface::class, RedisTripRequestRepository::class);
     } else {
         $services->alias(TripUpdatePublisherInterface::class, TripUpdatePublisher::class);
