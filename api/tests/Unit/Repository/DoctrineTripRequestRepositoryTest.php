@@ -592,4 +592,31 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->repository->getStages($tripId);
     }
+
+    #[Test]
+    public function alertToArrayThrowsOnUnhandledSubclass(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+
+        $this->entityManager->method('find')->willReturn($trip);
+
+        // Concrete readonly subclass not registered in alertToArray
+        $unknownAlert = new UnknownAlertStub(type: AlertType::WARNING, message: 'x');
+
+        $stageDto = new StageDto(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 10.0,
+            elevation: 0.0,
+            startPoint: new Coordinate(0.0, 0.0, 0.0),
+            endPoint: new Coordinate(1.0, 1.0, 0.0),
+        );
+        $stageDto->addAlert($unknownAlert);
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Unhandled Alert subclass');
+
+        $this->repository->storeStages($tripId, [$stageDto]);
+    }
 }
