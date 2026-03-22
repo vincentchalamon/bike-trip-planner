@@ -14,6 +14,7 @@ use ApiPlatform\OpenApi\Model\Operation;
 use App\State\TripCollectionProvider;
 use App\State\TripCreateProcessor;
 use App\State\TripDeleteProcessor;
+use App\State\TripDoctrineProvider;
 use App\State\TripGpxProvider;
 use App\State\TripRequestProvider;
 use App\State\TripUpdateProcessor;
@@ -23,11 +24,10 @@ use App\State\TripUpdateProcessor;
     operations: [
         new GetCollection(
             uriTemplate: '/trips',
-            output: TripListItem::class,
-            paginationEnabled: true,
-            paginationClientItemsPerPage: true,
-            paginationItemsPerPage: 20,
             openapi: new Operation(summary: 'List all trips, paginated and filterable.'),
+            paginationEnabled: true,
+            paginationItemsPerPage: 20,
+            paginationClientItemsPerPage: true,
             provider: TripCollectionProvider::class,
         ),
         new Post(
@@ -57,7 +57,7 @@ use App\State\TripUpdateProcessor;
         new Delete(
             uriTemplate: '/trips/{id}',
             openapi: new Operation(summary: 'Delete a trip and all its stages.'),
-            provider: TripRequestProvider::class,
+            provider: TripDoctrineProvider::class,
             processor: TripDeleteProcessor::class,
         ),
     ],

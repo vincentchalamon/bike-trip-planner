@@ -6,12 +6,19 @@ namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\ApiResource\TripRequest;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\DoctrineTripRequestRepository;
 use PHPUnit\Framework\Attributes\Test;
 
 final class TripListTest extends ApiTestCase
 {
+    #[\Override]
+    public static function setUpBeforeClass(): void
+    {
+        self::$alwaysBootKernel = false;
+    }
+
     private const string TRIP_ID_1 = '01936f6e-0000-7000-8000-000000000101';
+
     private const string TRIP_ID_2 = '01936f6e-0000-7000-8000-000000000102';
 
     private function seedTrip(
@@ -28,8 +35,8 @@ final class TripListTest extends ApiTestCase
 
         $container = self::getContainer();
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = $container->get(TripRequestRepositoryInterface::class);
+        /** @var DoctrineTripRequestRepository $repo */
+        $repo = $container->get(DoctrineTripRequestRepository::class);
         $repo->initializeTrip($tripId, $request);
 
         if (null !== $title) {
@@ -51,9 +58,9 @@ final class TripListTest extends ApiTestCase
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
 
         $data = $response->toArray(false);
-        $this->assertArrayHasKey('hydra:member', $data);
-        $this->assertArrayHasKey('hydra:totalItems', $data);
-        $this->assertGreaterThanOrEqual(2, $data['hydra:totalItems']);
+        $this->assertArrayHasKey('member', $data);
+        $this->assertArrayHasKey('totalItems', $data);
+        $this->assertGreaterThanOrEqual(2, $data['totalItems']);
     }
 
     #[Test]
@@ -69,9 +76,9 @@ final class TripListTest extends ApiTestCase
         $this->assertResponseIsSuccessful();
 
         $data = $response->toArray(false);
-        $this->assertArrayHasKey('hydra:member', $data);
-        $this->assertSame(1, $data['hydra:totalItems']);
-        $this->assertSame('Tour des Alpes', $data['hydra:member'][0]['title']);
+        $this->assertArrayHasKey('member', $data);
+        $this->assertSame(1, $data['totalItems']);
+        $this->assertSame('Tour des Alpes', $data['member'][0]['title']);
     }
 
     #[Test]
@@ -91,7 +98,9 @@ final class TripListTest extends ApiTestCase
         $this->assertResponseIsSuccessful();
 
         $data = $response->toArray(false);
-        $member = $data['hydra:member'][0];
+        $members = array_values(array_filter($data['member'], fn (array $m): bool => self::TRIP_ID_1 === $m['id']));
+        $this->assertNotEmpty($members, 'Seeded trip not found in response');
+        $member = $members[0];
 
         $this->assertArrayHasKey('id', $member);
         $this->assertArrayHasKey('title', $member);

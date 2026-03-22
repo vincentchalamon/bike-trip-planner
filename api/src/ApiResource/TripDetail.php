@@ -30,7 +30,6 @@ final class TripDetail
 {
     /**
      * @param list<array<string, mixed>> $stages Serialized stage DTOs
-     * @param array<string, mixed>       $settings Trip pacing/config settings
      */
     public function __construct(
         public string $id,

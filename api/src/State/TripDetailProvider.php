@@ -64,7 +64,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             ebikeMode: $request->ebikeMode,
             departureHour: $request->departureHour,
             enabledAccommodationTypes: $request->enabledAccommodationTypes,
-            stages: array_map([$this, 'serializeStage'], $stages),
+            stages: array_map($this->serializeStage(...), $stages),
         );
     }
 
@@ -82,13 +82,13 @@ final readonly class TripDetailProvider implements ProviderInterface
             'elevationLoss' => $stage->elevationLoss,
             'startPoint' => $this->serializeCoord($stage->startPoint),
             'endPoint' => $this->serializeCoord($stage->endPoint),
-            'geometry' => array_map([$this, 'serializeCoord'], $stage->geometry),
+            'geometry' => array_map($this->serializeCoord(...), $stage->geometry),
             'label' => $stage->label,
             'isRestDay' => $stage->isRestDay,
             'weather' => $stage->weather instanceof WeatherForecast ? $this->serializeWeather($stage->weather) : null,
-            'alerts' => array_map([$this, 'serializeAlert'], $stage->alerts),
-            'pois' => array_map([$this, 'serializePoi'], $stage->pois),
-            'accommodations' => array_map([$this, 'serializeAccommodation'], $stage->accommodations),
+            'alerts' => array_map($this->serializeAlert(...), $stage->alerts),
+            'pois' => array_map($this->serializePoi(...), $stage->pois),
+            'accommodations' => array_map($this->serializeAccommodation(...), $stage->accommodations),
             'selectedAccommodation' => $stage->selectedAccommodation instanceof Accommodation
                 ? $this->serializeAccommodation($stage->selectedAccommodation)
                 : null,

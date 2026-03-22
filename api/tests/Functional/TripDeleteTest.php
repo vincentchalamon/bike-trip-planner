@@ -6,11 +6,17 @@ namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\ApiResource\TripRequest;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\DoctrineTripRequestRepository;
 use PHPUnit\Framework\Attributes\Test;
 
 final class TripDeleteTest extends ApiTestCase
 {
+    #[\Override]
+    public static function setUpBeforeClass(): void
+    {
+        self::$alwaysBootKernel = false;
+    }
+
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000201';
 
     private function seedTrip(string $tripId): void
@@ -20,8 +26,8 @@ final class TripDeleteTest extends ApiTestCase
 
         $container = self::getContainer();
 
-        /** @var TripRequestRepositoryInterface $repo */
-        $repo = $container->get(TripRequestRepositoryInterface::class);
+        /** @var DoctrineTripRequestRepository $repo */
+        $repo = $container->get(DoctrineTripRequestRepository::class);
         $repo->initializeTrip($tripId, $request);
     }
 
@@ -51,7 +57,7 @@ final class TripDeleteTest extends ApiTestCase
         $this->assertResponseIsSuccessful();
 
         $data = $response->toArray(false);
-        $ids = array_column($data['hydra:member'], 'id');
+        $ids = array_column($data['member'], 'id');
         $this->assertNotContains(self::TRIP_ID, $ids);
     }
 
