@@ -80,7 +80,6 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             $this->tripStateManager->storeStages($tripId, $stages);
             // Note: endPoint intentionally not reverted — accommodation coords serve as
             // stage boundary until Valhalla (ADR-017) provides proper re-route.
-            \assert($request instanceof \App\ApiResource\TripRequest);
             $generation = $this->generationTracker->increment($tripId);
             $this->messageBus->dispatch(new ScanAccommodations($tripId, stageIndex: $index, enabledAccommodationTypes: $request->enabledAccommodationTypes, generation: $generation));
             $affectedDeselect = isset($stages[$index + 1]) ? [$index, $index + 1] : [$index];
@@ -145,8 +144,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipAccommodationScan: true, generation: $generation));
 
-        $tripRequest = $this->tripStateManager->getRequest($tripId);
-        if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
+        if ($request->startDate instanceof \DateTimeImmutable) {
             $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
             $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }

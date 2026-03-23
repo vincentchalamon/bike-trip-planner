@@ -58,8 +58,8 @@ final class StageMoveProcessorTest extends TestCase
         try {
             $processor->process($data, new Patch(), ['tripId' => 'trip-1', 'index' => 0]);
             self::fail('Expected HttpException to be thrown.');
-        } catch (HttpException $e) {
-            self::assertSame(423, $e->getStatusCode());
+        } catch (HttpException $httpException) {
+            self::assertSame(423, $httpException->getStatusCode());
         }
     }
 }
