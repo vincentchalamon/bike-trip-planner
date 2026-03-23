@@ -51,11 +51,15 @@ test.describe("/trips page", () => {
   });
 
   test("delete button opens confirmation dialog", async ({ page }) => {
-    const deleteButtons = page.getByRole("button", {
+    await expect(page.getByText("Tour des Alpes")).toBeVisible();
+    const deleteButton = page.getByRole("button", {
       name: /supprimer le voyage/i,
-    });
-    await deleteButtons.first().click();
-    await expect(page.getByRole("dialog")).toBeVisible();
+    }).first();
+    await expect(deleteButton).toBeVisible();
+    await deleteButton.click();
+    await expect(
+      page.getByRole("alertdialog"),
+    ).toBeVisible({ timeout: 5000 });
   });
 
   test("pagination controls are hidden when totalItems is small", async ({
