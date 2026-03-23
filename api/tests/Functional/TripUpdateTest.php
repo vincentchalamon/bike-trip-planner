@@ -17,9 +17,14 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
+use Zenstruck\Foundry\Test\Factories;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class TripUpdateTest extends ApiTestCase
 {
+    use Factories;
+
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000001';
 
     private function seedTrip(
@@ -50,12 +55,6 @@ final class TripUpdateTest extends ApiTestCase
         /** @var IdempotencyCheckerInterface $idempotencyChecker */
         $idempotencyChecker = $container->get(IdempotencyCheckerInterface::class);
         $idempotencyChecker->saveHash($tripId, $request);
-    }
-
-    #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
     }
 
     #[Test]
