@@ -24,7 +24,32 @@ use App\State\TripUpdateProcessor;
     operations: [
         new GetCollection(
             uriTemplate: '/trips',
-            openapi: new Operation(summary: 'List all trips, paginated and filterable.'),
+            openapi: new Operation(
+                summary: 'List all trips, paginated and filterable.',
+                parameters: [
+                    new \ApiPlatform\OpenApi\Model\Parameter(
+                        name: 'title',
+                        in: 'query',
+                        description: 'Filter by title (case-insensitive partial match)',
+                        required: false,
+                        schema: ['type' => 'string'],
+                    ),
+                    new \ApiPlatform\OpenApi\Model\Parameter(
+                        name: 'startDate',
+                        in: 'query',
+                        description: 'Filter trips starting on or after this date (YYYY-MM-DD)',
+                        required: false,
+                        schema: ['type' => 'string', 'format' => 'date'],
+                    ),
+                    new \ApiPlatform\OpenApi\Model\Parameter(
+                        name: 'endDate',
+                        in: 'query',
+                        description: 'Filter trips ending on or before this date (YYYY-MM-DD)',
+                        required: false,
+                        schema: ['type' => 'string', 'format' => 'date'],
+                    ),
+                ],
+            ),
             paginationEnabled: true,
             paginationItemsPerPage: 20,
             paginationClientItemsPerPage: true,
