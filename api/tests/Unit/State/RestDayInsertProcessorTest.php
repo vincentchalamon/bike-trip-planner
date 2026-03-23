@@ -20,6 +20,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\Envelope;
@@ -54,6 +55,23 @@ final class RestDayInsertProcessorTest extends TestCase
             $generationTracker,
             new TripLocker(),
         );
+    }
+
+    #[Test]
+    public function lockedTripThrowsHttpException(): void
+    {
+        $lockedRequest = new TripRequest();
+        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
+
+        $this->tripStateManager->method('getRequest')->willReturn($lockedRequest);
+        $this->tripStateManager->method('getStages')->willReturn([]);
+
+        try {
+            $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+            self::fail('Expected HttpException to be thrown.');
+        } catch (HttpException $httpException) {
+            self::assertSame(423, $httpException->getStatusCode());
+        }
     }
 
     #[Test]
