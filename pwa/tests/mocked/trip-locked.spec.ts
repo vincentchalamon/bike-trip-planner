@@ -1,6 +1,5 @@
 import { test, expect } from "../fixtures/base.fixture";
 import { fullTripEventSequence } from "../fixtures/mock-data";
-import { getTripId } from "../fixtures/api-mocks";
 
 test.describe("Trip locking", () => {
   test("shows locked banner and hides edit controls when isLocked is true", async ({
@@ -71,49 +70,50 @@ test.describe("Trip locking", () => {
     ).toBeVisible();
   });
 
-  test("shows locked banner after PATCH returns isLocked true", async ({
-    createFullTrip,
+  test("config panel controls are disabled when trip is locked", async ({
     mockedPage,
+    injectSequence,
   }) => {
-    await createFullTrip();
-
-    // Banner should not be visible initially
-    await expect(
-      mockedPage.getByTestId("trip-locked-banner"),
-    ).not.toBeVisible();
-
-    // Override PATCH /trips/{id} to return isLocked: true
-    const tripId = getTripId();
-    await mockedPage.route(`**/trips/${tripId}`, async (route, request) => {
-      if (request.method() !== "PATCH") return route.fallback();
+    // Override POST /trips to return isLocked: true
+    await mockedPage.route("**/trips", async (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
       return route.fulfill({
         status: 202,
         contentType: "application/ld+json",
         body: JSON.stringify({
           "@context": "/contexts/Trip",
-          "@id": `/trips/${tripId}`,
+          "@id": "/trips/locked-trip-2",
           "@type": "Trip",
-          id: tripId,
+          id: "locked-trip-2",
           computationStatus: {},
           isLocked: true,
         }),
       });
     });
 
-    // Open config panel and click a preset to trigger a PATCH
+    const input = mockedPage.getByTestId("magic-link-input");
+    await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
+    await input.press("Enter");
+    await expect(
+      mockedPage
+        .getByTestId("trip-title-skeleton")
+        .or(mockedPage.getByTestId("trip-title")),
+    ).toBeVisible({ timeout: 5000 });
+
+    await injectSequence(fullTripEventSequence());
+    await expect(mockedPage.getByTestId("stage-card-3")).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Open config panel — it should be visible but controls disabled
     await mockedPage
       .getByRole("button", { name: "Ouvrir les paramètres" })
       .click();
     await expect(
       mockedPage.getByRole("dialog", { name: "Paramètres" }),
     ).toBeInViewport();
-    await mockedPage
-      .getByRole("button", { name: "Appliquer le profil Débutant" })
-      .click();
 
-    // Banner should appear after PATCH response with isLocked: true
-    await expect(mockedPage.getByTestId("trip-locked-banner")).toBeVisible({
-      timeout: 5000,
-    });
+    // Date range trigger should be disabled
+    await expect(mockedPage.getByTestId("date-range-trigger")).toBeDisabled();
   });
 });
