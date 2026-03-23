@@ -1,5 +1,6 @@
 import { test, expect } from "../fixtures/base.fixture";
 import { fullTripEventSequence } from "../fixtures/mock-data";
+import { getTripId } from "../fixtures/api-mocks";
 
 test.describe("Trip locking", () => {
   test("shows locked banner and hides edit controls when isLocked is true", async ({
@@ -68,5 +69,51 @@ test.describe("Trip locking", () => {
     await expect(
       mockedPage.getByTestId("add-stage-button-0"),
     ).toBeVisible();
+  });
+
+  test("shows locked banner after PATCH returns isLocked true", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+
+    // Banner should not be visible initially
+    await expect(
+      mockedPage.getByTestId("trip-locked-banner"),
+    ).not.toBeVisible();
+
+    // Override PATCH /trips/{id} to return isLocked: true
+    const tripId = getTripId();
+    await mockedPage.route(`**/trips/${tripId}`, async (route, request) => {
+      if (request.method() !== "PATCH") return route.fallback();
+      return route.fulfill({
+        status: 202,
+        contentType: "application/ld+json",
+        body: JSON.stringify({
+          "@context": "/contexts/Trip",
+          "@id": `/trips/${tripId}`,
+          "@type": "Trip",
+          id: tripId,
+          computationStatus: {},
+          isLocked: true,
+        }),
+      });
+    });
+
+    // Open config panel and click a preset to trigger a PATCH
+    await mockedPage
+      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .click();
+    await expect(
+      mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    ).toBeInViewport();
+    await mockedPage
+      .getByRole("button", { name: "Appliquer le profil Débutant" })
+      .click();
+
+    // Banner should appear after PATCH response with isLocked: true
+    await expect(mockedPage.getByTestId("trip-locked-banner")).toBeVisible({
+      timeout: 5000,
+    });
   });
 });
