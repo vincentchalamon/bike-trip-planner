@@ -28,12 +28,11 @@ const MOCK_TRIPS = {
 
 test.describe("/trips page", () => {
   test.beforeEach(async ({ page }) => {
+    // Only intercept API calls (Accept: application/ld+json), not page navigation
     await page.route("**/trips*", (route, request) => {
+      const accept = request.headers()["accept"] ?? "";
+      if (!accept.includes("application/ld+json")) return route.fallback();
       if (request.method() !== "GET") return route.fallback();
-      const url = new URL(request.url());
-      // Skip detail/stages/duplicate routes
-      if (url.pathname.includes("/detail") || url.pathname.includes("/stages"))
-        return route.fallback();
 
       return route.fulfill({
         status: 200,
