@@ -8,14 +8,13 @@ use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\ApiResource\TripRequest;
 use App\Repository\DoctrineTripRequestRepository;
 use PHPUnit\Framework\Attributes\Test;
+use Zenstruck\Foundry\Test\Factories;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class TripDeleteTest extends ApiTestCase
 {
-    #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
+    use Factories;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000201';
 

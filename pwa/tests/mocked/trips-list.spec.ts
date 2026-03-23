@@ -51,14 +51,56 @@ test.describe("/trips page", () => {
 
   test("delete button opens confirmation dialog", async ({ page }) => {
     await expect(page.getByText("Tour des Alpes")).toBeVisible();
-    const deleteButton = page.getByRole("button", {
-      name: /supprimer le voyage/i,
-    }).first();
+    const deleteButton = page
+      .getByRole("button", {
+        name: /supprimer le voyage/i,
+      })
+      .first();
     await expect(deleteButton).toBeVisible();
     await deleteButton.click();
-    await expect(
-      page.getByRole("alertdialog"),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5000 });
+  });
+
+  test("confirming delete removes trip from list", async ({ page }) => {
+    await expect(page.getByText("Tour des Alpes")).toBeVisible();
+
+    // Mock DELETE endpoint
+    await page.route("**/trips/*", (route, request) => {
+      if (request.method() === "DELETE") {
+        return route.fulfill({ status: 204, body: "" });
+      }
+      return route.fallback();
+    });
+
+    // Open delete dialog
+    const deleteButton = page
+      .getByRole("button", {
+        name: /supprimer le voyage/i,
+      })
+      .first();
+    await deleteButton.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+
+    // Stub refresh GET to return only the second trip
+    await page.route("**/trips*", (route, request) => {
+      const accept = request.headers()["accept"] ?? "";
+      if (!accept.includes("application/ld+json")) return route.fallback();
+      if (request.method() !== "GET") return route.fallback();
+      return route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "application/ld+json; charset=utf-8" },
+        body: JSON.stringify({
+          member: [MOCK_TRIPS.member[1]],
+          totalItems: 1,
+        }),
+      });
+    });
+
+    // Confirm deletion
+    await dialog.getByRole("button", { name: /supprimer/i }).click();
+    await expect(page.getByText("Tour des Alpes")).not.toBeVisible();
+    await expect(page.getByText("Bretagne coastal")).toBeVisible();
   });
 
   test("pagination controls are hidden when totalItems is small", async ({

@@ -56,7 +56,7 @@ export default function TripsPage() {
     setIsLoading(true);
     setLoadError(false);
 
-    const params = new URLSearchParams({ page: String(page) });
+    const params = new URLSearchParams({ page: String(page), itemsPerPage: String(ITEMS_PER_PAGE) });
     if (debouncedTitle) params.set("title", debouncedTitle);
 
     try {

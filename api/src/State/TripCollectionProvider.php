@@ -47,7 +47,7 @@ final readonly class TripCollectionProvider implements ProviderInterface
             ->orderBy('t.createdAt', 'DESC');
 
         // Filter by title (partial, case-insensitive)
-        if (!empty($filters['title']) && is_string($filters['title'])) {
+        if (isset($filters['title']) && '' !== $filters['title'] && is_string($filters['title'])) {
             $qb->andWhere('LOWER(t.title) LIKE LOWER(:title)')
                 ->setParameter('title', '%'.$filters['title'].'%');
         }
