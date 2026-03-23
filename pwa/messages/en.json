@@ -297,7 +297,8 @@
     "previousPage": "Previous page",
     "nextPage": "Next page",
     "page": "Page {current} of {total}",
-    "retry": "Try again"
+    "retry": "Try again",
+    "untitled": "Untitled trip"
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",
