@@ -1314,6 +1314,12 @@ export interface operations {
     api_trips_get_collection: {
         parameters: {
             query?: {
+                /** @description Filter by title (case-insensitive partial match) */
+                title?: string;
+                /** @description Filter trips starting on or after this date (YYYY-MM-DD) */
+                startDate?: string;
+                /** @description Filter trips ending on or before this date (YYYY-MM-DD) */
+                endDate?: string;
                 /** @description The collection page number */
                 page?: number;
                 /** @description The number of items per page */
