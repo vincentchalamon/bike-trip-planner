@@ -296,7 +296,8 @@
     "deleteError": "Impossible de supprimer le voyage. Veuillez réessayer.",
     "previousPage": "Page précédente",
     "nextPage": "Page suivante",
-    "page": "Page {current} sur {total}"
+    "page": "Page {current} sur {total}",
+    "retry": "Réessayer"
   },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",

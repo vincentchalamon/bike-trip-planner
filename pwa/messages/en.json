@@ -296,7 +296,8 @@
     "deleteError": "Failed to delete trip. Please try again.",
     "previousPage": "Previous page",
     "nextPage": "Next page",
-    "page": "Page {current} of {total}"
+    "page": "Page {current} of {total}",
+    "retry": "Try again"
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",

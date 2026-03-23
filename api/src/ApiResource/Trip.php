@@ -28,6 +28,7 @@ use App\State\TripUpdateProcessor;
             paginationEnabled: true,
             paginationItemsPerPage: 20,
             paginationClientItemsPerPage: true,
+            output: TripListItem::class,
             provider: TripCollectionProvider::class,
         ),
         new Post(

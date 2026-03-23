@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ApiResource;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\OpenApi\Model\Operation;
@@ -45,6 +46,23 @@ final readonly class TripDetail
         public int $departureHour,
         /** @var string[] */
         public array $enabledAccommodationTypes,
+        #[ApiProperty(openapiContext: [
+            'type' => 'array',
+            'items' => [
+                'type' => 'object',
+                'properties' => [
+                    'dayNumber' => ['type' => 'integer'],
+                    'distance' => ['type' => 'number', 'format' => 'float'],
+                    'elevation' => ['type' => 'number', 'format' => 'float'],
+                    'elevationLoss' => ['type' => 'number', 'format' => 'float'],
+                    'startPoint' => ['type' => 'object', 'properties' => ['lat' => ['type' => 'number'], 'lon' => ['type' => 'number'], 'ele' => ['type' => 'number']]],
+                    'endPoint' => ['type' => 'object', 'properties' => ['lat' => ['type' => 'number'], 'lon' => ['type' => 'number'], 'ele' => ['type' => 'number']]],
+                    'geometry' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['lat' => ['type' => 'number'], 'lon' => ['type' => 'number'], 'ele' => ['type' => 'number']]]],
+                    'label' => ['type' => 'string', 'nullable' => true],
+                    'isRestDay' => ['type' => 'boolean'],
+                ],
+            ],
+        ])]
         /** @var list<array<string, mixed>> */
         public array $stages,
     ) {

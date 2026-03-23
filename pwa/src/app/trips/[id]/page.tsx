@@ -86,36 +86,38 @@ function TripLoader({ tripId }: { tripId: string }) {
 
         // Convert stages to Zustand StageData shape
         const stages: StageData[] = (data.stages ?? []).map((s) => {
-          const stage = s as Record<string, unknown>;
+          // Cast to unknown first for fields not described in the OpenAPI annotation
+          // (weather, alerts, pois, accommodations, selectedAccommodation)
+          const extra = s as Record<string, unknown>;
           return {
-            dayNumber: (stage.dayNumber as number) ?? 0,
-            distance: (stage.distance as number) ?? 0,
-            elevation: (stage.elevation as number) ?? 0,
-            elevationLoss: (stage.elevationLoss as number) ?? 0,
-            startPoint: (stage.startPoint as StageData["startPoint"]) ?? {
+            dayNumber: s.dayNumber ?? 0,
+            distance: s.distance ?? 0,
+            elevation: s.elevation ?? 0,
+            elevationLoss: s.elevationLoss ?? 0,
+            startPoint: (s.startPoint as StageData["startPoint"]) ?? {
               lat: 0,
               lon: 0,
               ele: 0,
             },
-            endPoint: (stage.endPoint as StageData["endPoint"]) ?? {
+            endPoint: (s.endPoint as StageData["endPoint"]) ?? {
               lat: 0,
               lon: 0,
               ele: 0,
             },
-            geometry: (stage.geometry as StageData["geometry"]) ?? [],
-            label: (stage.label as string | null) ?? null,
+            geometry: (s.geometry as StageData["geometry"]) ?? [],
+            label: s.label ?? null,
             startLabel: null,
             endLabel: null,
-            weather: (stage.weather as StageData["weather"]) ?? null,
-            alerts: (stage.alerts as StageData["alerts"]) ?? [],
-            pois: (stage.pois as StageData["pois"]) ?? [],
+            weather: (extra.weather as StageData["weather"]) ?? null,
+            alerts: (extra.alerts as StageData["alerts"]) ?? [],
+            pois: (extra.pois as StageData["pois"]) ?? [],
             accommodations:
-              (stage.accommodations as StageData["accommodations"]) ?? [],
+              (extra.accommodations as StageData["accommodations"]) ?? [],
             selectedAccommodation:
-              (stage.selectedAccommodation as StageData["selectedAccommodation"]) ??
+              (extra.selectedAccommodation as StageData["selectedAccommodation"]) ??
               null,
             accommodationSearchRadiusKm: 5,
-            isRestDay: (stage.isRestDay as boolean) ?? false,
+            isRestDay: s.isRestDay ?? false,
             supplyTimeline: [],
           };
         });

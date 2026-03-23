@@ -731,7 +731,30 @@ export interface components {
             enabledAccommodationTypes?: string[];
             /** @description Serialized stage DTOs */
             stages?: {
-                [key: string]: string | null;
+                dayNumber?: number;
+                /** Format: float */
+                distance?: number;
+                /** Format: float */
+                elevation?: number;
+                /** Format: float */
+                elevationLoss?: number;
+                startPoint?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                };
+                endPoint?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                };
+                geometry?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                }[];
+                label?: string | null;
+                isRestDay?: boolean;
             }[];
         };
         "WeatherForecast.fit": {
