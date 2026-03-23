@@ -62,9 +62,8 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
 
         $request = $this->tripStateManager->getRequest($tripId);
-        if ($request instanceof \App\ApiResource\TripRequest) {
-            $this->tripLocker->assertNotLocked($request);
-        }
+        \assert($request instanceof \App\ApiResource\TripRequest);
+        $this->tripLocker->assertNotLocked($request);
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
 

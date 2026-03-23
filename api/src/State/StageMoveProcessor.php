@@ -44,9 +44,8 @@ final readonly class StageMoveProcessor implements ProcessorInterface
         $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
-        if ($tripRequest instanceof \App\ApiResource\TripRequest) {
-            $this->tripLocker->assertNotLocked($tripRequest);
-        }
+        \assert($tripRequest instanceof \App\ApiResource\TripRequest);
+        $this->tripLocker->assertNotLocked($tripRequest);
 
         if (null === $data->toIndex) {
             throw new UnprocessableEntityHttpException('toIndex is required.');

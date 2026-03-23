@@ -54,9 +54,8 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
         $index = (int) $rawIndex;
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
-        if ($tripRequest instanceof \App\ApiResource\TripRequest) {
-            $this->tripLocker->assertNotLocked($tripRequest);
-        }
+        \assert($tripRequest instanceof \App\ApiResource\TripRequest);
+        $this->tripLocker->assertNotLocked($tripRequest);
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
 

@@ -45,9 +45,8 @@ final readonly class StageCreateProcessor implements ProcessorInterface
         $tripId = $uriVariables['tripId'] ?? '';
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
-        if ($tripRequest instanceof \App\ApiResource\TripRequest) {
-            $this->tripLocker->assertNotLocked($tripRequest);
-        }
+        \assert($tripRequest instanceof \App\ApiResource\TripRequest);
+        $this->tripLocker->assertNotLocked($tripRequest);
 
         if (null === $data->startPoint || null === $data->endPoint) {
             throw new UnprocessableEntityHttpException('startPoint and endPoint are required to create a stage.');
