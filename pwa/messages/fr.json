@@ -285,8 +285,6 @@
     "filterPlaceholder": "Rechercher par titre...",
     "startDateFilter": "Date de début (à partir du)",
     "endDateFilter": "Date de fin (jusqu'au)",
-    "shareTrip": "Partager le voyage",
-    "duplicateTrip": "Dupliquer le voyage",
     "deleteTrip": "Supprimer le voyage",
     "deleteTripConfirmTitle": "Supprimer le voyage ?",
     "deleteTripConfirmDescription": "Cette action est irréversible. Toutes les étapes et données de « {title} » seront définitivement supprimées.",

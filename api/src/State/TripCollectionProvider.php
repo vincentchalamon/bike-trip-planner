@@ -82,13 +82,16 @@ final readonly class TripCollectionProvider implements ProviderInterface
 
         // Fetch only the current page using SQL LIMIT/OFFSET, and JOIN FETCH
         // stages to avoid N+1 queries when computing totals in toListItem().
+        // Use Doctrine Paginator with fetchJoinCollection=true so that
+        // setMaxResults limits *entities*, not SQL rows (fetch-join multiplies rows).
         $qb->leftJoin('t.stages', 's')
             ->addSelect('s')
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 
+        $paginator = new \Doctrine\ORM\Tools\Pagination\Paginator($qb->getQuery(), fetchJoinCollection: true);
         /** @var list<TripRequest> $entities */
-        $entities = $qb->getQuery()->getResult();
+        $entities = iterator_to_array($paginator->getIterator());
 
         $items = array_map($this->toListItem(...), $entities);
 
