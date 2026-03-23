@@ -21,6 +21,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -175,5 +176,34 @@ final class StageDeleteProcessorTest extends TestCase
         $this->assertSame('trip-1', $weatherMessages[0]->tripId);
         $this->assertCount(1, $calendarMessages);
         $this->assertSame('trip-1', $calendarMessages[0]->tripId);
+    }
+
+    #[Test]
+    public function lockedTripThrowsHttpException(): void
+    {
+        $lockedRequest = new TripRequest();
+        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getRequest')->willReturn($lockedRequest);
+        $tripStateManager->method('getStages')->willReturn([]);
+
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('increment')->willReturn(1);
+
+        $processor = new StageDeleteProcessor(
+            $tripStateManager,
+            $this->createStub(MessageBusInterface::class),
+            $this->createStub(DistanceCalculatorInterface::class),
+            $generationTracker,
+            new TripLocker(),
+        );
+
+        try {
+            $processor->process(null, new Delete(), ['tripId' => 'trip-1', 'index' => 0]);
+            self::fail('Expected HttpException to be thrown.');
+        } catch (HttpException $httpException) {
+            self::assertSame(423, $httpException->getStatusCode());
+        }
     }
 }
