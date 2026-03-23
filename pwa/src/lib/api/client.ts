@@ -233,18 +233,14 @@ export async function uploadGpxFile(
 export async function duplicateTrip(
   tripId: string,
 ): Promise<{ id: string; computationStatus: Record<string, string> } | null> {
-  const res = await apiFetch(`/trips/${encodeURIComponent(tripId)}/duplicate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/ld+json" },
+  const { data, error } = await apiClient.POST("/trips/{id}/duplicate", {
+    params: { path: { id: tripId } },
   });
-  if (!res.ok) return null;
-  const data = (await res.json()) as {
-    id?: string;
-    computationStatus?: Record<string, string>;
+  if (error || !data?.id) return null;
+  return {
+    id: data.id,
+    computationStatus: (data.computationStatus as Record<string, string>) ?? {},
   };
-  return data.id
-    ? { id: data.id, computationStatus: data.computationStatus ?? {} }
-    : null;
 }
 
 /**
