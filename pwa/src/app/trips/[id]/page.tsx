@@ -86,9 +86,6 @@ function TripLoader({ tripId }: { tripId: string }) {
 
         // Convert stages to Zustand StageData shape
         const stages: StageData[] = (data.stages ?? []).map((s) => {
-          // Cast to unknown first for fields not described in the OpenAPI annotation
-          // (weather, alerts, pois, accommodations, selectedAccommodation)
-          const extra = s as Record<string, unknown>;
           return {
             dayNumber: s.dayNumber ?? 0,
             distance: s.distance ?? 0,
@@ -108,13 +105,13 @@ function TripLoader({ tripId }: { tripId: string }) {
             label: s.label ?? null,
             startLabel: null,
             endLabel: null,
-            weather: (extra.weather as StageData["weather"]) ?? null,
-            alerts: (extra.alerts as StageData["alerts"]) ?? [],
-            pois: (extra.pois as StageData["pois"]) ?? [],
+            weather: (s.weather as StageData["weather"]) ?? null,
+            alerts: (s.alerts as StageData["alerts"]) ?? [],
+            pois: (s.pois as StageData["pois"]) ?? [],
             accommodations:
-              (extra.accommodations as StageData["accommodations"]) ?? [],
+              (s.accommodations as StageData["accommodations"]) ?? [],
             selectedAccommodation:
-              (extra.selectedAccommodation as StageData["selectedAccommodation"]) ??
+              (s.selectedAccommodation as StageData["selectedAccommodation"]) ??
               null,
             accommodationSearchRadiusKm: 5,
             isRestDay: s.isRestDay ?? false,

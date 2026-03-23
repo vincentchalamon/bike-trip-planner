@@ -755,6 +755,56 @@ export interface components {
                 }[];
                 label?: string | null;
                 isRestDay?: boolean;
+                weather?: {
+                    icon?: string;
+                    description?: string;
+                    tempMin?: number;
+                    tempMax?: number;
+                    windSpeed?: number;
+                    windDirection?: string;
+                    precipitationProbability?: number;
+                    humidity?: number;
+                    comfortIndex?: number;
+                    relativeWindDirection?: string;
+                } | null;
+                alerts?: {
+                    /** @enum {string} */
+                    type?: "critical" | "warning" | "nudge";
+                    message?: string;
+                    lat?: number | null;
+                    lon?: number | null;
+                }[];
+                pois?: {
+                    name?: string;
+                    category?: string;
+                    lat?: number;
+                    lon?: number;
+                    distanceFromStart?: number | null;
+                }[];
+                accommodations?: {
+                    name?: string;
+                    type?: string;
+                    lat?: number;
+                    lon?: number;
+                    estimatedPriceMin?: number;
+                    estimatedPriceMax?: number;
+                    isExactPrice?: boolean;
+                    url?: string | null;
+                    possibleClosed?: boolean;
+                    distanceToEndPoint?: number;
+                }[];
+                selectedAccommodation?: {
+                    name?: string;
+                    type?: string;
+                    lat?: number;
+                    lon?: number;
+                    estimatedPriceMin?: number;
+                    estimatedPriceMax?: number;
+                    isExactPrice?: boolean;
+                    url?: string | null;
+                    possibleClosed?: boolean;
+                    distanceToEndPoint?: number;
+                } | null;
             }[];
         };
         "WeatherForecast.fit": {
