@@ -22,6 +22,25 @@ jobs:
     container:
       image: docker.io/esoledad/php:8.5
       options: --user root
+    services:
+      database:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: "!ChangeMe!"
+          POSTGRES_DB: app_test
+        options: >-
+          --health-cmd "pg_isready -U app -d app_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     strategy:
       fail-fast: false
       matrix:
@@ -53,6 +72,8 @@ jobs:
         working-directory: ${{ matrix.project }}
         env:
           XDEBUG_MODE: coverage
+          DATABASE_URL: "postgresql://app:!ChangeMe!@database:5432/app?serverVersion=18&charset=utf8"
+          REDIS_URL: "redis://redis:6379"
         run: vendor/bin/phpunit --coverage-clover coverage/clover.xml
       - name: Upload coverage report
         if: always()

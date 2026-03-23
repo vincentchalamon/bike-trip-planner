@@ -16,9 +16,14 @@ use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
+use Zenstruck\Foundry\Test\Factories;
+use Zenstruck\Foundry\Attribute\ResetDatabase;
 
+#[ResetDatabase]
 final class StageUpdateTest extends ApiTestCase
 {
+    use Factories;
+
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000020';
 
     private function seedTripWithStages(string $tripId, int $stageCount = 3): void
@@ -57,12 +62,6 @@ final class StageUpdateTest extends ApiTestCase
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
         $tracker->initializeComputations($tripId, ComputationName::cases());
-    }
-
-    #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
     }
 
     #[Test]

@@ -10,6 +10,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             'persistence' => [
                 'flush_once' => true,
             ],
+            'orm' => [
+                'reset' => [
+                    'mode' => 'migrate',
+                ],
+            ],
         ]);
     }
 };
