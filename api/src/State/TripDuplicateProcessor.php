@@ -72,20 +72,27 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
             $this->entityManager->persist($clonedStage);
         }
 
-        $this->entityManager->flush();
+        $this->entityManager->beginTransaction();
+        try {
+            $this->entityManager->flush();
 
-        // Copy transient Redis data from source trip to duplicate
-        $this->copyTransientData($sourceId, $newTripIdString, $duplicate);
+            // Copy transient Redis data from source trip to duplicate
+            $this->copyTransientData($sourceId, $newTripIdString, $duplicate);
 
-        // Initialize computation tracker as done (all computations are inherited from source)
-        $computations = ComputationName::pipeline();
-        $this->computationTracker->initializeComputations($newTripIdString, $computations);
+            // Initialize computation tracker as done (all computations are inherited from source)
+            $computations = ComputationName::pipeline();
+            $this->computationTracker->initializeComputations($newTripIdString, $computations);
 
-        foreach ($computations as $computation) {
-            $this->computationTracker->markDone($newTripIdString, $computation);
+            foreach ($computations as $computation) {
+                $this->computationTracker->markDone($newTripIdString, $computation);
+            }
+
+            $this->generationTracker->initialize($newTripIdString);
+            $this->entityManager->commit();
+        } catch (\Throwable $throwable) {
+            $this->entityManager->rollback();
+            throw $throwable;
         }
-
-        $this->generationTracker->initialize($newTripIdString);
 
         $statuses = $this->computationTracker->getStatuses($newTripIdString) ?? [];
 

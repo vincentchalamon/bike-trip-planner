@@ -12,16 +12,15 @@ use App\Repository\DoctrineTripRequestRepository;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\IdempotencyCheckerInterface;
 use PHPUnit\Framework\Attributes\Test;
+use Zenstruck\Foundry\Test\Factories;
+use Zenstruck\Foundry\Test\ResetDatabase;
 
 final class TripDuplicateTest extends ApiTestCase
 {
-    private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000002';
+    use ResetDatabase;
+    use Factories;
 
-    #[\Override]
-    public static function setUpBeforeClass(): void
-    {
-        self::$alwaysBootKernel = false;
-    }
+    private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000002';
 
     private function seedTrip(string $tripId): void
     {

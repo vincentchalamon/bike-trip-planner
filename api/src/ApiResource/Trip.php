@@ -68,7 +68,12 @@ use App\State\TripUpdateProcessor;
         new Post(
             uriTemplate: '/trips/{id}/duplicate{._format}',
             status: 201,
-            openapi: new Operation(summary: 'Duplicate an existing trip, deep-cloning all its stages and settings.'),
+            openapi: new Operation(
+                responses: [
+                    404 => new \ApiPlatform\OpenApi\Model\Response(description: 'Trip not found'),
+                ],
+                summary: 'Duplicate an existing trip, deep-cloning all its stages and settings.',
+            ),
             input: false,
             provider: TripRequestProvider::class,
             processor: TripDuplicateProcessor::class,
