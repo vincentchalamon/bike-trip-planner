@@ -28,7 +28,7 @@ jobs:
         env:
           POSTGRES_USER: app
           POSTGRES_PASSWORD: "!ChangeMe!"
-          POSTGRES_DB: app
+          POSTGRES_DB: app_test
         options: >-
           --health-cmd "pg_isready -U app -d app_test"
           --health-interval 5s
