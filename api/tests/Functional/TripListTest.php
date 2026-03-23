@@ -109,4 +109,40 @@ final class TripListTest extends ApiTestCase
         $this->assertArrayHasKey('createdAt', $member);
         $this->assertArrayHasKey('updatedAt', $member);
     }
+
+    #[Test]
+    public function listTripsFilterByStartDate(): void
+    {
+        $this->seedTrip(self::TRIP_ID_1, title: 'Early trip', startDate: new \DateTimeImmutable('2025-06-01'));
+        $this->seedTrip(self::TRIP_ID_2, title: 'Late trip', startDate: new \DateTimeImmutable('2025-09-01'));
+
+        $response = self::createClient()->request('GET', '/trips?startDate=2025-08-01', [
+            'headers' => ['Accept' => 'application/ld+json'],
+        ]);
+
+        $this->assertResponseIsSuccessful();
+
+        $data = $response->toArray(false);
+        $ids = array_column($data['member'], 'id');
+        $this->assertContains(self::TRIP_ID_2, $ids);
+        $this->assertNotContains(self::TRIP_ID_1, $ids);
+    }
+
+    #[Test]
+    public function listTripsFilterByEndDate(): void
+    {
+        $this->seedTrip(self::TRIP_ID_1, title: 'Short trip', endDate: new \DateTimeImmutable('2025-06-15'));
+        $this->seedTrip(self::TRIP_ID_2, title: 'Long trip', endDate: new \DateTimeImmutable('2025-09-30'));
+
+        $response = self::createClient()->request('GET', '/trips?endDate=2025-07-01', [
+            'headers' => ['Accept' => 'application/ld+json'],
+        ]);
+
+        $this->assertResponseIsSuccessful();
+
+        $data = $response->toArray(false);
+        $ids = array_column($data['member'], 'id');
+        $this->assertContains(self::TRIP_ID_1, $ids);
+        $this->assertNotContains(self::TRIP_ID_2, $ids);
+    }
 }
