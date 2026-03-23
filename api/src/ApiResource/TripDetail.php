@@ -58,7 +58,7 @@ final readonly class TripDetail
                     'startPoint' => ['type' => 'object', 'properties' => ['lat' => ['type' => 'number'], 'lon' => ['type' => 'number'], 'ele' => ['type' => 'number']]],
                     'endPoint' => ['type' => 'object', 'properties' => ['lat' => ['type' => 'number'], 'lon' => ['type' => 'number'], 'ele' => ['type' => 'number']]],
                     'geometry' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['lat' => ['type' => 'number'], 'lon' => ['type' => 'number'], 'ele' => ['type' => 'number']]]],
-                    'label' => ['type' => 'string', 'nullable' => true],
+                    'label' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
                     'isRestDay' => ['type' => 'boolean'],
                 ],
             ],
