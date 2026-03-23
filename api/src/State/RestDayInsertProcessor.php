@@ -29,6 +29,7 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private ObjectMapperInterface $objectMapper,
         private TripGenerationTrackerInterface $generationTracker,
+        private TripLocker $tripLocker,
     ) {
     }
 
@@ -40,6 +41,10 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
     {
         $tripId = $uriVariables['tripId'] ?? '';
         $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
+
+        $tripRequest = $this->tripStateManager->getRequest($tripId);
+        \assert($tripRequest instanceof \App\ApiResource\TripRequest);
+        $this->tripLocker->assertNotLocked($tripRequest);
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
 

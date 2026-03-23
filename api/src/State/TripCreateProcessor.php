@@ -29,6 +29,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
         private RequestStack $requestStack,
+        private TripLocker $tripLocker,
     ) {
     }
 
@@ -56,6 +57,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         return new Trip(
             id: $tripId,
             computationStatus: $this->buildInitialStatus($computations),
+            isLocked: $this->tripLocker->isLocked($data),
         );
     }
 

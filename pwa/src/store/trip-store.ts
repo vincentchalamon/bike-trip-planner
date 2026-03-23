@@ -23,6 +23,7 @@ interface TripIdentity {
 
 interface TripState {
   trip: TripIdentity | null;
+  isLocked: boolean;
   totalDistance: number | null;
   totalElevation: number | null;
   totalElevationLoss: number | null;
@@ -99,6 +100,7 @@ interface TripState {
   setEbikeMode: (ebikeMode: boolean) => void;
   setEnabledAccommodationTypes: (types: AccommodationType[]) => void;
   setComputationStatus: (status: Record<string, string>) => void;
+  setIsLocked: (isLocked: boolean) => void;
   deleteStage: (stageIndex: number) => void;
   insertRestDay: (afterIndex: number) => void;
   /** Optimistically inserts a stage placeholder at `afterIndex + 1`. Undoable. */
@@ -116,6 +118,7 @@ interface TripState {
 
 const initialState = {
   trip: null,
+  isLocked: false,
   totalDistance: null,
   totalElevation: null,
   totalElevationLoss: null,
@@ -380,6 +383,11 @@ export const useTripStore = create<TripState>()(
     setComputationStatus: (status) =>
       set((state) => {
         state.computationStatus = status;
+      }),
+
+    setIsLocked: (isLocked) =>
+      set((state) => {
+        state.isLocked = isLocked;
       }),
 
     deleteStage: (stageIndex) => {

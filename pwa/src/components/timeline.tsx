@@ -15,6 +15,8 @@ interface TimelineProps {
   stages: StageData[];
   startDate: string | null;
   isProcessing?: boolean;
+  /** When true, all edit controls are disabled (trip is locked). */
+  readOnly?: boolean;
   onDeleteStage: (index: number) => void;
   onAddStage: (afterIndex: number) => void;
   onInsertRestDay?: (afterIndex: number) => void;
@@ -63,6 +65,7 @@ export function Timeline({
   stages,
   startDate,
   isProcessing,
+  readOnly = false,
   onDeleteStage,
   onAddStage,
   onInsertRestDay,
@@ -220,7 +223,7 @@ export function Timeline({
                     <RestDayCard
                       dayNumber={stage.dayNumber}
                       stageIndex={originalIndex}
-                      canDelete={stages.length > 2}
+                      canDelete={!readOnly && stages.length > 2}
                       onDelete={() => onDeleteStage(originalIndex)}
                     />
                   ) : (
@@ -229,11 +232,12 @@ export function Timeline({
                       stageIndex={originalIndex}
                       isFirst={originalIndex === 0}
                       isLast={originalIndex === stages.length - 1}
-                      canDelete={stages.length > 2}
+                      canDelete={!readOnly && stages.length > 2}
                       isProcessing={isProcessing}
+                      readOnly={readOnly}
                       onDelete={() => onDeleteStage(originalIndex)}
                       onDistanceChange={
-                        onDistanceChange
+                        !readOnly && onDistanceChange
                           ? (d) => onDistanceChange(originalIndex, d)
                           : undefined
                       }
@@ -247,23 +251,23 @@ export function Timeline({
                         onRemoveAccommodation(originalIndex, accIdx)
                       }
                       onSelectAccommodation={
-                        onSelectAccommodation
+                        !readOnly && onSelectAccommodation
                           ? (accIdx) =>
                               onSelectAccommodation(originalIndex, accIdx)
                           : undefined
                       }
                       onDeselectAccommodation={
-                        onDeselectAccommodation
+                        !readOnly && onDeselectAccommodation
                           ? () => onDeselectAccommodation(originalIndex)
                           : undefined
                       }
                       onExpandAccommodationRadius={
-                        onExpandAccommodationRadius
+                        !readOnly && onExpandAccommodationRadius
                           ? (r) => onExpandAccommodationRadius(originalIndex, r)
                           : undefined
                       }
                       onAddPoiWaypoint={
-                        onAddPoiWaypoint
+                        !readOnly && onAddPoiWaypoint
                           ? (lat, lon) =>
                               onAddPoiWaypoint(originalIndex, lat, lon)
                           : undefined
@@ -284,8 +288,8 @@ export function Timeline({
             </div>
           ))}
 
-          {/* Add stage / rest day buttons between day groups */}
-          {groupIndex < dayGroups.length - 1 && (
+          {/* Add stage / rest day buttons between day groups — hidden in read-only mode */}
+          {!readOnly && groupIndex < dayGroups.length - 1 && (
             <div className="flex items-center mb-4">
               <TimelineMarker />
               <div className="ml-6 md:ml-12 flex-1 min-w-0 flex flex-wrap gap-2">

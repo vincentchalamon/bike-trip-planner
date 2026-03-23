@@ -6,6 +6,7 @@ import { Settings, HelpCircle, Loader2 } from "lucide-react";
 import { MagicLinkInput } from "@/components/magic-link-input";
 import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
+import { TripLockedBanner } from "@/components/trip-locked-banner";
 import { TripSummary } from "@/components/trip-summary";
 import { TripHeader } from "@/components/trip-header";
 import { TripDownloads } from "@/components/trip-downloads";
@@ -33,6 +34,7 @@ export function TripPlanner() {
   const t = useTranslations();
   const {
     trip,
+    isLocked,
     totalDistance,
     totalElevation,
     totalElevationLoss,
@@ -317,6 +319,13 @@ export function TripPlanner() {
               {actionButtons}
             </div>
 
+            {/* Locked banner */}
+            {isLocked && (
+              <div className="mt-4">
+                <TripLockedBanner />
+              </div>
+            )}
+
             <div className="mt-8 space-y-8">
               {/* Summary */}
               <TripSummary
@@ -400,6 +409,7 @@ export function TripPlanner() {
                       stages={stages}
                       startDate={startDate}
                       isProcessing={isProcessing}
+                      readOnly={isLocked}
                       onDeleteStage={handleDeleteStage}
                       onAddStage={handleAddStage}
                       onDistanceChange={handleDistanceChange}
@@ -472,6 +482,7 @@ export function TripPlanner() {
           onEbikeModeChange={handleEbikeModeChange}
           onDepartureHourChange={handleDepartureHourChange}
           onAccommodationTypesChange={handleAccommodationTypesChange}
+          readOnly={isLocked}
         />
 
         {/* Keyboard shortcuts help modal */}

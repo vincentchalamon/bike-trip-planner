@@ -48,6 +48,8 @@ interface ConfigPanelProps {
   onEbikeModeChange: (ebikeMode: boolean) => void;
   onDepartureHourChange: (departureHour: number) => void;
   onAccommodationTypesChange: (types: AccommodationType[]) => void;
+  /** When true, date/pacing/accommodation controls are disabled (trip is locked). */
+  readOnly?: boolean;
 }
 
 export function ConfigPanel({
@@ -66,6 +68,7 @@ export function ConfigPanel({
   onEbikeModeChange,
   onDepartureHourChange,
   onAccommodationTypesChange,
+  readOnly = false,
 }: ConfigPanelProps) {
   const t = useTranslations("config");
   const tAccommodation = useTranslations("accommodation");
@@ -205,6 +208,7 @@ export function ConfigPanel({
               startDate={startDate}
               endDate={endDate}
               onDatesChange={onDatesChange}
+              disabled={readOnly}
             />
           </section>
 
@@ -218,18 +222,23 @@ export function ConfigPanel({
             <h3 id="config-pacing-heading" className="text-sm font-medium mb-3">
               {t("pacingTitle")}
             </h3>
-            <PacingSettings
-              fatigueFactor={fatigueFactor}
-              elevationPenalty={elevationPenalty}
-              maxDistancePerDay={maxDistancePerDay}
-              averageSpeed={averageSpeed}
-              ebikeMode={ebikeMode}
-              departureHour={departureHour}
-              onUpdate={onPacingUpdate}
-              onCommit={onPacingCommit}
-              onEbikeModeChange={onEbikeModeChange}
-              onDepartureHourChange={onDepartureHourChange}
-            />
+            <fieldset
+              disabled={readOnly}
+              className={cn("border-0 p-0 m-0", readOnly && "opacity-60")}
+            >
+              <PacingSettings
+                fatigueFactor={fatigueFactor}
+                elevationPenalty={elevationPenalty}
+                maxDistancePerDay={maxDistancePerDay}
+                averageSpeed={averageSpeed}
+                ebikeMode={ebikeMode}
+                departureHour={departureHour}
+                onUpdate={onPacingUpdate}
+                onCommit={onPacingCommit}
+                onEbikeModeChange={onEbikeModeChange}
+                onDepartureHourChange={onDepartureHourChange}
+              />
+            </fieldset>
           </section>
 
           <Separator />
@@ -242,40 +251,50 @@ export function ConfigPanel({
             >
               {t("accommodationTitle")}
             </h3>
-            <div className="flex flex-col gap-2">
-              {FILTERABLE_ACCOMMODATION_TYPES.map((type) => {
-                const isEnabled = enabledAccommodationTypes.includes(type);
-                const isLastEnabled =
-                  isEnabled && enabledAccommodationTypes.length <= 1;
-                return (
-                  <div key={type} className="flex items-center gap-2">
-                    <Switch
-                      id={`acc-type-${type}`}
-                      size="sm"
-                      checked={isEnabled}
-                      onCheckedChange={() =>
-                        handleAccommodationTypeToggle(type)
-                      }
-                      disabled={isLastEnabled}
-                      aria-label={tAccommodation(
-                        `type_${type}` as Parameters<typeof tAccommodation>[0],
-                      )}
-                    />
-                    <label
-                      htmlFor={`acc-type-${type}`}
-                      className={cn(
-                        "text-sm cursor-pointer",
-                        isLastEnabled && "opacity-50 cursor-not-allowed",
-                      )}
-                    >
-                      {tAccommodation(
-                        `type_${type}` as Parameters<typeof tAccommodation>[0],
-                      )}
-                    </label>
-                  </div>
-                );
-              })}
-            </div>
+            <fieldset
+              disabled={readOnly}
+              className={cn("border-0 p-0 m-0", readOnly && "opacity-60")}
+            >
+              <div className="flex flex-col gap-2">
+                {FILTERABLE_ACCOMMODATION_TYPES.map((type) => {
+                  const isEnabled = enabledAccommodationTypes.includes(type);
+                  const isLastEnabled =
+                    isEnabled && enabledAccommodationTypes.length <= 1;
+                  return (
+                    <div key={type} className="flex items-center gap-2">
+                      <Switch
+                        id={`acc-type-${type}`}
+                        size="sm"
+                        checked={isEnabled}
+                        onCheckedChange={() =>
+                          handleAccommodationTypeToggle(type)
+                        }
+                        disabled={isLastEnabled || readOnly}
+                        aria-label={tAccommodation(
+                          `type_${type}` as Parameters<
+                            typeof tAccommodation
+                          >[0],
+                        )}
+                      />
+                      <label
+                        htmlFor={`acc-type-${type}`}
+                        className={cn(
+                          "text-sm cursor-pointer",
+                          (isLastEnabled || readOnly) &&
+                            "opacity-50 cursor-not-allowed",
+                        )}
+                      >
+                        {tAccommodation(
+                          `type_${type}` as Parameters<
+                            typeof tAccommodation
+                          >[0],
+                        )}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            </fieldset>
           </section>
 
           <Separator />

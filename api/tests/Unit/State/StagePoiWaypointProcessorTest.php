@@ -9,15 +9,18 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\StagePoiWaypointRequest;
 use App\ApiResource\StageResponse;
+use App\ApiResource\TripRequest;
 use App\Message\RecalculateRouteSegment;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StagePoiWaypointProcessor;
+use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -44,11 +47,16 @@ final class StagePoiWaypointProcessorTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('current')->willReturn(1);
 
+        $unlockedRequest = new TripRequest();
+        $unlockedRequest->startDate = new \DateTimeImmutable('+30 days');
+        $this->tripStateManager->method('getRequest')->willReturn($unlockedRequest);
+
         $this->processor = new StagePoiWaypointProcessor(
             $this->tripStateManager,
             $this->messageBus,
             $this->objectMapper,
             $generationTracker,
+            new TripLocker(),
         );
     }
 
@@ -110,5 +118,37 @@ final class StagePoiWaypointProcessorTest extends TestCase
 
         $data = new StagePoiWaypointRequest(waypointLat: 48.2, waypointLon: 2.3);
         $this->processor->process($data, new Post(), ['tripId' => 'trip-1', 'index' => 99]);
+    }
+
+    #[Test]
+    public function lockedTripThrowsHttpException(): void
+    {
+        $coord = new Coordinate(lat: 48.0, lon: 2.0);
+        $stage = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
+
+        $lockedRequest = new TripRequest();
+        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getRequest')->willReturn($lockedRequest);
+
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('current')->willReturn(1);
+
+        $processor = new StagePoiWaypointProcessor(
+            $tripStateManager,
+            $this->createStub(MessageBusInterface::class),
+            $this->createStub(ObjectMapperInterface::class),
+            $generationTracker,
+            new TripLocker(),
+        );
+
+        try {
+            $processor->process(new StagePoiWaypointRequest(waypointLat: 48.2, waypointLon: 2.3), new Post(), ['tripId' => 'trip-1', 'index' => 0]);
+            self::fail('Expected HttpException to be thrown.');
+        } catch (HttpException $httpException) {
+            self::assertSame(423, $httpException->getStatusCode());
+        }
     }
 }

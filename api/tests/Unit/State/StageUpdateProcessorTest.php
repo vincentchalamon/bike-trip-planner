@@ -9,14 +9,17 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
+use App\ApiResource\TripRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageUpdateProcessor;
+use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\ObjectMapper\ObjectMapperInterface;
@@ -44,6 +47,14 @@ final class StageUpdateProcessorTest extends TestCase
             static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']),
             $this->decimatedPointsRaw,
         );
+    }
+
+    private function makeUnlockedRequest(): TripRequest
+    {
+        $request = new TripRequest();
+        $request->startDate = new \DateTimeImmutable('+30 days');
+
+        return $request;
     }
 
     #[Test]
@@ -95,7 +106,7 @@ final class StageUpdateProcessorTest extends TestCase
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
-        $tripStateManager->method('getRequest')->willReturn(null);
+        $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
         $tripStateManager->method('storeStages')->willReturnCallback(
             static function (string $tripId, array $stages) use (&$storedStages): void {
                 $storedStages = $stages;
@@ -119,6 +130,7 @@ final class StageUpdateProcessorTest extends TestCase
             $routeSimplifier,
             $objectMapper,
             $generationTracker,
+            new TripLocker(),
         );
 
         $request = new StageRequest();
@@ -179,7 +191,7 @@ final class StageUpdateProcessorTest extends TestCase
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
-        $tripStateManager->method('getRequest')->willReturn(null);
+        $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
         $tripStateManager->method('storeStages')->willReturnCallback(
             static function (string $tripId, array $stages) use (&$storedStages): void {
                 $storedStages = $stages;
@@ -203,6 +215,7 @@ final class StageUpdateProcessorTest extends TestCase
             $routeSimplifier,
             $objectMapper,
             $generationTracker,
+            new TripLocker(),
         );
 
         $request = new StageRequest();
@@ -248,7 +261,7 @@ final class StageUpdateProcessorTest extends TestCase
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
-        $tripStateManager->method('getRequest')->willReturn(null);
+        $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
         $tripStateManager->method('storeStages')->willReturnCallback(
             static function (string $tripId, array $stages) use (&$storedStages): void {
                 $storedStages = $stages;
@@ -272,6 +285,7 @@ final class StageUpdateProcessorTest extends TestCase
             $routeSimplifier,
             $objectMapper,
             $generationTracker,
+            new TripLocker(),
         );
 
         $request = new StageRequest();
@@ -282,5 +296,41 @@ final class StageUpdateProcessorTest extends TestCase
         self::assertNotNull($storedStages);
         // Fallback: stage 1 startPoint must equal stage 0 endPoint to stay contiguous
         self::assertSame($storedStages[0]->endPoint, $storedStages[1]->startPoint);
+    }
+
+    #[Test]
+    public function lockedTripThrowsHttpException(): void
+    {
+        $p = $this->decimatedPoints;
+
+        $stages = [
+            new Stage(tripId: 't', dayNumber: 1, distance: 30.0, elevation: 10.0, startPoint: $p[0], endPoint: $p[1]),
+        ];
+
+        $lockedRequest = new TripRequest();
+        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn($stages);
+        $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
+        $tripStateManager->method('getRequest')->willReturn($lockedRequest);
+
+        $processor = new StageUpdateProcessor(
+            $tripStateManager,
+            $this->createStub(MessageBusInterface::class),
+            $this->createStub(DistanceCalculatorInterface::class),
+            $this->createStub(ElevationCalculatorInterface::class),
+            $this->createStub(RouteSimplifierInterface::class),
+            $this->createStub(ObjectMapperInterface::class),
+            $this->createStub(TripGenerationTrackerInterface::class),
+            new TripLocker(),
+        );
+
+        try {
+            $processor->process(new StageRequest(), new Patch(), ['tripId' => 't', 'index' => 0]);
+            self::fail('Expected HttpException to be thrown.');
+        } catch (HttpException $httpException) {
+            self::assertSame(423, $httpException->getStatusCode());
+        }
     }
 }

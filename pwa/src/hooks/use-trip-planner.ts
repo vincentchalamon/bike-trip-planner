@@ -77,6 +77,8 @@ export function useTripPlanner() {
     (s) => s.setEnabledAccommodationTypes,
   );
   const updateStageAlerts = useTripStore((s) => s.updateStageAlerts);
+  const isLocked = useTripStore((s) => s.isLocked);
+  const setIsLocked = useTripStore((s) => s.setIsLocked);
   const isProcessing = useUiStore((s) => s.isProcessing);
   const setProcessing = useUiStore((s) => s.setProcessing);
   const setAccommodationScanning = useUiStore(
@@ -124,6 +126,7 @@ export function useTripPlanner() {
         updateDatesInternal(today, null);
       }
 
+      setIsLocked(data.isLocked === true);
       setTrip({
         id: data.id ?? "",
         title: getRandomTripName(),
@@ -200,7 +203,7 @@ export function useTripPlanner() {
     if (!tripId) return;
 
     try {
-      const { error, response } = await apiClient.PATCH("/trips/{id}", {
+      const { data, error, response } = await apiClient.PATCH("/trips/{id}", {
         params: { path: { id: tripId } },
         headers: { "Content-Type": "application/merge-patch+json" },
         body: {
@@ -220,6 +223,7 @@ export function useTripPlanner() {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
       } else {
+        if (data) setIsLocked(data.isLocked === true);
         setProcessing(true);
         setAccommodationScanning(true);
       }
@@ -717,6 +721,7 @@ export function useTripPlanner() {
 
   return {
     trip,
+    isLocked,
     totalDistance,
     totalElevation,
     totalElevationLoss,

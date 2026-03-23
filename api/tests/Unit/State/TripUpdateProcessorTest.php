@@ -12,12 +12,14 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\IdempotencyCheckerInterface;
+use App\State\TripLocker;
 use App\State\TripUpdateProcessor;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -57,7 +59,43 @@ final class TripUpdateProcessorTest extends TestCase
             $this->idempotencyChecker,
             $generationTracker,
             $requestStack,
+            new TripLocker(),
         );
+    }
+
+    #[Test]
+    public function lockedTripThrowsHttpException(): void
+    {
+        $lockedRequest = new TripRequest();
+        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getRequest')->willReturn($lockedRequest);
+
+        $requestStack = $this->createStub(RequestStack::class);
+        $requestStack->method('getCurrentRequest')->willReturn(null);
+
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('increment')->willReturn(1);
+        $generationTracker->method('current')->willReturn(0);
+
+        $processor = new TripUpdateProcessor(
+            $this->createStub(MessageBusInterface::class),
+            $tripStateManager,
+            $this->createStub(ComputationTrackerInterface::class),
+            new ComputationDependencyResolver(),
+            $this->createStub(IdempotencyCheckerInterface::class),
+            $generationTracker,
+            $requestStack,
+            new TripLocker(),
+        );
+
+        try {
+            $processor->process(new TripRequest(), new Patch(), ['id' => 'trip-1']);
+            self::fail('Expected HttpException to be thrown.');
+        } catch (HttpException $httpException) {
+            self::assertSame(423, $httpException->getStatusCode());
+        }
     }
 
     #[Test]

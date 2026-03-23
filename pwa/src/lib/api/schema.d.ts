@@ -271,6 +271,7 @@ export interface components {
             computationStatus?: {
                 [key: string]: string;
             };
+            isLocked?: boolean;
         };
         "Alert.fit": {
             /** @enum {string} */
@@ -615,6 +616,7 @@ export interface components {
             computationStatus?: {
                 [key: string]: string;
             };
+            isLocked?: boolean;
         };
         "Trip.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
@@ -622,6 +624,7 @@ export interface components {
             computationStatus?: {
                 [key: string]: string;
             };
+            isLocked?: boolean;
         };
         "WeatherForecast.fit": {
             icon?: string;

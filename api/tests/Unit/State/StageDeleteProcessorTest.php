@@ -12,13 +12,16 @@ use App\Engine\DistanceCalculatorInterface;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
+use App\ApiResource\TripRequest;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageDeleteProcessor;
+use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -43,11 +46,17 @@ final class StageDeleteProcessorTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('increment')->willReturn(2);
 
+        // Return a non-locked request by default (startDate in the future)
+        $unlockedRequest = new TripRequest();
+        $unlockedRequest->startDate = new \DateTimeImmutable('+30 days');
+        $this->tripStateManager->method('getRequest')->willReturn($unlockedRequest);
+
         $this->processor = new StageDeleteProcessor(
             $this->tripStateManager,
             $this->messageBus,
             $this->distanceCalculator,
             $generationTracker,
+            new TripLocker(),
         );
     }
 
@@ -167,5 +176,34 @@ final class StageDeleteProcessorTest extends TestCase
         $this->assertSame('trip-1', $weatherMessages[0]->tripId);
         $this->assertCount(1, $calendarMessages);
         $this->assertSame('trip-1', $calendarMessages[0]->tripId);
+    }
+
+    #[Test]
+    public function lockedTripThrowsHttpException(): void
+    {
+        $lockedRequest = new TripRequest();
+        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getRequest')->willReturn($lockedRequest);
+        $tripStateManager->method('getStages')->willReturn([]);
+
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('increment')->willReturn(1);
+
+        $processor = new StageDeleteProcessor(
+            $tripStateManager,
+            $this->createStub(MessageBusInterface::class),
+            $this->createStub(DistanceCalculatorInterface::class),
+            $generationTracker,
+            new TripLocker(),
+        );
+
+        try {
+            $processor->process(null, new Delete(), ['tripId' => 'trip-1', 'index' => 0]);
+            self::fail('Expected HttpException to be thrown.');
+        } catch (HttpException $httpException) {
+            self::assertSame(423, $httpException->getStatusCode());
+        }
     }
 }

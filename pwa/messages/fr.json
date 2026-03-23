@@ -270,6 +270,9 @@
     "toggleHelp": "Afficher / masquer cette aide",
     "closePanels": "Fermer le panneau ouvert"
   },
+  "tripLocked": {
+    "banner": "Ce trip est en cours ou passé — consultation uniquement. Utilisez « Dupliquer » pour planifier une nouvelle variante."
+  },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",

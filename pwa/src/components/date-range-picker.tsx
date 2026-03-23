@@ -18,6 +18,8 @@ interface DateRangePickerProps {
   startDate: string | null;
   endDate: string | null;
   onDatesChange: (startDate: string | null, endDate: string | null) => void;
+  /** When true, the date picker is read-only (all interaction is disabled). */
+  disabled?: boolean;
 }
 
 interface CalendarDay {
@@ -220,6 +222,7 @@ export function DateRangePicker({
   startDate,
   endDate,
   onDatesChange,
+  disabled = false,
 }: DateRangePickerProps) {
   const t = useTranslations("calendar");
   const locale = useLocale();
@@ -309,13 +312,15 @@ export function DateRangePicker({
   };
 
   return (
-    <Popover open={open} onOpenChange={handleOpen}>
+    <Popover open={disabled ? false : open} onOpenChange={handleOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
+          disabled={disabled}
           className={cn(
             "flex items-center gap-2 w-full rounded-md border px-3 py-2 text-sm",
             "hover:bg-accent transition-colors cursor-pointer text-left",
+            disabled && "opacity-60 cursor-not-allowed pointer-events-none",
           )}
           data-testid="date-range-trigger"
         >
