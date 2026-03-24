@@ -76,7 +76,7 @@ final readonly class TripCollectionProvider implements ProviderInterface
 
         // Count total matching items at the SQL level (without LIMIT/OFFSET).
         $countQb = clone $qb;
-        $countQb->select('COUNT(DISTINCT t.id)');
+        $countQb->select('COUNT(DISTINCT t.id)')->resetDQLPart('orderBy');
 
         $totalItems = (int) $countQb->getQuery()->getSingleScalarResult();
 
