@@ -7,6 +7,7 @@ namespace App\Tests\Functional;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Entity\Stage;
 use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
 use App\Repository\TripRequestRepositoryInterface;
@@ -30,6 +31,20 @@ final class TripDuplicateTest extends ApiTestCase
         $request->fatigueFactor = 0.85;
         $request->elevationPenalty = 40.0;
         $request->title = 'Test Trip';
+
+        // Add a stage so cloneStage() is exercised during duplication
+        $stage = new Stage($request);
+        $stage->setPosition(0);
+        $stage->setDayNumber(1);
+        $stage->setDistance(80.0);
+        $stage->setElevation(500.0);
+        $stage->setStartLat(45.0);
+        $stage->setStartLon(6.0);
+        $stage->setEndLat(45.5);
+        $stage->setEndLon(6.5);
+        $stage->setLabel('Day 1');
+
+        $request->addStage($stage);
 
         $container = self::getContainer();
 
@@ -109,6 +124,14 @@ final class TripDuplicateTest extends ApiTestCase
         $this->assertSame('https://www.komoot.com/tour/123456789', $duplicated->sourceUrl);
         $this->assertSame(0.85, $duplicated->fatigueFactor);
         $this->assertSame(40.0, $duplicated->elevationPenalty);
+
+        // Verify stages were deep-cloned (exercises cloneStage())
+        $this->assertCount(1, $duplicated->stages);
+        $clonedStage = $duplicated->stages->first();
+        $this->assertInstanceOf(Stage::class, $clonedStage);
+        $this->assertSame(1, $clonedStage->getDayNumber());
+        $this->assertSame(80.0, $clonedStage->getDistance());
+        $this->assertSame('Day 1', $clonedStage->getLabel());
     }
 
     #[Test]
