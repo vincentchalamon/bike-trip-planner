@@ -19,7 +19,7 @@ const MOCK_DETAIL = {
 };
 
 test.describe("/trips/[id] detail page", () => {
-  test("renders back button after successful load", async ({ page }) => {
+  test("renders close button after successful load", async ({ page }) => {
     await page.route(`**/trips/${TRIP_ID}/detail`, (route, request) => {
       const accept = request.headers()["accept"] ?? "";
       if (!accept.includes("application/ld+json")) return route.fallback();
@@ -32,9 +32,9 @@ test.describe("/trips/[id] detail page", () => {
 
     await page.goto(`/trips/${TRIP_ID}`);
     // TripPlanner may keep SSE connections open — do not wait for networkidle
-    await expect(
-      page.getByRole("link", { name: /retour aux voyages/i }),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("close-trip-button")).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test("shows error state when API call fails", async ({ page }) => {

@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { TripPlanner } from "@/components/trip-planner";
 import { TripPlannerErrorBoundary } from "@/components/trip-planner-error-boundary";
 import { HydrationBoundary } from "@/components/hydration-boundary";
 import { useTripStore } from "@/store/trip-store";
+import { useUiStore } from "@/store/ui-store";
 import { apiFetch } from "@/lib/api/client";
 import { API_URL } from "@/lib/constants";
 import type { StageData } from "@/lib/validation/schemas";
@@ -20,6 +22,7 @@ type TripDetailResponse = components["schemas"]["TripDetail.jsonld"];
 
 function TripLoader({ tripId }: { tripId: string }) {
   const t = useTranslations("tripList");
+  const router = useRouter();
   const [loadError, setLoadError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -34,6 +37,7 @@ function TripLoader({ tripId }: { tripId: string }) {
   const setEnabledAccommodationTypes = useTripStore(
     (s) => s.setEnabledAccommodationTypes,
   );
+  const setIsLocked = useTripStore((s) => s.setIsLocked);
   const clearTrip = useTripStore((s) => s.clearTrip);
 
   useEffect(() => {
@@ -63,12 +67,8 @@ function TripLoader({ tripId }: { tripId: string }) {
         });
 
         updateDatesInternal(
-          data.startDate
-            ? (new Date(data.startDate).toISOString().split("T")[0] ?? null)
-            : null,
-          data.endDate
-            ? (new Date(data.endDate).toISOString().split("T")[0] ?? null)
-            : null,
+          data.startDate?.split("T")[0] ?? null,
+          data.endDate?.split("T")[0] ?? null,
         );
 
         updatePacingSettingsInternal(
@@ -83,6 +83,7 @@ function TripLoader({ tripId }: { tripId: string }) {
         setEnabledAccommodationTypes(
           (data.enabledAccommodationTypes ?? []) as AccommodationType[],
         );
+        setIsLocked(data.isLocked === true);
 
         // Convert stages to Zustand StageData shape
         const stages: StageData[] = (data.stages ?? []).map((s) => {
@@ -162,6 +163,7 @@ function TripLoader({ tripId }: { tripId: string }) {
     setEbikeMode,
     setDepartureHour,
     setEnabledAccommodationTypes,
+    setIsLocked,
     clearTrip,
   ]);
 
@@ -189,22 +191,18 @@ function TripLoader({ tripId }: { tripId: string }) {
   }
 
   return (
-    <>
-      {/* Back button */}
-      <div className="max-w-[1200px] mx-auto px-4 md:px-6 pt-4">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/trips">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {t("backToList")}
-          </Link>
-        </Button>
-      </div>
-      <TripPlannerErrorBoundary>
-        <Suspense fallback={null}>
-          <TripPlanner />
-        </Suspense>
-      </TripPlannerErrorBoundary>
-    </>
+    <TripPlannerErrorBoundary>
+      <Suspense fallback={null}>
+        <TripPlanner
+          onClose={() => {
+            clearTrip();
+            useUiStore.getState().setProcessing(false);
+            useUiStore.getState().setAccommodationScanning(false);
+            router.push("/");
+          }}
+        />
+      </Suspense>
+    </TripPlannerErrorBoundary>
   );
 }
 

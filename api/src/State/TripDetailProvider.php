@@ -30,6 +30,7 @@ final readonly class TripDetailProvider implements ProviderInterface
 {
     public function __construct(
         private DoctrineTripRequestRepository $tripStateManager,
+        private TripLocker $tripLocker,
     ) {
     }
 
@@ -64,6 +65,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             ebikeMode: $request->ebikeMode,
             departureHour: $request->departureHour,
             enabledAccommodationTypes: $request->enabledAccommodationTypes,
+            isLocked: $this->tripLocker->isLocked($request),
             stages: array_map($this->serializeStage(...), $stages),
         );
     }

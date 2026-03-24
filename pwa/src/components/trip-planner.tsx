@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Settings, HelpCircle, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Settings, HelpCircle, Loader2, X } from "lucide-react";
 import { MagicLinkInput } from "@/components/magic-link-input";
 import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
@@ -19,9 +20,11 @@ import { MapPanel } from "@/components/Map";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { Button } from "@/components/ui/button";
 import { UndoRedoButtons } from "@/components/undo-redo-buttons";
+import { RecentTrips } from "@/components/recent-trips";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useLinkParam } from "@/hooks/use-link-param";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useSwipe } from "@/hooks/use-swipe";
 import {
@@ -30,8 +33,10 @@ import {
   mealsForStage,
 } from "@/lib/budget-constants";
 
-export function TripPlanner() {
+export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const t = useTranslations();
+  const router = useRouter();
+  const clearTrip = useTripStore((s) => s.clearTrip);
   const {
     trip,
     isLocked,
@@ -53,7 +58,7 @@ export function TripPlanner() {
     departureHour,
     enabledAccommodationTypes,
     handleAccommodationTypesChange,
-    updateTitle,
+    handleTitleChange,
     updateLocalAccommodation,
     removeLocalAccommodation,
     handleMagicLink,
@@ -293,6 +298,7 @@ export function TripPlanner() {
               <GpxUploadButton onUpload={handleGpxUpload} disabled={false} />
             </div>
             {actionButtons}
+            <RecentTrips />
           </div>
         )}
 
@@ -307,12 +313,34 @@ export function TripPlanner() {
         {/* === State 3: Trip loaded === */}
         {trip && (
           <>
+            {/* Close button — top-right corner */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-4 md:right-6 h-8 w-8 z-10 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                if (onClose) {
+                  onClose();
+                } else {
+                  clearTrip();
+                  useUiStore.getState().setProcessing(false);
+                  useUiStore.getState().setAccommodationScanning(false);
+                  router.push("/");
+                }
+              }}
+              title={t("planner.closeTrip")}
+              aria-label={t("planner.closeTrip")}
+              data-testid="close-trip-button"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+
             {/* Top bar: title on first row, action buttons on second row */}
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-2 gap-y-2">
               <div className="basis-full min-w-0 text-center md:text-left">
                 <TripHeader
                   title={trip.title}
-                  onTitleChange={updateTitle}
+                  onTitleChange={handleTitleChange}
                   showTitleSuggestion={totalDistance !== null}
                   isTitleLoading={isProcessing && totalDistance === null}
                 />
@@ -427,6 +455,7 @@ export function TripPlanner() {
                       onAccommodationHover={handleAccommodationHover}
                       newAccKey={newAccKey}
                       onClearNewAcc={clearNewAccKey}
+                      onOpenConfig={() => setConfigPanelOpen(true)}
                     />
                   </div>
                 )}

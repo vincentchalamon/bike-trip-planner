@@ -164,8 +164,8 @@ test.describe("Trip creation flow", () => {
         .getByTestId("trip-title-skeleton")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
-    // The ?link= param should be consumed (URL cleaned)
-    await expect(mockedPage).toHaveURL("/");
+    // After creation the app navigates to the trip detail page
+    await expect(mockedPage).toHaveURL(/\/trips\//);
   });
 
   test("ignores invalid ?link= param without creating a trip", async ({

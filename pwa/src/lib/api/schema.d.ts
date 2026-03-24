@@ -668,6 +668,7 @@ export interface components {
              *     ]
              */
             enabledAccommodationTypes: string[];
+            title?: string | null;
         };
         "Trip.TripRequest.jsonMergePatch": {
             /** Format: uri */
@@ -710,6 +711,7 @@ export interface components {
              *     ]
              */
             enabledAccommodationTypes: string[];
+            title?: string | null;
         };
         "Trip.gpx": {
             id?: string;
@@ -749,6 +751,7 @@ export interface components {
             ebikeMode?: boolean;
             departureHour?: number;
             enabledAccommodationTypes?: string[];
+            isLocked?: boolean;
             /** @description Serialized stage DTOs */
             stages?: {
                 dayNumber?: number;

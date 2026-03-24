@@ -224,7 +224,7 @@ export function DateRangePicker({
   onDatesChange,
   disabled = false,
 }: DateRangePickerProps) {
-  const t = useTranslations("calendar");
+  const t = useTranslations();
   const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [selectingEnd, setSelectingEnd] = useState(false);
@@ -306,8 +306,8 @@ export function DateRangePicker({
     setCurrentMonth((m) => m.add(1, "month"));
   }, []);
 
-  const formatDisplayDate = (date: string | null) => {
-    if (!date) return "—";
+  const formatDisplayDate = (date: string | null, isStart: boolean) => {
+    if (!date) return isStart && !endDate ? t("calendar.fromToday") : "—";
     return dayjs(date).locale(locale).format("D MMM YYYY");
   };
 
@@ -327,16 +327,22 @@ export function DateRangePicker({
           <CalendarDays className="h-4 w-4 text-brand shrink-0" />
           <div className="flex flex-col gap-0.5 min-w-0">
             <span className="text-xs text-muted-foreground">
-              {t("startDate")}
+              {t("calendar.startDate")}
             </span>
-            <span className="truncate">{formatDisplayDate(startDate)}</span>
+            <span
+              className={`truncate${!startDate ? " text-muted-foreground italic" : ""}`}
+            >
+              {formatDisplayDate(startDate, true)}
+            </span>
           </div>
           <span className="text-muted-foreground mx-1">→</span>
           <div className="flex flex-col gap-0.5 min-w-0">
             <span className="text-xs text-muted-foreground">
-              {t("endDate")}
+              {t("calendar.endDate")}
             </span>
-            <span className="truncate">{formatDisplayDate(endDate)}</span>
+            <span className="truncate">
+              {formatDisplayDate(endDate, false)}
+            </span>
           </div>
         </button>
       </PopoverTrigger>
@@ -352,7 +358,7 @@ export function DateRangePicker({
             size="icon"
             className="h-7 w-7"
             onClick={goToPreviousMonth}
-            aria-label={t("previousMonth")}
+            aria-label={t("calendar.previousMonth")}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -364,7 +370,7 @@ export function DateRangePicker({
             size="icon"
             className="h-7 w-7"
             onClick={goToNextMonth}
-            aria-label={t("nextMonth")}
+            aria-label={t("calendar.nextMonth")}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>

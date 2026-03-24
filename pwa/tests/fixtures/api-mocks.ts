@@ -32,9 +32,28 @@ export async function mockAllApis(
     addStageFail = false,
   } = options;
 
+  // Capture pacing settings from POST body so the detail mock can echo them back
+  let lastPostPacingSettings: Record<string, unknown> = {};
+
   // POST /trips — create trip
   await page.route("**/trips", (route, request) => {
     if (request.method() !== "POST") return route.fallback();
+    try {
+      const body = JSON.parse(request.postData() ?? "{}") as Record<
+        string,
+        unknown
+      >;
+      lastPostPacingSettings = {
+        fatigueFactor: body.fatigueFactor,
+        elevationPenalty: body.elevationPenalty,
+        maxDistancePerDay: body.maxDistancePerDay,
+        averageSpeed: body.averageSpeed,
+        ebikeMode: body.ebikeMode,
+        departureHour: body.departureHour,
+      };
+    } catch {
+      /* ignore parse errors */
+    }
     return route.fulfill({
       status: postTripStatus,
       contentType: "application/ld+json",
@@ -156,6 +175,72 @@ export async function mockAllApis(
       body: `<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="44.7" lon="4.5"><ele>280</ele></trkpt></trkseg></trk></gpx>`,
     }),
   );
+
+  // GET /trips — list of trips (recent-trips widget + trips page)
+  // Use URL predicate to match /trips with or without query params,
+  // but NOT sub-paths like /trips/{id}/detail.
+  await page.route(
+    (url) => url.pathname === "/trips",
+    (route, request) => {
+      if (request.method() !== "GET") return route.fallback();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/ld+json",
+        body: JSON.stringify({
+          "@context": "/contexts/Trip",
+          "@id": "/trips",
+          "@type": "hydra:Collection",
+          "hydra:totalItems": 0,
+          "hydra:member": [],
+          member: [],
+          totalItems: 0,
+        }),
+      });
+    },
+  );
+
+  // GET /trips/{id}/detail — load trip on /trips/[id] page
+  // Echo back pacing settings from the last POST so tests relying on the
+  // initial store values (e.g. pacing-settings.spec.ts) see consistent data.
+  await page.route("**/trips/*/detail", (route, request) => {
+    if (request.method() !== "GET") return route.fallback();
+    const tripId =
+      request.url().match(/\/trips\/([^/]+)\/detail/)?.[1] ?? TRIP_ID;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/ld+json",
+      body: JSON.stringify({
+        "@context": "/contexts/TripDetail",
+        "@id": `/trips/${tripId}/detail`,
+        "@type": "TripDetail",
+        id: tripId,
+        title: "Test Trip",
+        sourceUrl: "https://www.komoot.com/fr-fr/tour/2795080048",
+        startDate: null,
+        endDate: null,
+        fatigueFactor: (lastPostPacingSettings.fatigueFactor as number) ?? 0.8,
+        elevationPenalty:
+          (lastPostPacingSettings.elevationPenalty as number) ?? 100,
+        maxDistancePerDay:
+          (lastPostPacingSettings.maxDistancePerDay as number) ?? 80,
+        averageSpeed: (lastPostPacingSettings.averageSpeed as number) ?? 15,
+        ebikeMode: (lastPostPacingSettings.ebikeMode as boolean) ?? false,
+        departureHour: (lastPostPacingSettings.departureHour as number) ?? 8,
+        enabledAccommodationTypes: [
+          "camp_site",
+          "hotel",
+          "hostel",
+          "chalet",
+          "guest_house",
+          "motel",
+          "alpine_hut",
+        ],
+        isLocked: false,
+        stages: [],
+        computationStatus: {},
+      }),
+    });
+  });
 
   // GET /.well-known/mercure — abort real SSE (we use __test_mercure_event)
   await page.route("**/.well-known/mercure*", (route) => route.abort());

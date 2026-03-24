@@ -63,9 +63,9 @@ test.describe("Trip duplication", () => {
       .click();
     await mockedPage.getByTestId("duplicate-trip-button").click();
 
-    await expect(
-      mockedPage.getByText(/impossible de dupliquer/i),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(mockedPage.getByText(/impossible de dupliquer/i)).toBeVisible({
+      timeout: 5000,
+    });
     await expect(mockedPage).not.toHaveURL(new RegExp(NEW_TRIP_ID));
   });
 });

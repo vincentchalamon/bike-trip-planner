@@ -72,6 +72,13 @@ test.describe("Error handling", () => {
     const input = page.getByTestId("magic-link-input");
     await input.fill("https://www.komoot.com/fr-fr/tour/12345");
     await input.press("Enter");
+    // Wait for navigation to /trips/[id] and for TripPlanner to mount
+    await page.waitForURL(/\/trips\//, { timeout: 5000 });
+    await expect(
+      page
+        .getByTestId("trip-title-skeleton")
+        .or(page.getByTestId("trip-title")),
+    ).toBeVisible({ timeout: 5000 });
     const { injectSseSequence } = await import("../fixtures/sse-helpers");
     const { fullTripEventSequence } = await import("../fixtures/mock-data");
     await injectSseSequence(page, fullTripEventSequence());
