@@ -49,7 +49,7 @@ final readonly class TripCollectionProvider implements ProviderInterface
         // Filter by title (partial, case-insensitive)
         if (isset($filters['title']) && '' !== $filters['title'] && is_string($filters['title'])) {
             $qb->andWhere('LOWER(t.title) LIKE LOWER(:title)')
-                ->setParameter('title', '%'.$filters['title'].'%');
+                ->setParameter('title', '%'.addcslashes($filters['title'], '%_').'%');
         }
 
         // Filter by startDate (trips starting on or after this date)

@@ -31,11 +31,10 @@ test.describe("/trips/[id] detail page", () => {
     });
 
     await page.goto(`/trips/${TRIP_ID}`);
-    await page.waitForLoadState("networkidle");
-
+    // TripPlanner may keep SSE connections open — do not wait for networkidle
     await expect(
       page.getByRole("link", { name: /retour aux voyages/i }),
-    ).toBeVisible({ timeout: 5000 });
+    ).toBeVisible({ timeout: 10000 });
   });
 
   test("shows error state when API call fails", async ({ page }) => {
