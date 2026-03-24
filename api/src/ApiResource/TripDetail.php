@@ -46,6 +46,7 @@ final readonly class TripDetail
         public int $departureHour,
         /** @var string[] */
         public array $enabledAccommodationTypes,
+        public bool $isLocked,
         #[ApiProperty(openapiContext: [
             'type' => 'array',
             'items' => [

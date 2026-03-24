@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Trash2, ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ type TripCollection = components["schemas"]["HydraCollectionBaseSchema"] & {
   member: TripListItem[];
 };
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 10;
 
 export default function TripsPage() {
   const t = useTranslations("tripList");
@@ -37,6 +37,8 @@ export default function TripsPage() {
   const [page, setPage] = useState(1);
   const [titleFilter, setTitleFilter] = useState("");
   const [debouncedTitle, setDebouncedTitle] = useState("");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -61,6 +63,8 @@ export default function TripsPage() {
       itemsPerPage: String(ITEMS_PER_PAGE),
     });
     if (debouncedTitle) params.set("title", debouncedTitle);
+    if (startDateFilter) params.set("startDate", startDateFilter);
+    if (endDateFilter) params.set("endDate", endDateFilter);
 
     try {
       const res = await apiFetch(`${API_URL}/trips?${params.toString()}`, {
@@ -80,7 +84,7 @@ export default function TripsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, debouncedTitle]);
+  }, [page, debouncedTitle, startDateFilter, endDateFilter]);
 
   useEffect(() => {
     void fetchTrips();
@@ -117,16 +121,21 @@ export default function TripsPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <Button asChild>
+        <Button
+          asChild
+          variant="ghost"
+          size="icon"
+          title={t("close")}
+          aria-label={t("close")}
+        >
           <Link href="/">
-            <Plus className="h-4 w-4 mr-2" />
-            {t("newTrip")}
+            <X className="h-4 w-4" />
           </Link>
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap items-end gap-3">
         <Input
           type="search"
           placeholder={t("filterPlaceholder")}
@@ -135,6 +144,53 @@ export default function TripsPage() {
           className="max-w-sm"
           aria-label={t("filterPlaceholder")}
         />
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-muted-foreground whitespace-nowrap">
+            {t("filterFrom")}
+          </label>
+          <Input
+            type="date"
+            value={startDateFilter}
+            onChange={(e) => {
+              setStartDateFilter(e.target.value);
+              setPage(1);
+            }}
+            className="w-40"
+            aria-label={t("filterFrom")}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-muted-foreground whitespace-nowrap">
+            {t("filterUntil")}
+          </label>
+          <Input
+            type="date"
+            value={endDateFilter}
+            onChange={(e) => {
+              setEndDateFilter(e.target.value);
+              setPage(1);
+            }}
+            className="w-40"
+            aria-label={t("filterUntil")}
+          />
+        </div>
+        {(titleFilter || startDateFilter || endDateFilter) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setTitleFilter("");
+              setDebouncedTitle("");
+              setStartDateFilter("");
+              setEndDateFilter("");
+              setPage(1);
+            }}
+            data-testid="clear-filters-button"
+          >
+            <X className="h-4 w-4 mr-1" />
+            {t("clearFilters")}
+          </Button>
+        )}
       </div>
 
       {/* Loading */}
@@ -169,6 +225,9 @@ export default function TripsPage() {
       {/* Trip list */}
       {!isLoading && !loadError && trips.length > 0 && (
         <>
+          <p className="text-sm text-muted-foreground mb-3" aria-live="polite">
+            {t("totalItems", { count: totalItems })}
+          </p>
           <ul className="space-y-3" role="list">
             {trips.map((trip) => (
               <li key={trip.id}>

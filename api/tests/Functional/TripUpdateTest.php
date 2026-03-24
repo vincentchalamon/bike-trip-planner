@@ -294,6 +294,27 @@ final class TripUpdateTest extends ApiTestCase
     }
 
     #[Test]
+    public function updateTitleSuccess(): void
+    {
+        self::createClient();
+        $this->seedTrip(self::TRIP_ID);
+
+        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+            'json' => [
+                'title' => 'Mon super voyage',
+            ],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+
+        /** @var TripRequestRepositoryInterface $repo */
+        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        $request = $repo->getRequest(self::TRIP_ID);
+        $this->assertSame('Mon super voyage', $request?->title);
+    }
+
+    #[Test]
     public function idempotentRequestDoesNotRedispatch(): void
     {
         self::createClient();
@@ -414,6 +435,7 @@ final class TripUpdateTest extends ApiTestCase
         yield 'negative elevation penalty' => [['elevationPenalty' => -5.0], 'elevationPenalty'];
         yield 'zero elevation penalty' => [['elevationPenalty' => 0.0], 'elevationPenalty'];
         yield 'invalid URL protocol' => [['sourceUrl' => 'http://www.komoot.com/tour/123'], 'sourceUrl'];
+        yield 'title too long' => [['title' => str_repeat('a', 256)], 'title'];
     }
 
     /**

@@ -74,7 +74,8 @@
     "expand": "Expand calendar",
     "ariaLabel": "Calendar",
     "startDate": "Start date",
-    "endDate": "End date"
+    "endDate": "End date",
+    "fromToday": "From today"
   },
   "accommodation": {
     "type_hotel": "Hotel",
@@ -284,6 +285,10 @@
     "stages": "{count, plural, one {# stage} other {# stages}}",
     "noDates": "Dates not set",
     "filterPlaceholder": "Search by title...",
+    "filterFrom": "From",
+    "filterUntil": "Until",
+    "clearFilters": "Clear filters",
+    "totalItems": "{count, plural, one {# trip} other {# trips}}",
     "deleteTrip": "Delete trip",
     "deleteTripConfirmTitle": "Delete trip?",
     "deleteTripConfirmDescription": "This action is irreversible. All stages and data for \"{title}\" will be permanently deleted.",
@@ -295,7 +300,20 @@
     "nextPage": "Next page",
     "page": "Page {current} of {total}",
     "retry": "Try again",
-    "untitled": "Untitled trip"
+    "untitled": "Untitled trip",
+    "close": "Back to home"
+  },
+  "noDates": {
+    "banner": "Dates not set — Displaying from today",
+    "cta": "Set dates"
+  },
+  "recentTrips": {
+    "title": "My recent trips",
+    "viewAll": "View all ({count})",
+    "noDate": "No date"
+  },
+  "planner": {
+    "closeTrip": "Close this trip"
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",

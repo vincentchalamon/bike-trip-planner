@@ -74,7 +74,8 @@
     "expand": "Développer le calendrier",
     "ariaLabel": "Calendrier",
     "startDate": "Date de départ",
-    "endDate": "Date de retour"
+    "endDate": "Date de retour",
+    "fromToday": "À partir d'aujourd'hui"
   },
   "accommodation": {
     "type_hotel": "Hôtel",
@@ -284,6 +285,10 @@
     "stages": "{count, plural, one {# étape} other {# étapes}}",
     "noDates": "Dates non définies",
     "filterPlaceholder": "Rechercher par titre...",
+    "filterFrom": "À partir du",
+    "filterUntil": "Jusqu'au",
+    "clearFilters": "Effacer les filtres",
+    "totalItems": "{count, plural, one {# voyage} other {# voyages}}",
     "deleteTrip": "Supprimer le voyage",
     "deleteTripConfirmTitle": "Supprimer le voyage ?",
     "deleteTripConfirmDescription": "Cette action est irréversible. Toutes les étapes et données de « {title} » seront définitivement supprimées.",
@@ -295,7 +300,20 @@
     "nextPage": "Page suivante",
     "page": "Page {current} sur {total}",
     "retry": "Réessayer",
-    "untitled": "Voyage sans titre"
+    "untitled": "Voyage sans titre",
+    "close": "Retour à l'accueil"
+  },
+  "noDates": {
+    "banner": "Dates non renseignées — Affichage depuis aujourd'hui",
+    "cta": "Définir les dates"
+  },
+  "recentTrips": {
+    "title": "Mes voyages récents",
+    "viewAll": "Voir tous ({count})",
+    "noDate": "Non daté"
+  },
+  "planner": {
+    "closeTrip": "Fermer ce trip"
   },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",

@@ -107,7 +107,8 @@ final class TripRequest
     // --- Persistence-only fields (not exposed in API input/output) ---
 
     #[ORM\Column(length: 255, nullable: true)]
-    #[ApiProperty(readable: false, writable: false)]
+    #[Assert\Length(max: 255)]
+    #[ApiProperty(readable: false)]
     public ?string $title = null;
 
     #[ORM\Column(length: 50, nullable: true)]

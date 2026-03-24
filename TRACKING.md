@@ -224,11 +224,11 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-11.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Trips persistés en PostgreSQL
-  - [ ] Fermer le navigateur → rouvrir → trip retrouvé
-  - [ ] Migrations Doctrine appliquées sans erreur
-  - [ ] Performances acceptables (liste de trips, chargement d'un trip)
-  - [ ] Fixtures chargées sans erreur (`bin/console doctrine:fixtures:load`)
+  - [x] Trips persistés en PostgreSQL
+  - [x] Fermer le navigateur → rouvrir → trip retrouvé
+  - [x] Migrations Doctrine appliquées sans erreur
+  - [x] Performances acceptables (liste de trips, chargement d'un trip)
+  - [x] Fixtures chargées sans erreur (`bin/console doctrine:fixtures:load`)
 
 ---
 
@@ -244,11 +244,11 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-12.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Liste des trips paginée et filtrable
-  - [ ] Navigation liste → détail → retour
-  - [ ] Duplication de trip fonctionnelle
-  - [ ] Verrouillage automatique des trips passés (lecture seule)
-  - [ ] Responsive : liste sur mobile
+  - [x] Liste des trips paginée et filtrable
+  - [x] Navigation liste → détail → retour
+  - [x] Duplication de trip fonctionnelle
+  - [x] Verrouillage automatique des trips passés (lecture seule)
+  - [x] Responsive : liste sur mobile
 
 ---
 

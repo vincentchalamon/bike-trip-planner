@@ -41,7 +41,9 @@ export const test = base.extend<
       const input = mockedPage.getByTestId("magic-link-input");
       await input.fill(url ?? "https://www.komoot.com/fr-fr/tour/2795080048");
       await input.press("Enter");
-      // Wait for trip to be set (title appears as skeleton or editable)
+      // After magic link submission the app navigates to /trips/{id}; wait for that URL
+      // then wait for the trip title (skeleton or editable)
+      await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
       await expect(
         mockedPage
           .getByTestId("trip-title-skeleton")

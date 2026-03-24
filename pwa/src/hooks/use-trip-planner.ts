@@ -74,7 +74,6 @@ export function useTripPlanner() {
   const updatePacingSettingsInternal = useTripStore(
     (s) => s.updatePacingSettingsInternal,
   );
-  const updateDatesInternal = useTripStore((s) => s.updateDatesInternal);
   const setEbikeMode = useTripStore((s) => s.setEbikeMode);
   const setEnabledAccommodationTypes = useTripStore(
     (s) => s.setEnabledAccommodationTypes,
@@ -102,7 +101,6 @@ export function useTripPlanner() {
     setAccommodationScanning(true);
 
     try {
-      const today = new Date().toISOString().split("T")[0]!;
       const { data, error, response } = await apiClient.POST("/trips", {
         body: {
           sourceUrl,
@@ -112,7 +110,7 @@ export function useTripPlanner() {
           averageSpeed,
           ebikeMode,
           departureHour,
-          startDate: startDate ?? today,
+          startDate: startDate,
           enabledAccommodationTypes,
         },
       });
@@ -125,16 +123,13 @@ export function useTripPlanner() {
         return;
       }
 
-      if (!startDate) {
-        updateDatesInternal(today, null);
-      }
-
       setIsLocked(data.isLocked === true);
       setTrip({
         id: data.id ?? "",
         title: getRandomTripName(),
         sourceUrl,
       });
+      router.push(`/trips/${data.id ?? ""}`);
     } catch (err) {
       if (isNetworkError(err)) {
         toast.error(t("errors.networkError"));
@@ -152,14 +147,13 @@ export function useTripPlanner() {
     setAccommodationScanning(true);
 
     try {
-      const today = new Date().toISOString().split("T")[0]!;
       const { data, error } = await uploadGpxFile(file, {
         fatigueFactor,
         elevationPenalty,
         maxDistancePerDay,
         averageSpeed,
         ebikeMode,
-        startDate: startDate ?? today,
+        startDate: startDate,
         enabledAccommodationTypes,
       });
 
@@ -168,10 +162,6 @@ export function useTripPlanner() {
         setProcessing(false);
         setAccommodationScanning(false);
         return;
-      }
-
-      if (!startDate) {
-        updateDatesInternal(today, null);
       }
 
       setTrip({
@@ -232,6 +222,30 @@ export function useTripPlanner() {
       }
     } catch {
       toast.error(t("errors.failedUpdateDates"));
+    }
+  }
+
+  async function handleTitleChange(newTitle: string) {
+    updateTitle(newTitle);
+    if (!tripId) return;
+
+    try {
+      await apiClient.PATCH("/trips/{id}", {
+        params: { path: { id: tripId } },
+        headers: { "Content-Type": "application/merge-patch+json" },
+        body: {
+          title: newTitle,
+          fatigueFactor,
+          elevationPenalty,
+          maxDistancePerDay,
+          averageSpeed,
+          ebikeMode,
+          departureHour,
+          enabledAccommodationTypes,
+        },
+      });
+    } catch {
+      // Title save is best-effort — don't show error toast for this
     }
   }
 
@@ -766,7 +780,7 @@ export function useTripPlanner() {
     departureHour,
     enabledAccommodationTypes,
     handleAccommodationTypesChange,
-    updateTitle,
+    handleTitleChange,
     updateLocalAccommodation,
     removeLocalAccommodation,
     handleMagicLink,
