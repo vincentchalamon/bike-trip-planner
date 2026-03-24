@@ -69,7 +69,10 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         // Reuse the request already fetched above for the lock check.
         $oldRequest = $existingRequest;
 
-        // Check idempotency
+        // Always persist — non-computation fields (e.g. title) may have changed
+        $this->tripStateManager->storeRequest($id, $data);
+
+        // Check idempotency for computation-triggering fields only
         if (!$this->idempotencyChecker->hasChanged($id, $data)) {
             $statuses = $this->computationTracker->getStatuses($id) ?? [];
 
@@ -80,8 +83,6 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
             );
         }
 
-        // Persist updated request
-        $this->tripStateManager->storeRequest($id, $data);
         $this->idempotencyChecker->saveHash($id, $data);
 
         // Determine which computations to re-trigger
