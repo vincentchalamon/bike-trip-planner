@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import dayjs from "dayjs";
+import "dayjs/locale/fr";
 import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client";
 import { formatDistanceKm } from "@/lib/formatters";
@@ -17,7 +18,7 @@ type TripCollection = components["schemas"]["HydraCollectionBaseSchema"] & {
 
 export function RecentTrips() {
   const t = useTranslations();
-  const router = useRouter();
+  const locale = useLocale();
   const [trips, setTrips] = useState<TripListItem[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,10 +79,9 @@ export function RecentTrips() {
       <ul className="space-y-2" role="list">
         {trips.map((trip) => (
           <li key={trip.id}>
-            <button
-              type="button"
-              className="w-full text-left rounded-lg border bg-card px-4 py-3 shadow-sm hover:bg-accent/50 transition-colors cursor-pointer"
-              onClick={() => router.push(`/trips/${trip.id ?? ""}`)}
+            <Link
+              href={`/trips/${trip.id ?? ""}`}
+              className="w-full text-left rounded-lg border bg-card px-4 py-3 shadow-sm hover:bg-accent/50 transition-colors block"
               data-testid={`recent-trip-${trip.id}`}
             >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
@@ -98,18 +98,20 @@ export function RecentTrips() {
                 {trip.startDate || trip.endDate ? (
                   <span>
                     {trip.startDate
-                      ? new Date(trip.startDate).toLocaleDateString()
+                      ? dayjs(trip.startDate)
+                          .locale(locale)
+                          .format("D MMM YYYY")
                       : "?"}
                     {" — "}
                     {trip.endDate
-                      ? new Date(trip.endDate).toLocaleDateString()
+                      ? dayjs(trip.endDate).locale(locale).format("D MMM YYYY")
                       : "?"}
                   </span>
                 ) : (
                   <span>{t("recentTrips.noDate")}</span>
                 )}
               </div>
-            </button>
+            </Link>
           </li>
         ))}
       </ul>

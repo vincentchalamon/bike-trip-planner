@@ -180,6 +180,7 @@ export default function TripsPage() {
             size="sm"
             onClick={() => {
               setTitleFilter("");
+              setDebouncedTitle("");
               setStartDateFilter("");
               setEndDateFilter("");
               setPage(1);
