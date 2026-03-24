@@ -283,8 +283,6 @@
     "stages": "{count, plural, one {# étape} other {# étapes}}",
     "noDates": "Dates non définies",
     "filterPlaceholder": "Rechercher par titre...",
-    "startDateFilter": "Date de début (à partir du)",
-    "endDateFilter": "Date de fin (jusqu'au)",
     "deleteTrip": "Supprimer le voyage",
     "deleteTripConfirmTitle": "Supprimer le voyage ?",
     "deleteTripConfirmDescription": "Cette action est irréversible. Toutes les étapes et données de « {title} » seront définitivement supprimées.",

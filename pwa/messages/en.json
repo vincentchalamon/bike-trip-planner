@@ -283,8 +283,6 @@
     "stages": "{count, plural, one {# stage} other {# stages}}",
     "noDates": "Dates not set",
     "filterPlaceholder": "Search by title...",
-    "startDateFilter": "Start date (from)",
-    "endDateFilter": "End date (to)",
     "deleteTrip": "Delete trip",
     "deleteTripConfirmTitle": "Delete trip?",
     "deleteTripConfirmDescription": "This action is irreversible. All stages and data for \"{title}\" will be permanently deleted.",
