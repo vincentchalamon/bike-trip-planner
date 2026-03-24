@@ -45,7 +45,7 @@ final class TripDetailTest extends ApiTestCase
             elevation: 1200.0,
             startPoint: new Coordinate(45.0, 6.0, 1000.0),
             endPoint: new Coordinate(45.5, 6.5, 800.0),
-            geometry: [['lat' => 45.0, 'lon' => 6.0, 'ele' => 1000.0]],
+            geometry: [new Coordinate(45.0, 6.0, 1000.0)],
         );
         $repo->storeStages(self::TRIP_ID, [$stage]);
 

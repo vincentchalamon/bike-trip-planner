@@ -99,6 +99,8 @@ test.describe("/trips page", () => {
 
     // Confirm deletion
     await dialog.getByRole("button", { name: /supprimer/i }).click();
+    // Wait for dialog to close before checking — the dialog description also contains the trip name
+    await expect(dialog).not.toBeVisible({ timeout: 5000 });
     await expect(page.getByText("Tour des Alpes")).not.toBeVisible();
     await expect(page.getByText("Bretagne coastal")).toBeVisible();
   });

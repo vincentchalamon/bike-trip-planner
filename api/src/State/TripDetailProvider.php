@@ -14,7 +14,7 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripDetail;
 use App\ApiResource\TripRequest;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\DoctrineTripRequestRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
 
@@ -29,7 +29,7 @@ use Symfony\Component\Uid\Uuid;
 final readonly class TripDetailProvider implements ProviderInterface
 {
     public function __construct(
-        private TripRequestRepositoryInterface $tripStateManager,
+        private DoctrineTripRequestRepository $tripStateManager,
     ) {
     }
 

@@ -7,7 +7,7 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripRequest;
-use App\Repository\TripRequestRepositoryInterface;
+use App\Repository\DoctrineTripRequestRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -20,7 +20,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 final readonly class TripDoctrineProvider implements ProviderInterface
 {
     public function __construct(
-        private TripRequestRepositoryInterface $repository,
+        private DoctrineTripRequestRepository $repository,
     ) {
     }
 
