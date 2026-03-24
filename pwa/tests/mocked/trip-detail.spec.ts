@@ -47,9 +47,9 @@ test.describe("/trips/[id] detail page", () => {
     await page.goto(`/trips/${TRIP_ID}`);
     await page.waitForLoadState("networkidle");
 
-    await expect(
-      page.getByText(/impossible de charger/i),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/impossible de charger/i)).toBeVisible({
+      timeout: 5000,
+    });
     await expect(
       page.getByRole("link", { name: /retour aux voyages/i }),
     ).toBeVisible();

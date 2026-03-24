@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import {
   useTripStore,
   useTripTemporalStore,
@@ -30,6 +31,7 @@ import type { AccommodationType } from "@/lib/accommodation-types";
 
 export function useTripPlanner() {
   const t = useTranslations();
+  const router = useRouter();
   const trip = useTripStore((s) => s.trip);
   const totalDistance = useTripStore((s) => s.totalDistance);
   const totalElevation = useTripStore((s) => s.totalElevation);
@@ -77,7 +79,6 @@ export function useTripPlanner() {
   const setEnabledAccommodationTypes = useTripStore(
     (s) => s.setEnabledAccommodationTypes,
   );
-  const setComputationStatus = useTripStore((s) => s.setComputationStatus);
   const updateStageAlerts = useTripStore((s) => s.updateStageAlerts);
   const isLocked = useTripStore((s) => s.isLocked);
   const setIsLocked = useTripStore((s) => s.setIsLocked);
@@ -618,10 +619,8 @@ export function useTripPlanner() {
         return null;
       }
 
-      // Switch trip identity to the duplicate while preserving in-memory stages
-      setTrip({ id: result.id, title: trip.title, sourceUrl: trip.sourceUrl });
-      setComputationStatus(result.computationStatus ?? {});
       toast.success(t("config.duplicateSuccess"));
+      router.push(`/trips/${result.id}`);
       return result.id;
     } catch (err) {
       if (isNetworkError(err)) {
