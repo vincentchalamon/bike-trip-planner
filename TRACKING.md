@@ -315,7 +315,38 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 ---
 
-## Sprint 16 — Garmin Connect
+## Sprint 16 — Recette Globale
+
+Phase de recette approfondie couvrant l'ensemble des sprints 1 à 15 (desktop + mobile). Scénarios Gherkin bilingues (FR/EN), tests de performance, audits sécurité/a11y/SEO, et automatisation via `playwright-bdd`. Environnement iso-prod requis.
+
+| Ordre | ID                                                                      | Titre                                           | Effort | PRs | Dépend de                                                               |
+|-------|-------------------------------------------------------------------------|------------------------------------------------|--------|-----|-------------------------------------------------------------------------|
+| 1     | [#240](https://github.com/vincentchalamon/bike-trip-planner/issues/240) | Rédiger les scénarios Gherkin (FR + EN)         | XL     | 1   | —                                                                       |
+| 2     | [#241](https://github.com/vincentchalamon/bike-trip-planner/issues/241) | Configurer l'environnement iso-prod             | M      | 2   | —                                                                       |
+| 3     | [#242](https://github.com/vincentchalamon/bike-trip-planner/issues/242) | Recette fonctionnelle desktop (Chrome + Firefox) | L      | —   | [#240](https://github.com/vincentchalamon/bike-trip-planner/issues/240), [#241](https://github.com/vincentchalamon/bike-trip-planner/issues/241) |
+| 4     | [#243](https://github.com/vincentchalamon/bike-trip-planner/issues/243) | Recette fonctionnelle mobile (web + APK)        | L      | —   | [#240](https://github.com/vincentchalamon/bike-trip-planner/issues/240), [#241](https://github.com/vincentchalamon/bike-trip-planner/issues/241) |
+| 5     | [#244](https://github.com/vincentchalamon/bike-trip-planner/issues/244) | Recette performance                             | L      | —   | [#241](https://github.com/vincentchalamon/bike-trip-planner/issues/241) |
+| 6     | [#245](https://github.com/vincentchalamon/bike-trip-planner/issues/245) | Recette sécurité, accessibilité et SEO          | M      | —   | [#241](https://github.com/vincentchalamon/bike-trip-planner/issues/241) |
+| 7     | [#246](https://github.com/vincentchalamon/bike-trip-planner/issues/246) | Automatiser les scénarios avec playwright-bdd   | XL     | 3   | [#240](https://github.com/vincentchalamon/bike-trip-planner/issues/240) |
+
+### Recette Sprint 16
+
+- **Scénarios Gherkin :** `tests/recette/features/*.{fr,en}.feature`
+- **Checklist manuelle :**
+  - [ ] 32 fichiers `.feature` rédigés et validés (16 domaines × 2 langues)
+  - [ ] Environnement iso-prod fonctionnel (`make start-prod`)
+  - [ ] Recette desktop OK (Chrome + Firefox, FR/EN, clair/sombre)
+  - [ ] Recette mobile OK (Chrome Android + APK Capacitor)
+  - [ ] Seuils de performance respectés (Lighthouse ≥ 80, LCP < 2.5s, CLS < 0.1)
+  - [ ] Audit sécurité passé (pas de stack traces, CORS, CSP, HTTPS)
+  - [ ] Lighthouse Accessibility ≥ 90, axe-core 0 violation critique
+  - [ ] Lighthouse SEO ≥ 90
+  - [ ] `make test-recette` exécute les scénarios automatisés
+  - [ ] Tous les bugs trouvés reportés en issues
+
+---
+
+## Sprint 17 — Garmin Connect
 
 Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase 2). Voir [ADR-018](docs/adr/adr-018-garmin-export-and-device-sync-strategy.md). Test local via ngrok pour le callback OAuth.
 
@@ -325,9 +356,9 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 |-------|-----------------------------------------------------------------------|----------------|--------|-----|-----------------------------------------------------------------------|
 | 1     | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Garmin Connect | L      | 3   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) |
 
-### Recette Sprint 16
+### Recette Sprint 17
 
-- **Tests E2E :** `tests/recette/sprint-16.spec.ts`
+- **Tests E2E :** `tests/recette/sprint-17.spec.ts`
 - **Checklist manuelle :**
   - [ ] Export FIT téléchargeable par étape
   - [ ] Flux OAuth Garmin Connect complet (via ngrok)
@@ -336,7 +367,7 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 
 ---
 
-## Sprint 17 — Déploiement
+## Sprint 18 — Déploiement
 
 Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructure-strategy.md). Issues GitHub à créer au moment venu.
 
@@ -350,7 +381,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 6     | Monitoring & healthchecks                          | M      |
 | 7     | Migration données + smoke test production          | M      |
 
-### Recette Sprint 17
+### Recette Sprint 18
 
 - **Checklist manuelle :**
   - [ ] Application accessible via URL publique
@@ -391,6 +422,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 13        | Auth & Sécurité        | 5       | 8            |
 | 14        | Partage                | 2       | 3            |
 | 15        | Mobile                 | 6       | 11           |
-| 16        | Garmin Connect         | 1       | 3            |
-| 17        | Déploiement            | 7       | ~7           |
-| **Total** |                        | **61**  | **~90**      |
+| 16        | Recette Globale        | 7       | ~6           |
+| 17        | Garmin Connect         | 1       | 3            |
+| 18        | Déploiement            | 7       | ~7           |
+| **Total** |                        | **68**  | **~96**      |
