@@ -15,6 +15,7 @@ use App\State\TripCollectionProvider;
 use App\State\TripCreateProcessor;
 use App\State\TripDeleteProcessor;
 use App\State\TripDoctrineProvider;
+use App\State\TripDuplicateProcessor;
 use App\State\TripGpxProvider;
 use App\State\TripRequestProvider;
 use App\State\TripUpdateProcessor;
@@ -63,6 +64,19 @@ use App\State\TripUpdateProcessor;
             input: TripRequest::class,
             mercure: true,
             processor: TripCreateProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/trips/{id}/duplicate{._format}',
+            status: 201,
+            openapi: new Operation(
+                responses: [
+                    404 => new \ApiPlatform\OpenApi\Model\Response(description: 'Trip not found'),
+                ],
+                summary: 'Duplicate an existing trip, deep-cloning all its stages and settings.',
+            ),
+            input: false,
+            provider: TripRequestProvider::class,
+            processor: TripDuplicateProcessor::class,
         ),
         new Patch(
             uriTemplate: '/trips/{id}{._format}',

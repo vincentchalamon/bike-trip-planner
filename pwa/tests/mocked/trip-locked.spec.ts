@@ -41,9 +41,7 @@ test.describe("Trip locking", () => {
     await expect(mockedPage.getByTestId("trip-locked-banner")).toBeVisible();
 
     // Edit controls should be hidden
-    await expect(
-      mockedPage.getByTestId("delete-stage-1"),
-    ).not.toBeVisible();
+    await expect(mockedPage.getByTestId("delete-stage-1")).not.toBeVisible();
     await expect(
       mockedPage.getByTestId("add-stage-button-0"),
     ).not.toBeVisible();
@@ -65,9 +63,7 @@ test.describe("Trip locking", () => {
 
     // Edit controls should be available
     await expect(mockedPage.getByTestId("delete-stage-1")).toBeVisible();
-    await expect(
-      mockedPage.getByTestId("add-stage-button-0"),
-    ).toBeVisible();
+    await expect(mockedPage.getByTestId("add-stage-button-0")).toBeVisible();
   });
 
   test("config panel controls are disabled when trip is locked", async ({

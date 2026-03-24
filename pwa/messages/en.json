@@ -193,7 +193,8 @@
     "switchLanguage": "Switch to {language}",
     "tripActionsTitle": "Trip actions",
     "duplicateLabel": "Duplicate trip",
-    "duplicateTooltip": "Requires persistent storage (coming soon).",
+    "duplicateSuccess": "Trip duplicated successfully.",
+    "duplicateFailed": "Failed to duplicate trip.",
     "shareLabel": "Share trip",
     "shareTooltip": "Requires persistent storage (coming soon)."
   },

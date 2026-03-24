@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import {
   useTripStore,
   useTripTemporalStore,
@@ -17,6 +18,7 @@ import {
   uploadGpxFile,
   scanAccommodations,
   addPoiWaypointToRoute,
+  duplicateTrip,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
 import {
@@ -29,6 +31,7 @@ import type { AccommodationType } from "@/lib/accommodation-types";
 
 export function useTripPlanner() {
   const t = useTranslations();
+  const router = useRouter();
   const trip = useTripStore((s) => s.trip);
   const totalDistance = useTripStore((s) => s.totalDistance);
   const totalElevation = useTripStore((s) => s.totalElevation);
@@ -606,6 +609,29 @@ export function useTripPlanner() {
     }
   }
 
+  async function handleDuplicateTrip(): Promise<string | null> {
+    if (!tripId || !trip) return null;
+
+    try {
+      const result = await duplicateTrip(tripId);
+      if (!result) {
+        toast.error(t("config.duplicateFailed"));
+        return null;
+      }
+
+      toast.success(t("config.duplicateSuccess"));
+      router.push(`/trips/${result.id}`);
+      return result.id;
+    } catch (err) {
+      if (isNetworkError(err)) {
+        toast.error(t("errors.networkError"));
+      } else {
+        toast.error(t("config.duplicateFailed"));
+      }
+      return null;
+    }
+  }
+
   function handleAddAccommodation(stageIndex: number) {
     const stage = stages[stageIndex];
     const accIndex = stage?.accommodations.length ?? 0;
@@ -759,6 +785,7 @@ export function useTripPlanner() {
     handleExpandAccommodationRadius,
     handleInsertRestDay,
     handleAddPoiWaypoint,
+    handleDuplicateTrip,
     clearNewAccKey: () => setNewAccKey(null),
   };
 }

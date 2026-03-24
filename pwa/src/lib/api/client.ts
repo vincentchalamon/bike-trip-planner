@@ -227,6 +227,23 @@ export async function uploadGpxFile(
 }
 
 /**
+ * Duplicate an existing trip (deep-clone with all stages and settings).
+ * Returns the new trip id on success, null on failure.
+ */
+export async function duplicateTrip(
+  tripId: string,
+): Promise<{ id: string; computationStatus: Record<string, string> } | null> {
+  const { data, error } = await apiClient.POST("/trips/{id}/duplicate", {
+    params: { path: { id: tripId } },
+  });
+  if (error || !data?.id) return null;
+  return {
+    id: data.id,
+    computationStatus: (data.computationStatus as Record<string, string>) ?? {},
+  };
+}
+
+/**
  * Download the full trip as a single GPX file containing all stages and trigger
  * a browser save dialog.
  * @throws {Error} When the server responds with a non-2xx status.

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { X, Copy, Share2 } from "lucide-react";
+import { X, Copy, Share2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -50,6 +50,8 @@ interface ConfigPanelProps {
   onAccommodationTypesChange: (types: AccommodationType[]) => void;
   /** When true, date/pacing/accommodation controls are disabled (trip is locked). */
   readOnly?: boolean;
+  hasTripLoaded?: boolean;
+  onDuplicate?: () => Promise<string | null>;
 }
 
 export function ConfigPanel({
@@ -69,8 +71,11 @@ export function ConfigPanel({
   onDepartureHourChange,
   onAccommodationTypesChange,
   readOnly = false,
+  hasTripLoaded = false,
+  onDuplicate,
 }: ConfigPanelProps) {
   const t = useTranslations("config");
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const tAccommodation = useTranslations("accommodation");
   const isOpen = useUiStore((s) => s.isConfigPanelOpen);
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
@@ -327,29 +332,35 @@ export function ConfigPanel({
 
           <Separator />
 
-          {/* Future features: Duplication + Sharing */}
-          <section aria-labelledby="config-future-heading">
-            <h3 id="config-future-heading" className="text-sm font-medium mb-3">
+          {/* Trip actions */}
+          <section aria-labelledby="config-trip-actions-heading">
+            <h3
+              id="config-trip-actions-heading"
+              className="text-sm font-medium mb-3"
+            >
               {t("tripActionsTitle")}
             </h3>
             <div className="flex flex-col gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start gap-2 opacity-50 cursor-not-allowed"
-                      disabled
-                      aria-label={t("duplicateLabel")}
-                    >
-                      <Copy className="h-4 w-4" />
-                      {t("duplicateLabel")}
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>{t("duplicateTooltip")}</TooltipContent>
-              </Tooltip>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-2"
+                disabled={!hasTripLoaded || isDuplicating}
+                aria-label={t("duplicateLabel")}
+                onClick={() => {
+                  if (!onDuplicate) return;
+                  setIsDuplicating(true);
+                  void onDuplicate().finally(() => setIsDuplicating(false));
+                }}
+                data-testid="duplicate-trip-button"
+              >
+                {isDuplicating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                {t("duplicateLabel")}
+              </Button>
 
               <Tooltip>
                 <TooltipTrigger asChild>
