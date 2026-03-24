@@ -5,11 +5,16 @@ declare(strict_types=1);
 namespace App\ApiResource;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
+use App\State\TripCollectionProvider;
 use App\State\TripCreateProcessor;
+use App\State\TripDeleteProcessor;
+use App\State\TripDoctrineProvider;
 use App\State\TripGpxProvider;
 use App\State\TripRequestProvider;
 use App\State\TripUpdateProcessor;
@@ -17,6 +22,40 @@ use App\State\TripUpdateProcessor;
 #[ApiResource(
     shortName: 'Trip',
     operations: [
+        new GetCollection(
+            uriTemplate: '/trips',
+            openapi: new Operation(
+                summary: 'List all trips, paginated and filterable.',
+                parameters: [
+                    new \ApiPlatform\OpenApi\Model\Parameter(
+                        name: 'title',
+                        in: 'query',
+                        description: 'Filter by title (case-insensitive partial match)',
+                        required: false,
+                        schema: ['type' => 'string'],
+                    ),
+                    new \ApiPlatform\OpenApi\Model\Parameter(
+                        name: 'startDate',
+                        in: 'query',
+                        description: 'Filter trips starting on or after this date (YYYY-MM-DD)',
+                        required: false,
+                        schema: ['type' => 'string', 'format' => 'date'],
+                    ),
+                    new \ApiPlatform\OpenApi\Model\Parameter(
+                        name: 'endDate',
+                        in: 'query',
+                        description: 'Filter trips ending on or before this date (YYYY-MM-DD)',
+                        required: false,
+                        schema: ['type' => 'string', 'format' => 'date'],
+                    ),
+                ],
+            ),
+            paginationEnabled: true,
+            paginationItemsPerPage: 20,
+            paginationClientItemsPerPage: true,
+            output: TripListItem::class,
+            provider: TripCollectionProvider::class,
+        ),
         new Post(
             uriTemplate: '/trips{._format}',
             status: 202,
@@ -40,6 +79,12 @@ use App\State\TripUpdateProcessor;
             ],
             openapi: new Operation(summary: 'Download the full trip as a single GPX file containing all stages.'),
             provider: TripGpxProvider::class,
+        ),
+        new Delete(
+            uriTemplate: '/trips/{id}',
+            openapi: new Operation(summary: 'Delete a trip and all its stages.'),
+            provider: TripDoctrineProvider::class,
+            processor: TripDeleteProcessor::class,
         ),
     ],
 )]

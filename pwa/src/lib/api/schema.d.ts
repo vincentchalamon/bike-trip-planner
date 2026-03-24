@@ -159,7 +159,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List all trips, paginated and filterable.
+         * @description Retrieves the collection of Trip resources.
+         */
+        get: operations["api_trips_get_collection"];
         put?: never;
         /**
          * Creates a Trip resource.
@@ -206,7 +210,11 @@ export interface paths {
         get: operations["api_trips_id_get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a trip and all its stages.
+         * @description Removes the Trip resource.
+         */
+        delete: operations["api_trips_id_delete"];
         options?: never;
         head?: never;
         /**
@@ -214,6 +222,26 @@ export interface paths {
          * @description Updates the Trip resource.
          */
         patch: operations["api_trips_id_patch"];
+        trace?: never;
+    };
+    "/trips/{id}/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Load trip configuration and persisted stages for frontend hydration.
+         * @description Retrieves a TripDetail resource.
+         */
+        get: operations["api_trips_iddetail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
 }
@@ -394,6 +422,45 @@ export interface components {
             readonly type?: string;
             readonly description?: string | null;
         };
+        HydraCollectionBaseSchema: components["schemas"]["HydraCollectionBaseSchemaNoPagination"] & {
+            /**
+             * @example {
+             *       "@id": "string",
+             *       "@type": "string",
+             *       "first": "string",
+             *       "last": "string",
+             *       "previous": "string",
+             *       "next": "string"
+             *     }
+             */
+            view?: {
+                /** Format: iri-reference */
+                "@id"?: string;
+                "@type"?: string;
+                /** Format: iri-reference */
+                first?: string;
+                /** Format: iri-reference */
+                last?: string;
+                /** Format: iri-reference */
+                previous?: string;
+                /** Format: iri-reference */
+                next?: string;
+            };
+        };
+        HydraCollectionBaseSchemaNoPagination: {
+            totalItems?: number;
+            search?: {
+                "@type"?: string;
+                template?: string;
+                variableRepresentation?: string;
+                mapping?: {
+                    "@type"?: string;
+                    variable?: string;
+                    property?: string | null;
+                    required?: boolean;
+                }[];
+            };
+        };
         HydraItemBaseSchema: {
             "@context"?: string | ({
                 "@vocab": string;
@@ -527,6 +594,20 @@ export interface components {
             elevationLoss?: number;
             isRestDay?: boolean;
         };
+        "Trip.TripListItem.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            id?: string;
+            title?: string | null;
+            /** Format: date-time */
+            startDate?: string | null;
+            /** Format: date-time */
+            endDate?: string | null;
+            totalDistance?: number;
+            stageCount?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
         "Trip.TripRequest": {
             sourceUrl: string | null;
             /** Format: date-time */
@@ -625,6 +706,106 @@ export interface components {
                 [key: string]: string;
             };
             isLocked?: boolean;
+        };
+        /**
+         * @description Read-only trip detail resource for loading a persisted trip on the frontend.
+         *
+         *     Returns the trip configuration (pacing settings, dates, source URL) together
+         *     with all persisted stages, enabling the frontend to hydrate the Zustand store
+         *     from the database without triggering a recomputation.
+         */
+        "TripDetail.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            id?: string;
+            title?: string | null;
+            sourceUrl?: string | null;
+            /** Format: date-time */
+            startDate?: string | null;
+            /** Format: date-time */
+            endDate?: string | null;
+            fatigueFactor?: number;
+            elevationPenalty?: number;
+            maxDistancePerDay?: number;
+            averageSpeed?: number;
+            ebikeMode?: boolean;
+            departureHour?: number;
+            enabledAccommodationTypes?: string[];
+            /** @description Serialized stage DTOs */
+            stages?: {
+                dayNumber?: number;
+                /** Format: float */
+                distance?: number;
+                /** Format: float */
+                elevation?: number;
+                /** Format: float */
+                elevationLoss?: number;
+                startPoint?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                };
+                endPoint?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                };
+                geometry?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                }[];
+                label?: string | null;
+                isRestDay?: boolean;
+                weather?: {
+                    icon?: string;
+                    description?: string;
+                    tempMin?: number;
+                    tempMax?: number;
+                    windSpeed?: number;
+                    windDirection?: string;
+                    precipitationProbability?: number;
+                    humidity?: number;
+                    comfortIndex?: number;
+                    relativeWindDirection?: string;
+                } | null;
+                alerts?: {
+                    /** @enum {string} */
+                    type?: "critical" | "warning" | "nudge";
+                    message?: string;
+                    lat?: number | null;
+                    lon?: number | null;
+                }[];
+                pois?: {
+                    name?: string;
+                    category?: string;
+                    lat?: number;
+                    lon?: number;
+                    distanceFromStart?: number | null;
+                }[];
+                accommodations?: {
+                    name?: string;
+                    type?: string;
+                    lat?: number;
+                    lon?: number;
+                    estimatedPriceMin?: number;
+                    estimatedPriceMax?: number;
+                    isExactPrice?: boolean;
+                    url?: string | null;
+                    possibleClosed?: boolean;
+                    distanceToEndPoint?: number;
+                }[];
+                selectedAccommodation?: {
+                    name?: string;
+                    type?: string;
+                    lat?: number;
+                    lon?: number;
+                    estimatedPriceMin?: number;
+                    estimatedPriceMax?: number;
+                    isExactPrice?: boolean;
+                    url?: string | null;
+                    possibleClosed?: boolean;
+                    distanceToEndPoint?: number;
+                } | null;
+            }[];
         };
         "WeatherForecast.fit": {
             icon?: string;
@@ -1130,6 +1311,39 @@ export interface operations {
             };
         };
     };
+    api_trips_get_collection: {
+        parameters: {
+            query?: {
+                /** @description Filter by title (case-insensitive partial match) */
+                title?: string;
+                /** @description Filter trips starting on or after this date (YYYY-MM-DD) */
+                startDate?: string;
+                /** @description Filter trips ending on or before this date (YYYY-MM-DD) */
+                endDate?: string;
+                /** @description The collection page number */
+                page?: number;
+                /** @description The number of items per page */
+                itemsPerPage?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trip collection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["HydraCollectionBaseSchema"] & {
+                        member: components["schemas"]["Trip.TripListItem.jsonld"][];
+                    };
+                };
+            };
+        };
+    };
     api_trips_post: {
         parameters: {
             query?: never;
@@ -1300,6 +1514,38 @@ export interface operations {
             };
         };
     };
+    api_trips_id_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Trip identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trip resource deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     api_trips_id_patch: {
         parameters: {
             query?: never;
@@ -1357,6 +1603,40 @@ export interface operations {
                     "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_trips_iddetail_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description TripDetail identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TripDetail resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["TripDetail.jsonld"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
