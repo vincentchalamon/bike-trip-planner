@@ -1,0 +1,16 @@
+auth:
+  email:
+    magic_link:
+      subject: "Votre lien de connexion — Bike Trip Planner"
+      body: "Cliquez sur le bouton ci-dessous pour vous connecter."
+      button: "Se connecter"
+      expires: "Ce lien expire dans %minutes% minutes et ne peut être utilisé qu'une seule fois."
+      ignore: "Si vous n'avez pas demandé ce lien, vous pouvez ignorer cet email."
+    invitation:
+      subject: "Invitation — Bike Trip Planner"
+      body_intro: "Vous avez été invité(e) à rejoindre Bike Trip Planner !"
+      body_action: "Cliquez sur le bouton ci-dessous pour activer votre compte et vous connecter."
+      button: "Activer mon compte"
+      expires: "Ce lien expire dans %minutes% minutes et ne peut être utilisé qu'une seule fois."
+      ignore: "Si vous avez reçu cet email par erreur, vous pouvez l'ignorer."
+  neutral_message: "Si votre adresse est enregistrée, vous recevrez un lien de connexion."

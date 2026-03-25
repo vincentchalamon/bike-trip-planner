@@ -11,6 +11,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Mailer\MailerInterface;
@@ -42,7 +43,8 @@ final class CreateUserCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('email', InputArgument::REQUIRED, 'Email address of the new user');
+            ->addArgument('email', InputArgument::REQUIRED, 'Email address of the new user')
+            ->addOption('locale', 'l', InputOption::VALUE_REQUIRED, 'Locale for the invitation email', 'fr');
     }
 
     #[\Override]
@@ -76,7 +78,7 @@ final class CreateUserCommand extends Command
         $magicLink = $this->magicLinkManager->create($user);
 
         if (!$magicLink instanceof \App\Entity\MagicLink) {
-            $io->warning('Could not create invitation link.');
+            $io->warning(\sprintf('An active invitation link already exists for user %s.', $email));
 
             return Command::SUCCESS;
         }
@@ -87,9 +89,13 @@ final class CreateUserCommand extends Command
             UrlGeneratorInterface::ABSOLUTE_URL,
         );
 
+        $locale = $input->getOption('locale');
+        \assert(\is_string($locale));
+
         $html = $this->twig->render('email/invitation.html.twig', [
             'verifyUrl' => $verifyUrl,
             'expiresInMinutes' => 30,
+            'locale' => $locale,
         ]);
 
         $emailMessage = new Email()
