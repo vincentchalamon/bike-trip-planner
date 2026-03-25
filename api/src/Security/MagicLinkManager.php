@@ -54,18 +54,30 @@ final readonly class MagicLinkManager
      */
     public function verify(string $token): ?User
     {
+        // Atomically consume the token: only succeeds if consumed_at is still NULL
+        // and the token is not expired. This prevents TOCTOU race conditions where
+        // two concurrent requests could both pass validation.
+        $now = new \DateTimeImmutable();
+        $affected = $this->entityManager->createQueryBuilder()
+            ->update(MagicLink::class, 'ml')
+            ->set('ml.consumedAt', ':now')
+            ->where('ml.token = :token')
+            ->andWhere('ml.consumedAt IS NULL')
+            ->andWhere('ml.expiresAt > :now')
+            ->setParameter('token', $token)
+            ->setParameter('now', $now)
+            ->getQuery()
+            ->execute();
+
+        if (0 === $affected) {
+            return null;
+        }
+
         $magicLink = $this->entityManager->getRepository(MagicLink::class)->findOneBy([
             'token' => $token,
         ]);
 
-        if (null === $magicLink || !$magicLink->isValid()) {
-            return null;
-        }
-
-        $magicLink->consume();
-        $this->entityManager->flush();
-
-        return $magicLink->getUser();
+        return $magicLink?->getUser();
     }
 
     /**
@@ -99,13 +111,17 @@ final readonly class MagicLinkManager
         }
 
         $user = $existing->getUser();
-
-        // Remove old token
         $this->entityManager->remove($existing);
+
+        $newToken = bin2hex(random_bytes(64));
+        $expiresAt = new \DateTimeImmutable(\sprintf('+%d days', self::REFRESH_TOKEN_TTL_DAYS));
+        $refreshToken = new RefreshToken($user, $newToken, $expiresAt);
+        $this->entityManager->persist($refreshToken);
+
+        // Single atomic flush: old token removed and new token created together
         $this->entityManager->flush();
 
-        // Create new one
-        return $this->createRefreshToken($user);
+        return $refreshToken;
     }
 
     /**
@@ -126,10 +142,18 @@ final readonly class MagicLinkManager
 
     private function hasActiveLinkForUser(User $user): bool
     {
-        $links = $this->entityManager->getRepository(MagicLink::class)->findBy([
-            'user' => $user,
-        ]);
+        $count = $this->entityManager->createQueryBuilder()
+            ->select('COUNT(ml.id)')
+            ->from(MagicLink::class, 'ml')
+            ->where('ml.user = :user')
+            ->andWhere('ml.consumedAt IS NULL')
+            ->andWhere('ml.expiresAt > :now')
+            ->setParameter('user', $user)
+            ->setParameter('now', new \DateTimeImmutable())
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getSingleScalarResult();
 
-        return array_any($links, fn ($link) => $link->isValid());
+        return (int) $count > 0;
     }
 }
