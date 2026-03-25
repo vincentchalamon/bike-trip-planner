@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion — Bike Trip Planner</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f4f4f5; color: #18181b;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+        <tr>
+            <td style="background-color: #ffffff; border-radius: 8px; padding: 40px; text-align: center;">
+                <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 16px;">Bike Trip Planner</h1>
+                <p style="font-size: 16px; line-height: 1.5; margin: 0 0 24px; color: #3f3f46;">
+                    Cliquez sur le bouton ci-dessous pour vous connecter.
+                </p>
+                <a href="{{ verifyUrl }}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 32px; border-radius: 6px; font-size: 16px; font-weight: 500;">
+                    Se connecter
+                </a>
+                <p style="font-size: 14px; line-height: 1.5; margin: 24px 0 0; color: #71717a;">
+                    Ce lien expire dans {{ expiresInMinutes }} minutes et ne peut être utilisé qu'une seule fois.
+                </p>
+                <p style="font-size: 14px; line-height: 1.5; margin: 16px 0 0; color: #71717a;">
+                    Si vous n'avez pas demandé ce lien, vous pouvez ignorer cet email.
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
