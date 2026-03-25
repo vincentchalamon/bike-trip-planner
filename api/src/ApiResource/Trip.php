@@ -27,7 +27,6 @@ use App\State\TripUpdateProcessor;
     operations: [
         new GetCollection(
             uriTemplate: '/trips',
-            security: "is_granted('ROLE_USER')",
             openapi: new Operation(
                 summary: 'List all trips, paginated and filterable.',
                 parameters: [
@@ -57,6 +56,7 @@ use App\State\TripUpdateProcessor;
             paginationEnabled: true,
             paginationItemsPerPage: 20,
             paginationClientItemsPerPage: true,
+            security: "is_granted('ROLE_USER')",
             output: TripListItem::class,
             provider: TripCollectionProvider::class,
         ),
@@ -72,13 +72,13 @@ use App\State\TripUpdateProcessor;
         new Post(
             uriTemplate: '/trips/{id}/duplicate{._format}',
             status: 201,
-            security: "is_granted('TRIP_VIEW', object)",
             openapi: new Operation(
                 responses: [
                     404 => new Response(description: 'Trip not found'),
                 ],
                 summary: 'Duplicate an existing trip, deep-cloning all its stages and settings.',
             ),
+            security: "is_granted('TRIP_VIEW', object)",
             input: false,
             provider: TripRequestProvider::class,
             processor: TripDuplicateProcessor::class,
@@ -94,17 +94,17 @@ use App\State\TripUpdateProcessor;
         ),
         new Get(
             uriTemplate: '/trips/{id}{._format}',
-            security: "is_granted('TRIP_VIEW', object)",
             outputFormats: [
                 'gpx' => ['application/gpx+xml'],
             ],
             openapi: new Operation(summary: 'Download the full trip as a single GPX file containing all stages.'),
+            security: "is_granted('TRIP_VIEW', object)",
             provider: TripGpxProvider::class,
         ),
         new Delete(
             uriTemplate: '/trips/{id}',
-            security: "is_granted('TRIP_DELETE', object)",
             openapi: new Operation(summary: 'Delete a trip and all its stages.'),
+            security: "is_granted('TRIP_DELETE', object)",
             provider: TripDoctrineProvider::class,
             processor: TripDeleteProcessor::class,
         ),

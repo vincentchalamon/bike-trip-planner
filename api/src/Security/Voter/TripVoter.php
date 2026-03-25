@@ -25,7 +25,9 @@ use Symfony\Component\Uid\Uuid;
 final class TripVoter extends Voter
 {
     public const string TRIP_VIEW = 'TRIP_VIEW';
+
     public const string TRIP_EDIT = 'TRIP_EDIT';
+
     public const string TRIP_DELETE = 'TRIP_DELETE';
 
     private const array SUPPORTED_ATTRIBUTES = [
@@ -50,7 +52,7 @@ final class TripVoter extends Voter
     /**
      * @param TripRequest|string $subject A TripRequest entity or a trip ID string
      */
-    protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token): bool
+    protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?\Symfony\Component\Security\Core\Authorization\Voter\Vote $vote = null): bool
     {
         $user = $token->getUser();
         if (!$user instanceof User) {

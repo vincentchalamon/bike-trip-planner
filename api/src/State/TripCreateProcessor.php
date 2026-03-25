@@ -59,7 +59,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $this->tripStateManager->storeLocale($tripId, $locale);
 
         // Associate trip with current user
-        $this->associateTripWithUser($tripId, $data);
+        $this->associateTripWithUser($tripId);
 
         $computations = ComputationName::pipeline();
         $this->computationTracker->initializeComputations($tripId, $computations);
@@ -76,7 +76,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         );
     }
 
-    private function associateTripWithUser(string $tripId, TripRequest $tripRequest): void
+    private function associateTripWithUser(string $tripId): void
     {
         $user = $this->security->getUser();
         if (!$user instanceof User) {
@@ -93,6 +93,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $userTrip = new UserTrip($user, $managedTrip);
         $userTrip->setTitle($managedTrip->title);
         $userTrip->setSourceUrl($managedTrip->sourceUrl);
+
         $this->entityManager->persist($userTrip);
         $this->entityManager->flush();
 
@@ -100,6 +101,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));
         $item->set($user->getId()->toRfc4122());
         $item->expiresAfter(self::CACHE_TTL);
+
         $this->tripStateCache->save($item);
     }
 

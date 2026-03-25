@@ -12,6 +12,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Security\TripOwnershipChecker;
 use App\State\StageCreateProcessor;
 use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -43,6 +44,11 @@ final class StageCreateProcessorTest extends TestCase
         $objectMapper = $this->createStub(ObjectMapperInterface::class);
         $objectMapper->method('map')->willReturn(new StageResponse());
 
+        /** @var \Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface&\PHPUnit\Framework\MockObject\Stub $authChecker */
+        $authChecker = $this->createStub(\Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface::class);
+        $authChecker->method('isGranted')->willReturn(true);
+        $ownershipChecker = new TripOwnershipChecker($authChecker);
+
         $processor = new StageCreateProcessor(
             $tripStateManager,
             $this->createStub(MessageBusInterface::class),
@@ -50,6 +56,7 @@ final class StageCreateProcessorTest extends TestCase
             $objectMapper,
             $generationTracker,
             new TripLocker(),
+            $ownershipChecker,
         );
 
         $coord = new Coordinate(lat: 48.0, lon: 2.0);
