@@ -184,6 +184,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $userTrip = new UserTrip($user, $tripRequest);
         $userTrip->setTitle($tripRequest->title);
         $userTrip->setSourceUrl($tripRequest->sourceUrl);
+
         $this->entityManager->persist($userTrip);
         $this->entityManager->flush();
 
@@ -191,6 +192,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));
         $item->set($user->getId()->toRfc4122());
         $item->expiresAfter(self::CACHE_TTL);
+
         $this->tripStateCache->save($item);
     }
 

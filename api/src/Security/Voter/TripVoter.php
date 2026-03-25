@@ -36,6 +36,7 @@ final class TripVoter extends Voter
 {
     public const string TRIP_VIEW = 'TRIP_VIEW';
 <<<<<<< HEAD
+<<<<<<< HEAD
 
     public const string TRIP_EDIT = 'TRIP_EDIT';
 
@@ -44,7 +45,11 @@ final class TripVoter extends Voter
     public const int CACHE_TTL = 1800; // 30 minutes
 
 =======
+=======
+
+>>>>>>> faa2909 (fix(security): resolve PHPStan errors, Rector fixes, and regenerate TS types)
     public const string TRIP_EDIT = 'TRIP_EDIT';
+
     public const string TRIP_DELETE = 'TRIP_DELETE';
 
 >>>>>>> 9aa31a5 (feat(security): secure Trip and Stage API endpoints with ownership checks)
@@ -71,10 +76,14 @@ final class TripVoter extends Voter
      * @param TripRequest|string $subject A TripRequest entity or a trip ID string
      */
 <<<<<<< HEAD
+<<<<<<< HEAD
     protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?Vote $vote = null): bool
 =======
     protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token): bool
 >>>>>>> 9aa31a5 (feat(security): secure Trip and Stage API endpoints with ownership checks)
+=======
+    protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?\Symfony\Component\Security\Core\Authorization\Voter\Vote $vote = null): bool
+>>>>>>> faa2909 (fix(security): resolve PHPStan errors, Rector fixes, and regenerate TS types)
     {
         $user = $token->getUser();
         if (!$user instanceof User) {

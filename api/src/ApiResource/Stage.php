@@ -32,7 +32,6 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
     operations: [
         new Get(
             uriTemplate: '/trips/{tripId}/stages/{index}{._format}',
-            security: "is_granted('ROLE_USER')",
             outputFormats: [
                 'gpx' => ['application/gpx+xml'],
                 'fit' => ['application/vnd.ant.fit'],
@@ -42,7 +41,11 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
             openapi: new Operation(summary: 'Download a stage as GPX or FIT file.'),
+<<<<<<< HEAD
             security: "is_granted('TRIP_VIEW', request.attributes.get('tripId'))",
+=======
+            security: "is_granted('ROLE_USER')",
+>>>>>>> faa2909 (fix(security): resolve PHPStan errors, Rector fixes, and regenerate TS types)
             provider: StageProvider::class,
         ),
         new Post(
@@ -50,10 +53,13 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
             uriVariables: [
                 'tripId' => new Link(fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Add a manual stage at a given position.'),
+<<<<<<< HEAD
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
+=======
+            security: "is_granted('ROLE_USER')",
+>>>>>>> faa2909 (fix(security): resolve PHPStan errors, Rector fixes, and regenerate TS types)
             input: StageRequest::class,
             output: StageResponse::class,
             processor: StageCreateProcessor::class,
@@ -64,10 +70,13 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Update stage data (start/end points, etc.).'),
+<<<<<<< HEAD
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
+=======
+            security: "is_granted('ROLE_USER')",
+>>>>>>> faa2909 (fix(security): resolve PHPStan errors, Rector fixes, and regenerate TS types)
             input: StageRequest::class,
             output: StageResponse::class,
             provider: StageProvider::class,
@@ -79,10 +88,13 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Move a stage to a new position.'),
+<<<<<<< HEAD
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
+=======
+            security: "is_granted('ROLE_USER')",
+>>>>>>> faa2909 (fix(security): resolve PHPStan errors, Rector fixes, and regenerate TS types)
             input: StageRequest::class,
             output: StageResponse::class,
             provider: StageProvider::class,
@@ -94,10 +106,13 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Delete a stage (merge with adjacent).'),
+<<<<<<< HEAD
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
+=======
+            security: "is_granted('ROLE_USER')",
+>>>>>>> faa2909 (fix(security): resolve PHPStan errors, Rector fixes, and regenerate TS types)
             provider: StageProvider::class,
             processor: StageDeleteProcessor::class,
         ),
@@ -107,10 +122,13 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Insert a rest day after a given stage. The next stage startPoint stays identical; dates shift by one day.'),
+<<<<<<< HEAD
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
+=======
+            security: "is_granted('ROLE_USER')",
+>>>>>>> faa2909 (fix(security): resolve PHPStan errors, Rector fixes, and regenerate TS types)
             input: false,
             output: StageResponse::class,
             processor: RestDayInsertProcessor::class,
@@ -121,10 +139,13 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Select or deselect an accommodation for a stage. Selecting updates stage endPoint and next stage startPoint.'),
+<<<<<<< HEAD
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
+=======
+            security: "is_granted('ROLE_USER')",
+>>>>>>> faa2909 (fix(security): resolve PHPStan errors, Rector fixes, and regenerate TS types)
             input: StageSelectAccommodationRequest::class,
             output: StageResponse::class,
             provider: StageProvider::class,
@@ -136,10 +157,13 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Add a cultural POI as a waypoint to a stage, triggering async route recalculation via Valhalla.'),
+<<<<<<< HEAD
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
+=======
+            security: "is_granted('ROLE_USER')",
+>>>>>>> faa2909 (fix(security): resolve PHPStan errors, Rector fixes, and regenerate TS types)
             input: StagePoiWaypointRequest::class,
             output: StageResponse::class,
             provider: StageProvider::class,

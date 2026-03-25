@@ -82,8 +82,12 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $this->tripStateCache->save($item);
 =======
         // Associate trip with current user
+<<<<<<< HEAD
         $this->associateTripWithUser($tripId, $data);
 >>>>>>> 9aa31a5 (feat(security): secure Trip and Stage API endpoints with ownership checks)
+=======
+        $this->associateTripWithUser($tripId);
+>>>>>>> faa2909 (fix(security): resolve PHPStan errors, Rector fixes, and regenerate TS types)
 
         $computations = ComputationName::pipeline();
         $this->computationTracker->initializeComputations($tripId, $computations);
@@ -100,7 +104,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         );
     }
 
-    private function associateTripWithUser(string $tripId, TripRequest $tripRequest): void
+    private function associateTripWithUser(string $tripId): void
     {
         $user = $this->security->getUser();
         if (!$user instanceof User) {
@@ -117,6 +121,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $userTrip = new UserTrip($user, $managedTrip);
         $userTrip->setTitle($managedTrip->title);
         $userTrip->setSourceUrl($managedTrip->sourceUrl);
+
         $this->entityManager->persist($userTrip);
         $this->entityManager->flush();
 
@@ -124,6 +129,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));
         $item->set($user->getId()->toRfc4122());
         $item->expiresAfter(self::CACHE_TTL);
+
         $this->tripStateCache->save($item);
     }
 
