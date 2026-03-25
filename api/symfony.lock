@@ -49,6 +49,18 @@
             "migrations/.gitignore"
         ]
     },
+    "lexik/jwt-authentication-bundle": {
+        "version": "3.2",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "2.5",
+            "ref": "e9481b233a11ef7e15fe055a2b21fd3ac1aa2bb7"
+        },
+        "files": [
+            "config/packages/lexik_jwt_authentication.yaml"
+        ]
+    },
     "nelmio/cors-bundle": {
         "version": "2.6",
         "recipe": {
@@ -133,6 +145,18 @@
             ".editorconfig"
         ]
     },
+    "symfony/mailer": {
+        "version": "8.0",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "4.3",
+            "ref": "09051cfde49476e3c12cd3a0e44289ace1c75a4f"
+        },
+        "files": [
+            "config/packages/mailer.yaml"
+        ]
+    },
     "symfony/mercure-bundle": {
         "version": "0.4",
         "recipe": {
@@ -181,6 +205,15 @@
             "config/packages/property_info.yaml"
         ]
     },
+    "symfony/resend-mailer": {
+        "version": "8.0",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "7.1",
+            "ref": "487735bc20cbd1547ec311692ef0261a7687a3f0"
+        }
+    },
     "symfony/routing": {
         "version": "8.0",
         "recipe": {
@@ -192,6 +225,19 @@
         "files": [
             "config/packages/routing.yaml",
             "config/routes.yaml"
+        ]
+    },
+    "symfony/security-bundle": {
+        "version": "8.0",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "7.4",
+            "ref": "c42fee7802181cdd50f61b8622715829f5d2335c"
+        },
+        "files": [
+            "config/packages/security.yaml",
+            "config/routes/security.yaml"
         ]
     },
     "symfony/translation": {

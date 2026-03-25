@@ -17,12 +17,6 @@ class MagicLink
     #[ORM\Column(type: 'uuid')]
     private Uuid $id;
 
-    #[ORM\Column(length: 128)]
-    private string $token;
-
-    #[ORM\Column]
-    private \DateTimeImmutable $expiresAt;
-
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $consumedAt = null;
 
@@ -33,13 +27,13 @@ class MagicLink
         #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'magicLinks')]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
         private User $user,
-        string $token,
-        \DateTimeImmutable $expiresAt,
+        #[ORM\Column(length: 128)]
+        private string $token,
+        #[ORM\Column]
+        private \DateTimeImmutable $expiresAt,
         ?Uuid $id = null,
     ) {
         $this->id = $id ?? Uuid::v7();
-        $this->token = $token;
-        $this->expiresAt = $expiresAt;
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -77,7 +71,7 @@ class MagicLink
 
     public function isValid(): bool
     {
-        return null === $this->consumedAt && $this->expiresAt > new \DateTimeImmutable();
+        return !$this->consumedAt instanceof \DateTimeImmutable && $this->expiresAt > new \DateTimeImmutable();
     }
 
     public function getCreatedAt(): \DateTimeImmutable
