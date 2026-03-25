@@ -8,12 +8,14 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $containerConfigurator->extension('framework', [
         'mailer' => [
             'dsn' => '%env(MAILER_DSN)%',
-            'envelope' => [
-                'sender' => 'noreply@bike-trip-planner.com',
-            ],
-            'headers' => [
-                'From' => 'Bike Trip Planner <noreply@bike-trip-planner.com>',
-            ],
         ],
     ]);
+
+    if ('test' === $containerConfigurator->env()) {
+        $containerConfigurator->extension('framework', [
+            'mailer' => [
+                'dsn' => 'null://null',
+            ],
+        ]);
+    }
 };
