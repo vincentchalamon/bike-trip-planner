@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Uid\Uuid;
 
-#[ORM\Entity(repositoryClass: UserRepository::class)]
+#[ORM\Entity]
 #[ORM\Table(name: '`user`')]
 #[ORM\UniqueConstraint(name: 'uniq_user_email', columns: ['email'])]
 class User implements UserInterface
@@ -18,6 +19,9 @@ class User implements UserInterface
     #[ORM\Column(type: 'uuid')]
     private Uuid $id;
 
+    #[ORM\Column(length: 180, unique: true)]
+    private string $email;
+
     /** @var list<string> */
     #[ORM\Column(type: 'json')]
     private array $roles = [];
@@ -25,17 +29,26 @@ class User implements UserInterface
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
-    #[ORM\Column(length: 5, options: ['default' => 'fr'])]
-    private string $locale = 'fr';
+    /** @var Collection<int, MagicLink> */
+    #[ORM\OneToMany(targetEntity: MagicLink::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $magicLinks;
 
-    /** @param non-empty-string $email */
-    public function __construct(
-        #[ORM\Column(length: 180, unique: true)]
-        private string $email,
-        ?Uuid $id = null,
-    ) {
+    /** @var Collection<int, RefreshToken> */
+    #[ORM\OneToMany(targetEntity: RefreshToken::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $refreshTokens;
+
+    /** @var Collection<int, UserTrip> */
+    #[ORM\OneToMany(targetEntity: UserTrip::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $userTrips;
+
+    public function __construct(string $email, ?Uuid $id = null)
+    {
         $this->id = $id ?? Uuid::v7();
+        $this->email = $email;
         $this->createdAt = new \DateTimeImmutable();
+        $this->magicLinks = new ArrayCollection();
+        $this->refreshTokens = new ArrayCollection();
+        $this->userTrips = new ArrayCollection();
     }
 
     public function getId(): Uuid
@@ -43,13 +56,11 @@ class User implements UserInterface
         return $this->id;
     }
 
-    /** @return non-empty-string */
     public function getEmail(): string
     {
         return $this->email;
     }
 
-    /** @return non-empty-string */
     public function getUserIdentifier(): string
     {
         return $this->email;
@@ -77,16 +88,22 @@ class User implements UserInterface
         return $this->createdAt;
     }
 
-    public function getLocale(): string
+    /** @return Collection<int, MagicLink> */
+    public function getMagicLinks(): Collection
     {
-        return $this->locale;
+        return $this->magicLinks;
     }
 
-    public function setLocale(string $locale): self
+    /** @return Collection<int, RefreshToken> */
+    public function getRefreshTokens(): Collection
     {
-        $this->locale = $locale;
+        return $this->refreshTokens;
+    }
 
-        return $this;
+    /** @return Collection<int, UserTrip> */
+    public function getUserTrips(): Collection
+    {
+        return $this->userTrips;
     }
 
     public function eraseCredentials(): void
