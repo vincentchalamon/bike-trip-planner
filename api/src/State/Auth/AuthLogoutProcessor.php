@@ -33,7 +33,7 @@ final readonly class AuthLogoutProcessor implements ProcessorInterface
     /**
      * @param AuthLogout $data
      */
-    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Response
+    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): \Symfony\Component\HttpFoundation\JsonResponse
     {
         $user = $this->security->getUser();
 
