@@ -19,9 +19,6 @@ class User implements UserInterface
     #[ORM\Column(type: 'uuid')]
     private Uuid $id;
 
-    #[ORM\Column(length: 180, unique: true)]
-    private string $email;
-
     /** @var list<string> */
     #[ORM\Column(type: 'json')]
     private array $roles = [];
@@ -41,10 +38,11 @@ class User implements UserInterface
     #[ORM\OneToMany(targetEntity: UserTrip::class, mappedBy: 'user', orphanRemoval: true)]
     private Collection $userTrips;
 
-    public function __construct(string $email, ?Uuid $id = null)
+    /** @param non-empty-string $email */
+    public function __construct(#[ORM\Column(length: 180, unique: true)]
+        private string $email, ?Uuid $id = null)
     {
         $this->id = $id ?? Uuid::v7();
-        $this->email = $email;
         $this->createdAt = new \DateTimeImmutable();
         $this->magicLinks = new ArrayCollection();
         $this->refreshTokens = new ArrayCollection();
@@ -56,11 +54,13 @@ class User implements UserInterface
         return $this->id;
     }
 
+    /** @return non-empty-string */
     public function getEmail(): string
     {
         return $this->email;
     }
 
+    /** @return non-empty-string */
     public function getUserIdentifier(): string
     {
         return $this->email;

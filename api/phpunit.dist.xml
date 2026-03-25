@@ -29,7 +29,20 @@
         <env name="MESSENGER_TRANSPORT_DSN" value="in-memory://" force="true" />
         <env name="MESSENGER_FAILED_DSN" value="in-memory://" force="true" />
 
+        <!-- ###+ lexik/jwt-authentication-bundle ### -->
+        <env name="JWT_SECRET_KEY" value="%kernel.project_dir%/config/jwt/private.pem"/>
+        <env name="JWT_PUBLIC_KEY" value="%kernel.project_dir%/config/jwt/public.pem"/>
+        <env name="JWT_PASSPHRASE" value="38c540578bb03eb1f523e6cb000a78e2da2eadbdf74492d684d069b4805fd9b6"/>
+        <!-- ###- lexik/jwt-authentication-bundle ### -->
+
+        <!-- ###+ symfony/mailer ### -->
         <env name="MAILER_DSN" value="null://null"/>
+        <!-- ###- symfony/mailer ### -->
+
+        <!-- ###+ symfony/resend-mailer ### -->
+        <!-- MAILER_DSN=resend+api://API_KEY@default -->
+        <!-- MAILER_DSN=resend+smtp://resend:API_KEY@default -->
+        <!-- ###- symfony/resend-mailer ### -->
     </php>
 
     <testsuites>

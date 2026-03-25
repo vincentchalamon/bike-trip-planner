@@ -31,6 +31,7 @@ use Twig\Environment;
 final readonly class AuthController
 {
     private const string REFRESH_TOKEN_COOKIE = 'refresh_token';
+
     private const string NEUTRAL_MESSAGE = 'Si votre adresse est enregistrée, vous recevrez un lien de connexion.';
 
     public function __construct(
@@ -73,7 +74,7 @@ final readonly class AuthController
 
         $magicLink = $this->magicLinkManager->create($user);
 
-        if (null !== $magicLink) {
+        if ($magicLink instanceof \App\Entity\MagicLink) {
             $verifyUrl = $this->urlGenerator->generate(
                 'auth_verify',
                 ['token' => $magicLink->getToken()],
@@ -85,7 +86,7 @@ final readonly class AuthController
                 'expiresInMinutes' => 30,
             ]);
 
-            $emailMessage = (new Email())
+            $emailMessage = new Email()
                 ->to($user->getEmail())
                 ->subject('Votre lien de connexion — Bike Trip Planner')
                 ->html($html);
@@ -101,7 +102,7 @@ final readonly class AuthController
     {
         $user = $this->magicLinkManager->verify($token);
 
-        if (null === $user) {
+        if (!$user instanceof User) {
             return new JsonResponse(
                 ['error' => 'Lien invalide ou expiré.'],
                 Response::HTTP_UNAUTHORIZED,
@@ -147,7 +148,7 @@ final readonly class AuthController
 
         $newRefreshToken = $this->magicLinkManager->rotateRefreshToken($token);
 
-        if (null === $newRefreshToken) {
+        if (!$newRefreshToken instanceof \App\Entity\RefreshToken) {
             $response = new JsonResponse(
                 ['error' => 'Refresh token invalide ou expiré.'],
                 Response::HTTP_UNAUTHORIZED,
@@ -175,7 +176,7 @@ final readonly class AuthController
     #[Route('/api/auth/logout', name: 'auth_logout', methods: ['POST'])]
     public function logout(#[CurrentUser] ?User $user): JsonResponse
     {
-        if (null !== $user) {
+        if ($user instanceof User) {
             $this->magicLinkManager->revokeAllRefreshTokens($user);
         }
 
@@ -189,7 +190,7 @@ final readonly class AuthController
     {
         $origin = $request->headers->get('Origin', '');
 
-        return str_starts_with($origin, 'capacitor://');
+        return str_starts_with((string) $origin, 'capacitor://');
     }
 
     private function setRefreshTokenCookie(Response $response, string $token, \DateTimeImmutable $expiresAt): void

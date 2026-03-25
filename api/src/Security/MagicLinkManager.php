@@ -17,6 +17,7 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class MagicLinkManager
 {
     private const int MAGIC_LINK_TTL_MINUTES = 30;
+
     private const int REFRESH_TOKEN_TTL_DAYS = 30;
 
     public function __construct(
@@ -129,12 +130,6 @@ final readonly class MagicLinkManager
             'user' => $user,
         ]);
 
-        foreach ($links as $link) {
-            if ($link->isValid()) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($links, fn ($link) => $link->isValid());
     }
 }
