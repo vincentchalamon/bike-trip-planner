@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\ApiResource\TripRequest;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -34,9 +35,9 @@ class User implements UserInterface
     #[ORM\OneToMany(targetEntity: RefreshToken::class, mappedBy: 'user', orphanRemoval: true)]
     private Collection $refreshTokens;
 
-    /** @var Collection<int, UserTrip> */
-    #[ORM\OneToMany(targetEntity: UserTrip::class, mappedBy: 'user', orphanRemoval: true)]
-    private Collection $userTrips;
+    /** @var Collection<int, TripRequest> */
+    #[ORM\OneToMany(targetEntity: TripRequest::class, mappedBy: 'user')]
+    private Collection $trips;
 
     /** @param non-empty-string $email */
     public function __construct(#[ORM\Column(length: 180, unique: true)]
@@ -46,7 +47,7 @@ class User implements UserInterface
         $this->createdAt = new \DateTimeImmutable();
         $this->magicLinks = new ArrayCollection();
         $this->refreshTokens = new ArrayCollection();
-        $this->userTrips = new ArrayCollection();
+        $this->trips = new ArrayCollection();
     }
 
     public function getId(): Uuid
@@ -100,10 +101,10 @@ class User implements UserInterface
         return $this->refreshTokens;
     }
 
-    /** @return Collection<int, UserTrip> */
-    public function getUserTrips(): Collection
+    /** @return Collection<int, TripRequest> */
+    public function getTrips(): Collection
     {
-        return $this->userTrips;
+        return $this->trips;
     }
 
     public function eraseCredentials(): void

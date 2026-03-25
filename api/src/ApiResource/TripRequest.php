@@ -128,7 +128,7 @@ final class TripRequest
     #[ApiProperty(readable: false, writable: false)]
     public \DateTimeImmutable $updatedAt;
 
-    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'trips')]
     #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
     #[ApiProperty(readable: false, writable: false)]
     public ?User $user = null;
