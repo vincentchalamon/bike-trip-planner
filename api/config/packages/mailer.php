@@ -10,12 +10,4 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             'dsn' => '%env(MAILER_DSN)%',
         ],
     ]);
-
-    if ('test' === $containerConfigurator->env()) {
-        $containerConfigurator->extension('framework', [
-            'mailer' => [
-                'dsn' => 'null://null',
-            ],
-        ]);
-    }
 };
