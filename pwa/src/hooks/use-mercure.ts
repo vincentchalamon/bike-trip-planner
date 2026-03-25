@@ -368,13 +368,19 @@ async function resolveStageLabels(
  *
  * @param tripId - The trip identifier to subscribe to, or `null` to skip subscription
  */
-export function useMercure(tripId: string | null): void {
+export function useMercure(
+  tripId: string | null,
+  mercureToken?: string | null,
+): void {
   const clientRef = useRef<MercureClient | null>(null);
 
   useEffect(() => {
     if (!tripId) return;
 
     const client = new MercureClient(MERCURE_URL, `/trips/${tripId}`);
+    if (mercureToken) {
+      client.setMercureToken(mercureToken);
+    }
     clientRef.current = client;
     useUiStore.getState().setSseConnected(true);
 
@@ -387,5 +393,5 @@ export function useMercure(tripId: string | null): void {
       clientRef.current = null;
       useUiStore.getState().setSseConnected(false);
     };
-  }, [tripId]);
+  }, [tripId, mercureToken]);
 }

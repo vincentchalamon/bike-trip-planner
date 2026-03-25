@@ -21,11 +21,14 @@ use Symfony\Component\HttpFoundation\Cookie;
 final readonly class MercureTokenIssuer
 {
     private const string COOKIE_NAME = 'mercureAuthorization';
+
     private const string COOKIE_PATH = '/.well-known/mercure';
+
     private const int TOKEN_TTL_SECONDS = 3600; // 1 hour
 
     private Configuration $jwtConfig;
 
+    /** @param non-empty-string $mercureSecret */
     public function __construct(
         #[Autowire(env: 'MERCURE_JWT_SECRET')]
         string $mercureSecret,

@@ -11,8 +11,7 @@ const MAX_AUTH_RETRIES = 2;
  */
 function isCapacitorRuntime(): boolean {
   return (
-    typeof window !== "undefined" &&
-    window.location.protocol === "capacitor:"
+    typeof window !== "undefined" && window.location.protocol === "capacitor:"
   );
 }
 
@@ -90,7 +89,10 @@ export class MercureClient {
 
       // EventSource enters CLOSED state (2) on HTTP 401/403 errors.
       // Attempt re-authentication before falling back to exponential backoff.
-      if (readyState === EventSource.CLOSED && this.authRetries < MAX_AUTH_RETRIES) {
+      if (
+        readyState === EventSource.CLOSED &&
+        this.authRetries < MAX_AUTH_RETRIES
+      ) {
         this.authRetries++;
         this.refreshMercureAuth().then(() => {
           if (!this.closed) {

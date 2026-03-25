@@ -44,7 +44,7 @@ final readonly class MercureSubscriberListener
         $path = $request->getPathInfo();
         $method = $request->getMethod();
 
-        $tripId = $this->extractTripId($path, $method, $response->getStatusCode());
+        $tripId = $this->extractTripId($path, $method);
 
         if (null === $tripId) {
             // For POST /trips and POST /trips/gpx-upload, the trip ID is in the response body
@@ -68,7 +68,7 @@ final readonly class MercureSubscriberListener
     /**
      * Extracts the trip ID from the URL path for endpoints that contain it.
      */
-    private function extractTripId(string $path, string $method, int $statusCode): ?string
+    private function extractTripId(string $path, string $method): ?string
     {
         // GET /trips/{id}/detail
         if ('GET' === $method && 1 === preg_match('#^/trips/('.self::UUID_PATTERN.')/detail$#', $path, $matches)) {
@@ -134,7 +134,7 @@ final readonly class MercureSubscriberListener
     {
         $origin = $request->headers->get('Origin', '');
 
-        return str_starts_with($origin, 'capacitor://');
+        return str_starts_with((string) $origin, 'capacitor://');
     }
 
     private function injectTokenInBody(\Symfony\Component\HttpFoundation\Response $response, string $tripId): void
