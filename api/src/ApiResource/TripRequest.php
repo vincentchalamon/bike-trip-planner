@@ -6,6 +6,7 @@ namespace App\ApiResource;
 
 use ApiPlatform\Metadata\ApiProperty;
 use App\Entity\Stage;
+use App\Entity\User;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -126,6 +127,11 @@ final class TripRequest
     #[ORM\Column]
     #[ApiProperty(readable: false, writable: false)]
     public \DateTimeImmutable $updatedAt;
+
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'trips')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
+    #[ApiProperty(readable: false, writable: false)]
+    public ?User $user = null;
 
     /** @var Collection<int, Stage> */
     #[ORM\OneToMany(targetEntity: Stage::class, mappedBy: 'trip', cascade: ['persist', 'remove'], orphanRemoval: true)]
