@@ -14,9 +14,9 @@ use App\State\Auth\AuthLogoutProcessor;
         new Post(
             uriTemplate: '/auth/logout',
             status: 204,
+            security: "is_granted('IS_AUTHENTICATED_FULLY')",
             input: false,
             output: false,
-            security: "is_granted('IS_AUTHENTICATED_FULLY')",
             processor: AuthLogoutProcessor::class,
         ),
     ],

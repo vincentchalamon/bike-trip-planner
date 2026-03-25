@@ -93,7 +93,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
             'locale' => $locale,
         ]);
 
-        $emailMessage = (new Email())
+        $emailMessage = new Email()
             ->from(new Address('noreply@bike-trip-planner.com', 'Bike Trip Planner'))
             ->to($user->getEmail())
             ->subject('Votre lien de connexion — Bike Trip Planner')
