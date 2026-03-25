@@ -66,9 +66,10 @@ export default function VerifyPage() {
           if (data.token) {
             // Parse user info from the JWT
             const parts = data.token.split(".");
-            if (parts.length === 3) {
+            const encodedPayload = parts[1];
+            if (parts.length === 3 && encodedPayload) {
               try {
-                const payload = JSON.parse(atob(parts[1])) as {
+                const payload = JSON.parse(atob(encodedPayload)) as {
                   sub: string;
                   email: string;
                 };

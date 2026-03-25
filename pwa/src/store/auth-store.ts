@@ -28,8 +28,9 @@ interface AuthState {
 function parseJwtPayload(token: string): { sub: string; email: string } | null {
   try {
     const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1]));
+    const encodedPayload = parts[1];
+    if (parts.length !== 3 || !encodedPayload) return null;
+    const payload = JSON.parse(atob(encodedPayload));
     if (typeof payload.sub !== "string" || typeof payload.email !== "string") {
       return null;
     }
@@ -87,9 +88,7 @@ export const useAuthStore = create<AuthState>()(
         await fetch(`${API_URL}/api/auth/logout`, {
           method: "POST",
           headers: {
-            ...(accessToken
-              ? { Authorization: `Bearer ${accessToken}` }
-              : {}),
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
           },
           credentials: "include",
         });
