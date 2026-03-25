@@ -41,6 +41,11 @@
         "symfony/uid": "8.0.*",
         "symfony/validator": "8.0.*",
         "symfony/yaml": "8.0.*",
+        "symfony/mailer": "8.0.*",
+        "symfony/rate-limiter": "8.0.*",
+        "symfony/resend-mailer": "8.0.*",
+        "symfony/security-bundle": "8.0.*",
+        "lexik/jwt-authentication-bundle": "^3.1",
         "symplify/config-transformer": "^12.4"
     },
     "config": {

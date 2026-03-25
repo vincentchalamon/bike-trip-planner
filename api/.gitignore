@@ -21,3 +21,7 @@ phpstan.neon
 ###> friendsofphp/php-cs-fixer ###
 .php-cs-fixer.cache
 ###< friendsofphp/php-cs-fixer ###
+
+###> lexik/jwt-authentication-bundle ###
+/config/jwt/*.pem
+###< lexik/jwt-authentication-bundle ###
