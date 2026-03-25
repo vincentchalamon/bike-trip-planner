@@ -17,12 +17,6 @@ class RefreshToken
     #[ORM\Column(type: 'uuid')]
     private Uuid $id;
 
-    #[ORM\Column(length: 128)]
-    private string $token;
-
-    #[ORM\Column]
-    private \DateTimeImmutable $expiresAt;
-
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -30,13 +24,13 @@ class RefreshToken
         #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'refreshTokens')]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
         private User $user,
-        string $token,
-        \DateTimeImmutable $expiresAt,
+        #[ORM\Column(length: 128)]
+        private string $token,
+        #[ORM\Column]
+        private \DateTimeImmutable $expiresAt,
         ?Uuid $id = null,
     ) {
         $this->id = $id ?? Uuid::v7();
-        $this->token = $token;
-        $this->expiresAt = $expiresAt;
         $this->createdAt = new \DateTimeImmutable();
     }
 

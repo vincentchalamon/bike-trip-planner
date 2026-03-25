@@ -50,11 +50,10 @@ final class CreateUserCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        /** @var string $email */
         $email = $input->getArgument('email');
 
-        if (!filter_var($email, \FILTER_VALIDATE_EMAIL)) {
-            $io->error(\sprintf('Invalid email address: %s', $email));
+        if (!\is_string($email) || '' === $email || !filter_var($email, \FILTER_VALIDATE_EMAIL)) {
+            $io->error(\sprintf('Invalid email address: %s', (string) $email));
 
             return Command::FAILURE;
         }
@@ -76,7 +75,7 @@ final class CreateUserCommand extends Command
         // Create magic link for invitation
         $magicLink = $this->magicLinkManager->create($user);
 
-        if (null === $magicLink) {
+        if (!$magicLink instanceof \App\Entity\MagicLink) {
             $io->warning('Could not create invitation link.');
 
             return Command::SUCCESS;
@@ -93,7 +92,7 @@ final class CreateUserCommand extends Command
             'expiresInMinutes' => 30,
         ]);
 
-        $emailMessage = (new Email())
+        $emailMessage = new Email()
             ->to($email)
             ->subject('Invitation — Bike Trip Planner')
             ->html($html);
