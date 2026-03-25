@@ -45,7 +45,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         $isCapacitor = $this->isCapacitorRequest();
 
         // Capacitor sends refresh token in body
-        if (null === $token && $isCapacitor && null !== $request) {
+        if (null === $token && $isCapacitor && $request instanceof \Symfony\Component\HttpFoundation\Request) {
             $body = $request->toArray();
             $token = $body['refresh_token'] ?? null;
         }
