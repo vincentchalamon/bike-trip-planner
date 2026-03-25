@@ -4,76 +4,56 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
-use App\Entity\RefreshToken;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
-use App\ApiResource\Auth\Auth;
+use App\ApiResource\Auth\AuthVerify;
 use App\Entity\User;
-use App\Repository\MagicLinkRepository;
-use App\Repository\RefreshTokenRepository;
-use App\Service\Auth\AuthResponseHelper;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Security\MagicLinkManager;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Validates a magic link token, issues JWT + refresh token.
  *
  * For Capacitor clients (Origin: capacitor://), the refresh token is also included in the response body.
  *
- * @implements ProcessorInterface<Auth, JsonResponse>
+ * @implements ProcessorInterface<AuthVerify, JsonResponse>
  */
 final readonly class AuthVerifyProcessor implements ProcessorInterface
 {
-    use AuthResponseHelper;
+    private const string REFRESH_TOKEN_COOKIE = 'refresh_token';
 
     public function __construct(
-        private MagicLinkRepository $magicLinkRepository,
-        private RefreshTokenRepository $refreshTokenRepository,
-        private EntityManagerInterface $entityManager,
+        private MagicLinkManager $magicLinkManager,
         private JWTTokenManagerInterface $jwtManager,
         private RequestStack $requestStack,
         private LoggerInterface $logger,
-        private TranslatorInterface $translator,
     ) {
     }
 
     /**
-     * @param Auth $data
+     * @param AuthVerify $data
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): JsonResponse
     {
-        // Wrap in transaction: consumeByToken (DELETE) + createForUser (persist) must be atomic
-        $user = null;
-        $refreshToken = null;
-
-        $this->entityManager->wrapInTransaction(function () use ($data, &$user, &$refreshToken): void {
-            $user = $this->magicLinkRepository->consumeByToken($data->token);
-
-            if ($user instanceof User) {
-                $refreshToken = $this->refreshTokenRepository->createForUser($user);
-            }
-        });
+        $user = $this->magicLinkManager->verify($data->token);
 
         if (!$user instanceof User) {
             $this->logger->debug('Auth verify invalid token');
 
             return new JsonResponse(
-                ['error' => $this->translator->trans('auth.error.invalid_link', [], 'auth')],
+                ['error' => 'Lien invalide ou expiré.'],
                 Response::HTTP_UNAUTHORIZED,
             );
         }
 
-        \assert($refreshToken instanceof RefreshToken);
-
         $jwt = $this->jwtManager->create($user);
-
-        $request = $this->requestStack->getCurrentRequest();
-        $isCapacitor = $this->isCapacitorRequest($request);
+        $refreshToken = $this->magicLinkManager->createRefreshToken($user);
+        $isCapacitor = $this->isCapacitorRequest();
 
         $this->logger->debug('Auth verify token verified', ['user' => $user->getEmail()]);
 
@@ -83,10 +63,29 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
         }
 
         $response = new JsonResponse($responseData);
-        $response->headers->setCookie(
-            $this->createRefreshTokenCookie($refreshToken->getToken(), $refreshToken->getExpiresAt()),
-        );
+        $this->setRefreshTokenCookie($response, $refreshToken->getToken(), $refreshToken->getExpiresAt());
 
         return $response;
+    }
+
+    private function isCapacitorRequest(): bool
+    {
+        $request = $this->requestStack->getCurrentRequest();
+        $origin = $request?->headers->get('Origin', '') ?? '';
+
+        return str_starts_with($origin, 'capacitor://');
+    }
+
+    private function setRefreshTokenCookie(JsonResponse $response, string $token, \DateTimeImmutable $expiresAt): void
+    {
+        $cookie = Cookie::create(self::REFRESH_TOKEN_COOKIE)
+            ->withValue($token)
+            ->withExpires($expiresAt)
+            ->withPath('/')
+            ->withSecure(true)
+            ->withHttpOnly(true)
+            ->withSameSite('strict');
+
+        $response->headers->setCookie($cookie);
     }
 }
