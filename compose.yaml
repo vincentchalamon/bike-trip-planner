@@ -58,7 +58,7 @@ services:
       JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
       JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
       JWT_PASSPHRASE: "${JWT_PASSPHRASE:-bike-trip-planner-dev}"
-      MAILER_DSN: "${MAILER_DSN:-null://null}"
+      MAILER_DSN: "${MAILER_DSN:-smtp://mailcatcher:1025}"
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -117,7 +117,7 @@ services:
       JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
       JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
       JWT_PASSPHRASE: "${JWT_PASSPHRASE:-bike-trip-planner-dev}"
-      MAILER_DSN: "${MAILER_DSN:-null://null}"
+      MAILER_DSN: "${MAILER_DSN:-smtp://mailcatcher:1025}"
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
