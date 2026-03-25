@@ -1,0 +1,72 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Entity;
+
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\Uuid;
+
+#[ORM\Entity]
+#[ORM\Table(name: 'refresh_token')]
+#[ORM\Index(name: 'idx_refresh_token_token', columns: ['token'])]
+#[ORM\Index(name: 'idx_refresh_token_user', columns: ['user_id'])]
+class RefreshToken
+{
+    #[ORM\Id]
+    #[ORM\Column(type: 'uuid')]
+    private Uuid $id;
+
+    #[ORM\Column(length: 128)]
+    private string $token;
+
+    #[ORM\Column]
+    private \DateTimeImmutable $expiresAt;
+
+    #[ORM\Column]
+    private \DateTimeImmutable $createdAt;
+
+    public function __construct(
+        #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'refreshTokens')]
+        #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+        private User $user,
+        string $token,
+        \DateTimeImmutable $expiresAt,
+        ?Uuid $id = null,
+    ) {
+        $this->id = $id ?? Uuid::v7();
+        $this->token = $token;
+        $this->expiresAt = $expiresAt;
+        $this->createdAt = new \DateTimeImmutable();
+    }
+
+    public function getId(): Uuid
+    {
+        return $this->id;
+    }
+
+    public function getUser(): User
+    {
+        return $this->user;
+    }
+
+    public function getToken(): string
+    {
+        return $this->token;
+    }
+
+    public function getExpiresAt(): \DateTimeImmutable
+    {
+        return $this->expiresAt;
+    }
+
+    public function isValid(): bool
+    {
+        return $this->expiresAt > new \DateTimeImmutable();
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
+    }
+}
