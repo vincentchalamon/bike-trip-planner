@@ -4,23 +4,18 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
-use App\Entity\MagicLink;
 use App\Entity\User;
-use App\Repository\MagicLinkRepository;
-use App\Repository\UserRepository;
+use App\Security\MagicLinkManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
-use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Twig\Environment;
 
 /**
@@ -33,17 +28,12 @@ use Twig\Environment;
 )]
 final class CreateUserCommand extends Command
 {
-    private const array SUPPORTED_LOCALES = ['fr', 'en'];
-
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly MagicLinkRepository $magicLinkRepository,
-        private readonly UserRepository $userRepository,
+        private readonly MagicLinkManager $magicLinkManager,
         private readonly MailerInterface $mailer,
         private readonly Environment $twig,
-        private readonly TranslatorInterface $translator,
-        #[Autowire(env: 'FRONTEND_URL')]
-        private readonly string $frontendUrl,
+        private readonly UrlGeneratorInterface $urlGenerator,
     ) {
         parent::__construct();
     }
@@ -52,8 +42,7 @@ final class CreateUserCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('email', InputArgument::REQUIRED, 'Email address of the new user')
-            ->addOption('locale', 'l', InputOption::VALUE_REQUIRED, 'Locale for the invitation email (fr, en)', 'fr');
+            ->addArgument('email', InputArgument::REQUIRED, 'Email address of the new user');
     }
 
     #[\Override]
@@ -61,68 +50,57 @@ final class CreateUserCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
+        /** @var string $email */
         $email = $input->getArgument('email');
 
-        if (!\is_string($email) || '' === $email || !filter_var($email, \FILTER_VALIDATE_EMAIL)) {
-            $io->error(\sprintf('Invalid email address: %s', (string) $email));
+        if (!filter_var($email, \FILTER_VALIDATE_EMAIL)) {
+            $io->error(\sprintf('Invalid email address: %s', $email));
 
             return Command::FAILURE;
         }
 
-        $locale = $input->getOption('locale');
-        \assert(\is_string($locale));
+        $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
 
-        if (!\in_array($locale, self::SUPPORTED_LOCALES, true)) {
-            $io->error(\sprintf('Unsupported locale "%s". Supported: %s', $locale, implode(', ', self::SUPPORTED_LOCALES)));
-
-            return Command::FAILURE;
-        }
-
-        $existingUser = $this->userRepository->findByEmail($email);
-
-        if ($existingUser instanceof User) {
+        if (null !== $existingUser) {
             $io->error(\sprintf('User with email "%s" already exists.', $email));
 
             return Command::FAILURE;
         }
 
         $user = new User($email);
-        $user->setLocale($locale);
-
-        // Persist but do NOT flush yet — defer until after the email send so that
-        // an SMTP failure does not leave an orphaned user without an invitation.
         $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
-        // User is not yet flushed — no active link can exist, so create() always returns a MagicLink
-        $magicLink = $this->magicLinkRepository->create($user);
-        \assert($magicLink instanceof MagicLink);
+        $io->success(\sprintf('User created: %s (ID: %s)', $email, $user->getId()));
 
-        $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), $magicLink->getToken());
+        // Create magic link for invitation
+        $magicLink = $this->magicLinkManager->create($user);
 
-        $html = $this->twig->render('email/invitation.html.twig', [
-            'verifyUrl' => $verifyUrl,
-            'expiresInMinutes' => MagicLinkRepository::TTL_MINUTES,
-            'locale' => $locale,
-        ]);
-
-        $emailMessage = new Email()
-            ->to($email)
-            ->subject($this->translator->trans('auth.email.invitation.subject', [], 'auth', $locale))
-            ->html($html);
-
-        // Send email before flush: if SMTP fails, the magic link is not persisted
-        // and the user can retry immediately instead of being locked out.
-        $this->mailer->send($emailMessage);
-
-        try {
-            $this->entityManager->flush();
-        } catch (UniqueConstraintViolationException) {
-            $io->warning(\sprintf('User "%s" or their invitation link was created concurrently by another process — no action needed.', $email));
+        if (null === $magicLink) {
+            $io->warning('Could not create invitation link.');
 
             return Command::SUCCESS;
         }
 
-        $io->success(\sprintf('User created: %s (ID: %s). Invitation email sent.', $email, $user->getId()));
+        $verifyUrl = $this->urlGenerator->generate(
+            'auth_verify',
+            ['token' => $magicLink->getToken()],
+            UrlGeneratorInterface::ABSOLUTE_URL,
+        );
+
+        $html = $this->twig->render('email/invitation.html.twig', [
+            'verifyUrl' => $verifyUrl,
+            'expiresInMinutes' => 30,
+        ]);
+
+        $emailMessage = (new Email())
+            ->to($email)
+            ->subject('Invitation — Bike Trip Planner')
+            ->html($html);
+
+        $this->mailer->send($emailMessage);
+
+        $io->success('Invitation email sent.');
 
         return Command::SUCCESS;
     }
