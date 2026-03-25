@@ -11,6 +11,10 @@ use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripListItem;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
+<<<<<<< HEAD
+=======
+use App\Entity\UserTrip;
+>>>>>>> 9aa31a5 (feat(security): secure Trip and Stage API endpoints with ownership checks)
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Uid\Uuid;
@@ -49,14 +53,27 @@ final readonly class TripCollectionProvider implements ProviderInterface
 
         $user = $this->security->getUser();
 
+<<<<<<< HEAD
         \assert($user instanceof User);
 
+=======
+>>>>>>> 9aa31a5 (feat(security): secure Trip and Stage API endpoints with ownership checks)
         $qb = $this->entityManager->createQueryBuilder();
         $qb->select('t')
             ->from(TripRequest::class, 't')
             ->orderBy('t.createdAt', 'DESC')
             ->andWhere('t.user = :user')
             ->setParameter('user', $user);
+
+        // Filter by current user's trips via UserTrip join
+        if ($user instanceof User) {
+            $qb->innerJoin(UserTrip::class, 'ut', 'WITH', 'ut.trip = t')
+                ->andWhere('ut.user = :user')
+                ->setParameter('user', $user);
+        } else {
+            // No authenticated user: return empty result
+            $qb->andWhere('1 = 0');
+        }
 
         // Filter by title (partial, case-insensitive)
         if (isset($filters['title']) && '' !== $filters['title'] && is_string($filters['title'])) {

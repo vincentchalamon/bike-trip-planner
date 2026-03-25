@@ -13,6 +13,10 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\Stage;
 use App\Entity\User;
+<<<<<<< HEAD
+=======
+use App\Entity\UserTrip;
+>>>>>>> 9aa31a5 (feat(security): secure Trip and Stage API endpoints with ownership checks)
 use App\Enum\ComputationName;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Security\Voter\TripVoter;
@@ -29,6 +33,8 @@ use Symfony\Component\Uid\Uuid;
  */
 final readonly class TripDuplicateProcessor implements ProcessorInterface
 {
+    private const int CACHE_TTL = 1800; // 30 minutes
+
     public function __construct(
         private TripRequestRepositoryInterface $tripRepository,
         private EntityManagerInterface $entityManager,
@@ -88,6 +94,26 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $this->entityManager->beginTransaction();
         try {
             $this->entityManager->flush();
+<<<<<<< HEAD
+=======
+
+            // Copy transient Redis data from source trip to duplicate
+            $this->copyTransientData($sourceId, $newTripIdString, $duplicate);
+
+            // Initialize computation tracker as done (all computations are inherited from source)
+            $computations = ComputationName::pipeline();
+            $this->computationTracker->initializeComputations($newTripIdString, $computations);
+
+            foreach ($computations as $computation) {
+                $this->computationTracker->markDone($newTripIdString, $computation);
+            }
+
+            $this->generationTracker->initialize($newTripIdString);
+
+            // Associate duplicate trip with current user
+            $this->associateTripWithUser($newTripIdString, $duplicate);
+
+>>>>>>> 9aa31a5 (feat(security): secure Trip and Stage API endpoints with ownership checks)
             $this->entityManager->commit();
         } catch (\Throwable $throwable) {
             $this->entityManager->rollback();
@@ -145,6 +171,27 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $clone->setSelectedAccommodation($source->getSelectedAccommodation());
 
         return $clone;
+    }
+
+    private function associateTripWithUser(string $tripId, TripRequest $tripRequest): void
+    {
+        $user = $this->security->getUser();
+        if (!$user instanceof User) {
+            return;
+        }
+
+        // Create UserTrip association in PostgreSQL
+        $userTrip = new UserTrip($user, $tripRequest);
+        $userTrip->setTitle($tripRequest->title);
+        $userTrip->setSourceUrl($tripRequest->sourceUrl);
+        $this->entityManager->persist($userTrip);
+        $this->entityManager->flush();
+
+        // Store userId in Redis for fast ownership checks during computation
+        $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));
+        $item->set($user->getId()->toRfc4122());
+        $item->expiresAfter(self::CACHE_TTL);
+        $this->tripStateCache->save($item);
     }
 
     private function copyTransientData(string $sourceId, string $newTripId, TripRequest $duplicate): void

@@ -12,10 +12,18 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
+<<<<<<< HEAD
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Security\Voter\TripVoter;
+=======
+use App\Entity\UserTrip;
+use App\Enum\ComputationName;
+use App\Message\FetchAndParseRoute;
+use App\Repository\TripRequestRepositoryInterface;
+use Doctrine\ORM\EntityManagerInterface;
+>>>>>>> 9aa31a5 (feat(security): secure Trip and Stage API endpoints with ownership checks)
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -28,6 +36,8 @@ use Symfony\Component\Uid\Uuid;
  */
 final readonly class TripCreateProcessor implements ProcessorInterface
 {
+    private const int CACHE_TTL = 1800; // 30 minutes
+
     public function __construct(
         private MessageBusInterface $messageBus,
         private TripRequestRepositoryInterface $tripStateManager,
@@ -36,6 +46,10 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private RequestStack $requestStack,
         private TripLocker $tripLocker,
         private Security $security,
+<<<<<<< HEAD
+=======
+        private EntityManagerInterface $entityManager,
+>>>>>>> 9aa31a5 (feat(security): secure Trip and Stage API endpoints with ownership checks)
         #[Autowire(service: 'cache.trip_state')]
         private CacheItemPoolInterface $tripStateCache,
     ) {
@@ -59,12 +73,17 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         $locale = $this->requestStack->getCurrentRequest()?->getPreferredLanguage(['en', 'fr']) ?? 'en';
         $this->tripStateManager->storeLocale($tripId, $locale);
 
+<<<<<<< HEAD
         // Store userId in Redis for fast ownership checks during computation
         $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));
         $item->set($user->getId()->toRfc4122());
         $item->expiresAfter(TripVoter::CACHE_TTL);
 
         $this->tripStateCache->save($item);
+=======
+        // Associate trip with current user
+        $this->associateTripWithUser($tripId, $data);
+>>>>>>> 9aa31a5 (feat(security): secure Trip and Stage API endpoints with ownership checks)
 
         $computations = ComputationName::pipeline();
         $this->computationTracker->initializeComputations($tripId, $computations);
@@ -79,6 +98,33 @@ final readonly class TripCreateProcessor implements ProcessorInterface
             computationStatus: $this->buildInitialStatus($computations),
             isLocked: $this->tripLocker->isLocked($data),
         );
+    }
+
+    private function associateTripWithUser(string $tripId, TripRequest $tripRequest): void
+    {
+        $user = $this->security->getUser();
+        if (!$user instanceof User) {
+            return;
+        }
+
+        // Re-fetch the managed TripRequest entity (initializeTrip may have persisted it)
+        $managedTrip = $this->entityManager->getRepository(TripRequest::class)->find(Uuid::fromString($tripId));
+        if (!$managedTrip instanceof TripRequest) {
+            return;
+        }
+
+        // Create UserTrip association in PostgreSQL
+        $userTrip = new UserTrip($user, $managedTrip);
+        $userTrip->setTitle($managedTrip->title);
+        $userTrip->setSourceUrl($managedTrip->sourceUrl);
+        $this->entityManager->persist($userTrip);
+        $this->entityManager->flush();
+
+        // Store userId in Redis for fast ownership checks during computation
+        $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));
+        $item->set($user->getId()->toRfc4122());
+        $item->expiresAfter(self::CACHE_TTL);
+        $this->tripStateCache->save($item);
     }
 
     /**
