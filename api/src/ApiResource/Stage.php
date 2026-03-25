@@ -32,7 +32,6 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
     operations: [
         new Get(
             uriTemplate: '/trips/{tripId}/stages/{index}{._format}',
-            security: "is_granted('ROLE_USER')",
             outputFormats: [
                 'gpx' => ['application/gpx+xml'],
                 'fit' => ['application/vnd.ant.fit'],
@@ -50,7 +49,6 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
             uriVariables: [
                 'tripId' => new Link(fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Add a manual stage at a given position.'),
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
@@ -64,7 +62,6 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Update stage data (start/end points, etc.).'),
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
@@ -79,7 +76,6 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Move a stage to a new position.'),
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
@@ -94,7 +90,6 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Delete a stage (merge with adjacent).'),
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
@@ -107,7 +102,6 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Insert a rest day after a given stage. The next stage startPoint stays identical; dates shift by one day.'),
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
@@ -121,7 +115,6 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Select or deselect an accommodation for a stage. Selecting updates stage endPoint and next stage startPoint.'),
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
@@ -136,7 +129,6 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
                 'tripId' => new Link(fromClass: Stage::class),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
-            security: "is_granted('ROLE_USER')",
             status: 202,
             openapi: new Operation(summary: 'Add a cultural POI as a waypoint to a stage, triggering async route recalculation via Valhalla.'),
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
