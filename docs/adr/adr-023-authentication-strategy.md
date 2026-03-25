@@ -47,12 +47,14 @@ The application does not offer self-registration. Users are created exclusively 
 The user enters their email address. If the email corresponds to an existing user, a time-limited magic link is sent. Clicking the link authenticates the user and issues a JWT access token + refresh token pair. No password is ever stored, transmitted, or remembered.
 
 **Pros:**
+
 - Zero password storage eliminates an entire class of vulnerabilities (credential stuffing, brute-force, password reuse)
 - Minimal UI surface: one input field, one button
 - Natural fit for invite-only: the admin creates users with just an email
 - Stateless JWT integrates cleanly with API Platform
 
 **Cons:**
+
 - Depends on email delivery reliability
 - Slight latency (user must switch to email client)
 
@@ -61,10 +63,12 @@ The user enters their email address. If the email corresponds to an existing use
 Traditional email + password authentication with JWT tokens.
 
 **Pros:**
+
 - Well-understood pattern with extensive library support
 - No dependency on email delivery for every login
 
 **Cons:**
+
 - Requires password hashing, storage, and reset flow
 - Increases attack surface (credential stuffing, brute-force, password reuse attacks)
 - More UI to build and maintain (registration, login, forgot password, reset password)
@@ -75,10 +79,12 @@ Traditional email + password authentication with JWT tokens.
 Server-side sessions stored in Redis or database.
 
 **Pros:**
+
 - Simplest implementation, native Symfony support
 - Easy revocation (delete session)
 
 **Cons:**
+
 - Breaks stateless architecture; requires sticky sessions or shared session store
 - Fragile in Capacitor WebView (cookie partitioning, ITP restrictions)
 - Does not scale to multiple API instances without shared state
@@ -88,10 +94,12 @@ Server-side sessions stored in Redis or database.
 Long-lived opaque tokens stored in the database, sent as Bearer header.
 
 **Pros:**
+
 - Simple to implement
 - Easy revocation (delete token row)
 
 **Cons:**
+
 - Database lookup on every request — not stateless
 - Long-lived tokens increase window of compromise
 - No standard refresh mechanism
@@ -101,10 +109,12 @@ Long-lived opaque tokens stored in the database, sent as Bearer header.
 Full OAuth2 authorization server (e.g., league/oauth2-server-bundle).
 
 **Pros:**
+
 - Industry standard, supports multiple grant types
 - Future-proof for third-party integrations
 
 **Cons:**
+
 - Significant implementation complexity for a single-developer project
 - Requires managing clients, scopes, consent screens
 - Massive overkill for an invite-only application with no third-party consumers
@@ -117,33 +127,42 @@ Full OAuth2 authorization server (e.g., league/oauth2-server-bundle).
 
 ### Authentication Flow
 
+```text
+┌──────────┐        ┌──────────┐        ┌──────────┐        ┌──────────┐
+│ Browser  │        │ Next.js  │        │ Symfony  │        │  Resend  │
+│          │        │ Frontend │        │ Backend  │        │  (SMTP)  │
+└────┬─────┘        └────┬─────┘        └────┬─────┘        └────┬─────┘
+     │ Enter email       │                   │                    │
+     │──────────────────►│ POST /auth/       │                    │
+     │                   │   request-link    │                    │
+     │                   │──────────────────►│                    │
+     │                   │                   │ Generate token     │
+     │                   │                   │ (256-bit entropy)  │
+     │                   │                   │                    │
+     │                   │                   │ Send magic link    │
+     │                   │ 200 OK            │───────────────────►│
+     │                   │◄──────────────────│                    │
+     │ "Check your email"│                   │                    │
+     │◄──────────────────│                   │                    │
+     │                   │                   │                    │
+     │ Click magic link  │                   │                    │
+     │──────────────────►│                   │                    │
+     │                   │ POST /auth/verify │                    │
+     │                   │ {token: <opaque>} │                    │
+     │                   │──────────────────►│                    │
+     │                   │                   │ Validate token     │
+     │                   │                   │ (TTL + single-use) │
+     │                   │                   │                    │
+     │                   │ JWT access token  │                    │
+     │                   │ + refresh cookie  │                    │
+     │◄──────────────────│◄──────────────────│                    │
+     │                   │                   │                    │
 ```
-┌──────────┐         ┌──────────┐         ┌─────────┐         ┌──────────┐
-│ Browser  │         │ Next.js  │         │ Symfony  │         │  Resend  │
-│          │         │ Frontend │         │ Backend  │         │  (SMTP)  │
-└────┬─────┘         └────┬─────┘         └────┬─────┘         └────┬─────┘
-     │  Enter email       │                    │                     │
-     │───────────────────►│  POST /auth/login  │                     │
-     │                    │───────────────────►│                     │
-     │                    │                    │  Generate token      │
-     │                    │                    │  (256-bit entropy)   │
-     │                    │                    │                     │
-     │                    │                    │  Send magic link     │
-     │                    │  202 Accepted      │────────────────────►│
-     │                    │◄───────────────────│                     │
-     │  "Check your email"│                    │                     │
-     │◄───────────────────│                    │                     │
-     │                    │                    │                     │
-     │  Click magic link  │                    │                     │
-     │───────────────────────────────────────►│                     │
-     │                    │                    │  Validate token      │
-     │                    │                    │  (TTL + single-use)  │
-     │                    │                    │                     │
-     │                    │  JWT access token   │                     │
-     │                    │  + refresh cookie   │                     │
-     │◄───────────────────────────────────────│                     │
-     │                    │                    │                     │
-```
+
+The magic link URL points to the Next.js frontend (`/auth/verify/{token}`).
+The frontend route handler exchanges the opaque token with the backend via
+`POST /auth/verify`, receives the JWT access token in the response body
+and the refresh token as an HttpOnly cookie. The JWT never appears in a URL.
 
 ### Token Strategy
 
@@ -188,7 +207,9 @@ Rate limiting on the magic link generation endpoint to prevent mailbox spam and 
 
 ### Capacitor (Mobile) Adaptation
 
-In Capacitor WebView, HttpOnly cookies may not be reliably transmitted. When the backend detects a Capacitor Origin header, the refresh token is returned in the response body instead of a cookie. The mobile client stores it in the device's secure storage (Capacitor Preferences with encryption).
+In Capacitor WebView, HttpOnly cookies may not be reliably transmitted. When the backend detects a Capacitor client — identified by `Origin: capacitor://localhost` — the refresh token is returned in the response body instead of a cookie. The mobile client stores it in the device's secure storage (Capacitor Preferences with encryption).
+
+**Accepted risk:** The `capacitor://` Origin can be set by any non-browser HTTP client (curl, scripts). However, this only changes the token transport mechanism, not the security model: the caller must already hold a valid single-use magic link token or a valid refresh token. The refresh token body exposure is therefore an accepted residual risk.
 
 ---
 
@@ -205,7 +226,7 @@ In Capacitor WebView, HttpOnly cookies may not be reliably transmitted. When the
 
 ### Frontend (Next.js)
 
-- Access token held in a Zustand store (in-memory, not persisted)
+- Access token held in a Zustand store (in-memory, not persisted) — **client components only**; React Server Components do not have access to this store and must not make authenticated API calls directly
 - `fetch` wrapper automatically attaches `Authorization: Bearer` header
 - Silent refresh via `credentials: 'include'` on the refresh endpoint
 - Redirect to login page when both tokens are expired
