@@ -27,6 +27,7 @@ use App\State\TripUpdateProcessor;
     operations: [
         new GetCollection(
             uriTemplate: '/trips',
+            security: "is_granted('ROLE_USER')",
             openapi: new Operation(
                 summary: 'List all trips, paginated and filterable.',
                 parameters: [
@@ -62,6 +63,7 @@ use App\State\TripUpdateProcessor;
         new Post(
             uriTemplate: '/trips{._format}',
             status: 202,
+            security: "is_granted('ROLE_USER')",
             validationContext: ['groups' => ['trip_request:create']],
             input: TripRequest::class,
             mercure: true,
@@ -70,6 +72,7 @@ use App\State\TripUpdateProcessor;
         new Post(
             uriTemplate: '/trips/{id}/duplicate{._format}',
             status: 201,
+            security: "is_granted('TRIP_VIEW', object)",
             openapi: new Operation(
                 responses: [
                     404 => new Response(description: 'Trip not found'),
@@ -83,6 +86,7 @@ use App\State\TripUpdateProcessor;
         new Patch(
             uriTemplate: '/trips/{id}{._format}',
             status: 202,
+            security: "is_granted('TRIP_EDIT', object)",
             input: TripRequest::class,
             mercure: true,
             provider: TripRequestProvider::class,
@@ -90,6 +94,7 @@ use App\State\TripUpdateProcessor;
         ),
         new Get(
             uriTemplate: '/trips/{id}{._format}',
+            security: "is_granted('TRIP_VIEW', object)",
             outputFormats: [
                 'gpx' => ['application/gpx+xml'],
             ],
@@ -98,6 +103,7 @@ use App\State\TripUpdateProcessor;
         ),
         new Delete(
             uriTemplate: '/trips/{id}',
+            security: "is_granted('TRIP_DELETE', object)",
             openapi: new Operation(summary: 'Delete a trip and all its stages.'),
             provider: TripDoctrineProvider::class,
             processor: TripDeleteProcessor::class,

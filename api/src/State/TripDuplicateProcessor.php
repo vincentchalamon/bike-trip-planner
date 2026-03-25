@@ -12,9 +12,14 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\Stage;
+use App\Entity\User;
+use App\Entity\UserTrip;
 use App\Enum\ComputationName;
 use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Cache\CacheItemPoolInterface;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -24,11 +29,16 @@ use Symfony\Component\Uid\Uuid;
  */
 final readonly class TripDuplicateProcessor implements ProcessorInterface
 {
+    private const int CACHE_TTL = 1800; // 30 minutes
+
     public function __construct(
         private TripRequestRepositoryInterface $tripRepository,
         private EntityManagerInterface $entityManager,
         private ComputationTrackerInterface $computationTracker,
         private TripGenerationTrackerInterface $generationTracker,
+        private Security $security,
+        #[Autowire(service: 'cache.trip_state')]
+        private CacheItemPoolInterface $tripStateCache,
     ) {
     }
 
@@ -88,6 +98,10 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
             }
 
             $this->generationTracker->initialize($newTripIdString);
+
+            // Associate duplicate trip with current user
+            $this->associateTripWithUser($newTripIdString, $duplicate);
+
             $this->entityManager->commit();
         } catch (\Throwable $throwable) {
             $this->entityManager->rollback();
@@ -126,6 +140,27 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $clone->setSelectedAccommodation($source->getSelectedAccommodation());
 
         return $clone;
+    }
+
+    private function associateTripWithUser(string $tripId, TripRequest $tripRequest): void
+    {
+        $user = $this->security->getUser();
+        if (!$user instanceof User) {
+            return;
+        }
+
+        // Create UserTrip association in PostgreSQL
+        $userTrip = new UserTrip($user, $tripRequest);
+        $userTrip->setTitle($tripRequest->title);
+        $userTrip->setSourceUrl($tripRequest->sourceUrl);
+        $this->entityManager->persist($userTrip);
+        $this->entityManager->flush();
+
+        // Store userId in Redis for fast ownership checks during computation
+        $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));
+        $item->set($user->getId()->toRfc4122());
+        $item->expiresAfter(self::CACHE_TTL);
+        $this->tripStateCache->save($item);
     }
 
     private function copyTransientData(string $sourceId, string $newTripId, TripRequest $duplicate): void

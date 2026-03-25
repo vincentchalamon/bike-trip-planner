@@ -10,11 +10,16 @@ use ApiPlatform\State\Pagination\Pagination;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripListItem;
 use App\ApiResource\TripRequest;
+use App\Entity\User;
+use App\Entity\UserTrip;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Uid\Uuid;
 
 /**
  * Provides a paginated, filterable list of trips from PostgreSQL.
+ *
+ * Only returns trips owned by the current authenticated user.
  *
  * Supports the following query parameters:
  *   - page (integer, default 1)
@@ -28,6 +33,7 @@ final readonly class TripCollectionProvider implements ProviderInterface
     public function __construct(
         private EntityManagerInterface $entityManager,
         private Pagination $pagination,
+        private Security $security,
     ) {
     }
 
@@ -42,10 +48,22 @@ final readonly class TripCollectionProvider implements ProviderInterface
 
         [$page, , $limit] = $this->pagination->getPagination($operation, $context);
 
+        $user = $this->security->getUser();
+
         $qb = $this->entityManager->createQueryBuilder();
         $qb->select('t')
             ->from(TripRequest::class, 't')
             ->orderBy('t.createdAt', 'DESC');
+
+        // Filter by current user's trips via UserTrip join
+        if ($user instanceof User) {
+            $qb->innerJoin(UserTrip::class, 'ut', 'WITH', 'ut.trip = t')
+                ->andWhere('ut.user = :user')
+                ->setParameter('user', $user);
+        } else {
+            // No authenticated user: return empty result
+            $qb->andWhere('1 = 0');
+        }
 
         // Filter by title (partial, case-insensitive)
         if (isset($filters['title']) && '' !== $filters['title'] && is_string($filters['title'])) {
