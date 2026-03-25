@@ -35,7 +35,6 @@ services:
       JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
       JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
-      MAILER_DSN: "${MAILER_DSN}"
     tty: true
     ports:
       - target: 80
@@ -94,7 +93,6 @@ services:
       JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
       JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
-      MAILER_DSN: "${MAILER_DSN}"
     volumes:
       - jwt_keys:/app/config/jwt
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
