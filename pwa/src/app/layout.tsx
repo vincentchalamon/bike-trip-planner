@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { OnboardingTour } from "@/components/onboarding-tour";
+import { AuthGuard } from "@/components/auth-guard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,7 +48,9 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <TooltipProvider>{children}</TooltipProvider>
+            <AuthGuard>
+              <TooltipProvider>{children}</TooltipProvider>
+            </AuthGuard>
             <OnboardingTour />
             <Toaster richColors position="top-right" />
           </ThemeProvider>
