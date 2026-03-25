@@ -32,8 +32,9 @@ services:
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
+      JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
-      FRONTEND_URL: "${FRONTEND_URL}"
       MAILER_DSN: "${MAILER_DSN}"
     tty: true
     ports:
@@ -90,8 +91,9 @@ services:
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
+      JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
-      FRONTEND_URL: "${FRONTEND_URL}"
       MAILER_DSN: "${MAILER_DSN}"
     volumes:
       - jwt_keys:/app/config/jwt
