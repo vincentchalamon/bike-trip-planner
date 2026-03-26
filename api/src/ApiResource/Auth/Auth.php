@@ -18,23 +18,18 @@ use Symfony\Component\Validator\Constraints as Assert;
         new Post(
             uriTemplate: '/auth/request-link',
             status: 202,
-            security: 'is_granted("PUBLIC_ACCESS")',
             validationContext: ['groups' => ['auth:request-link']],
             output: false,
             processor: AuthRequestLinkProcessor::class,
         ),
         new Post(
             uriTemplate: '/auth/verify',
-            status: 200,
-            security: 'is_granted("PUBLIC_ACCESS")',
             validationContext: ['groups' => ['auth:verify']],
             output: false,
             processor: AuthVerifyProcessor::class,
         ),
         new Post(
             uriTemplate: '/auth/refresh',
-            status: 200,
-            security: 'is_granted("PUBLIC_ACCESS")',
             input: false,
             output: false,
             processor: AuthRefreshProcessor::class,
@@ -51,8 +46,6 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 final class Auth
 {
-    public const string REFRESH_TOKEN_COOKIE = 'refresh_token';
-
     public function __construct(
         #[Assert\NotBlank(groups: ['auth:request-link'])]
         #[Assert\Email(groups: ['auth:request-link'])]

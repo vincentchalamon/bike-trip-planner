@@ -6,7 +6,7 @@ namespace App\State\Auth;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
-use App\ApiResource\Auth\AuthRequestLink;
+use App\ApiResource\Auth\Auth;
 use App\Entity\MagicLink;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
@@ -27,7 +27,7 @@ use Twig\Environment;
  *
  * Always returns the same neutral message to prevent user enumeration.
  *
- * @implements ProcessorInterface<AuthRequestLink, JsonResponse>
+ * @implements ProcessorInterface<Auth, JsonResponse>
  */
 final readonly class AuthRequestLinkProcessor implements ProcessorInterface
 {
@@ -50,7 +50,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
     }
 
     /**
-     * @param AuthRequestLink $data
+     * @param Auth $data
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): JsonResponse
     {
