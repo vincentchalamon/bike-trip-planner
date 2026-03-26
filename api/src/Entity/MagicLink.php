@@ -11,15 +11,12 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Entity(repositoryClass: MagicLinkRepository::class)]
 #[ORM\Table(name: 'magic_link')]
 #[ORM\UniqueConstraint(name: 'uniq_magic_link_token', columns: ['token'])]
-#[ORM\Index(name: 'idx_magic_link_user_expires', columns: ['user_id', 'expires_at'])]
+#[ORM\Index(name: 'idx_magic_link_user', columns: ['user_id'])]
 class MagicLink
 {
     #[ORM\Id]
     #[ORM\Column(type: 'uuid')]
     private Uuid $id;
-
-    #[ORM\Column(nullable: true)]
-    private ?\DateTimeImmutable $consumedAt = null; // @phpstan-ignore property.unusedType (used as DQL filter in MagicLinkRepository)
 
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
@@ -56,11 +53,6 @@ class MagicLink
     public function getExpiresAt(): \DateTimeImmutable
     {
         return $this->expiresAt;
-    }
-
-    public function getConsumedAt(): ?\DateTimeImmutable
-    {
-        return $this->consumedAt;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

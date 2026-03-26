@@ -20,11 +20,10 @@ final class Version20260325120000 extends AbstractMigration
         $this->addSql('CREATE UNIQUE INDEX uniq_user_email ON "user" (email)');
         $this->addSql('COMMENT ON COLUMN "user".created_at IS \'(DC2Type:datetime_immutable)\'');
 
-        $this->addSql('CREATE TABLE magic_link (id UUID NOT NULL, token VARCHAR(128) NOT NULL, expires_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, consumed_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, user_id UUID NOT NULL, PRIMARY KEY (id))');
+        $this->addSql('CREATE TABLE magic_link (id UUID NOT NULL, token VARCHAR(128) NOT NULL, expires_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, user_id UUID NOT NULL, PRIMARY KEY (id))');
         $this->addSql('CREATE UNIQUE INDEX uniq_magic_link_token ON magic_link (token)');
-        $this->addSql('CREATE INDEX idx_magic_link_user_expires ON magic_link (user_id, expires_at)');
+        $this->addSql('CREATE INDEX idx_magic_link_user ON magic_link (user_id)');
         $this->addSql('COMMENT ON COLUMN magic_link.expires_at IS \'(DC2Type:datetime_immutable)\'');
-        $this->addSql('COMMENT ON COLUMN magic_link.consumed_at IS \'(DC2Type:datetime_immutable)\'');
         $this->addSql('COMMENT ON COLUMN magic_link.created_at IS \'(DC2Type:datetime_immutable)\'');
         $this->addSql('ALTER TABLE magic_link ADD CONSTRAINT FK_MAGIC_LINK_USER FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE NOT DEFERRABLE');
 
