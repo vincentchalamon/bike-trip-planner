@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Trip;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Security\TripOwnershipChecker;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -26,7 +25,6 @@ final readonly class TripGpxProvider implements ProviderInterface
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
-        private TripOwnershipChecker $ownershipChecker,
     ) {
     }
 
@@ -43,8 +41,6 @@ final readonly class TripGpxProvider implements ProviderInterface
         if (null === $stages) {
             throw new NotFoundHttpException(\sprintf('Trip "%s" not found or has expired.', $id));
         }
-
-        $this->ownershipChecker->denyUnlessOwner($id);
 
         $context['trip_stages'] = $stages;
 
