@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
+use App\Entity\RefreshToken;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
 use App\Repository\RefreshTokenRepository;
-use App\Security\AuthCookies;
+use App\Service\Auth\AuthResponseHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
@@ -29,6 +29,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  */
 final readonly class AuthVerifyProcessor implements ProcessorInterface
 {
+    use AuthResponseHelper;
+
     public function __construct(
         private MagicLinkRepository $magicLinkRepository,
         private RefreshTokenRepository $refreshTokenRepository,
@@ -45,7 +47,17 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): JsonResponse
     {
-        $user = $this->magicLinkRepository->consumeByToken($data->token);
+        // Wrap in transaction: consumeByToken (DELETE) + createForUser (persist) must be atomic
+        $user = null;
+        $refreshToken = null;
+
+        $this->entityManager->wrapInTransaction(function () use ($data, &$user, &$refreshToken): void {
+            $user = $this->magicLinkRepository->consumeByToken($data->token);
+
+            if ($user instanceof User) {
+                $refreshToken = $this->refreshTokenRepository->createForUser($user);
+            }
+        });
 
         if (!$user instanceof User) {
             $this->logger->debug('Auth verify invalid token');
@@ -56,11 +68,12 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
             );
         }
 
-        $jwt = $this->jwtManager->create($user);
-        $refreshToken = $this->refreshTokenRepository->createForUser($user);
-        $this->entityManager->flush();
+        \assert($refreshToken instanceof RefreshToken);
 
-        $isCapacitor = $this->isCapacitorRequest();
+        $jwt = $this->jwtManager->create($user);
+
+        $request = $this->requestStack->getCurrentRequest();
+        $isCapacitor = $this->isCapacitorRequest($request);
 
         $this->logger->debug('Auth verify token verified', ['user' => $user->getEmail()]);
 
@@ -70,29 +83,10 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
         }
 
         $response = new JsonResponse($responseData);
-        $this->setRefreshTokenCookie($response, $refreshToken->getToken(), $refreshToken->getExpiresAt());
+        $response->headers->setCookie(
+            $this->createRefreshTokenCookie($refreshToken->getToken(), $refreshToken->getExpiresAt()),
+        );
 
         return $response;
-    }
-
-    private function isCapacitorRequest(): bool
-    {
-        $request = $this->requestStack->getCurrentRequest();
-        $origin = $request?->headers->get('Origin', '') ?? '';
-
-        return str_starts_with($origin, 'capacitor://');
-    }
-
-    private function setRefreshTokenCookie(JsonResponse $response, string $token, \DateTimeImmutable $expiresAt): void
-    {
-        $cookie = Cookie::create(AuthCookies::REFRESH_TOKEN)
-            ->withValue($token)
-            ->withExpires($expiresAt)
-            ->withPath('/')
-            ->withSecure(true)
-            ->withHttpOnly(true)
-            ->withSameSite('strict');
-
-        $response->headers->setCookie($cookie);
     }
 }

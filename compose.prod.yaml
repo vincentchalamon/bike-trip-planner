@@ -33,6 +33,8 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
+      FRONTEND_URL: "${FRONTEND_URL}"
+      MAILER_DSN: "${MAILER_DSN}"
     tty: true
     ports:
       - target: 80
@@ -47,6 +49,7 @@ services:
     volumes:
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/20-app.prod.ini
+      - jwt_keys:/app/config/jwt
     healthcheck:
       test: curl --insecure --fail https://localhost/docs || exit 1
       interval: 5s
@@ -88,9 +91,12 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
+      FRONTEND_URL: "${FRONTEND_URL}"
+      MAILER_DSN: "${MAILER_DSN}"
     volumes:
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/20-app.prod.ini
+      - jwt_keys:/app/config/jwt
     healthcheck:
       test: pgrep -f messenger:consume || exit 1
       interval: 5s
@@ -200,6 +206,7 @@ volumes:
   caddy_data: ~
   caddy_config: ~
   database_data: ~
+  jwt_keys: ~
   overpass-data: ~
   valhalla-tiles: ~
   pwa_node_modules: ~

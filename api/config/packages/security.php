@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Entity\User;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
@@ -9,7 +10,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         'providers' => [
             'app_user_provider' => [
                 'entity' => [
-                    'class' => App\Entity\User::class,
+                    'class' => User::class,
                     'property' => 'email',
                 ],
             ],
@@ -19,21 +20,12 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'pattern' => '^/(_(profiler|wdt)|css|images|js|docs)/',
                 'security' => false,
             ],
-            'auth' => [
-                'pattern' => '^/auth/(request-link|refresh|verify)',
-                'stateless' => true,
-                'security' => false,
-            ],
             'api' => [
                 'pattern' => '^/',
                 'stateless' => true,
                 'provider' => 'app_user_provider',
                 'jwt' => [],
             ],
-        ],
-        'access_control' => [
-            ['path' => '^/auth/logout', 'roles' => 'IS_AUTHENTICATED_FULLY'],
-            ['path' => '^/', 'roles' => 'IS_AUTHENTICATED_FULLY'],
         ],
     ]);
 };

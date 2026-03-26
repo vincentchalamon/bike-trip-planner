@@ -42,13 +42,40 @@ final class RefreshTokenRepository extends ServiceEntityRepository
      */
     public function findValidByToken(string $token): ?RefreshToken
     {
-        $refreshToken = $this->findOneBy(['token' => $token]);
+        $result = $this->createQueryBuilder('rt')
+            ->addSelect('u')
+            ->join('rt.user', 'u')
+            ->where('rt.token = :token')
+            ->andWhere('rt.expiresAt > :now')
+            ->setParameter('token', $token)
+            ->setParameter('now', new \DateTimeImmutable())
+            ->getQuery()
+            ->getOneOrNullResult();
+        \assert(null === $result || $result instanceof RefreshToken);
 
-        if (null === $refreshToken || !$refreshToken->isValid()) {
-            return null;
-        }
+        return $result;
+    }
 
-        return $refreshToken;
+    /**
+     * Atomically expires a refresh token to prevent TOCTOU race conditions.
+     *
+     * Returns the number of affected rows (1 if consumed, 0 if already expired/consumed).
+     */
+    public function atomicExpire(RefreshToken $token): int
+    {
+        $affected = $this->getEntityManager()->createQueryBuilder()
+            ->update(RefreshToken::class, 'rt')
+            ->set('rt.expiresAt', ':past')
+            ->where('rt.id = :id')
+            ->andWhere('rt.expiresAt > :now')
+            ->setParameter('id', $token->getId())
+            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('past', new \DateTimeImmutable('1970-01-01'))
+            ->getQuery()
+            ->execute();
+        \assert(\is_int($affected));
+
+        return $affected;
     }
 
     /**
@@ -58,10 +85,11 @@ final class RefreshTokenRepository extends ServiceEntityRepository
      */
     public function removeAllForUser(User $user): void
     {
-        $tokens = $this->findBy(['user' => $user]);
-
-        foreach ($tokens as $token) {
-            $this->getEntityManager()->remove($token);
-        }
+        $this->getEntityManager()->createQueryBuilder()
+            ->delete(RefreshToken::class, 'rt')
+            ->where('rt.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->execute();
     }
 }

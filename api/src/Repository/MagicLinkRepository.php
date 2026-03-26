@@ -10,11 +10,17 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
+ * Manages the 0..1 relationship between User and MagicLink.
+ *
+ * A user has at most one active (non-expired) magic link at any time.
+ * Consumed links are deleted immediately; expired links are cleaned up
+ * opportunistically when a new link is created.
+ *
  * @extends ServiceEntityRepository<MagicLink>
  */
 final class MagicLinkRepository extends ServiceEntityRepository
 {
-    private const int TTL_MINUTES = 30;
+    public const int TTL_MINUTES = 30;
 
     public function __construct(ManagerRegistry $registry)
     {
@@ -24,11 +30,22 @@ final class MagicLinkRepository extends ServiceEntityRepository
     /**
      * Creates a magic link for the given user, if no active link already exists.
      *
+     * Expired links are cleaned up opportunistically.
      * Persists the entity but does NOT flush — the caller is responsible for flushing.
      * Returns null if an active link is already pending (prevents link flooding).
      */
     public function create(User $user): ?MagicLink
     {
+        // Clean up any expired links for this user
+        $this->getEntityManager()->createQueryBuilder()
+            ->delete(MagicLink::class, 'ml')
+            ->where('ml.user = :user')
+            ->andWhere('ml.expiresAt <= :now')
+            ->setParameter('user', $user)
+            ->setParameter('now', new \DateTimeImmutable())
+            ->getQuery()
+            ->execute();
+
         if ($this->hasActiveLinkForUser($user)) {
             return null;
         }
@@ -43,32 +60,47 @@ final class MagicLinkRepository extends ServiceEntityRepository
     }
 
     /**
-     * Atomically consumes a magic link token and returns the associated user.
+     * Atomically consumes and deletes a magic link token, returning the associated user.
      *
-     * Uses a conditional UPDATE to prevent TOCTOU race conditions.
+     * Uses a conditional DELETE to prevent TOCTOU race conditions: only the first
+     * concurrent request will delete the row.
+     *
      * Returns null if the token is invalid, expired, or already consumed.
      */
     public function consumeByToken(string $token): ?User
     {
-        $now = new \DateTimeImmutable();
-        $affected = $this->getEntityManager()->createQueryBuilder()
-            ->update(MagicLink::class, 'ml')
-            ->set('ml.consumedAt', ':now')
+        // Fetch the magic link with its user eagerly before deleting
+        $magicLink = $this->createQueryBuilder('ml')
+            ->addSelect('u')
+            ->join('ml.user', 'u')
             ->where('ml.token = :token')
-            ->andWhere('ml.consumedAt IS NULL')
             ->andWhere('ml.expiresAt > :now')
             ->setParameter('token', $token)
-            ->setParameter('now', $now)
+            ->setParameter('now', new \DateTimeImmutable())
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (!$magicLink instanceof MagicLink) {
+            return null;
+        }
+
+        $user = $magicLink->getUser();
+
+        // Atomically delete the token: only the first concurrent request deletes 1 row
+        $affected = $this->getEntityManager()->createQueryBuilder()
+            ->delete(MagicLink::class, 'ml')
+            ->where('ml.token = :token')
+            ->andWhere('ml.expiresAt > :now')
+            ->setParameter('token', $token)
+            ->setParameter('now', new \DateTimeImmutable())
             ->getQuery()
             ->execute();
 
         if (0 === $affected) {
-            return null;
+            return null; // Lost the race — another request consumed it first
         }
 
-        $magicLink = $this->findOneBy(['token' => $token]);
-
-        return $magicLink?->getUser();
+        return $user;
     }
 
     private function hasActiveLinkForUser(User $user): bool
@@ -76,11 +108,9 @@ final class MagicLinkRepository extends ServiceEntityRepository
         $count = $this->createQueryBuilder('ml')
             ->select('COUNT(ml.id)')
             ->where('ml.user = :user')
-            ->andWhere('ml.consumedAt IS NULL')
             ->andWhere('ml.expiresAt > :now')
             ->setParameter('user', $user)
             ->setParameter('now', new \DateTimeImmutable())
-            ->setMaxResults(1)
             ->getQuery()
             ->getSingleScalarResult();
 
