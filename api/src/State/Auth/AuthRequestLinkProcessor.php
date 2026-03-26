@@ -89,11 +89,11 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
 
         $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), $magicLink->getToken());
 
-        $locale = $request?->getPreferredLanguage(['en', 'fr']) ?? 'fr';
+        $locale = $user->getLocale();
 
         $html = $this->twig->render('email/magic_link.html.twig', [
             'verifyUrl' => $verifyUrl,
-            'expiresInMinutes' => 30,
+            'expiresInMinutes' => MagicLinkRepository::TTL_MINUTES,
             'locale' => $locale,
         ]);
 

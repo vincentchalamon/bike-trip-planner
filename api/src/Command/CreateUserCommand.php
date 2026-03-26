@@ -107,7 +107,7 @@ final class CreateUserCommand extends Command
 
         $html = $this->twig->render('email/invitation.html.twig', [
             'verifyUrl' => $verifyUrl,
-            'expiresInMinutes' => 30,
+            'expiresInMinutes' => MagicLinkRepository::TTL_MINUTES,
             'locale' => $locale,
         ]);
 

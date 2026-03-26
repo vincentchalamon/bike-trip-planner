@@ -19,7 +19,7 @@ class MagicLink
     private Uuid $id;
 
     #[ORM\Column(nullable: true)]
-    private ?\DateTimeImmutable $consumedAt = null;
+    private ?\DateTimeImmutable $consumedAt = null; // @phpstan-ignore property.unusedType (set via DQL UPDATE in MagicLinkRepository)
 
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
@@ -61,18 +61,6 @@ class MagicLink
     public function getConsumedAt(): ?\DateTimeImmutable
     {
         return $this->consumedAt;
-    }
-
-    public function consume(): self
-    {
-        $this->consumedAt = new \DateTimeImmutable();
-
-        return $this;
-    }
-
-    public function isValid(): bool
-    {
-        return !$this->consumedAt instanceof \DateTimeImmutable && $this->expiresAt > new \DateTimeImmutable();
     }
 
     public function getCreatedAt(): \DateTimeImmutable
