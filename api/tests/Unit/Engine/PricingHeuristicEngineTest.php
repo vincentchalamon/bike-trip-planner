@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Engine;
 
-use Override;
 use App\Engine\PricingHeuristicEngine;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -14,7 +13,7 @@ final class PricingHeuristicEngineTest extends TestCase
 {
     private PricingHeuristicEngine $engine;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $this->engine = new PricingHeuristicEngine();

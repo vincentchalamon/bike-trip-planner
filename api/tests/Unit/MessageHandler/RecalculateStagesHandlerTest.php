@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
-use stdClass;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -62,7 +61,7 @@ final class RecalculateStagesHandlerTest extends TestCase
         $tripStateManager->method('getStages')->willReturn([$stage]);
 
         $messageBus = $this->createStub(MessageBusInterface::class);
-        $messageBus->method('dispatch')->willReturn(new Envelope(new stdClass()));
+        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())

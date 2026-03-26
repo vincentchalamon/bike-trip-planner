@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Scanner;
 
-use Override;
 use App\ApiResource\Model\Coordinate;
 use App\Scanner\OsmOverpassQueryBuilder;
 use PHPUnit\Framework\Attributes\Test;
@@ -14,7 +13,7 @@ final class OsmOverpassQueryBuilderTest extends TestCase
 {
     private OsmOverpassQueryBuilder $builder;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $this->builder = new OsmOverpassQueryBuilder();

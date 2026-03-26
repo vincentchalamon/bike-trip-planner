@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use DateTimeImmutable;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
@@ -46,7 +45,7 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::CALENDAR, function () use ($tripId, $request, $stages, $locale): void {
-            $startDate = $request->startDate ?? new DateTimeImmutable('today');
+            $startDate = $request->startDate ?? new \DateTimeImmutable('today');
             $year = (int) $startDate->format('Y');
 
             $holidays = Yasumi::create('France', $year);

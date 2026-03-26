@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
-use InvalidArgumentException;
-use XMLReader;
-use RuntimeException;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\RouteParser\GpxStreamRouteParser;
@@ -25,7 +22,7 @@ final class ScenarioStageBuilder
         $points = $parser->parse(self::readFile($gpxPath));
 
         if ([] === $points) {
-            throw new InvalidArgumentException(\sprintf('GPX file "%s" contains no track points.', $gpxPath));
+            throw new \InvalidArgumentException(\sprintf('GPX file "%s" contains no track points.', $gpxPath));
         }
 
         $distance = self::calculateTotalDistanceKm($points);
@@ -156,11 +153,11 @@ final class ScenarioStageBuilder
         $segments = [];
         $currentSegment = [];
 
-        $reader = new XMLReader();
+        $reader = new \XMLReader();
         $options = \LIBXML_NONET | \LIBXML_NOENT;
 
         if (!$reader->XML($content, null, $options)) {
-            throw new RuntimeException('Failed to initialize XMLReader for GPX content.');
+            throw new \RuntimeException('Failed to initialize XMLReader for GPX content.');
         }
 
         $inTrkpt = false;
@@ -172,15 +169,15 @@ final class ScenarioStageBuilder
         libxml_use_internal_errors(true);
 
         while ($reader->read()) {
-            if (XMLReader::ELEMENT === $reader->nodeType && 'trkseg' === $reader->localName) {
+            if (\XMLReader::ELEMENT === $reader->nodeType && 'trkseg' === $reader->localName) {
                 $currentSegment = [];
-            } elseif (XMLReader::END_ELEMENT === $reader->nodeType && 'trkseg' === $reader->localName) {
+            } elseif (\XMLReader::END_ELEMENT === $reader->nodeType && 'trkseg' === $reader->localName) {
                 if ([] !== $currentSegment) {
                     $segments[] = $currentSegment;
                 }
 
                 $currentSegment = [];
-            } elseif (XMLReader::ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
+            } elseif (\XMLReader::ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
                 $inTrkpt = true;
                 $inEle = false;
                 $lat = (float) $reader->getAttribute('lat');
@@ -191,13 +188,13 @@ final class ScenarioStageBuilder
                     $currentSegment[] = new Coordinate($lat, $lon, $ele);
                     $inTrkpt = false;
                 }
-            } elseif ($inTrkpt && XMLReader::ELEMENT === $reader->nodeType && 'ele' === $reader->localName) {
+            } elseif ($inTrkpt && \XMLReader::ELEMENT === $reader->nodeType && 'ele' === $reader->localName) {
                 $inEle = true;
-            } elseif ($inEle && XMLReader::TEXT === $reader->nodeType) {
+            } elseif ($inEle && \XMLReader::TEXT === $reader->nodeType) {
                 $ele = (float) $reader->value;
-            } elseif (XMLReader::END_ELEMENT === $reader->nodeType && 'ele' === $reader->localName) {
+            } elseif (\XMLReader::END_ELEMENT === $reader->nodeType && 'ele' === $reader->localName) {
                 $inEle = false;
-            } elseif (XMLReader::END_ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
+            } elseif (\XMLReader::END_ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
                 $currentSegment[] = new Coordinate($lat, $lon, $ele);
                 $inTrkpt = false;
                 $ele = 0.0;
@@ -215,7 +212,7 @@ final class ScenarioStageBuilder
         $content = file_get_contents($gpxPath);
 
         if (false === $content) {
-            throw new InvalidArgumentException(\sprintf('Cannot read GPX file: %s', $gpxPath));
+            throw new \InvalidArgumentException(\sprintf('Cannot read GPX file: %s', $gpxPath));
         }
 
         return $content;

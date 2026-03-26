@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use LogicException;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
@@ -406,7 +405,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             $data['poiLon'] = $alert->poiLon;
             $data['distanceFromRoute'] = $alert->distanceFromRoute;
         } elseif (Alert::class !== $alert::class) {
-            throw new LogicException(\sprintf('Unhandled Alert subclass "%s" in %s. Register it alongside CulturalPoiAlert.', $alert::class, __METHOD__));
+            throw new \LogicException(\sprintf('Unhandled Alert subclass "%s" in %s. Register it alongside CulturalPoiAlert.', $alert::class, __METHOD__));
         }
 
         return $data;
@@ -435,7 +434,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         }
 
         if (null !== ($data['_class'] ?? null)) {
-            throw new LogicException(\sprintf('Unhandled Alert subclass "%s" in %s. Register it alongside CulturalPoiAlert.', $data['_class'], __METHOD__));
+            throw new \LogicException(\sprintf('Unhandled Alert subclass "%s" in %s. Register it alongside CulturalPoiAlert.', $data['_class'], __METHOD__));
         }
 
         return new Alert(

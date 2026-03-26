@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use RuntimeException;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -47,7 +46,7 @@ final readonly class GpxUploadService
      *
      * @return list<Coordinate>
      *
-     * @throws RuntimeException When GPX content is invalid
+     * @throws \RuntimeException When GPX content is invalid
      */
     public function parseGpx(string $content): array
     {

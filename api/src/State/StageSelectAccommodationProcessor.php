@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use DateTimeImmutable;
 use App\ApiResource\TripRequest;
 use App\ApiResource\Model\Coordinate;
 use ApiPlatform\Metadata\Operation;
@@ -147,7 +146,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipAccommodationScan: true, generation: $generation));
 
-        if ($request->startDate instanceof DateTimeImmutable) {
+        if ($request->startDate instanceof \DateTimeImmutable) {
             $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
             $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }

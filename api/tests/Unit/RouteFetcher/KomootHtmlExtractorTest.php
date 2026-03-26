@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\RouteFetcher;
 
-use Override;
-use RuntimeException;
 use App\RouteFetcher\KomootHtmlExtractor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -14,7 +12,7 @@ final class KomootHtmlExtractorTest extends TestCase
 {
     private KomootHtmlExtractor $extractor;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $this->extractor = new KomootHtmlExtractor();
@@ -131,7 +129,7 @@ final class KomootHtmlExtractorTest extends TestCase
     #[Test]
     public function extractTourDataThrowsOnMissingBootstrap(): void
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Komoot bootstrap data not found');
 
         $this->extractor->extractTourData('<html><body>No bootstrap here</body></html>');
@@ -140,7 +138,7 @@ final class KomootHtmlExtractorTest extends TestCase
     #[Test]
     public function extractTourDataThrowsOnMissingPageData(): void
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Page data not found');
 
         $html = $this->buildBootstrapHtml(['other' => 'data']);
@@ -150,7 +148,7 @@ final class KomootHtmlExtractorTest extends TestCase
     #[Test]
     public function extractTourDataThrowsOnMissingTourData(): void
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Tour data not found');
 
         $html = $this->buildBootstrapHtml(['page' => ['_embedded' => ['other' => 'data']]]);
@@ -160,7 +158,7 @@ final class KomootHtmlExtractorTest extends TestCase
     #[Test]
     public function extractTourDataThrowsOnEmptyCoordinates(): void
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('No coordinate items found');
 
         $html = $this->buildBootstrapHtml([
@@ -182,7 +180,7 @@ final class KomootHtmlExtractorTest extends TestCase
     #[Test]
     public function extractTourDataThrowsWhenAllCoordinatesInvalid(): void
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('No valid coordinates extracted');
 
         $html = $this->buildBootstrapHtml([
@@ -264,7 +262,7 @@ final class KomootHtmlExtractorTest extends TestCase
     #[Test]
     public function extractCollectionTourIdsThrowsWhenNoTours(): void
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('No tours found in collection data');
 
         $html = $this->buildBootstrapHtml([

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Command;
 
-use stdClass;
-use Closure;
 use App\Command\MessengerClearCommand;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -20,7 +18,7 @@ final class MessengerClearCommandTest extends TestCase
     #[Test]
     public function clearsSpecificTransportByName(): void
     {
-        $envelope = new Envelope(new stdClass());
+        $envelope = new Envelope(new \stdClass());
 
         $asyncTransport = $this->createMock(ReceiverInterface::class);
         $asyncTransport->expects($this->exactly(2))
@@ -70,8 +68,8 @@ final class MessengerClearCommandTest extends TestCase
     #[Test]
     public function clearsMultipleTransportsByName(): void
     {
-        $asyncEnvelope = new Envelope(new stdClass());
-        $failedEnvelope = new Envelope(new stdClass());
+        $asyncEnvelope = new Envelope(new \stdClass());
+        $failedEnvelope = new Envelope(new \stdClass());
 
         $asyncTransport = $this->createMock(ReceiverInterface::class);
         $asyncTransport->expects($this->exactly(2))
@@ -201,7 +199,7 @@ final class MessengerClearCommandTest extends TestCase
     private function createReceiverLocator(array $transports): ServiceLocator
     {
         /** @var ServiceLocator<ReceiverInterface> $locator */
-        $locator = new ServiceLocator(array_map(fn (ReceiverInterface $t): Closure => fn (): ReceiverInterface => $t, $transports));
+        $locator = new ServiceLocator(array_map(fn (ReceiverInterface $t): \Closure => fn (): ReceiverInterface => $t, $transports));
 
         return $locator;
     }

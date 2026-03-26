@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
-use Override;
-use DateTimeImmutable;
 use ApiPlatform\Metadata\Patch;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationDependencyResolver;
@@ -38,7 +36,7 @@ final class TripUpdateProcessorTest extends TestCase
 
     private TripUpdateProcessor $processor;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
@@ -69,7 +67,7 @@ final class TripUpdateProcessorTest extends TestCase
     public function lockedTripThrowsHttpException(): void
     {
         $lockedRequest = new TripRequest();
-        $lockedRequest->startDate = new DateTimeImmutable('yesterday');
+        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getRequest')->willReturn($lockedRequest);

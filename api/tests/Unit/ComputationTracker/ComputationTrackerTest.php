@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\ComputationTracker;
 
-use Override;
 use App\ComputationTracker\ComputationTracker;
 use App\Enum\ComputationName;
 use PHPUnit\Framework\Attributes\Test;
@@ -15,7 +14,7 @@ final class ComputationTrackerTest extends TestCase
 {
     private ComputationTracker $tracker;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $this->tracker = new ComputationTracker(new ArrayAdapter());

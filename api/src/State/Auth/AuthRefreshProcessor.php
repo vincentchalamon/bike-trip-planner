@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
-use JsonException;
 use Symfony\Component\HttpFoundation\Request;
 use App\Entity\RefreshToken;
 use ApiPlatform\Metadata\Operation;
@@ -55,7 +54,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
             try {
                 $body = $request->toArray();
                 $token = $body['refresh_token'] ?? null;
-            } catch (JsonException) { // @phpstan-ignore catch.neverThrown (toArray uses json_decode with JSON_THROW_ON_ERROR)
+            } catch (\JsonException) { // @phpstan-ignore catch.neverThrown (toArray uses json_decode with JSON_THROW_ON_ERROR)
                 $token = null;
             }
         }

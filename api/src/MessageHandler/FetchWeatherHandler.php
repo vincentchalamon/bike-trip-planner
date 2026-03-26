@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use Throwable;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -118,7 +117,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                         $cacheItem->expiresAfter(10800); // 3 hours
                         $this->weatherCache->save($cacheItem);
                     }
-                } catch (Throwable $e) {
+                } catch (\Throwable $e) {
                     $this->logger->warning('Batch weather fetch failed.', ['error' => $e->getMessage()]);
                 }
             }

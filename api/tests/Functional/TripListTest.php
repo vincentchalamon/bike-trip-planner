@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use DateTimeImmutable;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\ApiResource\TripRequest;
 use App\Repository\DoctrineTripRequestRepository;
@@ -25,8 +24,8 @@ final class TripListTest extends ApiTestCase
         string $tripId,
         ?string $title = null,
         ?string $sourceUrl = 'https://www.komoot.com/tour/123456789',
-        ?DateTimeImmutable $startDate = null,
-        ?DateTimeImmutable $endDate = null,
+        ?\DateTimeImmutable $startDate = null,
+        ?\DateTimeImmutable $endDate = null,
     ): void {
         $request = new TripRequest();
         $request->sourceUrl = $sourceUrl;
@@ -87,8 +86,8 @@ final class TripListTest extends ApiTestCase
         $this->seedTrip(
             self::TRIP_ID_1,
             title: 'Tour des Alpes',
-            startDate: new DateTimeImmutable('2025-07-01'),
-            endDate: new DateTimeImmutable('2025-07-15'),
+            startDate: new \DateTimeImmutable('2025-07-01'),
+            endDate: new \DateTimeImmutable('2025-07-15'),
         );
 
         $response = self::createClient()->request('GET', '/trips', [
@@ -113,8 +112,8 @@ final class TripListTest extends ApiTestCase
     #[Test]
     public function listTripsFilterByStartDate(): void
     {
-        $this->seedTrip(self::TRIP_ID_1, title: 'Early trip', startDate: new DateTimeImmutable('2025-06-01'));
-        $this->seedTrip(self::TRIP_ID_2, title: 'Late trip', startDate: new DateTimeImmutable('2025-09-01'));
+        $this->seedTrip(self::TRIP_ID_1, title: 'Early trip', startDate: new \DateTimeImmutable('2025-06-01'));
+        $this->seedTrip(self::TRIP_ID_2, title: 'Late trip', startDate: new \DateTimeImmutable('2025-09-01'));
 
         $response = self::createClient()->request('GET', '/trips?startDate=2025-08-01', [
             'headers' => ['Accept' => 'application/ld+json'],
@@ -131,8 +130,8 @@ final class TripListTest extends ApiTestCase
     #[Test]
     public function listTripsFilterByEndDate(): void
     {
-        $this->seedTrip(self::TRIP_ID_1, title: 'Short trip', endDate: new DateTimeImmutable('2025-06-15'));
-        $this->seedTrip(self::TRIP_ID_2, title: 'Long trip', endDate: new DateTimeImmutable('2025-09-30'));
+        $this->seedTrip(self::TRIP_ID_1, title: 'Short trip', endDate: new \DateTimeImmutable('2025-06-15'));
+        $this->seedTrip(self::TRIP_ID_2, title: 'Long trip', endDate: new \DateTimeImmutable('2025-09-30'));
 
         $response = self::createClient()->request('GET', '/trips?endDate=2025-07-01', [
             'headers' => ['Accept' => 'application/ld+json'],

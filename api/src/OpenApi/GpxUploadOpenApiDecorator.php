@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\OpenApi;
 
-use ArrayObject;
 use ApiPlatform\OpenApi\Model\PathItem;
 use ApiPlatform\OpenApi\Model\Operation;
 use ApiPlatform\OpenApi\Model\Response;
@@ -40,9 +39,9 @@ final readonly class GpxUploadOpenApiDecorator implements OpenApiFactoryInterfac
                 responses: [
                     202 => new Response(
                         description: 'Trip created from GPX upload',
-                        content: new ArrayObject([
+                        content: new \ArrayObject([
                             'application/json' => new MediaType(
-                                schema: new ArrayObject([
+                                schema: new \ArrayObject([
                                     'type' => 'object',
                                     'properties' => [
                                         '@context' => ['type' => 'string', 'example' => '/contexts/Trip'],
@@ -65,9 +64,9 @@ final readonly class GpxUploadOpenApiDecorator implements OpenApiFactoryInterfac
                     ),
                     400 => new Response(
                         description: 'Bad request (missing file, invalid extension, empty file)',
-                        content: new ArrayObject([
+                        content: new \ArrayObject([
                             'application/json' => new MediaType(
-                                schema: new ArrayObject([
+                                schema: new \ArrayObject([
                                     'type' => 'object',
                                     'properties' => [
                                         'error' => ['type' => 'string'],
@@ -78,9 +77,9 @@ final readonly class GpxUploadOpenApiDecorator implements OpenApiFactoryInterfac
                     ),
                     422 => new Response(
                         description: 'Unprocessable entity (invalid GPX, no track points)',
-                        content: new ArrayObject([
+                        content: new \ArrayObject([
                             'application/json' => new MediaType(
-                                schema: new ArrayObject([
+                                schema: new \ArrayObject([
                                     'type' => 'object',
                                     'properties' => [
                                         'error' => ['type' => 'string'],
@@ -94,9 +93,9 @@ final readonly class GpxUploadOpenApiDecorator implements OpenApiFactoryInterfac
                 description: 'Parses the GPX file synchronously, creates a trip, and dispatches async computations (stage generation, OSM scan).',
                 requestBody: new RequestBody(
                     description: 'GPX file upload with optional trip parameters',
-                    content: new ArrayObject([
+                    content: new \ArrayObject([
                         'multipart/form-data' => new MediaType(
-                            schema: new ArrayObject([
+                            schema: new \ArrayObject([
                                 'type' => 'object',
                                 'properties' => [
                                     'gpxFile' => ['type' => 'string', 'format' => 'binary', 'description' => 'GPX file (max 15 MB)'],

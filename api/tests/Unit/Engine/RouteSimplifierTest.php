@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Engine;
 
-use Override;
 use App\ApiResource\Model\Coordinate;
 use App\Engine\RouteSimplifier;
 use PHPUnit\Framework\Attributes\Test;
@@ -14,7 +13,7 @@ final class RouteSimplifierTest extends TestCase
 {
     private RouteSimplifier $simplifier;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $this->simplifier = new RouteSimplifier();

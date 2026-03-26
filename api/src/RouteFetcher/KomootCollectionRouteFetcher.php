@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\RouteFetcher;
 
-use RuntimeException;
 use App\Enum\SourceType;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Cache\CacheInterface;
@@ -47,7 +46,7 @@ final readonly class KomootCollectionRouteFetcher implements RouteFetcherInterfa
             $statusCode = $response->getStatusCode();
 
             if (200 !== $statusCode) {
-                throw new RuntimeException(\sprintf('Komoot collection %s returned HTTP %d.', $collectionId, $statusCode));
+                throw new \RuntimeException(\sprintf('Komoot collection %s returned HTTP %d.', $collectionId, $statusCode));
             }
 
             $html = $response->getContent();
@@ -86,13 +85,13 @@ final readonly class KomootCollectionRouteFetcher implements RouteFetcherInterfa
                             title: $tourData['name'],
                         );
                     });
-                } catch (RuntimeException) {
+                } catch (\RuntimeException) {
                     continue;
                 }
             }
 
             if ([] === $tracks) {
-                throw new RuntimeException(\sprintf('Komoot collection %s yielded no valid tracks.', $collectionId));
+                throw new \RuntimeException(\sprintf('Komoot collection %s yielded no valid tracks.', $collectionId));
             }
 
             return new RouteFetchResult(

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use Throwable;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
@@ -47,7 +46,7 @@ abstract readonly class AbstractTripMessageHandler
      * Marks computation as running, executes callback, then marks done.
      * On exception: marks failed, publishes error event, re-throws for retry.
      *
-     * @throws Throwable
+     * @throws \Throwable
      */
     protected function executeWithTracking(
         string $tripId,
@@ -71,7 +70,7 @@ abstract readonly class AbstractTripMessageHandler
         try {
             $callback();
             $this->computationTracker->markDone($tripId, $computation);
-        } catch (Throwable $throwable) {
+        } catch (\Throwable $throwable) {
             $this->computationTracker->markFailed($tripId, $computation);
             $this->publisher->publishComputationError($tripId, $computation->value, $throwable->getMessage());
 

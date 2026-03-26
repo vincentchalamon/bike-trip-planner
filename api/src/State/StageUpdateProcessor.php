@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use DateTimeImmutable;
 use App\ApiResource\TripRequest;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Patch;
@@ -92,7 +91,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
             $this->messageBus->dispatch(new RecalculateStages($tripId, $affected, generation: $generation));
 
             $tripRequest = $this->tripStateManager->getRequest($tripId);
-            if ($tripRequest?->startDate instanceof DateTimeImmutable) {
+            if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
                 $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
                 $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
             }
@@ -114,7 +113,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
         $this->messageBus->dispatch(new RecalculateStages($tripId, [$index], generation: $generation));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
-        if ($tripRequest?->startDate instanceof DateTimeImmutable) {
+        if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
             $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
             $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }

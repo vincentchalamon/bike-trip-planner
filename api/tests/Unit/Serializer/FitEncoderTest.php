@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Serializer;
 
-use Override;
-use InvalidArgumentException;
 use App\Geo\GeoDistanceInterface;
 use App\Serializer\FitEncoder;
 use PHPUnit\Framework\Attributes\Test;
@@ -15,7 +13,7 @@ final class FitEncoderTest extends TestCase
 {
     private FitEncoder $encoder;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $this->encoder = new FitEncoder($this->createStub(GeoDistanceInterface::class));
@@ -98,7 +96,7 @@ final class FitEncoderTest extends TestCase
     #[Test]
     public function encodeWithNonArrayThrowsException(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
         $this->encoder->encode('not an array', 'fit'); // @phpstan-ignore argument.type
     }

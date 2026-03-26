@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\RouteFetcher;
 
-use RuntimeException;
 use App\ApiResource\Model\Coordinate;
 
 /**
@@ -33,19 +32,19 @@ final readonly class KomootHtmlExtractor
         /** @var array<string, mixed>|null $page */
         $page = is_array($data['page'] ?? null) ? $data['page'] : null;
         if (null === $page) {
-            throw new RuntimeException('Page data not found in Komoot bootstrap.');
+            throw new \RuntimeException('Page data not found in Komoot bootstrap.');
         }
 
         /** @var array<string, mixed>|null $embedded */
         $embedded = is_array($page['_embedded'] ?? null) ? $page['_embedded'] : null;
         if (null === $embedded) {
-            throw new RuntimeException('Embedded data not found in Komoot page.');
+            throw new \RuntimeException('Embedded data not found in Komoot page.');
         }
 
         /** @var array<string, mixed>|null $tour */
         $tour = is_array($embedded['tour'] ?? null) ? $embedded['tour'] : null;
         if (null === $tour) {
-            throw new RuntimeException('Tour data not found in Komoot page.');
+            throw new \RuntimeException('Tour data not found in Komoot page.');
         }
 
         $name = \is_string($tour['name'] ?? null) ? $tour['name'] : 'Komoot Tour';
@@ -53,20 +52,20 @@ final readonly class KomootHtmlExtractor
         /** @var array<string, mixed>|null $tourEmbedded */
         $tourEmbedded = is_array($tour['_embedded'] ?? null) ? $tour['_embedded'] : null;
         if (null === $tourEmbedded) {
-            throw new RuntimeException('Tour embedded data not found.');
+            throw new \RuntimeException('Tour embedded data not found.');
         }
 
         /** @var array<string, mixed>|null $coordsContainer */
         $coordsContainer = is_array($tourEmbedded['coordinates'] ?? null) ? $tourEmbedded['coordinates'] : null;
         if (null === $coordsContainer) {
-            throw new RuntimeException('Coordinates container not found in tour data.');
+            throw new \RuntimeException('Coordinates container not found in tour data.');
         }
 
         /** @var list<array{lat?: mixed, lng?: mixed, alt?: mixed}> $items */
         $items = is_array($coordsContainer['items'] ?? null) ? $coordsContainer['items'] : [];
 
         if ([] === $items) {
-            throw new RuntimeException('No coordinate items found in tour data.');
+            throw new \RuntimeException('No coordinate items found in tour data.');
         }
 
         $coordinates = [];
@@ -91,7 +90,7 @@ final readonly class KomootHtmlExtractor
         }
 
         if ([] === $coordinates) {
-            throw new RuntimeException('No valid coordinates extracted from tour data.');
+            throw new \RuntimeException('No valid coordinates extracted from tour data.');
         }
 
         return ['name' => $name, 'coordinates' => $coordinates];
@@ -107,19 +106,19 @@ final readonly class KomootHtmlExtractor
         /** @var array<string, mixed>|null $page */
         $page = is_array($data['page'] ?? null) ? $data['page'] : null;
         if (null === $page) {
-            throw new RuntimeException('Page data not found in Komoot bootstrap.');
+            throw new \RuntimeException('Page data not found in Komoot bootstrap.');
         }
 
         /** @var array<string, mixed>|null $embedded */
         $embedded = is_array($page['_embedded'] ?? null) ? $page['_embedded'] : null;
         if (null === $embedded) {
-            throw new RuntimeException('Embedded data not found in Komoot page.');
+            throw new \RuntimeException('Embedded data not found in Komoot page.');
         }
 
         /** @var array<string, mixed>|null $collectionHal */
         $collectionHal = is_array($embedded['collectionHal'] ?? null) ? $embedded['collectionHal'] : null;
         if (null === $collectionHal) {
-            throw new RuntimeException('Collection data not found in Komoot page.');
+            throw new \RuntimeException('Collection data not found in Komoot page.');
         }
 
         $name = \is_string($collectionHal['name'] ?? null) ? $collectionHal['name'] : 'Komoot Collection';
@@ -149,7 +148,7 @@ final readonly class KomootHtmlExtractor
         }
 
         if ([] === $tourIds) {
-            throw new RuntimeException('No tours found in collection data.');
+            throw new \RuntimeException('No tours found in collection data.');
         }
 
         return ['name' => $name, 'tourIds' => $tourIds];
@@ -166,7 +165,7 @@ final readonly class KomootHtmlExtractor
     {
         $markerPos = strpos($html, self::BOOTSTRAP_MARKER);
         if (false === $markerPos) {
-            throw new RuntimeException('Komoot bootstrap data not found in page HTML.');
+            throw new \RuntimeException('Komoot bootstrap data not found in page HTML.');
         }
 
         $contentStart = $markerPos + \strlen(self::BOOTSTRAP_MARKER);
@@ -188,7 +187,7 @@ final readonly class KomootHtmlExtractor
         }
 
         if ($i >= $len) {
-            throw new RuntimeException('Unterminated Komoot bootstrap string.');
+            throw new \RuntimeException('Unterminated Komoot bootstrap string.');
         }
 
         $rawContent = substr($html, $contentStart, $i - $contentStart);
@@ -197,13 +196,13 @@ final readonly class KomootHtmlExtractor
         // Wrap in quotes and json_decode to unescape, then parse as JSON.
         $jsonString = json_decode('"'.$rawContent.'"');
         if (!\is_string($jsonString)) {
-            throw new RuntimeException('Failed to decode Komoot bootstrap string.');
+            throw new \RuntimeException('Failed to decode Komoot bootstrap string.');
         }
 
         /** @var array<string, mixed>|null $data */
         $data = json_decode($jsonString, true);
         if (!\is_array($data)) {
-            throw new RuntimeException('Failed to parse Komoot bootstrap JSON.');
+            throw new \RuntimeException('Failed to parse Komoot bootstrap JSON.');
         }
 
         return $data;

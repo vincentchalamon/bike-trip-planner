@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\ApiResource;
 
-use DateTimeImmutable;
-use DateTimeZone;
 use ApiPlatform\Metadata\ApiProperty;
 use App\Entity\Stage;
 use App\Entity\User;
@@ -39,10 +37,10 @@ final class TripRequest
     public ?string $sourceUrl = null;
 
     #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
-    public ?DateTimeImmutable $startDate = null {
-        set(?DateTimeImmutable $value) {
-            $this->startDate = $value instanceof DateTimeImmutable
-                ? new DateTimeImmutable($value->format('Y-m-d'), new DateTimeZone('UTC'))
+    public ?\DateTimeImmutable $startDate = null {
+        set(?\DateTimeImmutable $value) {
+            $this->startDate = $value instanceof \DateTimeImmutable
+                ? new \DateTimeImmutable($value->format('Y-m-d'), new \DateTimeZone('UTC'))
                 : null;
         }
     }
@@ -51,10 +49,10 @@ final class TripRequest
     // If endDate omitted, default from distance (ceil(distance/80))
     #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
     #[Assert\GreaterThan(propertyPath: 'startDate', message: 'End date must be after start date.')]
-    public ?DateTimeImmutable $endDate = null {
-        set(?DateTimeImmutable $value) {
-            $this->endDate = $value instanceof DateTimeImmutable
-                ? new DateTimeImmutable($value->format('Y-m-d'), new DateTimeZone('UTC'))
+    public ?\DateTimeImmutable $endDate = null {
+        set(?\DateTimeImmutable $value) {
+            $this->endDate = $value instanceof \DateTimeImmutable
+                ? new \DateTimeImmutable($value->format('Y-m-d'), new \DateTimeZone('UTC'))
                 : null;
         }
     }
@@ -124,11 +122,11 @@ final class TripRequest
 
     #[ORM\Column]
     #[ApiProperty(readable: false, writable: false)]
-    public DateTimeImmutable $createdAt;
+    public \DateTimeImmutable $createdAt;
 
     #[ORM\Column]
     #[ApiProperty(readable: false, writable: false)]
-    public DateTimeImmutable $updatedAt;
+    public \DateTimeImmutable $updatedAt;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
@@ -145,8 +143,8 @@ final class TripRequest
     {
         $this->id = $id ?? Uuid::v7();
         $this->stages = new ArrayCollection();
-        $this->createdAt = new DateTimeImmutable();
-        $this->updatedAt = new DateTimeImmutable();
+        $this->createdAt = new \DateTimeImmutable();
+        $this->updatedAt = new \DateTimeImmutable();
     }
 
     public function addStage(Stage $stage): void
@@ -164,6 +162,6 @@ final class TripRequest
     #[ORM\PreUpdate]
     public function onPreUpdate(): void
     {
-        $this->updatedAt = new DateTimeImmutable();
+        $this->updatedAt = new \DateTimeImmutable();
     }
 }

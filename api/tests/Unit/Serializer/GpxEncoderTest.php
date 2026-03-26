@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Serializer;
 
-use DOMDocument;
-use InvalidArgumentException;
 use App\Serializer\GpxEncoder;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -18,7 +16,7 @@ final class GpxEncoderTest extends TestCase
         $encoder = new GpxEncoder();
         $xml = $encoder->encode($this->sampleData(), 'gpx');
 
-        $doc = new DOMDocument();
+        $doc = new \DOMDocument();
         self::assertTrue($doc->loadXML($xml));
     }
 
@@ -116,7 +114,7 @@ final class GpxEncoderTest extends TestCase
     #[Test]
     public function encodeWithNonArrayThrowsException(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
         $encoder = new GpxEncoder();
         $encoder->encode('not an array', 'gpx'); // @phpstan-ignore argument.type
@@ -143,7 +141,7 @@ final class GpxEncoderTest extends TestCase
 
         $xml = $encoder->encode($data, 'gpx');
 
-        $doc = new DOMDocument();
+        $doc = new \DOMDocument();
         self::assertTrue($doc->loadXML($xml));
         self::assertSame(2, $doc->getElementsByTagName('trkseg')->length);
         self::assertSame(1, $doc->getElementsByTagName('trk')->length);

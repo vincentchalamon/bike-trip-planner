@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use DateTimeImmutable;
 use App\Entity\RefreshToken;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -30,7 +29,7 @@ final class RefreshTokenRepository extends ServiceEntityRepository
     public function createForUser(User $user): RefreshToken
     {
         $token = bin2hex(random_bytes(64));
-        $expiresAt = new DateTimeImmutable(\sprintf('+%d days', self::TTL_DAYS));
+        $expiresAt = new \DateTimeImmutable(\sprintf('+%d days', self::TTL_DAYS));
 
         $refreshToken = new RefreshToken($user, $token, $expiresAt);
         $this->getEntityManager()->persist($refreshToken);
@@ -49,7 +48,7 @@ final class RefreshTokenRepository extends ServiceEntityRepository
             ->where('rt.token = :token')
             ->andWhere('rt.expiresAt > :now')
             ->setParameter('token', $token)
-            ->setParameter('now', new DateTimeImmutable())
+            ->setParameter('now', new \DateTimeImmutable())
             ->getQuery()
             ->getOneOrNullResult();
         \assert(null === $result || $result instanceof RefreshToken);
@@ -70,8 +69,8 @@ final class RefreshTokenRepository extends ServiceEntityRepository
             ->where('rt.id = :id')
             ->andWhere('rt.expiresAt > :now')
             ->setParameter('id', $token->getId())
-            ->setParameter('now', new DateTimeImmutable())
-            ->setParameter('past', new DateTimeImmutable('1970-01-01'))
+            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('past', new \DateTimeImmutable('1970-01-01'))
             ->getQuery()
             ->execute();
         \assert(\is_int($affected));

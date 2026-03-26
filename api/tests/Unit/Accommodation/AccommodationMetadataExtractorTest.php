@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Accommodation;
 
-use Override;
 use App\Accommodation\AccommodationMetadataExtractor;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -14,7 +13,7 @@ final class AccommodationMetadataExtractorTest extends TestCase
 {
     private AccommodationMetadataExtractor $extractor;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $this->extractor = new AccommodationMetadataExtractor();

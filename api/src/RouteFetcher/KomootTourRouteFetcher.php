@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\RouteFetcher;
 
-use RuntimeException;
 use App\Enum\SourceType;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Cache\CacheInterface;
@@ -46,15 +45,15 @@ final readonly class KomootTourRouteFetcher implements RouteFetcherInterface
             $statusCode = $response->getStatusCode();
 
             if (404 === $statusCode) {
-                throw new RuntimeException(\sprintf('Komoot tour %s not found (404).', $tourId));
+                throw new \RuntimeException(\sprintf('Komoot tour %s not found (404).', $tourId));
             }
 
             if (403 === $statusCode) {
-                throw new RuntimeException(\sprintf('Komoot tour %s is private or access denied (403).', $tourId));
+                throw new \RuntimeException(\sprintf('Komoot tour %s is private or access denied (403).', $tourId));
             }
 
             if (200 !== $statusCode) {
-                throw new RuntimeException(\sprintf('Komoot tour %s returned HTTP %d.', $tourId, $statusCode));
+                throw new \RuntimeException(\sprintf('Komoot tour %s returned HTTP %d.', $tourId, $statusCode));
             }
 
             $html = $response->getContent();

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\RouteFetcher;
 
-use RuntimeException;
 use App\ApiResource\Model\Coordinate;
 use App\Enum\SourceType;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -50,15 +49,15 @@ final readonly class RideWithGpsRouteFetcher implements RouteFetcherInterface
             $statusCode = $response->getStatusCode();
 
             if (404 === $statusCode) {
-                throw new RuntimeException(\sprintf('RideWithGPS route %s not found (404).', $routeId));
+                throw new \RuntimeException(\sprintf('RideWithGPS route %s not found (404).', $routeId));
             }
 
             if (403 === $statusCode) {
-                throw new RuntimeException(\sprintf('RideWithGPS route %s is private or access denied (403).', $routeId));
+                throw new \RuntimeException(\sprintf('RideWithGPS route %s is private or access denied (403).', $routeId));
             }
 
             if (200 !== $statusCode) {
-                throw new RuntimeException(\sprintf('RideWithGPS route %s returned HTTP %d.', $routeId, $statusCode));
+                throw new \RuntimeException(\sprintf('RideWithGPS route %s returned HTTP %d.', $routeId, $statusCode));
             }
 
             /** @var array<string, mixed> $data */
@@ -67,7 +66,7 @@ final readonly class RideWithGpsRouteFetcher implements RouteFetcherInterface
             /** @var array<string, mixed>|null $route */
             $route = \is_array($data['route'] ?? null) ? $data['route'] : null;
             if (null === $route) {
-                throw new RuntimeException(\sprintf('RideWithGPS route %s has no route data.', $routeId));
+                throw new \RuntimeException(\sprintf('RideWithGPS route %s has no route data.', $routeId));
             }
 
             $title = \is_string($route['name'] ?? null) ? $route['name'] : null;
@@ -76,7 +75,7 @@ final readonly class RideWithGpsRouteFetcher implements RouteFetcherInterface
             $trackPoints = \is_array($route['track_points'] ?? null) ? $route['track_points'] : [];
 
             if ([] === $trackPoints) {
-                throw new RuntimeException(\sprintf('RideWithGPS route %s has no track points.', $routeId));
+                throw new \RuntimeException(\sprintf('RideWithGPS route %s has no track points.', $routeId));
             }
 
             $coordinates = [];
@@ -101,7 +100,7 @@ final readonly class RideWithGpsRouteFetcher implements RouteFetcherInterface
             }
 
             if ([] === $coordinates) {
-                throw new RuntimeException(\sprintf('RideWithGPS route %s yielded no valid coordinates.', $routeId));
+                throw new \RuntimeException(\sprintf('RideWithGPS route %s yielded no valid coordinates.', $routeId));
             }
 
             return new RouteFetchResult(

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Analyzer\Rules;
 
-use DateTimeImmutable;
-use DateTimeZone;
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Stage;
@@ -41,7 +39,7 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
-        /** @var DateTimeImmutable|null $startDate */
+        /** @var \DateTimeImmutable|null $startDate */
         $startDate = $context['startDate'] ?? null;
         /** @var int $stageIndex */
         $stageIndex = $context['stageIndex'] ?? 0;
@@ -53,7 +51,7 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
         $locale = $context['locale'] ?? 'en';
 
         // Compute the stage date from the start date + stage index offset
-        $baseDate = $startDate ?? new DateTimeImmutable('today', new DateTimeZone('UTC'));
+        $baseDate = $startDate ?? new \DateTimeImmutable('today', new \DateTimeZone('UTC'));
         $stageDate = $baseDate->modify(\sprintf('+%d days', $stageIndex));
 
         if (false === $stageDate) {
@@ -89,7 +87,7 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
         );
 
         // Convert civil twilight end timestamp to a decimal hour of the day (UTC)
-        $twilightDate = new DateTimeImmutable('@'.$civilTwilightEnd, new DateTimeZone('UTC'));
+        $twilightDate = new \DateTimeImmutable('@'.$civilTwilightEnd, new \DateTimeZone('UTC'));
         $twilightDecimalHours = (float) $twilightDate->format('G') + (float) $twilightDate->format('i') / 60.0;
 
         if ($estimatedArrival <= $twilightDecimalHours) {
@@ -98,7 +96,7 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
 
         $rawSunset = $sunInfo['sunset'];
         $sunsetTimestamp = \is_int($rawSunset) ? $rawSunset : $civilTwilightEnd;
-        $sunsetDate = new DateTimeImmutable('@'.$sunsetTimestamp, new DateTimeZone('UTC'));
+        $sunsetDate = new \DateTimeImmutable('@'.$sunsetTimestamp, new \DateTimeZone('UTC'));
         $sunsetHm = $sunsetDate->format('H:i');
         $twilightHm = $twilightDate->format('H:i');
 

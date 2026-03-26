@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Serializer;
 
-use InvalidArgumentException;
 use App\ApiResource\TripRequest;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
@@ -148,7 +147,7 @@ final class TripGpxNormalizerTest extends TestCase
         $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $normalizer = new TripGpxNormalizer($repository);
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $normalizer->normalize('not a trip', 'gpx');
     }
 }

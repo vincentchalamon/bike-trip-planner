@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Engine;
 
-use Override;
 use App\ApiResource\Model\Coordinate;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
@@ -17,7 +16,7 @@ final class PacingEngineRegistryTest extends TestCase
 {
     private PacingEngineRegistry $engine;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);

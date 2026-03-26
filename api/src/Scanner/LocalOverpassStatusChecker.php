@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Scanner;
 
-use Throwable;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -42,7 +41,7 @@ final class LocalOverpassStatusChecker implements OverpassStatusCheckerInterface
             ]);
 
             $this->cachedStatus = 200 === $response->getStatusCode();
-        } catch (Throwable $throwable) {
+        } catch (\Throwable $throwable) {
             $this->logger->debug('Local Overpass status check failed.', [
                 'error' => $throwable->getMessage(),
             ]);

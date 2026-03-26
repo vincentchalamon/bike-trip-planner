@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\ComputationTracker;
 
-use Override;
 use App\ComputationTracker\TripGenerationTracker;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -14,7 +13,7 @@ final class TripGenerationTrackerTest extends TestCase
 {
     private TripGenerationTracker $tracker;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $this->tracker = new TripGenerationTracker(new ArrayAdapter());

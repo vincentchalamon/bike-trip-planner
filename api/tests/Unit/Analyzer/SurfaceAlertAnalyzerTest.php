@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
-use Override;
 use App\Analyzer\Rules\SurfaceAlertAnalyzer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -18,7 +17,7 @@ final class SurfaceAlertAnalyzerTest extends TestCase
 {
     private SurfaceAlertAnalyzer $analyzer;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $translator = $this->createStub(TranslatorInterface::class);

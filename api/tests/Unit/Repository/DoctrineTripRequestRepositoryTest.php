@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Repository;
 
-use Override;
-use DateTimeImmutable;
-use LogicException;
 use PHPUnit\Framework\MockObject\MockObject;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Query;
@@ -40,7 +37,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
     private DoctrineTripRequestRepository $repository;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
@@ -65,8 +62,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $request = new TripRequest();
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
-        $request->startDate = new DateTimeImmutable('2026-07-01');
-        $request->endDate = new DateTimeImmutable('2026-07-10');
+        $request->startDate = new \DateTimeImmutable('2026-07-01');
+        $request->endDate = new \DateTimeImmutable('2026-07-10');
         $request->fatigueFactor = 0.85;
         $request->elevationPenalty = 40.0;
         $request->ebikeMode = true;
@@ -597,7 +594,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('find')
             ->willReturn($trip);
 
-        $this->expectException(LogicException::class);
+        $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('Unhandled Alert subclass "UnknownAlertType"');
 
         $this->repository->getStages($tripId);
@@ -624,7 +621,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         );
         $stageDto->addAlert($unknownAlert);
 
-        $this->expectException(LogicException::class);
+        $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('Unhandled Alert subclass');
 
         $this->repository->storeStages($tripId, [$stageDto]);

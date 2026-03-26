@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use Override;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use App\Entity\MagicLink;
 use App\Entity\User;
@@ -49,7 +48,7 @@ final class CreateUserCommand extends Command
         parent::__construct();
     }
 
-    #[Override]
+    #[\Override]
     protected function configure(): void
     {
         $this
@@ -57,7 +56,7 @@ final class CreateUserCommand extends Command
             ->addOption('locale', 'l', InputOption::VALUE_REQUIRED, 'Locale for the invitation email (fr, en)', 'fr');
     }
 
-    #[Override]
+    #[\Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);

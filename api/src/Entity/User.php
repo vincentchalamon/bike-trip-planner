@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use DateTimeImmutable;
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -24,7 +23,7 @@ class User implements UserInterface
     private array $roles = [];
 
     #[ORM\Column]
-    private DateTimeImmutable $createdAt;
+    private \DateTimeImmutable $createdAt;
 
     #[ORM\Column(length: 5, options: ['default' => 'fr'])]
     private string $locale = 'fr';
@@ -36,7 +35,7 @@ class User implements UserInterface
         ?Uuid $id = null,
     ) {
         $this->id = $id ?? Uuid::v7();
-        $this->createdAt = new DateTimeImmutable();
+        $this->createdAt = new \DateTimeImmutable();
     }
 
     public function getId(): Uuid
@@ -73,7 +72,7 @@ class User implements UserInterface
         return $this;
     }
 
-    public function getCreatedAt(): DateTimeImmutable
+    public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }

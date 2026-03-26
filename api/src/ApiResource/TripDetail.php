@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\ApiResource;
 
-use DateTimeImmutable;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
@@ -37,8 +36,8 @@ final readonly class TripDetail
         public string $id,
         public ?string $title,
         public ?string $sourceUrl,
-        public ?DateTimeImmutable $startDate,
-        public ?DateTimeImmutable $endDate,
+        public ?\DateTimeImmutable $startDate,
+        public ?\DateTimeImmutable $endDate,
         public float $fatigueFactor,
         public float $elevationPenalty,
         public float $maxDistancePerDay,

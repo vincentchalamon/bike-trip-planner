@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use DateTimeImmutable;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -28,7 +27,7 @@ final class TripDuplicateTest extends ApiTestCase
     {
         $request = new TripRequest();
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
-        $request->startDate = new DateTimeImmutable('2026-07-01');
+        $request->startDate = new \DateTimeImmutable('2026-07-01');
         $request->fatigueFactor = 0.85;
         $request->elevationPenalty = 40.0;
         $request->title = 'Test Trip';

@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
-use Override;
-use DateTimeImmutable;
-use DateTimeZone;
 use App\ApiResource\TripRequest;
 use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\Test;
@@ -17,7 +14,7 @@ final class TripLockerTest extends TestCase
 {
     private TripLocker $locker;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $this->locker = new TripLocker();
@@ -36,7 +33,7 @@ final class TripLockerTest extends TestCase
     public function isLockedReturnsFalseWhenStartDateIsInFuture(): void
     {
         $request = new TripRequest();
-        $request->startDate = new DateTimeImmutable('tomorrow', new DateTimeZone('UTC'));
+        $request->startDate = new \DateTimeImmutable('tomorrow', new \DateTimeZone('UTC'));
 
         $this->assertFalse($this->locker->isLocked($request));
     }
@@ -45,7 +42,7 @@ final class TripLockerTest extends TestCase
     public function isLockedReturnsTrueWhenStartDateIsToday(): void
     {
         $request = new TripRequest();
-        $request->startDate = new DateTimeImmutable('today', new DateTimeZone('UTC'));
+        $request->startDate = new \DateTimeImmutable('today', new \DateTimeZone('UTC'));
 
         $this->assertTrue($this->locker->isLocked($request));
     }
@@ -54,7 +51,7 @@ final class TripLockerTest extends TestCase
     public function isLockedReturnsTrueWhenStartDateIsInPast(): void
     {
         $request = new TripRequest();
-        $request->startDate = new DateTimeImmutable('yesterday', new DateTimeZone('UTC'));
+        $request->startDate = new \DateTimeImmutable('yesterday', new \DateTimeZone('UTC'));
 
         $this->assertTrue($this->locker->isLocked($request));
     }
@@ -63,7 +60,7 @@ final class TripLockerTest extends TestCase
     public function assertNotLockedThrowsWhenTripIsLocked(): void
     {
         $request = new TripRequest();
-        $request->startDate = new DateTimeImmutable('yesterday', new DateTimeZone('UTC'));
+        $request->startDate = new \DateTimeImmutable('yesterday', new \DateTimeZone('UTC'));
 
         try {
             $this->locker->assertNotLocked($request);
@@ -77,7 +74,7 @@ final class TripLockerTest extends TestCase
     public function assertNotLockedDoesNotThrowWhenTripIsNotLocked(): void
     {
         $request = new TripRequest();
-        $request->startDate = new DateTimeImmutable('tomorrow', new DateTimeZone('UTC'));
+        $request->startDate = new \DateTimeImmutable('tomorrow', new \DateTimeZone('UTC'));
 
         $this->expectNotToPerformAssertions();
         $this->locker->assertNotLocked($request);

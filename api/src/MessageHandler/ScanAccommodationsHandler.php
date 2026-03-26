@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
-use DateTimeImmutable;
-use Throwable;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use App\Accommodation\AccommodationMetadataExtractor;
 use App\Accommodation\SeasonalityCheckerInterface;
@@ -146,7 +144,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     }
 
                     $possibleClosed = false;
-                    if ($stageDate instanceof DateTimeImmutable) {
+                    if ($stageDate instanceof \DateTimeImmutable) {
                         $possibleClosed = false === $this->seasonalityChecker->isLikelyOpen($stageDate, $raw['tags'] ?? []);
                     }
 
@@ -305,7 +303,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         foreach ($scrapableItems as $key => $item) {
             try {
                 $mainResponses[$key] = $this->scraperClient->request('GET', $item['url'], ['timeout' => 5]);
-            } catch (Throwable) {
+            } catch (\Throwable) {
                 // Skip malformed URLs
             }
         }
@@ -339,7 +337,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         'html' => $html,
                     ];
                 }
-            } catch (Throwable $e) {
+            } catch (\Throwable $e) {
                 $this->logger->debug('Accommodation scraping failed.', ['url' => $item['url'], 'error' => $e->getMessage()]);
             }
         }
@@ -364,7 +362,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         'candidateIdx' => $item['candidateIdx'],
                         'response' => $this->scraperClient->request('GET', $pricePageUrl, ['timeout' => 3]),
                     ];
-                } catch (Throwable) {
+                } catch (\Throwable) {
                     // Skip malformed URLs
                 }
             }
@@ -388,7 +386,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     $retainedByStage[$priceItem['stageIdx']][$priceItem['candidateIdx']]['isExact'] = true;
                     $priceFound[$candidateKey] = true;
                 }
-            } catch (Throwable) {
+            } catch (\Throwable) {
                 // Skip failed price pages
             }
         }

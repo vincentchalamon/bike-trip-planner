@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
-use Override;
 use App\Analyzer\Rules\SteepGradientAnalyzer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -18,7 +17,7 @@ final class SteepGradientAnalyzerTest extends TestCase
 {
     private SteepGradientAnalyzer $analyzer;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);

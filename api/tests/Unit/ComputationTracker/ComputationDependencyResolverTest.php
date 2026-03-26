@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\ComputationTracker;
 
-use Override;
-use DateTimeImmutable;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationDependencyResolver;
 use App\Enum\ComputationName;
@@ -16,7 +14,7 @@ final class ComputationDependencyResolverTest extends TestCase
 {
     private ComputationDependencyResolver $resolver;
 
-    #[Override]
+    #[\Override]
     protected function setUp(): void
     {
         $this->resolver = new ComputationDependencyResolver();
@@ -239,11 +237,11 @@ final class ComputationDependencyResolverTest extends TestCase
         $request = new TripRequest();
         $request->sourceUrl = $sourceUrl;
         if (null !== $startDate) {
-            $request->startDate = new DateTimeImmutable($startDate);
+            $request->startDate = new \DateTimeImmutable($startDate);
         }
 
         if (null !== $endDate) {
-            $request->endDate = new DateTimeImmutable($endDate);
+            $request->endDate = new \DateTimeImmutable($endDate);
         }
 
         return $request;

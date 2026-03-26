@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Accommodation;
 
-use DateTimeImmutable;
-
 /**
  * Checks whether an accommodation is likely open on a given date,
  * based on OSM tags such as `seasonal` and `opening_hours`.
@@ -18,5 +16,5 @@ interface SeasonalityCheckerInterface
      *
      * @param array<string, string> $tags OSM tags for the accommodation
      */
-    public function isLikelyOpen(DateTimeImmutable $date, array $tags): ?bool;
+    public function isLikelyOpen(\DateTimeImmutable $date, array $tags): ?bool;
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\RouteFetcher;
 
-use RuntimeException;
 use App\Enum\SourceType;
 use App\RouteFetcher\RideWithGpsRouteFetcher;
 use PHPUnit\Framework\Attributes\Test;
@@ -93,7 +92,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('not found (404)');
 
         $fetcher->fetch('https://ridewithgps.com/routes/123456');
@@ -115,7 +114,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('private or access denied (403)');
 
         $fetcher->fetch('https://ridewithgps.com/routes/123456');
@@ -143,7 +142,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('no track points');
 
         $fetcher->fetch('https://ridewithgps.com/routes/123456');
@@ -209,7 +208,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('no valid coordinates');
 
         $fetcher->fetch('https://ridewithgps.com/routes/123456');
@@ -232,7 +231,7 @@ final class RideWithGpsRouteFetcherTest extends TestCase
 
         $fetcher = new RideWithGpsRouteFetcher($client, $cache);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('has no route data');
 
         $fetcher->fetch('https://ridewithgps.com/routes/123456');

@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Accommodation;
 
-use DOMDocument;
-use DOMXPath;
-use DOMElement;
-
 // DIP: no interface — single consumer, single implementation. Extract when a second consumer arises.
 final class AccommodationMetadataExtractor
 {
@@ -23,9 +19,9 @@ final class AccommodationMetadataExtractor
 
     public function extract(string $html): AccommodationScrapedData
     {
-        $doc = new DOMDocument();
+        $doc = new \DOMDocument();
         @$doc->loadHTML($html, \LIBXML_NONET | \LIBXML_NOENT);
-        $xpath = new DOMXPath($doc);
+        $xpath = new \DOMXPath($doc);
 
         $jsonLd = $this->extractJsonLd($xpath);
         $og = $this->extractOpenGraph($xpath);
@@ -47,7 +43,7 @@ final class AccommodationMetadataExtractor
     /**
      * @return array{name?: string, type?: string, priceMin?: float, priceMax?: float}
      */
-    private function extractJsonLd(DOMXPath $xpath): array
+    private function extractJsonLd(\DOMXPath $xpath): array
     {
         $scripts = $xpath->query('//script[@type="application/ld+json"]');
         if (false === $scripts) {
@@ -57,7 +53,7 @@ final class AccommodationMetadataExtractor
         $result = [];
 
         foreach ($scripts as $script) {
-            if (!$script instanceof DOMElement) {
+            if (!$script instanceof \DOMElement) {
                 continue;
             }
 
@@ -155,7 +151,7 @@ final class AccommodationMetadataExtractor
     /**
      * @return array{name?: string}
      */
-    private function extractOpenGraph(DOMXPath $xpath): array
+    private function extractOpenGraph(\DOMXPath $xpath): array
     {
         $result = [];
 
@@ -170,12 +166,12 @@ final class AccommodationMetadataExtractor
         return $result;
     }
 
-    private function extractTitle(DOMXPath $xpath): ?string
+    private function extractTitle(\DOMXPath $xpath): ?string
     {
         $titleNode = $xpath->query('//title');
         if (false !== $titleNode && $titleNode->length > 0) {
             $item = $titleNode->item(0);
-            $value = $item instanceof DOMElement ? $item->textContent : null;
+            $value = $item instanceof \DOMElement ? $item->textContent : null;
             if (\is_string($value) && '' !== $value) {
                 return trim($value);
             }
@@ -228,9 +224,9 @@ final class AccommodationMetadataExtractor
      */
     public function discoverPricePagePaths(string $html, string $baseUrl): array
     {
-        $doc = new DOMDocument();
+        $doc = new \DOMDocument();
         @$doc->loadHTML($html, \LIBXML_NONET | \LIBXML_NOENT);
-        $xpath = new DOMXPath($doc);
+        $xpath = new \DOMXPath($doc);
 
         $priceKeywords = ['tarif', 'prix', 'price', 'rate', 'booking', 'reservation', 'chambre', 'room', 'hébergement'];
         $links = $xpath->query('//a[@href]');
@@ -243,7 +239,7 @@ final class AccommodationMetadataExtractor
         $baseHost = $parsedBase['host'] ?? '';
 
         foreach ($links as $link) {
-            if (!$link instanceof DOMElement) {
+            if (!$link instanceof \DOMElement) {
                 continue;
             }
 

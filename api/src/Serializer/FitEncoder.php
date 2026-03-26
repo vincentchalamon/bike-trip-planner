@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Serializer;
 
-use InvalidArgumentException;
 use App\Geo\GeoDistanceInterface;
 use App\Serializer\Mapper\WaypointMapper;
 use Symfony\Component\Serializer\Encoder\EncoderInterface;
@@ -78,7 +77,7 @@ final readonly class FitEncoder implements EncoderInterface
     public function encode(mixed $data, string $format, array $context = []): string
     {
         if (!\is_array($data)) {
-            throw new InvalidArgumentException('FitEncoder expects an array.');
+            throw new \InvalidArgumentException('FitEncoder expects an array.');
         }
 
         $body = '';

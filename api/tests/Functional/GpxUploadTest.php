@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use Override;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\Enum\ComputationName;
 use App\Message\GenerateStages;
@@ -17,7 +16,7 @@ final class GpxUploadTest extends ApiTestCase
 {
     private const string FIXTURES_DIR = __DIR__.'/../fixtures';
 
-    #[Override]
+    #[\Override]
     public static function setUpBeforeClass(): void
     {
         self::$alwaysBootKernel = false;
