@@ -8,8 +8,9 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\AuthRefresh;
 use App\Entity\RefreshToken;
+use App\Repository\RefreshTokenRepository;
 use App\Security\AuthCookies;
-use App\Security\RefreshTokenManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Cookie;
@@ -28,7 +29,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 final readonly class AuthRefreshProcessor implements ProcessorInterface
 {
     public function __construct(
-        private RefreshTokenManager $refreshTokenManager,
+        private RefreshTokenRepository $refreshTokenRepository,
+        private EntityManagerInterface $entityManager,
         private JWTTokenManagerInterface $jwtManager,
         private RequestStack $requestStack,
         private LoggerInterface $logger,
@@ -58,9 +60,9 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
             );
         }
 
-        $newRefreshToken = $this->refreshTokenManager->rotateRefreshToken($token);
+        $existing = $this->refreshTokenRepository->findValidByToken($token);
 
-        if (!$newRefreshToken instanceof RefreshToken) {
+        if (!$existing instanceof RefreshToken) {
             $this->logger->debug('Auth refresh invalid token');
 
             $response = new JsonResponse(
@@ -72,7 +74,11 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
             return $response;
         }
 
-        $user = $newRefreshToken->getUser();
+        $user = $existing->getUser();
+        $this->entityManager->remove($existing);
+        $newRefreshToken = $this->refreshTokenRepository->createForUser($user);
+        $this->entityManager->flush();
+
         $jwt = $this->jwtManager->create($user);
 
         $this->logger->debug('Auth refresh success', ['user' => $user->getEmail()]);

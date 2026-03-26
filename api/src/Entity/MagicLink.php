@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Repository\MagicLinkRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: MagicLinkRepository::class)]
 #[ORM\Table(name: 'magic_link')]
 #[ORM\Index(name: 'idx_magic_link_token', columns: ['token'])]
 #[ORM\Index(name: 'idx_magic_link_user_expires', columns: ['user_id', 'expires_at'])]
@@ -24,7 +25,7 @@ class MagicLink
     private \DateTimeImmutable $createdAt;
 
     public function __construct(
-        #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'magicLinks')]
+        #[ORM\ManyToOne(targetEntity: User::class)]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
         private User $user,
         #[ORM\Column(length: 128)]

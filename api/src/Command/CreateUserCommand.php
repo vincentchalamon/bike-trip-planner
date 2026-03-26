@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Entity\MagicLink;
 use App\Entity\User;
-use App\Security\MagicLinkManager;
+use App\Repository\MagicLinkRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -32,7 +33,7 @@ final class CreateUserCommand extends Command
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly MagicLinkManager $magicLinkManager,
+        private readonly MagicLinkRepository $magicLinkRepository,
         private readonly MailerInterface $mailer,
         private readonly Environment $twig,
         #[Autowire(env: 'FRONTEND_URL')]
@@ -82,13 +83,15 @@ final class CreateUserCommand extends Command
         $io->success(\sprintf('User created: %s (ID: %s)', $email, $user->getId()));
 
         // Create magic link for invitation
-        $magicLink = $this->magicLinkManager->create($user);
+        $magicLink = $this->magicLinkRepository->create($user);
 
-        if (!$magicLink instanceof \App\Entity\MagicLink) {
+        if (!$magicLink instanceof MagicLink) {
             $io->warning(\sprintf('An active invitation link already exists for user %s.', $email));
 
             return Command::SUCCESS;
         }
+
+        $this->entityManager->flush();
 
         $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), $magicLink->getToken());
 
