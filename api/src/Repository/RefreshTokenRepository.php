@@ -52,6 +52,28 @@ final class RefreshTokenRepository extends ServiceEntityRepository
     }
 
     /**
+     * Atomically expires a refresh token to prevent TOCTOU race conditions.
+     *
+     * Returns the number of affected rows (1 if consumed, 0 if already expired/consumed).
+     */
+    public function atomicExpire(RefreshToken $token): int
+    {
+        $affected = $this->getEntityManager()->createQueryBuilder()
+            ->update(RefreshToken::class, 'rt')
+            ->set('rt.expiresAt', ':past')
+            ->where('rt.id = :id')
+            ->andWhere('rt.expiresAt > :now')
+            ->setParameter('id', $token->getId())
+            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('past', new \DateTimeImmutable('1970-01-01'))
+            ->getQuery()
+            ->execute();
+        \assert(\is_int($affected));
+
+        return $affected;
+    }
+
+    /**
      * Marks all refresh tokens for the given user for removal.
      *
      * Does NOT flush — the caller is responsible for flushing.

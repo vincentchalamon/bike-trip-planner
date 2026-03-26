@@ -7,9 +7,7 @@ namespace App\State\Auth;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
-use App\Entity\RefreshToken;
 use App\Repository\RefreshTokenRepository;
-use App\Security\AuthCookies;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -44,7 +42,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): JsonResponse
     {
         $request = $this->requestStack->getCurrentRequest();
-        $token = $request?->cookies->get(AuthCookies::REFRESH_TOKEN);
+        $token = $request?->cookies->get(Auth::REFRESH_TOKEN_COOKIE);
         $isCapacitor = $this->isCapacitorRequest();
 
         // Capacitor sends refresh token in body
@@ -62,16 +60,27 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
         $existing = $this->refreshTokenRepository->findValidByToken($token);
 
-        if (!$existing instanceof RefreshToken) {
+        if (!$existing instanceof \App\Entity\RefreshToken) {
             $this->logger->debug('Auth refresh invalid token');
 
             $response = new JsonResponse(
                 ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
                 Response::HTTP_UNAUTHORIZED,
             );
-            $response->headers->clearCookie(AuthCookies::REFRESH_TOKEN, '/', null, true, true, 'strict');
+            $response->headers->clearCookie(Auth::REFRESH_TOKEN_COOKIE, '/', null, true, true, 'strict');
 
             return $response;
+        }
+
+        // Atomically expire the token to prevent TOCTOU race conditions
+        $affected = $this->refreshTokenRepository->atomicExpire($existing);
+        if (0 === $affected) {
+            $this->logger->debug('Auth refresh token already consumed (TOCTOU)');
+
+            return new JsonResponse(
+                ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
+                Response::HTTP_UNAUTHORIZED,
+            );
         }
 
         $user = $existing->getUser();
@@ -104,7 +113,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
     private function setRefreshTokenCookie(JsonResponse $response, string $token, \DateTimeImmutable $expiresAt): void
     {
-        $cookie = Cookie::create(AuthCookies::REFRESH_TOKEN)
+        $cookie = Cookie::create(Auth::REFRESH_TOKEN_COOKIE)
             ->withValue($token)
             ->withExpires($expiresAt)
             ->withPath('/')

@@ -10,7 +10,6 @@ use App\ApiResource\Auth\Auth;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
 use App\Repository\RefreshTokenRepository;
-use App\Security\AuthCookies;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -85,7 +84,7 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
 
     private function setRefreshTokenCookie(JsonResponse $response, string $token, \DateTimeImmutable $expiresAt): void
     {
-        $cookie = Cookie::create(AuthCookies::REFRESH_TOKEN)
+        $cookie = Cookie::create(Auth::REFRESH_TOKEN_COOKIE)
             ->withValue($token)
             ->withExpires($expiresAt)
             ->withPath('/')

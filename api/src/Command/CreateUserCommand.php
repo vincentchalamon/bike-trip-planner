@@ -19,6 +19,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
 
 /**
@@ -31,13 +32,16 @@ use Twig\Environment;
 )]
 final class CreateUserCommand extends Command
 {
+    private const array SUPPORTED_LOCALES = ['fr', 'en'];
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly MagicLinkRepository $magicLinkRepository,
         private readonly MailerInterface $mailer,
         private readonly Environment $twig,
+        private readonly TranslatorInterface $translator,
         #[Autowire(env: 'FRONTEND_URL')]
-        private readonly string $frontendUrl = 'https://localhost',
+        private readonly string $frontendUrl,
     ) {
         parent::__construct();
     }
@@ -47,7 +51,7 @@ final class CreateUserCommand extends Command
     {
         $this
             ->addArgument('email', InputArgument::REQUIRED, 'Email address of the new user')
-            ->addOption('locale', 'l', InputOption::VALUE_REQUIRED, 'Locale for the invitation email', 'fr');
+            ->addOption('locale', 'l', InputOption::VALUE_REQUIRED, 'Locale for the invitation email (fr, en)', 'fr');
     }
 
     #[\Override]
@@ -63,6 +67,15 @@ final class CreateUserCommand extends Command
             return Command::FAILURE;
         }
 
+        $locale = $input->getOption('locale');
+        \assert(\is_string($locale));
+
+        if (!\in_array($locale, self::SUPPORTED_LOCALES, true)) {
+            $io->error(\sprintf('Unsupported locale "%s". Supported: %s', $locale, implode(', ', self::SUPPORTED_LOCALES)));
+
+            return Command::FAILURE;
+        }
+
         $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
 
         if (null !== $existingUser) {
@@ -70,9 +83,6 @@ final class CreateUserCommand extends Command
 
             return Command::FAILURE;
         }
-
-        $locale = $input->getOption('locale');
-        \assert(\is_string($locale));
 
         $user = new User($email);
         $user->setLocale($locale);
@@ -104,7 +114,7 @@ final class CreateUserCommand extends Command
         $emailMessage = new Email()
             ->from(new Address('noreply@bike-trip-planner.com', 'Bike Trip Planner'))
             ->to($email)
-            ->subject('Invitation — Bike Trip Planner')
+            ->subject($this->translator->trans('auth.email.invitation.subject', [], 'auth', $locale))
             ->html($html);
 
         $this->mailer->send($emailMessage);

@@ -10,7 +10,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: RefreshTokenRepository::class)]
 #[ORM\Table(name: 'refresh_token')]
-#[ORM\Index(name: 'idx_refresh_token_token', columns: ['token'])]
+#[ORM\UniqueConstraint(name: 'uniq_refresh_token_token', columns: ['token'])]
 #[ORM\Index(name: 'idx_refresh_token_user', columns: ['user_id'])]
 class RefreshToken
 {
