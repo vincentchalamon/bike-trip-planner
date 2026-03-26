@@ -130,11 +130,11 @@ export class MercureClient {
         },
       );
 
-      // For Capacitor, extract the token from the response body
+      // For Capacitor, extract the token from the X-Mercure-Token response header
       if (isCapacitorRuntime() && res.ok) {
-        const data = (await res.json()) as { mercureToken?: string };
-        if (data.mercureToken) {
-          this.mercureToken = data.mercureToken;
+        const token = res.headers.get("X-Mercure-Token");
+        if (token) {
+          this.mercureToken = token;
         }
       }
     } catch {

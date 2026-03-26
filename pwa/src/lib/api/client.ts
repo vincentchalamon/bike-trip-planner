@@ -182,7 +182,11 @@ export async function uploadGpxFile(
     ebikeMode?: boolean;
     enabledAccommodationTypes?: string[];
   },
-): Promise<{ data: GpxUploadResponse | null; error: string | null }> {
+): Promise<{
+  data: GpxUploadResponse | null;
+  error: string | null;
+  response: Response | null;
+}> {
   const formData = new FormData();
   formData.append("gpxFile", file);
 
@@ -219,11 +223,11 @@ export async function uploadGpxFile(
     const body = (await res.json().catch(() => null)) as {
       error?: string;
     } | null;
-    return { data: null, error: body?.error ?? "Upload failed" };
+    return { data: null, error: body?.error ?? "Upload failed", response: res };
   }
 
   const data = (await res.json()) as GpxUploadResponse;
-  return { data, error: null };
+  return { data, error: null, response: res };
 }
 
 /**

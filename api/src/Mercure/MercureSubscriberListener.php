@@ -10,11 +10,12 @@ use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
- * Attaches a Mercure subscriber JWT cookie to responses that create or access a trip.
+ * Attaches a Mercure subscriber JWT to responses that create or access a trip.
  *
- * Listens on kernel.response and injects the `mercureAuthorization` cookie
- * for endpoints matching `/trips/{uuid}` patterns. For Capacitor requests,
- * the JWT is also included in the JSON response body.
+ * Listens on kernel.response and injects the `mercureAuthorization` cookie and
+ * the `X-Mercure-Token` response header for endpoints matching `/trips/{uuid}` patterns.
+ * The header allows Capacitor clients (which cannot read HttpOnly cookies) to obtain
+ * the subscriber JWT without requiring body injection.
  *
  * Matched routes:
  * - POST /trips (trip creation — 202 response)
@@ -55,14 +56,13 @@ final readonly class MercureSubscriberListener
             return;
         }
 
-        // Set the subscriber cookie
-        $cookie = $this->tokenIssuer->createSubscriberCookie($tripId);
-        $response->headers->setCookie($cookie);
+        $token = $this->tokenIssuer->generateSubscriberToken($tripId);
 
-        // For Capacitor clients, include the JWT in the response body
-        if ($this->isCapacitorRequest($request)) {
-            $this->injectTokenInBody($response, $tripId);
-        }
+        // Set the HttpOnly subscriber cookie (for browser SSE via EventSource)
+        $response->headers->setCookie($this->tokenIssuer->createSubscriberCookie($token));
+
+        // Set the X-Mercure-Token header so Capacitor clients can read the JWT directly
+        $response->headers->set('X-Mercure-Token', $token);
     }
 
     /**
@@ -128,34 +128,5 @@ final readonly class MercureSubscriberListener
         }
 
         return null;
-    }
-
-    private function isCapacitorRequest(\Symfony\Component\HttpFoundation\Request $request): bool
-    {
-        $origin = $request->headers->get('Origin', '');
-
-        return str_starts_with((string) $origin, 'capacitor://');
-    }
-
-    private function injectTokenInBody(\Symfony\Component\HttpFoundation\Response $response, string $tripId): void
-    {
-        if (!$response instanceof JsonResponse) {
-            return;
-        }
-
-        $content = $response->getContent();
-        if (false === $content) {
-            return;
-        }
-
-        try {
-            /** @var array<string, mixed> $data */
-            $data = json_decode($content, true, 512, \JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            return;
-        }
-
-        $data['mercureToken'] = $this->tokenIssuer->generateSubscriberToken($tripId);
-        $response->setData($data);
     }
 }

@@ -62,10 +62,8 @@ final readonly class MercureTokenIssuer
      * The cookie path is scoped to `/.well-known/mercure` so it is only
      * sent with SSE subscription requests, not with regular API calls.
      */
-    public function createSubscriberCookie(string $tripId): Cookie
+    public function createSubscriberCookie(string $token): Cookie
     {
-        $token = $this->generateSubscriberToken($tripId);
-
         return Cookie::create(self::COOKIE_NAME)
             ->withValue($token)
             ->withExpires(new \DateTimeImmutable(\sprintf('+%d seconds', self::TOKEN_TTL_SECONDS)))

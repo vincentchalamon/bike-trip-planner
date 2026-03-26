@@ -126,9 +126,8 @@ export function useTripPlanner() {
       }
 
       setIsLocked(data.isLocked === true);
-      if ("mercureToken" in data && typeof data.mercureToken === "string") {
-        setMercureToken(data.mercureToken);
-      }
+      const token = response.headers.get("X-Mercure-Token");
+      if (token) setMercureToken(token);
       setTrip({
         id: data.id ?? "",
         title: getRandomTripName(),
@@ -153,7 +152,7 @@ export function useTripPlanner() {
     setAccommodationScanning(true);
 
     try {
-      const { data, error } = await uploadGpxFile(file, {
+      const { data, error, response } = await uploadGpxFile(file, {
         fatigueFactor,
         elevationPenalty,
         maxDistancePerDay,
@@ -170,9 +169,8 @@ export function useTripPlanner() {
         return;
       }
 
-      if ("mercureToken" in data && typeof data.mercureToken === "string") {
-        setMercureToken(data.mercureToken);
-      }
+      const gpxToken = response?.headers.get("X-Mercure-Token");
+      if (gpxToken) setMercureToken(gpxToken);
       setTrip({
         id: data.id,
         title: data.title ?? file.name.replace(/\.gpx$/i, ""),
