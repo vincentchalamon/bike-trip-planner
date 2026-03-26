@@ -19,7 +19,7 @@ class MagicLink
     private Uuid $id;
 
     #[ORM\Column(nullable: true)]
-    private ?\DateTimeImmutable $consumedAt = null; // @phpstan-ignore property.unusedType (set via DQL UPDATE in MagicLinkRepository)
+    private ?\DateTimeImmutable $consumedAt = null; // @phpstan-ignore property.unusedType (used as DQL filter in MagicLinkRepository)
 
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;

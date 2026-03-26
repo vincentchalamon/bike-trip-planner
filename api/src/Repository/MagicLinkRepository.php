@@ -43,37 +43,46 @@ final class MagicLinkRepository extends ServiceEntityRepository
     }
 
     /**
-     * Atomically consumes a magic link token and returns the associated user.
+     * Atomically consumes and deletes a magic link token, returning the associated user.
      *
-     * Uses a conditional UPDATE to prevent TOCTOU race conditions.
+     * Uses a conditional DELETE to prevent TOCTOU race conditions: only the first
+     * concurrent request will affect 1 row. The magic link is removed immediately
+     * to avoid accumulating consumed rows.
+     *
      * Returns null if the token is invalid, expired, or already consumed.
      */
     public function consumeByToken(string $token): ?User
     {
-        $now = new \DateTimeImmutable();
-        $affected = $this->getEntityManager()->createQueryBuilder()
-            ->update(MagicLink::class, 'ml')
-            ->set('ml.consumedAt', ':now')
-            ->where('ml.token = :token')
-            ->andWhere('ml.consumedAt IS NULL')
-            ->andWhere('ml.expiresAt > :now')
-            ->setParameter('token', $token)
-            ->setParameter('now', $now)
-            ->getQuery()
-            ->execute();
-
-        if (0 === $affected) {
-            return null;
-        }
-
+        // First, fetch the user before deleting (we need the association)
         $user = $this->createQueryBuilder('ml')
             ->select('u')
             ->join('ml.user', 'u')
             ->where('ml.token = :token')
+            ->andWhere('ml.consumedAt IS NULL')
+            ->andWhere('ml.expiresAt > :now')
             ->setParameter('token', $token)
+            ->setParameter('now', new \DateTimeImmutable())
             ->getQuery()
             ->getOneOrNullResult();
-        \assert(null === $user || $user instanceof User);
+
+        if (!$user instanceof User) {
+            return null;
+        }
+
+        // Atomically delete the token: only the first concurrent request deletes 1 row
+        $affected = $this->getEntityManager()->createQueryBuilder()
+            ->delete(MagicLink::class, 'ml')
+            ->where('ml.token = :token')
+            ->andWhere('ml.consumedAt IS NULL')
+            ->andWhere('ml.expiresAt > :now')
+            ->setParameter('token', $token)
+            ->setParameter('now', new \DateTimeImmutable())
+            ->getQuery()
+            ->execute();
+
+        if (0 === $affected) {
+            return null; // Lost the race — another request consumed it first
+        }
 
         return $user;
     }
