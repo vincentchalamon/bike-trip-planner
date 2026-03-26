@@ -11,7 +11,6 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Entity(repositoryClass: MagicLinkRepository::class)]
 #[ORM\Table(name: 'magic_link')]
 #[ORM\UniqueConstraint(name: 'uniq_magic_link_token', columns: ['token'])]
-#[ORM\Index(name: 'idx_magic_link_user', columns: ['user_id'])]
 class MagicLink
 {
     #[ORM\Id]
@@ -22,8 +21,8 @@ class MagicLink
     private \DateTimeImmutable $createdAt;
 
     public function __construct(
-        #[ORM\ManyToOne(targetEntity: User::class)]
-        #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+        #[ORM\OneToOne(targetEntity: User::class)]
+        #[ORM\JoinColumn(unique: true, nullable: false, onDelete: 'CASCADE')]
         private User $user,
         #[ORM\Column(length: 128)]
         private string $token,
