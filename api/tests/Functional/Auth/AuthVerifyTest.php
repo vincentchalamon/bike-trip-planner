@@ -17,6 +17,12 @@ final class AuthVerifyTest extends ApiTestCase
 {
     use Factories;
 
+    #[\Override]
+    public static function setUpBeforeClass(): void
+    {
+        self::$alwaysBootKernel = false;
+    }
+
     private function getEntityManager(): EntityManagerInterface
     {
         return self::getContainer()->get('doctrine.orm.entity_manager');
