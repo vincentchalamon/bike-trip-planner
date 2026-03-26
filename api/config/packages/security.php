@@ -33,7 +33,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ],
         'access_control' => [
             ['path' => '^/auth/logout', 'roles' => 'IS_AUTHENTICATED_FULLY'],
-            ['path' => '^/docs', 'roles' => 'PUBLIC_ACCESS'],
+            ['path' => '^/', 'roles' => 'IS_AUTHENTICATED_FULLY'],
         ],
     ]);
 };
