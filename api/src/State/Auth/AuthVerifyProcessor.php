@@ -6,7 +6,7 @@ namespace App\State\Auth;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
-use App\ApiResource\Auth\AuthVerify;
+use App\ApiResource\Auth\Auth;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
 use App\Repository\RefreshTokenRepository;
@@ -25,7 +25,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  *
  * For Capacitor clients (Origin: capacitor://), the refresh token is also included in the response body.
  *
- * @implements ProcessorInterface<AuthVerify, JsonResponse>
+ * @implements ProcessorInterface<Auth, JsonResponse>
  */
 final readonly class AuthVerifyProcessor implements ProcessorInterface
 {
@@ -41,7 +41,7 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
     }
 
     /**
-     * @param AuthVerify $data
+     * @param Auth $data
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): JsonResponse
     {

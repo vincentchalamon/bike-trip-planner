@@ -6,7 +6,7 @@ namespace App\State\Auth;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
-use App\ApiResource\Auth\AuthRefresh;
+use App\ApiResource\Auth\Auth;
 use App\Entity\RefreshToken;
 use App\Repository\RefreshTokenRepository;
 use App\Security\AuthCookies;
@@ -24,7 +24,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  *
  * Reads the refresh token from cookie or request body (Capacitor).
  *
- * @implements ProcessorInterface<AuthRefresh, JsonResponse>
+ * @implements ProcessorInterface<Auth, JsonResponse>
  */
 final readonly class AuthRefreshProcessor implements ProcessorInterface
 {
@@ -39,7 +39,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
     }
 
     /**
-     * @param AuthRefresh $data
+     * @param Auth $data
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): JsonResponse
     {
