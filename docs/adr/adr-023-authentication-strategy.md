@@ -204,6 +204,7 @@ Rate limiting on the magic link generation endpoint to prevent mailbox spam and 
 - **Per email:** max 3 requests per 15-minute window
 - **Per IP:** max 3 requests per 15-minute window
 - Implemented via Symfony RateLimiter component with Redis backend
+- **Counter behaviour:** the throttle counter increments on every HTTP request to this endpoint, even when the Single Active Link Policy suppresses email delivery — this prevents an attacker from cycling requests freely after the first token is created
 
 ### Capacitor (Mobile) Adaptation
 
@@ -228,7 +229,7 @@ In Capacitor WebView, HttpOnly cookies may not be reliably transmitted. When the
 
 - Access token held in a Zustand store (in-memory, not persisted) — **client components only**; React Server Components do not have access to this store and must not make authenticated API calls directly
 - `fetch` wrapper automatically attaches `Authorization: Bearer` header
-- Silent refresh via `credentials: 'include'` on the refresh endpoint
+- Silent refresh via `credentials: 'include'` on `POST /auth/refresh`
 - Redirect to login page when both tokens are expired
 
 ### Prerequisites
@@ -258,6 +259,7 @@ In Capacitor WebView, HttpOnly cookies may not be reliably transmitted. When the
 
 - **Refresh token rotation** — a future enhancement could invalidate the previous refresh token upon each renewal (detect token theft)
 - **Device management** — users cannot currently see or revoke active sessions across devices
+- **Logout** — requires `POST /auth/logout` on the backend (responds with `Set-Cookie: refresh_token=; Max-Age=0; HttpOnly; SameSite=Strict; Path=/auth/refresh`) and client-side clearing of the in-memory access token; without this endpoint, the HttpOnly cookie cannot be removed by client JavaScript
 
 ---
 
