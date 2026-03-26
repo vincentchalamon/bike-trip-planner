@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\RouteParser;
 
+use XMLReader;
 use App\ApiResource\Model\Coordinate;
 
 final class GpxStreamRouteParser implements GpxRouteParserInterface

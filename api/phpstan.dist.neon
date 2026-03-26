@@ -47,4 +47,8 @@ parameters:
             # enable detection of shell execution by backticks
             - type: Expr_ShellExec
               functions: null
-    ignoreErrors: []
+    ignoreErrors:
+        - identifier: argument.type
+          path: tests/Functional/Auth/*
+        - identifier: missingType.iterableValue
+          path: tests/Functional/Auth/*

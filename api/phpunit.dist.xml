@@ -28,6 +28,8 @@
         <!-- Override environment variables set in Docker Compose -->
         <env name="MESSENGER_TRANSPORT_DSN" value="in-memory://" force="true" />
         <env name="MESSENGER_FAILED_DSN" value="in-memory://" force="true" />
+
+        <env name="MAILER_DSN" value="null://null"/>
     </php>
 
     <testsuites>

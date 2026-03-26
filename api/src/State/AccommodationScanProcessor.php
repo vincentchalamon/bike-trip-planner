@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\ApiResource\TripRequest;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
@@ -40,7 +41,7 @@ final readonly class AccommodationScanProcessor implements ProcessorInterface
         $tripId = $uriVariables['tripId'] ?? '';
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
-        if (!$tripRequest instanceof \App\ApiResource\TripRequest) {
+        if (!$tripRequest instanceof TripRequest) {
             throw new NotFoundHttpException(\sprintf('Trip "%s" not found.', $tripId));
         }
 

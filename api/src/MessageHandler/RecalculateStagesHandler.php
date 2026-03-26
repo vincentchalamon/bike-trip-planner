@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\TripRequest;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -96,7 +97,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
             $this->messageBus->dispatch(new ScanPois($tripId, $generation));
             if (!$message->skipAccommodationScan) {
                 $request = $this->tripStateManager->getRequest($tripId);
-                \assert($request instanceof \App\ApiResource\TripRequest);
+                \assert($request instanceof TripRequest);
                 foreach ($affectedIndices as $idx) {
                     $this->messageBus->dispatch(new ScanAccommodations(
                         $tripId,

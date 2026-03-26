@@ -233,6 +233,19 @@ services:
       timeout: 3s
       retries: 3
 
+  mailcatcher:
+    image: schickling/mailcatcher
+    restart: unless-stopped
+    ports:
+      - target: 1080
+        published: ${MAILCATCHER_PORT:-1080}
+        protocol: tcp
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:1080 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
   provisioner:
     build:
       context: ./

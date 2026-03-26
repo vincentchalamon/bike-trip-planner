@@ -37,6 +37,11 @@ if [ "$1" = 'symfony' ] || [ "$1" = 'php' ] || [ "$1" = 'bin/console' ]; then
 		fi
 	fi
 
+	# Generate JWT keypair if not present
+	if [ ! -f config/jwt/private.pem ]; then
+		php bin/console lexik:jwt:generate-keypair --skip-if-exists >&2
+	fi
+
 	setfacl -R -m u:www-data:rwX -m u:"$(whoami)":rwX var
 	setfacl -dR -m u:www-data:rwX -m u:"$(whoami)":rwX var
 

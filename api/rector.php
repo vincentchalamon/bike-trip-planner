@@ -27,6 +27,7 @@ $rector = RectorConfig::configure()
         PHPUnitSetList::PHPUNIT_120,
     ])
     ->withAttributesSets()
+    ->withImportNames(importShortClasses: false, removeUnusedImports: true)
     ->withComposerBased(phpunit: true, symfony: true)
 ;
 

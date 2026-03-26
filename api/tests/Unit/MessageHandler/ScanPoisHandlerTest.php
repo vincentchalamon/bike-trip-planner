@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use PHPUnit\Framework\MockObject\Stub;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -101,7 +102,7 @@ final class ScanPoisHandlerTest extends TestCase
     }
 
     /**
-     * @return array{QueryBuilderInterface&\PHPUnit\Framework\MockObject\Stub, GeoDistanceInterface&\PHPUnit\Framework\MockObject\Stub, RiderTimeEstimatorInterface&\PHPUnit\Framework\MockObject\Stub}
+     * @return array{QueryBuilderInterface&Stub, GeoDistanceInterface&Stub, RiderTimeEstimatorInterface&Stub}
      */
     private function createDefaultStubs(): array
     {

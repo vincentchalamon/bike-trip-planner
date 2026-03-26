@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\ApiResource;
 
+use ApiPlatform\OpenApi\Model\Parameter;
+use ApiPlatform\OpenApi\Model\Response;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
@@ -28,21 +30,21 @@ use App\State\TripUpdateProcessor;
             openapi: new Operation(
                 summary: 'List all trips, paginated and filterable.',
                 parameters: [
-                    new \ApiPlatform\OpenApi\Model\Parameter(
+                    new Parameter(
                         name: 'title',
                         in: 'query',
                         description: 'Filter by title (case-insensitive partial match)',
                         required: false,
                         schema: ['type' => 'string'],
                     ),
-                    new \ApiPlatform\OpenApi\Model\Parameter(
+                    new Parameter(
                         name: 'startDate',
                         in: 'query',
                         description: 'Filter trips starting on or after this date (YYYY-MM-DD)',
                         required: false,
                         schema: ['type' => 'string', 'format' => 'date'],
                     ),
-                    new \ApiPlatform\OpenApi\Model\Parameter(
+                    new Parameter(
                         name: 'endDate',
                         in: 'query',
                         description: 'Filter trips ending on or before this date (YYYY-MM-DD)',
@@ -70,7 +72,7 @@ use App\State\TripUpdateProcessor;
             status: 201,
             openapi: new Operation(
                 responses: [
-                    404 => new \ApiPlatform\OpenApi\Model\Response(description: 'Trip not found'),
+                    404 => new Response(description: 'Trip not found'),
                 ],
                 summary: 'Duplicate an existing trip, deep-cloning all its stages and settings.',
             ),

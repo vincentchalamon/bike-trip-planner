@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\Pagination\Pagination;
 use ApiPlatform\State\ProviderInterface;
@@ -89,7 +90,7 @@ final readonly class TripCollectionProvider implements ProviderInterface
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 
-        $paginator = new \Doctrine\ORM\Tools\Pagination\Paginator($qb->getQuery(), fetchJoinCollection: true);
+        $paginator = new Paginator($qb->getQuery(), fetchJoinCollection: true);
         /** @var list<TripRequest> $entities */
         $entities = iterator_to_array($paginator->getIterator());
 

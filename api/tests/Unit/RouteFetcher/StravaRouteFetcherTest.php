@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\RouteFetcher;
 
+use App\ApiResource\Model\Coordinate;
 use App\Enum\SourceType;
 use App\RouteParser\GpxRouteParserInterface;
 use App\RouteFetcher\StravaRouteFetcher;
@@ -55,7 +56,7 @@ final class StravaRouteFetcherTest extends TestCase
         $gpxParser->expects(self::once())
             ->method('parse')
             ->with($gpxContent)
-            ->willReturn([new \App\ApiResource\Model\Coordinate(44.0, 5.0, 100.0)]);
+            ->willReturn([new Coordinate(44.0, 5.0, 100.0)]);
         $gpxParser->expects(self::once())
             ->method('extractTitle')
             ->with($gpxContent)

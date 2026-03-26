@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use Symfony\Contracts\HttpClient\ResponseInterface;
 use App\Accommodation\AccommodationMetadataExtractor;
 use App\Accommodation\SeasonalityCheckerInterface;
 use App\ApiResource\Model\Accommodation;
@@ -349,7 +350,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         }
 
         // Wave 2: Fire all price-page requests (non-blocking)
-        /** @var list<array{stageIdx: int, candidateIdx: int, response: \Symfony\Contracts\HttpClient\ResponseInterface}> $priceResponses */
+        /** @var list<array{stageIdx: int, candidateIdx: int, response: ResponseInterface}> $priceResponses */
         $priceResponses = [];
         foreach ($needsPricePage as $item) {
             $pricePages = $this->metadataExtractor->discoverPricePagePaths($item['html'], $item['url']);

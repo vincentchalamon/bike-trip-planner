@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use MartinGeorgiev\Doctrine\DBAL\Types\Jsonb;
 use MartinGeorgiev\Doctrine\DBAL\Types\TextArray;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -29,7 +30,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             'validate_xml_mapping' => true,
             'naming_strategy' => 'doctrine.orm.naming_strategy.underscore_number_aware',
             'identity_generation_preferences' => [
-                Doctrine\DBAL\Platforms\PostgreSQLPlatform::class => 'identity',
+                PostgreSQLPlatform::class => 'identity',
             ],
             'auto_mapping' => true,
             'mappings' => [

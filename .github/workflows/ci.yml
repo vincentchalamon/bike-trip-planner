@@ -68,12 +68,21 @@ jobs:
       - name: Install dependencies
         working-directory: ${{ matrix.project }}
         run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
+      - name: Generate JWT keypair
+        if: matrix.project == 'api'
+        working-directory: api
+        run: |
+          mkdir -p config/jwt
+          openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test
+          openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test
       - name: Run PHPUnit with coverage
         working-directory: ${{ matrix.project }}
         env:
           XDEBUG_MODE: coverage
           DATABASE_URL: "postgresql://app:!ChangeMe!@database:5432/app?serverVersion=18&charset=utf8"
           REDIS_URL: "redis://redis:6379"
+          JWT_PASSPHRASE: "test"
+          FRONTEND_URL: "https://localhost"
         run: vendor/bin/phpunit --coverage-clover coverage/clover.xml
       - name: Upload coverage report
         if: always()

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Serializer;
 
+use App\ApiResource\TripRequest;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
@@ -127,7 +128,7 @@ final class TripGpxNormalizerTest extends TestCase
     #[Test]
     public function normalizeIncludesSourceUrlFromRequest(): void
     {
-        $request = new \App\ApiResource\TripRequest();
+        $request = new TripRequest();
         $request->sourceUrl = 'https://www.komoot.com/tour/12345';
 
         $repository = $this->createStub(TripRequestRepositoryInterface::class);

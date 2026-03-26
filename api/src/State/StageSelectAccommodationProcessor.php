@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\ApiResource\TripRequest;
+use App\ApiResource\Model\Coordinate;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
@@ -62,7 +64,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
 
         $request = $this->tripStateManager->getRequest($tripId);
-        \assert($request instanceof \App\ApiResource\TripRequest);
+        \assert($request instanceof TripRequest);
         $this->tripLocker->assertNotLocked($request);
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
@@ -121,7 +123,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
 
         // Update stage endPoint to the accommodation coordinates (marker only)
         // Distance and geometry are intentionally preserved from the original GPX route
-        $stage->endPoint = new \App\ApiResource\Model\Coordinate($selected->lat, $selected->lon);
+        $stage->endPoint = new Coordinate($selected->lat, $selected->lon);
 
         $stages[$index] = $stage;
 
