@@ -8,13 +8,15 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\AuthRefresh;
 use App\Entity\RefreshToken;
-use App\Security\MagicLinkManager;
+use App\Security\AuthCookies;
+use App\Security\RefreshTokenManager;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Rotates a refresh token and issues a new JWT.
@@ -25,13 +27,12 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final readonly class AuthRefreshProcessor implements ProcessorInterface
 {
-    private const string REFRESH_TOKEN_COOKIE = 'refresh_token';
-
     public function __construct(
-        private MagicLinkManager $magicLinkManager,
+        private RefreshTokenManager $refreshTokenManager,
         private JWTTokenManagerInterface $jwtManager,
         private RequestStack $requestStack,
         private LoggerInterface $logger,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -41,7 +42,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): JsonResponse
     {
         $request = $this->requestStack->getCurrentRequest();
-        $token = $request?->cookies->get(self::REFRESH_TOKEN_COOKIE);
+        $token = $request?->cookies->get(AuthCookies::REFRESH_TOKEN);
         $isCapacitor = $this->isCapacitorRequest();
 
         // Capacitor sends refresh token in body
@@ -52,21 +53,21 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
         if (null === $token || '' === $token) {
             return new JsonResponse(
-                ['error' => 'Refresh token manquant.'],
+                ['error' => $this->translator->trans('auth.error.refresh_missing', [], 'auth')],
                 Response::HTTP_UNAUTHORIZED,
             );
         }
 
-        $newRefreshToken = $this->magicLinkManager->rotateRefreshToken($token);
+        $newRefreshToken = $this->refreshTokenManager->rotateRefreshToken($token);
 
         if (!$newRefreshToken instanceof RefreshToken) {
             $this->logger->debug('Auth refresh invalid token');
 
             $response = new JsonResponse(
-                ['error' => 'Refresh token invalide ou expiré.'],
+                ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
                 Response::HTTP_UNAUTHORIZED,
             );
-            $response->headers->clearCookie(self::REFRESH_TOKEN_COOKIE, '/', null, true, true, 'strict');
+            $response->headers->clearCookie(AuthCookies::REFRESH_TOKEN, '/', null, true, true, 'strict');
 
             return $response;
         }
@@ -97,7 +98,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
     private function setRefreshTokenCookie(JsonResponse $response, string $token, \DateTimeImmutable $expiresAt): void
     {
-        $cookie = Cookie::create(self::REFRESH_TOKEN_COOKIE)
+        $cookie = Cookie::create(AuthCookies::REFRESH_TOKEN)
             ->withValue($token)
             ->withExpires($expiresAt)
             ->withPath('/')

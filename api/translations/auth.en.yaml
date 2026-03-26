@@ -14,3 +14,7 @@ auth:
       expires: "This link expires in %minutes% minutes and can only be used once."
       ignore: "If you received this email by mistake, you can ignore it."
   neutral_message: "If your email is registered, you will receive a login link."
+  error:
+    invalid_link: "Invalid or expired link."
+    refresh_missing: "Refresh token missing."
+    refresh_invalid: "Invalid or expired refresh token."

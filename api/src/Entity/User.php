@@ -27,16 +27,11 @@ class User implements UserInterface
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
-    /** @var Collection<int, MagicLink> */
-    #[ORM\OneToMany(targetEntity: MagicLink::class, mappedBy: 'user', orphanRemoval: true)]
-    private Collection $magicLinks;
-
-    /** @var Collection<int, RefreshToken> */
-    #[ORM\OneToMany(targetEntity: RefreshToken::class, mappedBy: 'user', orphanRemoval: true)]
-    private Collection $refreshTokens;
+    #[ORM\Column(length: 5, options: ['default' => 'fr'])]
+    private string $locale = 'fr';
 
     /** @var Collection<int, TripRequest> */
-    #[ORM\OneToMany(targetEntity: TripRequest::class, mappedBy: 'user')]
+    #[ORM\OneToMany(targetEntity: TripRequest::class, mappedBy: 'user', fetch: 'EXTRA_LAZY')]
     private Collection $trips;
 
     /** @param non-empty-string $email */
@@ -48,8 +43,6 @@ class User implements UserInterface
     {
         $this->id = $id ?? Uuid::v7();
         $this->createdAt = new \DateTimeImmutable();
-        $this->magicLinks = new ArrayCollection();
-        $this->refreshTokens = new ArrayCollection();
         $this->trips = new ArrayCollection();
     }
 
@@ -92,16 +85,16 @@ class User implements UserInterface
         return $this->createdAt;
     }
 
-    /** @return Collection<int, MagicLink> */
-    public function getMagicLinks(): Collection
+    public function getLocale(): string
     {
-        return $this->magicLinks;
+        return $this->locale;
     }
 
-    /** @return Collection<int, RefreshToken> */
-    public function getRefreshTokens(): Collection
+    public function setLocale(string $locale): self
     {
-        return $this->refreshTokens;
+        $this->locale = $locale;
+
+        return $this;
     }
 
     /** @return Collection<int, TripRequest> */
