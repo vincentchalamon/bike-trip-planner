@@ -55,11 +55,6 @@ class RefreshToken
         return $this->expiresAt;
     }
 
-    public function isValid(): bool
-    {
-        return $this->expiresAt > new \DateTimeImmutable();
-    }
-
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;

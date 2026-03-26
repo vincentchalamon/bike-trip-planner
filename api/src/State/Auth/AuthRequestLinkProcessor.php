@@ -59,11 +59,11 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         $clientIp = $request?->getClientIp() ?? 'unknown';
         $neutralMessage = $this->translator->trans('auth.neutral_message', [], 'auth');
 
-        // Apply rate limiters -- silently deny if exceeded
-        $ipLimiter = $this->magicLinkIpLimiter->create($clientIp);
-        $emailLimiter = $this->magicLinkEmailLimiter->create($email);
+        // Apply rate limiters -- consume both unconditionally to keep counters in sync
+        $ipAccepted = $this->magicLinkIpLimiter->create($clientIp)->consume()->isAccepted();
+        $emailAccepted = $this->magicLinkEmailLimiter->create($email)->consume()->isAccepted();
 
-        if (!$ipLimiter->consume()->isAccepted() || !$emailLimiter->consume()->isAccepted()) {
+        if (!$ipAccepted || !$emailAccepted) {
             $this->logger->debug('Auth request-link rate limited', ['email' => $email, 'ip' => $clientIp]);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);

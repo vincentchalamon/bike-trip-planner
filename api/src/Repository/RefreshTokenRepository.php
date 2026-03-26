@@ -42,13 +42,16 @@ final class RefreshTokenRepository extends ServiceEntityRepository
      */
     public function findValidByToken(string $token): ?RefreshToken
     {
-        $refreshToken = $this->findOneBy(['token' => $token]);
+        $result = $this->createQueryBuilder('rt')
+            ->where('rt.token = :token')
+            ->andWhere('rt.expiresAt > :now')
+            ->setParameter('token', $token)
+            ->setParameter('now', new \DateTimeImmutable())
+            ->getQuery()
+            ->getOneOrNullResult();
+        \assert(null === $result || $result instanceof RefreshToken);
 
-        if (null === $refreshToken || !$refreshToken->isValid()) {
-            return null;
-        }
-
-        return $refreshToken;
+        return $result;
     }
 
     /**
@@ -80,10 +83,11 @@ final class RefreshTokenRepository extends ServiceEntityRepository
      */
     public function removeAllForUser(User $user): void
     {
-        $tokens = $this->findBy(['user' => $user]);
-
-        foreach ($tokens as $token) {
-            $this->getEntityManager()->remove($token);
-        }
+        $this->getEntityManager()->createQueryBuilder()
+            ->delete(RefreshToken::class, 'rt')
+            ->where('rt.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->execute();
     }
 }
