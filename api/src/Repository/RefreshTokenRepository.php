@@ -43,6 +43,8 @@ final class RefreshTokenRepository extends ServiceEntityRepository
     public function findValidByToken(string $token): ?RefreshToken
     {
         $result = $this->createQueryBuilder('rt')
+            ->addSelect('u')
+            ->join('rt.user', 'u')
             ->where('rt.token = :token')
             ->andWhere('rt.expiresAt > :now')
             ->setParameter('token', $token)

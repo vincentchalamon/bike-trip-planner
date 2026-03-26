@@ -80,7 +80,7 @@ final class CreateUserCommand extends Command
 
         $existingUser = $this->userRepository->findByEmail($email);
 
-        if ($existingUser instanceof \App\Entity\User) {
+        if ($existingUser instanceof User) {
             $io->error(\sprintf('User with email "%s" already exists.', $email));
 
             return Command::FAILURE;

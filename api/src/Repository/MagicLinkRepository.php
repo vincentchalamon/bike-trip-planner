@@ -66,9 +66,16 @@ final class MagicLinkRepository extends ServiceEntityRepository
             return null;
         }
 
-        $magicLink = $this->findOneBy(['token' => $token]);
+        $user = $this->createQueryBuilder('ml')
+            ->select('u')
+            ->join('ml.user', 'u')
+            ->where('ml.token = :token')
+            ->setParameter('token', $token)
+            ->getQuery()
+            ->getOneOrNullResult();
+        \assert(null === $user || $user instanceof User);
 
-        return $magicLink?->getUser();
+        return $user;
     }
 
     private function hasActiveLinkForUser(User $user): bool

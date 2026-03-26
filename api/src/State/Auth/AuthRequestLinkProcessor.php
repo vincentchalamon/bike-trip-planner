@@ -87,8 +87,6 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
 
-        $this->entityManager->flush();
-
         $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), $magicLink->getToken());
 
         $locale = $user->getLocale();
@@ -105,7 +103,10 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
             ->subject($this->translator->trans('auth.email.magic_link.subject', [], 'auth', $locale))
             ->html($html);
 
+        // Send email before flush: if SMTP fails, the magic link is not persisted
+        // and the user can retry immediately instead of being locked out.
         $this->mailer->send($emailMessage);
+        $this->entityManager->flush();
 
         $this->logger->debug('Auth request-link magic link created and sent', ['email' => $email]);
 
