@@ -93,14 +93,9 @@ final class CreateUserCommand extends Command
         // an SMTP failure does not leave an orphaned user without an invitation.
         $this->entityManager->persist($user);
 
-        // Create magic link for invitation
+        // User is not yet flushed — no active link can exist, so create() always returns a MagicLink
         $magicLink = $this->magicLinkRepository->create($user);
-
-        if (!$magicLink instanceof MagicLink) {
-            $io->warning(\sprintf('An active invitation link already exists for user %s.', $email));
-
-            return Command::SUCCESS;
-        }
+        \assert($magicLink instanceof MagicLink);
 
         $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), $magicLink->getToken());
 
