@@ -34,6 +34,7 @@ services:
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
       FRONTEND_URL: "${FRONTEND_URL}"
+      MAILER_DSN: "${MAILER_DSN}"
     tty: true
     ports:
       - target: 80
@@ -90,6 +91,7 @@ services:
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
       FRONTEND_URL: "${FRONTEND_URL}"
+      MAILER_DSN: "${MAILER_DSN}"
     volumes:
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/20-app.prod.ini

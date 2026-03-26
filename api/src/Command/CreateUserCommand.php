@@ -18,7 +18,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
@@ -114,7 +113,6 @@ final class CreateUserCommand extends Command
         ]);
 
         $emailMessage = new Email()
-            ->from(new Address('noreply@bike-trip-planner.com', 'Bike Trip Planner'))
             ->to($email)
             ->subject($this->translator->trans('auth.email.invitation.subject', [], 'auth', $locale))
             ->html($html);

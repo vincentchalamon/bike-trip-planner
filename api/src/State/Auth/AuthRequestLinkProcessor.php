@@ -18,7 +18,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -98,7 +97,6 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         ]);
 
         $emailMessage = new Email()
-            ->from(new Address('noreply@bike-trip-planner.com', 'Bike Trip Planner'))
             ->to($user->getEmail())
             ->subject($this->translator->trans('auth.email.magic_link.subject', [], 'auth', $locale))
             ->html($html);
