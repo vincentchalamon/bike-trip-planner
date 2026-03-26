@@ -13,12 +13,15 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
 <<<<<<< HEAD
+<<<<<<< HEAD
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Security\Voter\TripVoter;
 =======
 use App\Entity\UserTrip;
+=======
+>>>>>>> 0f06fb5 (refactor(security): remove TripOwnershipChecker, replace UserTrip with direct user relation)
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
@@ -117,12 +120,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
             return;
         }
 
-        // Create UserTrip association in PostgreSQL
-        $userTrip = new UserTrip($user, $managedTrip);
-        $userTrip->setTitle($managedTrip->title);
-        $userTrip->setSourceUrl($managedTrip->sourceUrl);
-
-        $this->entityManager->persist($userTrip);
+        $managedTrip->user = $user;
         $this->entityManager->flush();
 
         // Store userId in Redis for fast ownership checks during computation

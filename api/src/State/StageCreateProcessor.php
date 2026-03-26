@@ -17,7 +17,6 @@ use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Security\TripOwnershipChecker;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\ObjectMapper\ObjectMapperInterface;
@@ -34,7 +33,6 @@ final readonly class StageCreateProcessor implements ProcessorInterface
         private ObjectMapperInterface $objectMapper,
         private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
-        private TripOwnershipChecker $ownershipChecker,
     ) {
     }
 
@@ -46,8 +44,6 @@ final readonly class StageCreateProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): StageResponse
     {
         $tripId = $uriVariables['tripId'] ?? '';
-
-        $this->ownershipChecker->denyUnlessOwner($tripId);
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);
