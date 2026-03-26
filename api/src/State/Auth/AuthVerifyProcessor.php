@@ -8,13 +8,16 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\AuthVerify;
 use App\Entity\User;
+use App\Security\AuthCookies;
 use App\Security\MagicLinkManager;
+use App\Security\RefreshTokenManager;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Validates a magic link token, issues JWT + refresh token.
@@ -25,13 +28,13 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final readonly class AuthVerifyProcessor implements ProcessorInterface
 {
-    private const string REFRESH_TOKEN_COOKIE = 'refresh_token';
-
     public function __construct(
         private MagicLinkManager $magicLinkManager,
+        private RefreshTokenManager $refreshTokenManager,
         private JWTTokenManagerInterface $jwtManager,
         private RequestStack $requestStack,
         private LoggerInterface $logger,
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -46,13 +49,13 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
             $this->logger->debug('Auth verify invalid token');
 
             return new JsonResponse(
-                ['error' => 'Lien invalide ou expiré.'],
+                ['error' => $this->translator->trans('auth.error.invalid_link', [], 'auth')],
                 Response::HTTP_UNAUTHORIZED,
             );
         }
 
         $jwt = $this->jwtManager->create($user);
-        $refreshToken = $this->magicLinkManager->createRefreshToken($user);
+        $refreshToken = $this->refreshTokenManager->createRefreshToken($user);
         $isCapacitor = $this->isCapacitorRequest();
 
         $this->logger->debug('Auth verify token verified', ['user' => $user->getEmail()]);
@@ -78,7 +81,7 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
 
     private function setRefreshTokenCookie(JsonResponse $response, string $token, \DateTimeImmutable $expiresAt): void
     {
-        $cookie = Cookie::create(self::REFRESH_TOKEN_COOKIE)
+        $cookie = Cookie::create(AuthCookies::REFRESH_TOKEN)
             ->withValue($token)
             ->withExpires($expiresAt)
             ->withPath('/')

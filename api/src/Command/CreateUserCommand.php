@@ -14,9 +14,10 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Twig\Environment;
 
 /**
@@ -34,7 +35,8 @@ final class CreateUserCommand extends Command
         private readonly MagicLinkManager $magicLinkManager,
         private readonly MailerInterface $mailer,
         private readonly Environment $twig,
-        private readonly UrlGeneratorInterface $urlGenerator,
+        #[Autowire(env: 'FRONTEND_URL')]
+        private readonly string $frontendUrl = 'https://localhost',
     ) {
         parent::__construct();
     }
@@ -68,7 +70,12 @@ final class CreateUserCommand extends Command
             return Command::FAILURE;
         }
 
+        $locale = $input->getOption('locale');
+        \assert(\is_string($locale));
+
         $user = new User($email);
+        $user->setLocale($locale);
+
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
@@ -83,14 +90,7 @@ final class CreateUserCommand extends Command
             return Command::SUCCESS;
         }
 
-        $verifyUrl = $this->urlGenerator->generate(
-            'auth_verify',
-            ['token' => $magicLink->getToken()],
-            UrlGeneratorInterface::ABSOLUTE_URL,
-        );
-
-        $locale = $input->getOption('locale');
-        \assert(\is_string($locale));
+        $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), $magicLink->getToken());
 
         $html = $this->twig->render('email/invitation.html.twig', [
             'verifyUrl' => $verifyUrl,
@@ -99,6 +99,7 @@ final class CreateUserCommand extends Command
         ]);
 
         $emailMessage = new Email()
+            ->from(new Address('noreply@bike-trip-planner.com', 'Bike Trip Planner'))
             ->to($email)
             ->subject('Invitation — Bike Trip Planner')
             ->html($html);
