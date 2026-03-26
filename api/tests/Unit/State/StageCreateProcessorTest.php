@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use DateTimeImmutable;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\StageRequest;
@@ -28,7 +29,7 @@ final class StageCreateProcessorTest extends TestCase
     public function lockedTripThrowsHttpException(): void
     {
         $lockedRequest = new TripRequest();
-        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
+        $lockedRequest->startDate = new DateTimeImmutable('yesterday');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getRequest')->willReturn($lockedRequest);

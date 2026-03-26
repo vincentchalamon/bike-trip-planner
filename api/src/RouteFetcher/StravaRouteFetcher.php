@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\RouteFetcher;
 
+use RuntimeException;
 use App\Enum\SourceType;
 use App\RouteParser\GpxRouteParserInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -50,22 +51,22 @@ final readonly class StravaRouteFetcher implements RouteFetcherInterface
             $statusCode = $response->getStatusCode();
 
             if (404 === $statusCode) {
-                throw new \RuntimeException(\sprintf('Strava route %s not found (404).', $routeId));
+                throw new RuntimeException(\sprintf('Strava route %s not found (404).', $routeId));
             }
 
             if (403 === $statusCode) {
-                throw new \RuntimeException(\sprintf('Strava route %s is private or access denied (403).', $routeId));
+                throw new RuntimeException(\sprintf('Strava route %s is private or access denied (403).', $routeId));
             }
 
             if (200 !== $statusCode) {
-                throw new \RuntimeException(\sprintf('Strava route %s returned HTTP %d.', $routeId, $statusCode));
+                throw new RuntimeException(\sprintf('Strava route %s returned HTTP %d.', $routeId, $statusCode));
             }
 
             $gpxContent = $response->getContent();
             $coordinates = $this->gpxParser->parse($gpxContent);
 
             if ([] === $coordinates) {
-                throw new \RuntimeException(\sprintf('Strava route %s yielded no valid coordinates.', $routeId));
+                throw new RuntimeException(\sprintf('Strava route %s yielded no valid coordinates.', $routeId));
             }
 
             $title = $this->gpxParser->extractTitle($gpxContent);

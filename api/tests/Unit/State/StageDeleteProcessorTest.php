@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use Override;
+use DateTimeImmutable;
 use ApiPlatform\Metadata\Delete;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -36,7 +38,7 @@ final class StageDeleteProcessorTest extends TestCase
 
     private StageDeleteProcessor $processor;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
@@ -48,7 +50,7 @@ final class StageDeleteProcessorTest extends TestCase
 
         // Return a non-locked request by default (startDate in the future)
         $unlockedRequest = new TripRequest();
-        $unlockedRequest->startDate = new \DateTimeImmutable('+30 days');
+        $unlockedRequest->startDate = new DateTimeImmutable('+30 days');
         $this->tripStateManager->method('getRequest')->willReturn($unlockedRequest);
 
         $this->processor = new StageDeleteProcessor(
@@ -182,7 +184,7 @@ final class StageDeleteProcessorTest extends TestCase
     public function lockedTripThrowsHttpException(): void
     {
         $lockedRequest = new TripRequest();
-        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
+        $lockedRequest->startDate = new DateTimeImmutable('yesterday');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getRequest')->willReturn($lockedRequest);

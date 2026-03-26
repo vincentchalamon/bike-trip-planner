@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use LogicException;
+use RuntimeException;
 use App\Analyzer\Rules\ContinuityAnalyzer;
 use App\Analyzer\Rules\EbikeRangeAnalyzer;
 use App\Analyzer\Rules\ElevationAlertAnalyzer;
@@ -197,7 +199,7 @@ final class AlertScenarioTest extends TestCase
             ),
             ElevationAlertAnalyzer::class => new ElevationAlertAnalyzer($this->createTranslator()),
             EbikeRangeAnalyzer::class => new EbikeRangeAnalyzer($this->createTranslator()),
-            default => throw new \LogicException(\sprintf('Unknown analyzer class: %s', $analyzerClass)),
+            default => throw new LogicException(\sprintf('Unknown analyzer class: %s', $analyzerClass)),
         };
 
         // For ebike, test with ebikeMode enabled — the nominal trace is short enough
@@ -359,7 +361,7 @@ final class AlertScenarioTest extends TestCase
         $content = file_get_contents(self::FIXTURES_DIR.$filename);
 
         if (false === $content) {
-            throw new \RuntimeException(\sprintf('Cannot read fixture: %s', $filename));
+            throw new RuntimeException(\sprintf('Cannot read fixture: %s', $filename));
         }
 
         /** @var array<string, mixed> $decoded */

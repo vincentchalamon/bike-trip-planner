@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use Throwable;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -58,7 +59,7 @@ final readonly class GeocodeController
 
             /** @var list<array{name?: string, display_name?: string, lat?: string, lon?: string, type?: string, addresstype?: string}> $data */
             $data = $response->toArray();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return new JsonResponse(['error' => 'Geocoding service unavailable'], Response::HTTP_BAD_GATEWAY);
         }
 
@@ -116,7 +117,7 @@ final readonly class GeocodeController
 
             /** @var array{name?: string, display_name?: string, lat?: string, lon?: string, type?: string, addresstype?: string, address?: array{city?: string, town?: string, village?: string, hamlet?: string, municipality?: string}, error?: string} $data */
             $data = $response->toArray();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return new JsonResponse(['error' => 'Geocoding service unavailable'], Response::HTTP_BAD_GATEWAY);
         }
 

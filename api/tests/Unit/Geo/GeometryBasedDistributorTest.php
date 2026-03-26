@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Geo;
 
+use Override;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Geo\GeometryBasedDistributor;
@@ -15,7 +16,7 @@ final class GeometryBasedDistributorTest extends TestCase
 {
     private GeometryBasedDistributor $distributor;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->distributor = new GeometryBasedDistributor(new HaversineDistance());

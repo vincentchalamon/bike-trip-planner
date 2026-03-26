@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use DateTimeImmutable;
+use App\ApiResource\TripRequest;
+use App\ApiResource\Model\Coordinate;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
@@ -62,7 +65,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
 
         $request = $this->tripStateManager->getRequest($tripId);
-        \assert($request instanceof \App\ApiResource\TripRequest);
+        \assert($request instanceof TripRequest);
         $this->tripLocker->assertNotLocked($request);
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
@@ -121,7 +124,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
 
         // Update stage endPoint to the accommodation coordinates (marker only)
         // Distance and geometry are intentionally preserved from the original GPX route
-        $stage->endPoint = new \App\ApiResource\Model\Coordinate($selected->lat, $selected->lon);
+        $stage->endPoint = new Coordinate($selected->lat, $selected->lon);
 
         $stages[$index] = $stage;
 
@@ -144,7 +147,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipAccommodationScan: true, generation: $generation));
 
-        if ($request->startDate instanceof \DateTimeImmutable) {
+        if ($request->startDate instanceof DateTimeImmutable) {
             $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
             $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }

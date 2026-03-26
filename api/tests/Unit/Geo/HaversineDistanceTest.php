@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Geo;
 
+use Override;
 use App\Geo\HaversineDistance;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -12,7 +13,7 @@ final class HaversineDistanceTest extends TestCase
 {
     private HaversineDistance $haversine;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->haversine = new HaversineDistance();

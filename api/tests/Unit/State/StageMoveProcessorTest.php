@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use DateTimeImmutable;
 use ApiPlatform\Metadata\Patch;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -32,7 +33,7 @@ final class StageMoveProcessorTest extends TestCase
         $stage1 = new Stage(tripId: 'trip-1', dayNumber: 2, distance: 90.0, elevation: 600.0, startPoint: $coord, endPoint: $coord);
 
         $lockedRequest = new TripRequest();
-        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
+        $lockedRequest->startDate = new DateTimeImmutable('yesterday');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getRequest')->willReturn($lockedRequest);

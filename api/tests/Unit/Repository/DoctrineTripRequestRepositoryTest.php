@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Repository;
 
+use Override;
+use DateTimeImmutable;
+use LogicException;
+use PHPUnit\Framework\MockObject\MockObject;
+use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Query;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
@@ -28,20 +34,20 @@ use Symfony\Component\Uid\Uuid;
 #[AllowMockObjectsWithoutExpectations]
 final class DoctrineTripRequestRepositoryTest extends TestCase
 {
-    private EntityManagerInterface&\PHPUnit\Framework\MockObject\MockObject $entityManager;
+    private EntityManagerInterface&MockObject $entityManager;
 
-    private CacheItemPoolInterface&\PHPUnit\Framework\MockObject\MockObject $cache;
+    private CacheItemPoolInterface&MockObject $cache;
 
     private DoctrineTripRequestRepository $repository;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->entityManager->method('wrapInTransaction')
             ->willReturnCallback(static fn (callable $callback): mixed => $callback());
 
-        $classMetadata = new \Doctrine\ORM\Mapping\ClassMetadata(TripRequest::class);
+        $classMetadata = new ClassMetadata(TripRequest::class);
         $this->entityManager->method('getClassMetadata')->willReturn($classMetadata);
 
         $this->cache = $this->createMock(CacheItemPoolInterface::class);
@@ -59,8 +65,8 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $request = new TripRequest();
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
-        $request->startDate = new \DateTimeImmutable('2026-07-01');
-        $request->endDate = new \DateTimeImmutable('2026-07-10');
+        $request->startDate = new DateTimeImmutable('2026-07-01');
+        $request->endDate = new DateTimeImmutable('2026-07-10');
         $request->fatigueFactor = 0.85;
         $request->elevationPenalty = 40.0;
         $request->ebikeMode = true;
@@ -87,7 +93,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $em2->method('find')
             ->willReturn($request);
         $em2->method('getClassMetadata')
-            ->willReturn(new \Doctrine\ORM\Mapping\ClassMetadata(TripRequest::class));
+            ->willReturn(new ClassMetadata(TripRequest::class));
 
         $registry2 = $this->createMock(ManagerRegistry::class);
         $registry2->method('getManagerForClass')->willReturn($em2);
@@ -117,7 +123,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('find')
             ->willReturn($trip);
         $this->entityManager->method('createQuery')
-            ->willReturn($this->createStub(\Doctrine\ORM\Query::class));
+            ->willReturn($this->createStub(Query::class));
         $this->entityManager->expects(self::once())
             ->method('flush');
 
@@ -309,7 +315,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('find')
             ->willReturn($trip);
         $this->entityManager->method('createQuery')
-            ->willReturn($this->createStub(\Doctrine\ORM\Query::class));
+            ->willReturn($this->createStub(Query::class));
         $this->entityManager->expects(self::once())
             ->method('flush');
 
@@ -591,7 +597,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->method('find')
             ->willReturn($trip);
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(LogicException::class);
         $this->expectExceptionMessage('Unhandled Alert subclass "UnknownAlertType"');
 
         $this->repository->getStages($tripId);
@@ -618,7 +624,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         );
         $stageDto->addAlert($unknownAlert);
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(LogicException::class);
         $this->expectExceptionMessage('Unhandled Alert subclass');
 
         $this->repository->storeStages($tripId, [$stageDto]);

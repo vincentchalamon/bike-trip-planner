@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Accommodation;
 
+use Override;
+use DateTimeImmutable;
 use App\Accommodation\SeasonalityChecker;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -13,7 +15,7 @@ final class SeasonalityCheckerTest extends TestCase
 {
     private SeasonalityChecker $checker;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->checker = new SeasonalityChecker();
@@ -47,7 +49,7 @@ final class SeasonalityCheckerTest extends TestCase
     public function seasonalYesWithoutOpeningHours(string $date, bool $expectedOpen): void
     {
         $result = $this->checker->isLikelyOpen(
-            new \DateTimeImmutable($date),
+            new DateTimeImmutable($date),
             ['seasonal' => 'yes'],
         );
 
@@ -90,7 +92,7 @@ final class SeasonalityCheckerTest extends TestCase
     public function openingHoursMonthRange(string $openingHours, string $date, bool $expectedOpen): void
     {
         $result = $this->checker->isLikelyOpen(
-            new \DateTimeImmutable($date),
+            new DateTimeImmutable($date),
             ['opening_hours' => $openingHours],
         );
 
@@ -104,7 +106,7 @@ final class SeasonalityCheckerTest extends TestCase
     #[Test]
     public function noTagsReturnsNull(): void
     {
-        $result = $this->checker->isLikelyOpen(new \DateTimeImmutable('2024-07-01'), []);
+        $result = $this->checker->isLikelyOpen(new DateTimeImmutable('2024-07-01'), []);
 
         $this->assertNull($result);
     }
@@ -113,7 +115,7 @@ final class SeasonalityCheckerTest extends TestCase
     public function unrelatedTagsReturnNull(): void
     {
         $result = $this->checker->isLikelyOpen(
-            new \DateTimeImmutable('2024-07-01'),
+            new DateTimeImmutable('2024-07-01'),
             ['tourism' => 'camp_site', 'name' => 'Happy Campers'],
         );
 
@@ -124,7 +126,7 @@ final class SeasonalityCheckerTest extends TestCase
     public function unparseableOpeningHoursReturnNull(): void
     {
         $result = $this->checker->isLikelyOpen(
-            new \DateTimeImmutable('2024-07-01'),
+            new DateTimeImmutable('2024-07-01'),
             ['opening_hours' => 'Mo-Fr 08:00-18:00'],
         );
 
@@ -136,7 +138,7 @@ final class SeasonalityCheckerTest extends TestCase
     {
         // Apr-Oct opening_hours: July is open even with seasonal=yes
         $result = $this->checker->isLikelyOpen(
-            new \DateTimeImmutable('2024-07-01'),
+            new DateTimeImmutable('2024-07-01'),
             ['opening_hours' => 'Apr-Oct', 'seasonal' => 'yes'],
         );
 
@@ -148,7 +150,7 @@ final class SeasonalityCheckerTest extends TestCase
     {
         // Oct-Mar opening_hours: January is open (wrap-around), even if seasonal=yes would say closed
         $result = $this->checker->isLikelyOpen(
-            new \DateTimeImmutable('2024-01-15'),
+            new DateTimeImmutable('2024-01-15'),
             ['opening_hours' => 'Oct-Mar', 'seasonal' => 'yes'],
         );
 

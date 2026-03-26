@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Factory;
 
+use DateTimeImmutable;
 use App\ApiResource\TripRequest;
 use Symfony\Component\Uid\Uuid;
 use Zenstruck\Foundry\Persistence\PersistentProxyObjectFactory;
@@ -25,8 +26,8 @@ final class TripFactory extends PersistentProxyObjectFactory
             'id' => Uuid::v7(),
             'sourceUrl' => 'https://www.komoot.com/tour/123456789',
             'title' => 'Test Trip',
-            'startDate' => new \DateTimeImmutable('+1 day'),
-            'endDate' => new \DateTimeImmutable('+5 days'),
+            'startDate' => new DateTimeImmutable('+1 day'),
+            'endDate' => new DateTimeImmutable('+5 days'),
             'fatigueFactor' => 0.9,
             'elevationPenalty' => 50.0,
             'ebikeMode' => false,

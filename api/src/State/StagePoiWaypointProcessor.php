@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\ApiResource\TripRequest;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
@@ -54,7 +55,7 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
         $index = (int) $rawIndex;
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
-        \assert($tripRequest instanceof \App\ApiResource\TripRequest);
+        \assert($tripRequest instanceof TripRequest);
         $this->tripLocker->assertNotLocked($tripRequest);
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];

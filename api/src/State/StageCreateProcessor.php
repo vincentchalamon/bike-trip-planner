@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use DateTimeImmutable;
+use App\ApiResource\TripRequest;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
@@ -45,7 +47,7 @@ final readonly class StageCreateProcessor implements ProcessorInterface
         $tripId = $uriVariables['tripId'] ?? '';
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
-        \assert($tripRequest instanceof \App\ApiResource\TripRequest);
+        \assert($tripRequest instanceof TripRequest);
         $this->tripLocker->assertNotLocked($tripRequest);
 
         if (null === $data->startPoint || null === $data->endPoint) {
@@ -84,7 +86,7 @@ final readonly class StageCreateProcessor implements ProcessorInterface
         $this->messageBus->dispatch(new RecalculateStages($tripId, [$position], generation: $generation));
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
-        if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
+        if ($tripRequest?->startDate instanceof DateTimeImmutable) {
             $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
             $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use Override;
 use App\ApiResource\TripRequest;
 use App\State\IdempotencyChecker;
 use PHPUnit\Framework\Attributes\Test;
@@ -16,7 +17,7 @@ final class IdempotencyCheckerTest extends TestCase
 
     private IdempotencyChecker $checker;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->cache = new ArrayAdapter();

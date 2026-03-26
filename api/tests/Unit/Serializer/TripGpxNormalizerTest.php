@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Serializer;
 
+use InvalidArgumentException;
+use App\ApiResource\TripRequest;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\PointOfInterest;
@@ -127,7 +129,7 @@ final class TripGpxNormalizerTest extends TestCase
     #[Test]
     public function normalizeIncludesSourceUrlFromRequest(): void
     {
-        $request = new \App\ApiResource\TripRequest();
+        $request = new TripRequest();
         $request->sourceUrl = 'https://www.komoot.com/tour/12345';
 
         $repository = $this->createStub(TripRequestRepositoryInterface::class);
@@ -146,7 +148,7 @@ final class TripGpxNormalizerTest extends TestCase
         $repository = $this->createStub(TripRequestRepositoryInterface::class);
         $normalizer = new TripGpxNormalizer($repository);
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $normalizer->normalize('not a trip', 'gpx');
     }
 }

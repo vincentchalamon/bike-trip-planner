@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\TripRequest;
 use App\ApiResource\Model\Coordinate;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
@@ -49,7 +50,7 @@ final readonly class ScanAllOsmDataHandler extends AbstractTripMessageHandler
             );
 
             $request = $this->tripStateManager->getRequest($tripId);
-            \assert($request instanceof \App\ApiResource\TripRequest);
+            \assert($request instanceof TripRequest);
             $enabledAccommodationTypes = $request->enabledAccommodationTypes;
 
             // Execute all 5 Overpass queries concurrently — results are cached.

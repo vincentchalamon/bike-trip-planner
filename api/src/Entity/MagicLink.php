@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use DateTimeImmutable;
 use App\Repository\MagicLinkRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
@@ -18,7 +19,7 @@ class MagicLink
     private Uuid $id;
 
     #[ORM\Column]
-    private \DateTimeImmutable $createdAt;
+    private DateTimeImmutable $createdAt;
 
     public function __construct(
         #[ORM\OneToOne(targetEntity: User::class)]
@@ -27,11 +28,11 @@ class MagicLink
         #[ORM\Column(length: 128)]
         private string $token,
         #[ORM\Column]
-        private \DateTimeImmutable $expiresAt,
+        private DateTimeImmutable $expiresAt,
         ?Uuid $id = null,
     ) {
         $this->id = $id ?? Uuid::v7();
-        $this->createdAt = new \DateTimeImmutable();
+        $this->createdAt = new DateTimeImmutable();
     }
 
     public function getId(): Uuid
@@ -49,12 +50,12 @@ class MagicLink
         return $this->token;
     }
 
-    public function getExpiresAt(): \DateTimeImmutable
+    public function getExpiresAt(): DateTimeImmutable
     {
         return $this->expiresAt;
     }
 
-    public function getCreatedAt(): \DateTimeImmutable
+    public function getCreatedAt(): DateTimeImmutable
     {
         return $this->createdAt;
     }

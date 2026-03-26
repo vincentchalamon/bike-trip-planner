@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use DateTimeImmutable;
 use App\Entity\MagicLink;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -42,7 +43,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
             ->where('ml.user = :user')
             ->andWhere('ml.expiresAt <= :now')
             ->setParameter('user', $user)
-            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('now', new DateTimeImmutable())
             ->getQuery()
             ->execute();
 
@@ -51,7 +52,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
         }
 
         $token = bin2hex(random_bytes(64));
-        $expiresAt = new \DateTimeImmutable(\sprintf('+%d minutes', self::TTL_MINUTES));
+        $expiresAt = new DateTimeImmutable(\sprintf('+%d minutes', self::TTL_MINUTES));
 
         $magicLink = new MagicLink($user, $token, $expiresAt);
         $this->getEntityManager()->persist($magicLink);
@@ -76,7 +77,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
             ->where('ml.token = :token')
             ->andWhere('ml.expiresAt > :now')
             ->setParameter('token', $token)
-            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('now', new DateTimeImmutable())
             ->getQuery()
             ->getOneOrNullResult();
 
@@ -90,7 +91,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
             ->where('ml.token = :token')
             ->andWhere('ml.expiresAt > :now')
             ->setParameter('token', $token)
-            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('now', new DateTimeImmutable())
             ->getQuery()
             ->execute();
 
@@ -108,7 +109,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
             ->where('ml.user = :user')
             ->andWhere('ml.expiresAt > :now')
             ->setParameter('user', $user)
-            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('now', new DateTimeImmutable())
             ->getQuery()
             ->getSingleScalarResult();
 

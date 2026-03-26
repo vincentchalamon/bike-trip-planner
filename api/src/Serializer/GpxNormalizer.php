@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Serializer;
 
+use Override;
 use App\Serializer\Mapper\WaypointMapper;
 
 final readonly class GpxNormalizer extends AbstractStageNormalizer
@@ -21,7 +22,7 @@ final readonly class GpxNormalizer extends AbstractStageNormalizer
     /**
      * @return array{lat: float, lon: float, name: string, symbol: string, type: string}
      */
-    #[\Override]
+    #[Override]
     protected function buildWaypointEntry(string $name, string $category, float $lat, float $lon): array
     {
         return parent::buildWaypointEntry($name, $category, $lat, $lon) + [

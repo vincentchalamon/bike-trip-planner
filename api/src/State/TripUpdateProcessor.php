@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use LogicException;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
@@ -119,7 +120,7 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
             // These computations are cascaded internally by their parent handlers,
             // not dispatched directly as root computations from a PATCH operation.
             // If a new ComputationName appears here unexpectedly, fail-fast to surface the gap.
-            default => throw new \LogicException(\sprintf('No direct dispatch registered for computation "%s" in %s. Add it to PARAMETER_DEPENDENCIES or wire its dispatch here.', $computation->value, self::class)),
+            default => throw new LogicException(\sprintf('No direct dispatch registered for computation "%s" in %s. Add it to PARAMETER_DEPENDENCIES or wire its dispatch here.', $computation->value, self::class)),
         };
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use DateTimeImmutable;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -176,7 +177,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
 
         $totalDistance = $this->distanceCalculator->calculateTotalDistance($allPoints);
 
-        if ($request->endDate instanceof \DateTimeImmutable && $request->startDate instanceof \DateTimeImmutable) {
+        if ($request->endDate instanceof DateTimeImmutable && $request->startDate instanceof DateTimeImmutable) {
             $numberOfDays = (int) $request->startDate->diff($request->endDate)->days + 1;
         } else {
             $numberOfDays = (int) ceil($totalDistance / $request->maxDistancePerDay);

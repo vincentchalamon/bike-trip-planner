@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use Override;
+use DateTimeImmutable;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -38,7 +40,7 @@ final class RestDayInsertProcessorTest extends TestCase
 
     private RestDayInsertProcessor $processor;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
@@ -61,7 +63,7 @@ final class RestDayInsertProcessorTest extends TestCase
     public function lockedTripThrowsHttpException(): void
     {
         $lockedRequest = new TripRequest();
-        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
+        $lockedRequest->startDate = new DateTimeImmutable('yesterday');
 
         $this->tripStateManager->method('getRequest')->willReturn($lockedRequest);
         $this->tripStateManager->method('getStages')->willReturn([]);
@@ -251,7 +253,7 @@ final class RestDayInsertProcessorTest extends TestCase
         $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
 
         $tripRequest = new TripRequest();
-        $tripRequest->startDate = new \DateTimeImmutable('2026-06-01');
+        $tripRequest->startDate = new DateTimeImmutable('2026-06-01');
 
         $this->tripStateManager->method('getStages')->willReturn([$stage0]);
         $this->tripStateManager->method('getRequest')->willReturn($tripRequest);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use Override;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Completion\CompletionInput;
@@ -39,7 +40,7 @@ final class MessengerClearCommand extends Command
         parent::__construct();
     }
 
-    #[\Override]
+    #[Override]
     protected function configure(): void
     {
         $this
@@ -47,7 +48,7 @@ final class MessengerClearCommand extends Command
             ->addOption('all', null, InputOption::VALUE_NONE, 'Clear all configured transports');
     }
 
-    #[\Override]
+    #[Override]
     protected function interact(InputInterface $input, OutputInterface $output): void
     {
         /** @var string[] $transports */
@@ -69,7 +70,7 @@ final class MessengerClearCommand extends Command
         $input->setArgument('transports', [$chosen]);
     }
 
-    #[\Override]
+    #[Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
@@ -118,7 +119,7 @@ final class MessengerClearCommand extends Command
         return Command::SUCCESS;
     }
 
-    #[\Override]
+    #[Override]
     public function complete(CompletionInput $input, CompletionSuggestions $suggestions): void
     {
         if ($input->mustSuggestArgumentValuesFor('transports')) {

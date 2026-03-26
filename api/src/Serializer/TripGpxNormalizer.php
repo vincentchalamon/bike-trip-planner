@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Serializer;
 
+use InvalidArgumentException;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\Trip;
@@ -29,7 +30,7 @@ final readonly class TripGpxNormalizer implements NormalizerInterface
     public function normalize(mixed $data, ?string $format = null, array $context = []): array
     {
         if (!$data instanceof Trip) {
-            throw new \InvalidArgumentException(\sprintf('Expected instance of %s, got %s.', Trip::class, get_debug_type($data)));
+            throw new InvalidArgumentException(\sprintf('Expected instance of %s, got %s.', Trip::class, get_debug_type($data)));
         }
 
         /** @var list<Stage> $stages */

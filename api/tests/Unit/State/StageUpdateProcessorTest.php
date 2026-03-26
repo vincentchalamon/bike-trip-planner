@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use DateTimeImmutable;
+use stdClass;
 use ApiPlatform\Metadata\Patch;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -52,7 +54,7 @@ final class StageUpdateProcessorTest extends TestCase
     private function makeUnlockedRequest(): TripRequest
     {
         $request = new TripRequest();
-        $request->startDate = new \DateTimeImmutable('+30 days');
+        $request->startDate = new DateTimeImmutable('+30 days');
 
         return $request;
     }
@@ -114,7 +116,7 @@ final class StageUpdateProcessorTest extends TestCase
         );
 
         $messageBus = $this->createStub(MessageBusInterface::class);
-        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+        $messageBus->method('dispatch')->willReturn(new Envelope(new stdClass()));
 
         $objectMapper = $this->createStub(ObjectMapperInterface::class);
         $objectMapper->method('map')->willReturn(new StageResponse());
@@ -199,7 +201,7 @@ final class StageUpdateProcessorTest extends TestCase
         );
 
         $messageBus = $this->createStub(MessageBusInterface::class);
-        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+        $messageBus->method('dispatch')->willReturn(new Envelope(new stdClass()));
 
         $objectMapper = $this->createStub(ObjectMapperInterface::class);
         $objectMapper->method('map')->willReturn(new StageResponse());
@@ -269,7 +271,7 @@ final class StageUpdateProcessorTest extends TestCase
         );
 
         $messageBus = $this->createStub(MessageBusInterface::class);
-        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+        $messageBus->method('dispatch')->willReturn(new Envelope(new stdClass()));
 
         $objectMapper = $this->createStub(ObjectMapperInterface::class);
         $objectMapper->method('map')->willReturn(new StageResponse());
@@ -308,7 +310,7 @@ final class StageUpdateProcessorTest extends TestCase
         ];
 
         $lockedRequest = new TripRequest();
-        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
+        $lockedRequest->startDate = new DateTimeImmutable('yesterday');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($stages);

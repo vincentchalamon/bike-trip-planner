@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\RouteParser;
 
+use RuntimeException;
+use XMLReader;
 use App\ApiResource\Model\Coordinate;
 
 final class GpxStreamRouteParser implements GpxRouteParserInterface
@@ -16,7 +18,7 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
     {
         $previous = libxml_use_internal_errors(true);
 
-        $reader = new \XMLReader();
+        $reader = new XMLReader();
 
         if (!$reader->XML($content, null, \LIBXML_NONET | \LIBXML_NOENT)) {
             libxml_clear_errors();
@@ -29,20 +31,20 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
         $inName = false;
 
         while ($reader->read()) {
-            if (\XMLReader::ELEMENT === $reader->nodeType && 'trk' === $reader->localName) {
+            if (XMLReader::ELEMENT === $reader->nodeType && 'trk' === $reader->localName) {
                 $inTrk = true;
-            } elseif ($inTrk && \XMLReader::ELEMENT === $reader->nodeType && 'name' === $reader->localName) {
+            } elseif ($inTrk && XMLReader::ELEMENT === $reader->nodeType && 'name' === $reader->localName) {
                 $inName = true;
-            } elseif ($inName && \XMLReader::TEXT === $reader->nodeType) {
+            } elseif ($inName && XMLReader::TEXT === $reader->nodeType) {
                 $title = trim($reader->value);
                 $reader->close();
                 libxml_clear_errors();
                 libxml_use_internal_errors($previous);
 
                 return '' !== $title ? $title : null;
-            } elseif (\XMLReader::END_ELEMENT === $reader->nodeType && 'name' === $reader->localName) {
+            } elseif (XMLReader::END_ELEMENT === $reader->nodeType && 'name' === $reader->localName) {
                 $inName = false;
-            } elseif (\XMLReader::ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
+            } elseif (XMLReader::ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
                 // Stop searching once we reach track points (name comes before trkpt)
                 break;
             }
@@ -68,7 +70,7 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
 
         $previous = libxml_use_internal_errors(true);
 
-        $reader = new \XMLReader();
+        $reader = new XMLReader();
 
         $options = \LIBXML_NONET | \LIBXML_NOENT;
 
@@ -76,7 +78,7 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
             libxml_clear_errors();
             libxml_use_internal_errors($previous);
 
-            throw new \RuntimeException('Failed to initialize XMLReader for GPX content.');
+            throw new RuntimeException('Failed to initialize XMLReader for GPX content.');
         }
 
         $inTrkpt = false;
@@ -86,7 +88,7 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
         $inEle = false;
 
         while ($reader->read()) {
-            if (\XMLReader::ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
+            if (XMLReader::ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
                 $inTrkpt = true;
                 $inEle = false;
                 $lat = (float) $reader->getAttribute('lat');
@@ -97,13 +99,13 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
                     $points[] = new Coordinate($lat, $lon, $ele);
                     $inTrkpt = false;
                 }
-            } elseif ($inTrkpt && \XMLReader::ELEMENT === $reader->nodeType && 'ele' === $reader->localName) {
+            } elseif ($inTrkpt && XMLReader::ELEMENT === $reader->nodeType && 'ele' === $reader->localName) {
                 $inEle = true;
-            } elseif ($inEle && \XMLReader::TEXT === $reader->nodeType) {
+            } elseif ($inEle && XMLReader::TEXT === $reader->nodeType) {
                 $ele = (float) $reader->value;
-            } elseif (\XMLReader::END_ELEMENT === $reader->nodeType && 'ele' === $reader->localName) {
+            } elseif (XMLReader::END_ELEMENT === $reader->nodeType && 'ele' === $reader->localName) {
                 $inEle = false;
-            } elseif (\XMLReader::END_ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
+            } elseif (XMLReader::END_ELEMENT === $reader->nodeType && 'trkpt' === $reader->localName) {
                 $points[] = new Coordinate($lat, $lon, $ele);
                 $inTrkpt = false;
                 $ele = 0.0;

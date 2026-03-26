@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use RuntimeException;
+use DateTimeImmutable;
+use Exception;
 use App\ApiResource\TripRequest;
 use App\Service\GpxUploadService;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -79,7 +82,7 @@ final readonly class GpxUploadController
 
         try {
             $points = $this->gpxUploadService->parseGpx($content);
-        } catch (\RuntimeException) {
+        } catch (RuntimeException) {
             return new JsonResponse(
                 ['error' => 'Invalid GPX file: could not parse XML content.'],
                 Response::HTTP_UNPROCESSABLE_ENTITY,
@@ -125,8 +128,8 @@ final readonly class GpxUploadController
         $startDate = $request->request->getString('startDate');
         if ('' !== $startDate) {
             try {
-                $tripRequest->startDate = new \DateTimeImmutable($startDate);
-            } catch (\Exception) {
+                $tripRequest->startDate = new DateTimeImmutable($startDate);
+            } catch (Exception) {
                 // Ignore invalid date, use default
             }
         }
@@ -134,8 +137,8 @@ final readonly class GpxUploadController
         $endDate = $request->request->getString('endDate');
         if ('' !== $endDate) {
             try {
-                $tripRequest->endDate = new \DateTimeImmutable($endDate);
-            } catch (\Exception) {
+                $tripRequest->endDate = new DateTimeImmutable($endDate);
+            } catch (Exception) {
                 // Ignore invalid date, use default
             }
         }

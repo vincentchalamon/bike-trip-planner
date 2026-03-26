@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Override;
+use stdClass;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
@@ -13,7 +15,7 @@ use PHPUnit\Framework\Attributes\Test;
 
 final class TripCreateTest extends ApiTestCase
 {
-    #[\Override]
+    #[Override]
     public static function setUpBeforeClass(): void
     {
         self::$alwaysBootKernel = false;
@@ -148,7 +150,7 @@ final class TripCreateTest extends ApiTestCase
     {
         self::createClient()->request('POST', '/trips', [
             'headers' => ['Content-Type' => 'application/ld+json'],
-            'json' => new \stdClass(),
+            'json' => new stdClass(),
         ]);
 
         $this->assertResponseStatusCodeSame(422);

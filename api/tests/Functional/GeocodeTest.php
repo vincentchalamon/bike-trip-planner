@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Override;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -11,7 +12,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class GeocodeTest extends ApiTestCase
 {
-    #[\Override]
+    #[Override]
     public static function setUpBeforeClass(): void
     {
         self::$alwaysBootKernel = false;

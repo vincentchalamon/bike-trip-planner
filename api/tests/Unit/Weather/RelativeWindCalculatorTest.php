@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Weather;
 
+use Override;
 use App\Weather\RelativeWindCalculator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -13,7 +14,7 @@ final class RelativeWindCalculatorTest extends TestCase
 {
     private RelativeWindCalculator $calculator;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->calculator = new RelativeWindCalculator();

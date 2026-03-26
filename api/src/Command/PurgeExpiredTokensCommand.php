@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use Override;
+use DateTimeImmutable;
 use App\Entity\RefreshToken;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -34,7 +36,7 @@ final class PurgeExpiredTokensCommand extends Command
         parent::__construct();
     }
 
-    #[\Override]
+    #[Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
@@ -43,7 +45,7 @@ final class PurgeExpiredTokensCommand extends Command
         $deleted = $this->entityManager->createQueryBuilder()
             ->delete(RefreshToken::class, 'rt')
             ->where('rt.expiresAt <= :now')
-            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('now', new DateTimeImmutable())
             ->getQuery()
             ->execute();
 

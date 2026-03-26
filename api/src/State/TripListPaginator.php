@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use IteratorAggregate;
+use Traversable;
+use ArrayIterator;
 use ApiPlatform\State\Pagination\PaginatorInterface;
 use App\ApiResource\TripListItem;
 
@@ -12,10 +15,10 @@ use App\ApiResource\TripListItem;
  * so that LIMIT/OFFSET can be applied at the database level instead of fetching
  * the entire collection into memory.
  *
- * @implements \IteratorAggregate<mixed, TripListItem>
+ * @implements IteratorAggregate<mixed, TripListItem>
  * @implements PaginatorInterface<TripListItem>
  */
-final readonly class TripListPaginator implements \IteratorAggregate, PaginatorInterface
+final readonly class TripListPaginator implements IteratorAggregate, PaginatorInterface
 {
     /** @param list<TripListItem> $items */
     public function __construct(
@@ -55,8 +58,8 @@ final readonly class TripListPaginator implements \IteratorAggregate, PaginatorI
         return \count($this->items);
     }
 
-    public function getIterator(): \Traversable
+    public function getIterator(): Traversable
     {
-        return new \ArrayIterator($this->items);
+        return new ArrayIterator($this->items);
     }
 }

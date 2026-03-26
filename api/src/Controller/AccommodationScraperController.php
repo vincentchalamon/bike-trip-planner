@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use Throwable;
 use App\Accommodation\AccommodationMetadataExtractor;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -35,7 +36,7 @@ final readonly class AccommodationScraperController
         try {
             $response = $this->httpClient->request('GET', $url);
             $html = $response->getContent();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return new JsonResponse(['error' => 'Failed to fetch URL'], Response::HTTP_GATEWAY_TIMEOUT);
         }
 

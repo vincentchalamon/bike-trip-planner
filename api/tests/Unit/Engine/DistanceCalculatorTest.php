@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Engine;
 
+use Override;
 use App\ApiResource\Model\Coordinate;
 use App\Engine\DistanceCalculator;
 use PHPUnit\Framework\Attributes\Test;
@@ -13,7 +14,7 @@ final class DistanceCalculatorTest extends TestCase
 {
     private DistanceCalculator $calculator;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->calculator = new DistanceCalculator();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\RouteParser;
 
+use RuntimeException;
 use App\ApiResource\Model\Coordinate;
 
 interface RouteParserInterface
@@ -13,7 +14,7 @@ interface RouteParserInterface
      *
      * @return list<Coordinate>
      *
-     * @throws \RuntimeException When route string is invalid
+     * @throws RuntimeException When route string is invalid
      */
     public function parse(string $content): array;
 }

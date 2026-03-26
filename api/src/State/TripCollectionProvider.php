@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use DateTimeImmutable;
+use Exception;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\Pagination\Pagination;
 use ApiPlatform\State\ProviderInterface;
@@ -55,10 +58,10 @@ final readonly class TripCollectionProvider implements ProviderInterface
         // Filter by startDate (trips starting on or after this date)
         if (!empty($filters['startDate']) && is_string($filters['startDate'])) {
             try {
-                $start = new \DateTimeImmutable($filters['startDate']);
+                $start = new DateTimeImmutable($filters['startDate']);
                 $qb->andWhere('t.startDate >= :startDate')
                     ->setParameter('startDate', $start);
-            } catch (\Exception) {
+            } catch (Exception) {
                 // Ignore invalid date values
             }
         }
@@ -66,10 +69,10 @@ final readonly class TripCollectionProvider implements ProviderInterface
         // Filter by endDate (trips ending on or before this date)
         if (!empty($filters['endDate']) && is_string($filters['endDate'])) {
             try {
-                $end = new \DateTimeImmutable($filters['endDate']);
+                $end = new DateTimeImmutable($filters['endDate']);
                 $qb->andWhere('t.endDate <= :endDate')
                     ->setParameter('endDate', $end);
-            } catch (\Exception) {
+            } catch (Exception) {
                 // Ignore invalid date values
             }
         }
@@ -89,7 +92,7 @@ final readonly class TripCollectionProvider implements ProviderInterface
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 
-        $paginator = new \Doctrine\ORM\Tools\Pagination\Paginator($qb->getQuery(), fetchJoinCollection: true);
+        $paginator = new Paginator($qb->getQuery(), fetchJoinCollection: true);
         /** @var list<TripRequest> $entities */
         $entities = iterator_to_array($paginator->getIterator());
 

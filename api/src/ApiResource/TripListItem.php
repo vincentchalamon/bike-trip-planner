@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\ApiResource;
 
+use DateTimeImmutable;
+
 /**
  * Lightweight read-only DTO for the trip collection list endpoint.
  *
@@ -16,12 +18,12 @@ final readonly class TripListItem
     public function __construct(
         public string $id,
         public ?string $title,
-        public ?\DateTimeImmutable $startDate,
-        public ?\DateTimeImmutable $endDate,
+        public ?DateTimeImmutable $startDate,
+        public ?DateTimeImmutable $endDate,
         public float $totalDistance,
         public int $stageCount,
-        public \DateTimeImmutable $createdAt,
-        public \DateTimeImmutable $updatedAt,
+        public DateTimeImmutable $createdAt,
+        public DateTimeImmutable $updatedAt,
     ) {
     }
 }

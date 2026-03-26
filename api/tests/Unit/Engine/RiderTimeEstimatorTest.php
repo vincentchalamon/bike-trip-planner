@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Engine;
 
+use Override;
 use App\Engine\RiderTimeEstimator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -13,7 +14,7 @@ final class RiderTimeEstimatorTest extends TestCase
 {
     private RiderTimeEstimator $estimator;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->estimator = new RiderTimeEstimator();

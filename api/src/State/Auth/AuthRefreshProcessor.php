@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
+use JsonException;
+use Symfony\Component\HttpFoundation\Request;
+use App\Entity\RefreshToken;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
@@ -46,11 +49,11 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         $isCapacitor = AuthResponseHelper::isCapacitorRequest($request);
 
         // Capacitor sends refresh token in body
-        if (null === $token && $isCapacitor && $request instanceof \Symfony\Component\HttpFoundation\Request) {
+        if (null === $token && $isCapacitor && $request instanceof Request) {
             try {
                 $body = $request->toArray();
                 $token = $body['refresh_token'] ?? null;
-            } catch (\JsonException) { // @phpstan-ignore catch.neverThrown (toArray uses json_decode with JSON_THROW_ON_ERROR)
+            } catch (JsonException) { // @phpstan-ignore catch.neverThrown (toArray uses json_decode with JSON_THROW_ON_ERROR)
                 $token = null;
             }
         }
@@ -64,7 +67,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
         $existing = $this->refreshTokenRepository->findValidByToken($token);
 
-        if (!$existing instanceof \App\Entity\RefreshToken) {
+        if (!$existing instanceof RefreshToken) {
             $this->logger->debug('Auth refresh invalid token');
 
             $response = new JsonResponse(

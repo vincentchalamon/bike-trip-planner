@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
+use Override;
 use App\Analyzer\Rules\ElevationAlertAnalyzer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -16,7 +17,7 @@ final class ElevationAlertAnalyzerTest extends TestCase
 {
     private ElevationAlertAnalyzer $analyzer;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $translator = $this->createStub(TranslatorInterface::class);

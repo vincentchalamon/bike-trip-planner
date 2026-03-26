@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Analyzer;
 
+use Override;
+use DateTimeImmutable;
+use DateTimeZone;
 use App\Analyzer\Rules\SunsetAlertAnalyzer;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -22,7 +25,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
 
     private SunsetAlertAnalyzer $analyzer;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->translator = $this->createStub(TranslatorInterface::class);
@@ -58,7 +61,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(17.0);
 
         $alerts = $this->analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2024-07-15', new \DateTimeZone('UTC')),
+            'startDate' => new DateTimeImmutable('2024-07-15', new DateTimeZone('UTC')),
             'stageIndex' => 0,
             'departureHour' => 8,
             'averageSpeed' => 15.0,
@@ -77,7 +80,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(22.0);
 
         $alerts = $this->analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
+            'startDate' => new DateTimeImmutable('2024-12-15', new DateTimeZone('UTC')),
             'stageIndex' => 0,
             'departureHour' => 8,
             'averageSpeed' => 15.0,
@@ -97,7 +100,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(22.0);
 
         $alerts = $this->analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
+            'startDate' => new DateTimeImmutable('2024-12-15', new DateTimeZone('UTC')),
             'stageIndex' => 0,
             'departureHour' => 8,
             'averageSpeed' => 15.0,
@@ -146,7 +149,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $stage = $this->createStage(lat: 48.85, lon: 2.35);
 
         $alerts = $analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
+            'startDate' => new DateTimeImmutable('2024-12-15', new DateTimeZone('UTC')),
             'stageIndex' => 0,
             'locale' => 'fr',
         ]);
@@ -170,7 +173,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(8.0);
 
         $alerts = $this->analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2024-06-01', new \DateTimeZone('UTC')),
+            'startDate' => new DateTimeImmutable('2024-06-01', new DateTimeZone('UTC')),
             'stageIndex' => 5,
             'departureHour' => 8,
             'averageSpeed' => 15.0,
@@ -192,7 +195,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $analyzer = new SunsetAlertAnalyzer($riderTimeEstimator, $this->translator);
 
         $alerts = $analyzer->analyze($stage, [
-            'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
+            'startDate' => new DateTimeImmutable('2024-12-15', new DateTimeZone('UTC')),
             'stageIndex' => 0,
             'departureHour' => 8,
             'averageSpeed' => 15.0,

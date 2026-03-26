@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Serializer;
 
+use InvalidArgumentException;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
@@ -13,7 +14,7 @@ abstract readonly class AbstractStageNormalizer implements NormalizerInterface
     public function normalize(mixed $data, ?string $format = null, array $context = []): array
     {
         if (!$data instanceof Stage) {
-            throw new \InvalidArgumentException(\sprintf('Expected instance of %s, got %s.', Stage::class, get_debug_type($data)));
+            throw new InvalidArgumentException(\sprintf('Expected instance of %s, got %s.', Stage::class, get_debug_type($data)));
         }
 
         return [

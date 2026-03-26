@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use Throwable;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
@@ -89,7 +90,7 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
 
             $this->generationTracker->initialize($newTripIdString);
             $this->entityManager->commit();
-        } catch (\Throwable $throwable) {
+        } catch (Throwable $throwable) {
             $this->entityManager->rollback();
             throw $throwable;
         }

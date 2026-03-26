@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Scanner;
 
+use Throwable;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -64,7 +65,7 @@ final readonly class OsmScanner implements ScannerInterface
 
                 return $this->executeQuery($this->publicClient, $query);
             });
-        } catch (\Throwable $throwable) {
+        } catch (Throwable $throwable) {
             $this->logger->warning('Overpass query failed, returning empty result.', [
                 'error' => $throwable->getMessage(),
             ]);
@@ -193,7 +194,7 @@ final readonly class OsmScanner implements ScannerInterface
                     ]);
                     $empties[$name] = $queries[$name];
                 }
-            } catch (\Throwable $throwable) {
+            } catch (Throwable $throwable) {
                 $this->logger->warning('Overpass query "{name}" failed, falling back.', [
                     'name' => $name,
                     'error' => $throwable->getMessage(),

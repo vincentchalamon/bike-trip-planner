@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\RouteFetcher;
 
+use RuntimeException;
+use App\ApiResource\Model\Coordinate;
 use App\Enum\SourceType;
 use App\RouteParser\GpxRouteParserInterface;
 use App\RouteFetcher\StravaRouteFetcher;
@@ -55,7 +57,7 @@ final class StravaRouteFetcherTest extends TestCase
         $gpxParser->expects(self::once())
             ->method('parse')
             ->with($gpxContent)
-            ->willReturn([new \App\ApiResource\Model\Coordinate(44.0, 5.0, 100.0)]);
+            ->willReturn([new Coordinate(44.0, 5.0, 100.0)]);
         $gpxParser->expects(self::once())
             ->method('extractTitle')
             ->with($gpxContent)
@@ -95,7 +97,7 @@ final class StravaRouteFetcherTest extends TestCase
             $cache,
         );
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('not found (404)');
 
         $fetcher->fetch('https://www.strava.com/routes/123456');
@@ -121,7 +123,7 @@ final class StravaRouteFetcherTest extends TestCase
             $cache,
         );
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('private or access denied (403)');
 
         $fetcher->fetch('https://www.strava.com/routes/123456');
@@ -147,7 +149,7 @@ final class StravaRouteFetcherTest extends TestCase
 
         $fetcher = new StravaRouteFetcher($client, $gpxParser, $cache);
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('no valid coordinates');
 
         $fetcher->fetch('https://www.strava.com/routes/123456');

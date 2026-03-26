@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use DateTimeImmutable;
+use stdClass;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -35,7 +37,7 @@ final class StageMoveTest extends ApiTestCase
 
         $request = new TripRequest();
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
-        $request->startDate = new \DateTimeImmutable('2026-07-01');
+        $request->startDate = new DateTimeImmutable('2026-07-01');
 
         $repo->initializeTrip($tripId, $request);
         $repo->storeSourceType($tripId, SourceType::KOMOOT_TOUR->value);
@@ -159,7 +161,7 @@ final class StageMoveTest extends ApiTestCase
 
         self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/move', [
             'headers' => ['Content-Type' => 'application/merge-patch+json'],
-            'json' => new \stdClass(),
+            'json' => new stdClass(),
         ]);
 
         $this->assertResponseStatusCodeSame(422);

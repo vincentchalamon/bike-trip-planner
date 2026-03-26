@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Serializer;
 
+use InvalidArgumentException;
+use XMLWriter;
 use Symfony\Component\Serializer\Encoder\EncoderInterface;
 
 final readonly class GpxEncoder implements EncoderInterface
@@ -20,10 +22,10 @@ final readonly class GpxEncoder implements EncoderInterface
     public function encode(mixed $data, string $format, array $context = []): string
     {
         if (!\is_array($data)) {
-            throw new \InvalidArgumentException('GpxEncoder expects an array.');
+            throw new InvalidArgumentException('GpxEncoder expects an array.');
         }
 
-        $xml = new \XMLWriter();
+        $xml = new XMLWriter();
         $xml->openMemory();
         $xml->setIndent(true);
         $xml->setIndentString('    ');

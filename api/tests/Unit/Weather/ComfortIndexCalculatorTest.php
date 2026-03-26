@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Weather;
 
+use Override;
 use App\Weather\ComfortIndexCalculator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -13,7 +14,7 @@ final class ComfortIndexCalculatorTest extends TestCase
 {
     private ComfortIndexCalculator $calculator;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->calculator = new ComfortIndexCalculator();

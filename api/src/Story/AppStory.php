@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Story;
 
+use DateTimeImmutable;
 use App\Factory\StageFactory;
 use App\Factory\TripFactory;
 use Zenstruck\Foundry\Attribute\AsFixture;
@@ -18,8 +19,8 @@ final class AppStory extends Story
         $trip1 = TripFactory::createOne([ // @phpstan-ignore staticMethod.unresolvableReturnType
             'title' => 'Entre Sensée et Escaut',
             'sourceUrl' => 'https://www.komoot.com/fr-fr/tour/2795080048',
-            'startDate' => new \DateTimeImmutable('2026-05-01'),
-            'endDate' => new \DateTimeImmutable('2026-05-03'),
+            'startDate' => new DateTimeImmutable('2026-05-01'),
+            'endDate' => new DateTimeImmutable('2026-05-03'),
             'maxDistancePerDay' => 80.0,
             'averageSpeed' => 15.0,
             'locale' => 'fr',
@@ -118,8 +119,8 @@ final class AppStory extends Story
         $trip2 = TripFactory::createOne([ // @phpstan-ignore staticMethod.unresolvableReturnType
             'title' => "L'Odyssée des Eaux Royales",
             'sourceUrl' => 'https://www.komoot.com/fr-fr/tour/2796682420',
-            'startDate' => new \DateTimeImmutable('2026-05-14'),
-            'endDate' => new \DateTimeImmutable('2026-05-17'),
+            'startDate' => new DateTimeImmutable('2026-05-14'),
+            'endDate' => new DateTimeImmutable('2026-05-17'),
             'maxDistancePerDay' => 45.0,
             'averageSpeed' => 10.0,
             'locale' => 'fr',

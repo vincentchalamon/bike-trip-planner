@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use App\ApiResource\TripRequest;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -25,11 +27,11 @@ final class TripLocker
 
     public function isLocked(TripRequest $request): bool
     {
-        if (!$request->startDate instanceof \DateTimeImmutable) {
+        if (!$request->startDate instanceof DateTimeImmutable) {
             return false;
         }
 
-        $today = new \DateTimeImmutable('today', new \DateTimeZone('UTC'));
+        $today = new DateTimeImmutable('today', new DateTimeZone('UTC'));
 
         return $request->startDate <= $today;
     }

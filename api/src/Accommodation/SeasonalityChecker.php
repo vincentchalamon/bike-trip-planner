@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Accommodation;
 
+use DateTimeImmutable;
+
 /**
  * Determines seasonality of an OSM accommodation from its tags.
  *
@@ -24,7 +26,7 @@ final readonly class SeasonalityChecker implements SeasonalityCheckerInterface
     /** Months considered "winter off-season" when seasonal=yes has no opening_hours. */
     private const array WINTER_MONTHS = [11, 12, 1, 2, 3];
 
-    public function isLikelyOpen(\DateTimeImmutable $date, array $tags): ?bool
+    public function isLikelyOpen(DateTimeImmutable $date, array $tags): ?bool
     {
         $openingHours = $tags['opening_hours'] ?? null;
 
@@ -47,7 +49,7 @@ final readonly class SeasonalityChecker implements SeasonalityCheckerInterface
      * Examples handled: "Apr-Oct", "May-Sep", "Apr-Oct 10:00-20:00", "Jun-Sep; Mo off".
      * Returns null when the pattern is not recognised.
      */
-    private function parseOpeningHours(string $openingHours, \DateTimeImmutable $date): ?bool
+    private function parseOpeningHours(string $openingHours, DateTimeImmutable $date): ?bool
     {
         // Normalise: strip time/day-of-week suffixes and take only the first rule
         $rule = trim(explode(';', $openingHours)[0]);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\RouteFetcher;
 
+use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 final readonly class RouteFetcherRegistry implements RouteFetcherRegistryInterface
@@ -22,7 +23,7 @@ final readonly class RouteFetcherRegistry implements RouteFetcherRegistryInterfa
     }
 
     /**
-     * @throws \RuntimeException When no fetcher supports the given URL
+     * @throws RuntimeException When no fetcher supports the given URL
      */
     public function get(string $url): RouteFetcherInterface
     {
@@ -32,6 +33,6 @@ final readonly class RouteFetcherRegistry implements RouteFetcherRegistryInterfa
             }
         }
 
-        throw new \RuntimeException('No route fetcher supports the provided URL. Supported formats: Komoot Tour, Komoot Collection, Strava Route, RideWithGPS Route.');
+        throw new RuntimeException('No route fetcher supports the provided URL. Supported formats: Komoot Tour, Komoot Collection, Strava Route, RideWithGPS Route.');
     }
 }

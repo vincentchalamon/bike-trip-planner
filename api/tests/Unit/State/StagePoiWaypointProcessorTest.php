@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use Override;
+use DateTimeImmutable;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
@@ -37,7 +39,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
 
     private StagePoiWaypointProcessor $processor;
 
-    #[\Override]
+    #[Override]
     protected function setUp(): void
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
@@ -48,7 +50,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
         $generationTracker->method('current')->willReturn(1);
 
         $unlockedRequest = new TripRequest();
-        $unlockedRequest->startDate = new \DateTimeImmutable('+30 days');
+        $unlockedRequest->startDate = new DateTimeImmutable('+30 days');
         $this->tripStateManager->method('getRequest')->willReturn($unlockedRequest);
 
         $this->processor = new StagePoiWaypointProcessor(
@@ -127,7 +129,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
         $stage = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
 
         $lockedRequest = new TripRequest();
-        $lockedRequest->startDate = new \DateTimeImmutable('yesterday');
+        $lockedRequest->startDate = new DateTimeImmutable('yesterday');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn([$stage]);

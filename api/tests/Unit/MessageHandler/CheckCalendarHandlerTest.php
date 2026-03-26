@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use DateTimeImmutable;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -67,7 +68,7 @@ final class CheckCalendarHandlerTest extends TestCase
     {
         // 2026-03-15 is a Sunday, not a French holiday
         $request = new TripRequest();
-        $request->startDate = new \DateTimeImmutable('2026-03-15');
+        $request->startDate = new DateTimeImmutable('2026-03-15');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getRequest')->willReturn($request);
@@ -102,7 +103,7 @@ final class CheckCalendarHandlerTest extends TestCase
         // Actually, let's use a simpler approach: 2022-01-01 was a Saturday... no.
         // 2023-01-01 is a Sunday and is New Year's Day (holiday in France).
         $request = new TripRequest();
-        $request->startDate = new \DateTimeImmutable('2023-01-01');
+        $request->startDate = new DateTimeImmutable('2023-01-01');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getRequest')->willReturn($request);
@@ -133,7 +134,7 @@ final class CheckCalendarHandlerTest extends TestCase
     {
         // 2026-03-10 is a Tuesday, not a holiday
         $request = new TripRequest();
-        $request->startDate = new \DateTimeImmutable('2026-03-10');
+        $request->startDate = new DateTimeImmutable('2026-03-10');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getRequest')->willReturn($request);

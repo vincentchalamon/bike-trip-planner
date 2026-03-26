@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use DateTimeImmutable;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -30,8 +31,8 @@ final class TripUpdateTest extends ApiTestCase
     private function seedTrip(
         string $tripId,
         ?string $sourceUrl = 'https://www.komoot.com/tour/123456789',
-        ?\DateTimeImmutable $startDate = null,
-        ?\DateTimeImmutable $endDate = null,
+        ?DateTimeImmutable $startDate = null,
+        ?DateTimeImmutable $endDate = null,
         float $fatigueFactor = 0.9,
         float $elevationPenalty = 50.0,
     ): void {
@@ -249,7 +250,7 @@ final class TripUpdateTest extends ApiTestCase
         self::createClient();
         $this->seedTrip(
             self::TRIP_ID,
-            startDate: new \DateTimeImmutable('2026-07-15'),
+            startDate: new DateTimeImmutable('2026-07-15'),
         );
 
         self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
@@ -274,7 +275,7 @@ final class TripUpdateTest extends ApiTestCase
         self::createClient();
         $this->seedTrip(
             self::TRIP_ID,
-            startDate: new \DateTimeImmutable('2026-07-15'),
+            startDate: new DateTimeImmutable('2026-07-15'),
         );
 
         self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
