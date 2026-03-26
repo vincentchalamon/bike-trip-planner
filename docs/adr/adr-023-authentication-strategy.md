@@ -132,31 +132,31 @@ Full OAuth2 authorization server (e.g., league/oauth2-server-bundle).
 │ Browser  │        │ Next.js  │        │ Symfony  │        │  Resend  │
 │          │        │ Frontend │        │ Backend  │        │  (SMTP)  │
 └────┬─────┘        └────┬─────┘        └────┬─────┘        └────┬─────┘
-     │ Enter email       │                   │                    │
-     │──────────────────►│ POST /auth/       │                    │
-     │                   │   request-link    │                    │
-     │                   │──────────────────►│                    │
-     │                   │                   │ Generate token     │
-     │                   │                   │ (256-bit entropy)  │
-     │                   │                   │                    │
-     │                   │                   │ Send magic link    │
-     │                   │ 200 OK            │───────────────────►│
-     │                   │◄──────────────────│                    │
-     │ "Check your email"│                   │                    │
-     │◄──────────────────│                   │                    │
-     │                   │                   │                    │
-     │ Click magic link  │                   │                    │
-     │──────────────────►│                   │                    │
-     │                   │ POST /auth/verify │                    │
-     │                   │ {token: <opaque>} │                    │
-     │                   │──────────────────►│                    │
-     │                   │                   │ Validate token     │
-     │                   │                   │ (TTL + single-use) │
-     │                   │                   │                    │
-     │                   │ JWT access token  │                    │
-     │                   │ + refresh cookie  │                    │
-     │◄──────────────────│◄──────────────────│                    │
-     │                   │                   │                    │
+     │ Enter email       │                   │                   │
+     │──────────────────►│ POST /auth/       │                   │
+     │                   │   request-link    │                   │
+     │                   │──────────────────►│                   │
+     │                   │                   │ Generate token    │
+     │                   │                   │ (256-bit entropy) │
+     │                   │                   │                   │
+     │                   │                   │ Send magic link   │
+     │                   │ 200 OK            │───────────────────│
+     │                   │◄──────────────────│                   │
+     │ "Check your email"│                   │                   │
+     │◄──────────────────│                   │                   │
+     │                   │                   │                   │
+     │ Click magic link  │                   │                   │
+     │──────────────────►│                   │                   │
+     │                   │ POST /auth/verify │                   │
+     │                   │ {token: <opaque>} │                   │
+     │                   │──────────────────►│                   │
+     │                   │                   │ Validate token    │
+     │                   │                   │ (TTL + single-use)│
+     │                   │                   │                   │
+     │                   │ JWT access token  │                   │
+     │                   │ + refresh cookie  │                   │
+     │◄──────────────────│◄──────────────────│                   │
+     │                   │                   │                   │
 ```
 
 The magic link URL points to the Next.js frontend (`/auth/verify/{token}`).
