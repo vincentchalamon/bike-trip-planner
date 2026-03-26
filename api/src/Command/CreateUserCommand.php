@@ -7,6 +7,7 @@ namespace App\Command;
 use App\Entity\MagicLink;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -37,6 +38,7 @@ final class CreateUserCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly MagicLinkRepository $magicLinkRepository,
+        private readonly UserRepository $userRepository,
         private readonly MailerInterface $mailer,
         private readonly Environment $twig,
         private readonly TranslatorInterface $translator,
@@ -76,9 +78,9 @@ final class CreateUserCommand extends Command
             return Command::FAILURE;
         }
 
-        $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+        $existingUser = $this->userRepository->findByEmail($email);
 
-        if (null !== $existingUser) {
+        if ($existingUser instanceof \App\Entity\User) {
             $io->error(\sprintf('User with email "%s" already exists.', $email));
 
             return Command::FAILURE;

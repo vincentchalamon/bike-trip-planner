@@ -10,6 +10,7 @@ use App\ApiResource\Auth\Auth;
 use App\Entity\MagicLink;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -35,6 +36,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
     public function __construct(
         private EntityManagerInterface $entityManager,
         private MagicLinkRepository $magicLinkRepository,
+        private UserRepository $userRepository,
         private MailerInterface $mailer,
         private Environment $twig,
         private RequestStack $requestStack,
@@ -69,7 +71,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
 
-        $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+        $user = $this->userRepository->findByEmail($email);
 
         if (!$user instanceof User) {
             $this->logger->debug('Auth request-link user not found', ['email' => $email]);
