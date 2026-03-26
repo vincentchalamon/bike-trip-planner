@@ -24,13 +24,25 @@ interface AuthState {
 /**
  * Parse a JWT payload without verifying the signature.
  * Used only to extract `sub` (user id) and `email` from the access token.
+ *
+ * JWTs use Base64url encoding (RFC 4648 §5): `-` instead of `+`, `_` instead
+ * of `/`, and no padding. `atob()` requires standard Base64, so we normalise
+ * before decoding.
  */
-function parseJwtPayload(token: string): { sub: string; email: string } | null {
+export function parseJwtPayload(
+  token: string,
+): { sub: string; email: string } | null {
   try {
     const parts = token.split(".");
     const encodedPayload = parts[1];
     if (parts.length !== 3 || !encodedPayload) return null;
-    const payload = JSON.parse(atob(encodedPayload));
+    // Convert Base64url → standard Base64 and restore padding
+    const base64 = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(
+      base64.length + ((4 - (base64.length % 4)) % 4),
+      "=",
+    );
+    const payload = JSON.parse(atob(padded)) as Record<string, unknown>;
     if (typeof payload.sub !== "string" || typeof payload.email !== "string") {
       return null;
     }
@@ -59,6 +71,11 @@ function parseJwtPayload(token: string): { sub: string; email: string } | null {
  * 3. Frontend calls `silentRefresh()` → exchanges cookie for JWT
  * 4. JWT stored in this store → injected into API requests via middleware
  */
+// Deduplicates concurrent silentRefresh calls: if a refresh is already in
+// flight, all callers share the same promise rather than firing multiple
+// /auth/refresh requests.
+let pendingRefresh: Promise<boolean> | null = null;
+
 export const useAuthStore = create<AuthState>()(
   immer((set, get) => ({
     accessToken: null,
@@ -73,7 +90,7 @@ export const useAuthStore = create<AuthState>()(
       }),
 
     requestMagicLink: async (email: string) => {
-      await fetch(`${API_URL}/api/auth/request-link`, {
+      await fetch(`${API_URL}/auth/request-link`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -85,7 +102,7 @@ export const useAuthStore = create<AuthState>()(
     logout: async () => {
       const { accessToken } = get();
       try {
-        await fetch(`${API_URL}/api/auth/logout`, {
+        await fetch(`${API_URL}/auth/logout`, {
           method: "POST",
           headers: {
             ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
@@ -102,44 +119,52 @@ export const useAuthStore = create<AuthState>()(
       });
     },
 
-    silentRefresh: async (): Promise<boolean> => {
-      try {
-        const res = await fetch(`${API_URL}/api/auth/refresh`, {
-          method: "POST",
-          credentials: "include",
-        });
+    silentRefresh: (): Promise<boolean> => {
+      if (pendingRefresh) return pendingRefresh;
 
-        if (!res.ok) {
+      pendingRefresh = (async () => {
+        try {
+          const res = await fetch(`${API_URL}/auth/refresh`, {
+            method: "POST",
+            credentials: "include",
+          });
+
+          if (!res.ok) {
+            set((state) => {
+              state.accessToken = null;
+              state.user = null;
+              state.isAuthenticated = false;
+            });
+            return false;
+          }
+
+          const data = (await res.json()) as { token: string };
+          const payload = parseJwtPayload(data.token);
+
+          if (!payload) {
+            return false;
+          }
+
+          set((state) => {
+            state.accessToken = data.token;
+            state.user = { id: payload.sub, email: payload.email };
+            state.isAuthenticated = true;
+          });
+
+          return true;
+        } catch {
           set((state) => {
             state.accessToken = null;
             state.user = null;
             state.isAuthenticated = false;
           });
           return false;
+        } finally {
+          pendingRefresh = null;
         }
+      })();
 
-        const data = (await res.json()) as { token: string };
-        const payload = parseJwtPayload(data.token);
-
-        if (!payload) {
-          return false;
-        }
-
-        set((state) => {
-          state.accessToken = data.token;
-          state.user = { id: payload.sub, email: payload.email };
-          state.isAuthenticated = true;
-        });
-
-        return true;
-      } catch {
-        set((state) => {
-          state.accessToken = null;
-          state.user = null;
-          state.isAuthenticated = false;
-        });
-        return false;
-      }
+      return pendingRefresh;
     },
 
     clearAuth: () =>

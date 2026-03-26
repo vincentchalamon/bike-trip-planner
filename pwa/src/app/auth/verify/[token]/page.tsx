@@ -3,86 +3,43 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useAuthStore } from "@/store/auth-store";
+import { useAuthStore, parseJwtPayload } from "@/store/auth-store";
 import { API_URL } from "@/lib/constants";
 
 /**
  * Magic link verification page.
  *
  * When the user clicks the magic link in their email, they land here.
- * This page calls the backend `/auth/verify/{token}` endpoint to validate
- * the token. On success, it attempts a silent refresh to obtain a JWT
- * (the backend sets a refresh_token httpOnly cookie in its response),
- * then redirects to the home page.
+ * This page POSTs the token to the backend `/auth/verify` endpoint.
+ * On success the backend returns a JWT access token and sets a
+ * refresh_token httpOnly cookie; the frontend stores the JWT and
+ * redirects to the home page.
  */
 export default function VerifyPage() {
   const t = useTranslations("auth");
   const params = useParams<{ token: string }>();
   const router = useRouter();
-  const { setAuth, silentRefresh } = useAuthStore();
+  const setAuth = useAuthStore((s) => s.setAuth);
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
     const verify = async () => {
       try {
-        // Call the backend verify endpoint. For web browsers, the backend
-        // returns a 302 redirect with the refresh_token cookie set.
-        // We use redirect: 'manual' to prevent the browser from following
-        // the redirect, allowing us to capture the cookie being set.
-        const res = await fetch(
-          `${API_URL}/auth/verify/${encodeURIComponent(params.token)}`,
-          {
-            credentials: "include",
-            redirect: "manual",
-          },
-        );
-
-        // The backend may return:
-        // - 302 redirect (web flow) — refresh_token cookie is set
-        // - 200 JSON (Capacitor flow) — { token, refresh_token }
-        // - 401 — invalid/expired token
-
-        if (res.type === "opaqueredirect" || res.status === 302) {
-          // Cookie was set by the redirect response. Use silentRefresh
-          // to exchange it for a JWT.
-          const refreshed = await silentRefresh();
-          if (refreshed) {
-            router.replace("/");
-            return;
-          }
-          setError(t("verifyFailed"));
-          setVerifying(false);
-          return;
-        }
+        const res = await fetch(`${API_URL}/auth/verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: params.token }),
+          credentials: "include",
+        });
 
         if (res.ok) {
-          // JSON response (Capacitor flow or direct JSON)
-          const data = (await res.json()) as {
-            token: string;
-            refresh_token?: string;
-          };
-
-          if (data.token) {
-            // Parse user info from the JWT
-            const parts = data.token.split(".");
-            const encodedPayload = parts[1];
-            if (parts.length === 3 && encodedPayload) {
-              try {
-                const payload = JSON.parse(atob(encodedPayload)) as {
-                  sub: string;
-                  email: string;
-                };
-                setAuth(data.token, {
-                  id: payload.sub,
-                  email: payload.email,
-                });
-                router.replace("/");
-                return;
-              } catch {
-                // Fall through to error
-              }
-            }
+          const data = (await res.json()) as { token: string };
+          const payload = parseJwtPayload(data.token);
+          if (payload) {
+            setAuth(data.token, { id: payload.sub, email: payload.email });
+            router.replace("/");
+            return;
           }
         }
 
@@ -94,8 +51,9 @@ export default function VerifyPage() {
       }
     };
 
-    verify();
-  }, [params.token, router, setAuth, silentRefresh, t]);
+    void verify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.token]);
 
   if (verifying) {
     return (
