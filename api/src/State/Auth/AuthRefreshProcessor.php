@@ -8,10 +8,10 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
 use App\Repository\RefreshTokenRepository;
+use App\Service\Auth\AuthResponseHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,7 +43,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
     {
         $request = $this->requestStack->getCurrentRequest();
         $token = $request?->cookies->get(Auth::REFRESH_TOKEN_COOKIE);
-        $isCapacitor = $this->isCapacitorRequest();
+        $isCapacitor = AuthResponseHelper::isCapacitorRequest($request);
 
         // Capacitor sends refresh token in body
         if (null === $token && $isCapacitor && $request instanceof \Symfony\Component\HttpFoundation\Request) {
@@ -102,29 +102,10 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         }
 
         $response = new JsonResponse($responseData);
-        $this->setRefreshTokenCookie($response, $newRefreshToken->getToken(), $newRefreshToken->getExpiresAt());
+        $response->headers->setCookie(
+            AuthResponseHelper::createRefreshTokenCookie($newRefreshToken->getToken(), $newRefreshToken->getExpiresAt()),
+        );
 
         return $response;
-    }
-
-    private function isCapacitorRequest(): bool
-    {
-        $request = $this->requestStack->getCurrentRequest();
-        $origin = $request?->headers->get('Origin', '') ?? '';
-
-        return str_starts_with($origin, 'capacitor://');
-    }
-
-    private function setRefreshTokenCookie(JsonResponse $response, string $token, \DateTimeImmutable $expiresAt): void
-    {
-        $cookie = Cookie::create(Auth::REFRESH_TOKEN_COOKIE)
-            ->withValue($token)
-            ->withExpires($expiresAt)
-            ->withPath('/')
-            ->withSecure(true)
-            ->withHttpOnly(true)
-            ->withSameSite('strict');
-
-        $response->headers->setCookie($cookie);
     }
 }

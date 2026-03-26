@@ -10,10 +10,10 @@ use App\ApiResource\Auth\Auth;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
 use App\Repository\RefreshTokenRepository;
+use App\Service\Auth\AuthResponseHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
@@ -59,7 +59,8 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
         $refreshToken = $this->refreshTokenRepository->createForUser($user);
         $this->entityManager->flush();
 
-        $isCapacitor = $this->isCapacitorRequest();
+        $request = $this->requestStack->getCurrentRequest();
+        $isCapacitor = AuthResponseHelper::isCapacitorRequest($request);
 
         $this->logger->debug('Auth verify token verified', ['user' => $user->getEmail()]);
 
@@ -69,29 +70,10 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
         }
 
         $response = new JsonResponse($responseData);
-        $this->setRefreshTokenCookie($response, $refreshToken->getToken(), $refreshToken->getExpiresAt());
+        $response->headers->setCookie(
+            AuthResponseHelper::createRefreshTokenCookie($refreshToken->getToken(), $refreshToken->getExpiresAt()),
+        );
 
         return $response;
-    }
-
-    private function isCapacitorRequest(): bool
-    {
-        $request = $this->requestStack->getCurrentRequest();
-        $origin = $request?->headers->get('Origin', '') ?? '';
-
-        return str_starts_with($origin, 'capacitor://');
-    }
-
-    private function setRefreshTokenCookie(JsonResponse $response, string $token, \DateTimeImmutable $expiresAt): void
-    {
-        $cookie = Cookie::create(Auth::REFRESH_TOKEN_COOKIE)
-            ->withValue($token)
-            ->withExpires($expiresAt)
-            ->withPath('/')
-            ->withSecure(true)
-            ->withHttpOnly(true)
-            ->withSameSite('strict');
-
-        $response->headers->setCookie($cookie);
     }
 }
