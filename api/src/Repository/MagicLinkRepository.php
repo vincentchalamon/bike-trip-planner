@@ -69,9 +69,9 @@ final class MagicLinkRepository extends ServiceEntityRepository
      */
     public function consumeByToken(string $token): ?User
     {
-        // Fetch the user before deleting (we need the association)
-        $user = $this->createQueryBuilder('ml')
-            ->select('u')
+        // Fetch the magic link with its user eagerly before deleting
+        $magicLink = $this->createQueryBuilder('ml')
+            ->addSelect('u')
             ->join('ml.user', 'u')
             ->where('ml.token = :token')
             ->andWhere('ml.expiresAt > :now')
@@ -80,9 +80,11 @@ final class MagicLinkRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
 
-        if (!$user instanceof User) {
+        if (!$magicLink instanceof MagicLink) {
             return null;
         }
+
+        $user = $magicLink->getUser();
 
         // Atomically delete the token: only the first concurrent request deletes 1 row
         $affected = $this->getEntityManager()->createQueryBuilder()

@@ -80,21 +80,34 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
             return $response;
         }
 
-        // Atomically expire the token to prevent TOCTOU race conditions
-        $affected = $this->refreshTokenRepository->atomicExpire($existing);
-        if (0 === $affected) {
-            $this->logger->debug('Auth refresh token already consumed (TOCTOU)');
+        // Wrap in transaction: atomicExpire + remove + create must all succeed or all roll back
+        $user = $existing->getUser();
+        $newRefreshToken = null;
 
-            return new JsonResponse(
-                ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
-                Response::HTTP_UNAUTHORIZED,
-            );
+        try {
+            $this->entityManager->wrapInTransaction(function () use ($existing, $user, &$newRefreshToken): void {
+                $affected = $this->refreshTokenRepository->atomicExpire($existing);
+                if (0 === $affected) {
+                    throw new \RuntimeException('token_already_consumed');
+                }
+
+                $this->entityManager->remove($existing);
+                $newRefreshToken = $this->refreshTokenRepository->createForUser($user);
+            });
+        } catch (\RuntimeException $e) {
+            if ('token_already_consumed' === $e->getMessage()) {
+                $this->logger->debug('Auth refresh token already consumed (TOCTOU)');
+
+                return new JsonResponse(
+                    ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
+                    Response::HTTP_UNAUTHORIZED,
+                );
+            }
+
+            throw $e;
         }
 
-        $user = $existing->getUser();
-        $this->entityManager->remove($existing);
-        $newRefreshToken = $this->refreshTokenRepository->createForUser($user);
-        $this->entityManager->flush();
+        \assert($newRefreshToken instanceof RefreshToken);
 
         $jwt = $this->jwtManager->create($user);
 

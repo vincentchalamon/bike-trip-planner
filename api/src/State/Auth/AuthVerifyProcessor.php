@@ -46,7 +46,17 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): JsonResponse
     {
-        $user = $this->magicLinkRepository->consumeByToken($data->token);
+        // Wrap in transaction: consumeByToken (DELETE) + createForUser (persist) must be atomic
+        $user = null;
+        $refreshToken = null;
+
+        $this->entityManager->wrapInTransaction(function () use ($data, &$user, &$refreshToken): void {
+            $user = $this->magicLinkRepository->consumeByToken($data->token);
+
+            if ($user instanceof User) {
+                $refreshToken = $this->refreshTokenRepository->createForUser($user);
+            }
+        });
 
         if (!$user instanceof User) {
             $this->logger->debug('Auth verify invalid token');
@@ -57,9 +67,9 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
             );
         }
 
+        \assert($refreshToken instanceof \App\Entity\RefreshToken);
+
         $jwt = $this->jwtManager->create($user);
-        $refreshToken = $this->refreshTokenRepository->createForUser($user);
-        $this->entityManager->flush();
 
         $request = $this->requestStack->getCurrentRequest();
         $isCapacitor = $this->isCapacitorRequest($request);
