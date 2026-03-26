@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Repository\RefreshTokenRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: RefreshTokenRepository::class)]
 #[ORM\Table(name: 'refresh_token')]
 #[ORM\Index(name: 'idx_refresh_token_token', columns: ['token'])]
 #[ORM\Index(name: 'idx_refresh_token_user', columns: ['user_id'])]
@@ -21,7 +22,7 @@ class RefreshToken
     private \DateTimeImmutable $createdAt;
 
     public function __construct(
-        #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'refreshTokens')]
+        #[ORM\ManyToOne(targetEntity: User::class)]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
         private User $user,
         #[ORM\Column(length: 128)]

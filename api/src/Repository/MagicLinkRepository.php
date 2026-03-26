@@ -2,27 +2,29 @@
 
 declare(strict_types=1);
 
-namespace App\Security;
+namespace App\Repository;
 
 use App\Entity\MagicLink;
 use App\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * Manages magic link lifecycle: creation, verification, and consumption.
+ * @extends ServiceEntityRepository<MagicLink>
  */
-final readonly class MagicLinkManager
+final class MagicLinkRepository extends ServiceEntityRepository
 {
-    private const int MAGIC_LINK_TTL_MINUTES = 30;
+    private const int TTL_MINUTES = 30;
 
-    public function __construct(
-        private EntityManagerInterface $entityManager,
-    ) {
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, MagicLink::class);
     }
 
     /**
      * Creates a magic link for the given user, if no active link already exists.
      *
+     * Persists the entity but does NOT flush — the caller is responsible for flushing.
      * Returns null if an active link is already pending (prevents link flooding).
      */
     public function create(User $user): ?MagicLink
@@ -32,28 +34,24 @@ final readonly class MagicLinkManager
         }
 
         $token = bin2hex(random_bytes(64));
-        $expiresAt = new \DateTimeImmutable(\sprintf('+%d minutes', self::MAGIC_LINK_TTL_MINUTES));
+        $expiresAt = new \DateTimeImmutable(\sprintf('+%d minutes', self::TTL_MINUTES));
 
         $magicLink = new MagicLink($user, $token, $expiresAt);
-        $this->entityManager->persist($magicLink);
-        $this->entityManager->flush();
+        $this->getEntityManager()->persist($magicLink);
 
         return $magicLink;
     }
 
     /**
-     * Verifies and consumes a magic link token.
+     * Atomically consumes a magic link token and returns the associated user.
      *
-     * Returns the associated user if the token is valid, non-expired and not yet consumed.
-     * The token is consumed atomically to prevent replay attacks.
+     * Uses a conditional UPDATE to prevent TOCTOU race conditions.
+     * Returns null if the token is invalid, expired, or already consumed.
      */
-    public function verify(string $token): ?User
+    public function consumeByToken(string $token): ?User
     {
-        // Atomically consume the token: only succeeds if consumed_at is still NULL
-        // and the token is not expired. This prevents TOCTOU race conditions where
-        // two concurrent requests could both pass validation.
         $now = new \DateTimeImmutable();
-        $affected = $this->entityManager->createQueryBuilder()
+        $affected = $this->getEntityManager()->createQueryBuilder()
             ->update(MagicLink::class, 'ml')
             ->set('ml.consumedAt', ':now')
             ->where('ml.token = :token')
@@ -68,18 +66,15 @@ final readonly class MagicLinkManager
             return null;
         }
 
-        $magicLink = $this->entityManager->getRepository(MagicLink::class)->findOneBy([
-            'token' => $token,
-        ]);
+        $magicLink = $this->findOneBy(['token' => $token]);
 
         return $magicLink?->getUser();
     }
 
     private function hasActiveLinkForUser(User $user): bool
     {
-        $count = $this->entityManager->createQueryBuilder()
+        $count = $this->createQueryBuilder('ml')
             ->select('COUNT(ml.id)')
-            ->from(MagicLink::class, 'ml')
             ->where('ml.user = :user')
             ->andWhere('ml.consumedAt IS NULL')
             ->andWhere('ml.expiresAt > :now')
