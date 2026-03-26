@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use Override;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use App\Entity\MagicLink;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
@@ -103,7 +104,13 @@ final class CreateUserCommand extends Command
             return Command::SUCCESS;
         }
 
-        $this->entityManager->flush();
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            $io->warning(\sprintf('An active invitation link already exists for user %s (concurrent creation).', $email));
+
+            return Command::SUCCESS;
+        }
 
         $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), $magicLink->getToken());
 

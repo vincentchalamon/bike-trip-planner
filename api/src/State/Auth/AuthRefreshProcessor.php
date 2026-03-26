@@ -29,6 +29,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  */
 final readonly class AuthRefreshProcessor implements ProcessorInterface
 {
+    use AuthResponseHelper;
+
     public function __construct(
         private RefreshTokenRepository $refreshTokenRepository,
         private EntityManagerInterface $entityManager,
@@ -46,7 +48,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
     {
         $request = $this->requestStack->getCurrentRequest();
         $token = $request?->cookies->get(Auth::REFRESH_TOKEN_COOKIE);
-        $isCapacitor = AuthResponseHelper::isCapacitorRequest($request);
+        $isCapacitor = $this->isCapacitorRequest($request);
 
         // Capacitor sends refresh token in body
         if (null === $token && $isCapacitor && $request instanceof Request) {
@@ -106,7 +108,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
         $response = new JsonResponse($responseData);
         $response->headers->setCookie(
-            AuthResponseHelper::createRefreshTokenCookie($newRefreshToken->getToken(), $newRefreshToken->getExpiresAt()),
+            $this->createRefreshTokenCookie($newRefreshToken->getToken(), $newRefreshToken->getExpiresAt()),
         );
 
         return $response;

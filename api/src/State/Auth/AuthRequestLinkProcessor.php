@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
@@ -104,7 +105,16 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         // Send email before flush: if SMTP fails, the magic link is not persisted
         // and the user can retry immediately instead of being locked out.
         $this->mailer->send($emailMessage);
-        $this->entityManager->flush();
+
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            // Lost the TOCTOU race: concurrent request already created a link for this user.
+            // Return the neutral message as if the link was created — anti-enumeration.
+            $this->logger->debug('Auth request-link lost race (unique constraint)', ['email' => $email]);
+
+            return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
+        }
 
         $this->logger->debug('Auth request-link magic link created and sent', ['email' => $email]);
 

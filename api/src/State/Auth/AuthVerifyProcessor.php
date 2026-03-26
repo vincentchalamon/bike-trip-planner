@@ -28,6 +28,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  */
 final readonly class AuthVerifyProcessor implements ProcessorInterface
 {
+    use AuthResponseHelper;
+
     public function __construct(
         private MagicLinkRepository $magicLinkRepository,
         private RefreshTokenRepository $refreshTokenRepository,
@@ -60,7 +62,7 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
         $this->entityManager->flush();
 
         $request = $this->requestStack->getCurrentRequest();
-        $isCapacitor = AuthResponseHelper::isCapacitorRequest($request);
+        $isCapacitor = $this->isCapacitorRequest($request);
 
         $this->logger->debug('Auth verify token verified', ['user' => $user->getEmail()]);
 
@@ -71,7 +73,7 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
 
         $response = new JsonResponse($responseData);
         $response->headers->setCookie(
-            AuthResponseHelper::createRefreshTokenCookie($refreshToken->getToken(), $refreshToken->getExpiresAt()),
+            $this->createRefreshTokenCookie($refreshToken->getToken(), $refreshToken->getExpiresAt()),
         );
 
         return $response;
