@@ -40,8 +40,11 @@ class User implements UserInterface
     private Collection $trips;
 
     /** @param non-empty-string $email */
-    public function __construct(#[ORM\Column(length: 180, unique: true)]
-        private string $email, ?Uuid $id = null)
+    public function __construct(
+        #[ORM\Column(length: 180, unique: true)]
+        private string $email,
+        ?Uuid $id = null
+    )
     {
         $this->id = $id ?? Uuid::v7();
         $this->createdAt = new \DateTimeImmutable();
