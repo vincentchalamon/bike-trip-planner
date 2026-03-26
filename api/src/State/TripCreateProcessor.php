@@ -12,7 +12,6 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
-use App\Entity\UserTrip;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
@@ -89,12 +88,7 @@ final readonly class TripCreateProcessor implements ProcessorInterface
             return;
         }
 
-        // Create UserTrip association in PostgreSQL
-        $userTrip = new UserTrip($user, $managedTrip);
-        $userTrip->setTitle($managedTrip->title);
-        $userTrip->setSourceUrl($managedTrip->sourceUrl);
-
-        $this->entityManager->persist($userTrip);
+        $managedTrip->user = $user;
         $this->entityManager->flush();
 
         // Store userId in Redis for fast ownership checks during computation

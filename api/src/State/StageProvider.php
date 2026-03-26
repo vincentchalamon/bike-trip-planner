@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Stage;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Security\TripOwnershipChecker;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -18,7 +17,6 @@ final readonly class StageProvider implements ProviderInterface
 {
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
-        private TripOwnershipChecker $ownershipChecker,
     ) {
     }
 
@@ -29,8 +27,6 @@ final readonly class StageProvider implements ProviderInterface
     {
         $tripId = $uriVariables['tripId'] ?? '';
         $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
-
-        $this->ownershipChecker->denyUnlessOwner($tripId);
 
         $stages = $this->tripStateManager->getStages($tripId) ?? [];
 

@@ -15,7 +15,6 @@ use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Security\TripOwnershipChecker;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -32,7 +31,6 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         private ObjectMapperInterface $objectMapper,
         private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
-        private TripOwnershipChecker $ownershipChecker,
     ) {
     }
 
@@ -44,8 +42,6 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
     {
         $tripId = $uriVariables['tripId'] ?? '';
         $index = \is_numeric($uriVariables['index'] ?? null) ? (int) $uriVariables['index'] : 0;
-
-        $this->ownershipChecker->denyUnlessOwner($tripId);
 
         $tripRequest = $this->tripStateManager->getRequest($tripId);
         \assert($tripRequest instanceof TripRequest);

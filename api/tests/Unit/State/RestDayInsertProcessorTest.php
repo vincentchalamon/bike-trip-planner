@@ -14,7 +14,6 @@ use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Security\TripOwnershipChecker;
 use App\State\RestDayInsertProcessor;
 use App\State\TripLocker;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -49,18 +48,12 @@ final class RestDayInsertProcessorTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('increment')->willReturn(2);
 
-        /** @var \Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface&\PHPUnit\Framework\MockObject\Stub $authChecker */
-        $authChecker = $this->createStub(\Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface::class);
-        $authChecker->method('isGranted')->willReturn(true);
-        $ownershipChecker = new TripOwnershipChecker($authChecker);
-
         $this->processor = new RestDayInsertProcessor(
             $this->tripStateManager,
             $this->messageBus,
             $this->objectMapper,
             $generationTracker,
             new TripLocker(),
-            $ownershipChecker,
         );
     }
 

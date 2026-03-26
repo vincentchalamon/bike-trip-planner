@@ -6,7 +6,6 @@ namespace App\Security\Voter;
 
 use App\ApiResource\TripRequest;
 use App\Entity\User;
-use App\Entity\UserTrip;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -17,7 +16,7 @@ use Symfony\Component\Uid\Uuid;
 /**
  * Grants access to trip operations based on ownership.
  *
- * Checks the PostgreSQL user_trip table first, with a Redis fallback
+ * Checks the PostgreSQL trip table first (user column), with a Redis fallback
  * for trips that are still being computed (not yet persisted).
  *
  * @extends Voter<string, TripRequest|string>
@@ -88,12 +87,12 @@ final class TripVoter extends Voter
         }
 
         $count = $this->entityManager->createQueryBuilder()
-            ->select('COUNT(ut.id)')
-            ->from(UserTrip::class, 'ut')
-            ->where('ut.user = :user')
-            ->andWhere('ut.trip = :trip')
+            ->select('COUNT(t.id)')
+            ->from(TripRequest::class, 't')
+            ->where('t.id = :tripId')
+            ->andWhere('t.user = :user')
+            ->setParameter('tripId', Uuid::fromString($tripId))
             ->setParameter('user', $user)
-            ->setParameter('trip', Uuid::fromString($tripId))
             ->getQuery()
             ->getSingleScalarResult();
 

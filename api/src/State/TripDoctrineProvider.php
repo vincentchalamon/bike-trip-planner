@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripRequest;
 use App\Repository\DoctrineTripRequestRepository;
-use App\Security\TripOwnershipChecker;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -22,7 +21,6 @@ final readonly class TripDoctrineProvider implements ProviderInterface
 {
     public function __construct(
         private DoctrineTripRequestRepository $repository,
-        private TripOwnershipChecker $ownershipChecker,
     ) {
     }
 
@@ -38,8 +36,6 @@ final readonly class TripDoctrineProvider implements ProviderInterface
         if (!$trip instanceof TripRequest) {
             throw new NotFoundHttpException(\sprintf('Trip "%s" not found.', $id));
         }
-
-        $this->ownershipChecker->denyUnlessOwner($id);
 
         return $trip;
     }

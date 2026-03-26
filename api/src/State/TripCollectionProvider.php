@@ -11,7 +11,6 @@ use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripListItem;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
-use App\Entity\UserTrip;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Uid\Uuid;
@@ -55,10 +54,9 @@ final readonly class TripCollectionProvider implements ProviderInterface
             ->from(TripRequest::class, 't')
             ->orderBy('t.createdAt', 'DESC');
 
-        // Filter by current user's trips via UserTrip join
+        // Filter by current user's trips
         if ($user instanceof User) {
-            $qb->innerJoin(UserTrip::class, 'ut', 'WITH', 'ut.trip = t')
-                ->andWhere('ut.user = :user')
+            $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         } else {
             // No authenticated user: return empty result

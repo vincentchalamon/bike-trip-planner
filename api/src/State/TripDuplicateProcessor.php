@@ -13,7 +13,6 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\Stage;
 use App\Entity\User;
-use App\Entity\UserTrip;
 use App\Enum\ComputationName;
 use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -82,30 +81,39 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
             $this->entityManager->persist($clonedStage);
         }
 
+        // Associate duplicate with current user before flush
+        $user = $this->security->getUser();
+        if ($user instanceof User) {
+            $duplicate->user = $user;
+        }
+
         $this->entityManager->beginTransaction();
         try {
             $this->entityManager->flush();
-
-            // Copy transient Redis data from source trip to duplicate
-            $this->copyTransientData($sourceId, $newTripIdString, $duplicate);
-
-            // Initialize computation tracker as done (all computations are inherited from source)
-            $computations = ComputationName::pipeline();
-            $this->computationTracker->initializeComputations($newTripIdString, $computations);
-
-            foreach ($computations as $computation) {
-                $this->computationTracker->markDone($newTripIdString, $computation);
-            }
-
-            $this->generationTracker->initialize($newTripIdString);
-
-            // Associate duplicate trip with current user
-            $this->associateTripWithUser($newTripIdString, $duplicate);
-
             $this->entityManager->commit();
         } catch (\Throwable $throwable) {
             $this->entityManager->rollback();
             throw $throwable;
+        }
+
+        // Redis operations after DB commit to avoid inconsistent state on rollback
+        $this->copyTransientData($sourceId, $newTripIdString, $duplicate);
+
+        $computations = ComputationName::pipeline();
+        $this->computationTracker->initializeComputations($newTripIdString, $computations);
+
+        foreach ($computations as $computation) {
+            $this->computationTracker->markDone($newTripIdString, $computation);
+        }
+
+        $this->generationTracker->initialize($newTripIdString);
+
+        // Store userId in Redis for fast ownership checks during computation
+        if ($user instanceof User) {
+            $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $newTripIdString));
+            $item->set($user->getId()->toRfc4122());
+            $item->expiresAfter(self::CACHE_TTL);
+            $this->tripStateCache->save($item);
         }
 
         $statuses = $this->computationTracker->getStatuses($newTripIdString) ?? [];
@@ -140,29 +148,6 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $clone->setSelectedAccommodation($source->getSelectedAccommodation());
 
         return $clone;
-    }
-
-    private function associateTripWithUser(string $tripId, TripRequest $tripRequest): void
-    {
-        $user = $this->security->getUser();
-        if (!$user instanceof User) {
-            return;
-        }
-
-        // Create UserTrip association in PostgreSQL
-        $userTrip = new UserTrip($user, $tripRequest);
-        $userTrip->setTitle($tripRequest->title);
-        $userTrip->setSourceUrl($tripRequest->sourceUrl);
-
-        $this->entityManager->persist($userTrip);
-        $this->entityManager->flush();
-
-        // Store userId in Redis for fast ownership checks during computation
-        $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));
-        $item->set($user->getId()->toRfc4122());
-        $item->expiresAfter(self::CACHE_TTL);
-
-        $this->tripStateCache->save($item);
     }
 
     private function copyTransientData(string $sourceId, string $newTripId, TripRequest $duplicate): void
