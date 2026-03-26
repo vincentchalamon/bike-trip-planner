@@ -103,14 +103,6 @@ final class CreateUserCommand extends Command
             return Command::SUCCESS;
         }
 
-        try {
-            $this->entityManager->flush();
-        } catch (UniqueConstraintViolationException) {
-            $io->warning(\sprintf('An active invitation link already exists for user %s (concurrent creation).', $email));
-
-            return Command::SUCCESS;
-        }
-
         $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), $magicLink->getToken());
 
         $html = $this->twig->render('email/invitation.html.twig', [
@@ -124,7 +116,17 @@ final class CreateUserCommand extends Command
             ->subject($this->translator->trans('auth.email.invitation.subject', [], 'auth', $locale))
             ->html($html);
 
+        // Send email before flush: if SMTP fails, the magic link is not persisted
+        // and the user can retry immediately instead of being locked out.
         $this->mailer->send($emailMessage);
+
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            $io->warning(\sprintf('An active invitation link already exists for user %s (concurrent creation).', $email));
+
+            return Command::SUCCESS;
+        }
 
         $io->success('Invitation email sent.');
 
