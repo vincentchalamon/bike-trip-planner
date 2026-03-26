@@ -8,8 +8,9 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\AuthLogout;
 use App\Entity\User;
+use App\Repository\RefreshTokenRepository;
 use App\Security\AuthCookies;
-use App\Security\RefreshTokenManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -23,7 +24,8 @@ use Symfony\Component\HttpFoundation\Response;
 final readonly class AuthLogoutProcessor implements ProcessorInterface
 {
     public function __construct(
-        private RefreshTokenManager $refreshTokenManager,
+        private RefreshTokenRepository $refreshTokenRepository,
+        private EntityManagerInterface $entityManager,
         private Security $security,
         private LoggerInterface $logger,
     ) {
@@ -37,7 +39,8 @@ final readonly class AuthLogoutProcessor implements ProcessorInterface
         $user = $this->security->getUser();
 
         if ($user instanceof User) {
-            $this->refreshTokenManager->revokeAllRefreshTokens($user);
+            $this->refreshTokenRepository->removeAllForUser($user);
+            $this->entityManager->flush();
             $this->logger->debug('Auth logout user logged out', ['user' => $user->getEmail()]);
         }
 
