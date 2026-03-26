@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Auth;
 
+use Symfony\Contracts\HttpClient\ResponseInterface;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\Entity\RefreshToken;
 use App\Entity\User;
@@ -46,7 +47,7 @@ final class AuthRefreshTest extends ApiTestCase
      * Sends a refresh request using Capacitor body transport (Origin header
      * triggers body-based refresh token reading in the processor).
      */
-    private function sendRefreshRequest(string $refreshToken): \Symfony\Contracts\HttpClient\ResponseInterface
+    private function sendRefreshRequest(string $refreshToken): ResponseInterface
     {
         return self::createClient()->request('POST', '/auth/refresh', [
             'headers' => [
@@ -139,7 +140,7 @@ final class AuthRefreshTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(200);
         $data = $response->toArray(false);
 
-        $parts = explode('.', $data['token']);
+        $parts = explode('.', (string) $data['token']);
         $this->assertCount(3, $parts, 'JWT should have 3 dot-separated parts');
     }
 }

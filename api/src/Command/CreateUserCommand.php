@@ -89,10 +89,9 @@ final class CreateUserCommand extends Command
         $user = new User($email);
         $user->setLocale($locale);
 
+        // Persist but do NOT flush yet — defer until after the email send so that
+        // an SMTP failure does not leave an orphaned user without an invitation.
         $this->entityManager->persist($user);
-        $this->entityManager->flush();
-
-        $io->success(\sprintf('User created: %s (ID: %s)', $email, $user->getId()));
 
         // Create magic link for invitation
         $magicLink = $this->magicLinkRepository->create($user);
@@ -128,7 +127,7 @@ final class CreateUserCommand extends Command
             return Command::SUCCESS;
         }
 
-        $io->success('Invitation email sent.');
+        $io->success(\sprintf('User created: %s (ID: %s). Invitation email sent.', $email, $user->getId()));
 
         return Command::SUCCESS;
     }

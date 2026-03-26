@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
+use App\Entity\RefreshToken;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
@@ -67,7 +68,7 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
             );
         }
 
-        \assert($refreshToken instanceof \App\Entity\RefreshToken);
+        \assert($refreshToken instanceof RefreshToken);
 
         $jwt = $this->jwtManager->create($user);
 

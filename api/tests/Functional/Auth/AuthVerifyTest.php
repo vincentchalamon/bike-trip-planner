@@ -78,6 +78,7 @@ final class AuthVerifyTest extends ApiTestCase
                 break;
             }
         }
+
         $this->assertTrue($hasRefreshCookie, 'Response should set a refresh_token cookie');
     }
 
@@ -167,7 +168,7 @@ final class AuthVerifyTest extends ApiTestCase
         $data = $response->toArray(false);
 
         // JWT should have 3 dot-separated parts (header.payload.signature)
-        $parts = explode('.', $data['token']);
+        $parts = explode('.', (string) $data['token']);
         $this->assertCount(3, $parts, 'JWT should have 3 dot-separated parts');
     }
 }

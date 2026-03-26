@@ -94,8 +94,8 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
                 $this->entityManager->remove($existing);
                 $newRefreshToken = $this->refreshTokenRepository->createForUser($user);
             });
-        } catch (\RuntimeException $e) {
-            if ('token_already_consumed' === $e->getMessage()) {
+        } catch (\RuntimeException $runtimeException) {
+            if ('token_already_consumed' === $runtimeException->getMessage()) {
                 $this->logger->debug('Auth refresh token already consumed (TOCTOU)');
 
                 return new JsonResponse(
@@ -104,7 +104,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
                 );
             }
 
-            throw $e;
+            throw $runtimeException;
         }
 
         \assert($newRefreshToken instanceof RefreshToken);

@@ -82,6 +82,7 @@ final class AuthLogoutTest extends ApiTestCase
                 break;
             }
         }
+
         $this->assertTrue($cookieCleared, 'Response should clear the refresh_token cookie');
     }
 
