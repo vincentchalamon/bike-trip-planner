@@ -140,7 +140,7 @@ Full OAuth2 authorization server (e.g., league/oauth2-server-bundle).
      │                   │                   │ (256-bit entropy) │
      │                   │                   │                   │
      │                   │                   │ Send magic link   │
-     │                   │ 200 OK            │──────────────────►│
+     │                   │ 202 Accepted      │──────────────────►│
      │                   │◄──────────────────│                   │
      │ "Check your email"│                   │                   │
      │◄──────────────────│                   │                   │
