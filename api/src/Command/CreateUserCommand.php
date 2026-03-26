@@ -121,11 +121,10 @@ final class CreateUserCommand extends Command
 
         try {
             $this->entityManager->flush();
-        } catch (UniqueConstraintViolationException $uniqueConstraintViolationException) {
-            // Could be uniq_user_email (concurrent user creation) or uniq_magic_link_user
-            $io->error(\sprintf('Concurrent creation conflict for user %s: %s', $email, $uniqueConstraintViolationException->getMessage()));
+        } catch (UniqueConstraintViolationException) {
+            $io->warning(\sprintf('User "%s" or their invitation link was created concurrently by another process — no action needed.', $email));
 
-            return Command::FAILURE;
+            return Command::SUCCESS;
         }
 
         $io->success(\sprintf('User created: %s (ID: %s). Invitation email sent.', $email, $user->getId()));

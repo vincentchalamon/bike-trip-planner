@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
+use App\Exception\Auth\TokenAlreadyConsumedException;
 use Symfony\Component\HttpFoundation\Request;
 use App\Entity\RefreshToken;
 use ApiPlatform\Metadata\Operation;
@@ -88,23 +89,19 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
             $this->entityManager->wrapInTransaction(function () use ($existing, $user, &$newRefreshToken): void {
                 $affected = $this->refreshTokenRepository->atomicExpire($existing);
                 if (0 === $affected) {
-                    throw new \RuntimeException('token_already_consumed');
+                    throw new TokenAlreadyConsumedException();
                 }
 
                 $this->entityManager->remove($existing);
                 $newRefreshToken = $this->refreshTokenRepository->createForUser($user);
             });
-        } catch (\RuntimeException $runtimeException) {
-            if ('token_already_consumed' === $runtimeException->getMessage()) {
-                $this->logger->debug('Auth refresh token already consumed (TOCTOU)');
+        } catch (TokenAlreadyConsumedException) {
+            $this->logger->debug('Auth refresh token already consumed (TOCTOU)');
 
-                return new JsonResponse(
-                    ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
-                    Response::HTTP_UNAUTHORIZED,
-                );
-            }
-
-            throw $runtimeException;
+            return new JsonResponse(
+                ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
+                Response::HTTP_UNAUTHORIZED,
+            );
         }
 
         \assert($newRefreshToken instanceof RefreshToken);
