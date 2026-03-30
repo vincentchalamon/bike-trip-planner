@@ -10,7 +10,7 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: MagicLinkRepository::class)]
 #[ORM\Table(name: 'magic_link')]
-#[ORM\Index(name: 'idx_magic_link_token', columns: ['token'])]
+#[ORM\UniqueConstraint(name: 'uniq_magic_link_token', columns: ['token'])]
 #[ORM\Index(name: 'idx_magic_link_user_expires', columns: ['user_id', 'expires_at'])]
 class MagicLink
 {

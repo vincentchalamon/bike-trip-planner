@@ -27,6 +27,7 @@ export class MercureClient {
   constructor(
     private readonly mercureHubUrl: string,
     private readonly topic: string,
+    private readonly authHeaderFactory?: () => Promise<string | null>,
   ) {}
 
   /**
@@ -122,12 +123,15 @@ export class MercureClient {
     if (!tripId) return;
 
     try {
+      const headers: Record<string, string> = { Accept: "application/ld+json" };
+      if (this.authHeaderFactory) {
+        const bearer = await this.authHeaderFactory();
+        if (bearer) headers["Authorization"] = bearer;
+      }
+
       const res = await fetch(
         `${API_URL}/trips/${encodeURIComponent(tripId)}/detail`,
-        {
-          headers: { Accept: "application/ld+json" },
-          credentials: "include",
-        },
+        { headers, credentials: "include" },
       );
 
       // For Capacitor, extract the token from the X-Mercure-Token response header
