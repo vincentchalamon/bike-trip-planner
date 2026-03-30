@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { FAKE_JWT_TOKEN } from "../fixtures/api-mocks";
 
 const TRIP_ID = "01936f6e-0000-7000-8000-000000000101";
 
@@ -19,6 +20,16 @@ const MOCK_DETAIL = {
 };
 
 test.describe("/trips/[id] detail page", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/auth/refresh", (route) =>
+      route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+      }),
+    );
+  });
+
   test("renders close button after successful load", async ({ page }) => {
     await page.route(`**/trips/${TRIP_ID}/detail`, (route, request) => {
       const accept = request.headers()["accept"] ?? "";

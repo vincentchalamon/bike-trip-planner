@@ -78,7 +78,9 @@ const requestBodyCache = new WeakMap<Request, BodyInit | null>();
 const authMiddleware: Middleware = {
   onRequest({ request }) {
     // Clone body before it is consumed so the retry in onResponse can reuse it.
-    requestBodyCache.set(request, request.body);
+    // request.body is a ReadableStream — once fetch() consumes it, it's locked.
+    // request.clone() creates an independent copy whose stream remains unconsumed.
+    requestBodyCache.set(request, request.body ? request.clone().body : null);
     const authValue = getAuthHeader();
     if (authValue) {
       request.headers.set("Authorization", authValue);

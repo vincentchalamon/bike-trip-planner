@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { FAKE_JWT_TOKEN } from "../fixtures/api-mocks";
 
 const MOCK_TRIPS = {
   member: [
@@ -28,6 +29,15 @@ const MOCK_TRIPS = {
 
 test.describe("/trips page", () => {
   test.beforeEach(async ({ page }) => {
+    // Mock auth refresh so AuthGuard passes
+    await page.route("**/auth/refresh", (route) =>
+      route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+      }),
+    );
+
     // Only intercept API calls (Accept: application/ld+json), not page navigation
     await page.route("**/trips*", (route, request) => {
       const accept = request.headers()["accept"] ?? "";
