@@ -20,6 +20,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
 
 /**
@@ -31,8 +32,6 @@ use Twig\Environment;
  */
 final readonly class AuthRequestLinkProcessor implements ProcessorInterface
 {
-    private const string NEUTRAL_MESSAGE = 'Si votre adresse est enregistrée, vous recevrez un lien de connexion.';
-
     public function __construct(
         private EntityManagerInterface $entityManager,
         private MagicLinkRepository $magicLinkRepository,
@@ -40,6 +39,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         private Environment $twig,
         private RequestStack $requestStack,
         private LoggerInterface $logger,
+        private TranslatorInterface $translator,
         #[Autowire(service: 'limiter.magic_link_email')]
         private RateLimiterFactory $magicLinkEmailLimiter,
         #[Autowire(service: 'limiter.magic_link_ip')]
@@ -66,10 +66,12 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         $ipAccepted = $ipLimiter->consume()->isAccepted();
         $emailAccepted = $emailLimiter->consume()->isAccepted();
 
+        $neutralMessage = $this->translator->trans('auth.neutral_message', [], 'auth');
+
         if (!$ipAccepted || !$emailAccepted) {
             $this->logger->debug('Auth request-link rate limited', ['email' => $email, 'ip' => $clientIp]);
 
-            return new JsonResponse(['message' => self::NEUTRAL_MESSAGE], Response::HTTP_ACCEPTED);
+            return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
 
         $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
@@ -77,7 +79,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         if (!$user instanceof User) {
             $this->logger->debug('Auth request-link user not found', ['email' => $email]);
 
-            return new JsonResponse(['message' => self::NEUTRAL_MESSAGE], Response::HTTP_ACCEPTED);
+            return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
 
         $magicLink = $this->magicLinkRepository->create($user);
@@ -85,10 +87,8 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         if (!$magicLink instanceof MagicLink) {
             $this->logger->debug('Auth request-link active link already exists', ['email' => $email]);
 
-            return new JsonResponse(['message' => self::NEUTRAL_MESSAGE], Response::HTTP_ACCEPTED);
+            return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
         }
-
-        $this->entityManager->flush();
 
         $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), $magicLink->getToken());
 
@@ -107,9 +107,10 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
             ->html($html);
 
         $this->mailer->send($emailMessage);
+        $this->entityManager->flush();
 
         $this->logger->debug('Auth request-link magic link created and sent', ['email' => $email]);
 
-        return new JsonResponse(['message' => self::NEUTRAL_MESSAGE], Response::HTTP_ACCEPTED);
+        return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
     }
 }

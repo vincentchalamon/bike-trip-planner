@@ -133,7 +133,7 @@ Full OAuth2 authorization server (e.g., league/oauth2-server-bundle).
 │          │         │ Frontend │         │ Backend  │         │  (SMTP)  │
 └────┬─────┘         └────┬─────┘         └────┬─────┘         └────┬─────┘
      │  Enter email       │                    │                     │
-     │───────────────────►│  POST /auth/login  │                     │
+     │───────────────────►│  POST /auth/request-link  │                     │
      │                    │───────────────────►│                     │
      │                    │                    │  Generate token      │
      │                    │                    │  (256-bit entropy)   │
@@ -211,7 +211,7 @@ In Capacitor WebView, HttpOnly cookies may not be reliably transmitted. When the
 - **Doctrine entity** `MagicLinkToken` with columns: `token` (hashed), `email`, `expires_at`, `consumed_at`
 - **Symfony Mailer** with Resend SMTP transport for magic link delivery
 - **Symfony RateLimiter** for throttling (Redis-backed sliding window)
-- **Custom API Platform State Processor** for the `/auth/login` endpoint
+- **Custom API Platform State Processor** for the `/auth/request-link` endpoint
 
 ### Frontend (Next.js)
 

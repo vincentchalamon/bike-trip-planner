@@ -75,6 +75,22 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
             return $response;
         }
 
+        // Atomic expire guard: prevent TOCTOU race in concurrent refresh requests.
+        // If another request already consumed this token, 0 rows will be affected.
+        $expiredRows = $this->entityManager->getConnection()->executeStatement(
+            "UPDATE refresh_token SET expires_at = '1970-01-01 00:00:00' WHERE id = :id AND expires_at > NOW()",
+            ['id' => $existing->getId()->toRfc4122()],
+        );
+
+        if (0 === $expiredRows) {
+            $this->logger->debug('Auth refresh token already consumed (race)');
+
+            return new JsonResponse(
+                ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
+                Response::HTTP_UNAUTHORIZED,
+            );
+        }
+
         $user = $existing->getUser();
         $this->entityManager->remove($existing);
         $newRefreshToken = $this->refreshTokenRepository->createForUser($user);
@@ -95,6 +111,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         return $response;
     }
 
+    // TODO: extract isCapacitorRequest() and setRefreshTokenCookie() to shared AuthCookieFactory service (#78)
     private function isCapacitorRequest(): bool
     {
         $request = $this->requestStack->getCurrentRequest();

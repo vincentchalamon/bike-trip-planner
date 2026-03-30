@@ -86,20 +86,17 @@ final class CreateUserCommand extends Command
         $user->setLocale($locale);
 
         $this->entityManager->persist($user);
-        $this->entityManager->flush();
-
-        $io->success(\sprintf('User created: %s (ID: %s)', $email, $user->getId()));
 
         // Create magic link for invitation
         $magicLink = $this->magicLinkRepository->create($user);
 
         if (!$magicLink instanceof MagicLink) {
+            $this->entityManager->flush();
+            $io->success(\sprintf('User created: %s (ID: %s)', $email, $user->getId()));
             $io->warning(\sprintf('An active invitation link already exists for user %s.', $email));
 
             return Command::SUCCESS;
         }
-
-        $this->entityManager->flush();
 
         $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), $magicLink->getToken());
 
@@ -116,7 +113,9 @@ final class CreateUserCommand extends Command
             ->html($html);
 
         $this->mailer->send($emailMessage);
+        $this->entityManager->flush();
 
+        $io->success(\sprintf('User created: %s (ID: %s)', $email, $user->getId()));
         $io->success('Invitation email sent.');
 
         return Command::SUCCESS;

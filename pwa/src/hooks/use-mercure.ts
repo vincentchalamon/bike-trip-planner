@@ -377,6 +377,7 @@ export function useMercure(
   useEffect(() => {
     if (!tripId) return;
 
+    // TODO: wire authHeaderFactory when auth store is implemented (#78)
     const client = new MercureClient(MERCURE_URL, `/trips/${tripId}`);
     if (mercureToken) {
       client.setMercureToken(mercureToken);
