@@ -240,4 +240,12 @@ final class GeocodeTest extends ApiTestCase
 
         self::getContainer()->set('nominatim.client', $mockClient);
     }
+
+    #[Test]
+    public function unauthenticatedRequestReturns401(): void
+    {
+        $this->client->request('GET', '/geocode/search?q=Paris');
+
+        $this->assertResponseStatusCodeSame(401);
+    }
 }

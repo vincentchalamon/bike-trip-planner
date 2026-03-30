@@ -95,4 +95,12 @@ final class TripDetailTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(404);
     }
+
+    #[Test]
+    public function unauthenticatedRequestReturns401(): void
+    {
+        $this->client->request('GET', '/trips/01936f6e-0000-7000-8000-000000000001/detail');
+
+        $this->assertResponseStatusCodeSame(401);
+    }
 }

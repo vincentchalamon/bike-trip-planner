@@ -270,4 +270,14 @@ final class GpxUploadTest extends ApiTestCase
         $this->assertNotEmpty($data['id']);
         $this->assertSame('Trip', $data['@type']);
     }
+
+    #[Test]
+    public function unauthenticatedRequestReturns401(): void
+    {
+        $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => ['Content-Type' => 'multipart/form-data'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(401);
+    }
 }
