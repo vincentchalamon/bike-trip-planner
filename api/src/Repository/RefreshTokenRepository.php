@@ -58,10 +58,11 @@ final class RefreshTokenRepository extends ServiceEntityRepository
      */
     public function removeAllForUser(User $user): void
     {
-        $tokens = $this->findBy(['user' => $user]);
-
-        foreach ($tokens as $token) {
-            $this->getEntityManager()->remove($token);
-        }
+        $this->getEntityManager()->createQueryBuilder()
+            ->delete(RefreshToken::class, 'rt')
+            ->where('rt.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->execute();
     }
 }

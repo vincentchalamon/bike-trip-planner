@@ -127,7 +127,7 @@ Full OAuth2 authorization server (e.g., league/oauth2-server-bundle).
 
 ### Authentication Flow
 
-```
+```text
 ┌─────────┐         ┌──────────┐         ┌─────────┐         ┌──────────┐
 │ Browser  │         │ Next.js  │         │ Symfony  │         │  Resend  │
 │          │         │ Frontend │         │ Backend  │         │  (SMTP)  │
