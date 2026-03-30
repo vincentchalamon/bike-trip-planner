@@ -52,32 +52,31 @@ final class MagicLinkRepository extends ServiceEntityRepository
     /**
      * Atomically consumes a magic link token and returns the associated user.
      *
-     * Uses a conditional UPDATE (SET consumed_at WHERE consumed_at IS NULL)
-     * to prevent TOCTOU race conditions — only the first concurrent request wins.
-     * Returns null if the token is invalid, expired, or already consumed.
+     * Uses a native SQL conditional UPDATE (SET consumed_at = NOW() WHERE
+     * consumed_at IS NULL AND expires_at > NOW()) to prevent TOCTOU race
+     * conditions — only the first concurrent request wins.
+     *
+     * Native SQL is used instead of DQL because Doctrine ORM 3 does not bind
+     * DateTimeImmutable correctly in combined SET + WHERE clauses on PostgreSQL.
      */
     public function consumeByToken(string $token): ?User
     {
+        $affected = $this->getEntityManager()->getConnection()->executeStatement(
+            'UPDATE magic_link SET consumed_at = NOW() WHERE token = :token AND consumed_at IS NULL AND expires_at > NOW()',
+            ['token' => $token],
+        );
+
+        if (0 === $affected) {
+            $this->logger->debug('Magic link not found, expired, or already consumed', ['token_prefix' => substr($token, 0, 12)]);
+
+            return null;
+        }
+
         $magicLink = $this->findOneBy(['token' => $token]);
 
-        if (!$magicLink instanceof MagicLink) {
-            $this->logger->debug('Magic link not found', ['token_prefix' => substr($token, 0, 12)]);
+        $this->logger->debug('Magic link consumed', ['email' => $magicLink?->getUser()->getEmail()]);
 
-            return null;
-        }
-
-        if (!$magicLink->isValid()) {
-            $this->logger->debug('Magic link expired or already consumed', ['token_prefix' => substr($token, 0, 12)]);
-
-            return null;
-        }
-
-        $magicLink->consume();
-        $this->getEntityManager()->flush();
-
-        $this->logger->debug('Magic link consumed', ['email' => $magicLink->getUser()->getEmail()]);
-
-        return $magicLink->getUser();
+        return $magicLink?->getUser();
     }
 
     private function hasActiveLinkForUser(User $user): bool

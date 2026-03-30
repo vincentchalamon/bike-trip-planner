@@ -43,17 +43,9 @@ export function parseJwtPayload(
       "=",
     );
     const payload = JSON.parse(atob(padded)) as Record<string, unknown>;
-    // LexikJWTBundle uses "username" for the user identifier
-    const email =
-      typeof payload.email === "string"
-        ? payload.email
-        : typeof payload.username === "string"
-          ? payload.username
-          : null;
-    const sub =
-      typeof payload.sub === "string"
-        ? payload.sub
-        : email; // fallback: use email as sub if no sub claim
+    // sub = UUID (from JwtCreatedListener), username = email (LexikJWTBundle default)
+    const sub = typeof payload.sub === "string" ? payload.sub : null;
+    const email = typeof payload.username === "string" ? payload.username : null;
     if (!sub || !email) {
       return null;
     }
