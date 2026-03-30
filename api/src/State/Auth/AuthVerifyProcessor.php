@@ -10,11 +10,9 @@ use App\ApiResource\Auth\Auth;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
 use App\Repository\RefreshTokenRepository;
-use App\Security\AuthCookies;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
@@ -29,6 +27,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  */
 final readonly class AuthVerifyProcessor implements ProcessorInterface
 {
+    use AuthResponseHelper;
+
     public function __construct(
         private MagicLinkRepository $magicLinkRepository,
         private RefreshTokenRepository $refreshTokenRepository,
@@ -75,24 +75,8 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
         return $response;
     }
 
-    private function isCapacitorRequest(): bool
+    private function getRequestStack(): RequestStack
     {
-        $request = $this->requestStack->getCurrentRequest();
-        $origin = $request?->headers->get('Origin', '') ?? '';
-
-        return str_starts_with($origin, 'capacitor://');
-    }
-
-    private function setRefreshTokenCookie(JsonResponse $response, string $token, \DateTimeImmutable $expiresAt): void
-    {
-        $cookie = Cookie::create(AuthCookies::REFRESH_TOKEN)
-            ->withValue($token)
-            ->withExpires($expiresAt)
-            ->withPath('/')
-            ->withSecure(true)
-            ->withHttpOnly(true)
-            ->withSameSite('strict');
-
-        $response->headers->setCookie($cookie);
+        return $this->requestStack;
     }
 }

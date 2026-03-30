@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use Symfony\Contracts\Translation\TranslatorInterface;
 use App\Entity\MagicLink;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
@@ -36,6 +37,7 @@ final class CreateUserCommand extends Command
         private readonly MagicLinkRepository $magicLinkRepository,
         private readonly MailerInterface $mailer,
         private readonly Environment $twig,
+        private readonly TranslatorInterface $translator,
         #[Autowire(env: 'FRONTEND_URL')]
         private readonly string $frontendUrl = 'https://localhost',
     ) {
@@ -109,7 +111,7 @@ final class CreateUserCommand extends Command
         $emailMessage = new Email()
             ->from(new Address('noreply@bike-trip-planner.com', 'Bike Trip Planner'))
             ->to($email)
-            ->subject('Invitation — Bike Trip Planner')
+            ->subject($this->translator->trans('auth.email.invitation.subject', [], 'auth', $locale))
             ->html($html);
 
         $this->mailer->send($emailMessage);

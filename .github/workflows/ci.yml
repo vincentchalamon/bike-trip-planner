@@ -309,9 +309,9 @@ jobs:
             pwa.cache-from=type=gha,scope=pwa-main
             pwa.cache-to=type=gha,scope=pwa,mode=max
       - name: Start services
-        run: docker compose up -d database php pwa worker redis --no-build --wait || true
+        run: docker compose up -d database php pwa worker redis --no-build --wait
       - name: Dump PHP logs on failure
-        if: failure() || success()
+        if: failure()
         run: docker compose logs php --tail 50
       - name: Run Playwright
         run: >-

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
@@ -107,7 +108,13 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
             ->html($html);
 
         $this->mailer->send($emailMessage);
-        $this->entityManager->flush();
+
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            // Concurrent request already created a link — return neutral response
+            return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
+        }
 
         $this->logger->debug('Auth request-link magic link created and sent', ['email' => $email]);
 
