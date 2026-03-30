@@ -90,9 +90,11 @@ export class MercureClient {
 
       // EventSource enters CLOSED state (2) on terminal HTTP errors (401, 403, 404, 5xx…).
       // Attempt re-authentication on the first CLOSED error in case the cookie expired.
+      // Skip if no authHeaderFactory — the /detail endpoint requires JWT auth.
       if (
         readyState === EventSource.CLOSED &&
-        this.authRetries < MAX_AUTH_RETRIES
+        this.authRetries < MAX_AUTH_RETRIES &&
+        this.authHeaderFactory
       ) {
         this.authRetries++;
         this.refreshMercureAuth().then(() => {

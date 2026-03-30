@@ -76,12 +76,25 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
             return $response;
         }
 
-        // Atomic expire guard: prevent TOCTOU race in concurrent refresh requests.
-        // If another request already consumed this token, 0 rows will be affected.
-        $expiredRows = $this->entityManager->getConnection()->executeStatement(
-            "UPDATE refresh_token SET expires_at = '1970-01-01 00:00:00' WHERE id = :id AND expires_at > NOW()",
-            ['id' => $existing->getId()->toRfc4122()],
-        );
+        // Atomic expire + rotate in a single transaction to prevent TOCTOU race
+        // and ensure no token is lost if the flush fails.
+        $user = $existing->getUser();
+        $expiredRows = 0;
+        $newRefreshToken = null;
+
+        $this->entityManager->wrapInTransaction(function () use ($existing, $user, &$expiredRows, &$newRefreshToken): void {
+            $expiredRows = $this->entityManager->getConnection()->executeStatement(
+                "UPDATE refresh_token SET expires_at = '1970-01-01 00:00:00' WHERE id = :id AND expires_at > NOW()",
+                ['id' => $existing->getId()->toRfc4122()],
+            );
+
+            if (0 === $expiredRows) {
+                return;
+            }
+
+            $this->entityManager->remove($existing);
+            $newRefreshToken = $this->refreshTokenRepository->createForUser($user);
+        });
 
         if (0 === $expiredRows) {
             $this->logger->debug('Auth refresh token already consumed (race)');
@@ -92,10 +105,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
             );
         }
 
-        $user = $existing->getUser();
-        $this->entityManager->remove($existing);
-        $newRefreshToken = $this->refreshTokenRepository->createForUser($user);
-        $this->entityManager->flush();
+        \assert($newRefreshToken instanceof RefreshToken);
 
         $jwt = $this->jwtManager->create($user);
 
