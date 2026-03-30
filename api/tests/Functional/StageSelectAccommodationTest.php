@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Component\Uid\Uuid;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Message\CheckCalendar;
@@ -27,8 +30,21 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 final class StageSelectAccommodationTest extends ApiTestCase
 {
     use Factories;
+    use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000039';
+
+    private Client $client;
+
+    private User $testUser;
+
+    private string $jwtToken;
+
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+    }
 
     private function seedTripWithStages(string $tripId): void
     {
@@ -37,7 +53,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
-        $request = new TripRequest();
+        $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/987654321';
         $request->startDate = new \DateTimeImmutable('2026-07-01');
 
@@ -78,16 +94,17 @@ final class StageSelectAccommodationTest extends ApiTestCase
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
         $tracker->initializeComputations($tripId, ComputationName::cases());
+
+        $this->associateTripWithUser($tripId, $this->testUser);
     }
 
     #[Test]
     public function selectAccommodationUpdatesEndPointAndNextStartPoint(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'selectedAccommodationLat' => 45.48,
                 'selectedAccommodationLon' => 5.48,
@@ -126,11 +143,10 @@ final class StageSelectAccommodationTest extends ApiTestCase
     #[Test]
     public function selectAccommodationDispatchesRecalculate(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'selectedAccommodationLat' => 45.48,
                 'selectedAccommodationLon' => 5.48,
@@ -158,7 +174,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
-        $request = new TripRequest();
+        $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/987654321';
         $request->startDate = new \DateTimeImmutable('2026-07-01');
 
@@ -200,20 +216,21 @@ final class StageSelectAccommodationTest extends ApiTestCase
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
         $tracker->initializeComputations($tripId, ComputationName::cases());
+
+        $this->associateTripWithUser($tripId, $this->testUser);
     }
 
     #[Test]
     public function deselectAccommodationDispatchesScanAccommodations(): void
     {
-        self::createClient();
         $this->seedTripWithSelectedAccommodation(self::TRIP_ID);
 
         /** @var InMemoryTransport $transport */
         $transport = self::getContainer()->get('messenger.transport.async');
         $transport->reset();
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => ['selectedAccommodationLat' => null, 'selectedAccommodationLon' => null],
         ]);
         $this->assertResponseStatusCodeSame(202);
@@ -253,7 +270,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
-        $request = new TripRequest();
+        $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/987654321';
         $request->startDate = new \DateTimeImmutable('2026-07-01');
 
@@ -296,16 +313,17 @@ final class StageSelectAccommodationTest extends ApiTestCase
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
         $tracker->initializeComputations($tripId, ComputationName::cases());
+
+        $this->associateTripWithUser($tripId, $this->testUser);
     }
 
     #[Test]
     public function selectAccommodationWithStaleCoordinatesReturns409(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'selectedAccommodationLat' => 45.0,
                 'selectedAccommodationLon' => 5.0,
@@ -318,11 +336,10 @@ final class StageSelectAccommodationTest extends ApiTestCase
     #[Test]
     public function selectAccommodationFallsBackToSelectedAccommodationReturns202(): void
     {
-        self::createClient();
         $this->seedTripWithSelectedAccommodationOnly(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/accommodation', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'selectedAccommodationLat' => 45.48,
                 'selectedAccommodationLon' => 5.48,
@@ -335,11 +352,10 @@ final class StageSelectAccommodationTest extends ApiTestCase
     #[Test]
     public function selectAccommodationOnNonExistentStageReturns404(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/99/accommodation', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/99/accommodation', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'selectedAccommodationLat' => 45.48,
                 'selectedAccommodationLon' => 5.48,

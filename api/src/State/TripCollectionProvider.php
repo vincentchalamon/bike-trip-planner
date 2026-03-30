@@ -49,19 +49,14 @@ final readonly class TripCollectionProvider implements ProviderInterface
 
         $user = $this->security->getUser();
 
+        \assert($user instanceof User);
+
         $qb = $this->entityManager->createQueryBuilder();
         $qb->select('t')
             ->from(TripRequest::class, 't')
-            ->orderBy('t.createdAt', 'DESC');
-
-        // Filter by current user's trips
-        if ($user instanceof User) {
-            $qb->andWhere('t.user = :user')
-                ->setParameter('user', $user);
-        } else {
-            // No authenticated user: return empty result
-            $qb->andWhere('1 = 0');
-        }
+            ->orderBy('t.createdAt', 'DESC')
+            ->andWhere('t.user = :user')
+            ->setParameter('user', $user);
 
         // Filter by title (partial, case-insensitive)
         if (isset($filters['title']) && '' !== $filters['title'] && is_string($filters['title'])) {

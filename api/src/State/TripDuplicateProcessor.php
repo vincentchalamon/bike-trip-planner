@@ -15,6 +15,7 @@ use App\Entity\Stage;
 use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Security\Voter\TripVoter;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -28,8 +29,6 @@ use Symfony\Component\Uid\Uuid;
  */
 final readonly class TripDuplicateProcessor implements ProcessorInterface
 {
-    private const int CACHE_TTL = 1800; // 30 minutes
-
     public function __construct(
         private TripRequestRepositoryInterface $tripRepository,
         private EntityManagerInterface $entityManager,
@@ -81,11 +80,10 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
             $this->entityManager->persist($clonedStage);
         }
 
-        // Associate duplicate with current user before flush
-        $user = $this->security->getUser();
-        if ($user instanceof User) {
-            $duplicate->user = $user;
-        }
+        // Copy user from source trip, or fall back to the authenticated user
+        $user = $source->user ?? $this->security->getUser();
+        \assert($user instanceof User);
+        $duplicate->user = $user;
 
         $this->entityManager->beginTransaction();
         try {
@@ -109,12 +107,11 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $this->generationTracker->initialize($newTripIdString);
 
         // Store userId in Redis for fast ownership checks during computation
-        if ($user instanceof User) {
-            $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $newTripIdString));
-            $item->set($user->getId()->toRfc4122());
-            $item->expiresAfter(self::CACHE_TTL);
-            $this->tripStateCache->save($item);
-        }
+        $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $newTripIdString));
+        $item->set($user->getId()->toRfc4122());
+        $item->expiresAfter(TripVoter::CACHE_TTL);
+
+        $this->tripStateCache->save($item);
 
         $statuses = $this->computationTracker->getStatuses($newTripIdString) ?? [];
 

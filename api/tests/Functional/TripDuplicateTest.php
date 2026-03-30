@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Component\Uid\Uuid;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\Stage;
+use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
 use App\Repository\TripRequestRepositoryInterface;
@@ -20,12 +23,25 @@ final class TripDuplicateTest extends ApiTestCase
 {
     use ResetDatabase;
     use Factories;
+    use JwtAuthTestTrait;
+
+    private Client $client;
+
+    private User $testUser;
+
+    private string $jwtToken;
+
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+    }
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000002';
 
     private function seedTrip(string $tripId): void
     {
-        $request = new TripRequest();
+        $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
         $request->startDate = new \DateTimeImmutable('2026-07-01');
         $request->fatigueFactor = 0.85;
@@ -51,6 +67,7 @@ final class TripDuplicateTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
         $repo->initializeTrip($tripId, $request);
+        $this->associateTripWithUser($tripId, $this->testUser);
 
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
@@ -69,10 +86,10 @@ final class TripDuplicateTest extends ApiTestCase
     {
         $this->seedTrip(self::TRIP_ID);
 
-        $response = self::createClient()->request(
+        $response = $this->client->request(
             'POST',
             \sprintf('/trips/%s/duplicate', self::TRIP_ID),
-            ['headers' => ['Content-Type' => 'application/ld+json']],
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken))],
         );
 
         $this->assertResponseStatusCodeSame(201);
@@ -88,10 +105,10 @@ final class TripDuplicateTest extends ApiTestCase
     #[Test]
     public function duplicateNonExistentTripReturns404(): void
     {
-        self::createClient()->request(
+        $this->client->request(
             'POST',
             '/trips/00000000-0000-0000-0000-000000000000/duplicate',
-            ['headers' => ['Content-Type' => 'application/ld+json']],
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken))],
         );
 
         $this->assertResponseStatusCodeSame(404);
@@ -102,10 +119,10 @@ final class TripDuplicateTest extends ApiTestCase
     {
         $this->seedTrip(self::TRIP_ID);
 
-        $response = self::createClient()->request(
+        $response = $this->client->request(
             'POST',
             \sprintf('/trips/%s/duplicate', self::TRIP_ID),
-            ['headers' => ['Content-Type' => 'application/ld+json']],
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken))],
         );
 
         $this->assertResponseStatusCodeSame(201);
@@ -139,10 +156,10 @@ final class TripDuplicateTest extends ApiTestCase
     {
         $this->seedTrip(self::TRIP_ID);
 
-        $response = self::createClient()->request(
+        $response = $this->client->request(
             'POST',
             \sprintf('/trips/%s/duplicate', self::TRIP_ID),
-            ['headers' => ['Content-Type' => 'application/ld+json']],
+            ['headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken))],
         );
 
         $this->assertResponseStatusCodeSame(201);

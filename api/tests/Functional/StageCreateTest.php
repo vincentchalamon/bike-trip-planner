@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Component\Uid\Uuid;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Message\RecalculateStages;
@@ -23,8 +26,21 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 final class StageCreateTest extends ApiTestCase
 {
     use Factories;
+    use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000010';
+
+    private Client $client;
+
+    private User $testUser;
+
+    private string $jwtToken;
+
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+    }
 
     private function seedTripWithStages(string $tripId, int $stageCount = 3): void
     {
@@ -33,7 +49,7 @@ final class StageCreateTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
-        $request = new TripRequest();
+        $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
         $request->startDate = new \DateTimeImmutable('2026-07-01');
 
@@ -61,16 +77,17 @@ final class StageCreateTest extends ApiTestCase
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
         $tracker->initializeComputations($tripId, ComputationName::cases());
+
+        $this->associateTripWithUser($tripId, $this->testUser);
     }
 
     #[Test]
     public function createStageSuccess(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
+        $response = $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0, 'ele' => 200.0],
                 'endPoint' => ['lat' => 44.5, 'lon' => 4.5, 'ele' => 300.0],
@@ -88,11 +105,10 @@ final class StageCreateTest extends ApiTestCase
     #[Test]
     public function createStageAtSpecificPosition(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
+        $response = $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'position' => 1,
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0, 'ele' => 200.0],
@@ -122,11 +138,10 @@ final class StageCreateTest extends ApiTestCase
     #[Test]
     public function createStageAtPositionZero(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
+        $response = $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'position' => 0,
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0],
@@ -156,11 +171,10 @@ final class StageCreateTest extends ApiTestCase
     #[Test]
     public function createStageWithLabel(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
+        $response = $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0],
                 'endPoint' => ['lat' => 44.5, 'lon' => 4.5],
@@ -187,11 +201,10 @@ final class StageCreateTest extends ApiTestCase
     #[Test]
     public function createStageDefaultsToEndPosition(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 2);
 
-        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
+        $response = $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0],
                 'endPoint' => ['lat' => 44.5, 'lon' => 4.5],
@@ -218,11 +231,10 @@ final class StageCreateTest extends ApiTestCase
     #[Test]
     public function rejectsMissingStartPoint(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'endPoint' => ['lat' => 44.5, 'lon' => 4.5],
             ],
@@ -239,11 +251,10 @@ final class StageCreateTest extends ApiTestCase
     #[Test]
     public function rejectsMissingEndPoint(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0],
             ],
@@ -260,11 +271,10 @@ final class StageCreateTest extends ApiTestCase
     #[Test]
     public function rejectsMissingBothPoints(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => new \stdClass(),
         ]);
 
@@ -279,11 +289,10 @@ final class StageCreateTest extends ApiTestCase
     #[Test]
     public function rejectsPositionOutOfBounds(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 3);
 
-        self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'position' => 10,
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0],
@@ -302,11 +311,10 @@ final class StageCreateTest extends ApiTestCase
     #[Test]
     public function rejectsNegativePosition(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'position' => -1,
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0],
@@ -326,11 +334,10 @@ final class StageCreateTest extends ApiTestCase
     #[Test]
     public function recalculateStagesMessageDispatched(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
+        $response = $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0],
                 'endPoint' => ['lat' => 44.5, 'lon' => 4.5],
@@ -359,11 +366,10 @@ final class StageCreateTest extends ApiTestCase
     #[Test]
     public function dayNumbersReindexedAfterInsert(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 3);
 
-        $response = self::createClient()->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
-            'headers' => ['Content-Type' => 'application/ld+json'],
+        $response = $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'position' => 1,
                 'startPoint' => ['lat' => 44.0, 'lon' => 4.0],

@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Component\Uid\Uuid;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Message\RecalculateStages;
@@ -23,8 +26,21 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 final class StageMoveTest extends ApiTestCase
 {
     use Factories;
+    use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000030';
+
+    private Client $client;
+
+    private User $testUser;
+
+    private string $jwtToken;
+
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+    }
 
     private function seedTripWithStages(string $tripId, int $stageCount = 4): void
     {
@@ -33,7 +49,7 @@ final class StageMoveTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
-        $request = new TripRequest();
+        $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
         $request->startDate = new \DateTimeImmutable('2026-07-01');
 
@@ -62,16 +78,17 @@ final class StageMoveTest extends ApiTestCase
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
         $tracker->initializeComputations($tripId, ComputationName::cases());
+
+        $this->associateTripWithUser($tripId, $this->testUser);
     }
 
     #[Test]
     public function moveStageForward(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 4);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/move', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/move', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'toIndex' => 2,
             ],
@@ -99,11 +116,10 @@ final class StageMoveTest extends ApiTestCase
     #[Test]
     public function moveStageBackward(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 4);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/3/move', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/3/move', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'toIndex' => 0,
             ],
@@ -126,11 +142,10 @@ final class StageMoveTest extends ApiTestCase
     #[Test]
     public function moveStageDispatchesRecalculate(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 3);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/move', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/move', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'toIndex' => 2,
             ],
@@ -154,11 +169,10 @@ final class StageMoveTest extends ApiTestCase
     #[Test]
     public function rejectsMissingToIndex(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/move', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/move', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => new \stdClass(),
         ]);
 
@@ -173,11 +187,10 @@ final class StageMoveTest extends ApiTestCase
     #[Test]
     public function rejectsToIndexOutOfBounds(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 3);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/move', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/move', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'toIndex' => 10,
             ],
@@ -194,11 +207,10 @@ final class StageMoveTest extends ApiTestCase
     #[Test]
     public function rejectsSameIndex(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/1/move', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/1/move', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'toIndex' => 1,
             ],
@@ -215,11 +227,10 @@ final class StageMoveTest extends ApiTestCase
     #[Test]
     public function rejectsNegativeToIndex(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/move', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0/move', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'toIndex' => -1,
             ],
@@ -237,11 +248,10 @@ final class StageMoveTest extends ApiTestCase
     #[Test]
     public function stageNotFound(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 3);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/99/move', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/99/move', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'toIndex' => 0,
             ],

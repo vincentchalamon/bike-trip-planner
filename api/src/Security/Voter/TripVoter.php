@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Security\Voter;
 
+use Symfony\Component\Security\Core\Authorization\Voter\Vote;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
@@ -29,6 +30,8 @@ final class TripVoter extends Voter
 
     public const string TRIP_DELETE = 'TRIP_DELETE';
 
+    public const int CACHE_TTL = 1800; // 30 minutes
+
     private const array SUPPORTED_ATTRIBUTES = [
         self::TRIP_VIEW,
         self::TRIP_EDIT,
@@ -51,7 +54,7 @@ final class TripVoter extends Voter
     /**
      * @param TripRequest|string $subject A TripRequest entity or a trip ID string
      */
-    protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?\Symfony\Component\Security\Core\Authorization\Voter\Vote $vote = null): bool
+    protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token, ?Vote $vote = null): bool
     {
         $user = $token->getUser();
         if (!$user instanceof User) {
@@ -71,7 +74,7 @@ final class TripVoter extends Voter
 
     private function isOwner(User $user, string $tripId): bool
     {
-        // Primary check: PostgreSQL user_trip table
+        // Primary check: PostgreSQL TripRequest.user column
         if ($this->isOwnerInDatabase($user, $tripId)) {
             return true;
         }
