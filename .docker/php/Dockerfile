@@ -31,8 +31,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # https://getcomposer.org/doc/03-cli.md#composer-allow-superuser
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
-ENV PHP_INI_SCAN_DIR=":$PHP_INI_DIR/app.conf.d"
-
 RUN set -eux; \
 	install-php-extensions \
 		@composer \
@@ -50,7 +48,7 @@ RUN set -eux; \
 ###< doctrine/doctrine-bundle ###
 ###< recipes ###
 
-COPY --link .docker/php/conf.d/10-app.ini $PHP_INI_DIR/app.conf.d/
+COPY --link .docker/php/conf.d/10-app.ini $PHP_INI_DIR/conf.d/zz-app.ini
 COPY --link --chmod=755 .docker/php/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 COPY --link .docker/php/Caddyfile /etc/frankenphp/Caddyfile
 
@@ -74,7 +72,7 @@ RUN set -eux; \
 		xdebug \
 	;
 
-COPY --link .docker/php/conf.d/20-app.dev.ini $PHP_INI_DIR/app.conf.d/
+COPY --link .docker/php/conf.d/20-app.dev.ini $PHP_INI_DIR/conf.d/zz-app.dev.ini
 
 CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile", "--watch" ]
 
@@ -85,7 +83,7 @@ ENV APP_ENV=prod
 
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
-COPY --link .docker/php/conf.d/20-app.prod.ini $PHP_INI_DIR/app.conf.d/
+COPY --link .docker/php/conf.d/20-app.prod.ini $PHP_INI_DIR/conf.d/zz-app.prod.ini
 
 # prevent the reinstallation of vendors at every changes in the source code
 COPY --link api/composer.* api/symfony.* ./

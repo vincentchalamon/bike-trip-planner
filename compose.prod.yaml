@@ -51,6 +51,7 @@ services:
       # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
       # and our date.timezone=UTC override takes effect.
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini
+      - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini
     healthcheck:
       test: curl --insecure --fail https://localhost/docs || exit 1
       interval: 5s
@@ -99,6 +100,7 @@ services:
       # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
       # and our date.timezone=UTC override takes effect.
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini
+      - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini
     healthcheck:
       test: pgrep -f messenger:consume || exit 1
       interval: 5s

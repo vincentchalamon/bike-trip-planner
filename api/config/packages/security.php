@@ -28,9 +28,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             ],
         ],
         'access_control' => [
-            ['path' => '^/docs', 'roles' => 'PUBLIC_ACCESS'],
             ['path' => '^/auth/(request-link|refresh|verify)$', 'roles' => 'PUBLIC_ACCESS'],
-            ['path' => '^/auth/logout', 'roles' => 'IS_AUTHENTICATED_FULLY'],
             ['path' => '^/', 'roles' => 'IS_AUTHENTICATED_FULLY'],
         ],
     ]);
