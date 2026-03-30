@@ -1,6 +1,7 @@
-import createClient from "openapi-fetch";
+import createClient, { type Middleware } from "openapi-fetch";
 import type { operations, paths } from "./schema";
 import { API_URL } from "@/lib/constants";
+import { useAuthStore } from "@/store/auth-store";
 
 function getBrowserLocale(): string {
   if (typeof navigator !== "undefined") {
@@ -9,18 +10,116 @@ function getBrowserLocale(): string {
   return "fr";
 }
 
+/**
+ * Get the current Authorization header value from the auth store.
+ * Returns undefined when no access token is available.
+ */
+function getAuthHeader(): string | undefined {
+  const { accessToken } = useAuthStore.getState();
+  return accessToken ? `Bearer ${accessToken}` : undefined;
+}
+
+/**
+ * Lightweight wrapper around `fetch` that injects the Accept-Language header
+ * and the Authorization bearer token (when available).
+ *
+ * Used for non-OpenAPI calls (GPX upload, accommodation scrape, etc.) where
+ * the openapi-fetch middleware pipeline is bypassed.
+ */
 export async function apiFetch(
   input: string,
   init?: RequestInit,
 ): Promise<Response> {
-  return fetch(input, {
+  const authHeader = getAuthHeader();
+  const res = await fetch(input, {
     ...init,
     headers: {
       "Accept-Language": getBrowserLocale(),
+      ...(authHeader ? { Authorization: authHeader } : {}),
       ...init?.headers,
     },
   });
+
+  // On 401, attempt a silent refresh and retry once
+  if (res.status === 401) {
+    const refreshed = await useAuthStore.getState().silentRefresh();
+    if (refreshed) {
+      const newAuthHeader = getAuthHeader();
+      return fetch(input, {
+        ...init,
+        headers: {
+          "Accept-Language": getBrowserLocale(),
+          ...(newAuthHeader ? { Authorization: newAuthHeader } : {}),
+          ...init?.headers,
+        },
+      });
+    }
+    // Refresh failed — redirect to login
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+  }
+
+  return res;
 }
+
+/**
+ * openapi-fetch middleware that injects the JWT access token on every request
+ * and handles 401 responses with a silent refresh + retry strategy.
+ *
+ * Flow on 401:
+ * 1. Call `silentRefresh()` to rotate the refresh_token cookie and get a new JWT
+ * 2. If refresh succeeds → retry the original request with the new token
+ * 3. If refresh fails → redirect to `/login`
+ */
+// Cache request bodies before they are consumed by fetch, so the retry can reuse them.
+const requestBodyCache = new WeakMap<Request, BodyInit | null>();
+
+const authMiddleware: Middleware = {
+  onRequest({ request }) {
+    // Clone body before it is consumed so the retry in onResponse can reuse it.
+    // request.body is a ReadableStream — once fetch() consumes it, it's locked.
+    // request.clone() creates an independent copy whose stream remains unconsumed.
+    requestBodyCache.set(request, request.body ? request.clone().body : null);
+    const authValue = getAuthHeader();
+    if (authValue) {
+      request.headers.set("Authorization", authValue);
+    }
+    return request;
+  },
+
+  async onResponse({ request, response }) {
+    if (response.status !== 401) {
+      return response;
+    }
+
+    const refreshed = await useAuthStore.getState().silentRefresh();
+    if (!refreshed) {
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+      return response;
+    }
+
+    // Retry with the new token — rebuild from scratch to avoid bodyUsed TypeError
+    const newAuthValue = getAuthHeader();
+    const headers = new Headers(request.headers);
+    if (newAuthValue) {
+      headers.set("Authorization", newAuthValue);
+    }
+    return fetch(request.url, {
+      method: request.method,
+      headers,
+      body: requestBodyCache.get(request),
+      credentials: request.credentials,
+      cache: request.cache,
+      redirect: request.redirect,
+      referrer: request.referrer,
+      integrity: request.integrity,
+      signal: request.signal,
+    });
+  },
+};
 
 export const apiClient = createClient<paths>({
   headers: {
@@ -29,6 +128,8 @@ export const apiClient = createClient<paths>({
     "Accept-Language": getBrowserLocale(),
   },
 });
+
+apiClient.use(authMiddleware);
 
 export interface ApiError {
   type: "validation" | "bad_request" | "not_found" | "network";

@@ -332,5 +332,18 @@
     "failedDeselectAccommodation": "Impossible de désélectionner l'hébergement.",
     "failedUpdateAccommodationTypes": "Impossible de mettre à jour les filtres de types d'hébergements.",
     "failedInsertRestDay": "Impossible d'insérer le jour de repos."
+  },
+  "auth": {
+    "loginTitle": "Connexion",
+    "loginDescription": "Entrez votre adresse email pour recevoir un lien de connexion.",
+    "emailLabel": "Adresse email",
+    "emailPlaceholder": "vous@exemple.com",
+    "sendLink": "Recevoir un lien de connexion",
+    "sending": "Envoi en cours...",
+    "linkSent": "Si votre adresse est enregistrée, vous allez recevoir un email avec un lien de connexion.",
+    "verifying": "Vérification en cours...",
+    "verifyFailed": "Lien invalide ou expiré. Veuillez demander un nouveau lien de connexion.",
+    "backToLogin": "Retour à la connexion",
+    "logout": "Déconnexion"
   }
 }

@@ -332,5 +332,18 @@
     "failedDeselectAccommodation": "Failed to deselect accommodation.",
     "failedUpdateAccommodationTypes": "Failed to update accommodation type filters.",
     "failedInsertRestDay": "Failed to insert rest day."
+  },
+  "auth": {
+    "loginTitle": "Sign in",
+    "loginDescription": "Enter your email address to receive a sign-in link.",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "sendLink": "Send sign-in link",
+    "sending": "Sending...",
+    "linkSent": "If your address is registered, you will receive an email with a sign-in link.",
+    "verifying": "Verifying...",
+    "verifyFailed": "Invalid or expired link. Please request a new sign-in link.",
+    "backToLogin": "Back to sign in",
+    "logout": "Sign out"
   }
 }
