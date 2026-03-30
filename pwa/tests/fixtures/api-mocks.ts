@@ -9,6 +9,14 @@ export interface MockApiOptions {
 
 const TRIP_ID = "test-trip-abc-123";
 
+/**
+ * Fake JWT token for test authentication.
+ * Payload: {"sub":"test-user-id","email":"test@example.com","exp":9999999999}
+ * Header/payload are valid base64url; signature is a fake placeholder.
+ */
+export const FAKE_JWT_TOKEN =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjk5OTk5OTk5OTl9.ZmFrZS1zaWduYXR1cmU";
+
 const defaultTripResponse = {
   "@context": "/contexts/Trip",
   "@id": `/trips/${TRIP_ID}`,
@@ -31,6 +39,16 @@ export async function mockAllApis(
     deleteStageFail = false,
     addStageFail = false,
   } = options;
+
+  // POST /auth/refresh — return fake JWT so AuthGuard's silentRefresh succeeds
+  await page.route("**/auth/refresh", (route, request) => {
+    if (request.method() !== "POST") return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+    });
+  });
 
   // Capture pacing settings from POST body so the detail mock can echo them back
   let lastPostPacingSettings: Record<string, unknown> = {};

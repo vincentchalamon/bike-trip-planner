@@ -72,8 +72,13 @@ export async function apiFetch(
  * 2. If refresh succeeds → retry the original request with the new token
  * 3. If refresh fails → redirect to `/login`
  */
+// Cache request bodies before they are consumed by fetch, so the retry can reuse them.
+const requestBodyCache = new WeakMap<Request, BodyInit | null>();
+
 const authMiddleware: Middleware = {
   onRequest({ request }) {
+    // Clone body before it is consumed so the retry in onResponse can reuse it.
+    requestBodyCache.set(request, request.body);
     const authValue = getAuthHeader();
     if (authValue) {
       request.headers.set("Authorization", authValue);
@@ -103,7 +108,7 @@ const authMiddleware: Middleware = {
     return fetch(request.url, {
       method: request.method,
       headers,
-      body: request.body,
+      body: requestBodyCache.get(request),
       credentials: request.credentials,
       cache: request.cache,
       redirect: request.redirect,

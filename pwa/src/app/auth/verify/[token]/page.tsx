@@ -42,12 +42,12 @@ export default function VerifyPage() {
           const payload = parseJwtPayload(data.token);
           if (payload) {
             setAuth(data.token, { id: payload.sub, email: payload.email });
-            router.replace("/");
+            if (!cancelled) router.replace("/");
             return;
           }
         }
 
-        setError(t("verifyFailed"));
+        if (!cancelled) setError(t("verifyFailed"));
       } catch {
         if (!cancelled) setError(t("verifyFailed"));
       } finally {
