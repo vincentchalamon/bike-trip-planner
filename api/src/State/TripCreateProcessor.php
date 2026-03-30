@@ -11,9 +11,14 @@ use App\ApiResource\Trip;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Security\Voter\TripVoter;
+use Psr\Cache\CacheItemPoolInterface;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Uid\Uuid;
@@ -30,6 +35,9 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private TripGenerationTrackerInterface $generationTracker,
         private RequestStack $requestStack,
         private TripLocker $tripLocker,
+        private Security $security,
+        #[Autowire(service: 'cache.trip_state')]
+        private CacheItemPoolInterface $tripStateCache,
     ) {
     }
 
@@ -41,10 +49,22 @@ final readonly class TripCreateProcessor implements ProcessorInterface
     {
         $tripId = Uuid::v7()->toRfc4122();
 
+        // Associate trip with current user before persisting
+        /** @var User $user */
+        $user = $this->security->getUser();
+        $data->user = $user;
+
         $this->tripStateManager->initializeTrip($tripId, $data);
 
         $locale = $this->requestStack->getCurrentRequest()?->getPreferredLanguage(['en', 'fr']) ?? 'en';
         $this->tripStateManager->storeLocale($tripId, $locale);
+
+        // Store userId in Redis for fast ownership checks during computation
+        $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));
+        $item->set($user->getId()->toRfc4122());
+        $item->expiresAfter(TripVoter::CACHE_TTL);
+
+        $this->tripStateCache->save($item);
 
         $computations = ComputationName::pipeline();
         $this->computationTracker->initializeComputations($tripId, $computations);

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Component\Uid\Uuid;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\TripRequest;
+use App\Entity\User;
 use App\Repository\DoctrineTripRequestRepository;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Test\Factories;
@@ -15,12 +18,25 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 final class TripDeleteTest extends ApiTestCase
 {
     use Factories;
+    use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000201';
 
+    private Client $client;
+
+    private User $testUser;
+
+    private string $jwtToken;
+
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+    }
+
     private function seedTrip(string $tripId): void
     {
-        $request = new TripRequest();
+        $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
 
         $container = self::getContainer();
@@ -28,6 +44,7 @@ final class TripDeleteTest extends ApiTestCase
         /** @var DoctrineTripRequestRepository $repo */
         $repo = $container->get(DoctrineTripRequestRepository::class);
         $repo->initializeTrip($tripId, $request);
+        $this->associateTripWithUser($tripId, $this->testUser);
     }
 
     #[Test]
@@ -35,7 +52,9 @@ final class TripDeleteTest extends ApiTestCase
     {
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('DELETE', \sprintf('/trips/%s', self::TRIP_ID));
+        $this->client->request('DELETE', \sprintf('/trips/%s', self::TRIP_ID), [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(204);
     }
@@ -45,13 +64,13 @@ final class TripDeleteTest extends ApiTestCase
     {
         $this->seedTrip(self::TRIP_ID);
 
-        $client = self::createClient();
-
-        $client->request('DELETE', \sprintf('/trips/%s', self::TRIP_ID));
+        $this->client->request('DELETE', \sprintf('/trips/%s', self::TRIP_ID), [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
         $this->assertResponseStatusCodeSame(204);
 
-        $response = $client->request('GET', '/trips', [
-            'headers' => ['Accept' => 'application/ld+json'],
+        $response = $this->client->request('GET', '/trips', [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
         ]);
         $this->assertResponseIsSuccessful();
 
@@ -63,7 +82,9 @@ final class TripDeleteTest extends ApiTestCase
     #[Test]
     public function deleteNonExistentTripReturns404(): void
     {
-        self::createClient()->request('DELETE', '/trips/00000000-0000-0000-0000-000000000000');
+        $this->client->request('DELETE', '/trips/00000000-0000-0000-0000-000000000000', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(404);
     }

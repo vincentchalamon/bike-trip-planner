@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Component\Uid\Uuid;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Message\RecalculateStages;
@@ -23,8 +26,21 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 final class StageUpdateTest extends ApiTestCase
 {
     use Factories;
+    use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000020';
+
+    private Client $client;
+
+    private User $testUser;
+
+    private string $jwtToken;
+
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+    }
 
     private function seedTripWithStages(string $tripId, int $stageCount = 3): void
     {
@@ -33,7 +49,7 @@ final class StageUpdateTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
-        $request = new TripRequest();
+        $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
         $request->startDate = new \DateTimeImmutable('2026-07-01');
 
@@ -62,16 +78,17 @@ final class StageUpdateTest extends ApiTestCase
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
         $tracker->initializeComputations($tripId, ComputationName::cases());
+
+        $this->associateTripWithUser($tripId, $this->testUser);
     }
 
     #[Test]
     public function updateStageLabel(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'label' => 'Grenoble → Briançon',
             ],
@@ -95,11 +112,10 @@ final class StageUpdateTest extends ApiTestCase
     #[Test]
     public function updateStageStartPoint(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'startPoint' => ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
             ],
@@ -124,11 +140,10 @@ final class StageUpdateTest extends ApiTestCase
     #[Test]
     public function updateStageEndPoint(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/1', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/1', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'endPoint' => ['lat' => 44.0, 'lon' => 6.0, 'ele' => 1200.0],
             ],
@@ -152,7 +167,6 @@ final class StageUpdateTest extends ApiTestCase
     #[Test]
     public function updateStageRecalculatesDistanceWhenPointsChange(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
         /** @var TripRequestRepositoryInterface $repo */
@@ -161,8 +175,8 @@ final class StageUpdateTest extends ApiTestCase
         $this->assertNotNull($stagesBefore);
         $distanceBefore = $stagesBefore[0]->distance;
 
-        $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'endPoint' => ['lat' => 48.0, 'lon' => 8.0],
             ],
@@ -183,11 +197,10 @@ final class StageUpdateTest extends ApiTestCase
     #[Test]
     public function updateStageDispatchesRecalculate(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID);
 
-        $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/0', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'label' => 'Updated label',
             ],
@@ -213,11 +226,10 @@ final class StageUpdateTest extends ApiTestCase
     #[Test]
     public function stageNotFound(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 3);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/99', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID.'/stages/99', [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', ...$this->authHeader($this->jwtToken)],
             'json' => [
                 'label' => 'Ghost stage',
             ],

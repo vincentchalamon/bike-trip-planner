@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Component\Uid\Uuid;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Message\RecalculateStages;
@@ -23,8 +26,21 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 final class StageDeleteTest extends ApiTestCase
 {
     use Factories;
+    use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000040';
+
+    private Client $client;
+
+    private User $testUser;
+
+    private string $jwtToken;
+
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+    }
 
     private function seedTripWithStages(string $tripId, int $stageCount = 4, string $sourceType = SourceType::KOMOOT_TOUR->value): void
     {
@@ -33,7 +49,7 @@ final class StageDeleteTest extends ApiTestCase
         /** @var TripRequestRepositoryInterface $repo */
         $repo = $container->get(TripRequestRepositoryInterface::class);
 
-        $request = new TripRequest();
+        $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
         $request->startDate = new \DateTimeImmutable('2026-07-01');
 
@@ -62,15 +78,18 @@ final class StageDeleteTest extends ApiTestCase
         /** @var ComputationTrackerInterface $tracker */
         $tracker = $container->get(ComputationTrackerInterface::class);
         $tracker->initializeComputations($tripId, ComputationName::cases());
+
+        $this->associateTripWithUser($tripId, $this->testUser);
     }
 
     #[Test]
     public function deleteMiddleStageContinuousRoute(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 4, SourceType::KOMOOT_TOUR->value);
 
-        self::createClient()->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/1');
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/1', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(202);
         // todo check json schema
@@ -92,7 +111,6 @@ final class StageDeleteTest extends ApiTestCase
     #[Test]
     public function deleteLastStageMergesWithPrevious(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 4, SourceType::KOMOOT_TOUR->value);
 
         /** @var TripRequestRepositoryInterface $repo */
@@ -101,7 +119,9 @@ final class StageDeleteTest extends ApiTestCase
         $this->assertNotNull($stagesBefore);
         $lastStageEndPoint = $stagesBefore[3]->endPoint;
 
-        self::createClient()->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/3');
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/3', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(202);
         // todo check json schema
@@ -120,7 +140,6 @@ final class StageDeleteTest extends ApiTestCase
     #[Test]
     public function deleteFirstStageMergesWithNext(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 4, SourceType::KOMOOT_TOUR->value);
 
         /** @var TripRequestRepositoryInterface $repo */
@@ -129,7 +148,9 @@ final class StageDeleteTest extends ApiTestCase
         $this->assertNotNull($stagesBefore);
         $firstStageStartPoint = $stagesBefore[0]->startPoint;
 
-        self::createClient()->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/0');
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/0', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(202);
         // todo check json schema
@@ -148,7 +169,6 @@ final class StageDeleteTest extends ApiTestCase
     #[Test]
     public function deleteFromCollectionRemovesWithoutMerge(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 4, SourceType::KOMOOT_COLLECTION->value);
 
         /** @var TripRequestRepositoryInterface $repo */
@@ -157,7 +177,9 @@ final class StageDeleteTest extends ApiTestCase
         $this->assertNotNull($stagesBefore);
         $secondStageLabel = $stagesBefore[1]->label;
 
-        self::createClient()->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/0');
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/0', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(202);
         // todo check json schema
@@ -174,10 +196,11 @@ final class StageDeleteTest extends ApiTestCase
     #[Test]
     public function rejectsDeleteWhenOnly2StagesRemain(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 2);
 
-        self::createClient()->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/0');
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/0', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(422);
         $this->assertJsonContains([
@@ -189,10 +212,11 @@ final class StageDeleteTest extends ApiTestCase
     #[Test]
     public function stageNotFound(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 3);
 
-        self::createClient()->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/99');
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/99', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(404);
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
@@ -205,10 +229,11 @@ final class StageDeleteTest extends ApiTestCase
     #[Test]
     public function deleteDispatchesRecalculateStages(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 4);
 
-        self::createClient()->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/1');
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/1', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(202);
         // todo check json schema
@@ -227,10 +252,11 @@ final class StageDeleteTest extends ApiTestCase
     #[Test]
     public function dayNumbersReindexedAfterDelete(): void
     {
-        self::createClient();
         $this->seedTripWithStages(self::TRIP_ID, 5);
 
-        self::createClient()->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/2');
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/2', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(202);
         // todo check json schema

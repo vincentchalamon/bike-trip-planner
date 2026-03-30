@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Component\Uid\Uuid;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Entity\User;
 use App\Enum\ComputationName;
 use App\Message\FetchAndParseRoute;
 use App\Message\FetchWeather;
@@ -24,8 +27,21 @@ use Zenstruck\Foundry\Attribute\ResetDatabase;
 final class TripUpdateTest extends ApiTestCase
 {
     use Factories;
+    use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000001';
+
+    private Client $client;
+
+    private User $testUser;
+
+    private string $jwtToken;
+
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+    }
 
     private function seedTrip(
         string $tripId,
@@ -35,7 +51,7 @@ final class TripUpdateTest extends ApiTestCase
         float $fatigueFactor = 0.9,
         float $elevationPenalty = 50.0,
     ): void {
-        $request = new TripRequest();
+        $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = $sourceUrl;
         $request->startDate = $startDate;
         $request->endDate = $endDate;
@@ -55,16 +71,16 @@ final class TripUpdateTest extends ApiTestCase
         /** @var IdempotencyCheckerInterface $idempotencyChecker */
         $idempotencyChecker = $container->get(IdempotencyCheckerInterface::class);
         $idempotencyChecker->saveHash($tripId, $request);
+        $this->associateTripWithUser($tripId, $this->testUser);
     }
 
     #[Test]
     public function updateTripSuccess(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'fatigueFactor' => 0.8,
             ],
@@ -79,11 +95,10 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function updateTripResponseContainsId(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        $response = self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $response = $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'elevationPenalty' => 40.0,
             ],
@@ -102,8 +117,8 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function tripNotFound(): void
     {
-        self::createClient()->request('PATCH', '/trips/nonexistent-trip-id', [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/nonexistent-trip-id', [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'fatigueFactor' => 0.8,
             ],
@@ -120,11 +135,10 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function rejectsHttpSourceUrl(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'sourceUrl' => 'http://www.komoot.com/tour/123',
             ],
@@ -142,11 +156,10 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function acceptsAnyHttpsSourceUrl(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'sourceUrl' => 'https://unknown-provider.example.com/route/123',
             ],
@@ -158,11 +171,10 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function rejectsFatigueFactorTooLow(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'fatigueFactor' => 0.3,
             ],
@@ -180,11 +192,10 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function rejectsFatigueFactorTooHigh(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'fatigueFactor' => 1.5,
             ],
@@ -202,11 +213,10 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function rejectsNegativeElevationPenalty(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'elevationPenalty' => -10.0,
             ],
@@ -224,11 +234,10 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function rejectsZeroElevationPenalty(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'elevationPenalty' => 0.0,
             ],
@@ -246,14 +255,13 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function rejectsEndDateBeforeStartDate(): void
     {
-        self::createClient();
         $this->seedTrip(
             self::TRIP_ID,
             startDate: new \DateTimeImmutable('2026-07-15'),
         );
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'endDate' => '2026-07-01T00:00:00+00:00',
             ],
@@ -271,14 +279,13 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function rejectsEndDateEqualToStartDate(): void
     {
-        self::createClient();
         $this->seedTrip(
             self::TRIP_ID,
             startDate: new \DateTimeImmutable('2026-07-15'),
         );
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'endDate' => '2026-07-15T00:00:00+00:00',
             ],
@@ -296,11 +303,10 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function updateTitleSuccess(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'title' => 'Mon super voyage',
             ],
@@ -317,12 +323,11 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function idempotentRequestDoesNotRedispatch(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID, fatigueFactor: 0.9, elevationPenalty: 50.0);
 
         // Send PATCH with same values as seeded
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'fatigueFactor' => 0.9,
                 'elevationPenalty' => 50.0,
@@ -342,11 +347,10 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function sourceUrlChangeTriggersRouteComputation(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'sourceUrl' => 'https://www.komoot.com/tour/999999999',
             ],
@@ -368,11 +372,10 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function fatigueFactorChangeTriggersStagesComputation(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'fatigueFactor' => 0.75,
             ],
@@ -398,11 +401,10 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function startDateChangeTriggersWeatherAndCalendar(): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
                 'startDate' => '2026-08-01T00:00:00+00:00',
             ],
@@ -445,11 +447,10 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function rejectsInvalidPatchPayloads(array $payload, string $expectedPropertyPath): void
     {
-        self::createClient();
         $this->seedTrip(self::TRIP_ID);
 
-        self::createClient()->request('PATCH', '/trips/'.self::TRIP_ID, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json'],
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => $payload,
         ]);
 
