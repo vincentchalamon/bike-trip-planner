@@ -20,11 +20,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'pattern' => '^/(_(profiler|wdt)|css|images|js|docs)/',
                 'security' => false,
             ],
-            'auth' => [
-                'pattern' => '^/auth/(request-link|refresh|verify)',
-                'stateless' => true,
-                'security' => false,
-            ],
             'api' => [
                 'pattern' => '^/',
                 'stateless' => true,
@@ -34,6 +29,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ],
         'access_control' => [
             ['path' => '^/docs', 'roles' => 'PUBLIC_ACCESS'],
+            ['path' => '^/auth/(request-link|refresh|verify)$', 'roles' => 'PUBLIC_ACCESS'],
             ['path' => '^/auth/logout', 'roles' => 'IS_AUTHENTICATED_FULLY'],
             ['path' => '^/', 'roles' => 'IS_AUTHENTICATED_FULLY'],
         ],

@@ -43,10 +43,21 @@ export function parseJwtPayload(
       "=",
     );
     const payload = JSON.parse(atob(padded)) as Record<string, unknown>;
-    if (typeof payload.sub !== "string" || typeof payload.email !== "string") {
+    // LexikJWTBundle uses "username" for the user identifier
+    const email =
+      typeof payload.email === "string"
+        ? payload.email
+        : typeof payload.username === "string"
+          ? payload.username
+          : null;
+    const sub =
+      typeof payload.sub === "string"
+        ? payload.sub
+        : email; // fallback: use email as sub if no sub claim
+    if (!sub || !email) {
       return null;
     }
-    return { sub: payload.sub, email: payload.email };
+    return { sub, email };
   } catch {
     return null;
   }
@@ -92,7 +103,7 @@ export const useAuthStore = create<AuthState>()(
     requestMagicLink: async (email: string) => {
       await fetch(`${API_URL}/auth/request-link`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/ld+json" },
         body: JSON.stringify({ email }),
         credentials: "include",
       });

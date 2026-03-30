@@ -48,8 +48,9 @@ services:
         protocol: udp
     volumes:
       - jwt_keys:/app/config/jwt
-      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
-      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/20-app.prod.ini
+      # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
+      # and our date.timezone=UTC override takes effect.
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini
     healthcheck:
       test: curl --insecure --fail https://localhost/docs || exit 1
       interval: 5s
@@ -95,8 +96,9 @@ services:
       MAILER_DSN: "${MAILER_DSN}"
     volumes:
       - jwt_keys:/app/config/jwt
-      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
-      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/20-app.prod.ini
+      # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
+      # and our date.timezone=UTC override takes effect.
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini
     healthcheck:
       test: pgrep -f messenger:consume || exit 1
       interval: 5s

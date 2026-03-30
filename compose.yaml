@@ -63,7 +63,9 @@ services:
     tty: true
     volumes:
       - .docker/php/:/usr/local/bin/docker
-      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
+      # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
+      # and our date.timezone=UTC override takes effect.
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini
       - ./api/:/app
       - ./README.md:/README.md:ro
       - /app/var
@@ -117,7 +119,9 @@ services:
       - host.docker.internal:host-gateway
     volumes:
       - .docker/php/:/usr/local/bin/docker
-      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
+      # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
+      # and our date.timezone=UTC override takes effect.
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini
       - ./api/:/app
       - /app/var
       # If you develop on Mac or Windows you can remove the vendor/ directory
