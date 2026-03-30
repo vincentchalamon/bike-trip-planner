@@ -103,7 +103,7 @@ final readonly class AuthRequestLinkProcessor implements ProcessorInterface
         $emailMessage = new Email()
             ->from(new Address('noreply@bike-trip-planner.com', 'Bike Trip Planner'))
             ->to($user->getEmail())
-            ->subject('Votre lien de connexion — Bike Trip Planner')
+            ->subject($this->translator->trans('auth.email.magic_link.subject', [], 'auth', $locale))
             ->html($html);
 
         $this->mailer->send($emailMessage);
