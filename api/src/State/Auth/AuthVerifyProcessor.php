@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
+use App\Entity\RefreshToken;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
@@ -57,8 +58,15 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
         }
 
         $jwt = $this->jwtManager->create($user);
-        $refreshToken = $this->refreshTokenRepository->createForUser($user);
-        $this->entityManager->flush();
+
+        // Wrap refresh token creation in a transaction: if flush fails, the
+        // magic link's consumed_at is already set (atomic UPDATE) but we must
+        // ensure the refresh token is also committed.
+        $refreshToken = null;
+        $this->entityManager->wrapInTransaction(function () use ($user, &$refreshToken): void {
+            $refreshToken = $this->refreshTokenRepository->createForUser($user);
+        });
+        \assert($refreshToken instanceof RefreshToken);
 
         $isCapacitor = $this->isCapacitorRequest();
 

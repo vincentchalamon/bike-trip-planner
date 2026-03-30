@@ -56,6 +56,10 @@ final readonly class MercureSubscriberListener
             return;
         }
 
+        if (!$response->isSuccessful()) {
+            return;
+        }
+
         $token = $this->tokenIssuer->generateSubscriberToken($tripId);
 
         // Set the HttpOnly subscriber cookie (for browser SSE via EventSource)
