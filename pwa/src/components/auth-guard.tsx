@@ -35,14 +35,17 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const checkAuth = async () => {
       if (isAuthenticated) {
-        setAuthChecked(true);
+        if (!cancelled) setAuthChecked(true);
         return;
       }
 
       // Attempt silent refresh using the httpOnly refresh_token cookie
       const refreshed = await silentRefresh();
+      if (cancelled) return;
 
       if (!refreshed && !isPublicPath(pathname)) {
         router.replace("/login");
@@ -53,6 +56,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     };
 
     checkAuth();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthenticated, pathname, router, silentRefresh]);
 
   // Always render public pages immediately

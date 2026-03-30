@@ -94,13 +94,23 @@ const authMiddleware: Middleware = {
       return response;
     }
 
-    // Retry with the new token
+    // Retry with the new token — rebuild from scratch to avoid bodyUsed TypeError
     const newAuthValue = getAuthHeader();
-    const retryRequest = new Request(request.url, request);
+    const headers = new Headers(request.headers);
     if (newAuthValue) {
-      retryRequest.headers.set("Authorization", newAuthValue);
+      headers.set("Authorization", newAuthValue);
     }
-    return fetch(retryRequest);
+    return fetch(request.url, {
+      method: request.method,
+      headers,
+      body: request.body,
+      credentials: request.credentials,
+      cache: request.cache,
+      redirect: request.redirect,
+      referrer: request.referrer,
+      integrity: request.integrity,
+      signal: request.signal,
+    });
   },
 };
 

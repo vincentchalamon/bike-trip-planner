@@ -24,6 +24,8 @@ export default function VerifyPage() {
   const [verifying, setVerifying] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const verify = async () => {
       try {
         const res = await fetch(`${API_URL}/auth/verify`, {
@@ -32,6 +34,8 @@ export default function VerifyPage() {
           body: JSON.stringify({ token: params.token }),
           credentials: "include",
         });
+
+        if (cancelled) return;
 
         if (res.ok) {
           const data = (await res.json()) as { token: string };
@@ -45,13 +49,17 @@ export default function VerifyPage() {
 
         setError(t("verifyFailed"));
       } catch {
-        setError(t("verifyFailed"));
+        if (!cancelled) setError(t("verifyFailed"));
       } finally {
-        setVerifying(false);
+        if (!cancelled) setVerifying(false);
       }
     };
 
     void verify();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.token]);
 

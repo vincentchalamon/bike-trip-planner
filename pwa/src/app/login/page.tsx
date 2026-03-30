@@ -33,6 +33,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await requestMagicLink(email.trim());
+    } catch {
+      // Swallow network errors — UI always shows confirmation (anti-enumeration)
     } finally {
       setLoading(false);
       setSubmitted(true);
