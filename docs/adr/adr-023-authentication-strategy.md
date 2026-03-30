@@ -128,41 +128,32 @@ Full OAuth2 authorization server (e.g., league/oauth2-server-bundle).
 ### Authentication Flow
 
 ```text
-┌──────────┐        ┌──────────┐        ┌──────────┐        ┌──────────┐
-│ Browser  │        │ Next.js  │        │ Symfony  │        │  Resend  │
-│          │        │ Frontend │        │ Backend  │        │  (SMTP)  │
-└────┬─────┘        └────┬─────┘        └────┬─────┘        └────┬─────┘
-     │ Enter email       │                   │                   │
-     │──────────────────►│ POST /auth/       │                   │
-     │                   │   request-link    │                   │
-     │                   │──────────────────►│                   │
-     │                   │                   │ Generate token    │
-     │                   │                   │ (256-bit entropy) │
-     │                   │                   │                   │
-     │                   │                   │ Send magic link   │
-     │                   │ 202 Accepted      │──────────────────►│
-     │                   │◄──────────────────│                   │
-     │ "Check your email"│                   │                   │
-     │◄──────────────────│                   │                   │
-     │                   │                   │                   │
-     │ Click magic link  │                   │                   │
-     │──────────────────►│                   │                   │
-     │                   │ POST /auth/verify │                   │
-     │                   │ {token: <opaque>} │                   │
-     │                   │──────────────────►│                   │
-     │                   │                   │ Validate token    │
-     │                   │                   │ (TTL + single-use)│
-     │                   │                   │                   │
-     │                   │ JWT access token  │                   │
-     │                   │ + refresh cookie  │                   │
-     │◄──────────────────│◄──────────────────│                   │
-     │                   │                   │                   │
+┌─────────┐         ┌──────────┐         ┌─────────┐         ┌──────────┐
+│ Browser  │         │ Next.js  │         │ Symfony  │         │  Resend  │
+│          │         │ Frontend │         │ Backend  │         │  (SMTP)  │
+└────┬─────┘         └────┬─────┘         └────┬─────┘         └────┬─────┘
+     │  Enter email       │                    │                     │
+     │───────────────────►│  POST /auth/request-link  │                     │
+     │                    │───────────────────►│                     │
+     │                    │                    │  Generate token      │
+     │                    │                    │  (256-bit entropy)   │
+     │                    │                    │                     │
+     │                    │                    │  Send magic link     │
+     │                    │  202 Accepted      │────────────────────►│
+     │                    │◄───────────────────│                     │
+     │  "Check your email"│                    │                     │
+     │◄───────────────────│                    │                     │
+     │                    │                    │                     │
+     │  Click magic link  │                    │                     │
+     │───────────────────────────────────────►│                     │
+     │                    │                    │  Validate token      │
+     │                    │                    │  (TTL + single-use)  │
+     │                    │                    │                     │
+     │                    │  JWT access token   │                     │
+     │                    │  + refresh cookie   │                     │
+     │◄───────────────────────────────────────│                     │
+     │                    │                    │                     │
 ```
-
-The magic link URL points to the Next.js frontend (`/auth/verify/{token}`).
-The frontend route handler exchanges the opaque token with the backend via
-`POST /auth/verify`, receives the JWT access token in the response body
-and the refresh token as an HttpOnly cookie. The JWT never appears in a URL.
 
 ### Token Strategy
 
@@ -204,13 +195,10 @@ Rate limiting on the magic link generation endpoint to prevent mailbox spam and 
 - **Per email:** max 3 requests per 15-minute window
 - **Per IP:** max 3 requests per 15-minute window
 - Implemented via Symfony RateLimiter component with Redis backend
-- **Counter behaviour:** the throttle counter increments on every HTTP request to this endpoint, even when the Single Active Link Policy suppresses email delivery — this prevents an attacker from cycling requests freely after the first token is created
 
 ### Capacitor (Mobile) Adaptation
 
-In Capacitor WebView, HttpOnly cookies may not be reliably transmitted. When the backend detects a Capacitor client — identified by `Origin: capacitor://localhost` — the refresh token is returned in the response body instead of a cookie. The mobile client stores it in the device's secure storage (Capacitor Preferences with encryption).
-
-**Accepted risk:** The `capacitor://` Origin can be set by any non-browser HTTP client (curl, scripts). However, this only changes the token transport mechanism, not the security model: the caller must already hold a valid single-use magic link token or a valid refresh token. The refresh token body exposure is therefore an accepted residual risk.
+In Capacitor WebView, HttpOnly cookies may not be reliably transmitted. When the backend detects a Capacitor Origin header, the refresh token is returned in the response body instead of a cookie. The mobile client stores it in the device's secure storage (Capacitor Preferences with encryption).
 
 ---
 
@@ -227,9 +215,9 @@ In Capacitor WebView, HttpOnly cookies may not be reliably transmitted. When the
 
 ### Frontend (Next.js)
 
-- Access token held in a Zustand store (in-memory, not persisted) — **client components only**; React Server Components do not have access to this store and must not make authenticated API calls directly
+- Access token held in a Zustand store (in-memory, not persisted)
 - `fetch` wrapper automatically attaches `Authorization: Bearer` header
-- Silent refresh via `credentials: 'include'` on `POST /auth/refresh`
+- Silent refresh via `credentials: 'include'` on the refresh endpoint
 - Redirect to login page when both tokens are expired
 
 ### Prerequisites
@@ -259,7 +247,6 @@ In Capacitor WebView, HttpOnly cookies may not be reliably transmitted. When the
 
 - **Refresh token rotation** — a future enhancement could invalidate the previous refresh token upon each renewal (detect token theft)
 - **Device management** — users cannot currently see or revoke active sessions across devices
-- **Logout** — requires `POST /auth/logout` on the backend (responds with `Set-Cookie: refresh_token=; Max-Age=0; HttpOnly; SameSite=Strict; Path=/auth/refresh`) and client-side clearing of the in-memory access token; without this endpoint, the HttpOnly cookie cannot be removed by client JavaScript
 
 ---
 

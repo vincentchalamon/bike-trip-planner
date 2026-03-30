@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use App\Entity\MagicLink;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
-use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -19,8 +18,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
 
 /**
@@ -33,17 +32,14 @@ use Twig\Environment;
 )]
 final class CreateUserCommand extends Command
 {
-    private const array SUPPORTED_LOCALES = ['fr', 'en'];
-
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly MagicLinkRepository $magicLinkRepository,
-        private readonly UserRepository $userRepository,
         private readonly MailerInterface $mailer,
         private readonly Environment $twig,
         private readonly TranslatorInterface $translator,
         #[Autowire(env: 'FRONTEND_URL')]
-        private readonly string $frontendUrl,
+        private readonly string $frontendUrl = 'https://localhost',
     ) {
         parent::__construct();
     }
@@ -53,7 +49,7 @@ final class CreateUserCommand extends Command
     {
         $this
             ->addArgument('email', InputArgument::REQUIRED, 'Email address of the new user')
-            ->addOption('locale', 'l', InputOption::VALUE_REQUIRED, 'Locale for the invitation email (fr, en)', 'fr');
+            ->addOption('locale', 'l', InputOption::VALUE_REQUIRED, 'Locale for the invitation email', 'fr');
     }
 
     #[\Override]
@@ -69,19 +65,21 @@ final class CreateUserCommand extends Command
             return Command::FAILURE;
         }
 
-        $locale = $input->getOption('locale');
-        \assert(\is_string($locale));
+        $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
 
-        if (!\in_array($locale, self::SUPPORTED_LOCALES, true)) {
-            $io->error(\sprintf('Unsupported locale "%s". Supported: %s', $locale, implode(', ', self::SUPPORTED_LOCALES)));
+        if (null !== $existingUser) {
+            $io->error(\sprintf('User with email "%s" already exists.', $email));
 
             return Command::FAILURE;
         }
 
-        $existingUser = $this->userRepository->findByEmail($email);
+        $locale = $input->getOption('locale');
+        \assert(\is_string($locale));
 
-        if ($existingUser instanceof User) {
-            $io->error(\sprintf('User with email "%s" already exists.', $email));
+        $supportedLocales = ['fr', 'en'];
+
+        if (!\in_array($locale, $supportedLocales, true)) {
+            $io->error(\sprintf('Unsupported locale: %s. Supported locales: %s', $locale, implode(', ', $supportedLocales)));
 
             return Command::FAILURE;
         }
@@ -89,40 +87,38 @@ final class CreateUserCommand extends Command
         $user = new User($email);
         $user->setLocale($locale);
 
-        // Persist but do NOT flush yet — defer until after the email send so that
-        // an SMTP failure does not leave an orphaned user without an invitation.
         $this->entityManager->persist($user);
 
-        // User is not yet flushed — no active link can exist, so create() always returns a MagicLink
+        // Create magic link for invitation
         $magicLink = $this->magicLinkRepository->create($user);
-        \assert($magicLink instanceof MagicLink);
+
+        if (!$magicLink instanceof MagicLink) {
+            $this->entityManager->flush();
+            $io->success(\sprintf('User created: %s (ID: %s)', $email, $user->getId()));
+            $io->warning(\sprintf('An active invitation link already exists for user %s.', $email));
+
+            return Command::SUCCESS;
+        }
 
         $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), $magicLink->getToken());
 
         $html = $this->twig->render('email/invitation.html.twig', [
             'verifyUrl' => $verifyUrl,
-            'expiresInMinutes' => MagicLinkRepository::TTL_MINUTES,
+            'expiresInMinutes' => 30,
             'locale' => $locale,
         ]);
 
         $emailMessage = new Email()
+            ->from(new Address('noreply@bike-trip-planner.com', 'Bike Trip Planner'))
             ->to($email)
             ->subject($this->translator->trans('auth.email.invitation.subject', [], 'auth', $locale))
             ->html($html);
 
-        // Send email before flush: if SMTP fails, the magic link is not persisted
-        // and the user can retry immediately instead of being locked out.
         $this->mailer->send($emailMessage);
+        $this->entityManager->flush();
 
-        try {
-            $this->entityManager->flush();
-        } catch (UniqueConstraintViolationException) {
-            $io->warning(\sprintf('User "%s" or their invitation link was created concurrently by another process — no action needed.', $email));
-
-            return Command::SUCCESS;
-        }
-
-        $io->success(\sprintf('User created: %s (ID: %s). Invitation email sent.', $email, $user->getId()));
+        $io->success(\sprintf('User created: %s (ID: %s)', $email, $user->getId()));
+        $io->success('Invitation email sent.');
 
         return Command::SUCCESS;
     }

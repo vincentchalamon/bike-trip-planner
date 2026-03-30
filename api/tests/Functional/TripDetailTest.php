@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
+use App\Entity\User;
 use App\Repository\DoctrineTripRequestRepository;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -17,8 +19,22 @@ use Zenstruck\Foundry\Test\Factories;
 final class TripDetailTest extends ApiTestCase
 {
     use Factories;
+    use JwtAuthTestTrait;
 
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000301';
+
+    private Client $client;
+
+    private User $testUser;
+
+    private string $jwtToken;
+
+    #[\Override]
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        ['user' => $this->testUser, 'token' => $this->jwtToken] = $this->createTestUserWithJwt('test@example.com');
+    }
 
     private function seedTrip(string $tripId): DoctrineTripRequestRepository
     {
@@ -29,6 +45,7 @@ final class TripDetailTest extends ApiTestCase
         $repo = self::getContainer()->get(DoctrineTripRequestRepository::class);
         $repo->initializeTrip($tripId, $request);
         $repo->storeTitle($tripId, 'Detail test trip');
+        $this->associateTripWithUser($tripId, $this->testUser);
 
         return $repo;
     }
@@ -49,8 +66,8 @@ final class TripDetailTest extends ApiTestCase
         );
         $repo->storeStages(self::TRIP_ID, [$stage]);
 
-        $response = self::createClient()->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
-            'headers' => ['Accept' => 'application/ld+json'],
+        $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
         ]);
 
         $this->assertResponseIsSuccessful();
@@ -72,8 +89,18 @@ final class TripDetailTest extends ApiTestCase
     #[Test]
     public function detailNonExistentTripReturns404(): void
     {
-        self::createClient()->request('GET', '/trips/00000000-0000-0000-0000-000000000000/detail');
+        $this->client->request('GET', '/trips/00000000-0000-0000-0000-000000000000/detail', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(404);
+    }
+
+    #[Test]
+    public function unauthenticatedRequestReturns401(): void
+    {
+        $this->client->request('GET', '/trips/01936f6e-0000-7000-8000-000000000001/detail');
+
+        $this->assertResponseStatusCodeSame(401);
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\Enum\ComputationName;
 use App\Message\GenerateStages;
 use App\Message\ScanAllOsmData;
@@ -14,12 +15,25 @@ use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 
 final class GpxUploadTest extends ApiTestCase
 {
+    use JwtAuthTestTrait;
+
     private const string FIXTURES_DIR = __DIR__.'/../fixtures';
+
+    private Client $client;
+
+    private string $jwtToken;
 
     #[\Override]
     public static function setUpBeforeClass(): void
     {
         self::$alwaysBootKernel = false;
+    }
+
+    #[\Override]
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        ['token' => $this->jwtToken] = $this->createTestUserWithJwt(\sprintf('gpx-%s@test.com', bin2hex(random_bytes(4))));
     }
 
     #[Test]
@@ -33,9 +47,8 @@ final class GpxUploadTest extends ApiTestCase
             true,
         );
 
-        $client = self::createClient();
-        $response = $client->request('POST', '/trips/gpx-upload', [
-            'headers' => ['Content-Type' => 'multipart/form-data'],
+        $response = $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
             'extra' => [
                 'files' => ['gpxFile' => $file],
             ],
@@ -87,9 +100,8 @@ final class GpxUploadTest extends ApiTestCase
             true,
         );
 
-        $client = self::createClient();
-        $client->request('POST', '/trips/gpx-upload', [
-            'headers' => ['Content-Type' => 'multipart/form-data'],
+        $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
             'extra' => [
                 'files' => ['gpxFile' => $file],
             ],
@@ -109,9 +121,8 @@ final class GpxUploadTest extends ApiTestCase
     #[Test]
     public function rejectsMissingFile(): void
     {
-        $client = self::createClient();
-        $client->request('POST', '/trips/gpx-upload', [
-            'headers' => ['Content-Type' => 'multipart/form-data'],
+        $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
         ]);
 
         $this->assertResponseStatusCodeSame(400);
@@ -133,9 +144,8 @@ final class GpxUploadTest extends ApiTestCase
                 true,
             );
 
-            $client = self::createClient();
-            $client->request('POST', '/trips/gpx-upload', [
-                'headers' => ['Content-Type' => 'multipart/form-data'],
+            $this->client->request('POST', '/trips/gpx-upload', [
+                'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
                 'extra' => [
                     'files' => ['gpxFile' => $file],
                 ],
@@ -163,9 +173,8 @@ final class GpxUploadTest extends ApiTestCase
                 true,
             );
 
-            $client = self::createClient();
-            $client->request('POST', '/trips/gpx-upload', [
-                'headers' => ['Content-Type' => 'multipart/form-data'],
+            $this->client->request('POST', '/trips/gpx-upload', [
+                'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
                 'extra' => [
                     'files' => ['gpxFile' => $file],
                 ],
@@ -194,9 +203,8 @@ final class GpxUploadTest extends ApiTestCase
                 true,
             );
 
-            $client = self::createClient();
-            $client->request('POST', '/trips/gpx-upload', [
-                'headers' => ['Content-Type' => 'multipart/form-data'],
+            $this->client->request('POST', '/trips/gpx-upload', [
+                'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
                 'extra' => ['files' => ['gpxFile' => $file]],
             ]);
 
@@ -217,9 +225,8 @@ final class GpxUploadTest extends ApiTestCase
             true,
         );
 
-        $client = self::createClient();
-        $client->request('POST', '/trips/gpx-upload', [
-            'headers' => ['Content-Type' => 'multipart/form-data'],
+        $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
             'extra' => [
                 'files' => ['gpxFile' => $file],
                 'parameters' => [
@@ -244,9 +251,8 @@ final class GpxUploadTest extends ApiTestCase
             true,
         );
 
-        $client = self::createClient();
-        $response = $client->request('POST', '/trips/gpx-upload', [
-            'headers' => ['Content-Type' => 'multipart/form-data'],
+        $response = $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
             'extra' => [
                 'files' => ['gpxFile' => $file],
                 'parameters' => [
@@ -263,5 +269,15 @@ final class GpxUploadTest extends ApiTestCase
         $data = $response->toArray(false);
         $this->assertNotEmpty($data['id']);
         $this->assertSame('Trip', $data['@type']);
+    }
+
+    #[Test]
+    public function unauthenticatedRequestReturns401(): void
+    {
+        $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => ['Content-Type' => 'multipart/form-data'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(401);
     }
 }

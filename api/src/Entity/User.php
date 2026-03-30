@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Repository\UserRepository;
+use App\ApiResource\TripRequest;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Uid\Uuid;
 
-#[ORM\Entity(repositoryClass: UserRepository::class)]
+#[ORM\Entity]
 #[ORM\Table(name: '`user`')]
 #[ORM\UniqueConstraint(name: 'uniq_user_email', columns: ['email'])]
 class User implements UserInterface
@@ -28,6 +30,10 @@ class User implements UserInterface
     #[ORM\Column(length: 5, options: ['default' => 'fr'])]
     private string $locale = 'fr';
 
+    /** @var Collection<int, TripRequest> */
+    #[ORM\OneToMany(targetEntity: TripRequest::class, mappedBy: 'user', fetch: 'EXTRA_LAZY')]
+    private Collection $trips;
+
     /** @param non-empty-string $email */
     public function __construct(
         #[ORM\Column(length: 180, unique: true)]
@@ -36,6 +42,7 @@ class User implements UserInterface
     ) {
         $this->id = $id ?? Uuid::v7();
         $this->createdAt = new \DateTimeImmutable();
+        $this->trips = new ArrayCollection();
     }
 
     public function getId(): Uuid
@@ -87,6 +94,12 @@ class User implements UserInterface
         $this->locale = $locale;
 
         return $this;
+    }
+
+    /** @return Collection<int, TripRequest> */
+    public function getTrips(): Collection
+    {
+        return $this->trips;
     }
 
     public function eraseCredentials(): void

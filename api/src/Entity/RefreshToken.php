@@ -12,7 +12,6 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Table(name: 'refresh_token')]
 #[ORM\UniqueConstraint(name: 'uniq_refresh_token_token', columns: ['token'])]
 #[ORM\Index(name: 'idx_refresh_token_user', columns: ['user_id'])]
-#[ORM\Index(name: 'idx_refresh_token_expires', columns: ['expires_at'])]
 class RefreshToken
 {
     #[ORM\Id]
@@ -54,6 +53,11 @@ class RefreshToken
     public function getExpiresAt(): \DateTimeImmutable
     {
         return $this->expiresAt;
+    }
+
+    public function isValid(): bool
+    {
+        return $this->expiresAt > new \DateTimeImmutable();
     }
 
     public function getCreatedAt(): \DateTimeImmutable

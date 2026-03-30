@@ -25,6 +25,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             ],
             'expose_headers' => [
                 'Link',
+                'X-Mercure-Token',
             ],
             'max_age' => 3600,
         ],

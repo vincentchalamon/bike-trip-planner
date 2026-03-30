@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
-use App\Exception\Auth\TokenAlreadyConsumedException;
 use Symfony\Component\HttpFoundation\Request;
-use App\Entity\RefreshToken;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
+use App\Entity\RefreshToken;
 use App\Repository\RefreshTokenRepository;
-use App\Service\Auth\AuthResponseHelper;
+use App\Security\AuthCookies;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -47,17 +46,13 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): JsonResponse
     {
         $request = $this->requestStack->getCurrentRequest();
-        $token = $request?->cookies->get(Auth::REFRESH_TOKEN_COOKIE);
-        $isCapacitor = $this->isCapacitorRequest($request);
+        $token = $request?->cookies->get(AuthCookies::REFRESH_TOKEN);
+        $isCapacitor = $this->isCapacitorRequest();
 
         // Capacitor sends refresh token in body
         if (null === $token && $isCapacitor && $request instanceof Request) {
-            try {
-                $body = $request->toArray();
-                $token = $body['refresh_token'] ?? null;
-            } catch (\JsonException) { // @phpstan-ignore catch.neverThrown (toArray uses json_decode with JSON_THROW_ON_ERROR)
-                $token = null;
-            }
+            $body = $request->toArray();
+            $token = $body['refresh_token'] ?? null;
         }
 
         if (null === $token || '' === $token) {
@@ -76,27 +71,33 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
                 ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
                 Response::HTTP_UNAUTHORIZED,
             );
-            $response->headers->clearCookie(Auth::REFRESH_TOKEN_COOKIE, '/', null, true, true, 'strict');
+            $response->headers->clearCookie(AuthCookies::REFRESH_TOKEN, '/', null, true, true, 'strict');
 
             return $response;
         }
 
-        // Wrap in transaction: atomicExpire + remove + create must all succeed or all roll back
+        // Atomic expire + rotate in a single transaction to prevent TOCTOU race
+        // and ensure no token is lost if the flush fails.
         $user = $existing->getUser();
+        $expiredRows = 0;
         $newRefreshToken = null;
 
-        try {
-            $this->entityManager->wrapInTransaction(function () use ($existing, $user, &$newRefreshToken): void {
-                $affected = $this->refreshTokenRepository->atomicExpire($existing);
-                if (0 === $affected) {
-                    throw new TokenAlreadyConsumedException();
-                }
+        $this->entityManager->wrapInTransaction(function () use ($existing, $user, &$expiredRows, &$newRefreshToken): void {
+            $expiredRows = $this->entityManager->getConnection()->executeStatement(
+                "UPDATE refresh_token SET expires_at = '1970-01-01 00:00:00' WHERE id = :id AND expires_at > NOW()",
+                ['id' => $existing->getId()->toRfc4122()],
+            );
 
-                $this->entityManager->remove($existing);
-                $newRefreshToken = $this->refreshTokenRepository->createForUser($user);
-            });
-        } catch (TokenAlreadyConsumedException) {
-            $this->logger->debug('Auth refresh token already consumed (TOCTOU)');
+            if (0 === $expiredRows) {
+                return;
+            }
+
+            $this->entityManager->remove($existing);
+            $newRefreshToken = $this->refreshTokenRepository->createForUser($user);
+        });
+
+        if (0 === $expiredRows) {
+            $this->logger->debug('Auth refresh token already consumed (race)');
 
             return new JsonResponse(
                 ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
@@ -116,10 +117,13 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         }
 
         $response = new JsonResponse($responseData);
-        $response->headers->setCookie(
-            $this->createRefreshTokenCookie($newRefreshToken->getToken(), $newRefreshToken->getExpiresAt()),
-        );
+        $this->setRefreshTokenCookie($response, $newRefreshToken->getToken(), $newRefreshToken->getExpiresAt());
 
         return $response;
+    }
+
+    private function getRequestStack(): RequestStack
+    {
+        return $this->requestStack;
     }
 }

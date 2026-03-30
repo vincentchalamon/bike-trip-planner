@@ -88,15 +88,17 @@ export function useTripPlanner() {
   );
 
   const [newAccKey, setNewAccKey] = useState<string | null>(null);
+  const [mercureToken, setMercureToken] = useState<string | null>(null);
   const preDragPacingSnapshot = useRef<ReturnType<
     typeof getUndoableSlice
   > | null>(null);
 
   const tripId = trip?.id ?? null;
-  useMercure(tripId);
+  useMercure(tripId, mercureToken);
 
   async function handleMagicLink(sourceUrl: string) {
     clearTrip();
+    setMercureToken(null);
     setProcessing(true);
     setAccommodationScanning(true);
 
@@ -124,6 +126,8 @@ export function useTripPlanner() {
       }
 
       setIsLocked(data.isLocked === true);
+      const token = response.headers.get("X-Mercure-Token");
+      if (token) setMercureToken(token);
       setTrip({
         id: data.id ?? "",
         title: getRandomTripName(),
@@ -143,11 +147,12 @@ export function useTripPlanner() {
 
   async function handleGpxUpload(file: File) {
     clearTrip();
+    setMercureToken(null);
     setProcessing(true);
     setAccommodationScanning(true);
 
     try {
-      const { data, error } = await uploadGpxFile(file, {
+      const { data, error, response } = await uploadGpxFile(file, {
         fatigueFactor,
         elevationPenalty,
         maxDistancePerDay,
@@ -164,6 +169,8 @@ export function useTripPlanner() {
         return;
       }
 
+      const gpxToken = response?.headers.get("X-Mercure-Token");
+      if (gpxToken) setMercureToken(gpxToken);
       setTrip({
         id: data.id,
         title: data.title ?? file.name.replace(/\.gpx$/i, ""),

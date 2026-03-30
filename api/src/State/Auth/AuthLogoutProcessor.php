@@ -9,6 +9,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
 use App\Entity\User;
 use App\Repository\RefreshTokenRepository;
+use App\Security\AuthCookies;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -44,7 +45,7 @@ final readonly class AuthLogoutProcessor implements ProcessorInterface
         }
 
         $response = new JsonResponse(null, Response::HTTP_NO_CONTENT);
-        $response->headers->clearCookie(Auth::REFRESH_TOKEN_COOKIE, '/', null, true, true, 'strict');
+        $response->headers->clearCookie(AuthCookies::REFRESH_TOKEN, '/', null, true, true, 'strict');
 
         return $response;
     }

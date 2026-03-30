@@ -22,7 +22,7 @@ services:
       PWA_UPSTREAM: pwa:3000
       MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
-      MERCURE_EXTRA_DIRECTIVES: anonymous
+      MERCURE_EXTRA_DIRECTIVES: "cors_origins ${FRONTEND_URL:-https://localhost}"
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
       MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
@@ -47,9 +47,9 @@ services:
         published: ${HTTPS_PORT:-443}
         protocol: udp
     volumes:
+      - jwt_keys:/app/config/jwt
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/20-app.prod.ini
-      - jwt_keys:/app/config/jwt
     healthcheck:
       test: curl --insecure --fail https://localhost/docs || exit 1
       interval: 5s
@@ -94,9 +94,9 @@ services:
       FRONTEND_URL: "${FRONTEND_URL}"
       MAILER_DSN: "${MAILER_DSN}"
     volumes:
+      - jwt_keys:/app/config/jwt
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/10-app.ini
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/app.conf.d/20-app.prod.ini
-      - jwt_keys:/app/config/jwt
     healthcheck:
       test: pgrep -f messenger:consume || exit 1
       interval: 5s
@@ -206,8 +206,8 @@ volumes:
   caddy_data: ~
   caddy_config: ~
   database_data: ~
-  jwt_keys: ~
   overpass-data: ~
   valhalla-tiles: ~
   pwa_node_modules: ~
   pwa_next: ~
+  jwt_keys: ~

@@ -20,6 +20,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
         $update = new Update(
             topics: [\sprintf('/trips/%s', $tripId)],
             data: json_encode(['type' => $type->value, 'data' => $data], \JSON_THROW_ON_ERROR),
+            private: true,
         );
 
         $this->hub->publish($update);
