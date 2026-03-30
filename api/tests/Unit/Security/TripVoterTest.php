@@ -147,6 +147,28 @@ final class TripVoterTest extends TestCase
         $this->assertSame(VoterInterface::ACCESS_DENIED, $result);
     }
 
+    #[Test]
+    public function grantWhenOwnerFoundInDatabaseViaStringSubject(): void
+    {
+        $userId = Uuid::v7();
+        $user = new User('owner@example.com', $userId);
+        $token = $this->createStub(TokenInterface::class);
+        $token->method('getUser')->willReturn($user);
+
+        $tripId = '01936f6e-0000-7000-8000-000000000004';
+
+        $this->mockDatabaseOwnershipCheck(1);
+
+        $tripStateCache = $this->createMock(CacheItemPoolInterface::class);
+        $tripStateCache->expects($this->never())->method('getItem');
+        $this->voter = new TripVoter($this->entityManager, $tripStateCache);
+
+        // Stage operations pass the tripId as a plain string, not a TripRequest
+        $result = $this->voter->vote($token, $tripId, [TripVoter::TRIP_VIEW]);
+
+        $this->assertSame(VoterInterface::ACCESS_GRANTED, $result);
+    }
+
     private function mockDatabaseOwnershipCheck(int $count): void
     {
         $query = $this->createStub(Query::class);
