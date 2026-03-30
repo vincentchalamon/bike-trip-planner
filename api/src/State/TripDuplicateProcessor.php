@@ -13,13 +13,6 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\Stage;
 use App\Entity\User;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-use App\Entity\UserTrip;
->>>>>>> 9aa31a5 (feat(security): secure Trip and Stage API endpoints with ownership checks)
-=======
->>>>>>> 0f06fb5 (refactor(security): remove TripOwnershipChecker, replace UserTrip with direct user relation)
 use App\Enum\ComputationName;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Security\Voter\TripVoter;
@@ -36,8 +29,6 @@ use Symfony\Component\Uid\Uuid;
  */
 final readonly class TripDuplicateProcessor implements ProcessorInterface
 {
-    private const int CACHE_TTL = 1800; // 30 minutes
-
     public function __construct(
         private TripRequestRepositoryInterface $tripRepository,
         private EntityManagerInterface $entityManager,
@@ -89,45 +80,14 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
             $this->entityManager->persist($clonedStage);
         }
 
-<<<<<<< HEAD
         // Copy user from source trip, or fall back to the authenticated user
         $user = $source->user ?? $this->security->getUser();
         \assert($user instanceof User);
         $duplicate->user = $user;
-=======
-        // Associate duplicate with current user before flush
-        $user = $this->security->getUser();
-        if ($user instanceof User) {
-            $duplicate->user = $user;
-        }
->>>>>>> 0f06fb5 (refactor(security): remove TripOwnershipChecker, replace UserTrip with direct user relation)
 
         $this->entityManager->beginTransaction();
         try {
             $this->entityManager->flush();
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-
-            // Copy transient Redis data from source trip to duplicate
-            $this->copyTransientData($sourceId, $newTripIdString, $duplicate);
-
-            // Initialize computation tracker as done (all computations are inherited from source)
-            $computations = ComputationName::pipeline();
-            $this->computationTracker->initializeComputations($newTripIdString, $computations);
-
-            foreach ($computations as $computation) {
-                $this->computationTracker->markDone($newTripIdString, $computation);
-            }
-
-            $this->generationTracker->initialize($newTripIdString);
-
-            // Associate duplicate trip with current user
-            $this->associateTripWithUser($newTripIdString, $duplicate);
-
->>>>>>> 9aa31a5 (feat(security): secure Trip and Stage API endpoints with ownership checks)
-=======
->>>>>>> 0f06fb5 (refactor(security): remove TripOwnershipChecker, replace UserTrip with direct user relation)
             $this->entityManager->commit();
         } catch (\Throwable $throwable) {
             $this->entityManager->rollback();
@@ -147,20 +107,11 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         $this->generationTracker->initialize($newTripIdString);
 
         // Store userId in Redis for fast ownership checks during computation
-<<<<<<< HEAD
         $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $newTripIdString));
         $item->set($user->getId()->toRfc4122());
         $item->expiresAfter(TripVoter::CACHE_TTL);
 
         $this->tripStateCache->save($item);
-=======
-        if ($user instanceof User) {
-            $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $newTripIdString));
-            $item->set($user->getId()->toRfc4122());
-            $item->expiresAfter(self::CACHE_TTL);
-            $this->tripStateCache->save($item);
-        }
->>>>>>> 0f06fb5 (refactor(security): remove TripOwnershipChecker, replace UserTrip with direct user relation)
 
         $statuses = $this->computationTracker->getStatuses($newTripIdString) ?? [];
 
