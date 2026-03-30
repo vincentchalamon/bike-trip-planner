@@ -5,16 +5,30 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use ApiPlatform\Symfony\Bundle\Test\Client;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class GeocodeTest extends ApiTestCase
 {
+    use JwtAuthTestTrait;
+
+    private Client $client;
+
+    private string $jwtToken;
+
     #[\Override]
     public static function setUpBeforeClass(): void
     {
         self::$alwaysBootKernel = false;
+    }
+
+    #[\Override]
+    protected function setUp(): void
+    {
+        $this->client = self::createClient();
+        ['token' => $this->jwtToken] = $this->createTestUserWithJwt(\sprintf('geocode-%s@test.com', bin2hex(random_bytes(4))));
     }
 
     #[Test]
@@ -39,10 +53,11 @@ final class GeocodeTest extends ApiTestCase
             ],
         ];
 
-        $client = self::createClient();
         $this->mockNominatimClient($nominatimPayload);
 
-        $response = $client->request('GET', '/geocode/search?q=Lyon&limit=5');
+        $response = $this->client->request('GET', '/geocode/search?q=Lyon&limit=5', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(200);
 
@@ -61,7 +76,9 @@ final class GeocodeTest extends ApiTestCase
     #[Test]
     public function searchRejectsMissingQuery(): void
     {
-        $response = self::createClient()->request('GET', '/geocode/search');
+        $response = $this->client->request('GET', '/geocode/search', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(400);
 
@@ -72,7 +89,9 @@ final class GeocodeTest extends ApiTestCase
     #[Test]
     public function searchRejectsEmptyQuery(): void
     {
-        $response = self::createClient()->request('GET', '/geocode/search?q=');
+        $response = $this->client->request('GET', '/geocode/search?q=', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(400);
 
@@ -94,10 +113,11 @@ final class GeocodeTest extends ApiTestCase
             ],
         ];
 
-        $client = self::createClient();
         $this->mockNominatimClient($nominatimPayload);
 
-        $response = $client->request('GET', '/geocode/search?q=Lyon&limit=1');
+        $response = $this->client->request('GET', '/geocode/search?q=Lyon&limit=1', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(200);
 
@@ -117,10 +137,11 @@ final class GeocodeTest extends ApiTestCase
             'addresstype' => 'road',
         ];
 
-        $client = self::createClient();
         $this->mockNominatimClient($nominatimPayload);
 
-        $response = $client->request('GET', '/geocode/reverse?lat=45.764&lon=4.8343');
+        $response = $this->client->request('GET', '/geocode/reverse?lat=45.764&lon=4.8343', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(200);
 
@@ -137,7 +158,9 @@ final class GeocodeTest extends ApiTestCase
     #[Test]
     public function reverseRejectsMissingLat(): void
     {
-        $response = self::createClient()->request('GET', '/geocode/reverse?lon=4.8343');
+        $response = $this->client->request('GET', '/geocode/reverse?lon=4.8343', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(400);
 
@@ -148,7 +171,9 @@ final class GeocodeTest extends ApiTestCase
     #[Test]
     public function reverseRejectsMissingLon(): void
     {
-        $response = self::createClient()->request('GET', '/geocode/reverse?lat=45.764');
+        $response = $this->client->request('GET', '/geocode/reverse?lat=45.764', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(400);
 
@@ -159,7 +184,9 @@ final class GeocodeTest extends ApiTestCase
     #[Test]
     public function reverseRejectsMissingBothParams(): void
     {
-        $response = self::createClient()->request('GET', '/geocode/reverse');
+        $response = $this->client->request('GET', '/geocode/reverse', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(400);
 
@@ -170,10 +197,11 @@ final class GeocodeTest extends ApiTestCase
     #[Test]
     public function reverseReturnsEmptyOnNominatimError(): void
     {
-        $client = self::createClient();
         $this->mockNominatimClient(['error' => 'Unable to geocode']);
 
-        $response = $client->request('GET', '/geocode/reverse?lat=0&lon=0');
+        $response = $this->client->request('GET', '/geocode/reverse?lat=0&lon=0', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(200);
 
@@ -187,10 +215,11 @@ final class GeocodeTest extends ApiTestCase
         $mockResponse = new MockResponse('', ['http_code' => 500]);
         $mockClient = new MockHttpClient($mockResponse);
 
-        $client = self::createClient();
         self::getContainer()->set('nominatim.client', $mockClient);
 
-        $response = $client->request('GET', '/geocode/search?q=Lyon');
+        $response = $this->client->request('GET', '/geocode/search?q=Lyon', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
 
         $this->assertResponseStatusCodeSame(502);
 

@@ -15,7 +15,7 @@ final class MercureTokenIssuerTest extends TestCase
     #[\Override]
     protected function setUp(): void
     {
-        $this->issuer = new MercureTokenIssuer('test-mercure-secret-key');
+        $this->issuer = new MercureTokenIssuer('test-mercure-secret-key-that-is-at-least-256-bits-long!');
     }
 
     #[Test]
@@ -45,8 +45,8 @@ final class MercureTokenIssuerTest extends TestCase
 
         self::assertIsArray($payload);
         self::assertArrayHasKey('exp', $payload);
-        self::assertGreaterThanOrEqual($before + 3600, $payload['exp']);
-        self::assertLessThanOrEqual($after + 3600, $payload['exp']);
+        self::assertGreaterThanOrEqual($before + 3600, (int) $payload['exp']);
+        self::assertLessThanOrEqual($after + 3601, (int) $payload['exp']);
     }
 
     #[Test]

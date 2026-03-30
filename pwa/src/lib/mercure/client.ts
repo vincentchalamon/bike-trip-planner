@@ -87,8 +87,8 @@ export class MercureClient {
 
       if (this.closed) return;
 
-      // EventSource enters CLOSED state (2) on HTTP 401/403 errors.
-      // Attempt re-authentication before falling back to exponential backoff.
+      // EventSource enters CLOSED state (2) on terminal HTTP errors (401, 403, 404, 5xx…).
+      // Attempt re-authentication on the first CLOSED error in case the cookie expired.
       if (
         readyState === EventSource.CLOSED &&
         this.authRetries < MAX_AUTH_RETRIES

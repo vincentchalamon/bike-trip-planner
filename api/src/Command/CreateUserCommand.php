@@ -74,6 +74,14 @@ final class CreateUserCommand extends Command
         $locale = $input->getOption('locale');
         \assert(\is_string($locale));
 
+        $supportedLocales = ['fr', 'en'];
+
+        if (!\in_array($locale, $supportedLocales, true)) {
+            $io->error(\sprintf('Unsupported locale: %s. Supported locales: %s', $locale, implode(', ', $supportedLocales)));
+
+            return Command::FAILURE;
+        }
+
         $user = new User($email);
         $user->setLocale($locale);
 

@@ -26,7 +26,7 @@ final class MercureSubscriberListenerTest extends TestCase
     protected function setUp(): void
     {
         $this->listener = new MercureSubscriberListener(
-            new MercureTokenIssuer('test-mercure-secret-key'),
+            new MercureTokenIssuer('test-mercure-secret-key-that-is-at-least-256-bits-long!'),
         );
     }
 
@@ -128,7 +128,7 @@ final class MercureSubscriberListenerTest extends TestCase
 
     private function createResponseEvent(Request $request, Response $response): ResponseEvent
     {
-        $kernel = $this->createMock(KernelInterface::class);
+        $kernel = $this->createStub(KernelInterface::class);
 
         return new ResponseEvent($kernel, $request, HttpKernelInterface::MAIN_REQUEST, $response);
     }

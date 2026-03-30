@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State\Auth;
 
+use Symfony\Component\HttpFoundation\Request;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
@@ -48,7 +49,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         $isCapacitor = $this->isCapacitorRequest();
 
         // Capacitor sends refresh token in body
-        if (null === $token && $isCapacitor && $request instanceof \Symfony\Component\HttpFoundation\Request) {
+        if (null === $token && $isCapacitor && $request instanceof Request) {
             $body = $request->toArray();
             $token = $body['refresh_token'] ?? null;
         }
