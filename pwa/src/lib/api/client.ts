@@ -437,7 +437,7 @@ export async function createTripShare(
 }
 
 /**
- * Revoke a share link.
+ * Revoke a share link. Used by the share modal (#42).
  * @returns true on success, false on failure.
  */
 export async function revokeTripShare(

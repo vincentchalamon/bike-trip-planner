@@ -90,9 +90,11 @@ test.describe("/shares/[tripId] page", () => {
   test("shows error state for an invalid or expired share token", async ({
     page,
   }) => {
-    await page.route(`**/shares/${TRIP_ID}**`, (route) =>
-      route.fulfill({ status: 404, body: "" }),
-    );
+    await page.route(`**/shares/${TRIP_ID}**`, (route, request) => {
+      const accept = request.headers()["accept"] ?? "";
+      if (!accept.includes("application/ld+json")) return route.fallback();
+      return route.fulfill({ status: 404, body: "" });
+    });
 
     await page.goto(`/shares/${TRIP_ID}?token=invalid-token`);
 

@@ -58,7 +58,7 @@ use Symfony\Component\Uid\Uuid;
         new Get(
             uriTemplate: '/shares/{tripId}',
             uriVariables: [
-                'tripId' => new Link(fromClass: TripShare::class),
+                'tripId' => new Link(toProperty: 'trip', fromClass: TripRequest::class),
             ],
             openapi: new Operation(
                 summary: 'View a shared trip (read-only, anonymous access).',

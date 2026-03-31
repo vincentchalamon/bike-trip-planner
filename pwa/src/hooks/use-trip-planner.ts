@@ -665,9 +665,13 @@ export function useTripPlanner() {
         return;
       }
 
-      await navigator.clipboard.writeText(
-        buildShareUrl(tripId, result.token ?? ""),
-      );
+      const token = result.token;
+      if (!token) {
+        toast.error(t("config.shareCreateFailed"));
+        return;
+      }
+
+      await navigator.clipboard.writeText(buildShareUrl(tripId, token));
       toast.success(t("config.shareCopied"));
     } catch (err) {
       if (isNetworkError(err)) {
