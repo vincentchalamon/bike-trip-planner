@@ -27,6 +27,12 @@ function SharedTripLoader({ tripId }: { tripId: string }) {
   const [totalElevationLoss, setTotalElevationLoss] = useState<number | null>(
     null,
   );
+  const [pacingConfig, setPacingConfig] = useState<{
+    fatigueFactor: number;
+    elevationPenalty: number;
+    maxDistancePerDay: number;
+    averageSpeed: number;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,7 +51,7 @@ function SharedTripLoader({ tripId }: { tripId: string }) {
           return;
         }
 
-        setTitle(data.title);
+        setTitle(data.title ?? null);
         setStartDate(data.startDate?.split("T")[0] ?? null);
 
         const parsedStages: StageData[] = (data.stages ?? []).map((s) => ({
@@ -90,6 +96,13 @@ function SharedTripLoader({ tripId }: { tripId: string }) {
         setTotalElevationLoss(
           parsedStages.reduce((sum, s) => sum + (s.elevationLoss ?? 0), 0),
         );
+
+        setPacingConfig({
+          fatigueFactor: data.fatigueFactor ?? 0.9,
+          elevationPenalty: data.elevationPenalty ?? 50,
+          maxDistancePerDay: data.maxDistancePerDay ?? 80,
+          averageSpeed: data.averageSpeed ?? 15,
+        });
 
         setIsLoaded(true);
       } catch {
@@ -150,10 +163,10 @@ function SharedTripLoader({ tripId }: { tripId: string }) {
         estimatedBudgetMax={0}
         startDate={startDate}
         endDate={null}
-        fatigueFactor={0.9}
-        elevationPenalty={50}
-        maxDistancePerDay={80}
-        averageSpeed={15}
+        fatigueFactor={pacingConfig?.fatigueFactor ?? 0.9}
+        elevationPenalty={pacingConfig?.elevationPenalty ?? 50}
+        maxDistancePerDay={pacingConfig?.maxDistancePerDay ?? 80}
+        averageSpeed={pacingConfig?.averageSpeed ?? 15}
       />
 
       {/* Timeline (read-only) */}

@@ -1,5 +1,5 @@
 import createClient, { type Middleware } from "openapi-fetch";
-import type { operations, paths } from "./schema";
+import type { components, operations, paths } from "./schema";
 import { API_URL } from "@/lib/constants";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -461,25 +461,13 @@ export async function revokeTripShare(
  * Fetch a shared trip (anonymous, no auth required).
  * @returns The trip detail data, or null if the share link is invalid/expired.
  */
+export type SharedTripDetail =
+  components["schemas"]["TripShare.TripDetail.jsonld"];
+
 export async function fetchSharedTrip(
   tripId: string,
   token: string,
-): Promise<{
-  id: string;
-  title: string | null;
-  sourceUrl: string | null;
-  startDate: string | null;
-  endDate: string | null;
-  fatigueFactor: number;
-  elevationPenalty: number;
-  maxDistancePerDay: number;
-  averageSpeed: number;
-  ebikeMode: boolean;
-  departureHour: number;
-  enabledAccommodationTypes: string[];
-  isLocked: boolean;
-  stages: Array<Record<string, unknown>>;
-} | null> {
+): Promise<SharedTripDetail | null> {
   const res = await fetch(
     `${API_URL}/shares/${encodeURIComponent(tripId)}?token=${encodeURIComponent(token)}`,
     {
@@ -489,20 +477,5 @@ export async function fetchSharedTrip(
     },
   );
   if (!res.ok) return null;
-  return res.json() as Promise<{
-    id: string;
-    title: string | null;
-    sourceUrl: string | null;
-    startDate: string | null;
-    endDate: string | null;
-    fatigueFactor: number;
-    elevationPenalty: number;
-    maxDistancePerDay: number;
-    averageSpeed: number;
-    ebikeMode: boolean;
-    departureHour: number;
-    enabledAccommodationTypes: string[];
-    isLocked: boolean;
-    stages: Array<Record<string, unknown>>;
-  }>;
+  return res.json() as Promise<SharedTripDetail>;
 }
