@@ -64,11 +64,11 @@ final class MagicLinkRepository extends ServiceEntityRepository
         $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         $affected = $this->getEntityManager()->getConnection()->executeStatement(
             'UPDATE magic_link SET consumed_at = :now WHERE token = :token AND consumed_at IS NULL AND expires_at > :now',
-            ['token' => $token, 'now' => $now->format('Y-m-d H:i:s')],
+            ['token' => $token, 'now' => $now->format('Y-m-d H:i:sP')],
         );
 
         if (0 === $affected) {
-            $this->logger->debug('Magic link not found, expired, or already consumed', ['token_prefix' => substr($token, 0, 12)]);
+            $this->logger->debug('Magic link not found, expired, or already consumed');
 
             return null;
         }
