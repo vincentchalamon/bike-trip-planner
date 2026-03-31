@@ -61,9 +61,10 @@ final class MagicLinkRepository extends ServiceEntityRepository
      */
     public function consumeByToken(string $token): ?User
     {
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         $affected = $this->getEntityManager()->getConnection()->executeStatement(
-            'UPDATE magic_link SET consumed_at = NOW() WHERE token = :token AND consumed_at IS NULL AND expires_at > NOW()',
-            ['token' => $token],
+            'UPDATE magic_link SET consumed_at = :now WHERE token = :token AND consumed_at IS NULL AND expires_at > :now',
+            ['token' => $token, 'now' => $now->format('Y-m-d H:i:s')],
         );
 
         if (0 === $affected) {
