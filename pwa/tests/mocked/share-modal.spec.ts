@@ -256,8 +256,6 @@ test.describe("Share modal", () => {
     );
     expect(clipboardText).toContain("Tour de l'Ardeche");
     // Should also contain the share URL since a link was created
-    expect(clipboardText).toContain(
-      expectedShareUrl(getTripId(), SHARE_TOKEN),
-    );
+    expect(clipboardText).toContain(expectedShareUrl(getTripId(), SHARE_TOKEN));
   });
 });
