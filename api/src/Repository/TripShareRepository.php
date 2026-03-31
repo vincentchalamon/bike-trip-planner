@@ -11,7 +11,7 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * @extends ServiceEntityRepository<TripShare>
  */
-final class TripShareRepository extends ServiceEntityRepository
+final class TripShareRepository extends ServiceEntityRepository implements TripShareRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
     {

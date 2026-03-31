@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use App\Entity\TripShare;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripDetail;
-use App\Repository\TripShareRepository;
+use App\Entity\TripShare;
+use App\Repository\TripShareRepositoryInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -24,8 +25,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 final readonly class TripShareViewProvider implements ProviderInterface
 {
     public function __construct(
-        private TripShareRepository $tripShareRepository,
-        private TripDetailProvider $tripDetailProvider,
+        private TripShareRepositoryInterface $tripShareRepository,
+        /** @var ProviderInterface<TripDetail> */
+        #[Autowire(service: TripDetailProvider::class)]
+        private ProviderInterface $tripDetailProvider,
         private RequestStack $requestStack,
     ) {
     }
@@ -50,6 +53,9 @@ final readonly class TripShareViewProvider implements ProviderInterface
         }
 
         // Delegate to TripDetailProvider's provide() by passing the tripId as 'id'
-        return $this->tripDetailProvider->provide($operation, ['id' => $tripId], $context);
+        $detail = $this->tripDetailProvider->provide($operation, ['id' => $tripId], $context);
+        \assert($detail instanceof TripDetail);
+
+        return $detail;
     }
 }
