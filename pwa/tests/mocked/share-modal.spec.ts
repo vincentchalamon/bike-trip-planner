@@ -35,10 +35,13 @@ function mockShareRevoke(
   page: import("@playwright/test").Page,
   tripId: string,
 ) {
-  return page.route(`**/trips/${tripId}/share/${SHARE_ID}`, (route, request) => {
-    if (request.method() !== "DELETE") return route.fallback();
-    return route.fulfill({ status: 204, body: "" });
-  });
+  return page.route(
+    `**/trips/${tripId}/share/${SHARE_ID}`,
+    (route, request) => {
+      if (request.method() !== "DELETE") return route.fallback();
+      return route.fulfill({ status: 204, body: "" });
+    },
+  );
 }
 
 /** Helper: create a full trip and open the share modal. */
@@ -163,9 +166,7 @@ test.describe("Share modal", () => {
     ).toBeVisible({ timeout: 5000 });
 
     // The share link input should no longer be visible
-    await expect(
-      mockedPage.getByTestId("share-link-input"),
-    ).not.toBeVisible();
+    await expect(mockedPage.getByTestId("share-link-input")).not.toBeVisible();
 
     // No auto-creation should have happened (no POST request after revoke)
     expect(shareCreateRequests).toHaveLength(0);

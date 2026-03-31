@@ -296,4 +296,3 @@ function formatDateRange(start: string | null, end: string | null): string {
   if (start) return formatDate(start);
   return "";
 }
-
