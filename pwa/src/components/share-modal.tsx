@@ -23,11 +23,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import {
-  renderInfographic,
-  downloadInfographicPng,
-  computeEstimatedBudget,
-} from "@/lib/infographic";
+import { renderInfographic, downloadInfographicPng } from "@/lib/infographic";
 import { buildTripText } from "@/lib/text-export";
 import { createTripShare, revokeTripShare } from "@/lib/api/client";
 import type { StageData } from "@/lib/validation/schemas";
@@ -44,6 +40,8 @@ interface ShareModalProps {
   stages: StageData[];
   startDate: string | null;
   endDate: string | null;
+  estimatedBudgetMin: number;
+  estimatedBudgetMax: number;
 }
 
 export function ShareModal({
@@ -58,6 +56,8 @@ export function ShareModal({
   stages,
   startDate,
   endDate,
+  estimatedBudgetMin,
+  estimatedBudgetMax,
 }: ShareModalProps) {
   const t = useTranslations("share");
   const tStage = useTranslations("stage");
@@ -65,8 +65,9 @@ export function ShareModal({
 
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareId, setShareId] = useState<string | null>(null);
+  const [hasRevoked, setHasRevoked] = useState(false);
   const [isRecreatingLink, setIsRecreatingLink] = useState(false);
-  const isCreatingLink = (open && !shareUrl) || isRecreatingLink;
+  const isCreatingLink = (open && !shareUrl && !hasRevoked) || isRecreatingLink;
   const [isRevokingLink, setIsRevokingLink] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [textCopied, setTextCopied] = useState(false);
@@ -75,7 +76,7 @@ export function ShareModal({
 
   // Create share link on first open
   useEffect(() => {
-    if (!open || shareUrl) return;
+    if (!open || shareUrl || hasRevoked) return;
 
     let cancelled = false;
     createTripShare(tripId).then((result) => {
@@ -91,7 +92,7 @@ export function ShareModal({
     return () => {
       cancelled = true;
     };
-  }, [open, tripId, shareUrl, t]);
+  }, [open, tripId, shareUrl, hasRevoked, t]);
 
   // Render infographic when dialog opens and data is ready
   useEffect(() => {
@@ -101,8 +102,6 @@ export function ShareModal({
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const budget = computeEstimatedBudget(stages);
-
       renderInfographic(canvas, {
         title,
         totalDistance,
@@ -111,8 +110,8 @@ export function ShareModal({
         stages,
         startDate,
         endDate,
-        estimatedBudgetMin: budget.min,
-        estimatedBudgetMax: budget.max,
+        estimatedBudgetMin,
+        estimatedBudgetMax,
         labels: {
           distance: t("statDistance"),
           elevation: t("statElevation"),
@@ -137,6 +136,8 @@ export function ShareModal({
     stages,
     startDate,
     endDate,
+    estimatedBudgetMin,
+    estimatedBudgetMax,
     t,
     tStage,
   ]);
@@ -159,6 +160,7 @@ export function ShareModal({
     const ok = await revokeTripShare(tripId, shareId);
     setIsRevokingLink(false);
     if (ok) {
+      setHasRevoked(true);
       setShareUrl(null);
       setShareId(null);
       toast.success(t("linkRevoked"));
@@ -293,6 +295,7 @@ export function ShareModal({
                 size="sm"
                 className="cursor-pointer"
                 onClick={() => {
+                  setHasRevoked(false);
                   setIsRecreatingLink(true);
                   void createTripShare(tripId).then((result) => {
                     setIsRecreatingLink(false);

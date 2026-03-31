@@ -1,10 +1,5 @@
 import { getDifficulty } from "@/lib/constants";
 import type { StageData } from "@/lib/validation/schemas";
-import {
-  MEAL_COST_MIN,
-  MEAL_COST_MAX,
-  mealsForStage,
-} from "@/lib/budget-constants";
 
 export interface InfographicData {
   title: string;
@@ -302,38 +297,3 @@ function formatDateRange(start: string | null, end: string | null): string {
   return "";
 }
 
-/**
- * Compute the estimated total budget for a trip (same logic as trip-planner.tsx).
- */
-export function computeEstimatedBudget(stages: StageData[]): {
-  min: number;
-  max: number;
-} {
-  const nonRestStages = stages.filter((s) => !s.isRestDay);
-  const lastActiveIndex = nonRestStages.length - 1;
-  const restDayCount = stages.filter((s) => s.isRestDay).length;
-  let accMin = 0;
-  let accMax = 0;
-  let foodMin = restDayCount * 3 * MEAL_COST_MIN;
-  let foodMax = restDayCount * 3 * MEAL_COST_MAX;
-  nonRestStages.forEach((s, i) => {
-    const isFirst = i === 0;
-    const isLast = i === lastActiveIndex;
-    foodMin += mealsForStage(isFirst, isLast) * MEAL_COST_MIN;
-    foodMax += mealsForStage(isFirst, isLast) * MEAL_COST_MAX;
-    if (!isLast) {
-      if (s.selectedAccommodation) {
-        accMin += s.selectedAccommodation.estimatedPriceMin ?? 0;
-        accMax += s.selectedAccommodation.estimatedPriceMax ?? 0;
-      } else if (s.accommodations.length > 0) {
-        accMin +=
-          s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMin, 0) /
-          s.accommodations.length;
-        accMax +=
-          s.accommodations.reduce((a, ac) => a + ac.estimatedPriceMax, 0) /
-          s.accommodations.length;
-      }
-    }
-  });
-  return { min: accMin + foodMin, max: accMax + foodMax };
-}

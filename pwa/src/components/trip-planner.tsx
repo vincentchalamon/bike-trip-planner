@@ -513,6 +513,8 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
             stages={stages}
             startDate={startDate}
             endDate={endDate}
+            estimatedBudgetMin={estimatedBudget.min}
+            estimatedBudgetMax={estimatedBudget.max}
           />
         )}
 
