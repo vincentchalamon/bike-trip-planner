@@ -49,31 +49,32 @@ const MOCK_SHARED_TRIP = {
   ],
 };
 
+function mockValidShare(page: import("@playwright/test").Page) {
+  return page.route(
+    `**/shares/${TRIP_ID}?token=${SHARE_TOKEN}`,
+    (route, request) => {
+      const accept = request.headers()["accept"] ?? "";
+      if (!accept.includes("application/ld+json")) return route.fallback();
+      return route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "application/ld+json; charset=utf-8" },
+        body: JSON.stringify(MOCK_SHARED_TRIP),
+      });
+    },
+  );
+}
+
 test.describe("/shares/[tripId] page", () => {
-  test("renders trip title, summary and timeline for a valid share token", async ({
+  test("renders trip title, summary, timeline and read-only banner for a valid share token", async ({
     page,
   }) => {
-    await page.route(
-      `**/shares/${TRIP_ID}?token=${SHARE_TOKEN}`,
-      (route, request) => {
-        const accept = request.headers()["accept"] ?? "";
-        if (!accept.includes("application/ld+json")) return route.fallback();
-        return route.fulfill({
-          status: 200,
-          headers: { "Content-Type": "application/ld+json; charset=utf-8" },
-          body: JSON.stringify(MOCK_SHARED_TRIP),
-        });
-      },
-    );
-
+    await mockValidShare(page);
     await page.goto(`/shares/${TRIP_ID}?token=${SHARE_TOKEN}`);
 
     // Title
     await expect(
       page.getByRole("heading", { name: "Tour de Bretagne" }),
-    ).toBeVisible({
-      timeout: 10000,
-    });
+    ).toBeVisible({ timeout: 10000 });
 
     // Trip summary stats
     await expect(page.getByTestId("total-distance")).toBeVisible();
@@ -82,17 +83,8 @@ test.describe("/shares/[tripId] page", () => {
     await expect(page.getByTestId("stage-card-1")).toBeVisible();
     await expect(page.getByTestId("stage-card-2")).toBeVisible();
 
-    // Read-only banner visible
-    await expect(
-      page.getByRole("paragraph").or(page.locator("[data-testid]")).first(),
-    ).toBeDefined();
-    await expect(
-      page.locator("text=lecture seule").or(page.locator("text=read")).first(),
-    )
-      .toBeVisible({ timeout: 5000 })
-      .catch(() => {
-        // Banner text may vary by locale — just verify the page loaded correctly
-      });
+    // Read-only banner
+    await expect(page.getByTestId("read-only-banner")).toBeVisible();
   });
 
   test("shows error state for an invalid or expired share token", async ({
@@ -104,40 +96,26 @@ test.describe("/shares/[tripId] page", () => {
 
     await page.goto(`/shares/${TRIP_ID}?token=invalid-token`);
 
-    // Error message should appear
-    await expect(
-      page.getByText(/introuvable|not found|invalid|expired|erreur/i),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("share-error")).toBeVisible({
+      timeout: 10000,
+    });
 
-    // Back to home button
+    // Back to home link
     await expect(page.getByRole("link").first()).toBeVisible();
   });
 
   test("shows error state when token is missing from URL", async ({ page }) => {
     await page.goto(`/shares/${TRIP_ID}`);
 
-    // Error message should appear (token is empty → immediate error)
-    await expect(
-      page.getByText(/introuvable|not found|invalid|expired|erreur/i),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("share-error")).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test("stage cards are read-only (no delete or add buttons)", async ({
     page,
   }) => {
-    await page.route(
-      `**/shares/${TRIP_ID}?token=${SHARE_TOKEN}`,
-      (route, request) => {
-        const accept = request.headers()["accept"] ?? "";
-        if (!accept.includes("application/ld+json")) return route.fallback();
-        return route.fulfill({
-          status: 200,
-          headers: { "Content-Type": "application/ld+json; charset=utf-8" },
-          body: JSON.stringify(MOCK_SHARED_TRIP),
-        });
-      },
-    );
-
+    await mockValidShare(page);
     await page.goto(`/shares/${TRIP_ID}?token=${SHARE_TOKEN}`);
 
     await expect(page.getByTestId("stage-card-1")).toBeVisible({

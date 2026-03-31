@@ -415,14 +415,12 @@ export function buildShareUrl(tripId: string, token: string): string {
  * Create a read-only share link for a trip.
  * @returns The share metadata (id, token, expiresAt), or null on failure.
  */
+export type TripShareResponse = components["schemas"]["TripShare.jsonld"];
+
 export async function createTripShare(
   tripId: string,
   expiresAt?: string,
-): Promise<{
-  id: string;
-  token: string;
-  expiresAt: string | null;
-} | null> {
+): Promise<TripShareResponse | null> {
   const res = await apiFetch(
     `${API_URL}/trips/${encodeURIComponent(tripId)}/shares`,
     {
@@ -435,11 +433,7 @@ export async function createTripShare(
     },
   );
   if (!res.ok) return null;
-  return res.json() as Promise<{
-    id: string;
-    token: string;
-    expiresAt: string | null;
-  }>;
+  return res.json() as Promise<TripShareResponse>;
 }
 
 /**

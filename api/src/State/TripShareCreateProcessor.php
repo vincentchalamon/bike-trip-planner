@@ -4,20 +4,23 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use ApiPlatform\Doctrine\Common\State\PersistProcessor;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Entity\TripShare;
-use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Generates a 256-bit token before persisting a new TripShare.
+ * Generates a 256-bit token before delegating persistence to API Platform's PersistProcessor.
  *
  * @implements ProcessorInterface<TripShare, TripShare>
  */
 final readonly class TripShareCreateProcessor implements ProcessorInterface
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
+        /** @var ProcessorInterface<TripShare, TripShare> */
+        #[Autowire(service: PersistProcessor::class)]
+        private ProcessorInterface $persistProcessor,
     ) {
     }
 
@@ -27,9 +30,9 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
 
         $data->generateToken();
 
-        $this->entityManager->persist($data);
-        $this->entityManager->flush();
+        $result = $this->persistProcessor->process($data, $operation, $uriVariables, $context);
+        \assert($result instanceof TripShare);
 
-        return $data;
+        return $result;
     }
 }

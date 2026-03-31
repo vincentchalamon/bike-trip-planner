@@ -14,10 +14,8 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 #[CoversClass(TripShareViewProvider::class)]
@@ -29,8 +27,6 @@ final class TripShareViewProviderTest extends TestCase
     /** @var MockObject&ProviderInterface<TripDetail> */
     private MockObject $tripDetailProvider;
 
-    private Stub&RequestStack $requestStack;
-
     private TripShareViewProvider $provider;
 
     #[\Override]
@@ -38,19 +34,17 @@ final class TripShareViewProviderTest extends TestCase
     {
         $this->repository = $this->createMock(TripShareRepositoryInterface::class);
         $this->tripDetailProvider = $this->createMock(ProviderInterface::class);
-        $this->requestStack = $this->createStub(RequestStack::class);
 
         $this->provider = new TripShareViewProvider(
             $this->repository,
             $this->tripDetailProvider,
-            $this->requestStack,
         );
     }
 
-    private function mockRequest(string $token): void
+    /** @return array<string, mixed> */
+    private function makeContext(string $token): array
     {
-        $request = new Request(query: ['token' => $token]);
-        $this->requestStack->method('getCurrentRequest')->willReturn($request);
+        return ['request' => new Request(query: ['token' => $token])];
     }
 
     #[Test]
@@ -58,8 +52,6 @@ final class TripShareViewProviderTest extends TestCase
     {
         $tripId = 'test-trip-uuid';
         $token = str_repeat('a', 64);
-
-        $this->mockRequest($token);
 
         $share = $this->createStub(TripShare::class);
         $this->repository->expects($this->once())->method('findValidShare')->with($tripId, $token)->willReturn($share);
@@ -86,7 +78,7 @@ final class TripShareViewProviderTest extends TestCase
             ->with($this->anything(), ['id' => $tripId], $this->anything())
             ->willReturn($expectedDetail);
 
-        $result = $this->provider->provide(new Get(), ['tripId' => $tripId]);
+        $result = $this->provider->provide(new Get(), ['tripId' => $tripId], $this->makeContext($token));
 
         $this->assertSame($expectedDetail, $result);
     }
@@ -94,21 +86,19 @@ final class TripShareViewProviderTest extends TestCase
     #[Test]
     public function missingTokenThrowsNotFound(): void
     {
-        $this->mockRequest('');
         $this->repository->expects($this->never())->method('findValidShare');
 
         $this->expectException(NotFoundHttpException::class);
-        $this->provider->provide(new Get(), ['tripId' => 'some-trip-id']);
+        $this->provider->provide(new Get(), ['tripId' => 'some-trip-id'], $this->makeContext(''));
     }
 
     #[Test]
     public function missingTripIdThrowsNotFound(): void
     {
-        $this->mockRequest(str_repeat('b', 64));
         $this->repository->expects($this->never())->method('findValidShare');
 
         $this->expectException(NotFoundHttpException::class);
-        $this->provider->provide(new Get(), []);
+        $this->provider->provide(new Get(), [], $this->makeContext(str_repeat('b', 64)));
     }
 
     #[Test]
@@ -117,22 +107,20 @@ final class TripShareViewProviderTest extends TestCase
         $tripId = 'test-trip-uuid';
         $token = str_repeat('c', 64);
 
-        $this->mockRequest($token);
         $this->repository->expects($this->once())->method('findValidShare')->with($tripId, $token)->willReturn(null);
 
         $this->tripDetailProvider->expects($this->never())->method('provide');
 
         $this->expectException(NotFoundHttpException::class);
-        $this->provider->provide(new Get(), ['tripId' => $tripId]);
+        $this->provider->provide(new Get(), ['tripId' => $tripId], $this->makeContext($token));
     }
 
     #[Test]
-    public function nullRequestStackThrowsNotFound(): void
+    public function missingRequestInContextThrowsNotFound(): void
     {
-        $this->requestStack->method('getCurrentRequest')->willReturn(null);
         $this->repository->expects($this->never())->method('findValidShare');
 
         $this->expectException(NotFoundHttpException::class);
-        $this->provider->provide(new Get(), ['tripId' => 'some-trip-id']);
+        $this->provider->provide(new Get(), ['tripId' => 'some-trip-id'], []);
     }
 }

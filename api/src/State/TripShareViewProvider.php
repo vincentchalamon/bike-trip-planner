@@ -10,7 +10,7 @@ use App\ApiResource\TripDetail;
 use App\Entity\TripShare;
 use App\Repository\TripShareRepositoryInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -29,17 +29,18 @@ final readonly class TripShareViewProvider implements ProviderInterface
         /** @var ProviderInterface<TripDetail> */
         #[Autowire(service: TripDetailProvider::class)]
         private ProviderInterface $tripDetailProvider,
-        private RequestStack $requestStack,
     ) {
     }
 
     /**
      * @param array{tripId?: string} $uriVariables
+     * @param array<string, mixed>   $context
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): TripDetail
     {
         $tripId = $uriVariables['tripId'] ?? '';
-        $token = $this->requestStack->getCurrentRequest()?->query->getString('token') ?? '';
+        $request = $context['request'] ?? null;
+        $token = $request instanceof Request ? $request->query->getString('token') : '';
 
         // Uniform error message: never reveal whether the trip exists
         if ('' === $token || '' === $tripId) {
