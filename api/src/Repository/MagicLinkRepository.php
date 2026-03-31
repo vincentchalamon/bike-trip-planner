@@ -52,8 +52,8 @@ final class MagicLinkRepository extends ServiceEntityRepository
     /**
      * Atomically consumes a magic link token and returns the associated user.
      *
-     * Uses a native SQL conditional UPDATE (SET consumed_at = NOW() WHERE
-     * consumed_at IS NULL AND expires_at > NOW()) to prevent TOCTOU race
+     * Uses a native SQL conditional UPDATE (SET consumed_at = :now WHERE
+     * consumed_at IS NULL AND expires_at > :now) to prevent TOCTOU race
      * conditions — only the first concurrent request wins.
      *
      * Native SQL is used instead of DQL because Doctrine ORM 3 does not bind
