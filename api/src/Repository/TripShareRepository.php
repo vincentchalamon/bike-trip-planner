@@ -39,23 +39,4 @@ final class TripShareRepository extends ServiceEntityRepository
 
         return $share;
     }
-
-    /**
-     * Find all shares for a given trip.
-     *
-     * @return list<TripShare>
-     */
-    public function findByTrip(string $tripId): array
-    {
-        /** @var list<TripShare> $shares */
-        $shares = $this->createQueryBuilder('s')
-            ->join('s.trip', 't')
-            ->where('t.id = :tripId')
-            ->setParameter('tripId', $tripId)
-            ->orderBy('s.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
-
-        return $shares;
-    }
 }

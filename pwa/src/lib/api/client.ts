@@ -401,35 +401,40 @@ export async function downloadStageFile(
 }
 
 /**
+ * Build the frontend share URL from trip ID and token.
+ */
+export function buildShareUrl(tripId: string, token: string): string {
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "https://localhost";
+  return `${origin}/shares/${encodeURIComponent(tripId)}?token=${encodeURIComponent(token)}`;
+}
+
+/**
  * Create a read-only share link for a trip.
- * @returns The share URL and metadata, or null on failure.
+ * @returns The share metadata (id, token, expiresAt), or null on failure.
  */
 export async function createTripShare(
   tripId: string,
-  expiresInHours?: number,
+  expiresAt?: string,
 ): Promise<{
   id: string;
-  shareUrl: string;
   token: string;
   expiresAt: string | null;
 } | null> {
   const res = await apiFetch(
-    `${API_URL}/trips/${encodeURIComponent(tripId)}/share`,
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/shares`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/ld+json",
         Accept: "application/ld+json",
       },
-      body: JSON.stringify(
-        expiresInHours !== undefined ? { expiresInHours } : {},
-      ),
+      body: JSON.stringify(expiresAt !== undefined ? { expiresAt } : {}),
     },
   );
   if (!res.ok) return null;
   return res.json() as Promise<{
     id: string;
-    shareUrl: string;
     token: string;
     expiresAt: string | null;
   }>;
@@ -444,7 +449,7 @@ export async function revokeTripShare(
   shareId: string,
 ): Promise<boolean> {
   const res = await apiFetch(
-    `${API_URL}/trips/${encodeURIComponent(tripId)}/share/${encodeURIComponent(shareId)}`,
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/shares/${encodeURIComponent(shareId)}`,
     { method: "DELETE" },
   );
   return res.ok;
@@ -474,7 +479,7 @@ export async function fetchSharedTrip(
   stages: Array<Record<string, unknown>>;
 } | null> {
   const res = await fetch(
-    `${API_URL}/share/${encodeURIComponent(tripId)}?token=${encodeURIComponent(token)}`,
+    `${API_URL}/shares/${encodeURIComponent(tripId)}?token=${encodeURIComponent(token)}`,
     {
       headers: {
         Accept: "application/ld+json",

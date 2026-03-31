@@ -19,6 +19,7 @@ import {
   scanAccommodations,
   addPoiWaypointToRoute,
   duplicateTrip,
+  buildShareUrl,
   createTripShare,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
@@ -664,7 +665,7 @@ export function useTripPlanner() {
         return;
       }
 
-      await navigator.clipboard.writeText(result.shareUrl);
+      await navigator.clipboard.writeText(buildShareUrl(tripId, result.token));
       toast.success(t("config.shareCopied"));
     } catch (err) {
       if (isNetworkError(err)) {

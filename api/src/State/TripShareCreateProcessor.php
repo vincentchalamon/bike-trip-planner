@@ -5,69 +5,31 @@ declare(strict_types=1);
 namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
-use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
-use App\ApiResource\TripRequest;
-use App\ApiResource\TripShareRequest;
-use App\ApiResource\TripShareResponse;
 use App\Entity\TripShare;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Creates a new share token for a trip.
+ * Generates a 256-bit token before persisting a new TripShare.
  *
- * @implements ProcessorInterface<TripShareRequest, TripShareResponse>
+ * @implements ProcessorInterface<TripShare, TripShare>
  */
 final readonly class TripShareCreateProcessor implements ProcessorInterface
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        #[Autowire(env: 'PWA_URL')]
-        private string $pwaUrl,
     ) {
     }
 
-    /**
-     * @param TripShareRequest                   $data         The deserialized input DTO
-     * @param Post                               $operation
-     * @param array{tripId?: string}             $uriVariables
-     * @param array{previous_data?: TripRequest} $context
-     */
-    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): TripShareResponse
+    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): TripShare
     {
-        \assert(isset($context['previous_data']) && $context['previous_data'] instanceof TripRequest);
-        $trip = $context['previous_data'];
+        \assert($data instanceof TripShare);
 
-        $token = bin2hex(random_bytes(32)); // 256 bits = 64 hex chars
+        $data->generateToken();
 
-        $expiresAt = null;
-        if ($data instanceof TripShareRequest && null !== $data->expiresInHours) {
-            $expiresAt = new \DateTimeImmutable(\sprintf('+%d hours', $data->expiresInHours));
-        }
-
-        $share = new TripShare(
-            trip: $trip,
-            token: $token,
-            expiresAt: $expiresAt,
-        );
-
-        $this->entityManager->persist($share);
+        $this->entityManager->persist($data);
         $this->entityManager->flush();
 
-        $tripId = $uriVariables['tripId'] ?? '';
-
-        return new TripShareResponse(
-            id: $share->getId()->toRfc4122(),
-            shareUrl: $this->buildShareUrl($tripId, $token),
-            token: $token,
-            expiresAt: $expiresAt,
-            createdAt: $share->getCreatedAt(),
-        );
-    }
-
-    private function buildShareUrl(string $tripId, string $token): string
-    {
-        return \sprintf('%s/share/%s?token=%s', rtrim($this->pwaUrl, '/'), $tripId, $token);
+        return $data;
     }
 }
