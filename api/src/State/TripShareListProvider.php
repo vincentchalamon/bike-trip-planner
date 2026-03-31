@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use ApiPlatform\Metadata\Delete;
+use App\Entity\TripShare;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
@@ -22,7 +22,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * For GET collection: returns a list of TripShareResponse DTOs.
  * For DELETE: returns the TripRequest (processor handles deletion).
  *
- * @implements ProviderInterface<TripRequest|list<TripShareResponse>>
+ * @implements ProviderInterface<TripRequest>
  */
 final readonly class TripShareListProvider implements ProviderInterface
 {
@@ -64,7 +64,7 @@ final readonly class TripShareListProvider implements ProviderInterface
         $shares = $this->tripShareRepository->findByTrip($tripId);
 
         return array_map(
-            static fn (\App\Entity\TripShare $share): TripShareResponse => new TripShareResponse(
+            static fn (TripShare $share): TripShareResponse => new TripShareResponse(
                 id: $share->getId()->toRfc4122(),
                 shareUrl: '',
                 token: $share->getToken(),

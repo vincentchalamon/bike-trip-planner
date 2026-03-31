@@ -26,8 +26,8 @@ final readonly class TripShareDeleteProcessor implements ProcessorInterface
     }
 
     /**
-     * @param TripRequest                        $data         The trip entity (loaded by provider for security check)
-     * @param Delete                             $operation
+     * @param TripRequest                              $data         The trip entity (loaded by provider for security check)
+     * @param Delete                                   $operation
      * @param array{tripId?: string, shareId?: string} $uriVariables
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): void

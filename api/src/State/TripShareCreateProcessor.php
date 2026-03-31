@@ -28,20 +28,20 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
     }
 
     /**
-     * @param TripShareRequest                 $data         The deserialized input DTO
-     * @param Post                             $operation
-     * @param array{tripId?: string}           $uriVariables
+     * @param TripShareRequest                   $data         The deserialized input DTO
+     * @param Post                               $operation
+     * @param array{tripId?: string}             $uriVariables
      * @param array{previous_data?: TripRequest} $context
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): TripShareResponse
     {
-        /** @var TripRequest $trip */
+        \assert(isset($context['previous_data']) && $context['previous_data'] instanceof TripRequest);
         $trip = $context['previous_data'];
 
         $token = bin2hex(random_bytes(32)); // 256 bits = 64 hex chars
 
         $expiresAt = null;
-        if ($data instanceof TripShareRequest && $data->expiresInHours !== null) {
+        if ($data instanceof TripShareRequest && null !== $data->expiresInHours) {
             $expiresAt = new \DateTimeImmutable(\sprintf('+%d hours', $data->expiresInHours));
         }
 
@@ -75,6 +75,6 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
         // Use the PWA origin from the request's Referer/Origin or fallback to env
         $pwaUrl = $_ENV['PWA_URL'] ?? $baseUrl;
 
-        return \sprintf('%s/share/%s?token=%s', rtrim($pwaUrl, '/'), $tripId, $token);
+        return \sprintf('%s/share/%s?token=%s', rtrim(\is_string($pwaUrl) ? $pwaUrl : $baseUrl, '/'), $tripId, $token);
     }
 }

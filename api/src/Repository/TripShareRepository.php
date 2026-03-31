@@ -47,12 +47,15 @@ final class TripShareRepository extends ServiceEntityRepository
      */
     public function findByTrip(string $tripId): array
     {
-        return $this->createQueryBuilder('s')
+        /** @var list<TripShare> $shares */
+        $shares = $this->createQueryBuilder('s')
             ->join('s.trip', 't')
             ->where('t.id = :tripId')
             ->setParameter('tripId', $tripId)
             ->orderBy('s.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
+
+        return $shares;
     }
 }

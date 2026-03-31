@@ -24,6 +24,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates a Auth resource.
+         * @description Creates a Auth resource.
+         */
+        post: operations["api_authlogout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates a Auth resource.
+         * @description Creates a Auth resource.
+         */
+        post: operations["api_authrefresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/request-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates a Auth resource.
+         * @description Creates a Auth resource.
+         */
+        post: operations["api_authrequest-link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates a Auth resource.
+         * @description Creates a Auth resource.
+         */
+        post: operations["api_authverify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{tripId}/stages": {
         parameters: {
             query?: never;
@@ -264,6 +344,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/share/{tripId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * View a shared trip (read-only, anonymous access).
+         * @description Retrieves a TripShare resource.
+         */
+        get: operations["api_share_tripId_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{tripId}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a read-only share link for a trip.
+         * @description Creates a TripShare resource.
+         */
+        post: operations["api_trips_tripIdshare_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{tripId}/share/{shareId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke a share link.
+         * @description Removes the TripShare resource.
+         */
+        delete: operations["api_trips_tripIdshare_shareId_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{tripId}/shares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all share links for a trip.
+         * @description Retrieves the collection of TripShare resources.
+         */
+        get: operations["api_trips_tripIdshares_get_collection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -341,6 +501,11 @@ export interface components {
             message?: string;
             lat?: number | null;
             lon?: number | null;
+        };
+        Auth: {
+            /** Format: email */
+            email: string;
+            token?: string;
         };
         /** @description Unprocessable entity */
         ConstraintViolation: {
@@ -830,6 +995,116 @@ export interface components {
                 } | null;
             }[];
         };
+        "TripShare.TripDetail.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            id?: string;
+            title?: string | null;
+            sourceUrl?: string | null;
+            /** Format: date-time */
+            startDate?: string | null;
+            /** Format: date-time */
+            endDate?: string | null;
+            fatigueFactor?: number;
+            elevationPenalty?: number;
+            maxDistancePerDay?: number;
+            averageSpeed?: number;
+            ebikeMode?: boolean;
+            departureHour?: number;
+            enabledAccommodationTypes?: string[];
+            isLocked?: boolean;
+            /** @description Serialized stage DTOs */
+            stages?: {
+                dayNumber?: number;
+                /** Format: float */
+                distance?: number;
+                /** Format: float */
+                elevation?: number;
+                /** Format: float */
+                elevationLoss?: number;
+                startPoint?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                };
+                endPoint?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                };
+                geometry?: {
+                    lat?: number;
+                    lon?: number;
+                    ele?: number;
+                }[];
+                label?: string | null;
+                isRestDay?: boolean;
+                weather?: {
+                    icon?: string;
+                    description?: string;
+                    tempMin?: number;
+                    tempMax?: number;
+                    windSpeed?: number;
+                    windDirection?: string;
+                    precipitationProbability?: number;
+                    humidity?: number;
+                    comfortIndex?: number;
+                    relativeWindDirection?: string;
+                } | null;
+                alerts?: {
+                    /** @enum {string} */
+                    type?: "critical" | "warning" | "nudge";
+                    message?: string;
+                    lat?: number | null;
+                    lon?: number | null;
+                }[];
+                pois?: {
+                    name?: string;
+                    category?: string;
+                    lat?: number;
+                    lon?: number;
+                    distanceFromStart?: number | null;
+                }[];
+                accommodations?: {
+                    name?: string;
+                    type?: string;
+                    lat?: number;
+                    lon?: number;
+                    estimatedPriceMin?: number;
+                    estimatedPriceMax?: number;
+                    isExactPrice?: boolean;
+                    url?: string | null;
+                    possibleClosed?: boolean;
+                    distanceToEndPoint?: number;
+                }[];
+                selectedAccommodation?: {
+                    name?: string;
+                    type?: string;
+                    lat?: number;
+                    lon?: number;
+                    estimatedPriceMin?: number;
+                    estimatedPriceMax?: number;
+                    isExactPrice?: boolean;
+                    url?: string | null;
+                    possibleClosed?: boolean;
+                    distanceToEndPoint?: number;
+                } | null;
+            }[];
+        };
+        "TripShare.TripShareRequest": {
+            /** @description Optional expiration delay in hours. Null means no expiration. */
+            expiresInHours?: number | null;
+        };
+        "TripShare.TripShareResponse.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            id?: string;
+            shareUrl?: string;
+            token?: string;
+            /** Format: date-time */
+            expiresAt?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        "TripShare.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            id?: string;
+        };
         "WeatherForecast.fit": {
             icon?: string;
             description?: string;
@@ -900,6 +1175,187 @@ export interface operations {
                 content: {
                     "application/ld+json": components["schemas"]["AccommodationScan.Trip.jsonld"];
                 };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_authlogout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Auth resource created */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_authrefresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Auth resource created */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    "api_authrequest-link_post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The new Auth resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["Auth"];
+            };
+        };
+        responses: {
+            /** @description Auth resource created */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_authverify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The new Auth resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["Auth"];
+            };
+        };
+        responses: {
+            /** @description Auth resource created */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Invalid input */
             400: {
@@ -1859,6 +2315,199 @@ export interface operations {
             };
             /** @description Not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    api_share_tripId_get: {
+        parameters: {
+            query: {
+                /** @description Share token (64 hex characters) */
+                token: string;
+            };
+            header?: never;
+            path: {
+                /** @description TripShare identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TripShare resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["TripShare.TripDetail.jsonld"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    api_trips_tripIdshare_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description TripShare identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description The new TripShare resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["TripShare.TripShareRequest"];
+            };
+        };
+        responses: {
+            /** @description TripShare resource created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["TripShare.TripShareResponse.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_trips_tripIdshare_shareId_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description TripShare identifier */
+                tripId: string;
+                /** @description TripShare identifier */
+                shareId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TripShare resource deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    api_trips_tripIdshares_get_collection: {
+        parameters: {
+            query?: {
+                /** @description The collection page number */
+                page?: number;
+            };
+            header?: never;
+            path: {
+                /** @description TripShare identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TripShare collection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["HydraCollectionBaseSchema"] & {
+                        member: components["schemas"]["TripShare.TripShareResponse.jsonld"][];
+                    };
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

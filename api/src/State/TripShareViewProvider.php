@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\Entity\TripShare;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripDetail;
-use App\ApiResource\TripRequest;
-use App\Repository\DoctrineTripRequestRepository;
 use App\Repository\TripShareRepository;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\Uid\Uuid;
 
 /**
  * Provides a read-only trip detail for anonymous share access.
@@ -27,8 +25,6 @@ final readonly class TripShareViewProvider implements ProviderInterface
 {
     public function __construct(
         private TripShareRepository $tripShareRepository,
-        private DoctrineTripRequestRepository $tripStateManager,
-        private TripLocker $tripLocker,
         private TripDetailProvider $tripDetailProvider,
         private RequestStack $requestStack,
     ) {
@@ -49,7 +45,7 @@ final readonly class TripShareViewProvider implements ProviderInterface
 
         $share = $this->tripShareRepository->findValidShare($tripId, $token);
 
-        if (null === $share) {
+        if (!$share instanceof TripShare) {
             throw new NotFoundHttpException('Shared trip not found.');
         }
 
