@@ -101,7 +101,7 @@ final class AuthVerifyTest extends ApiTestCase
         $this->createUserWithMagicLink(
             'expired@example.com',
             'expired-token',
-            new \DateTimeImmutable('-1 hour'),
+            new \DateTimeImmutable('-1 day'),
         );
 
         self::createClient()->request('POST', '/auth/verify', [

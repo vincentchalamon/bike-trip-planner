@@ -11,11 +11,12 @@ const TRIP_ID = "test-trip-abc-123";
 
 /**
  * Fake JWT token for test authentication.
- * Payload: {"sub":"test-user-id","email":"test@example.com","exp":9999999999}
+ * Payload: {"sub":"test-user-id","username":"test@example.com","exp":9999999999}
+ * Matches LexikJWTBundle format (username) + JwtCreatedListener (sub).
  * Header/payload are valid base64url; signature is a fake placeholder.
  */
 export const FAKE_JWT_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjk5OTk5OTk5OTl9.ZmFrZS1zaWduYXR1cmU";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJ1c2VybmFtZSI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjk5OTk5OTk5OTl9.ZmFrZS1zaWduYXR1cmU";
 
 const defaultTripResponse = {
   "@context": "/contexts/Trip",

@@ -61,10 +61,14 @@ final class MagicLinkRepository extends ServiceEntityRepository
      */
     public function consumeByToken(string $token): ?User
     {
+        // Use PHP DateTimeImmutable as single source of truth for timestamps.
+        // Format without offset (Y-m-d H:i:s) to match Doctrine's storage format
+        // for TIMESTAMP WITHOUT TIME ZONE columns.
         $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $formatted = $now->format('Y-m-d H:i:s');
         $affected = $this->getEntityManager()->getConnection()->executeStatement(
             'UPDATE magic_link SET consumed_at = :now WHERE token = :token AND consumed_at IS NULL AND expires_at > :now',
-            ['token' => $token, 'now' => $now->format('Y-m-d H:i:sP')],
+            ['token' => $token, 'now' => $formatted],
         );
 
         if (0 === $affected) {
