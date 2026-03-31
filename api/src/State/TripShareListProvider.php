@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use App\Entity\TripShare;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripRequest;
 use App\ApiResource\TripShareResponse;
+use App\Entity\TripShare;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Repository\TripShareRepository;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -29,6 +30,8 @@ final readonly class TripShareListProvider implements ProviderInterface
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
         private TripShareRepository $tripShareRepository,
+        #[Autowire(env: 'PWA_URL')]
+        private string $pwaUrl,
     ) {
     }
 
@@ -64,9 +67,9 @@ final readonly class TripShareListProvider implements ProviderInterface
         $shares = $this->tripShareRepository->findByTrip($tripId);
 
         return array_map(
-            static fn (TripShare $share): TripShareResponse => new TripShareResponse(
+            fn (TripShare $share): TripShareResponse => new TripShareResponse(
                 id: $share->getId()->toRfc4122(),
-                shareUrl: '',
+                shareUrl: \sprintf('%s/share/%s?token=%s', rtrim($this->pwaUrl, '/'), $tripId, $share->getToken()),
                 token: $share->getToken(),
                 expiresAt: $share->getExpiresAt(),
                 createdAt: $share->getCreatedAt(),

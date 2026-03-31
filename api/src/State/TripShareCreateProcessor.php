@@ -12,7 +12,7 @@ use App\ApiResource\TripShareRequest;
 use App\ApiResource\TripShareResponse;
 use App\Entity\TripShare;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Creates a new share token for a trip.
@@ -23,7 +23,8 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private RequestStack $requestStack,
+        #[Autowire(env: 'PWA_URL')]
+        private string $pwaUrl,
     ) {
     }
 
@@ -55,11 +56,10 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
         $this->entityManager->flush();
 
         $tripId = $uriVariables['tripId'] ?? '';
-        $shareUrl = $this->buildShareUrl($tripId, $token);
 
         return new TripShareResponse(
             id: $share->getId()->toRfc4122(),
-            shareUrl: $shareUrl,
+            shareUrl: $this->buildShareUrl($tripId, $token),
             token: $token,
             expiresAt: $expiresAt,
             createdAt: $share->getCreatedAt(),
@@ -68,13 +68,6 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
 
     private function buildShareUrl(string $tripId, string $token): string
     {
-        $request = $this->requestStack->getCurrentRequest();
-        $baseUrl = $request?->getSchemeAndHttpHost() ?? 'https://localhost';
-
-        // The share URL points to the frontend, not the API
-        // Use the PWA origin from the request's Referer/Origin or fallback to env
-        $pwaUrl = $_ENV['PWA_URL'] ?? $baseUrl;
-
-        return \sprintf('%s/share/%s?token=%s', rtrim(\is_string($pwaUrl) ? $pwaUrl : $baseUrl, '/'), $tripId, $token);
+        return \sprintf('%s/share/%s?token=%s', rtrim($this->pwaUrl, '/'), $tripId, $token);
     }
 }
