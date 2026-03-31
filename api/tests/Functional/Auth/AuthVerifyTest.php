@@ -65,6 +65,7 @@ final class AuthVerifyTest extends ApiTestCase
 
         // Assert JwtCreatedListener injects the sub (UUID) claim
         $parts = explode('.', (string) $data['token']);
+        /** @var array{sub?: string, username?: string} $payload */
         $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
         $this->assertSame($user->getId()->toRfc4122(), $payload['sub'] ?? null, 'JWT must contain sub = user UUID');
         $this->assertSame('alice@example.com', $payload['username'] ?? null, 'JWT must contain username = email');
