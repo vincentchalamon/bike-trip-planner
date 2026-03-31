@@ -197,7 +197,12 @@
     "duplicateSuccess": "Trip duplicated successfully.",
     "duplicateFailed": "Failed to duplicate trip.",
     "shareLabel": "Share trip",
-    "shareTooltip": "Requires persistent storage (coming soon)."
+    "shareCreating": "Creating share link...",
+    "shareCopied": "Share link copied to clipboard",
+    "shareCopyFailed": "Could not copy share link",
+    "shareCreateFailed": "Failed to create share link",
+    "shareRevokeSuccess": "Share link revoked",
+    "shareRevokeFailed": "Failed to revoke share link"
   },
   "weather": {
     "humidity": "Humidity",
@@ -345,5 +350,13 @@
     "verifyFailed": "Invalid or expired link. Please request a new sign-in link.",
     "backToLogin": "Back to sign in",
     "logout": "Sign out"
+  },
+  "sharePage": {
+    "title": "Shared trip",
+    "loading": "Loading shared trip...",
+    "error": "This share link is invalid or has expired.",
+    "backToHome": "Back to home",
+    "readOnlyBanner": "You are viewing a read-only shared trip.",
+    "noStages": "This trip has no stages yet."
   }
 }

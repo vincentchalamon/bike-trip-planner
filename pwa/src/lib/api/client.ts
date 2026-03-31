@@ -399,3 +399,103 @@ export async function downloadStageFile(
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Create a read-only share link for a trip.
+ * @returns The share URL and metadata, or null on failure.
+ */
+export async function createTripShare(
+  tripId: string,
+  expiresInHours?: number,
+): Promise<{
+  id: string;
+  shareUrl: string;
+  token: string;
+  expiresAt: string | null;
+} | null> {
+  const res = await apiFetch(
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/share`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/ld+json",
+        Accept: "application/ld+json",
+      },
+      body: JSON.stringify(
+        expiresInHours !== undefined ? { expiresInHours } : {},
+      ),
+    },
+  );
+  if (!res.ok) return null;
+  return res.json() as Promise<{
+    id: string;
+    shareUrl: string;
+    token: string;
+    expiresAt: string | null;
+  }>;
+}
+
+/**
+ * Revoke a share link.
+ * @returns true on success, false on failure.
+ */
+export async function revokeTripShare(
+  tripId: string,
+  shareId: string,
+): Promise<boolean> {
+  const res = await apiFetch(
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/share/${encodeURIComponent(shareId)}`,
+    { method: "DELETE" },
+  );
+  return res.ok;
+}
+
+/**
+ * Fetch a shared trip (anonymous, no auth required).
+ * @returns The trip detail data, or null if the share link is invalid/expired.
+ */
+export async function fetchSharedTrip(
+  tripId: string,
+  token: string,
+): Promise<{
+  id: string;
+  title: string | null;
+  sourceUrl: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  fatigueFactor: number;
+  elevationPenalty: number;
+  maxDistancePerDay: number;
+  averageSpeed: number;
+  ebikeMode: boolean;
+  departureHour: number;
+  enabledAccommodationTypes: string[];
+  isLocked: boolean;
+  stages: Array<Record<string, unknown>>;
+} | null> {
+  const res = await fetch(
+    `${API_URL}/share/${encodeURIComponent(tripId)}?token=${encodeURIComponent(token)}`,
+    {
+      headers: {
+        Accept: "application/ld+json",
+      },
+    },
+  );
+  if (!res.ok) return null;
+  return res.json() as Promise<{
+    id: string;
+    title: string | null;
+    sourceUrl: string | null;
+    startDate: string | null;
+    endDate: string | null;
+    fatigueFactor: number;
+    elevationPenalty: number;
+    maxDistancePerDay: number;
+    averageSpeed: number;
+    ebikeMode: boolean;
+    departureHour: number;
+    enabledAccommodationTypes: string[];
+    isLocked: boolean;
+    stages: Array<Record<string, unknown>>;
+  }>;
+}
