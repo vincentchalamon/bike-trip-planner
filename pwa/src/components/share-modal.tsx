@@ -25,7 +25,11 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { renderInfographic, downloadInfographicPng } from "@/lib/infographic";
 import { buildTripText } from "@/lib/text-export";
-import { createTripShare, revokeTripShare } from "@/lib/api/client";
+import {
+  buildShareUrl,
+  createTripShare,
+  revokeTripShare,
+} from "@/lib/api/client";
 import type { StageData } from "@/lib/validation/schemas";
 
 interface ShareModalProps {
@@ -82,7 +86,7 @@ export function ShareModal({
     createTripShare(tripId).then((result) => {
       if (cancelled) return;
       if (result) {
-        setShareUrl(result.shareUrl);
+        setShareUrl(buildShareUrl(tripId, result.token));
         setShareId(result.id);
       } else {
         toast.error(t("linkCreateFailed"));
@@ -300,7 +304,7 @@ export function ShareModal({
                   void createTripShare(tripId).then((result) => {
                     setIsRecreatingLink(false);
                     if (result) {
-                      setShareUrl(result.shareUrl);
+                      setShareUrl(buildShareUrl(tripId, result.token));
                       setShareId(result.id);
                     } else {
                       toast.error(t("linkCreateFailed"));

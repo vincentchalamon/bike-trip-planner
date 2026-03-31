@@ -10,22 +10,28 @@ import {
 
 const SHARE_ID = "share-uuid-abc-123";
 const SHARE_TOKEN = "share-token-xyz";
-const SHARE_URL = "http://localhost:3000/shared/share-token-xyz";
+
+/** The frontend builds the share URL client-side from tripId + token. */
+function expectedShareUrl(tripId: string, token: string): string {
+  return `http://localhost:3000/shares/${tripId}?token=${token}`;
+}
 
 function mockShareCreate(
   page: import("@playwright/test").Page,
   tripId: string,
+  token = SHARE_TOKEN,
+  id = SHARE_ID,
 ) {
-  return page.route(`**/trips/${tripId}/share`, (route, request) => {
+  return page.route(`**/trips/${tripId}/shares`, (route, request) => {
     if (request.method() !== "POST") return route.fallback();
     return route.fulfill({
       status: 201,
       contentType: "application/ld+json",
       body: JSON.stringify({
-        id: SHARE_ID,
-        shareUrl: SHARE_URL,
-        token: SHARE_TOKEN,
+        id,
+        token,
         expiresAt: null,
+        createdAt: new Date().toISOString(),
       }),
     });
   });
@@ -36,7 +42,7 @@ function mockShareRevoke(
   tripId: string,
 ) {
   return page.route(
-    `**/trips/${tripId}/share/${SHARE_ID}`,
+    `**/trips/${tripId}/shares/${SHARE_ID}`,
     (route, request) => {
       if (request.method() !== "DELETE") return route.fallback();
       return route.fulfill({ status: 204, body: "" });
@@ -94,9 +100,9 @@ test.describe("Share modal", () => {
   }) => {
     await openShareModal({ submitUrl, injectSequence, mockedPage });
 
-    // Share link input should contain the generated URL
+    // Share link input should contain the client-built URL
     await expect(mockedPage.getByTestId("share-link-input")).toHaveValue(
-      SHARE_URL,
+      expectedShareUrl(getTripId(), SHARE_TOKEN),
     );
 
     // All three sections should be visible
@@ -127,7 +133,7 @@ test.describe("Share modal", () => {
     const clipboardText = await mockedPage.evaluate(() =>
       navigator.clipboard.readText(),
     );
-    expect(clipboardText).toBe(SHARE_URL);
+    expect(clipboardText).toBe(expectedShareUrl(getTripId(), SHARE_TOKEN));
   });
 
   test("revoke shows create share link button without auto-creating", async ({
@@ -137,10 +143,10 @@ test.describe("Share modal", () => {
   }) => {
     await openShareModal({ submitUrl, injectSequence, mockedPage });
 
-    // Track whether any new POST /share requests are made after revoke
+    // Track whether any new POST /shares requests are made after revoke
     const shareCreateRequests: string[] = [];
     await mockedPage.route(
-      `**/trips/${getTripId()}/share`,
+      `**/trips/${getTripId()}/shares`,
       (route, request) => {
         if (request.method() !== "POST") return route.fallback();
         shareCreateRequests.push(request.url());
@@ -149,9 +155,9 @@ test.describe("Share modal", () => {
           contentType: "application/ld+json",
           body: JSON.stringify({
             id: "new-share-id",
-            shareUrl: "http://localhost:3000/shared/new-token",
             token: "new-token",
             expiresAt: null,
+            createdAt: new Date().toISOString(),
           }),
         });
       },
@@ -186,9 +192,9 @@ test.describe("Share modal", () => {
     ).toBeVisible({ timeout: 5000 });
 
     // Re-mock the create endpoint for re-creation
-    const newShareUrl = "http://localhost:3000/shared/recreated-token";
+    const recreatedToken = "recreated-token";
     await mockedPage.route(
-      `**/trips/${getTripId()}/share`,
+      `**/trips/${getTripId()}/shares`,
       (route, request) => {
         if (request.method() !== "POST") return route.fallback();
         return route.fulfill({
@@ -196,9 +202,9 @@ test.describe("Share modal", () => {
           contentType: "application/ld+json",
           body: JSON.stringify({
             id: "recreated-share-id",
-            shareUrl: newShareUrl,
-            token: "recreated-token",
+            token: recreatedToken,
             expiresAt: null,
+            createdAt: new Date().toISOString(),
           }),
         });
       },
@@ -212,7 +218,7 @@ test.describe("Share modal", () => {
       timeout: 5000,
     });
     await expect(mockedPage.getByTestId("share-link-input")).toHaveValue(
-      newShareUrl,
+      expectedShareUrl(getTripId(), recreatedToken),
     );
   });
 
@@ -250,6 +256,8 @@ test.describe("Share modal", () => {
     );
     expect(clipboardText).toContain("Tour de l'Ardeche");
     // Should also contain the share URL since a link was created
-    expect(clipboardText).toContain(SHARE_URL);
+    expect(clipboardText).toContain(
+      expectedShareUrl(getTripId(), SHARE_TOKEN),
+    );
   });
 });
