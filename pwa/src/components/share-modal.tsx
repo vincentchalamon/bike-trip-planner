@@ -9,7 +9,7 @@ import {
   Copy,
   Check,
   Download,
-  Image,
+  Image as ImageIcon,
   FileText,
   Loader2,
   Trash2,
@@ -29,10 +29,7 @@ import {
   computeEstimatedBudget,
 } from "@/lib/infographic";
 import { buildTripText } from "@/lib/text-export";
-import {
-  createTripShare,
-  revokeTripShare,
-} from "@/lib/api/client";
+import { createTripShare, revokeTripShare } from "@/lib/api/client";
 import type { StageData } from "@/lib/validation/schemas";
 
 interface ShareModalProps {
@@ -68,7 +65,8 @@ export function ShareModal({
 
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareId, setShareId] = useState<string | null>(null);
-  const [isCreatingLink, setIsCreatingLink] = useState(false);
+  const [isRecreatingLink, setIsRecreatingLink] = useState(false);
+  const isCreatingLink = (open && !shareUrl) || isRecreatingLink;
   const [isRevokingLink, setIsRevokingLink] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [textCopied, setTextCopied] = useState(false);
@@ -79,9 +77,9 @@ export function ShareModal({
   useEffect(() => {
     if (!open || shareUrl) return;
 
-    setIsCreatingLink(true);
-    void createTripShare(tripId).then((result) => {
-      setIsCreatingLink(false);
+    let cancelled = false;
+    createTripShare(tripId).then((result) => {
+      if (cancelled) return;
       if (result) {
         setShareUrl(result.shareUrl);
         setShareId(result.id);
@@ -89,6 +87,10 @@ export function ShareModal({
         toast.error(t("linkCreateFailed"));
       }
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [open, tripId, shareUrl, t]);
 
   // Render infographic when dialog opens and data is ready
@@ -168,8 +170,7 @@ export function ShareModal({
   const handleDownloadPng = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const safeName =
-      title.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
+    const safeName = title.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
     downloadInfographicPng(canvas, `${safeName}-infographic.png`);
   }, [title]);
 
@@ -292,9 +293,9 @@ export function ShareModal({
                 size="sm"
                 className="cursor-pointer"
                 onClick={() => {
-                  setIsCreatingLink(true);
+                  setIsRecreatingLink(true);
                   void createTripShare(tripId).then((result) => {
-                    setIsCreatingLink(false);
+                    setIsRecreatingLink(false);
                     if (result) {
                       setShareUrl(result.shareUrl);
                       setShareId(result.id);
@@ -319,7 +320,7 @@ export function ShareModal({
             id="share-infographic-heading"
             className="flex items-center gap-2 text-sm font-medium mb-2"
           >
-            <Image className="h-4 w-4" />
+            <ImageIcon className="h-4 w-4" />
             {t("infographicTitle")}
           </h3>
 

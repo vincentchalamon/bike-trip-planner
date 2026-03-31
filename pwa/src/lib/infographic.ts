@@ -156,7 +156,10 @@ export function renderInfographic(
     {
       icon: "\uD83D\uDEB4",
       label: data.labels.distance,
-      value: data.totalDistance !== null ? `${Math.round(data.totalDistance)} km` : "—",
+      value:
+        data.totalDistance !== null
+          ? `${Math.round(data.totalDistance)} km`
+          : "—",
       color: "#38bdf8",
     },
     {
@@ -273,16 +276,16 @@ function truncateText(
 ): string {
   if (ctx.measureText(text).width <= maxWidth) return text;
   let truncated = text;
-  while (truncated.length > 0 && ctx.measureText(truncated + "\u2026").width > maxWidth) {
+  while (
+    truncated.length > 0 &&
+    ctx.measureText(truncated + "\u2026").width > maxWidth
+  ) {
     truncated = truncated.slice(0, -1);
   }
   return truncated + "\u2026";
 }
 
-function formatDateRange(
-  start: string | null,
-  end: string | null,
-): string {
+function formatDateRange(start: string | null, end: string | null): string {
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleDateString(undefined, {
