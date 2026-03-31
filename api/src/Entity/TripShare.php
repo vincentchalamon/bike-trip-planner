@@ -115,7 +115,7 @@ class TripShare
         return $this->id;
     }
 
-    public function getTrip(): TripRequest
+    public function getTrip(): ?TripRequest
     {
         return $this->trip;
     }

@@ -405,7 +405,9 @@ export async function downloadStageFile(
  */
 export function buildShareUrl(tripId: string, token: string): string {
   const origin =
-    typeof window !== "undefined" ? window.location.origin : "https://localhost";
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "https://localhost";
   return `${origin}/shares/${encodeURIComponent(tripId)}?token=${encodeURIComponent(token)}`;
 }
 

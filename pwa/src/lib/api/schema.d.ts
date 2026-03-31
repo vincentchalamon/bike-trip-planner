@@ -344,7 +344,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/share/{tripId}": {
+    "/shares/{tripId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -355,50 +355,10 @@ export interface paths {
          * View a shared trip (read-only, anonymous access).
          * @description Retrieves a TripShare resource.
          */
-        get: operations["api_share_tripId_get"];
+        get: operations["api_shares_tripId_get"];
         put?: never;
         post?: never;
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/trips/{tripId}/share": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create a read-only share link for a trip.
-         * @description Creates a TripShare resource.
-         */
-        post: operations["api_trips_tripIdshare_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/trips/{tripId}/share/{shareId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Revoke a share link.
-         * @description Removes the TripShare resource.
-         */
-        delete: operations["api_trips_tripIdshare_shareId_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -417,8 +377,32 @@ export interface paths {
          */
         get: operations["api_trips_tripIdshares_get_collection"];
         put?: never;
-        post?: never;
+        /**
+         * Create a read-only share link for a trip.
+         * @description Creates a TripShare resource.
+         */
+        post: operations["api_trips_tripIdshares_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{tripId}/shares/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke a share link.
+         * @description Removes the TripShare resource.
+         */
+        delete: operations["api_trips_tripIdshares_id_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -995,6 +979,16 @@ export interface components {
                 } | null;
             }[];
         };
+        TripShare: {
+            /** Format: uuid */
+            id?: string | null;
+            /** Format: date-time */
+            readonly createdAt?: string;
+            token?: string;
+            /** Format: date-time */
+            expiresAt?: string | null;
+            readonly valid?: boolean;
+        };
         "TripShare.TripDetail.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
             title?: string | null;
@@ -1089,21 +1083,15 @@ export interface components {
                 } | null;
             }[];
         };
-        "TripShare.TripShareRequest": {
-            /** @description Optional expiration delay in hours. Null means no expiration. */
-            expiresInHours?: number | null;
-        };
-        "TripShare.TripShareResponse.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
-            id?: string;
-            shareUrl?: string;
+        "TripShare.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            /** Format: uuid */
+            id?: string | null;
+            /** Format: date-time */
+            readonly createdAt?: string;
             token?: string;
             /** Format: date-time */
             expiresAt?: string | null;
-            /** Format: date-time */
-            createdAt?: string;
-        };
-        "TripShare.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
-            id?: string;
+            readonly valid?: boolean;
         };
         "WeatherForecast.fit": {
             icon?: string;
@@ -2326,7 +2314,7 @@ export interface operations {
             };
         };
     };
-    api_share_tripId_get: {
+    api_shares_tripId_get: {
         parameters: {
             query: {
                 /** @description Share token (64 hex characters) */
@@ -2374,7 +2362,46 @@ export interface operations {
             };
         };
     };
-    api_trips_tripIdshare_post: {
+    api_trips_tripIdshares_get_collection: {
+        parameters: {
+            query?: {
+                /** @description The collection page number */
+                page?: number;
+            };
+            header?: never;
+            path: {
+                /** @description TripShare identifier */
+                tripId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TripShare collection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["HydraCollectionBaseSchema"] & {
+                        member: components["schemas"]["TripShare.jsonld"][];
+                    };
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    api_trips_tripIdshares_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2387,7 +2414,7 @@ export interface operations {
         /** @description The new TripShare resource */
         requestBody: {
             content: {
-                "application/ld+json": components["schemas"]["TripShare.TripShareRequest"];
+                "application/ld+json": components["schemas"]["TripShare"];
             };
         };
         responses: {
@@ -2397,7 +2424,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/ld+json": components["schemas"]["TripShare.TripShareResponse.jsonld"];
+                    "application/ld+json": components["schemas"]["TripShare.jsonld"];
                 };
             };
             /** @description Invalid input */
@@ -2435,7 +2462,7 @@ export interface operations {
             };
         };
     };
-    api_trips_tripIdshare_shareId_delete: {
+    api_trips_tripIdshares_id_delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -2443,7 +2470,7 @@ export interface operations {
                 /** @description TripShare identifier */
                 tripId: string;
                 /** @description TripShare identifier */
-                shareId: string;
+                id: string;
             };
             cookie?: never;
         };
@@ -2469,45 +2496,6 @@ export interface operations {
             };
             /** @description Not found */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    api_trips_tripIdshares_get_collection: {
-        parameters: {
-            query?: {
-                /** @description The collection page number */
-                page?: number;
-            };
-            header?: never;
-            path: {
-                /** @description TripShare identifier */
-                tripId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description TripShare collection */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["HydraCollectionBaseSchema"] & {
-                        member: components["schemas"]["TripShare.TripShareResponse.jsonld"][];
-                    };
-                };
-            };
-            /** @description Forbidden */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
