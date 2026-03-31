@@ -136,9 +136,7 @@ function SharedTripLoader({ tripId }: { tripId: string }) {
       </div>
 
       {/* Title */}
-      {title && (
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-      )}
+      {title && <h1 className="text-2xl font-bold tracking-tight">{title}</h1>}
 
       {/* Summary */}
       <TripSummary
