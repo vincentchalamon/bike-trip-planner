@@ -86,8 +86,8 @@ export function ShareModal({
     createTripShare(tripId).then((result) => {
       if (cancelled) return;
       if (result) {
-        setShareUrl(buildShareUrl(tripId, result.token));
-        setShareId(result.id);
+        setShareUrl(buildShareUrl(tripId, result.token ?? ""));
+        setShareId(result.id ?? null);
       } else {
         toast.error(t("linkCreateFailed"));
       }
@@ -304,8 +304,8 @@ export function ShareModal({
                   void createTripShare(tripId).then((result) => {
                     setIsRecreatingLink(false);
                     if (result) {
-                      setShareUrl(buildShareUrl(tripId, result.token));
-                      setShareId(result.id);
+                      setShareUrl(buildShareUrl(tripId, result.token ?? ""));
+                      setShareId(result.id ?? null);
                     } else {
                       toast.error(t("linkCreateFailed"));
                     }
