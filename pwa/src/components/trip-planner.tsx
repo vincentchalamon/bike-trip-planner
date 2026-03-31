@@ -78,6 +78,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
     handleInsertRestDay,
     handleAddPoiWaypoint,
     handleDuplicateTrip,
+    handleShareTrip,
     clearNewAccKey,
   } = useTripPlanner();
 
@@ -515,6 +516,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
           readOnly={isLocked}
           hasTripLoaded={!!trip}
           onDuplicate={handleDuplicateTrip}
+          onShare={handleShareTrip}
         />
 
         {/* Keyboard shortcuts help modal */}

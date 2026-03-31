@@ -6,11 +6,6 @@ import { X, Copy, Share2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { PacingSettings } from "@/components/pacing-settings";
@@ -52,6 +47,7 @@ interface ConfigPanelProps {
   readOnly?: boolean;
   hasTripLoaded?: boolean;
   onDuplicate?: () => Promise<string | null>;
+  onShare?: () => Promise<void>;
 }
 
 export function ConfigPanel({
@@ -73,9 +69,11 @@ export function ConfigPanel({
   readOnly = false,
   hasTripLoaded = false,
   onDuplicate,
+  onShare,
 }: ConfigPanelProps) {
   const t = useTranslations("config");
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const tAccommodation = useTranslations("accommodation");
   const isOpen = useUiStore((s) => s.isConfigPanelOpen);
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
@@ -362,23 +360,26 @@ export function ConfigPanel({
                 {t("duplicateLabel")}
               </Button>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start gap-2 opacity-50 cursor-not-allowed"
-                      disabled
-                      aria-label={t("shareLabel")}
-                    >
-                      <Share2 className="h-4 w-4" />
-                      {t("shareLabel")}
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>{t("shareTooltip")}</TooltipContent>
-              </Tooltip>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-2"
+                disabled={!hasTripLoaded || isSharing}
+                aria-label={t("shareLabel")}
+                onClick={() => {
+                  if (!onShare) return;
+                  setIsSharing(true);
+                  void onShare().finally(() => setIsSharing(false));
+                }}
+                data-testid="share-trip-button"
+              >
+                {isSharing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Share2 className="h-4 w-4" />
+                )}
+                {t("shareLabel")}
+              </Button>
             </div>
           </section>
         </div>

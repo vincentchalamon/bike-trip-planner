@@ -2,7 +2,9 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Integration smoke test", () => {
   // TODO: re-enable after adding E2E auth flow (magic-link login via mailcatcher) — #77
-  test.skip("backend accepts and processes a real Komoot tour", async ({ page }) => {
+  test.skip("backend accepts and processes a real Komoot tour", async ({
+    page,
+  }) => {
     test.slow();
 
     let capturedTripId: string | null = null;

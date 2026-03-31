@@ -1,5 +1,5 @@
 import createClient, { type Middleware } from "openapi-fetch";
-import type { operations, paths } from "./schema";
+import type { components, operations, paths } from "./schema";
 import { API_URL } from "@/lib/constants";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -398,4 +398,78 @@ export async function downloadStageFile(
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Build the frontend share URL from trip ID and token.
+ */
+export function buildShareUrl(tripId: string, token: string): string {
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "https://localhost";
+  return `${origin}/shares/${encodeURIComponent(tripId)}?token=${encodeURIComponent(token)}`;
+}
+
+/**
+ * Create a read-only share link for a trip.
+ * @returns The share metadata (id, token, expiresAt), or null on failure.
+ */
+export type TripShareResponse = components["schemas"]["TripShare.jsonld"];
+
+export async function createTripShare(
+  tripId: string,
+  expiresAt?: string,
+): Promise<TripShareResponse | null> {
+  const res = await apiFetch(
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/shares`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/ld+json",
+        Accept: "application/ld+json",
+      },
+      body: JSON.stringify(expiresAt !== undefined ? { expiresAt } : {}),
+    },
+  );
+  if (!res.ok) return null;
+  return res.json() as Promise<TripShareResponse>;
+}
+
+/**
+ * Revoke a share link. Used by the share modal (#42).
+ * @returns true on success, false on failure.
+ */
+export async function revokeTripShare(
+  tripId: string,
+  shareId: string,
+): Promise<boolean> {
+  const res = await apiFetch(
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/shares/${encodeURIComponent(shareId)}`,
+    { method: "DELETE" },
+  );
+  return res.ok;
+}
+
+/**
+ * Fetch a shared trip (anonymous, no auth required).
+ * @returns The trip detail data, or null if the share link is invalid/expired.
+ */
+export type SharedTripDetail =
+  components["schemas"]["TripShare.TripDetail.jsonld"];
+
+export async function fetchSharedTrip(
+  tripId: string,
+  token: string,
+): Promise<SharedTripDetail | null> {
+  const res = await fetch(
+    `${API_URL}/shares/${encodeURIComponent(tripId)}?token=${encodeURIComponent(token)}`,
+    {
+      headers: {
+        Accept: "application/ld+json",
+      },
+    },
+  );
+  if (!res.ok) return null;
+  return res.json() as Promise<SharedTripDetail>;
 }

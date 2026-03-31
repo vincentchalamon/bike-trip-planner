@@ -45,7 +45,8 @@ export function parseJwtPayload(
     const payload = JSON.parse(atob(padded)) as Record<string, unknown>;
     // sub = UUID (from JwtCreatedListener), username = email (LexikJWTBundle default)
     const sub = typeof payload.sub === "string" ? payload.sub : null;
-    const email = typeof payload.username === "string" ? payload.username : null;
+    const email =
+      typeof payload.username === "string" ? payload.username : null;
     if (!sub || !email) {
       return null;
     }

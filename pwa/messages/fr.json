@@ -197,7 +197,12 @@
     "duplicateSuccess": "Voyage dupliqué avec succès.",
     "duplicateFailed": "Impossible de dupliquer le voyage.",
     "shareLabel": "Partager le voyage",
-    "shareTooltip": "Nécessite la persistance en base de données (bientôt disponible)."
+    "shareCreating": "Création du lien de partage...",
+    "shareCopied": "Lien de partage copié dans le presse-papier",
+    "shareCopyFailed": "Impossible de copier le lien de partage",
+    "shareCreateFailed": "Impossible de créer le lien de partage",
+    "shareRevokeSuccess": "Lien de partage révoqué",
+    "shareRevokeFailed": "Impossible de révoquer le lien de partage"
   },
   "weather": {
     "humidity": "Humidité",
@@ -345,5 +350,13 @@
     "verifyFailed": "Lien invalide ou expiré. Veuillez demander un nouveau lien de connexion.",
     "backToLogin": "Retour à la connexion",
     "logout": "Déconnexion"
+  },
+  "sharePage": {
+    "title": "Voyage partagé",
+    "loading": "Chargement du voyage partagé...",
+    "error": "Ce lien de partage est invalide ou a expiré.",
+    "backToHome": "Retour à l'accueil",
+    "readOnlyBanner": "Vous consultez un voyage partagé en lecture seule.",
+    "noStages": "Ce voyage n'a pas encore d'étapes."
   }
 }

@@ -19,6 +19,8 @@ import {
   scanAccommodations,
   addPoiWaypointToRoute,
   duplicateTrip,
+  buildShareUrl,
+  createTripShare,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
 import {
@@ -653,6 +655,35 @@ export function useTripPlanner() {
     }
   }
 
+  async function handleShareTrip(): Promise<void> {
+    if (!tripId || !trip) return;
+
+    try {
+      const result = await createTripShare(tripId);
+      if (!result) {
+        toast.error(t("config.shareCreateFailed"));
+        return;
+      }
+
+      const token = result.token;
+      if (!token) {
+        toast.error(t("config.shareCreateFailed"));
+        return;
+      }
+
+      await navigator.clipboard
+        .writeText(buildShareUrl(tripId, token))
+        .then(() => toast.success(t("config.shareCopied")))
+        .catch(() => toast.error(t("config.shareCopyFailed")));
+    } catch (err) {
+      if (isNetworkError(err)) {
+        toast.error(t("errors.networkError"));
+      } else {
+        toast.error(t("config.shareCreateFailed"));
+      }
+    }
+  }
+
   function handleAddAccommodation(stageIndex: number) {
     const stage = stages[stageIndex];
     const accIndex = stage?.accommodations.length ?? 0;
@@ -807,6 +838,7 @@ export function useTripPlanner() {
     handleInsertRestDay,
     handleAddPoiWaypoint,
     handleDuplicateTrip,
+    handleShareTrip,
     clearNewAccKey: () => setNewAccKey(null),
   };
 }
