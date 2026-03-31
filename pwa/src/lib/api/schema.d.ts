@@ -2335,7 +2335,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description TripShare identifier */
-                id: string;
+                tripId: string;
             };
             cookie?: never;
         };
@@ -2380,7 +2380,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description TripShare identifier */
-                id: string;
+                tripId: string;
             };
             cookie?: never;
         };
@@ -2489,7 +2489,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description TripShare identifier */
-                id: string;
+                tripId: string;
             };
             cookie?: never;
         };
