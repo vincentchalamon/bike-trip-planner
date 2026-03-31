@@ -50,8 +50,8 @@ export default async function RootLayout({
           >
             <AuthGuard>
               <TooltipProvider>{children}</TooltipProvider>
+              <OnboardingTour />
             </AuthGuard>
-            <OnboardingTour />
             <Toaster richColors position="top-right" />
           </ThemeProvider>
         </NextIntlClientProvider>

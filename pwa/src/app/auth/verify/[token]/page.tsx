@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore, parseJwtPayload } from "@/store/auth-store";
@@ -22,44 +22,46 @@ export default function VerifyPage() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(true);
+  // Prevent double-fire in React Strict Mode (dev): the token is single-use,
+  // so a second POST would fail with "already consumed".
+  const verifyStarted = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
+    // Guard against React Strict Mode double-fire: the token is single-use,
+    // so a second POST would fail with "already consumed".
+    if (verifyStarted.current) return;
+    verifyStarted.current = true;
 
     const verify = async () => {
       try {
         const res = await fetch(`${API_URL}/auth/verify`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/ld+json" },
           body: JSON.stringify({ token: params.token }),
           credentials: "include",
         });
-
-        if (cancelled) return;
 
         if (res.ok) {
           const data = (await res.json()) as { token: string };
           const payload = parseJwtPayload(data.token);
           if (payload) {
             setAuth(data.token, { id: payload.sub, email: payload.email });
-            if (!cancelled) router.replace("/");
+            router.replace("/");
             return;
           }
         }
 
-        if (!cancelled) setError(t("verifyFailed"));
+        setError(t("verifyFailed"));
       } catch {
-        if (!cancelled) setError(t("verifyFailed"));
+        setError(t("verifyFailed"));
       } finally {
-        if (!cancelled) setVerifying(false);
+        setVerifying(false);
       }
     };
 
     void verify();
-
-    return () => {
-      cancelled = true;
-    };
+    // No cleanup — the useRef guard prevents double-fire, and we must not
+    // cancel the in-flight verify (the token is consumed server-side).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.token]);
 

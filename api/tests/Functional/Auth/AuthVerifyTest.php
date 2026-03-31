@@ -51,7 +51,7 @@ final class AuthVerifyTest extends ApiTestCase
     #[Test]
     public function verifyValidTokenReturnsJwt(): void
     {
-        $this->createUserWithMagicLink('alice@example.com', 'my-valid-token');
+        $user = $this->createUserWithMagicLink('alice@example.com', 'my-valid-token');
 
         $response = self::createClient()->request('POST', '/auth/verify', [
             'headers' => ['Content-Type' => 'application/ld+json'],
@@ -62,6 +62,13 @@ final class AuthVerifyTest extends ApiTestCase
         $data = $response->toArray(false);
         $this->assertArrayHasKey('token', $data);
         $this->assertNotEmpty($data['token']);
+
+        // Assert JwtCreatedListener injects the sub (UUID) claim
+        $parts = explode('.', (string) $data['token']);
+        /** @var array{sub?: string, username?: string} $payload */
+        $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
+        $this->assertSame($user->getId()->toRfc4122(), $payload['sub'] ?? null, 'JWT must contain sub = user UUID');
+        $this->assertSame('alice@example.com', $payload['username'] ?? null, 'JWT must contain username = email');
     }
 
     #[Test]
@@ -94,7 +101,7 @@ final class AuthVerifyTest extends ApiTestCase
         $this->createUserWithMagicLink(
             'expired@example.com',
             'expired-token',
-            new \DateTimeImmutable('-1 hour'),
+            new \DateTimeImmutable('-1 day'),
         );
 
         self::createClient()->request('POST', '/auth/verify', [

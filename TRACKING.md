@@ -266,9 +266,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-13.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Flux magic link complet : demande → email → clic → connecté
-  - [ ] Token expiré/utilisé → message d'erreur clair
-  - [ ] Endpoints sécurisés (401 sans JWT)
+  - [x] Flux magic link complet : demande → email → clic → connecté
+  - [x] Token expiré/utilisé → message d'erreur clair
+  - [x] Endpoints sécurisés (401 sans JWT)
   - [ ] Mercure : pas de fuite de données entre utilisateurs
   - [ ] Mobile : flux auth sur Capacitor
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
@@ -26,10 +27,13 @@ import { useOnboarding } from "@/hooks/use-onboarding";
  */
 export function OnboardingTour() {
   const t = useTranslations("onboarding");
+  const pathname = usePathname();
   const { hasSeenOnboarding, markOnboardingDone } = useOnboarding();
   const startedRef = useRef(false);
 
   useEffect(() => {
+    // Only show onboarding on the home page
+    if (pathname !== "/") return;
     // Wait until localStorage has been read (null = not yet resolved)
     if (hasSeenOnboarding !== false) return;
     // Guard against StrictMode double-invoke
