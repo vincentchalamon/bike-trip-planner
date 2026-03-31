@@ -671,8 +671,10 @@ export function useTripPlanner() {
         return;
       }
 
-      await navigator.clipboard.writeText(buildShareUrl(tripId, token));
-      toast.success(t("config.shareCopied"));
+      await navigator.clipboard
+        .writeText(buildShareUrl(tripId, token))
+        .then(() => toast.success(t("config.shareCopied")))
+        .catch(() => toast.error(t("config.shareCopyFailed")));
     } catch (err) {
       if (isNetworkError(err)) {
         toast.error(t("errors.networkError"));
