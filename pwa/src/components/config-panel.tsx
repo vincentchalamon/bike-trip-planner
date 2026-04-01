@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { X, Copy, Share2, Loader2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -47,7 +48,7 @@ interface ConfigPanelProps {
   readOnly?: boolean;
   hasTripLoaded?: boolean;
   onDuplicate?: () => Promise<string | null>;
-  onShare?: () => Promise<void>;
+  onShare?: () => void;
 }
 
 export function ConfigPanel({
@@ -73,7 +74,6 @@ export function ConfigPanel({
 }: ConfigPanelProps) {
   const t = useTranslations("config");
   const [isDuplicating, setIsDuplicating] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
   const tAccommodation = useTranslations("accommodation");
   const isOpen = useUiStore((s) => s.isConfigPanelOpen);
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
@@ -364,20 +364,12 @@ export function ConfigPanel({
                 variant="outline"
                 size="sm"
                 className="w-full justify-start gap-2"
-                disabled={!hasTripLoaded || isSharing}
+                disabled={!hasTripLoaded}
                 aria-label={t("shareLabel")}
-                onClick={() => {
-                  if (!onShare) return;
-                  setIsSharing(true);
-                  void onShare().finally(() => setIsSharing(false));
-                }}
+                onClick={() => onShare?.()}
                 data-testid="share-trip-button"
               >
-                {isSharing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Share2 className="h-4 w-4" />
-                )}
+                <Share2 className="h-4 w-4" />
                 {t("shareLabel")}
               </Button>
             </div>

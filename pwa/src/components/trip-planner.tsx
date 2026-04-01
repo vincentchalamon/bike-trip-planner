@@ -16,6 +16,7 @@ import { Timeline } from "@/components/timeline";
 import { ConfigPanel } from "@/components/config-panel";
 import { KeyboardHelpModal } from "@/components/keyboard-help-modal";
 import { TextExportButton } from "@/components/text-export-button";
+import { ShareModal } from "@/components/share-modal";
 import { MapPanel } from "@/components/Map";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,8 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
     handleAddPoiWaypoint,
     handleDuplicateTrip,
     handleShareTrip,
+    isShareModalOpen,
+    setShareModalOpen,
     clearNewAccKey,
   } = useTripPlanner();
 
@@ -494,6 +497,25 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
               </div>
             </div>
           </>
+        )}
+
+        {/* Share modal */}
+        {trip && (
+          <ShareModal
+            open={isShareModalOpen}
+            onOpenChange={setShareModalOpen}
+            tripId={trip.id}
+            title={trip.title}
+            sourceUrl={trip.sourceUrl}
+            totalDistance={totalDistance}
+            totalElevation={totalElevation}
+            totalElevationLoss={totalElevationLoss}
+            stages={stages}
+            startDate={startDate}
+            endDate={endDate}
+            estimatedBudgetMin={estimatedBudget.min}
+            estimatedBudgetMax={estimatedBudget.max}
+          />
         )}
 
         {/* Configuration panel (sidebar drawer) */}
