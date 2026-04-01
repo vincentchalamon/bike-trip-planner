@@ -47,7 +47,9 @@ jobs:
 
       - name: Sync Capacitor
         working-directory: pwa
-        run: npx cap sync android
+        run: |
+          test -d android || npx cap add android
+          npx cap sync android
 
       - name: Build APK
         working-directory: pwa/android
