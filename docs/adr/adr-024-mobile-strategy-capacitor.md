@@ -130,17 +130,17 @@ The mobile app must communicate with the remote API server. The API base URL is 
 
 #### CORS Extension
 
-The Capacitor WebView serves content from `capacitor://localhost` on Android. The backend CORS configuration is extended to allow this origin:
+The Capacitor WebView serves content from `capacitor://localhost` on Android. The backend uses `origin_regex: true` with a single `%env(CORS_ALLOW_ORIGIN)%` entry (`api/config/packages/nelmio_cors.php`). Extend the regex in the environment variable to include the `capacitor` scheme:
 
-```yaml
-# config/packages/nelmio_cors.yaml
-nelmio_cors:
-    defaults:
-        origin_regex: true
-        allow_origin:
-            - '^https?://localhost(:\d+)?$'
-            - '^capacitor://localhost$'
+```dotenv
+# dev
+CORS_ALLOW_ORIGIN='^(https?|capacitor)://(localhost|127\.0\.0\.1)(:[0-9]+)?$'
+
+# prod
+CORS_ALLOW_ORIGIN='^(https://example\.com|capacitor://localhost)$'
 ```
+
+No PHP config change is required; the PHP file remains unchanged.
 
 #### Offline Access
 
