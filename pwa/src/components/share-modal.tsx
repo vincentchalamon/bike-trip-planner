@@ -274,9 +274,9 @@ export function ShareModal({
               {t("linkCreating")}
             </div>
           ) : shareUrl ? (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 min-w-0">
               <TooltipProvider>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 overflow-hidden">
                   {/* Link text — click to copy */}
                   <Tooltip open={linkCopied}>
                     <TooltipTrigger asChild>
