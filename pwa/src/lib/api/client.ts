@@ -233,7 +233,7 @@ export async function scanAccommodations(
   stageIndex?: number,
 ): Promise<boolean> {
   const res = await apiFetch(
-    `/trips/${encodeURIComponent(tripId)}/accommodations/scan`,
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/accommodations/scan`,
     {
       method: "POST",
       headers: { "Content-Type": "application/ld+json" },
@@ -253,7 +253,7 @@ export async function scanAccommodations(
 export async function scrapeAccommodation(
   url: string,
 ): Promise<ScrapedData | null> {
-  const res = await apiFetch("/accommodations/scrape", {
+  const res = await apiFetch(`${API_URL}/accommodations/scrape`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url }),
@@ -316,7 +316,7 @@ export async function uploadGpxFile(
     });
   }
 
-  const res = await apiFetch("/trips/gpx-upload", {
+  const res = await apiFetch(`${API_URL}/trips/gpx-upload`, {
     method: "POST",
     body: formData,
   });

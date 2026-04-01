@@ -1,6 +1,5 @@
 import { apiFetch } from "@/lib/api/client";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+import { API_URL } from "@/lib/constants";
 
 export interface GeocodeResult {
   name: string;
@@ -12,7 +11,7 @@ export interface GeocodeResult {
 
 export async function searchPlaces(query: string): Promise<GeocodeResult[]> {
   const res = await apiFetch(
-    `${API_BASE}/geocode/search?q=${encodeURIComponent(query)}&limit=5`,
+    `${API_URL}/geocode/search?q=${encodeURIComponent(query)}&limit=5`,
   );
   if (!res.ok) return [];
   const data = (await res.json()) as { results: GeocodeResult[] };
@@ -24,7 +23,7 @@ export async function reverseGeocode(
   lon: number,
 ): Promise<GeocodeResult | null> {
   const res = await apiFetch(
-    `${API_BASE}/geocode/reverse?lat=${lat}&lon=${lon}`,
+    `${API_URL}/geocode/reverse?lat=${lat}&lon=${lon}`,
   );
   if (!res.ok) return null;
   const data = (await res.json()) as { results: GeocodeResult[] };
