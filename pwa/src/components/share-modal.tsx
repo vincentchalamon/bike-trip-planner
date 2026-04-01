@@ -24,6 +24,12 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   renderInfographic,
   downloadInfographicPng,
   CARD_WIDTH,
@@ -83,6 +89,7 @@ export function ShareModal({
   const [isRevokingLink, setIsRevokingLink] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [textCopied, setTextCopied] = useState(false);
+  const [isRenderingInfographic, setIsRenderingInfographic] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -118,7 +125,8 @@ export function ShareModal({
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      void renderInfographic(canvas, {
+      setIsRenderingInfographic(true);
+      renderInfographic(canvas, {
         title,
         totalDistance,
         totalElevation,
@@ -140,6 +148,8 @@ export function ShareModal({
           difficultyHard: tStage("difficultyHard"),
           powered: t("poweredBy"),
         },
+      }).finally(() => {
+        setIsRenderingInfographic(false);
       });
     }, 100);
     return () => clearTimeout(timer);
@@ -163,7 +173,6 @@ export function ShareModal({
     try {
       await navigator.clipboard.writeText(shareUrl);
       setLinkCopied(true);
-      toast.success(t("linkCopied"));
       setTimeout(() => setLinkCopied(false), 2000);
     } catch {
       toast.error(t("linkCopyFailed"));
@@ -266,45 +275,65 @@ export function ShareModal({
             </div>
           ) : shareUrl ? (
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={shareUrl}
-                  className="flex-1 rounded-md border bg-muted px-3 py-2 text-sm select-all"
-                  onClick={(e) => (e.target as HTMLInputElement).select()}
-                  data-testid="share-link-input"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0 cursor-pointer"
-                  onClick={() => void handleCopyLink()}
-                  aria-label={t("copyLink")}
-                  data-testid="share-copy-link-button"
-                >
-                  {linkCopied ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 text-destructive cursor-pointer"
-                  onClick={() => void handleRevokeLink()}
-                  disabled={isRevokingLink}
-                  aria-label={t("revokeLink")}
-                  data-testid="share-revoke-link-button"
-                >
-                  {isRevokingLink ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+              <TooltipProvider>
+                <div className="flex items-center gap-2">
+                  {/* Link text — click to copy */}
+                  <Tooltip open={linkCopied}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => void handleCopyLink()}
+                        className="flex-1 text-left text-sm text-brand underline underline-offset-2 hover:no-underline truncate cursor-pointer"
+                        data-testid="share-link-text"
+                      >
+                        {shareUrl}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {t("linkCopied")}
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {/* Copy button */}
+                  <Tooltip open={linkCopied}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => void handleCopyLink()}
+                        aria-label={t("copyLink")}
+                        data-testid="share-copy-link-button"
+                      >
+                        {linkCopied ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {t("linkCopied")}
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {/* Revoke button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 text-destructive"
+                    onClick={() => void handleRevokeLink()}
+                    disabled={isRevokingLink}
+                    aria-label={t("revokeLink")}
+                    data-testid="share-revoke-link-button"
+                  >
+                    {isRevokingLink ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </TooltipProvider>
               <p className="text-xs text-muted-foreground">
                 {t("linkReadOnlyNote")}
               </p>
@@ -373,9 +402,14 @@ export function ShareModal({
               size="sm"
               className="gap-2 cursor-pointer"
               onClick={handleDownloadPng}
+              disabled={isRenderingInfographic}
               data-testid="share-download-png-button"
             >
-              <Download className="h-4 w-4" />
+              {isRenderingInfographic ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
               {t("downloadPng")}
             </Button>
           </div>
