@@ -293,14 +293,14 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 ## Sprint 15 — Mobile
 
-| Ordre | ID                                                                    | Titre                  | Effort | PRs | Dépend de                                                                                      |
-|-------|-----------------------------------------------------------------------|------------------------|--------|-----|------------------------------------------------------------------------------------------------|
-| 1     | [#74](https://github.com/vincentchalamon/bike-trip-planner/issues/74) | ADR mobile Capacitor   | S      | 1   | —                                                                                              |
-| 2     | [#71](https://github.com/vincentchalamon/bike-trip-planner/issues/71) | URL API direct backend | S      | 1   | —                                                                                              |
-| 3     | [#69](https://github.com/vincentchalamon/bike-trip-planner/issues/69) | Scaffolding Capacitor  | M      | 1   | [#52](https://github.com/vincentchalamon/bike-trip-planner/issues/52), #53                     |
-| 4     | [#72](https://github.com/vincentchalamon/bike-trip-planner/issues/72) | Mode hors-ligne        | L      | 2   | —                                                                                              |
-| 5     | [#73](https://github.com/vincentchalamon/bike-trip-planner/issues/73) | CI APK Android         | M      | 1   | —                                                                                              |
-| 6     | [#51](https://github.com/vincentchalamon/bike-trip-planner/issues/51) | Consultation mobile    | XL     | 5   | [#69](https://github.com/vincentchalamon/bike-trip-planner/issues/69), #70, #71, #72, #73, #74 |
+| Ordre | ID                                                                    | Titre                  | Effort | PRs | Dépend de                                                                                       | Statut    | Branche       |
+|-------|-----------------------------------------------------------------------|------------------------|--------|-----|-------------------------------------------------------------------------------------------------|-----------|---------------|
+| 1     | [#74](https://github.com/vincentchalamon/bike-trip-planner/issues/74) | ADR mobile Capacitor   | S      | 1   | —                                                                                               | En cours  | [feature/74](https://github.com/vincentchalamon/bike-trip-planner/pull/257) |
+| 2     | [#71](https://github.com/vincentchalamon/bike-trip-planner/issues/71) | URL API direct backend | S      | 1   | —                                                                                               | En cours  | [feature/71](https://github.com/vincentchalamon/bike-trip-planner/pull/258) |
+| 3     | [#69](https://github.com/vincentchalamon/bike-trip-planner/issues/69) | Scaffolding Capacitor  | M      | 1   | [#52](https://github.com/vincentchalamon/bike-trip-planner/issues/52), #53                      | En cours  | [feature/69](https://github.com/vincentchalamon/bike-trip-planner/pull/259) |
+| 4     | [#72](https://github.com/vincentchalamon/bike-trip-planner/issues/72) | Mode hors-ligne        | L      | 2   | —                                                                                               | En cours  | [feature/72](https://github.com/vincentchalamon/bike-trip-planner/pull/260) |
+| 5     | [#73](https://github.com/vincentchalamon/bike-trip-planner/issues/73) | CI APK Android         | M      | 1   | —                                                                                               | En cours  | [feature/73](https://github.com/vincentchalamon/bike-trip-planner/pull/261) |
+| 6     | [#51](https://github.com/vincentchalamon/bike-trip-planner/issues/51) | Consultation mobile    | XL     | 5   | [#69](https://github.com/vincentchalamon/bike-trip-planner/issues/69), #70, #71, #72, #73, #74  | Bloqué    | — (dépend de #70) |
 
 ### Recette Sprint 15
 
