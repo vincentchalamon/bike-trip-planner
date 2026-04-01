@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/base.fixture";
+import { mockAllApis } from "../fixtures/api-mocks";
 
 /**
  * Tests for the offline mode feature (issue #72).
@@ -26,10 +27,13 @@ test.describe("Offline mode", () => {
 
       const banner = mockedPage.getByTestId("offline-banner");
       await expect(banner).toBeVisible({ timeout: 3000 });
-      await expect(banner).toContainText("Hors ligne");
+      // locale-agnostic: matches either French or English copy
+      await expect(banner).toContainText(/Hors ligne|Offline/);
     });
 
-    test("offline banner has amber styling", async ({ mockedPage }) => {
+    test("offline banner has role=status and aria-live=polite", async ({
+      mockedPage,
+    }) => {
       await mockedPage.evaluate(() => {
         window.dispatchEvent(new Event("offline"));
       });
@@ -37,6 +41,7 @@ test.describe("Offline mode", () => {
       const banner = mockedPage.getByTestId("offline-banner");
       await expect(banner).toBeVisible({ timeout: 3000 });
       await expect(banner).toHaveAttribute("role", "status");
+      await expect(banner).toHaveAttribute("aria-live", "polite");
     });
 
     test("shows reconnection banner when back online after being offline", async ({
@@ -55,28 +60,36 @@ test.describe("Offline mode", () => {
 
       const banner = mockedPage.getByTestId("offline-banner");
       await expect(banner).toBeVisible({ timeout: 3000 });
-      await expect(banner).toContainText("Connexion rétablie");
+      // locale-agnostic: matches either French or English copy
+      await expect(banner).toContainText(/Connexion rétablie|Connection restored/);
     });
 
     test("reconnection banner auto-dismisses after 3 seconds", async ({
-      mockedPage,
+      page,
     }) => {
-      await mockedPage.evaluate(() => {
+      // Install fake clock before page load so setTimeout is controlled
+      await page.clock.install();
+      await mockAllApis(page);
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
+
+      await page.evaluate(() => {
         window.dispatchEvent(new Event("offline"));
       });
-      await expect(mockedPage.getByTestId("offline-banner")).toBeVisible({
+      await expect(page.getByTestId("offline-banner")).toBeVisible({
         timeout: 3000,
       });
-      await mockedPage.evaluate(() => {
+
+      await page.evaluate(() => {
         window.dispatchEvent(new Event("online"));
       });
-      // Banner should appear then disappear automatically
-      await expect(mockedPage.getByTestId("offline-banner")).toBeVisible({
+      await expect(page.getByTestId("offline-banner")).toBeVisible({
         timeout: 3000,
       });
-      await expect(mockedPage.getByTestId("offline-banner")).not.toBeVisible({
-        timeout: 5000,
-      });
+
+      // Fast-forward past the 3-second auto-dismiss timer
+      await page.clock.fastForward(3100);
+      await expect(page.getByTestId("offline-banner")).not.toBeVisible();
     });
   });
 
@@ -134,8 +147,6 @@ test.describe("Offline mode", () => {
     test("pre-seeded trip data persists in IndexedDB across page loads", async ({
       page,
     }) => {
-      const { mockAllApis } = await import("../fixtures/api-mocks");
-
       // Seed IndexedDB before the app loads to simulate a previously saved trip
       await page.addInitScript(() => {
         const savedTrips = [
@@ -187,7 +198,9 @@ test.describe("Offline mode", () => {
             request.onsuccess = (e) => {
               const db = (e.target as IDBOpenDBRequest).result;
               const tx = db.transaction("keyval", "readonly");
-              const getReq = tx.objectStore("keyval").get("offline_saved_trips");
+              const getReq = tx
+                .objectStore("keyval")
+                .get("offline_saved_trips");
               getReq.onsuccess = () =>
                 resolve(
                   Array.isArray(getReq.result) ? getReq.result.length : 0,

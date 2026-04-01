@@ -10,10 +10,9 @@ import { useOfflineStore } from "@/store/offline-store";
  * syncing the result into {@link useOfflineStore}.
  *
  * Displays a banner when offline:
- *   "Hors ligne — consultation des donn\u00e9es en cache. Modification d\u00e9sactiv\u00e9e."
+ *   "Hors ligne — consultation des données en cache. Modification désactivée."
  *
- * On reconnection, briefly shows:
- *   "Connexion r\u00e9tablie. Rafra\u00eechissement..."
+ * On reconnection, briefly shows "Connexion rétablie." / "Connection restored."
  * before auto-dismissing after 3 seconds.
  */
 export function OfflineBanner() {

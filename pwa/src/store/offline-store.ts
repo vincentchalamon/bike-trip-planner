@@ -1,7 +1,6 @@
 "use client";
 
 import { create } from "zustand";
-import { immer } from "zustand/middleware/immer";
 import { get as idbGet, set as idbSet } from "idb-keyval";
 import type { StageData } from "@/lib/validation/schemas";
 import type { AccommodationType } from "@/lib/accommodation-types";
@@ -31,12 +30,13 @@ export interface SavedTrip {
 }
 
 const IDB_KEY = "offline_saved_trips";
+const MAX_SAVED_TRIPS = 20;
 
 interface OfflineState {
   isOnline: boolean;
 
   setOnline: (value: boolean) => void;
-  /** Persist a completed trip to IndexedDB (upsert by trip id). */
+  /** Persist a completed trip to IndexedDB (upsert by trip id, capped at MAX_SAVED_TRIPS). */
   saveTrip: (trip: SavedTrip) => Promise<void>;
 }
 
@@ -53,23 +53,21 @@ interface OfflineState {
  * A future iteration could use a Service Worker with a cache-first strategy
  * for raster/vector tiles (see issue backlog).
  */
-export const useOfflineStore = create<OfflineState>()(
-  immer((set) => ({
-    isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
+export const useOfflineStore = create<OfflineState>()((set) => ({
+  isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
 
-    setOnline: (value) =>
-      set((state) => {
-        state.isOnline = value;
-      }),
+  setOnline: (value) => set({ isOnline: value }),
 
-    saveTrip: async (trip) => {
-      try {
-        const existing = (await idbGet<SavedTrip[]>(IDB_KEY)) ?? [];
-        const updated = [trip, ...existing.filter((t) => t.id !== trip.id)];
-        await idbSet(IDB_KEY, updated);
-      } catch {
-        // IndexedDB write failed — degrade gracefully
-      }
-    },
-  })),
-);
+  saveTrip: async (trip) => {
+    try {
+      const existing = (await idbGet<SavedTrip[]>(IDB_KEY)) ?? [];
+      const updated = [
+        trip,
+        ...existing.filter((t) => t.id !== trip.id),
+      ].slice(0, MAX_SAVED_TRIPS);
+      await idbSet(IDB_KEY, updated);
+    } catch {
+      // IndexedDB write failed — degrade gracefully
+    }
+  },
+}));
