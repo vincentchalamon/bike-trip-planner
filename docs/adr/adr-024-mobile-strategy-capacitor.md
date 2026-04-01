@@ -130,7 +130,11 @@ The mobile app must communicate with the remote API server. The API base URL is 
 
 #### CORS Extension
 
-The Capacitor WebView serves content from `capacitor://localhost` on Android. The backend uses `origin_regex: true` with a single `%env(CORS_ALLOW_ORIGIN)%` entry (`api/config/packages/nelmio_cors.php`). Extend the regex in the environment variable to include the `capacitor` scheme:
+The Capacitor WebView serves content from `capacitor://localhost` on Android. Two components need updating.
+
+**1. Symfony API — `CORS_ALLOW_ORIGIN` regex:**
+
+The backend uses `origin_regex: true` with a single `%env(CORS_ALLOW_ORIGIN)%` entry (`api/config/packages/nelmio_cors.php`). No PHP config change is required; extend the regex in the environment variable to include the `capacitor` scheme:
 
 ```dotenv
 # dev
@@ -140,7 +144,15 @@ CORS_ALLOW_ORIGIN='^(https?|capacitor)://(localhost|127\.0\.0\.1)(:[0-9]+)?$'
 CORS_ALLOW_ORIGIN='^(https://example\.com|capacitor://localhost)$'
 ```
 
-No PHP config change is required; the PHP file remains unchanged.
+**2. Mercure SSE (`compose.prod.yaml`):**
+
+`MERCURE_EXTRA_DIRECTIVES` must also allow `capacitor://localhost`, since SSE subscriptions for real-time trip computation events originate from the WebView:
+
+```yaml
+MERCURE_EXTRA_DIRECTIVES: "cors_origins ${FRONTEND_URL:-https://localhost} capacitor://localhost"
+```
+
+Without this second update, real-time trip computation events will fail silently in the mobile app.
 
 #### Offline Access
 
