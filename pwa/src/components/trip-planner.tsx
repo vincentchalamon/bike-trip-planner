@@ -41,12 +41,6 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const router = useRouter();
   const clearTrip = useTripStore((s) => s.clearTrip);
   const isOnline = useOfflineStore((s) => s.isOnline);
-  const loadSavedTrips = useOfflineStore((s) => s.loadSavedTrips);
-
-  // Load saved trips from IndexedDB on mount (for offline consultation)
-  useEffect(() => {
-    void loadSavedTrips();
-  }, [loadSavedTrips]);
 
   const {
     trip,

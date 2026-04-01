@@ -34,11 +34,8 @@ const IDB_KEY = "offline_saved_trips";
 
 interface OfflineState {
   isOnline: boolean;
-  savedTrips: SavedTrip[];
 
   setOnline: (value: boolean) => void;
-  /** Load saved trips from IndexedDB into memory. Call once on app init. */
-  loadSavedTrips: () => Promise<void>;
   /** Persist a completed trip to IndexedDB (upsert by trip id). */
   saveTrip: (trip: SavedTrip) => Promise<void>;
 }
@@ -49,49 +46,30 @@ interface OfflineState {
  * Tracks the browser's online/offline status via `navigator.onLine` and
  * `online`/`offline` events (see {@link OfflineBanner}).
  *
- * Maintains a list of {@link SavedTrip} snapshots persisted in IndexedDB
- * via `idb-keyval`. Completed trips are saved on `trip_complete` Mercure
- * events for offline consultation.
+ * Completed trips are persisted to IndexedDB via `idb-keyval` on
+ * `trip_complete` Mercure events for future offline consultation (see #51).
  *
  * **Tile caching:** Map tile caching is not implemented in this version.
  * A future iteration could use a Service Worker with a cache-first strategy
  * for raster/vector tiles (see issue backlog).
  */
 export const useOfflineStore = create<OfflineState>()(
-  immer((set, get) => ({
+  immer((set) => ({
     isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
-    savedTrips: [],
 
     setOnline: (value) =>
       set((state) => {
         state.isOnline = value;
       }),
 
-    loadSavedTrips: async () => {
-      try {
-        const trips = await idbGet<SavedTrip[]>(IDB_KEY);
-        if (trips && Array.isArray(trips)) {
-          set((state) => {
-            state.savedTrips = trips;
-          });
-        }
-      } catch {
-        // IndexedDB unavailable — degrade gracefully
-      }
-    },
-
     saveTrip: async (trip) => {
-      const existing = get().savedTrips;
-      const updated = [trip, ...existing.filter((t) => t.id !== trip.id)];
-      set((state) => {
-        state.savedTrips = updated;
-      });
       try {
+        const existing = (await idbGet<SavedTrip[]>(IDB_KEY)) ?? [];
+        const updated = [trip, ...existing.filter((t) => t.id !== trip.id)];
         await idbSet(IDB_KEY, updated);
       } catch {
-        // IndexedDB write failed — data remains in memory for the session
+        // IndexedDB write failed — degrade gracefully
       }
     },
-
   })),
 );

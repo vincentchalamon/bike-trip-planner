@@ -131,12 +131,13 @@ test.describe("Offline mode", () => {
   });
 
   test.describe("IndexedDB persistence", () => {
-    test("loads saved trips from IndexedDB on init", async ({ page }) => {
+    test("pre-seeded trip data persists in IndexedDB across page loads", async ({
+      page,
+    }) => {
       const { mockAllApis } = await import("../fixtures/api-mocks");
 
-      // Pre-populate IndexedDB before the app loads
+      // Seed IndexedDB before the app loads to simulate a previously saved trip
       await page.addInitScript(() => {
-        // Override idb-keyval to return a saved trip on first get
         const savedTrips = [
           {
             id: "saved-trip-offline-1",
@@ -160,21 +161,17 @@ test.describe("Offline mode", () => {
           },
         ];
 
-        // Intercept idb-keyval by patching the IndexedDB call at the module level
-        // We inject data directly into IndexedDB so idb-keyval reads it naturally
-        const dbName = "keyval-store";
-        const storeName = "keyval";
-        const request = indexedDB.open(dbName, 1);
+        const request = indexedDB.open("keyval-store", 1);
         request.onupgradeneeded = (e) => {
           const db = (e.target as IDBOpenDBRequest).result;
-          if (!db.objectStoreNames.contains(storeName)) {
-            db.createObjectStore(storeName);
+          if (!db.objectStoreNames.contains("keyval")) {
+            db.createObjectStore("keyval");
           }
         };
         request.onsuccess = (e) => {
           const db = (e.target as IDBOpenDBRequest).result;
-          const tx = db.transaction(storeName, "readwrite");
-          tx.objectStore(storeName).put(savedTrips, "offline_saved_trips");
+          const tx = db.transaction("keyval", "readwrite");
+          tx.objectStore("keyval").put(savedTrips, "offline_saved_trips");
         };
       });
 
@@ -182,28 +179,24 @@ test.describe("Offline mode", () => {
       await page.goto("/");
       await page.waitForLoadState("networkidle");
 
-      // The recent trips panel should reflect the saved trip once loaded
-      // Saved trips are loaded into the offline store on mount
-      const savedTripCount = await page.evaluate(async () => {
-        // Wait briefly for the async loadSavedTrips to complete
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        // Check IndexedDB directly to confirm the data is there
-        return new Promise<number>((resolve) => {
-          const request = indexedDB.open("keyval-store", 1);
-          request.onsuccess = (e) => {
-            const db = (e.target as IDBOpenDBRequest).result;
-            const tx = db.transaction("keyval", "readonly");
-            const store = tx.objectStore("keyval");
-            const getReq = store.get("offline_saved_trips");
-            getReq.onsuccess = () => {
-              const trips = getReq.result;
-              resolve(Array.isArray(trips) ? trips.length : 0);
+      // Verify the seeded data is readable from IndexedDB
+      const savedTripCount = await page.evaluate(
+        () =>
+          new Promise<number>((resolve) => {
+            const request = indexedDB.open("keyval-store", 1);
+            request.onsuccess = (e) => {
+              const db = (e.target as IDBOpenDBRequest).result;
+              const tx = db.transaction("keyval", "readonly");
+              const getReq = tx.objectStore("keyval").get("offline_saved_trips");
+              getReq.onsuccess = () =>
+                resolve(
+                  Array.isArray(getReq.result) ? getReq.result.length : 0,
+                );
+              getReq.onerror = () => resolve(0);
             };
-            getReq.onerror = () => resolve(0);
-          };
-          request.onerror = () => resolve(0);
-        });
-      });
+            request.onerror = () => resolve(0);
+          }),
+      );
 
       expect(savedTripCount).toBe(1);
     });
@@ -221,32 +214,31 @@ test.describe("Offline mode", () => {
         timeout: 10000,
       });
 
-      // Allow async saveTrip to complete
-      await mockedPage.waitForTimeout(500);
-
-      const savedCount = await mockedPage.evaluate(async () => {
-        return new Promise<number>((resolve) => {
-          const request = indexedDB.open("keyval-store", 1);
-          request.onsuccess = (e) => {
-            const db = (e.target as IDBOpenDBRequest).result;
-            if (!db.objectStoreNames.contains("keyval")) {
-              resolve(0);
-              return;
-            }
-            const tx = db.transaction("keyval", "readonly");
-            const store = tx.objectStore("keyval");
-            const getReq = store.get("offline_saved_trips");
-            getReq.onsuccess = () => {
-              const trips = getReq.result;
-              resolve(Array.isArray(trips) ? trips.length : 0);
+      // Poll IndexedDB until saveTrip completes (avoid flaky waitForTimeout)
+      await mockedPage.waitForFunction(
+        () =>
+          new Promise<boolean>((resolve) => {
+            const req = indexedDB.open("keyval-store", 1);
+            req.onsuccess = (e) => {
+              const db = (e.target as IDBOpenDBRequest).result;
+              if (!db.objectStoreNames.contains("keyval")) {
+                resolve(false);
+                return;
+              }
+              const getReq = db
+                .transaction("keyval", "readonly")
+                .objectStore("keyval")
+                .get("offline_saved_trips");
+              getReq.onsuccess = () =>
+                resolve(
+                  Array.isArray(getReq.result) && getReq.result.length >= 1,
+                );
+              getReq.onerror = () => resolve(false);
             };
-            getReq.onerror = () => resolve(0);
-          };
-          request.onerror = () => resolve(0);
-        });
-      });
-
-      expect(savedCount).toBeGreaterThanOrEqual(1);
+            req.onerror = () => resolve(false);
+          }),
+        { timeout: 5000 },
+      );
     });
   });
 });
