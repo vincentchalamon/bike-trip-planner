@@ -295,7 +295,7 @@ jobs:
           openssl genpkey -algorithm RSA -out api/config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:ci-test-passphrase
           openssl rsa -pubout -in api/config/jwt/private.pem -out api/config/jwt/public.pem -passin pass:ci-test-passphrase
       - name: Build Docker images
-        uses: docker/bake-action@v6
+        uses: docker/bake-action@v7
         with:
           load: true
           files: |
