@@ -20,12 +20,18 @@ const geistMono = Geist_Mono({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("layout");
-
-  return {
-    title: t("title"),
-    description: t("description"),
-  };
+  try {
+    const t = await getTranslations("layout");
+    return {
+      title: t("title"),
+      description: t("description"),
+    };
+  } catch {
+    return {
+      title: "Bike Trip Planner",
+      description: "Plan your bikepacking trips",
+    };
+  }
 }
 
 export default async function RootLayout({
@@ -33,8 +39,17 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getLocale();
-  const messages = await getMessages();
+  let locale: string;
+  let messages: Awaited<ReturnType<typeof getMessages>>;
+
+  try {
+    locale = await getLocale();
+    messages = await getMessages();
+  } catch {
+    // Static export prerendering: next-intl server context unavailable
+    locale = "fr";
+    messages = (await import("../../messages/fr.json")).default;
+  }
 
   return (
     <html lang={locale} suppressHydrationWarning>

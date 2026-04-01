@@ -395,3 +395,39 @@ jobs:
       - name: Run TypeScript Check
         working-directory: pwa
         run: npm run test:ts
+
+  mobile-build:
+    name: Mobile Export Build
+    runs-on: ubuntu-latest
+    container:
+      image: node:25
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Get NPM cache directory
+        working-directory: pwa
+        id: npm-cache
+        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+      - name: Cache dependencies
+        id: npm-deps-cache
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.npm-cache.outputs.dir }}
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
+      - name: Install dependencies
+        working-directory: pwa
+        run: npm ci
+      - name: Remove dynamic routes incompatible with static export
+        working-directory: pwa
+        run: |
+          rm -rf 'src/app/shares/[tripId]'
+          rm -rf 'src/app/trips/[id]'
+          rm -rf 'src/app/auth'
+      - name: Build (static export)
+        working-directory: pwa
+        env:
+          NODE_ENV: production
+          BUILD_TARGET: mobile
+        run: npm run build

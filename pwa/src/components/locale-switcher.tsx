@@ -23,8 +23,8 @@ export function LocaleSwitcher() {
   function handleLocaleChange(locale: SupportedLocale) {
     if (locale === currentLocale) return;
 
-    startTransition(async () => {
-      await setLocale(locale);
+    startTransition(() => {
+      setLocale(locale);
       router.refresh();
     });
   }

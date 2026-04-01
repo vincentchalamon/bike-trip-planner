@@ -1,15 +1,9 @@
-"use server";
-
-import { cookies } from "next/headers";
 import type { SupportedLocale } from "./locale";
 
-export async function setLocale(locale: SupportedLocale): Promise<void> {
-  const store = await cookies();
-  store.set("locale", locale, {
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365, // 1 year
-    sameSite: "lax",
-    secure: true,
-    httpOnly: true,
-  });
+/**
+ * Persist the user's locale preference as a client-side cookie.
+ * next-intl reads it from the request on subsequent navigations.
+ */
+export function setLocale(locale: SupportedLocale): void {
+  document.cookie = `locale=${locale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
 }

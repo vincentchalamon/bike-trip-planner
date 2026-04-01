@@ -61,10 +61,10 @@ export const useOfflineStore = create<OfflineState>()((set) => ({
   saveTrip: async (trip) => {
     try {
       const existing = (await idbGet<SavedTrip[]>(IDB_KEY)) ?? [];
-      const updated = [
-        trip,
-        ...existing.filter((t) => t.id !== trip.id),
-      ].slice(0, MAX_SAVED_TRIPS);
+      const updated = [trip, ...existing.filter((t) => t.id !== trip.id)].slice(
+        0,
+        MAX_SAVED_TRIPS,
+      );
       await idbSet(IDB_KEY, updated);
     } catch {
       // IndexedDB write failed — degrade gracefully
