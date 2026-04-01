@@ -282,7 +282,9 @@ function truncateText(
 
 function formatDateRange(start: string | null, end: string | null): string {
   const formatDate = (iso: string) => {
-    const d = new Date(iso);
+    // Append time component so date-only strings are parsed as local midnight,
+    // not UTC midnight (which shifts the date backward in UTC- timezones).
+    const d = new Date(iso.includes("T") ? iso : `${iso}T00:00:00`);
     return d.toLocaleDateString(undefined, {
       day: "numeric",
       month: "short",

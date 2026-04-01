@@ -83,15 +83,19 @@ export function ShareModal({
     if (!open || shareUrl || hasRevoked) return;
 
     let cancelled = false;
-    createTripShare(tripId).then((result) => {
-      if (cancelled) return;
-      if (result) {
-        setShareUrl(buildShareUrl(tripId, result.token ?? ""));
-        setShareId(result.id ?? null);
-      } else {
-        toast.error(t("linkCreateFailed"));
-      }
-    });
+    createTripShare(tripId)
+      .then((result) => {
+        if (cancelled) return;
+        if (result) {
+          setShareUrl(buildShareUrl(tripId, result.token ?? ""));
+          setShareId(result.id ?? null);
+        } else {
+          toast.error(t("linkCreateFailed"));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) toast.error(t("linkCreateFailed"));
+      });
 
     return () => {
       cancelled = true;
@@ -161,15 +165,20 @@ export function ShareModal({
   const handleRevokeLink = useCallback(async () => {
     if (!shareId) return;
     setIsRevokingLink(true);
-    const ok = await revokeTripShare(tripId, shareId);
-    setIsRevokingLink(false);
-    if (ok) {
-      setHasRevoked(true);
-      setShareUrl(null);
-      setShareId(null);
-      toast.success(t("linkRevoked"));
-    } else {
+    try {
+      const ok = await revokeTripShare(tripId, shareId);
+      if (ok) {
+        setHasRevoked(true);
+        setShareUrl(null);
+        setShareId(null);
+        toast.success(t("linkRevoked"));
+      } else {
+        toast.error(t("linkRevokeFailed"));
+      }
+    } catch {
       toast.error(t("linkRevokeFailed"));
+    } finally {
+      setIsRevokingLink(false);
     }
   }, [tripId, shareId, t]);
 
@@ -301,15 +310,21 @@ export function ShareModal({
                 onClick={() => {
                   setHasRevoked(false);
                   setIsRecreatingLink(true);
-                  void createTripShare(tripId).then((result) => {
-                    setIsRecreatingLink(false);
-                    if (result) {
-                      setShareUrl(buildShareUrl(tripId, result.token ?? ""));
-                      setShareId(result.id ?? null);
-                    } else {
+                  void createTripShare(tripId)
+                    .then((result) => {
+                      if (result) {
+                        setShareUrl(buildShareUrl(tripId, result.token ?? ""));
+                        setShareId(result.id ?? null);
+                      } else {
+                        toast.error(t("linkCreateFailed"));
+                      }
+                    })
+                    .catch(() => {
                       toast.error(t("linkCreateFailed"));
-                    }
-                  });
+                    })
+                    .finally(() => {
+                      setIsRecreatingLink(false);
+                    });
                 }}
                 data-testid="share-create-link-button"
               >
