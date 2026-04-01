@@ -284,6 +284,12 @@ function SharedTripLoader({ code }: { code: string }) {
   );
 }
 
+// Required for static export (Capacitor mobile build).
+// Returns empty — pages are rendered client-side at runtime.
+export function generateStaticParams() {
+  return [];
+}
+
 export default function SharedTripPage({
   params,
 }: {
