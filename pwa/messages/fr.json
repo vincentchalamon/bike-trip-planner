@@ -391,6 +391,6 @@
   },
   "offline": {
     "offlineMessage": "Hors ligne — consultation des données en cache. Modification désactivée.",
-    "reconnected": "Connexion rétablie. Rafraîchissement..."
+    "reconnected": "Connexion rétablie."
   }
 }

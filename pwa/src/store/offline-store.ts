@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { get as idbGet, set as idbSet, del as idbDel } from "idb-keyval";
+import { get as idbGet, set as idbSet } from "idb-keyval";
 import type { StageData } from "@/lib/validation/schemas";
 import type { AccommodationType } from "@/lib/accommodation-types";
 
@@ -41,8 +41,6 @@ interface OfflineState {
   loadSavedTrips: () => Promise<void>;
   /** Persist a completed trip to IndexedDB (upsert by trip id). */
   saveTrip: (trip: SavedTrip) => Promise<void>;
-  /** Remove a saved trip from IndexedDB by id. */
-  removeSavedTrip: (tripId: string) => Promise<void>;
 }
 
 /**
@@ -95,20 +93,5 @@ export const useOfflineStore = create<OfflineState>()(
       }
     },
 
-    removeSavedTrip: async (tripId) => {
-      const updated = get().savedTrips.filter((t) => t.id !== tripId);
-      set((state) => {
-        state.savedTrips = updated;
-      });
-      try {
-        if (updated.length === 0) {
-          await idbDel(IDB_KEY);
-        } else {
-          await idbSet(IDB_KEY, updated);
-        }
-      } catch {
-        // IndexedDB delete failed — in-memory state is already updated
-      }
-    },
   })),
 );
