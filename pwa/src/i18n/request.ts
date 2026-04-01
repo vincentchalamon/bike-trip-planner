@@ -6,7 +6,7 @@ export default getRequestConfig(async () => {
   // TODO: implement proper per-locale builds or [locale] path segments for full i18n support on mobile
   let locale: SupportedLocale = "fr";
 
-  if (process.env.BUILD_TARGET !== "mobile") {
+  if (process.env.NEXT_PUBLIC_IS_MOBILE_BUILD !== "1") {
     const { cookies } = await import("next/headers");
     const store = await cookies();
     const raw = store.get("locale")?.value;

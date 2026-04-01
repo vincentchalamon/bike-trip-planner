@@ -5,6 +5,9 @@ const isMobile = process.env.BUILD_TARGET === "mobile";
 
 const nextConfig: NextConfig = {
   output: isMobile ? "export" : "standalone",
+  env: {
+    NEXT_PUBLIC_IS_MOBILE_BUILD: isMobile ? "1" : "",
+  },
   ...(isMobile
     ? {}
     : {
