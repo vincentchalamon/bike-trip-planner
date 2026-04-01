@@ -42,7 +42,12 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
         if ($tripId instanceof TripRequest) {
             $data->setTrip($tripId);
         } elseif ($tripId instanceof Uuid || is_string($tripId)) {
-            $uuid = $tripId instanceof Uuid ? $tripId : Uuid::fromString($tripId);
+            try {
+                $uuid = $tripId instanceof Uuid ? $tripId : Uuid::fromString($tripId);
+            } catch (\InvalidArgumentException) {
+                throw new NotFoundHttpException(sprintf('Trip "%s" not found.', $tripId));
+            }
+
             $trip = $this->entityManager->find(TripRequest::class, $uuid);
             if (!$trip instanceof TripRequest) {
                 throw new NotFoundHttpException(sprintf('Trip "%s" not found.', $uuid));

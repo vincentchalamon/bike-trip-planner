@@ -148,4 +148,22 @@ final class TripShareCreateProcessorTest extends TestCase
         $this->expectException(NotFoundHttpException::class);
         $processor->process($share, new Post(), ['tripId' => (string) $tripId]);
     }
+
+    #[Test]
+    public function itThrowsNotFoundWhenTripIdIsNotAValidUuid(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->never())->method('find');
+
+        $share = new TripShare();
+
+        /** @var MockObject&ProcessorInterface<TripShare, TripShare> $persistProcessor */
+        $persistProcessor = $this->createMock(ProcessorInterface::class);
+        $persistProcessor->expects($this->never())->method('process');
+
+        $processor = new TripShareCreateProcessor($persistProcessor, $entityManager);
+
+        $this->expectException(NotFoundHttpException::class);
+        $processor->process($share, new Post(), ['tripId' => 'not-a-uuid']);
+    }
 }
