@@ -388,5 +388,9 @@
     "backToHome": "Retour à l'accueil",
     "readOnlyBanner": "Vous consultez un voyage partagé en lecture seule.",
     "noStages": "Ce voyage n'a pas encore d'étapes."
+  },
+  "offline": {
+    "offlineMessage": "Hors ligne — consultation des données en cache. Modification désactivée.",
+    "reconnected": "Connexion rétablie. Rafraîchissement..."
   }
 }

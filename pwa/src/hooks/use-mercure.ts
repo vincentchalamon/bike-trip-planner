@@ -5,6 +5,8 @@ import { MercureClient } from "@/lib/mercure/client";
 import type { MercureEvent } from "@/lib/mercure/types";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
+import { useOfflineStore } from "@/store/offline-store";
+import type { SavedTrip } from "@/store/offline-store";
 import { reverseGeocode } from "@/lib/geocode/client";
 import { toast } from "sonner";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
@@ -311,6 +313,31 @@ function dispatchEvent(event: MercureEvent): void {
       store.setComputationStatus(event.data.computationStatus);
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
+
+      // Persist the completed trip to IndexedDB for offline consultation
+      if (store.trip) {
+        const snapshot: SavedTrip = {
+          id: store.trip.id,
+          title: store.trip.title,
+          sourceUrl: store.trip.sourceUrl,
+          totalDistance: store.totalDistance,
+          totalElevation: store.totalElevation,
+          totalElevationLoss: store.totalElevationLoss,
+          sourceType: store.sourceType,
+          startDate: store.startDate,
+          endDate: store.endDate,
+          fatigueFactor: store.fatigueFactor,
+          elevationPenalty: store.elevationPenalty,
+          maxDistancePerDay: store.maxDistancePerDay,
+          averageSpeed: store.averageSpeed,
+          ebikeMode: store.ebikeMode,
+          departureHour: store.departureHour,
+          enabledAccommodationTypes: store.enabledAccommodationTypes,
+          stages: store.stages,
+          savedAt: new Date().toISOString(),
+        };
+        void useOfflineStore.getState().saveTrip(snapshot);
+      }
       break;
 
     case "validation_error":

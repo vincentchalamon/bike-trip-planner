@@ -22,11 +22,13 @@ import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { Button } from "@/components/ui/button";
 import { UndoRedoButtons } from "@/components/undo-redo-buttons";
 import { RecentTrips } from "@/components/recent-trips";
+import { OfflineBanner } from "@/components/offline-banner";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useLinkParam } from "@/hooks/use-link-param";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
+import { useOfflineStore } from "@/store/offline-store";
 import { useSwipe } from "@/hooks/use-swipe";
 import {
   MEAL_COST_MIN,
@@ -38,6 +40,14 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const t = useTranslations();
   const router = useRouter();
   const clearTrip = useTripStore((s) => s.clearTrip);
+  const isOnline = useOfflineStore((s) => s.isOnline);
+  const loadSavedTrips = useOfflineStore((s) => s.loadSavedTrips);
+
+  // Load saved trips from IndexedDB on mount (for offline consultation)
+  useEffect(() => {
+    void loadSavedTrips();
+  }, [loadSavedTrips]);
+
   const {
     trip,
     isLocked,
@@ -278,7 +288,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   );
 
   return (
-    <GpxDropZone onDrop={handleGpxUpload} disabled={isProcessing || !!trip}>
+    <GpxDropZone onDrop={handleGpxUpload} disabled={isProcessing || !!trip || !isOnline}>
       <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative overflow-x-clip">
         {/* Skip link */}
         <a
@@ -288,6 +298,9 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
           {t("layout.skipToTimeline")}
         </a>
 
+        {/* Offline status banner */}
+        <OfflineBanner />
+
         {/* === State 1: Welcome (no trip, not processing) === */}
         {isWelcome && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
@@ -296,10 +309,10 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
                 <MagicLinkInput
                   onSubmit={handleMagicLink}
                   isProcessing={false}
-                  disabled={false}
+                  disabled={!isOnline}
                 />
               </div>
-              <GpxUploadButton onUpload={handleGpxUpload} disabled={false} />
+              <GpxUploadButton onUpload={handleGpxUpload} disabled={!isOnline} />
             </div>
             {actionButtons}
             <RecentTrips />
@@ -442,7 +455,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
                       stages={stages}
                       startDate={startDate}
                       isProcessing={isProcessing}
-                      readOnly={isLocked}
+                      readOnly={isLocked || !isOnline}
                       onDeleteStage={handleDeleteStage}
                       onAddStage={handleAddStage}
                       onDistanceChange={handleDistanceChange}
@@ -535,7 +548,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
           onEbikeModeChange={handleEbikeModeChange}
           onDepartureHourChange={handleDepartureHourChange}
           onAccommodationTypesChange={handleAccommodationTypesChange}
-          readOnly={isLocked}
+          readOnly={isLocked || !isOnline}
           hasTripLoaded={!!trip}
           onDuplicate={handleDuplicateTrip}
           onShare={handleShareTrip}
