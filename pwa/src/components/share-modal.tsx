@@ -67,6 +67,9 @@ export function ShareModal({
   const tStage = useTranslations("stage");
   const tTextExport = useTranslations("textExport");
 
+  // Local state intentionally: the modal stays mounted while the trip is loaded
+  // ({trip && <ShareModal>} in trip-planner.tsx), so state survives open/close.
+  // A fresh link per browser session is acceptable — orphan cleanup is a server concern.
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareId, setShareId] = useState<string | null>(null);
   const [hasRevoked, setHasRevoked] = useState(false);
