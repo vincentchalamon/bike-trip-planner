@@ -274,24 +274,29 @@ export function ShareModal({
               {t("linkCreating")}
             </div>
           ) : shareUrl ? (
-            <div className="flex flex-col gap-2 min-w-0">
+            <div className="flex flex-col gap-2">
               <TooltipProvider>
-                <div className="flex items-center gap-2 overflow-hidden">
-                  {/* Link text — click to copy */}
-                  <Tooltip open={linkCopied}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => void handleCopyLink()}
-                        className="flex-1 min-w-0 text-left text-sm text-brand underline underline-offset-2 hover:no-underline truncate cursor-pointer"
-                        data-testid="share-link-text"
-                      >
-                        {shareUrl}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      {t("linkCopied")}
-                    </TooltipContent>
-                  </Tooltip>
+                <div className="flex items-center gap-2">
+                  {/* Link text — click to copy.
+                      The outer div.flex-1.min-w-0 is the flex child so the
+                      flex algorithm constrains it; truncate on the button
+                      then clips the URL with an ellipsis. */}
+                  <div className="flex-1 min-w-0">
+                    <Tooltip open={linkCopied}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => void handleCopyLink()}
+                          className="block w-full text-left text-sm text-brand underline underline-offset-2 hover:no-underline truncate cursor-pointer"
+                          data-testid="share-link-text"
+                        >
+                          {shareUrl}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        {t("linkCopied")}
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
 
                   {/* Copy button */}
                   <Tooltip open={linkCopied}>
