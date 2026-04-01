@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Settings, HelpCircle, Loader2, X } from "lucide-react";
+import { Settings, HelpCircle, Loader2, X, Share2 } from "lucide-react";
 import { MagicLinkInput } from "@/components/magic-link-input";
 import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
@@ -15,7 +15,6 @@ import { StageProgressBar } from "@/components/stage-progress-bar";
 import { Timeline } from "@/components/timeline";
 import { ConfigPanel } from "@/components/config-panel";
 import { KeyboardHelpModal } from "@/components/keyboard-help-modal";
-import { TextExportButton } from "@/components/text-export-button";
 import { ShareModal } from "@/components/share-modal";
 import { MapPanel } from "@/components/Map";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
@@ -244,16 +243,18 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const actionButtons = (
     <div className="flex items-center gap-1">
       {trip && <TripDownloads tripId={trip.id} tripTitle={trip.title} />}
-      {trip && totalDistance !== null && (
-        <TextExportButton
-          title={trip.title}
-          totalDistance={totalDistance}
-          totalElevation={totalElevation}
-          totalElevationLoss={totalElevationLoss}
-          sourceUrl={trip.sourceUrl}
-          stages={stages}
-          startDate={startDate}
-        />
+      {trip && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 cursor-pointer"
+          onClick={() => setShareModalOpen(true)}
+          title={t("share.title")}
+          aria-label={t("share.title")}
+          data-testid="share-button"
+        >
+          <Share2 className="h-4 w-4" />
+        </Button>
       )}
       <UndoRedoButtons />
       <Button

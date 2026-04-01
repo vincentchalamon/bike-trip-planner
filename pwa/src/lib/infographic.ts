@@ -495,56 +495,74 @@ function drawElevationProfile(
   stages: StageData[],
 ): void {
   const activeStages = stages.filter((s) => !s.isRestDay);
-  const allEles = activeStages.flatMap((s) => s.geometry.map((p) => p.ele));
+  if (activeStages.length === 0) return;
+
+  // Build per-stage segments with elevation + difficulty color
+  type Segment = { eles: number[]; color: string };
+  const segments: Segment[] = activeStages.map((s) => ({
+    eles: s.geometry.map((p) => p.ele),
+    color: DIFFICULTY_HEX[getDifficulty(s.distance, s.elevation)] ?? "#38bdf8",
+  }));
+
+  const allEles = segments.flatMap((seg) => seg.eles);
   if (allEles.length < 2) return;
 
-  // Downsample to at most 600 points
-  const maxPoints = 600;
-  const step = Math.max(1, Math.floor(allEles.length / maxPoints));
-  const sampled: number[] = [];
-  for (let i = 0; i < allEles.length; i += step) {
-    sampled.push(allEles[i]!);
-  }
-  const lastSampled = sampled[sampled.length - 1];
-  const lastEle = allEles[allEles.length - 1];
-  if (lastSampled !== lastEle && lastEle !== undefined) {
-    sampled.push(lastEle);
-  }
-
-  const minEle = sampled.reduce((a, b) => (b < a ? b : a), sampled[0]!);
-  const maxEle = sampled.reduce((a, b) => (b > a ? b : a), sampled[0]!);
+  const minEle = allEles.reduce((a, b) => (b < a ? b : a), allEles[0]!);
+  const maxEle = allEles.reduce((a, b) => (b > a ? b : a), allEles[0]!);
   const eleRange = maxEle - minEle || 1;
   const padY = 4;
   const ph = h - padY * 2;
-  const n = sampled.length;
+  const totalPoints = allEles.length;
 
-  const toCanvasX = (i: number) => x + (i / (n - 1)) * w;
+  const toCanvasX = (globalIdx: number) =>
+    x + (globalIdx / (totalPoints - 1)) * w;
   const toCanvasY = (ele: number) =>
     y + h - padY - ((ele - minEle) / eleRange) * ph;
 
-  const grad = ctx.createLinearGradient(0, y, 0, y + h);
-  grad.addColorStop(0, "rgba(56, 189, 248, 0.35)");
-  grad.addColorStop(1, "rgba(56, 189, 248, 0.0)");
-
-  ctx.beginPath();
-  ctx.moveTo(toCanvasX(0), toCanvasY(sampled[0]!));
-  for (let i = 1; i < n; i++) {
-    ctx.lineTo(toCanvasX(i), toCanvasY(sampled[i]!));
+  // Filled area under the profile (subtle gradient per segment)
+  let globalIdx = 0;
+  for (const seg of segments) {
+    if (seg.eles.length < 2) {
+      globalIdx += seg.eles.length;
+      continue;
+    }
+    ctx.beginPath();
+    ctx.moveTo(toCanvasX(globalIdx), toCanvasY(seg.eles[0]!));
+    for (let j = 1; j < seg.eles.length; j++) {
+      ctx.lineTo(toCanvasX(globalIdx + j), toCanvasY(seg.eles[j]!));
+    }
+    ctx.lineTo(toCanvasX(globalIdx + seg.eles.length - 1), y + h);
+    ctx.lineTo(toCanvasX(globalIdx), y + h);
+    ctx.closePath();
+    // Parse hex color for semi-transparent fill
+    const r = parseInt(seg.color.slice(1, 3), 16);
+    const g = parseInt(seg.color.slice(3, 5), 16);
+    const b = parseInt(seg.color.slice(5, 7), 16);
+    const grad = ctx.createLinearGradient(0, y, 0, y + h);
+    grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.3)`);
+    grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.0)`);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    globalIdx += seg.eles.length;
   }
-  ctx.lineTo(toCanvasX(n - 1), y + h);
-  ctx.lineTo(toCanvasX(0), y + h);
-  ctx.closePath();
-  ctx.fillStyle = grad;
-  ctx.fill();
 
-  ctx.beginPath();
-  ctx.moveTo(toCanvasX(0), toCanvasY(sampled[0]!));
-  for (let i = 1; i < n; i++) {
-    ctx.lineTo(toCanvasX(i), toCanvasY(sampled[i]!));
+  // Stroke line per segment with difficulty color
+  globalIdx = 0;
+  for (const seg of segments) {
+    if (seg.eles.length < 2) {
+      globalIdx += seg.eles.length;
+      continue;
+    }
+    ctx.beginPath();
+    ctx.moveTo(toCanvasX(globalIdx), toCanvasY(seg.eles[0]!));
+    for (let j = 1; j < seg.eles.length; j++) {
+      ctx.lineTo(toCanvasX(globalIdx + j), toCanvasY(seg.eles[j]!));
+    }
+    ctx.strokeStyle = seg.color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    globalIdx += seg.eles.length;
   }
-  ctx.strokeStyle = "#38bdf8";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
 }
 
 // ---------------------------------------------------------------------------
