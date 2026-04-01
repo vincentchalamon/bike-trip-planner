@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@api-platform/api-doc-parser": "^0.15.2",
-    "@capacitor/android": "^7.2.0",
     "@capacitor/core": "^7.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -37,6 +36,7 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@capacitor/android": "^7.2.0",
     "@capacitor/cli": "^7.2.0",
     "@eslint/eslintrc": "^3.3.3",
     "@playwright/test": "^1.58.2",

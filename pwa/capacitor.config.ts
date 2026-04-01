@@ -10,10 +10,6 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: "#0a0a0a",
     allowMixedContent: false,
-    buildOptions: {
-      keystorePath: undefined,
-      keystoreAlias: undefined,
-    },
   },
 };
 
