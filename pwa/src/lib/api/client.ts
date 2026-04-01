@@ -122,6 +122,7 @@ const authMiddleware: Middleware = {
 };
 
 export const apiClient = createClient<paths>({
+  baseUrl: process.env.NEXT_PUBLIC_API_URL ?? "",
   headers: {
     "Content-Type": "application/ld+json",
     Accept: "application/ld+json",
