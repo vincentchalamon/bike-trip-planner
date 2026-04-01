@@ -35,12 +35,17 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
 
         // API Platform's Link(toProperty: 'trip') does not inject the trip into the
         // entity on POST operations because $trip is not writable via the denormalizer.
-        // Fetch it explicitly from the URI variable.
+        // Fetch it explicitly from the URI variable. Depending on the API Platform
+        // version and configuration, the variable may arrive as a TripRequest entity,
+        // a Uuid object, or a raw string.
         $tripId = $uriVariables['tripId'] ?? null;
-        if (is_string($tripId)) {
-            $trip = $this->entityManager->find(TripRequest::class, Uuid::fromString($tripId));
+        if ($tripId instanceof TripRequest) {
+            $data->setTrip($tripId);
+        } elseif ($tripId instanceof Uuid || is_string($tripId)) {
+            $uuid = $tripId instanceof Uuid ? $tripId : Uuid::fromString($tripId);
+            $trip = $this->entityManager->find(TripRequest::class, $uuid);
             if (!$trip instanceof TripRequest) {
-                throw new NotFoundHttpException(sprintf('Trip "%s" not found.', $tripId));
+                throw new NotFoundHttpException(sprintf('Trip "%s" not found.', $uuid));
             }
 
             $data->setTrip($trip);

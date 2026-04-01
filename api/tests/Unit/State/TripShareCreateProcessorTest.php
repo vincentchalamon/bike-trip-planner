@@ -21,7 +21,7 @@ use Symfony\Component\Uid\Uuid;
 final class TripShareCreateProcessorTest extends TestCase
 {
     #[Test]
-    public function itSetsTheTripFromUriVariablesAndGeneratesToken(): void
+    public function itSetsTheTripFromStringUriVariable(): void
     {
         $tripId = Uuid::v7();
         $trip = new TripRequest();
@@ -48,6 +48,61 @@ final class TripShareCreateProcessorTest extends TestCase
 
         $processor = new TripShareCreateProcessor($persistProcessor, $entityManager);
         $result = $processor->process($share, new Post(), ['tripId' => (string) $tripId]);
+
+        self::assertSame($trip, $result->getTrip());
+        self::assertNotEmpty($result->getToken());
+    }
+
+    #[Test]
+    public function itSetsTheTripFromUuidUriVariable(): void
+    {
+        $tripId = Uuid::v7();
+        $trip = new TripRequest();
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager
+            ->expects($this->once())
+            ->method('find')
+            ->with(TripRequest::class, $tripId)
+            ->willReturn($trip);
+
+        $share = new TripShare();
+
+        /** @var MockObject&ProcessorInterface<TripShare, TripShare> $persistProcessor */
+        $persistProcessor = $this->createMock(ProcessorInterface::class);
+        $persistProcessor
+            ->expects($this->once())
+            ->method('process')
+            ->with($share)
+            ->willReturn($share);
+
+        $processor = new TripShareCreateProcessor($persistProcessor, $entityManager);
+        $result = $processor->process($share, new Post(), ['tripId' => $tripId]);
+
+        self::assertSame($trip, $result->getTrip());
+        self::assertNotEmpty($result->getToken());
+    }
+
+    #[Test]
+    public function itSetsTheTripFromTripRequestUriVariable(): void
+    {
+        $trip = new TripRequest();
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->never())->method('find');
+
+        $share = new TripShare();
+
+        /** @var MockObject&ProcessorInterface<TripShare, TripShare> $persistProcessor */
+        $persistProcessor = $this->createMock(ProcessorInterface::class);
+        $persistProcessor
+            ->expects($this->once())
+            ->method('process')
+            ->with($share)
+            ->willReturn($share);
+
+        $processor = new TripShareCreateProcessor($persistProcessor, $entityManager);
+        $result = $processor->process($share, new Post(), ['tripId' => $trip]);
 
         self::assertSame($trip, $result->getTrip());
         self::assertNotEmpty($result->getToken());

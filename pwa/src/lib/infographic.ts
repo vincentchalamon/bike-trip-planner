@@ -357,15 +357,15 @@ async function drawRouteMap(
   const allPoints = activeStages.flatMap((s) => s.geometry);
   if (allPoints.length < 2) return;
 
-  // Bounding box with 10 % padding
+  // Bounding box with 8 % padding
   const lats = allPoints.map((p) => p.lat);
   const lons = allPoints.map((p) => p.lon);
   const rawMinLat = lats.reduce((a, b) => (b < a ? b : a), lats[0]!);
   const rawMaxLat = lats.reduce((a, b) => (b > a ? b : a), lats[0]!);
   const rawMinLon = lons.reduce((a, b) => (b < a ? b : a), lons[0]!);
   const rawMaxLon = lons.reduce((a, b) => (b > a ? b : a), lons[0]!);
-  const latPad = Math.max((rawMaxLat - rawMinLat) * 0.15, 0.01);
-  const lonPad = Math.max((rawMaxLon - rawMinLon) * 0.15, 0.01);
+  const latPad = Math.max((rawMaxLat - rawMinLat) * 0.08, 0.005);
+  const lonPad = Math.max((rawMaxLon - rawMinLon) * 0.08, 0.005);
   const minLat = rawMinLat - latPad;
   const maxLat = rawMaxLat + latPad;
   const minLon = rawMinLon - lonPad;
@@ -373,21 +373,6 @@ async function drawRouteMap(
 
   const zoom = chooseZoom(minLat, maxLat, minLon, maxLon);
   const power = Math.pow(2, zoom);
-
-  const tileMin = lonLatToTile(minLon, maxLat, zoom); // top-left
-  const tileMax = lonLatToTile(maxLon, minLat, zoom); // bottom-right
-  const numTilesX = tileMax.x - tileMin.x + 1;
-  const numTilesY = tileMax.y - tileMin.y + 1;
-
-  // Scale tile grid to fit inside the map area
-  const mapPad = 0;
-  const mw = w - mapPad * 2;
-  const mh = h - mapPad * 2;
-  const scale = Math.min(mw / (numTilesX * 256), mh / (numTilesY * 256));
-  const scaledW = numTilesX * 256 * scale;
-  const scaledH = numTilesY * 256 * scale;
-  const offX = x + mapPad + (mw - scaledW) / 2;
-  const offY = y + mapPad + (mh - scaledH) / 2;
 
   /** Convert lon/lat to WebMercator absolute pixel at this zoom. */
   const toAbsPx = (lon: number, lat: number): [number, number] => {
@@ -400,13 +385,26 @@ async function drawRouteMap(
     return [px, py];
   };
 
+  // Scale so the padded bounding box (in absolute pixels) fits exactly in the
+  // map area. This ensures the route is centred with minimal whitespace,
+  // regardless of how many OSM tiles the bounding box spans.
+  const [bboxMinPxX, bboxMinPxY] = toAbsPx(minLon, maxLat); // top-left
+  const [bboxMaxPxX, bboxMaxPxY] = toAbsPx(maxLon, minLat); // bottom-right
+  const bboxPxW = bboxMaxPxX - bboxMinPxX;
+  const bboxPxH = bboxMaxPxY - bboxMinPxY;
+  const scale = Math.min(w / bboxPxW, h / bboxPxH);
+  const scaledBboxW = bboxPxW * scale;
+  const scaledBboxH = bboxPxH * scale;
+  const offX = x + (w - scaledBboxW) / 2;
+  const offY = y + (h - scaledBboxH) / 2;
+
   const toCanvas = (lon: number, lat: number): [number, number] => {
     const [px, py] = toAbsPx(lon, lat);
-    return [
-      offX + (px - tileMin.x * 256) * scale,
-      offY + (py - tileMin.y * 256) * scale,
-    ];
+    return [offX + (px - bboxMinPxX) * scale, offY + (py - bboxMinPxY) * scale];
   };
+
+  const tileMin = lonLatToTile(minLon, maxLat, zoom); // top-left tile
+  const tileMax = lonLatToTile(maxLon, minLat, zoom); // bottom-right tile
 
   // Fetch all tiles in parallel
   type TileResult = {
@@ -433,13 +431,14 @@ async function drawRouteMap(
   const tiles = await Promise.all(tilePromises);
   for (const { tx, ty, img } of tiles) {
     if (img) {
-      ctx.drawImage(
-        img,
-        offX + (tx - tileMin.x) * 256 * scale,
-        offY + (ty - tileMin.y) * 256 * scale,
-        256 * scale,
-        256 * scale,
+      // Convert tile top-left corner (lon/lat) to canvas coordinates
+      const tileLon = (tx / Math.pow(2, zoom)) * 360 - 180;
+      const tileLatRad = Math.atan(
+        Math.sinh(Math.PI * (1 - (2 * ty) / Math.pow(2, zoom))),
       );
+      const tileLat = (tileLatRad * 180) / Math.PI;
+      const [cx, cy] = toCanvas(tileLon, tileLat);
+      ctx.drawImage(img, cx, cy, 256 * scale, 256 * scale);
     }
   }
 
