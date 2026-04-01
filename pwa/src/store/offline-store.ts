@@ -84,10 +84,7 @@ export const useOfflineStore = create<OfflineState>()(
 
     saveTrip: async (trip) => {
       const existing = get().savedTrips;
-      const updated = [
-        trip,
-        ...existing.filter((t) => t.id !== trip.id),
-      ];
+      const updated = [trip, ...existing.filter((t) => t.id !== trip.id)];
       set((state) => {
         state.savedTrips = updated;
       });

@@ -288,7 +288,10 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   );
 
   return (
-    <GpxDropZone onDrop={handleGpxUpload} disabled={isProcessing || !!trip || !isOnline}>
+    <GpxDropZone
+      onDrop={handleGpxUpload}
+      disabled={isProcessing || !!trip || !isOnline}
+    >
       <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative overflow-x-clip">
         {/* Skip link */}
         <a
@@ -312,7 +315,10 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
                   disabled={!isOnline}
                 />
               </div>
-              <GpxUploadButton onUpload={handleGpxUpload} disabled={!isOnline} />
+              <GpxUploadButton
+                onUpload={handleGpxUpload}
+                disabled={!isOnline}
+              />
             </div>
             {actionButtons}
             <RecentTrips />
