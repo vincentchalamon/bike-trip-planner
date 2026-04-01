@@ -115,6 +115,11 @@ class TripShare
         return $this->id;
     }
 
+    public function setTrip(TripRequest $trip): void
+    {
+        $this->trip = $trip;
+    }
+
     public function getTrip(): ?TripRequest
     {
         return $this->trip;

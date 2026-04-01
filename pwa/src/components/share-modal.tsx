@@ -126,7 +126,7 @@ export function ShareModal({
         labels: {
           distance: t("statDistance"),
           elevation: t("statElevation"),
-          days: t("statDays"),
+          dates: t("statDates"),
           budget: t("statBudget"),
           difficulty: t("statDifficulty"),
           weather: t("statWeather"),
@@ -350,13 +350,10 @@ export function ShareModal({
           </h3>
 
           <div className="flex flex-col items-center gap-3">
-            <div
-              className="rounded-lg overflow-hidden border shadow-sm w-full"
-              style={{ maxWidth: "600px", aspectRatio: "600 / 400" }}
-            >
+            <div className="rounded-lg overflow-hidden border shadow-sm w-full">
               <canvas
                 ref={canvasRef}
-                className="block w-full h-full"
+                className="block w-full"
                 data-testid="share-infographic-canvas"
               />
             </div>
