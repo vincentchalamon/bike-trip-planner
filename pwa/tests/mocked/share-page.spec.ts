@@ -1,14 +1,14 @@
 import { test, expect } from "@playwright/test";
 
-const TRIP_ID = "share-uuid-abc-999";
-const SHARE_TOKEN = "share-token-xyz-valid";
+const SHORT_CODE = "Br3t4gn3";
 
 const MOCK_SHARED_TRIP = {
   "@context": "/contexts/TripShare",
   "@type": "TripDetail",
-  id: TRIP_ID,
+  id: "share-uuid-abc-999",
   title: "Tour de Bretagne",
   startDate: "2026-07-01T00:00:00+00:00",
+  endDate: "2026-07-02T00:00:00+00:00",
   fatigueFactor: 0.85,
   elevationPenalty: 40,
   maxDistancePerDay: 70,
@@ -50,26 +50,23 @@ const MOCK_SHARED_TRIP = {
 };
 
 function mockValidShare(page: import("@playwright/test").Page) {
-  return page.route(
-    `**/shares/${TRIP_ID}?token=${SHARE_TOKEN}`,
-    (route, request) => {
-      const accept = request.headers()["accept"] ?? "";
-      if (!accept.includes("application/ld+json")) return route.fallback();
-      return route.fulfill({
-        status: 200,
-        headers: { "Content-Type": "application/ld+json; charset=utf-8" },
-        body: JSON.stringify(MOCK_SHARED_TRIP),
-      });
-    },
-  );
+  return page.route(`**/s/${SHORT_CODE}`, (route, request) => {
+    const accept = request.headers()["accept"] ?? "";
+    if (!accept.includes("application/ld+json")) return route.fallback();
+    return route.fulfill({
+      status: 200,
+      headers: { "Content-Type": "application/ld+json; charset=utf-8" },
+      body: JSON.stringify(MOCK_SHARED_TRIP),
+    });
+  });
 }
 
-test.describe("/shares/[tripId] page", () => {
-  test("renders trip title, summary, timeline and read-only banner for a valid share token", async ({
+test.describe("/s/[code] page", () => {
+  test("renders trip title, summary, timeline and read-only banner for a valid short code", async ({
     page,
   }) => {
     await mockValidShare(page);
-    await page.goto(`/shares/${TRIP_ID}?token=${SHARE_TOKEN}`);
+    await page.goto(`/s/${SHORT_CODE}`);
 
     // Title
     await expect(
@@ -87,16 +84,14 @@ test.describe("/shares/[tripId] page", () => {
     await expect(page.getByTestId("read-only-banner")).toBeVisible();
   });
 
-  test("shows error state for an invalid or expired share token", async ({
-    page,
-  }) => {
-    await page.route(`**/shares/${TRIP_ID}**`, (route, request) => {
+  test("shows error state for an invalid short code", async ({ page }) => {
+    await page.route(`**/s/invalid8`, (route, request) => {
       const accept = request.headers()["accept"] ?? "";
       if (!accept.includes("application/ld+json")) return route.fallback();
       return route.fulfill({ status: 404, body: "" });
     });
 
-    await page.goto(`/shares/${TRIP_ID}?token=invalid-token`);
+    await page.goto(`/s/invalid8`);
 
     await expect(page.getByTestId("share-error")).toBeVisible({
       timeout: 10000,
@@ -106,19 +101,11 @@ test.describe("/shares/[tripId] page", () => {
     await expect(page.getByRole("link").first()).toBeVisible();
   });
 
-  test("shows error state when token is missing from URL", async ({ page }) => {
-    await page.goto(`/shares/${TRIP_ID}`);
-
-    await expect(page.getByTestId("share-error")).toBeVisible({
-      timeout: 10000,
-    });
-  });
-
   test("stage cards are read-only (no delete or add buttons)", async ({
     page,
   }) => {
     await mockValidShare(page);
-    await page.goto(`/shares/${TRIP_ID}?token=${SHARE_TOKEN}`);
+    await page.goto(`/s/${SHORT_CODE}`);
 
     await expect(page.getByTestId("stage-card-1")).toBeVisible({
       timeout: 10000,

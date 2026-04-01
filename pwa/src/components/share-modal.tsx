@@ -148,9 +148,13 @@ export function ShareModal({
           difficultyHard: tStage("difficultyHard"),
           powered: t("poweredBy"),
         },
-      }).finally(() => {
-        setIsRenderingInfographic(false);
-      });
+      })
+        .catch((err: unknown) => {
+          console.error("[infographic] render failed", err);
+        })
+        .finally(() => {
+          setIsRenderingInfographic(false);
+        });
     }, 100);
     return () => clearTimeout(timer);
   }, [
