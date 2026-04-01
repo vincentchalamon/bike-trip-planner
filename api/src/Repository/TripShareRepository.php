@@ -18,24 +18,32 @@ final class TripShareRepository extends ServiceEntityRepository implements TripS
         parent::__construct($registry, TripShare::class);
     }
 
-    /**
-     * Find a valid (non-expired) share by trip ID and token.
-     */
     public function findValidShare(string $tripId, string $token): ?TripShare
     {
-        $qb = $this->createQueryBuilder('s')
+        /** @var TripShare|null $share */
+        $share = $this->createQueryBuilder('s')
             ->join('s.trip', 't')
             ->where('t.id = :tripId')
             ->andWhere('s.token = :token')
+            ->andWhere('s.deletedAt IS NULL')
             ->setParameter('tripId', $tripId)
-            ->setParameter('token', $token);
+            ->setParameter('token', $token)
+            ->getQuery()
+            ->getOneOrNullResult();
 
+        return $share;
+    }
+
+    public function findActiveByTrip(string $tripId): ?TripShare
+    {
         /** @var TripShare|null $share */
-        $share = $qb->getQuery()->getOneOrNullResult();
-
-        if (!$share instanceof TripShare || !$share->isValid()) {
-            return null;
-        }
+        $share = $this->createQueryBuilder('s')
+            ->join('s.trip', 't')
+            ->where('t.id = :tripId')
+            ->andWhere('s.deletedAt IS NULL')
+            ->setParameter('tripId', $tripId)
+            ->getQuery()
+            ->getOneOrNullResult();
 
         return $share;
     }

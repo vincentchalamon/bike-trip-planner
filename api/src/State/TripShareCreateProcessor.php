@@ -4,18 +4,21 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use ApiPlatform\Doctrine\Common\State\PersistProcessor;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\TripRequest;
 use App\Entity\TripShare;
+use App\Repository\TripShareRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * Generates a 256-bit token before delegating persistence to API Platform's PersistProcessor.
+ * Creates a TripShare: resolves the trip, checks for active share (409),
+ * generates a 256-bit token, and persists.
  *
  * @implements ProcessorInterface<TripShare, TripShare>
  */
@@ -26,6 +29,7 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
         #[Autowire(service: PersistProcessor::class)]
         private ProcessorInterface $persistProcessor,
         private EntityManagerInterface $entityManager,
+        private TripShareRepositoryInterface $tripShareRepository,
     ) {
     }
 
@@ -33,15 +37,37 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
     {
         \assert($data instanceof TripShare);
 
-        // API Platform's Link(toProperty: 'trip') does not inject the trip into the
-        // entity on POST operations because $trip is not writable via the denormalizer.
-        // Fetch it explicitly from the URI variable. Depending on the API Platform
-        // version and configuration, the variable may arrive as a TripRequest entity,
-        // a Uuid object, or a raw string.
+        $trip = $this->resolveTrip($uriVariables);
+
+        if ($trip instanceof TripRequest) {
+            $data->setTrip($trip);
+
+            // Only one active share per trip
+            if ($this->tripShareRepository->findActiveByTrip((string) $trip->id) instanceof TripShare) {
+                throw new ConflictHttpException('An active share link already exists for this trip.');
+            }
+        }
+
+        $data->generateToken();
+
+        $result = $this->persistProcessor->process($data, $operation, $uriVariables, $context);
+        \assert($result instanceof TripShare);
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $uriVariables
+     */
+    private function resolveTrip(array $uriVariables): ?TripRequest
+    {
         $tripId = $uriVariables['tripId'] ?? null;
+
         if ($tripId instanceof TripRequest) {
-            $data->setTrip($tripId);
-        } elseif ($tripId instanceof Uuid || is_string($tripId)) {
+            return $tripId;
+        }
+
+        if ($tripId instanceof Uuid || is_string($tripId)) {
             try {
                 $uuid = $tripId instanceof Uuid ? $tripId : Uuid::fromString($tripId);
             } catch (\InvalidArgumentException) {
@@ -53,14 +79,9 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
                 throw new NotFoundHttpException(sprintf('Trip "%s" not found.', $uuid));
             }
 
-            $data->setTrip($trip);
+            return $trip;
         }
 
-        $data->generateToken();
-
-        $result = $this->persistProcessor->process($data, $operation, $uriVariables, $context);
-        \assert($result instanceof TripShare);
-
-        return $result;
+        return null;
     }
 }

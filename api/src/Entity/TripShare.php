@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
-use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
@@ -17,6 +16,8 @@ use App\ApiResource\TripDetail;
 use App\ApiResource\TripRequest;
 use App\Repository\TripShareRepository;
 use App\State\TripShareCreateProcessor;
+use App\State\TripShareDeleteProcessor;
+use App\State\TripShareProvider;
 use App\State\TripShareViewProvider;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
@@ -29,7 +30,7 @@ use Symfony\Component\Uid\Uuid;
     shortName: 'TripShare',
     operations: [
         new Post(
-            uriTemplate: '/trips/{tripId}/shares',
+            uriTemplate: '/trips/{tripId}/share',
             uriVariables: [
                 'tripId' => new Link(toProperty: 'trip', fromClass: TripRequest::class),
             ],
@@ -38,22 +39,24 @@ use Symfony\Component\Uid\Uuid;
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
             processor: TripShareCreateProcessor::class,
         ),
-        new GetCollection(
-            uriTemplate: '/trips/{tripId}/shares',
+        new Get(
+            uriTemplate: '/trips/{tripId}/share',
             uriVariables: [
                 'tripId' => new Link(toProperty: 'trip', fromClass: TripRequest::class),
             ],
-            openapi: new Operation(summary: 'List all share links for a trip.'),
+            openapi: new Operation(summary: 'Get the active share link for a trip.'),
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
+            provider: TripShareProvider::class,
         ),
         new Delete(
-            uriTemplate: '/trips/{tripId}/shares/{id}',
+            uriTemplate: '/trips/{tripId}/share',
             uriVariables: [
                 'tripId' => new Link(toProperty: 'trip', fromClass: TripRequest::class),
-                'id' => new Link(fromClass: TripShare::class),
             ],
-            openapi: new Operation(summary: 'Revoke a share link.'),
+            openapi: new Operation(summary: 'Revoke the active share link.'),
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
+            provider: TripShareProvider::class,
+            processor: TripShareDeleteProcessor::class,
         ),
         new Get(
             uriTemplate: '/shares/{tripId}',
@@ -89,6 +92,10 @@ class TripShare
     #[ApiProperty(writable: false)]
     private \DateTimeImmutable $createdAt;
 
+    #[ORM\Column(nullable: true)]
+    #[ApiProperty(readable: false, writable: false)]
+    private ?\DateTimeImmutable $deletedAt = null;
+
     public function __construct(
         #[ORM\ManyToOne(targetEntity: TripRequest::class)]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -97,8 +104,6 @@ class TripShare
         #[ORM\Column(length: 64)]
         #[ApiProperty(writable: false)]
         private string $token = '',
-        #[ORM\Column(nullable: true)]
-        private ?\DateTimeImmutable $expiresAt = null,
         ?Uuid $id = null,
     ) {
         $this->id = $id ?? Uuid::v7();
@@ -130,18 +135,23 @@ class TripShare
         return $this->token;
     }
 
-    public function getExpiresAt(): ?\DateTimeImmutable
-    {
-        return $this->expiresAt;
-    }
-
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
     }
 
-    public function isValid(): bool
+    public function getDeletedAt(): ?\DateTimeImmutable
     {
-        return !$this->expiresAt instanceof \DateTimeImmutable || $this->expiresAt > new \DateTimeImmutable();
+        return $this->deletedAt;
+    }
+
+    public function softDelete(): void
+    {
+        $this->deletedAt = new \DateTimeImmutable();
+    }
+
+    public function isActive(): bool
+    {
+        return !$this->deletedAt instanceof \DateTimeImmutable;
     }
 }

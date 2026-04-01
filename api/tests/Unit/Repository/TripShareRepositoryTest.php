@@ -59,8 +59,10 @@ final class TripShareRepositoryTest extends TestCase
         $this->repository = new TripShareRepository($registry);
     }
 
+    // --- findValidShare ---
+
     #[Test]
-    public function findValidShareReturnsShareWhenTokenMatchesAndNotExpired(): void
+    public function findValidShareReturnsShareWhenTokenMatches(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
         $token = bin2hex(random_bytes(32));
@@ -85,68 +87,51 @@ final class TripShareRepositoryTest extends TestCase
         $this->assertNull($result);
     }
 
+    // --- findActiveByTrip ---
+
     #[Test]
-    public function findValidShareReturnsNullWhenShareIsExpired(): void
+    public function findActiveByTripReturnsActiveShare(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
         $trip = new TripRequest(Uuid::fromString($tripId));
-        $expiredShare = new TripShare(
-            trip: $trip,
-            token: 'expired-token',
-            expiresAt: new \DateTimeImmutable('-1 hour'),
-        );
-
-        $this->query->method('getOneOrNullResult')->willReturn($expiredShare);
-
-        $result = $this->repository->findValidShare($tripId, 'expired-token');
-
-        $this->assertNull($result);
-    }
-
-    #[Test]
-    public function findValidShareReturnsShareWhenExpiryIsInTheFuture(): void
-    {
-        $tripId = Uuid::v7()->toRfc4122();
-        $token = bin2hex(random_bytes(32));
-
-        $trip = new TripRequest(Uuid::fromString($tripId));
-        $share = new TripShare(
-            trip: $trip,
-            token: $token,
-            expiresAt: new \DateTimeImmutable('+7 days'),
-        );
+        $share = new TripShare(trip: $trip, token: 'some-token');
 
         $this->query->method('getOneOrNullResult')->willReturn($share);
 
-        $result = $this->repository->findValidShare($tripId, $token);
+        $result = $this->repository->findActiveByTrip($tripId);
 
         $this->assertSame($share, $result);
     }
 
-    // --- TripShare::isValid() ---
+    #[Test]
+    public function findActiveByTripReturnsNullWhenNoActiveShare(): void
+    {
+        $this->query->method('getOneOrNullResult')->willReturn(null);
+
+        $result = $this->repository->findActiveByTrip('some-trip-id');
+
+        $this->assertNull($result);
+    }
+
+    // --- TripShare entity ---
 
     #[Test]
-    public function isValidReturnsTrueWhenNoExpiry(): void
+    public function isActiveReturnsTrueByDefault(): void
     {
-        $share = new TripShare(expiresAt: null);
+        $share = new TripShare();
 
-        $this->assertTrue($share->isValid());
+        $this->assertTrue($share->isActive());
+        $this->assertNull($share->getDeletedAt());
     }
 
     #[Test]
-    public function isValidReturnsTrueWhenExpiryIsInFuture(): void
+    public function softDeleteSetsDeletedAt(): void
     {
-        $share = new TripShare(expiresAt: new \DateTimeImmutable('+1 day'));
+        $share = new TripShare();
+        $share->softDelete();
 
-        $this->assertTrue($share->isValid());
-    }
-
-    #[Test]
-    public function isValidReturnsFalseWhenExpired(): void
-    {
-        $share = new TripShare(expiresAt: new \DateTimeImmutable('-1 second'));
-
-        $this->assertFalse($share->isValid());
+        $this->assertFalse($share->isActive());
+        $this->assertNotNull($share->getDeletedAt());
     }
 
     #[Test]

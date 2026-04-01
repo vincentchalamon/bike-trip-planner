@@ -384,7 +384,7 @@
   "sharePage": {
     "title": "Voyage partagé",
     "loading": "Chargement du voyage partagé...",
-    "error": "Ce lien de partage est invalide ou a expiré.",
+    "error": "Ce lien de partage est invalide ou a été révoqué.",
     "backToHome": "Retour à l'accueil",
     "readOnlyBanner": "Vous consultez un voyage partagé en lecture seule.",
     "noStages": "Ce voyage n'a pas encore d'étapes."

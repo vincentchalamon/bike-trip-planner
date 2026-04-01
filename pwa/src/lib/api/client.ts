@@ -413,24 +413,38 @@ export function buildShareUrl(tripId: string, token: string): string {
 }
 
 /**
- * Create a read-only share link for a trip.
- * @returns The share metadata (id, token, expiresAt), or null on failure.
+ * Get the active share link for a trip.
+ * @returns The share metadata (id, token), or null if none exists.
  */
 export type TripShareResponse = components["schemas"]["TripShare.jsonld"];
 
-export async function createTripShare(
+export async function getTripShare(
   tripId: string,
-  expiresAt?: string,
 ): Promise<TripShareResponse | null> {
   const res = await apiFetch(
-    `${API_URL}/trips/${encodeURIComponent(tripId)}/shares`,
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/share`,
+    { headers: { Accept: "application/ld+json" } },
+  );
+  if (!res.ok) return null;
+  return res.json() as Promise<TripShareResponse>;
+}
+
+/**
+ * Create a read-only share link for a trip.
+ * @returns The share metadata (id, token), or null on failure.
+ */
+export async function createTripShare(
+  tripId: string,
+): Promise<TripShareResponse | null> {
+  const res = await apiFetch(
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/share`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/ld+json",
         Accept: "application/ld+json",
       },
-      body: JSON.stringify(expiresAt !== undefined ? { expiresAt } : {}),
+      body: JSON.stringify({}),
     },
   );
   if (!res.ok) return null;
@@ -438,15 +452,12 @@ export async function createTripShare(
 }
 
 /**
- * Revoke a share link. Used by the share modal (#42).
+ * Revoke the active share link for a trip (soft delete).
  * @returns true on success, false on failure.
  */
-export async function revokeTripShare(
-  tripId: string,
-  shareId: string,
-): Promise<boolean> {
+export async function revokeTripShare(tripId: string): Promise<boolean> {
   const res = await apiFetch(
-    `${API_URL}/trips/${encodeURIComponent(tripId)}/shares/${encodeURIComponent(shareId)}`,
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/share`,
     { method: "DELETE" },
   );
   return res.ok;

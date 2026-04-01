@@ -17,7 +17,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * Provides a read-only trip detail for anonymous share access.
  *
  * Validates the share token from query parameter before returning data.
- * Returns a uniform 404 for any invalid/expired/missing token to avoid
+ * Returns a uniform 404 for any invalid/revoked/missing token to avoid
  * leaking information about trip existence.
  *
  * @implements ProviderInterface<TripDetail>
@@ -33,12 +33,12 @@ final readonly class TripShareViewProvider implements ProviderInterface
     }
 
     /**
-     * @param array{tripId?: string} $uriVariables
-     * @param array<string, mixed>   $context
+     * @param array<string, mixed> $uriVariables
+     * @param array<string, mixed> $context
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): TripDetail
     {
-        $tripId = $uriVariables['tripId'] ?? '';
+        $tripId = isset($uriVariables['tripId']) ? (string) $uriVariables['tripId'] : '';
         $request = $context['request'] ?? null;
         $token = $request instanceof Request ? $request->query->getString('token') : '';
 
