@@ -222,6 +222,7 @@ export function StageCard({
                 DEFAULT_ACCOMMODATION_RADIUS_KM
               }
               onAccommodationHover={onAccommodationHover}
+              readOnly={readOnly}
             />
           </>
         )}

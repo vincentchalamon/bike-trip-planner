@@ -5,7 +5,8 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { downloadTripGpx } from "@/lib/api/client";
+import { downloadTripGpx, downloadSharedTripGpx } from "@/lib/api/client";
+import { useShareContext } from "@/lib/share-context";
 
 interface TripDownloadsProps {
   tripId: string | undefined;
@@ -14,13 +15,18 @@ interface TripDownloadsProps {
 
 export function TripDownloads({ tripId, tripTitle }: TripDownloadsProps) {
   const t = useTranslations("tripSummary");
+  const share = useShareContext();
   const [downloading, setDownloading] = useState(false);
 
   async function handleDownload() {
-    if (!tripId) return;
+    if (!tripId && !share) return;
     setDownloading(true);
     try {
-      await downloadTripGpx(tripId, tripTitle);
+      if (share) {
+        await downloadSharedTripGpx(share.shortCode, share.title);
+      } else {
+        await downloadTripGpx(tripId!, tripTitle);
+      }
     } catch {
       toast.error(t("downloadFailed"));
     } finally {
@@ -33,7 +39,7 @@ export function TripDownloads({ tripId, tripTitle }: TripDownloadsProps) {
       variant="ghost"
       size="icon"
       className="h-9 w-9 cursor-pointer"
-      disabled={!tripId || downloading}
+      disabled={(!tripId && !share) || downloading}
       onClick={() => void handleDownload()}
       aria-label={t("downloadGpx")}
       title={t("downloadGpx")}

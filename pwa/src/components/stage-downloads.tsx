@@ -5,7 +5,8 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { downloadStageFile } from "@/lib/api/client";
+import { downloadStageFile, downloadSharedStageFile } from "@/lib/api/client";
+import { useShareContext } from "@/lib/share-context";
 
 interface StageDownloadsProps {
   tripId: string | undefined;
@@ -19,13 +20,23 @@ export function StageDownloads({
   dayNumber,
 }: StageDownloadsProps) {
   const t = useTranslations("stage");
+  const share = useShareContext();
   const [downloading, setDownloading] = useState<"gpx" | "fit" | false>(false);
 
   async function handleDownload(format: "gpx" | "fit") {
-    if (!tripId) return;
+    if (!tripId && !share) return;
     setDownloading(format);
     try {
-      await downloadStageFile(tripId, stageIndex, format, dayNumber);
+      if (share) {
+        await downloadSharedStageFile(
+          share.shortCode,
+          stageIndex,
+          format,
+          dayNumber,
+        );
+      } else {
+        await downloadStageFile(tripId!, stageIndex, format, dayNumber);
+      }
     } catch {
       toast.error(t("downloadFailed"));
     } finally {
@@ -39,7 +50,7 @@ export function StageDownloads({
         variant="ghost"
         size="sm"
         className="h-6 gap-1 text-muted-icon px-1.5 cursor-pointer"
-        disabled={!tripId || !!downloading}
+        disabled={(!tripId && !share) || !!downloading}
         onClick={() => void handleDownload("gpx")}
         aria-label={t("downloadGpx", { dayNumber })}
         title={t("downloadGpx", { dayNumber })}
@@ -55,7 +66,7 @@ export function StageDownloads({
         variant="ghost"
         size="sm"
         className="h-6 gap-1 text-muted-icon px-1.5 cursor-pointer"
-        disabled={!tripId || !!downloading}
+        disabled={(!tripId && !share) || !!downloading}
         onClick={() => void handleDownload("fit")}
         aria-label={t("downloadFit", { dayNumber })}
         title={t("downloadFit", { dayNumber })}

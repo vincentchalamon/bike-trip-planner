@@ -132,11 +132,13 @@ const PAD_B = 20;
 interface ElevationProfileProps {
   focusedStageIndex: number | null;
   onHover: (coordIndex: number | null, stageIndex: number | null) => void;
+  stages?: StageData[];
 }
 
 export const ElevationProfile = memo(function ElevationProfile({
   focusedStageIndex,
   onHover,
+  stages: externalStages,
 }: ElevationProfileProps) {
   const t = useTranslations("map");
   const svgRef = useRef<SVGSVGElement>(null);
@@ -147,7 +149,8 @@ export const ElevationProfile = memo(function ElevationProfile({
     gradient: number;
     distance: number;
   } | null>(null);
-  const stages = useTripStore((s) => s.stages);
+  const storeStages = useTripStore((s) => s.stages);
+  const stages = externalStages ?? storeStages;
   const activeStages = useMemo(
     () => stages.filter((s) => !s.isRestDay),
     [stages],
