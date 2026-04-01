@@ -47,4 +47,17 @@ final class TripShareRepository extends ServiceEntityRepository implements TripS
 
         return $share;
     }
+
+    public function findByShortCode(string $shortCode): ?TripShare
+    {
+        /** @var TripShare|null $share */
+        $share = $this->createQueryBuilder('s')
+            ->where('s.shortCode = :shortCode')
+            ->andWhere('s.deletedAt IS NULL')
+            ->setParameter('shortCode', $shortCode)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $share;
+    }
 }

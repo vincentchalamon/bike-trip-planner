@@ -25,12 +25,12 @@ final readonly class TripShareProvider implements ProviderInterface
     }
 
     /**
-     * @param array<string, mixed> $uriVariables
-     * @param array<string, mixed> $context
+     * @param array{tripId?: string} $uriVariables
+     * @param array<string, mixed>   $context
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): TripShare
     {
-        $tripId = isset($uriVariables['tripId']) ? (string) $uriVariables['tripId'] : '';
+        $tripId = $uriVariables['tripId'] ?? '';
 
         if ('' === $tripId) {
             throw new NotFoundHttpException('Active share not found.');

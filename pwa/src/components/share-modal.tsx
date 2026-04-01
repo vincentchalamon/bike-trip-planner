@@ -100,7 +100,7 @@ export function ShareModal({
       .then((result) => {
         if (cancelled) return;
         if (result) {
-          setShareUrl(buildShareUrl(tripId, result.token ?? ""));
+          setShareUrl(buildShareUrl(result.shortCode ?? ""));
         }
       })
       .catch(() => {
@@ -173,7 +173,7 @@ export function ShareModal({
     try {
       const result = await createTripShare(tripId);
       if (result) {
-        setShareUrl(buildShareUrl(tripId, result.token ?? ""));
+        setShareUrl(buildShareUrl(result.shortCode ?? ""));
       } else {
         toast.error(t("linkCreateFailed"));
       }

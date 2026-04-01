@@ -344,7 +344,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/shares/{tripId}": {
+    "/s/{shortCode}": {
         parameters: {
             query?: never;
             header?: never;
@@ -352,10 +352,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * View a shared trip (read-only, anonymous access).
+         * View a shared trip via short code (anonymous).
          * @description Retrieves a TripShare resource.
          */
-        get: operations["api_shares_tripId_get"];
+        get: operations["api_s_shortCode_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -364,7 +364,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/trips/{tripId}/shares": {
+    "/s/{shortCode}.gpx": {
         parameters: {
             query?: never;
             header?: never;
@@ -372,37 +372,61 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List all share links for a trip.
-         * @description Retrieves the collection of TripShare resources.
+         * Download shared trip as GPX via short code.
+         * @description Retrieves a TripShare resource.
          */
-        get: operations["api_trips_tripIdshares_get_collection"];
+        get: operations["api_s_shortCode.gpx_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/s/{shortCode}/stages/{index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download shared stage as GPX or FIT via short code.
+         * @description Retrieves a TripShare resource.
+         */
+        get: operations["api_s_shortCodestages_index_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{tripId}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the active share link for a trip.
+         * @description Retrieves a TripShare resource.
+         */
+        get: operations["api_trips_tripIdshare_get"];
         put?: never;
         /**
          * Create a read-only share link for a trip.
          * @description Creates a TripShare resource.
          */
-        post: operations["api_trips_tripIdshares_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/trips/{tripId}/shares/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
+        post: operations["api_trips_tripIdshare_post"];
         /**
-         * Revoke a share link.
+         * Revoke the active share link.
          * @description Removes the TripShare resource.
          */
-        delete: operations["api_trips_tripIdshares_id_delete"];
+        delete: operations["api_trips_tripIdshare_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -985,9 +1009,50 @@ export interface components {
             /** Format: date-time */
             readonly createdAt?: string;
             token?: string;
-            /** Format: date-time */
-            expiresAt?: string | null;
-            readonly valid?: boolean;
+            shortCode?: string;
+            readonly active?: boolean;
+        };
+        "TripShare.Stage.fit": {
+            weather?: components["schemas"]["WeatherForecast.fit"] | null;
+            alerts?: components["schemas"]["Alert.fit"][];
+            pois?: components["schemas"]["PointOfInterest.fit"][];
+            accommodations?: components["schemas"]["Accommodation.fit"][];
+            selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
+            tripId?: string;
+            dayNumber?: number;
+            distance?: number;
+            elevation?: number;
+            startPoint?: components["schemas"]["Coordinate.fit"];
+            endPoint?: components["schemas"]["Coordinate.fit"];
+            geometry?: components["schemas"]["Coordinate.fit"][];
+            label?: string | null;
+            elevationLoss?: number;
+            isRestDay?: boolean;
+        };
+        "TripShare.Stage.gpx": {
+            weather?: components["schemas"]["WeatherForecast.gpx"] | null;
+            alerts?: components["schemas"]["Alert.gpx"][];
+            pois?: components["schemas"]["PointOfInterest.gpx"][];
+            accommodations?: components["schemas"]["Accommodation.gpx"][];
+            selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
+            tripId?: string;
+            dayNumber?: number;
+            distance?: number;
+            elevation?: number;
+            startPoint?: components["schemas"]["Coordinate.gpx"];
+            endPoint?: components["schemas"]["Coordinate.gpx"];
+            geometry?: components["schemas"]["Coordinate.gpx"][];
+            label?: string | null;
+            elevationLoss?: number;
+            isRestDay?: boolean;
+        };
+        "TripShare.Trip.gpx": {
+            id?: string;
+            /** @description Map of ComputationName->value to status string */
+            computationStatus?: {
+                [key: string]: string;
+            };
+            isLocked?: boolean;
         };
         "TripShare.TripDetail.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
@@ -1089,9 +1154,8 @@ export interface components {
             /** Format: date-time */
             readonly createdAt?: string;
             token?: string;
-            /** Format: date-time */
-            expiresAt?: string | null;
-            readonly valid?: boolean;
+            shortCode?: string;
+            readonly active?: boolean;
         };
         "WeatherForecast.fit": {
             icon?: string;
@@ -2314,16 +2378,13 @@ export interface operations {
             };
         };
     };
-    api_shares_tripId_get: {
+    api_s_shortCode_get: {
         parameters: {
-            query: {
-                /** @description Share token (64 hex characters) */
-                token: string;
-            };
+            query?: never;
             header?: never;
             path: {
                 /** @description TripShare identifier */
-                tripId: string;
+                shortCode: string;
             };
             cookie?: never;
         };
@@ -2362,30 +2423,25 @@ export interface operations {
             };
         };
     };
-    api_trips_tripIdshares_get_collection: {
+    "api_s_shortCode.gpx_get": {
         parameters: {
-            query?: {
-                /** @description The collection page number */
-                page?: number;
-            };
+            query?: never;
             header?: never;
             path: {
                 /** @description TripShare identifier */
-                tripId: string;
+                shortCode: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description TripShare collection */
+            /** @description TripShare resource */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/ld+json": components["schemas"]["HydraCollectionBaseSchema"] & {
-                        member: components["schemas"]["TripShare.jsonld"][];
-                    };
+                    "application/gpx+xml": components["schemas"]["TripShare.Trip.gpx"];
                 };
             };
             /** @description Forbidden */
@@ -2399,9 +2455,113 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
-    api_trips_tripIdshares_post: {
+    api_s_shortCodestages_index_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description TripShare identifier */
+                shortCode: string;
+                /** @description TripShare identifier */
+                index: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TripShare resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/gpx+xml": components["schemas"]["TripShare.Stage.gpx"];
+                    "application/vnd.ant.fit": components["schemas"]["TripShare.Stage.fit"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    api_trips_tripIdshare_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description TripShare identifier */
+                tripId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TripShare resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["TripShare.jsonld"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    api_trips_tripIdshare_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2462,15 +2622,13 @@ export interface operations {
             };
         };
     };
-    api_trips_tripIdshares_id_delete: {
+    api_trips_tripIdshare_delete: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 /** @description TripShare identifier */
                 tripId: string;
-                /** @description TripShare identifier */
-                id: string;
             };
             cookie?: never;
         };
