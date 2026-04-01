@@ -388,5 +388,9 @@
     "backToHome": "Back to home",
     "readOnlyBanner": "You are viewing a read-only shared trip.",
     "noStages": "This trip has no stages yet."
+  },
+  "offline": {
+    "offlineMessage": "Offline — viewing cached data. Editing disabled.",
+    "reconnected": "Connection restored."
   }
 }
