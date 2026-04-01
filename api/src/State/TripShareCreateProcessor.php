@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use ApiPlatform\Doctrine\Common\State\PersistProcessor;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
@@ -38,9 +39,11 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
         $tripId = $uriVariables['tripId'] ?? null;
         if (is_string($tripId)) {
             $trip = $this->entityManager->find(TripRequest::class, Uuid::fromString($tripId));
-            if ($trip instanceof TripRequest) {
-                $data->setTrip($trip);
+            if (!$trip instanceof TripRequest) {
+                throw new NotFoundHttpException(sprintf('Trip "%s" not found.', $tripId));
             }
+
+            $data->setTrip($trip);
         }
 
         $data->generateToken();

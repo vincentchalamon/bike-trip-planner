@@ -23,7 +23,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { renderInfographic, downloadInfographicPng } from "@/lib/infographic";
+import {
+  renderInfographic,
+  downloadInfographicPng,
+  CARD_WIDTH,
+  CARD_HEIGHT,
+} from "@/lib/infographic";
 import { buildTripText } from "@/lib/text-export";
 import {
   buildShareUrl,
@@ -113,7 +118,7 @@ export function ShareModal({
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      renderInfographic(canvas, {
+      void renderInfographic(canvas, {
         title,
         totalDistance,
         totalElevation,
@@ -350,10 +355,16 @@ export function ShareModal({
           </h3>
 
           <div className="flex flex-col items-center gap-3">
-            <div className="rounded-lg overflow-hidden border shadow-sm w-full">
+            <div
+              className="rounded-lg overflow-hidden border shadow-sm w-full"
+              style={{
+                maxWidth: `${CARD_WIDTH}px`,
+                aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+              }}
+            >
               <canvas
                 ref={canvasRef}
-                className="block w-full"
+                className="block w-full h-full"
                 data-testid="share-infographic-canvas"
               />
             </div>

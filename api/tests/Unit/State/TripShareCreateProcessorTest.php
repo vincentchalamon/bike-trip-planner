@@ -14,6 +14,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -68,5 +69,28 @@ final class TripShareCreateProcessorTest extends TestCase
         $processor->process($share, new Post(), []);
 
         self::assertNull($share->getTrip());
+    }
+
+    #[Test]
+    public function itThrowsNotFoundWhenTripDoesNotExist(): void
+    {
+        $tripId = Uuid::v7();
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager
+            ->expects($this->once())
+            ->method('find')
+            ->willReturn(null);
+
+        $share = new TripShare();
+
+        /** @var MockObject&ProcessorInterface<TripShare, TripShare> $persistProcessor */
+        $persistProcessor = $this->createMock(ProcessorInterface::class);
+        $persistProcessor->expects($this->never())->method('process');
+
+        $processor = new TripShareCreateProcessor($persistProcessor, $entityManager);
+
+        $this->expectException(NotFoundHttpException::class);
+        $processor->process($share, new Post(), ['tripId' => (string) $tripId]);
     }
 }
