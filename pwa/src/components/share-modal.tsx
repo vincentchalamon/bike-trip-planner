@@ -282,7 +282,7 @@ export function ShareModal({
                     <TooltipTrigger asChild>
                       <button
                         onClick={() => void handleCopyLink()}
-                        className="flex-1 text-left text-sm text-brand underline underline-offset-2 hover:no-underline truncate cursor-pointer"
+                        className="flex-1 min-w-0 text-left text-sm text-brand underline underline-offset-2 hover:no-underline truncate cursor-pointer"
                         data-testid="share-link-text"
                       >
                         {shareUrl}
