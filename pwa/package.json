@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "build:mobile": "BUILD_TARGET=mobile next build",
-    "build:android": "npm run build:mobile && npx cap sync android",
+    "build:android": "npm run build:mobile && (test -d android || npx cap add android) && npx cap sync android",
     "start": "next start",
     "lint": "eslint",
     "typegen": "openapi-typescript openapi.json -o ./src/lib/api/schema.d.ts",
