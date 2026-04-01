@@ -91,8 +91,6 @@ export function renderInfographic(
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 2;
   canvas.width = CARD_WIDTH * dpr;
   canvas.height = CARD_HEIGHT * dpr;
-  canvas.style.width = `${CARD_WIDTH}px`;
-  canvas.style.height = `${CARD_HEIGHT}px`;
 
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
