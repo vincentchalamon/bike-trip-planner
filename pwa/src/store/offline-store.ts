@@ -34,10 +34,13 @@ const MAX_SAVED_TRIPS = 20;
 
 interface OfflineState {
   isOnline: boolean;
+  savedTrips: SavedTrip[];
 
   setOnline: (value: boolean) => void;
   /** Persist a completed trip to IndexedDB (upsert by trip id, capped at MAX_SAVED_TRIPS). */
   saveTrip: (trip: SavedTrip) => Promise<void>;
+  /** Load all saved trips from IndexedDB into the in-memory state. */
+  loadSavedTrips: () => Promise<void>;
 }
 
 /**
@@ -55,6 +58,7 @@ interface OfflineState {
  */
 export const useOfflineStore = create<OfflineState>()((set) => ({
   isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
+  savedTrips: [],
 
   setOnline: (value) => set({ isOnline: value }),
 
@@ -66,8 +70,18 @@ export const useOfflineStore = create<OfflineState>()((set) => ({
         MAX_SAVED_TRIPS,
       );
       await idbSet(IDB_KEY, updated);
+      set({ savedTrips: updated });
     } catch {
       // IndexedDB write failed — degrade gracefully
+    }
+  },
+
+  loadSavedTrips: async () => {
+    try {
+      const trips = (await idbGet<SavedTrip[]>(IDB_KEY)) ?? [];
+      set({ savedTrips: trips });
+    } catch {
+      // IndexedDB read failed — degrade gracefully
     }
   },
 }));

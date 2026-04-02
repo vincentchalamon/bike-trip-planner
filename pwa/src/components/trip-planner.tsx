@@ -21,6 +21,7 @@ import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { Button } from "@/components/ui/button";
 import { UndoRedoButtons } from "@/components/undo-redo-buttons";
 import { RecentTrips } from "@/components/recent-trips";
+import { SavedTripsSection } from "@/components/saved-trips-section";
 import { OfflineBanner } from "@/components/offline-banner";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useLinkParam } from "@/hooks/use-link-param";
@@ -317,6 +318,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
             </div>
             {actionButtons}
             <RecentTrips />
+            <SavedTripsSection />
           </div>
         )}
 

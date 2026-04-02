@@ -391,6 +391,12 @@
   },
   "offline": {
     "offlineMessage": "Offline — viewing cached data. Editing disabled.",
-    "reconnected": "Connection restored."
+    "reconnected": "Connection restored.",
+    "savedTrips": {
+      "title": "My saved trips",
+      "stages": "{count, plural, one {# stage} other {# stages}}",
+      "noDate": "No date",
+      "offlineBadge": "Offline"
+    }
   }
 }
