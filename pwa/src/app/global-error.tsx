@@ -6,8 +6,8 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // lang hardcoded: GlobalError replaces the root layout so next-intl context is unavailable
   return (
-    {/* lang hardcoded: GlobalError replaces the root layout so next-intl context is unavailable */}
     <html lang="fr">
       <body>
         <div
