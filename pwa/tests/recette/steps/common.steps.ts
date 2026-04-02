@@ -802,12 +802,12 @@ When("I navigate to the login page", async ({ page }) => {
   await page.waitForLoadState("networkidle");
 });
 
-Then("je suis redirigé vers /login", async ({ page }) => {
+Then(/^je suis redirigé vers \/login$/, async ({ page }) => {
   await page.waitForURL(/\/login/, { timeout: 5000 });
   await expect(page).toHaveURL(/\/login/);
 });
 
-Then("I am redirected to /login", async ({ page }) => {
+Then(/^I am redirected to \/login$/, async ({ page }) => {
   await page.waitForURL(/\/login/, { timeout: 5000 });
   await expect(page).toHaveURL(/\/login/);
 });

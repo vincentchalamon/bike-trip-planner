@@ -1,15 +1,7 @@
 import { createBdd } from "playwright-bdd";
 import { test } from "./fixtures";
 
-const { Before, After, BeforeAll, AfterAll } = createBdd(test);
-
-BeforeAll(async () => {
-  // Global setup — runs once before all BDD scenarios
-});
-
-AfterAll(async () => {
-  // Global teardown — runs once after all BDD scenarios
-});
+const { Before, After } = createBdd(test);
 
 Before(async ({ page }) => {
   await page.context().clearCookies();

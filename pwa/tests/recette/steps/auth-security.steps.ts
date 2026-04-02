@@ -89,7 +89,7 @@ Then("I see the email confirmation message", async ({ page }) => {
 });
 
 When(
-  "je navigue vers /auth/verify/token-valide",
+  /^je navigue vers \/auth\/verify\/token-valide$/,
   async ({ page }) => {
     await page.route("**/auth/verify", (route, req) => {
       if (req.method() !== "POST") return route.fallback();
@@ -131,7 +131,7 @@ When(
   },
 );
 
-When("I navigate to /auth/verify/valid-token", async ({ page }) => {
+When(/^I navigate to \/auth\/verify\/valid-token$/, async ({ page }) => {
   await page.route("**/auth/verify", (route, req) => {
     if (req.method() !== "POST") return route.fallback();
     return route.fulfill({
