@@ -465,30 +465,24 @@ export const useTripStore = create<TripState>()(
       }),
 
     loadFromSavedTrip: (trip) => {
-      const store = useTripStore.getState();
-      store.setTrip({
-        id: trip.id,
-        title: trip.title,
-        sourceUrl: trip.sourceUrl,
-      });
-      store.updateDatesInternal(trip.startDate, trip.endDate);
-      store.updatePacingSettingsInternal(
-        trip.fatigueFactor,
-        trip.elevationPenalty,
-        trip.maxDistancePerDay,
-        trip.averageSpeed,
-      );
-      store.setEbikeMode(trip.ebikeMode);
-      store.setDepartureHour(trip.departureHour);
-      store.setEnabledAccommodationTypes(trip.enabledAccommodationTypes);
-      store.setStages(trip.stages);
-      store.setIsLocked(true);
-      store.updateRouteData({
-        totalDistance: trip.totalDistance ?? 0,
-        totalElevation: trip.totalElevation ?? 0,
-        totalElevationLoss: trip.totalElevationLoss ?? 0,
-        sourceType: trip.sourceType ?? "",
-        title: null,
+      useTripTemporalStore.getState().clear();
+      set((state) => {
+        state.trip = { id: trip.id, title: trip.title, sourceUrl: trip.sourceUrl };
+        state.startDate = trip.startDate;
+        state.endDate = trip.endDate;
+        state.fatigueFactor = trip.fatigueFactor;
+        state.elevationPenalty = trip.elevationPenalty;
+        state.maxDistancePerDay = trip.maxDistancePerDay;
+        state.averageSpeed = trip.averageSpeed;
+        state.ebikeMode = trip.ebikeMode;
+        state.departureHour = trip.departureHour;
+        state.enabledAccommodationTypes = trip.enabledAccommodationTypes;
+        state.stages = trip.stages;
+        state.isLocked = true;
+        state.totalDistance = trip.totalDistance ?? 0;
+        state.totalElevation = trip.totalElevation ?? 0;
+        state.totalElevationLoss = trip.totalElevationLoss ?? 0;
+        state.sourceType = trip.sourceType ?? "";
       });
     },
 
