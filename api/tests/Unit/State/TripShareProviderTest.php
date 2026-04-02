@@ -13,6 +13,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Uid\Uuid;
 
 final class TripShareProviderTest extends TestCase
 {
@@ -69,5 +70,19 @@ final class TripShareProviderTest extends TestCase
 
         $this->expectException(NotFoundHttpException::class);
         $this->provider->provide(new Get(), []);
+    }
+
+    #[Test]
+    public function itAcceptsUuidObjectAsTripId(): void
+    {
+        $tripId = Uuid::v7();
+        $share = new TripShare();
+        $this->repository->expects($this->once())->method('findActiveByTrip')
+            ->with((string) $tripId)
+            ->willReturn($share);
+
+        $result = $this->provider->provide(new Get(), ['tripId' => $tripId]);
+
+        self::assertSame($share, $result);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\ApiResource\TripRequest;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Stage;
@@ -41,7 +42,12 @@ final readonly class TripShareStageProvider implements ProviderInterface
             throw new NotFoundHttpException('Shared trip not found.');
         }
 
-        $tripId = (string) $share->getTrip()?->id;
+        $trip = $share->getTrip();
+        if (!$trip instanceof TripRequest) {
+            throw new NotFoundHttpException('Shared trip not found.');
+        }
+
+        $tripId = (string) $trip->id;
 
         $stage = $this->stageProvider->provide($operation, ['tripId' => $tripId, 'index' => $uriVariables['index'] ?? 0], $context);
         \assert($stage instanceof Stage);

@@ -86,4 +86,15 @@ final class TripShareShortCodeProviderTest extends TestCase
         $this->expectException(NotFoundHttpException::class);
         $this->provider->provide(new Get(), []);
     }
+
+    #[Test]
+    public function itThrowsNotFoundWhenShareHasNoTrip(): void
+    {
+        $share = new TripShare();
+        $this->repository->expects($this->once())->method('findByShortCode')->willReturn($share);
+        $this->tripDetailProvider->expects($this->never())->method('provide');
+
+        $this->expectException(NotFoundHttpException::class);
+        $this->provider->provide(new Get(), ['shortCode' => 'Ab3kX9mP']);
+    }
 }
