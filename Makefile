@@ -101,6 +101,14 @@ test-e2e: ## Run Playwright End-to-End tests
 
 playwright: test-e2e ## Alias for "test-e2e"
 
+test-recette: ## Run Playwright BDD recette scenarios (Gherkin)
+	@docker run --network host \
+		-w /app -v $(CURDIR)/pwa:/app \
+		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
+		--rm --ipc=host \
+		mcr.microsoft.com/playwright:v1.58.2-noble \
+		/bin/sh -c 'npm install; npx bddgen --config playwright.bdd.config.ts; npx playwright test --config playwright.bdd.config.ts $(ARGS)'
+
 coverage: ## Run PHPUnit with coverage (HTML report)
 	@docker compose exec -e XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-html coverage/api
 	@docker compose --profile provisioning run -e XDEBUG_MODE=coverage --entrypoint "" provisioner vendor/bin/phpunit --coverage-html coverage/provisioner

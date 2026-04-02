@@ -334,6 +334,67 @@ jobs:
           docker compose ps
           docker compose logs
 
+  playwright-recette:
+    name: Playwright BDD Recette
+    runs-on: ubuntu-latest
+    env:
+      COMPOSE_FILE: compose.prod.yaml
+      WORKER_REPLICAS: 1
+      JWT_PASSPHRASE: "ci-test-passphrase"
+      FRONTEND_URL: "https://localhost"
+      MAILER_DSN: "null://null"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Generate JWT keys
+        run: |
+          mkdir -p api/config/jwt
+          openssl genpkey -algorithm RSA -out api/config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:ci-test-passphrase
+          openssl rsa -pubout -in api/config/jwt/private.pem -out api/config/jwt/public.pem -passin pass:ci-test-passphrase
+      - name: Build Docker images
+        uses: docker/bake-action@v7
+        with:
+          load: true
+          files: |
+            compose.prod.yaml
+          set: |
+            *.platform=linux/amd64
+            php.cache-from=type=gha,scope=php
+            php.cache-from=type=gha,scope=php-main
+            pwa.cache-from=type=gha,scope=pwa
+            pwa.cache-from=type=gha,scope=pwa-main
+      - name: Start services
+        run: docker compose up -d database php pwa worker redis --no-build --wait
+      - name: Generate BDD test files
+        run: >-
+          docker run --network host
+          -w /app -v ./pwa:/app
+          --rm --ipc=host
+          mcr.microsoft.com/playwright:v1.58.2-noble
+          /bin/sh -c 'npm ci; npx bddgen --config playwright.bdd.config.ts'
+      - name: Run BDD recette scenarios
+        run: >-
+          docker run --network host
+          -w /app -v ./pwa:/app
+          --rm --ipc=host
+          mcr.microsoft.com/playwright:v1.58.2-noble
+          /bin/sh -c 'npx playwright test --config playwright.bdd.config.ts'
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: recette-reports
+          path: |
+            pwa/recette-report/
+            pwa/test-results/
+          retention-days: 14
+      - name: Debug services on failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs
+
   eslint:
     name: Eslint
     runs-on: ubuntu-latest
