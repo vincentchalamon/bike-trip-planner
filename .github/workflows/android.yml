@@ -43,6 +43,7 @@ jobs:
           rm -rf 'src/app/shares/[tripId]'
           rm -rf 'src/app/trips/[id]'
           rm -rf 'src/app/auth'
+          rm -rf 'src/app/s/[code]'
 
       - name: Build Next.js
         working-directory: pwa
