@@ -67,6 +67,7 @@ use Symfony\Component\Uid\Uuid;
         new Get(
             uriTemplate: '/s/{shortCode}',
             uriVariables: ['shortCode' => new Link(fromClass: TripShare::class, identifiers: ['shortCode'])],
+            requirements: ['shortCode' => '[A-Za-z0-9_-]+'],
             openapi: new Operation(summary: 'View a shared trip via short code (anonymous).'),
             security: 'is_granted("PUBLIC_ACCESS")',
             output: TripDetail::class,
