@@ -397,25 +397,23 @@ jobs:
         run: npm run test:ts
 
   mobile-build:
-    name: Mobile Export Build
+    name: Mobile APK Build
     runs-on: ubuntu-latest
-    container:
-      image: node:25
     continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Get NPM cache directory
-        working-directory: pwa
-        id: npm-cache
-        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
-      - name: Cache dependencies
-        id: npm-deps-cache
-        uses: actions/cache@v5
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
-          path: ${{ steps.npm-cache.outputs.dir }}
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: ${{ runner.os }}-npm-
+          node-version: "25"
+          cache: npm
+          cache-dependency-path: pwa/package-lock.json
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
       - name: Install dependencies
         working-directory: pwa
         run: npm ci
@@ -425,9 +423,17 @@ jobs:
           rm -rf 'src/app/shares/[tripId]'
           rm -rf 'src/app/trips/[id]'
           rm -rf 'src/app/auth'
-      - name: Build (static export)
+      - name: Build Next.js (static export)
         working-directory: pwa
         env:
           NODE_ENV: production
           BUILD_TARGET: mobile
         run: npm run build
+      - name: Sync Capacitor
+        working-directory: pwa
+        run: |
+          test -d android || npx cap add android
+          npx cap sync android
+      - name: Build APK
+        working-directory: pwa/android
+        run: ./gradlew assembleDebug
