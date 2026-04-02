@@ -285,9 +285,9 @@ Backend pur, pattern `StageAnalyzerInterface` + `#[AutoconfigureTag]`. Reviews r
 
 - **Tests E2E :** `tests/recette/sprint-14.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Partage en lecture seule fonctionnel (lien anonyme)
-  - [ ] Révocation du lien par le propriétaire
-  - [ ] Bouton Partager : infographie + texte + lien
+  - [x] Partage en lecture seule fonctionnel (lien anonyme)
+  - [x] Révocation du lien par le propriétaire
+  - [x] Bouton Partager : infographie + texte + lien
 
 ---
 
