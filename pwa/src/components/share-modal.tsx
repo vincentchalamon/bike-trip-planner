@@ -23,10 +23,22 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { renderInfographic, downloadInfographicPng } from "@/lib/infographic";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  renderInfographic,
+  downloadInfographicPng,
+  CARD_WIDTH,
+  CARD_HEIGHT,
+} from "@/lib/infographic";
 import { buildTripText } from "@/lib/text-export";
 import {
   buildShareUrl,
+  getTripShare,
   createTripShare,
   revokeTripShare,
 } from "@/lib/api/client";
@@ -67,52 +79,53 @@ export function ShareModal({
   const tStage = useTranslations("stage");
   const tTextExport = useTranslations("textExport");
 
-  // Local state intentionally: the modal stays mounted while the trip is loaded
-  // ({trip && <ShareModal>} in trip-planner.tsx), so state survives open/close.
-  // A fresh link per browser session is acceptable — orphan cleanup is a server concern.
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [shareId, setShareId] = useState<string | null>(null);
-  const [hasRevoked, setHasRevoked] = useState(false);
-  const [isRecreatingLink, setIsRecreatingLink] = useState(false);
-  const isCreatingLink = (open && !shareUrl && !hasRevoked) || isRecreatingLink;
+  const [isLoadingLink, setIsLoadingLink] = useState(false);
+  const [isCreatingLink, setIsCreatingLink] = useState(false);
   const [isRevokingLink, setIsRevokingLink] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [textCopied, setTextCopied] = useState(false);
+  const [isRenderingInfographic, setIsRenderingInfographic] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Create share link on first open
+  // Fetch existing active share on first open
   useEffect(() => {
-    if (!open || shareUrl || hasRevoked) return;
+    if (!open || hasFetched) return;
 
     let cancelled = false;
-    createTripShare(tripId)
+    setIsLoadingLink(true);
+    getTripShare(tripId)
       .then((result) => {
         if (cancelled) return;
         if (result) {
-          setShareUrl(buildShareUrl(tripId, result.token ?? ""));
-          setShareId(result.id ?? null);
-        } else {
-          toast.error(t("linkCreateFailed"));
+          setShareUrl(buildShareUrl(result.shortCode ?? ""));
         }
       })
       .catch(() => {
-        if (!cancelled) toast.error(t("linkCreateFailed"));
+        // 404 = no active share, which is fine
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingLink(false);
+          setHasFetched(true);
+        }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [open, tripId, shareUrl, hasRevoked, t]);
+  }, [open, tripId, hasFetched]);
 
   // Render infographic when dialog opens and data is ready
   useEffect(() => {
     if (!open) return;
-    // Small delay to ensure canvas is mounted
     const timer = setTimeout(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
+      setIsRenderingInfographic(true);
       renderInfographic(canvas, {
         title,
         totalDistance,
@@ -126,7 +139,7 @@ export function ShareModal({
         labels: {
           distance: t("statDistance"),
           elevation: t("statElevation"),
-          days: t("statDays"),
+          dates: t("statDates"),
           budget: t("statBudget"),
           difficulty: t("statDifficulty"),
           weather: t("statWeather"),
@@ -135,7 +148,13 @@ export function ShareModal({
           difficultyHard: tStage("difficultyHard"),
           powered: t("poweredBy"),
         },
-      });
+      })
+        .catch((err: unknown) => {
+          console.error("[infographic] render failed", err);
+        })
+        .finally(() => {
+          setIsRenderingInfographic(false);
+        });
     }, 100);
     return () => clearTimeout(timer);
   }, [
@@ -153,12 +172,27 @@ export function ShareModal({
     tStage,
   ]);
 
+  const handleCreateLink = useCallback(async () => {
+    setIsCreatingLink(true);
+    try {
+      const result = await createTripShare(tripId);
+      if (result) {
+        setShareUrl(buildShareUrl(result.shortCode ?? ""));
+      } else {
+        toast.error(t("linkCreateFailed"));
+      }
+    } catch {
+      toast.error(t("linkCreateFailed"));
+    } finally {
+      setIsCreatingLink(false);
+    }
+  }, [tripId, t]);
+
   const handleCopyLink = useCallback(async () => {
     if (!shareUrl) return;
     try {
       await navigator.clipboard.writeText(shareUrl);
       setLinkCopied(true);
-      toast.success(t("linkCopied"));
       setTimeout(() => setLinkCopied(false), 2000);
     } catch {
       toast.error(t("linkCopyFailed"));
@@ -166,14 +200,11 @@ export function ShareModal({
   }, [shareUrl, t]);
 
   const handleRevokeLink = useCallback(async () => {
-    if (!shareId) return;
     setIsRevokingLink(true);
     try {
-      const ok = await revokeTripShare(tripId, shareId);
+      const ok = await revokeTripShare(tripId);
       if (ok) {
-        setHasRevoked(true);
         setShareUrl(null);
-        setShareId(null);
         toast.success(t("linkRevoked"));
       } else {
         toast.error(t("linkRevokeFailed"));
@@ -183,7 +214,7 @@ export function ShareModal({
     } finally {
       setIsRevokingLink(false);
     }
-  }, [tripId, shareId, t]);
+  }, [tripId, t]);
 
   const handleDownloadPng = useCallback(() => {
     const canvas = canvasRef.current;
@@ -219,7 +250,6 @@ export function ShareModal({
     ],
   );
 
-  // Build the formatted text including the share link if available
   const fullText = useMemo(() => {
     if (!shareUrl) return tripText;
     return `${tripText}\n\n${t("viewOnline")}: ${shareUrl}`;
@@ -238,7 +268,7 @@ export function ShareModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto [&>*]:min-w-0">
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>{t("description")}</DialogDescription>
@@ -254,86 +284,80 @@ export function ShareModal({
             {t("linkTitle")}
           </h3>
 
-          {isCreatingLink ? (
+          {isLoadingLink ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               {t("linkCreating")}
             </div>
           ) : shareUrl ? (
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={shareUrl}
-                  className="flex-1 rounded-md border bg-muted px-3 py-2 text-sm select-all"
-                  onClick={(e) => (e.target as HTMLInputElement).select()}
-                  data-testid="share-link-input"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0 cursor-pointer"
-                  onClick={() => void handleCopyLink()}
-                  aria-label={t("copyLink")}
-                  data-testid="share-copy-link-button"
-                >
-                  {linkCopied ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 text-destructive cursor-pointer"
-                  onClick={() => void handleRevokeLink()}
-                  disabled={isRevokingLink}
-                  aria-label={t("revokeLink")}
-                  data-testid="share-revoke-link-button"
-                >
-                  {isRevokingLink ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+              <TooltipProvider>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <button
+                      onClick={() => void handleCopyLink()}
+                      className="block w-full text-left text-sm text-brand underline underline-offset-2 hover:no-underline truncate cursor-pointer"
+                      data-testid="share-link-text"
+                    >
+                      {shareUrl}
+                    </button>
+                  </div>
+
+                  <Tooltip open={linkCopied}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0"
+                        onClick={() => void handleCopyLink()}
+                        aria-label={t("copyLink")}
+                        data-testid="share-copy-link-button"
+                      >
+                        {linkCopied ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {t("linkCopied")}
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 text-destructive"
+                    onClick={() => void handleRevokeLink()}
+                    disabled={isRevokingLink}
+                    aria-label={t("revokeLink")}
+                    data-testid="share-revoke-link-button"
+                  >
+                    {isRevokingLink ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </TooltipProvider>
               <p className="text-xs text-muted-foreground">
                 {t("linkReadOnlyNote")}
               </p>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="cursor-pointer"
-                onClick={() => {
-                  setHasRevoked(false);
-                  setIsRecreatingLink(true);
-                  void createTripShare(tripId)
-                    .then((result) => {
-                      if (result) {
-                        setShareUrl(buildShareUrl(tripId, result.token ?? ""));
-                        setShareId(result.id ?? null);
-                      } else {
-                        toast.error(t("linkCreateFailed"));
-                      }
-                    })
-                    .catch(() => {
-                      toast.error(t("linkCreateFailed"));
-                    })
-                    .finally(() => {
-                      setIsRecreatingLink(false);
-                    });
-                }}
-                data-testid="share-create-link-button"
-              >
-                {t("createLink")}
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="cursor-pointer"
+              onClick={() => void handleCreateLink()}
+              disabled={isCreatingLink}
+              data-testid="share-create-link-button"
+            >
+              {isCreatingLink && <Loader2 className="h-4 w-4 animate-spin" />}
+              {t("createLink")}
+            </Button>
           )}
         </section>
 
@@ -352,7 +376,10 @@ export function ShareModal({
           <div className="flex flex-col items-center gap-3">
             <div
               className="rounded-lg overflow-hidden border shadow-sm w-full"
-              style={{ maxWidth: "600px", aspectRatio: "600 / 400" }}
+              style={{
+                maxWidth: `${CARD_WIDTH}px`,
+                aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+              }}
             >
               <canvas
                 ref={canvasRef}
@@ -365,9 +392,14 @@ export function ShareModal({
               size="sm"
               className="gap-2 cursor-pointer"
               onClick={handleDownloadPng}
+              disabled={isRenderingInfographic}
               data-testid="share-download-png-button"
             >
-              <Download className="h-4 w-4" />
+              {isRenderingInfographic ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
               {t("downloadPng")}
             </Button>
           </div>
@@ -424,7 +456,6 @@ export function ShareModal({
  * and URLs to clickable links.
  */
 function renderTextLine(line: string): React.ReactNode[] {
-  // Split on bold markers and URLs
   const parts = line.split(/(\*[^*]+\*|https?:\/\/[^\s,)]+)/);
   return parts.map((part, j) => {
     if (/^\*[^*]+\*$/.test(part)) {

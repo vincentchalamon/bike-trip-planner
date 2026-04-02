@@ -5,34 +5,23 @@ import { useTranslations } from "next-intl";
 import { MapView } from "./MapView";
 import { ElevationProfile } from "./ElevationProfile";
 import "./map-markers.css";
+import type { StageData } from "@/lib/validation/schemas";
 
 interface MapPanelProps {
-  /**
-   * Controlled: which stage is currently focused (0-based index into active stages).
-   * null = global view.
-   */
   focusedStageIndex: number | null;
   onStageClick: (stageIndex: number) => void;
   onResetView: () => void;
+  stages?: StageData[];
 }
 
-/**
- * MapPanel composes MapView + ElevationProfile and manages
- * the bidirectional hover state between them:
- *
- * - ElevationProfile hover → cursor dot on MapView
- * - (future) Map route hover → highlight on ElevationProfile
- *
- * The panel itself is a simple flex column; sizing is left to the parent.
- */
 export function MapPanel({
   focusedStageIndex,
   onStageClick,
   onResetView,
+  stages,
 }: MapPanelProps) {
   const t = useTranslations("map");
 
-  // Elevation profile ↔ map hover synchronization
   const [hoverCoordIndex, setHoverCoordIndex] = useState<number | null>(null);
   const [hoverStageIndex, setHoverStageIndex] = useState<number | null>(null);
 
@@ -50,7 +39,6 @@ export function MapPanel({
       data-testid="map-panel"
       aria-label={t("panelAriaLabel")}
     >
-      {/* Main map — grows to fill available space */}
       <div className="flex-1 min-h-0">
         <MapView
           focusedStageIndex={focusedStageIndex}
@@ -58,13 +46,14 @@ export function MapPanel({
           onResetView={onResetView}
           highlightCoordIndex={hoverCoordIndex}
           highlightStageIndex={hoverStageIndex}
+          stages={stages}
         />
       </div>
 
-      {/* Elevation profile — fixed height at bottom */}
       <ElevationProfile
         focusedStageIndex={focusedStageIndex}
         onHover={handleProfileHover}
+        stages={stages}
       />
     </div>
   );

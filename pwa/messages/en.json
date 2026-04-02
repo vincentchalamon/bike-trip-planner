@@ -375,7 +375,7 @@
     "viewOnline": "View online",
     "statDistance": "Distance",
     "statElevation": "Elevation",
-    "statDays": "Days",
+    "statDates": "Dates",
     "statBudget": "Budget",
     "statDifficulty": "Difficulty",
     "statWeather": "Weather",
@@ -384,7 +384,7 @@
   "sharePage": {
     "title": "Shared trip",
     "loading": "Loading shared trip...",
-    "error": "This share link is invalid or has expired.",
+    "error": "This share link is invalid or has been revoked.",
     "backToHome": "Back to home",
     "readOnlyBanner": "You are viewing a read-only shared trip.",
     "noStages": "This trip has no stages yet."

@@ -130,6 +130,7 @@ interface MapViewProps {
   onResetView: () => void;
   highlightCoordIndex?: number | null;
   highlightStageIndex?: number | null;
+  stages?: StageData[];
 }
 
 export const MapView = memo(function MapView({
@@ -138,6 +139,7 @@ export const MapView = memo(function MapView({
   onResetView,
   highlightCoordIndex,
   highlightStageIndex,
+  stages: externalStages,
 }: MapViewProps) {
   const t = useTranslations("map");
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -147,7 +149,8 @@ export const MapView = memo(function MapView({
   const accMarkerElementsRef = useRef<Map<string, HTMLElement>>(new Map());
   const [mapReady, setMapReady] = useState(false);
 
-  const stages = useTripStore((s) => s.stages);
+  const storeStages = useTripStore((s) => s.stages);
+  const stages = externalStages ?? storeStages;
   const hoveredAccommodation = useUiStore((s) => s.hoveredAccommodation);
   const setHoveredAccommodation = useUiStore((s) => s.setHoveredAccommodation);
   const { resolvedTheme } = useTheme();

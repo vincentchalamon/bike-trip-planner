@@ -14,7 +14,7 @@ export interface InfographicData {
   labels: {
     distance: string;
     elevation: string;
-    days: string;
+    dates: string;
     budget: string;
     difficulty: string;
     weather: string;
@@ -24,6 +24,24 @@ export interface InfographicData {
     powered: string;
   };
 }
+
+const DIFFICULTY_HEX: Record<string, string> = {
+  easy: "#22c55e",
+  medium: "#f97316",
+  hard: "#ef4444",
+};
+
+export const CARD_WIDTH = 800;
+export const CARD_HEIGHT = 480;
+const PADDING = 28;
+const MAP_WIDTH = 260;
+const MAP_HEIGHT = 200;
+const ELEV_HEIGHT = 88;
+// Layout positions (fixed, always reserve space for the date line)
+const SEP_Y = PADDING + 32 + 24 + 8; // 92
+const CONTENT_TOP = SEP_Y + 16; // 108
+const SEP2_Y = CONTENT_TOP + MAP_HEIGHT + 12; // 320
+const ELEV_Y = SEP2_Y + 12; // 332
 
 function computeOverallDifficulty(
   stages: StageData[],
@@ -56,10 +74,15 @@ function getWeatherSummary(
   if (withWeather.length === 0) return null;
 
   const temps = withWeather.map((s) => s.weather!);
-  const tempMin = Math.min(...temps.map((w) => w.tempMin));
-  const tempMax = Math.max(...temps.map((w) => w.tempMax));
+  const tempMin = temps.reduce(
+    (a, w) => (w.tempMin < a ? w.tempMin : a),
+    temps[0]!.tempMin,
+  );
+  const tempMax = temps.reduce(
+    (a, w) => (w.tempMax > a ? w.tempMax : a),
+    temps[0]!.tempMax,
+  );
 
-  // Most frequent description
   const descCounts = new Map<string, number>();
   for (const w of temps) {
     descCounts.set(w.description, (descCounts.get(w.description) ?? 0) + 1);
@@ -76,18 +99,15 @@ function getWeatherSummary(
   return { tempMin, tempMax, description };
 }
 
-const CARD_WIDTH = 600;
-const CARD_HEIGHT = 400;
-const PADDING = 32;
-
 /**
  * Render a trip infographic summary to an HTMLCanvasElement.
- * The caller is responsible for creating the canvas (or using an offscreen one).
+ * Returns a Promise because it fetches OpenStreetMap tiles for the route map.
+ * Attribution: © OpenStreetMap contributors (https://www.openstreetmap.org/copyright)
  */
-export function renderInfographic(
+export async function renderInfographic(
   canvas: HTMLCanvasElement,
   data: InfographicData,
-): void {
+): Promise<void> {
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 2;
   canvas.width = CARD_WIDTH * dpr;
   canvas.height = CARD_HEIGHT * dpr;
@@ -112,33 +132,46 @@ export function renderInfographic(
   const titleText = truncateText(ctx, data.title, CARD_WIDTH - PADDING * 2);
   ctx.fillText(titleText, PADDING, PADDING);
 
-  // Date range (if available)
-  let dateY = PADDING + 32;
+  // Date range subtitle (space always reserved so layout stays fixed)
   if (data.startDate || data.endDate) {
     ctx.fillStyle = "#94a3b8";
     ctx.font = "14px system-ui, -apple-system, sans-serif";
-    const dateStr = formatDateRange(data.startDate, data.endDate);
-    ctx.fillText(dateStr, PADDING, dateY);
-    dateY += 24;
+    ctx.fillText(
+      formatDateRange(data.startDate, data.endDate),
+      PADDING,
+      PADDING + 32,
+    );
   }
 
-  // Separator line
-  const sepY = dateY + 8;
+  // First separator
   ctx.strokeStyle = "#334155";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(PADDING, sepY);
-  ctx.lineTo(CARD_WIDTH - PADDING, sepY);
+  ctx.moveTo(PADDING, SEP_Y);
+  ctx.lineTo(CARD_WIDTH - PADDING, SEP_Y);
   ctx.stroke();
 
-  // Stats grid (2 columns, 3 rows)
-  const gridTop = sepY + 20;
-  const colWidth = (CARD_WIDTH - PADDING * 2) / 2;
-  const rowHeight = 72;
+  // Route map (left side of content row) — async tile fetch
+  await drawRouteMap(
+    ctx,
+    PADDING,
+    CONTENT_TOP,
+    MAP_WIDTH,
+    MAP_HEIGHT,
+    data.stages,
+  );
+
+  // Stats grid (right side of content row)
+  const statsX = PADDING + MAP_WIDTH + 16;
+  const statsW = CARD_WIDTH - statsX - PADDING;
+  const colWidth = statsW / 2;
+  const rowHeight = MAP_HEIGHT / 3;
 
   const activeStages = data.stages.filter((s) => !s.isRestDay);
   const difficulty = computeOverallDifficulty(data.stages, data.labels);
   const weather = getWeatherSummary(data.stages);
+  const datesValue =
+    formatDateRange(data.startDate, data.endDate) || `${activeStages.length}`;
 
   const stats: Array<{
     icon: string;
@@ -152,7 +185,7 @@ export function renderInfographic(
       value:
         data.totalDistance !== null
           ? `${Math.round(data.totalDistance)} km`
-          : "—",
+          : "\u2014",
       color: "#38bdf8",
     },
     {
@@ -161,13 +194,13 @@ export function renderInfographic(
       value:
         data.totalElevation !== null
           ? `\u2B06 ${Math.round(data.totalElevation)}m \u2B07 ${Math.round(data.totalElevationLoss ?? 0)}m`
-          : "—",
+          : "\u2014",
       color: "#f97316",
     },
     {
       icon: "\uD83D\uDCC5",
-      label: data.labels.days,
-      value: `${activeStages.length}`,
+      label: data.labels.dates,
+      value: datesValue,
       color: "#a78bfa",
     },
     {
@@ -175,7 +208,7 @@ export function renderInfographic(
       label: data.labels.weather,
       value: weather
         ? `${weather.description}, ${Math.round(weather.tempMin)}-${Math.round(weather.tempMax)}\u00B0C`
-        : "—",
+        : "\u2014",
       color: "#fbbf24",
     },
     {
@@ -184,7 +217,7 @@ export function renderInfographic(
       value:
         data.estimatedBudgetMin > 0 || data.estimatedBudgetMax > 0
           ? `${Math.round(data.estimatedBudgetMin)}\u2013${Math.round(data.estimatedBudgetMax)}\u20AC`
-          : "—",
+          : "\u2014",
       color: "#4ade80",
     },
     {
@@ -198,32 +231,343 @@ export function renderInfographic(
   stats.forEach((stat, i) => {
     const col = i % 2;
     const row = Math.floor(i / 2);
-    const x = PADDING + col * colWidth;
-    const y = gridTop + row * rowHeight;
+    const sx = statsX + col * colWidth;
+    const sy = CONTENT_TOP + row * rowHeight;
 
-    // Icon
-    ctx.font = "24px system-ui, -apple-system, sans-serif";
+    ctx.font = "20px system-ui, -apple-system, sans-serif";
     ctx.fillStyle = "#ffffff";
-    ctx.fillText(stat.icon, x, y);
+    ctx.textBaseline = "top";
+    ctx.fillText(stat.icon, sx, sy);
 
-    // Label
-    ctx.font = "12px system-ui, -apple-system, sans-serif";
+    ctx.font = "11px system-ui, -apple-system, sans-serif";
     ctx.fillStyle = "#64748b";
-    ctx.fillText(stat.label, x + 34, y + 2);
+    ctx.fillText(stat.label, sx + 30, sy + 2);
 
-    // Value
-    ctx.font = "bold 16px system-ui, -apple-system, sans-serif";
+    ctx.font = "bold 14px system-ui, -apple-system, sans-serif";
     ctx.fillStyle = stat.color;
-    const valueText = truncateText(ctx, stat.value, colWidth - 44);
-    ctx.fillText(valueText, x + 34, y + 20);
+    ctx.fillText(
+      truncateText(ctx, stat.value, colWidth - 38),
+      sx + 30,
+      sy + 18,
+    );
   });
 
-  // Footer / branding
+  // Second separator
+  ctx.strokeStyle = "#334155";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PADDING, SEP2_Y);
+  ctx.lineTo(CARD_WIDTH - PADDING, SEP2_Y);
+  ctx.stroke();
+
+  // Elevation profile
+  drawElevationProfile(
+    ctx,
+    PADDING,
+    ELEV_Y,
+    CARD_WIDTH - PADDING * 2,
+    ELEV_HEIGHT,
+    data.stages,
+  );
+
+  // Footer / branding + OSM attribution
   ctx.fillStyle = "#475569";
   ctx.font = "11px system-ui, -apple-system, sans-serif";
   ctx.textBaseline = "bottom";
-  ctx.fillText(data.labels.powered, PADDING, CARD_HEIGHT - PADDING / 2);
+  ctx.fillText(
+    `${data.labels.powered} \u00B7 \u00A9 OpenStreetMap contributors`,
+    PADDING,
+    CARD_HEIGHT - PADDING / 2,
+  );
 }
+
+// ---------------------------------------------------------------------------
+// Route map with OpenStreetMap tiles
+// ---------------------------------------------------------------------------
+
+/** Convert lon/lat to OSM tile coordinates at a given zoom level. */
+function lonLatToTile(
+  lon: number,
+  lat: number,
+  zoom: number,
+): { x: number; y: number } {
+  const x = Math.floor(((lon + 180) / 360) * Math.pow(2, zoom));
+  const latRad = (lat * Math.PI) / 180;
+  const y = Math.floor(
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) *
+      Math.pow(2, zoom),
+  );
+  return { x, y };
+}
+
+/** Choose the highest zoom where the bounding box fits in ≤ 9 tiles (3×3). */
+function chooseZoom(
+  minLat: number,
+  maxLat: number,
+  minLon: number,
+  maxLon: number,
+): number {
+  for (let z = 13; z >= 1; z--) {
+    const tMin = lonLatToTile(minLon, maxLat, z);
+    const tMax = lonLatToTile(maxLon, minLat, z);
+    const numX = Math.max(1, tMax.x - tMin.x + 1);
+    const numY = Math.max(1, tMax.y - tMin.y + 1);
+    if (numX * numY <= 9) return z;
+  }
+  return 4;
+}
+
+/** Load a tile image, resolving to null on error or timeout. */
+function loadTile(url: string): Promise<HTMLImageElement | null> {
+  if (typeof document === "undefined") return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    const timeout = setTimeout(() => resolve(null), 5000);
+    img.onload = () => {
+      clearTimeout(timeout);
+      resolve(img);
+    };
+    img.onerror = () => {
+      clearTimeout(timeout);
+      resolve(null);
+    };
+    img.src = url;
+  });
+}
+
+async function drawRouteMap(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  stages: StageData[],
+): Promise<void> {
+  // Dark fallback background
+  ctx.fillStyle = "#0f2340";
+  roundRect(ctx, x, y, w, h, 8);
+  ctx.fill();
+
+  const activeStages = stages.filter(
+    (s) => !s.isRestDay && s.geometry.length >= 2,
+  );
+  if (activeStages.length === 0) return;
+
+  const allPoints = activeStages.flatMap((s) => s.geometry);
+  if (allPoints.length < 2) return;
+
+  // Bounding box with 8 % padding
+  const lats = allPoints.map((p) => p.lat);
+  const lons = allPoints.map((p) => p.lon);
+  const rawMinLat = lats.reduce((a, b) => (b < a ? b : a), lats[0]!);
+  const rawMaxLat = lats.reduce((a, b) => (b > a ? b : a), lats[0]!);
+  const rawMinLon = lons.reduce((a, b) => (b < a ? b : a), lons[0]!);
+  const rawMaxLon = lons.reduce((a, b) => (b > a ? b : a), lons[0]!);
+  const latPad = Math.max((rawMaxLat - rawMinLat) * 0.08, 0.005);
+  const lonPad = Math.max((rawMaxLon - rawMinLon) * 0.08, 0.005);
+  const minLat = rawMinLat - latPad;
+  const maxLat = rawMaxLat + latPad;
+  const minLon = rawMinLon - lonPad;
+  const maxLon = rawMaxLon + lonPad;
+
+  const zoom = chooseZoom(minLat, maxLat, minLon, maxLon);
+  const power = Math.pow(2, zoom);
+
+  /** Convert lon/lat to WebMercator absolute pixel at this zoom. */
+  const toAbsPx = (lon: number, lat: number): [number, number] => {
+    const px = ((lon + 180) / 360) * 256 * power;
+    const latRad = (lat * Math.PI) / 180;
+    const py =
+      ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) *
+      256 *
+      power;
+    return [px, py];
+  };
+
+  // Scale so the padded bounding box (in absolute pixels) fits exactly in the
+  // map area. This ensures the route is centred with minimal whitespace,
+  // regardless of how many OSM tiles the bounding box spans.
+  const [bboxMinPxX, bboxMinPxY] = toAbsPx(minLon, maxLat); // top-left
+  const [bboxMaxPxX, bboxMaxPxY] = toAbsPx(maxLon, minLat); // bottom-right
+  const bboxPxW = bboxMaxPxX - bboxMinPxX;
+  const bboxPxH = bboxMaxPxY - bboxMinPxY;
+  const scale = Math.min(w / bboxPxW, h / bboxPxH);
+  const scaledBboxW = bboxPxW * scale;
+  const scaledBboxH = bboxPxH * scale;
+  const offX = x + (w - scaledBboxW) / 2;
+  const offY = y + (h - scaledBboxH) / 2;
+
+  const toCanvas = (lon: number, lat: number): [number, number] => {
+    const [px, py] = toAbsPx(lon, lat);
+    return [offX + (px - bboxMinPxX) * scale, offY + (py - bboxMinPxY) * scale];
+  };
+
+  const tileMin = lonLatToTile(minLon, maxLat, zoom); // top-left tile
+  const tileMax = lonLatToTile(maxLon, minLat, zoom); // bottom-right tile
+
+  // Fetch all tiles in parallel
+  type TileResult = {
+    tx: number;
+    ty: number;
+    img: HTMLImageElement | null;
+  };
+  const tilePromises: Promise<TileResult>[] = [];
+  for (let tx = tileMin.x; tx <= tileMax.x; tx++) {
+    for (let ty = tileMin.y; ty <= tileMax.y; ty++) {
+      tilePromises.push(
+        loadTile(`https://tile.openstreetmap.org/${zoom}/${tx}/${ty}.png`).then(
+          (img) => ({ tx, ty, img }),
+        ),
+      );
+    }
+  }
+
+  // Clip to rounded map rect
+  ctx.save();
+  roundRect(ctx, x, y, w, h, 8);
+  ctx.clip();
+
+  const tiles = await Promise.all(tilePromises);
+  for (const { tx, ty, img } of tiles) {
+    if (img) {
+      // Convert tile top-left corner (lon/lat) to canvas coordinates
+      const tileLon = (tx / Math.pow(2, zoom)) * 360 - 180;
+      const tileLatRad = Math.atan(
+        Math.sinh(Math.PI * (1 - (2 * ty) / Math.pow(2, zoom))),
+      );
+      const tileLat = (tileLatRad * 180) / Math.PI;
+      const [cx, cy] = toCanvas(tileLon, tileLat);
+      ctx.drawImage(img, cx, cy, 256 * scale, 256 * scale);
+    }
+  }
+
+  // Draw route on top of tiles
+  for (const stage of activeStages) {
+    const color =
+      DIFFICULTY_HEX[getDifficulty(stage.distance, stage.elevation)] ??
+      "#38bdf8";
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    const first = stage.geometry[0]!;
+    const [sx, sy] = toCanvas(first.lon, first.lat);
+    ctx.moveTo(sx, sy);
+    for (let i = 1; i < stage.geometry.length; i++) {
+      const pt = stage.geometry[i]!;
+      const [px, py] = toCanvas(pt.lon, pt.lat);
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  // Start marker (green) and end marker (red)
+  const firstGeom = activeStages[0]!.geometry;
+  const [startX, startY] = toCanvas(firstGeom[0]!.lon, firstGeom[0]!.lat);
+  ctx.fillStyle = "#22c55e";
+  ctx.beginPath();
+  ctx.arc(startX, startY, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  const lastGeom = activeStages[activeStages.length - 1]!.geometry;
+  const lastPt = lastGeom[lastGeom.length - 1]!;
+  const [endX, endY] = toCanvas(lastPt.lon, lastPt.lat);
+  ctx.fillStyle = "#ef4444";
+  ctx.beginPath();
+  ctx.arc(endX, endY, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
+// Elevation profile
+// ---------------------------------------------------------------------------
+
+function drawElevationProfile(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  stages: StageData[],
+): void {
+  const activeStages = stages.filter((s) => !s.isRestDay);
+  if (activeStages.length === 0) return;
+
+  // Build per-stage segments with elevation + difficulty color
+  type Segment = { eles: number[]; color: string };
+  const segments: Segment[] = activeStages.map((s) => ({
+    eles: s.geometry.map((p) => p.ele),
+    color: DIFFICULTY_HEX[getDifficulty(s.distance, s.elevation)] ?? "#38bdf8",
+  }));
+
+  const allEles = segments.flatMap((seg) => seg.eles);
+  if (allEles.length < 2) return;
+
+  const minEle = allEles.reduce((a, b) => (b < a ? b : a), allEles[0]!);
+  const maxEle = allEles.reduce((a, b) => (b > a ? b : a), allEles[0]!);
+  const eleRange = maxEle - minEle || 1;
+  const padY = 4;
+  const ph = h - padY * 2;
+  const totalPoints = allEles.length;
+
+  const toCanvasX = (globalIdx: number) =>
+    x + (globalIdx / (totalPoints - 1)) * w;
+  const toCanvasY = (ele: number) =>
+    y + h - padY - ((ele - minEle) / eleRange) * ph;
+
+  // Filled area under the profile (subtle gradient per segment)
+  let globalIdx = 0;
+  for (const seg of segments) {
+    if (seg.eles.length < 2) {
+      globalIdx += seg.eles.length;
+      continue;
+    }
+    ctx.beginPath();
+    ctx.moveTo(toCanvasX(globalIdx), toCanvasY(seg.eles[0]!));
+    for (let j = 1; j < seg.eles.length; j++) {
+      ctx.lineTo(toCanvasX(globalIdx + j), toCanvasY(seg.eles[j]!));
+    }
+    ctx.lineTo(toCanvasX(globalIdx + seg.eles.length - 1), y + h);
+    ctx.lineTo(toCanvasX(globalIdx), y + h);
+    ctx.closePath();
+    // Parse hex color for semi-transparent fill
+    const r = parseInt(seg.color.slice(1, 3), 16);
+    const g = parseInt(seg.color.slice(3, 5), 16);
+    const b = parseInt(seg.color.slice(5, 7), 16);
+    const grad = ctx.createLinearGradient(0, y, 0, y + h);
+    grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.3)`);
+    grad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.0)`);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    globalIdx += seg.eles.length;
+  }
+
+  // Stroke line per segment with difficulty color
+  globalIdx = 0;
+  for (const seg of segments) {
+    if (seg.eles.length < 2) {
+      globalIdx += seg.eles.length;
+      continue;
+    }
+    ctx.beginPath();
+    ctx.moveTo(toCanvasX(globalIdx), toCanvasY(seg.eles[0]!));
+    for (let j = 1; j < seg.eles.length; j++) {
+      ctx.lineTo(toCanvasX(globalIdx + j), toCanvasY(seg.eles[j]!));
+    }
+    ctx.strokeStyle = seg.color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    globalIdx += seg.eles.length;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Download helper
+// ---------------------------------------------------------------------------
 
 /**
  * Export the canvas content as a downloadable PNG file.
@@ -240,6 +584,10 @@ export function downloadInfographicPng(
   a.click();
   document.body.removeChild(a);
 }
+
+// ---------------------------------------------------------------------------
+// Canvas utilities
+// ---------------------------------------------------------------------------
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -280,8 +628,6 @@ function truncateText(
 
 function formatDateRange(start: string | null, end: string | null): string {
   const formatDate = (iso: string) => {
-    // Append time component so date-only strings are parsed as local midnight,
-    // not UTC midnight (which shifts the date backward in UTC- timezones).
     const d = new Date(iso.includes("T") ? iso : `${iso}T00:00:00`);
     return d.toLocaleDateString(undefined, {
       day: "numeric",

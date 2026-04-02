@@ -354,30 +354,28 @@ export async function duplicateTrip(
  * a browser save dialog.
  * @throws {Error} When the server responds with a non-2xx status.
  */
-export async function downloadTripGpx(
-  tripId: string,
-  tripTitle: string,
-): Promise<void> {
-  const res = await apiFetch(`${API_URL}/trips/${tripId}.gpx`);
-  if (!res.ok) {
-    throw new Error(`Download failed with status ${res.status}`);
-  }
-  const blob = await res.blob();
+function triggerBlobDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  const safeName = tripTitle.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
-  a.download = `${safeName}.gpx`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
-/**
- * Download a stage file (GPX or FIT) and trigger a browser save dialog.
- * @throws {Error} When the server responds with a non-2xx status.
- */
+export async function downloadTripGpx(
+  tripId: string,
+  tripTitle: string,
+): Promise<void> {
+  const res = await apiFetch(`${API_URL}/trips/${tripId}.gpx`);
+  if (!res.ok) throw new Error(`Download failed with status ${res.status}`);
+  const blob = await res.blob();
+  const safeName = tripTitle.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
+  triggerBlobDownload(blob, `${safeName}.gpx`);
+}
+
 export async function downloadStageFile(
   tripId: string,
   stageIndex: number,
@@ -387,50 +385,55 @@ export async function downloadStageFile(
   const res = await apiFetch(
     `${API_URL}/trips/${tripId}/stages/${stageIndex}.${format}`,
   );
-  if (!res.ok) {
-    throw new Error(`Download failed with status ${res.status}`);
-  }
+  if (!res.ok) throw new Error(`Download failed with status ${res.status}`);
   const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `stage-${dayNumber}.${format}`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  triggerBlobDownload(blob, `stage-${dayNumber}.${format}`);
 }
 
 /**
- * Build the frontend share URL from trip ID and token.
+ * Build the frontend share URL from a short code.
  */
-export function buildShareUrl(tripId: string, token: string): string {
+export function buildShareUrl(shortCode: string): string {
   const origin =
     typeof window !== "undefined"
       ? window.location.origin
       : "https://localhost";
-  return `${origin}/shares/${encodeURIComponent(tripId)}?token=${encodeURIComponent(token)}`;
+  return `${origin}/s/${encodeURIComponent(shortCode)}`;
+}
+
+/**
+ * Get the active share link for a trip.
+ * @returns The share metadata (id, token), or null if none exists.
+ */
+export type TripShareResponse = components["schemas"]["TripShare.jsonld"];
+
+export async function getTripShare(
+  tripId: string,
+): Promise<TripShareResponse | null> {
+  const res = await apiFetch(
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/share`,
+    { headers: { Accept: "application/ld+json" } },
+  );
+  if (!res.ok) return null;
+  return res.json() as Promise<TripShareResponse>;
 }
 
 /**
  * Create a read-only share link for a trip.
- * @returns The share metadata (id, token, expiresAt), or null on failure.
+ * @returns The share metadata (id, token), or null on failure.
  */
-export type TripShareResponse = components["schemas"]["TripShare.jsonld"];
-
 export async function createTripShare(
   tripId: string,
-  expiresAt?: string,
 ): Promise<TripShareResponse | null> {
   const res = await apiFetch(
-    `${API_URL}/trips/${encodeURIComponent(tripId)}/shares`,
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/share`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/ld+json",
         Accept: "application/ld+json",
       },
-      body: JSON.stringify(expiresAt !== undefined ? { expiresAt } : {}),
+      body: JSON.stringify({}),
     },
   );
   if (!res.ok) return null;
@@ -438,39 +441,60 @@ export async function createTripShare(
 }
 
 /**
- * Revoke a share link. Used by the share modal (#42).
+ * Revoke the active share link for a trip (soft delete).
  * @returns true on success, false on failure.
  */
-export async function revokeTripShare(
-  tripId: string,
-  shareId: string,
-): Promise<boolean> {
+export async function revokeTripShare(tripId: string): Promise<boolean> {
   const res = await apiFetch(
-    `${API_URL}/trips/${encodeURIComponent(tripId)}/shares/${encodeURIComponent(shareId)}`,
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/share`,
     { method: "DELETE" },
   );
   return res.ok;
 }
 
 /**
- * Fetch a shared trip (anonymous, no auth required).
- * @returns The trip detail data, or null if the share link is invalid/expired.
+ * Fetch a shared trip via short code (anonymous, no auth required).
  */
 export type SharedTripDetail =
   components["schemas"]["TripShare.TripDetail.jsonld"];
 
 export async function fetchSharedTrip(
-  tripId: string,
-  token: string,
+  shortCode: string,
 ): Promise<SharedTripDetail | null> {
-  const res = await fetch(
-    `${API_URL}/shares/${encodeURIComponent(tripId)}?token=${encodeURIComponent(token)}`,
-    {
-      headers: {
-        Accept: "application/ld+json",
-      },
-    },
-  );
+  const res = await fetch(`${API_URL}/s/${encodeURIComponent(shortCode)}`, {
+    headers: { Accept: "application/ld+json" },
+  });
   if (!res.ok) return null;
   return res.json() as Promise<SharedTripDetail>;
+}
+
+/**
+ * Download shared trip as GPX via short code (anonymous).
+ */
+export async function downloadSharedTripGpx(
+  shortCode: string,
+  tripTitle: string,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/s/${encodeURIComponent(shortCode)}.gpx`);
+  if (!res.ok) throw new Error("Download failed");
+  const blob = await res.blob();
+  const safeName = tripTitle.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
+  triggerBlobDownload(blob, `${safeName}.gpx`);
+}
+
+/**
+ * Download shared stage as GPX or FIT via short code (anonymous).
+ */
+export async function downloadSharedStageFile(
+  shortCode: string,
+  stageIndex: number,
+  format: "gpx" | "fit",
+  dayNumber: number,
+): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/s/${encodeURIComponent(shortCode)}/stages/${stageIndex}.${format}`,
+  );
+  if (!res.ok) throw new Error("Download failed");
+  const blob = await res.blob();
+  triggerBlobDownload(blob, `stage-${dayNumber}.${format}`);
 }

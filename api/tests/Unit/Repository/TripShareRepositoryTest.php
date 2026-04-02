@@ -52,6 +52,7 @@ final class TripShareRepositoryTest extends TestCase
         $this->queryBuilder->method('where')->willReturnSelf();
         $this->queryBuilder->method('andWhere')->willReturnSelf();
         $this->queryBuilder->method('setParameter')->willReturnSelf();
+        $this->queryBuilder->method('setMaxResults')->willReturnSelf();
         $this->queryBuilder->method('getQuery')->willReturn($this->query);
 
         $this->entityManager->method('createQueryBuilder')->willReturn($this->queryBuilder);
@@ -59,94 +60,51 @@ final class TripShareRepositoryTest extends TestCase
         $this->repository = new TripShareRepository($registry);
     }
 
+    // --- findActiveByTrip ---
+
     #[Test]
-    public function findValidShareReturnsShareWhenTokenMatchesAndNotExpired(): void
+    public function findActiveByTripReturnsActiveShare(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
-        $token = bin2hex(random_bytes(32));
-
         $trip = new TripRequest(Uuid::fromString($tripId));
-        $share = new TripShare(trip: $trip, token: $token);
+        $share = new TripShare(trip: $trip, token: 'some-token');
 
         $this->query->method('getOneOrNullResult')->willReturn($share);
 
-        $result = $this->repository->findValidShare($tripId, $token);
+        $result = $this->repository->findActiveByTrip($tripId);
 
         $this->assertSame($share, $result);
     }
 
     #[Test]
-    public function findValidShareReturnsNullWhenQueryReturnsNull(): void
+    public function findActiveByTripReturnsNullWhenNoActiveShare(): void
     {
         $this->query->method('getOneOrNullResult')->willReturn(null);
 
-        $result = $this->repository->findValidShare('some-trip-id', 'some-token');
+        $result = $this->repository->findActiveByTrip('some-trip-id');
 
         $this->assertNull($result);
     }
 
+    // --- TripShare entity ---
+
     #[Test]
-    public function findValidShareReturnsNullWhenShareIsExpired(): void
+    public function isActiveReturnsTrueByDefault(): void
     {
-        $tripId = Uuid::v7()->toRfc4122();
-        $trip = new TripRequest(Uuid::fromString($tripId));
-        $expiredShare = new TripShare(
-            trip: $trip,
-            token: 'expired-token',
-            expiresAt: new \DateTimeImmutable('-1 hour'),
-        );
+        $share = new TripShare();
 
-        $this->query->method('getOneOrNullResult')->willReturn($expiredShare);
-
-        $result = $this->repository->findValidShare($tripId, 'expired-token');
-
-        $this->assertNull($result);
+        $this->assertTrue($share->isActive());
+        $this->assertNull($share->getDeletedAt());
     }
 
     #[Test]
-    public function findValidShareReturnsShareWhenExpiryIsInTheFuture(): void
+    public function softDeleteSetsDeletedAt(): void
     {
-        $tripId = Uuid::v7()->toRfc4122();
-        $token = bin2hex(random_bytes(32));
+        $share = new TripShare();
+        $share->softDelete();
 
-        $trip = new TripRequest(Uuid::fromString($tripId));
-        $share = new TripShare(
-            trip: $trip,
-            token: $token,
-            expiresAt: new \DateTimeImmutable('+7 days'),
-        );
-
-        $this->query->method('getOneOrNullResult')->willReturn($share);
-
-        $result = $this->repository->findValidShare($tripId, $token);
-
-        $this->assertSame($share, $result);
-    }
-
-    // --- TripShare::isValid() ---
-
-    #[Test]
-    public function isValidReturnsTrueWhenNoExpiry(): void
-    {
-        $share = new TripShare(expiresAt: null);
-
-        $this->assertTrue($share->isValid());
-    }
-
-    #[Test]
-    public function isValidReturnsTrueWhenExpiryIsInFuture(): void
-    {
-        $share = new TripShare(expiresAt: new \DateTimeImmutable('+1 day'));
-
-        $this->assertTrue($share->isValid());
-    }
-
-    #[Test]
-    public function isValidReturnsFalseWhenExpired(): void
-    {
-        $share = new TripShare(expiresAt: new \DateTimeImmutable('-1 second'));
-
-        $this->assertFalse($share->isValid());
+        $this->assertFalse($share->isActive());
+        $this->assertNotNull($share->getDeletedAt());
     }
 
     #[Test]

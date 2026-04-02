@@ -1,13 +1,13 @@
 import dynamic from "next/dynamic";
 
-const TripPage = dynamic(() => import("./trip-page"), {
+const SharedTripPage = dynamic(() => import("./shared-trip-page"), {
   loading: () => null,
 });
 
 export function generateStaticParams() {
-  return [{ id: "__placeholder" }];
+  return [{ code: "__placeholder" }];
 }
 
 export default function Page() {
-  return <TripPage />;
+  return <SharedTripPage />;
 }

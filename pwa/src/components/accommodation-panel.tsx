@@ -29,6 +29,7 @@ interface AccommodationPanelProps {
   onClearNewAcc?: () => void;
   searchRadiusKm?: number;
   onAccommodationHover?: (accIndex: number | null) => void;
+  readOnly?: boolean;
 }
 
 export function AccommodationPanel({
@@ -45,6 +46,7 @@ export function AccommodationPanel({
   onClearNewAcc,
   searchRadiusKm = DEFAULT_ACCOMMODATION_RADIUS_KM,
   onAccommodationHover,
+  readOnly = false,
 }: AccommodationPanelProps) {
   const t = useTranslations("accommodation");
   const isAccommodationScanning = useUiStore((s) => s.isAccommodationScanning);
@@ -121,7 +123,7 @@ export function AccommodationPanel({
               <Info className="h-3.5 w-3.5 shrink-0" />
               <span>{t("noAccommodation", { radius: searchRadiusKm })}</span>
             </div>
-            {canExpand && onExpandRadius && (
+            {!readOnly && canExpand && onExpandRadius && (
               <div className="flex flex-col gap-1 pl-5">
                 {isExpanding ? (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -204,24 +206,28 @@ export function AccommodationPanel({
           <span>{t("loading")}</span>
         </div>
       )}
-      {!hasNoAccommodations && canExpand && onExpandRadius && !isExpanding && (
-        <div className="mt-2">
-          <Button
-            variant="link"
-            size="sm"
-            className="h-auto p-0 text-xs text-primary"
-            onClick={async () => {
-              setExpandingFromRadius(searchRadiusKm);
-              const ok = await onExpandRadius(searchRadiusKm);
-              if (!ok) setExpandingFromRadius(null);
-            }}
-          >
-            <ChevronRight className="h-3 w-3 mr-1" />
-            {t("expandRadius", { radius: nextRadiusKm })}
-          </Button>
-        </div>
-      )}
-      {!selectedAccommodation && (
+      {!readOnly &&
+        !hasNoAccommodations &&
+        canExpand &&
+        onExpandRadius &&
+        !isExpanding && (
+          <div className="mt-2">
+            <Button
+              variant="link"
+              size="sm"
+              className="h-auto p-0 text-xs text-primary"
+              onClick={async () => {
+                setExpandingFromRadius(searchRadiusKm);
+                const ok = await onExpandRadius(searchRadiusKm);
+                if (!ok) setExpandingFromRadius(null);
+              }}
+            >
+              <ChevronRight className="h-3 w-3 mr-1" />
+              {t("expandRadius", { radius: nextRadiusKm })}
+            </Button>
+          </div>
+        )}
+      {!readOnly && !selectedAccommodation && (
         <div className={accommodations.length > 0 ? "mt-3" : ""}>
           <AddAccommodationButton onClick={onAdd} />
         </div>

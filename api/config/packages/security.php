@@ -31,7 +31,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             ['path' => '^/docs', 'roles' => 'PUBLIC_ACCESS'],
             ['path' => '^/auth/(request-link|refresh|verify)$', 'roles' => 'PUBLIC_ACCESS'],
             ['path' => '^/auth/logout', 'roles' => 'IS_AUTHENTICATED_FULLY'],
-            ['path' => '^/shares/', 'roles' => 'PUBLIC_ACCESS'],
+            ['path' => '^/s/', 'roles' => 'PUBLIC_ACCESS'],
             ['path' => '^/', 'roles' => 'IS_AUTHENTICATED_FULLY'],
         ],
     ]);
