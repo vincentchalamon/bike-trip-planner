@@ -88,6 +88,9 @@ security-check: ## Run Security Check
 	@docker compose run --rm --no-deps php symfony check:security
 	@docker compose --profile provisioning run --rm --entrypoint "" provisioner symfony check:security
 
+test-unit: ## Run Vitest unit tests (frontend)
+	@docker compose exec pwa npm run test:unit
+
 test-e2e: ## Run Playwright End-to-End tests
 	@docker run --network host \
 		-w /app -v $(CURDIR)/pwa:/app \

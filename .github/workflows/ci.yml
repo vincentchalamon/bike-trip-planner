@@ -337,27 +337,15 @@ jobs:
   eslint:
     name: Eslint
     runs-on: ubuntu-latest
-    container:
-      image: node:25
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Get NPM cache directory
-        working-directory: pwa
-        id: npm-cache
-        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
-      - name: Cache dependencies
-        id: npm-deps-cache
-        uses: actions/cache@v5
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
-          path: ${{ steps.npm-cache.outputs.dir }}
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: ${{ runner.os }}-npm-
-      - if: ${{ steps.npm-deps-cache.outputs.cache-hit != 'true' }}
-        name: List the state of node modules
-        continue-on-error: true
-        working-directory: pwa
-        run: npm list
+          node-version: "25"
+          cache: npm
+          cache-dependency-path: pwa/package-lock.json
       - name: Install dependencies
         working-directory: pwa
         run: npm ci
@@ -368,27 +356,15 @@ jobs:
   typescript-check:
     name: TypeScript Check
     runs-on: ubuntu-latest
-    container:
-      image: node:25
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Get NPM cache directory
-        working-directory: pwa
-        id: npm-cache
-        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
-      - name: Cache dependencies
-        id: npm-deps-cache
-        uses: actions/cache@v5
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
-          path: ${{ steps.npm-cache.outputs.dir }}
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: ${{ runner.os }}-npm-
-      - if: ${{ steps.npm-deps-cache.outputs.cache-hit != 'true' }}
-        name: List the state of node modules
-        continue-on-error: true
-        working-directory: pwa
-        run: npm list
+          node-version: "25"
+          cache: npm
+          cache-dependency-path: pwa/package-lock.json
       - name: Install dependencies
         working-directory: pwa
         run: npm ci

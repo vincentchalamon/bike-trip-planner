@@ -53,8 +53,9 @@ services:
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini
       - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini
     healthcheck:
-      test: curl --insecure --fail https://localhost/docs || exit 1
-      interval: 5s
+      test: curl --fail http://php/docs || exit 1
+      start_period: 30s
+      interval: 10s
       timeout: 3s
       retries: 3
 
@@ -103,7 +104,8 @@ services:
       - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini
     healthcheck:
       test: pgrep -f messenger:consume || exit 1
-      interval: 5s
+      start_period: 30s
+      interval: 10s
       timeout: 3s
       retries: 3
 
@@ -126,8 +128,8 @@ services:
       - pwa_next:/app/.next
     healthcheck:
       test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1" ]
-      start_period: 5s
-      interval: 5s
+      start_period: 10s
+      interval: 10s
       timeout: 3s
       retries: 5
 
@@ -183,7 +185,7 @@ services:
       - database_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
-      interval: 5s
+      interval: 10s
       timeout: 3s
       retries: 3
       start_period: 30s
@@ -193,6 +195,8 @@ services:
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 10s
+      start_period: 10s
       timeout: 3s
       retries: 5
 

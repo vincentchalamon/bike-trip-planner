@@ -17,6 +17,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
 use App\MessageHandler\ScanPoisHandler;
+use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
@@ -75,7 +76,7 @@ final class ScanPoisHandlerTest extends TestCase
             $scanner,
             $queryBuilder,
             $distributor,
-            $haversine,
+            new SupplyTimelineBuilder($haversine),
             $riderTimeEstimator,
             $translator,
         );

@@ -20,7 +20,9 @@ use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -38,6 +40,8 @@ final readonly class TripCreateProcessor implements ProcessorInterface
         private Security $security,
         #[Autowire(service: 'cache.trip_state')]
         private CacheItemPoolInterface $tripStateCache,
+        #[Autowire(service: 'limiter.trip_create')]
+        private RateLimiterFactory $tripCreateLimiter,
     ) {
     }
 
@@ -47,11 +51,17 @@ final readonly class TripCreateProcessor implements ProcessorInterface
      */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Trip
     {
+        /** @var User $user */
+        $user = $this->security->getUser();
+        $limiter = $this->tripCreateLimiter->create($user->getId()->toRfc4122());
+
+        if (!$limiter->consume()->isAccepted()) {
+            throw new TooManyRequestsHttpException();
+        }
+
         $tripId = Uuid::v7()->toRfc4122();
 
         // Associate trip with current user before persisting
-        /** @var User $user */
-        $user = $this->security->getUser();
         $data->user = $user;
 
         $this->tripStateManager->initializeTrip($tripId, $data);

@@ -34,8 +34,7 @@ export function ViewModeToggle({
     if (window.innerWidth < MOBILE_BREAKPOINT) {
       setViewMode("timeline");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setViewMode]);
 
   const viewModeRef = useRef(viewMode);
   viewModeRef.current = viewMode;
