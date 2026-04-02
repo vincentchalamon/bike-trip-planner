@@ -10,6 +10,7 @@ use App\ApiResource\TripRequest;
 use App\Entity\TripShare;
 use App\Repository\TripShareRepositoryInterface;
 use App\State\TripShareCreateProcessor;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -142,5 +143,24 @@ final class TripShareCreateProcessorTest extends TestCase
 
         $this->expectException(NotFoundHttpException::class);
         $this->processor->process(new TripShare(), new Post(), ['tripId' => 'not-a-uuid']);
+    }
+
+    #[Test]
+    public function itThrows409OnConcurrentInsertRaceCondition(): void
+    {
+        $tripId = Uuid::v7();
+        $trip = new TripRequest();
+
+        $this->entityManager->expects($this->once())->method('find')->willReturn($trip);
+        $this->tripShareRepository->expects($this->once())->method('findActiveByTrip')->willReturn(null);
+
+        $uniqueException = $this->getMockBuilder(UniqueConstraintViolationException::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $this->persistProcessor->expects($this->once())->method('process')->willThrowException($uniqueException);
+
+        $this->expectException(ConflictHttpException::class);
+        $this->processor->process(new TripShare(), new Post(), ['tripId' => (string) $tripId]);
     }
 }

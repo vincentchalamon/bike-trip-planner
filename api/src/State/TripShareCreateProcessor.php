@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use ApiPlatform\Doctrine\Common\State\PersistProcessor;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
@@ -50,7 +51,12 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
 
         $data->generateToken();
 
-        $result = $this->persistProcessor->process($data, $operation, $uriVariables, $context);
+        try {
+            $result = $this->persistProcessor->process($data, $operation, $uriVariables, $context);
+        } catch (UniqueConstraintViolationException) {
+            throw new ConflictHttpException('An active share link already exists for this trip.');
+        }
+
         \assert($result instanceof TripShare);
 
         return $result;
