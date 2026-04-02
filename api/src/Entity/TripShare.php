@@ -66,7 +66,7 @@ use Symfony\Component\Uid\Uuid;
         // --- Public short-code endpoints (anonymous, token-free) ---
         new Get(
             uriTemplate: '/s/{shortCode}',
-            uriVariables: ['shortCode' => new Link(fromClass: TripShare::class)],
+            uriVariables: ['shortCode' => new Link(fromClass: TripShare::class, identifiers: ['shortCode'])],
             openapi: new Operation(summary: 'View a shared trip via short code (anonymous).'),
             security: 'is_granted("PUBLIC_ACCESS")',
             output: TripDetail::class,
@@ -75,7 +75,7 @@ use Symfony\Component\Uid\Uuid;
         new Get(
             uriTemplate: '/s/{shortCode}.gpx',
             outputFormats: ['gpx' => ['application/gpx+xml']],
-            uriVariables: ['shortCode' => new Link(fromClass: TripShare::class)],
+            uriVariables: ['shortCode' => new Link(fromClass: TripShare::class, identifiers: ['shortCode'])],
             openapi: new Operation(summary: 'Download shared trip as GPX via short code.'),
             security: 'is_granted("PUBLIC_ACCESS")',
             output: Trip::class,
@@ -88,7 +88,7 @@ use Symfony\Component\Uid\Uuid;
                 'fit' => ['application/vnd.ant.fit'],
             ],
             uriVariables: [
-                'shortCode' => new Link(fromClass: TripShare::class),
+                'shortCode' => new Link(fromClass: TripShare::class, identifiers: ['shortCode']),
                 'index' => new Link(toProperty: 'dayNumber', fromClass: Stage::class),
             ],
             openapi: new Operation(summary: 'Download shared stage as GPX or FIT via short code.'),
