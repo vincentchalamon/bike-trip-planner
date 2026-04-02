@@ -8,20 +8,21 @@ import { getTripId } from "../../fixtures/api-mocks";
 
 Given("aucun lien de partage n'est actif", async ({ mockedPage }) => {
   await mockedPage.route(`**/trips/${getTripId()}/share`, (route, request) => {
-    if (request.method() !== "GET") return route.fallback();
-    return route.fulfill({ status: 404, body: "" });
-  });
-  await mockedPage.route(`**/trips/${getTripId()}/share`, (route, request) => {
-    if (request.method() !== "POST") return route.fallback();
-    return route.fulfill({
-      status: 201,
-      contentType: "application/ld+json",
-      body: JSON.stringify({
-        shortCode: "NewCode1",
-        token: "new-token",
-        createdAt: new Date().toISOString(),
-      }),
-    });
+    if (request.method() === "GET") {
+      return route.fulfill({ status: 404, body: "" });
+    }
+    if (request.method() === "POST") {
+      return route.fulfill({
+        status: 201,
+        contentType: "application/ld+json",
+        body: JSON.stringify({
+          shortCode: "NewCode1",
+          token: "new-token",
+          createdAt: new Date().toISOString(),
+        }),
+      });
+    }
+    return route.fallback();
   });
 });
 

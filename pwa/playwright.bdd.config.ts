@@ -21,7 +21,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI
     ? [
-        ["github"],
+        "github",
         cucumberReporter("html", {
           outputFile: "recette-report/index.html",
         }),
