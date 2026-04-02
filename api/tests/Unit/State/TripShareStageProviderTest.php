@@ -12,12 +12,14 @@ use App\ApiResource\TripRequest;
 use App\Entity\TripShare;
 use App\Repository\TripShareRepositoryInterface;
 use App\State\TripShareStageProvider;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
 
+#[AllowMockObjectsWithoutExpectations]
 final class TripShareStageProviderTest extends TestCase
 {
     private MockObject&TripShareRepositoryInterface $repository;
