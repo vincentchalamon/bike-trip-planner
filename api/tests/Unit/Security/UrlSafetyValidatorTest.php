@@ -51,9 +51,9 @@ final class UrlSafetyValidatorTest extends TestCase
     }
 
     #[Test]
-    public function itAcceptsPublicUrl(): void
+    public function itAcceptsPublicIpUrl(): void
     {
-        // example.com resolves to 93.184.215.14 (public IP)
-        self::assertTrue($this->validator->isPublicUrl('https://example.com/page'));
+        // 93.184.215.14 is IANA's example.com — a known public IP, no DNS required
+        self::assertTrue($this->validator->isPublicUrl('https://93.184.215.14/page'));
     }
 }

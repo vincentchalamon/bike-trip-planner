@@ -19,11 +19,25 @@ final class UrlSafetyValidator
             return false;
         }
 
-        $ips = gethostbynamel($host);
-        if (false === $ips || [] === $ips) {
+        // If the host is already an IP address, validate it directly without DNS resolution.
+        if (false !== filter_var($host, \FILTER_VALIDATE_IP)) {
+            return false !== filter_var($host, \FILTER_VALIDATE_IP, \FILTER_FLAG_NO_PRIV_RANGE | \FILTER_FLAG_NO_RES_RANGE);
+        }
+
+        $records = dns_get_record($host, \DNS_A | \DNS_AAAA);
+        if (false === $records || [] === $records) {
             return false;
         }
 
-        return array_all($ips, fn ($ip): bool => false !== filter_var($ip, \FILTER_VALIDATE_IP, \FILTER_FLAG_NO_PRIV_RANGE | \FILTER_FLAG_NO_RES_RANGE));
+        $ips = array_filter(array_map(
+            static fn (array $r): string => $r['ip'] ?? $r['ipv6'] ?? '',
+            $records,
+        ));
+
+        if ([] === $ips) {
+            return false;
+        }
+
+        return array_all($ips, fn (string $ip): bool => false !== filter_var($ip, \FILTER_VALIDATE_IP, \FILTER_FLAG_NO_PRIV_RANGE | \FILTER_FLAG_NO_RES_RANGE));
     }
 }

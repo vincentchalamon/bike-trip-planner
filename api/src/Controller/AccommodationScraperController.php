@@ -45,7 +45,7 @@ final readonly class AccommodationScraperController
         }
 
         if (!$this->urlSafetyValidator->isPublicUrl($url)) {
-            return new JsonResponse(['error' => 'Invalid URL'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return new JsonResponse(['error' => 'Unreachable URL'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         try {

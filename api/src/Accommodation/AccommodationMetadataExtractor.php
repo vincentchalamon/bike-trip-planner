@@ -21,9 +21,13 @@ final class AccommodationMetadataExtractor
     {
         $doc = new \DOMDocument();
         $previous = libxml_use_internal_errors(true);
-        $doc->loadHTML($html, \LIBXML_NONET | \LIBXML_NOENT);
-        libxml_clear_errors();
-        libxml_use_internal_errors($previous);
+        try {
+            $doc->loadHTML($html, \LIBXML_NONET | \LIBXML_NOENT);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+
         $xpath = new \DOMXPath($doc);
 
         $jsonLd = $this->extractJsonLd($xpath);
@@ -229,9 +233,13 @@ final class AccommodationMetadataExtractor
     {
         $doc = new \DOMDocument();
         $previous = libxml_use_internal_errors(true);
-        $doc->loadHTML($html, \LIBXML_NONET | \LIBXML_NOENT);
-        libxml_clear_errors();
-        libxml_use_internal_errors($previous);
+        try {
+            $doc->loadHTML($html, \LIBXML_NONET | \LIBXML_NOENT);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+
         $xpath = new \DOMXPath($doc);
 
         $priceKeywords = ['tarif', 'prix', 'price', 'rate', 'booking', 'reservation', 'chambre', 'room', 'hébergement'];
