@@ -26,6 +26,7 @@ final class TripShareRepository extends ServiceEntityRepository implements TripS
             ->where('t.id = :tripId')
             ->andWhere('s.deletedAt IS NULL')
             ->setParameter('tripId', $tripId)
+            ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
 

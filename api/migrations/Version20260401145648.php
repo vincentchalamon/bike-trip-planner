@@ -19,10 +19,12 @@ final class Version20260401145648 extends AbstractMigration
         $this->addSql("ALTER TABLE trip_share ADD short_code VARCHAR(8) NOT NULL DEFAULT ''");
         $this->addSql("UPDATE trip_share SET short_code = substr(md5(token), 1, 8) WHERE short_code = ''");
         $this->addSql('CREATE UNIQUE INDEX uniq_trip_share_short_code ON trip_share (short_code)');
+        $this->addSql('CREATE UNIQUE INDEX uniq_trip_share_active ON trip_share (trip_id) WHERE deleted_at IS NULL');
     }
 
     public function down(Schema $schema): void
     {
+        $this->addSql('DROP INDEX uniq_trip_share_active');
         $this->addSql('DROP INDEX uniq_trip_share_short_code');
         $this->addSql('ALTER TABLE trip_share DROP short_code');
     }
