@@ -428,6 +428,8 @@ jobs:
         env:
           NODE_ENV: production
           BUILD_TARGET: mobile
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_MERCURE_URL: ${{ vars.NEXT_PUBLIC_MERCURE_URL }}
         run: npm run build
       - name: Sync Capacitor
         working-directory: pwa
