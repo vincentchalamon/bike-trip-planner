@@ -14,6 +14,7 @@ import type {
 import type { AccommodationType } from "@/lib/accommodation-types";
 import { FILTERABLE_ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
 import { createTemporalStore } from "@/store/temporal-middleware";
+import type { SavedTrip } from "@/store/offline-store";
 
 interface TripIdentity {
   id: string;
@@ -114,6 +115,8 @@ interface TripState {
     },
   ) => void;
   clearTrip: () => void;
+  /** Hydrate the trip store from a {@link SavedTrip} snapshot (offline consultation). */
+  loadFromSavedTrip: (trip: SavedTrip) => void;
 }
 
 const initialState = {
@@ -460,6 +463,34 @@ export const useTripStore = create<TripState>()(
         stage.elevation = data.elevationGain;
         stage.geometry = data.coordinates;
       }),
+
+    loadFromSavedTrip: (trip) => {
+      const store = useTripStore.getState();
+      store.setTrip({
+        id: trip.id,
+        title: trip.title,
+        sourceUrl: trip.sourceUrl,
+      });
+      store.updateDatesInternal(trip.startDate, trip.endDate);
+      store.updatePacingSettingsInternal(
+        trip.fatigueFactor,
+        trip.elevationPenalty,
+        trip.maxDistancePerDay,
+        trip.averageSpeed,
+      );
+      store.setEbikeMode(trip.ebikeMode);
+      store.setDepartureHour(trip.departureHour);
+      store.setEnabledAccommodationTypes(trip.enabledAccommodationTypes);
+      store.setStages(trip.stages);
+      store.setIsLocked(true);
+      store.updateRouteData({
+        totalDistance: trip.totalDistance ?? 0,
+        totalElevation: trip.totalElevation ?? 0,
+        totalElevationLoss: trip.totalElevationLoss ?? 0,
+        sourceType: trip.sourceType ?? "",
+        title: null,
+      });
+    },
 
     clearTrip: () => {
       // Clear undo/redo history when starting a fresh trip — history from a

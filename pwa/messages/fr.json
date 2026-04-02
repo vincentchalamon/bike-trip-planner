@@ -391,6 +391,12 @@
   },
   "offline": {
     "offlineMessage": "Hors ligne — consultation des données en cache. Modification désactivée.",
-    "reconnected": "Connexion rétablie."
+    "reconnected": "Connexion rétablie.",
+    "savedTrips": {
+      "title": "Mes voyages sauvegardés",
+      "stages": "{count, plural, one {# étape} other {# étapes}}",
+      "noDate": "Non daté",
+      "offlineBadge": "Hors ligne"
+    }
   }
 }
