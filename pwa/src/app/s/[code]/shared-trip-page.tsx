@@ -231,7 +231,9 @@ function SharedTripLoader({ code }: { code: string }) {
         />
 
         {/* View mode toggle */}
-        <ViewModeToggle />
+        <div className="flex justify-end">
+          <ViewModeToggle />
+        </div>
 
         {/* Timeline + Map */}
         <div className="flex gap-8 relative">
