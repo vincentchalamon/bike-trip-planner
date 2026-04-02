@@ -20,7 +20,14 @@ final class AccommodationMetadataExtractor
     public function extract(string $html): AccommodationScrapedData
     {
         $doc = new \DOMDocument();
-        @$doc->loadHTML($html, \LIBXML_NONET | \LIBXML_NOENT);
+        $previous = libxml_use_internal_errors(true);
+        try {
+            $doc->loadHTML($html, \LIBXML_NONET | \LIBXML_NOENT);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+
         $xpath = new \DOMXPath($doc);
 
         $jsonLd = $this->extractJsonLd($xpath);
@@ -225,7 +232,14 @@ final class AccommodationMetadataExtractor
     public function discoverPricePagePaths(string $html, string $baseUrl): array
     {
         $doc = new \DOMDocument();
-        @$doc->loadHTML($html, \LIBXML_NONET | \LIBXML_NOENT);
+        $previous = libxml_use_internal_errors(true);
+        try {
+            $doc->loadHTML($html, \LIBXML_NONET | \LIBXML_NOENT);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+
         $xpath = new \DOMXPath($doc);
 
         $priceKeywords = ['tarif', 'prix', 'price', 'rate', 'booking', 'reservation', 'chambre', 'room', 'hébergement'];

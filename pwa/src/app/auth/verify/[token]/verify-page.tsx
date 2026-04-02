@@ -62,8 +62,7 @@ export default function VerifyPage() {
     void verify();
     // No cleanup — the useRef guard prevents double-fire, and we must not
     // cancel the in-flight verify (the token is consumed server-side).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.token]);
+  }, [params.token, setAuth, router, t]);
 
   if (verifying) {
     return (

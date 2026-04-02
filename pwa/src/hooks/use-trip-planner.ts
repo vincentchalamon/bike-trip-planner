@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useShallow } from "zustand/react/shallow";
 import {
   useTripStore,
   useTripTemporalStore,
@@ -29,58 +30,94 @@ import {
 import type { AccommodationData, StageData } from "@/lib/validation/schemas";
 import type { AccommodationType } from "@/lib/accommodation-types";
 
+/** Read current pacing + config state from the store without subscribing. */
+function getPacingState() {
+  const s = useTripStore.getState();
+  return {
+    fatigueFactor: s.fatigueFactor,
+    elevationPenalty: s.elevationPenalty,
+    maxDistancePerDay: s.maxDistancePerDay,
+    averageSpeed: s.averageSpeed,
+    ebikeMode: s.ebikeMode,
+    departureHour: s.departureHour,
+    enabledAccommodationTypes: s.enabledAccommodationTypes,
+  };
+}
+
 export function useTripPlanner() {
   const t = useTranslations();
   const router = useRouter();
-  const trip = useTripStore((s) => s.trip);
-  const totalDistance = useTripStore((s) => s.totalDistance);
-  const totalElevation = useTripStore((s) => s.totalElevation);
-  const totalElevationLoss = useTripStore((s) => s.totalElevationLoss);
-  const stages = useTripStore((s) => s.stages);
-  const startDate = useTripStore((s) => s.startDate);
-  const endDate = useTripStore((s) => s.endDate);
-  const setTrip = useTripStore((s) => s.setTrip);
-  const updateRouteData = useTripStore((s) => s.updateRouteData);
-  const updateTitle = useTripStore((s) => s.updateTitle);
-  const updateDates = useTripStore((s) => s.updateDates);
-  const clearTrip = useTripStore((s) => s.clearTrip);
-  const addLocalAccommodation = useTripStore((s) => s.addLocalAccommodation);
-  const removeLocalAccommodation = useTripStore(
-    (s) => s.removeLocalAccommodation,
+
+  // Group 1: Trip data — re-renders when trip metadata or stages change
+  const {
+    trip,
+    totalDistance,
+    totalElevation,
+    totalElevationLoss,
+    stages,
+    startDate,
+    endDate,
+    isLocked,
+  } = useTripStore(
+    useShallow((s) => ({
+      trip: s.trip,
+      totalDistance: s.totalDistance,
+      totalElevation: s.totalElevation,
+      totalElevationLoss: s.totalElevationLoss,
+      stages: s.stages,
+      startDate: s.startDate,
+      endDate: s.endDate,
+      isLocked: s.isLocked,
+    })),
   );
-  const updateLocalAccommodation = useTripStore(
-    (s) => s.updateLocalAccommodation,
+
+  // Group 2: Pacing settings — re-renders when pacing config changes
+  const {
+    fatigueFactor,
+    elevationPenalty,
+    maxDistancePerDay,
+    averageSpeed,
+    ebikeMode,
+    departureHour,
+    enabledAccommodationTypes,
+  } = useTripStore(
+    useShallow((s) => ({
+      fatigueFactor: s.fatigueFactor,
+      elevationPenalty: s.elevationPenalty,
+      maxDistancePerDay: s.maxDistancePerDay,
+      averageSpeed: s.averageSpeed,
+      ebikeMode: s.ebikeMode,
+      departureHour: s.departureHour,
+      enabledAccommodationTypes: s.enabledAccommodationTypes,
+    })),
   );
-  const updateStageAccommodations = useTripStore(
-    (s) => s.updateStageAccommodations,
+
+  // Group 3: Store actions — stable references, single subscription
+  const actions = useTripStore(
+    useShallow((s) => ({
+      setTrip: s.setTrip,
+      updateRouteData: s.updateRouteData,
+      updateTitle: s.updateTitle,
+      updateDates: s.updateDates,
+      clearTrip: s.clearTrip,
+      addLocalAccommodation: s.addLocalAccommodation,
+      removeLocalAccommodation: s.removeLocalAccommodation,
+      updateLocalAccommodation: s.updateLocalAccommodation,
+      selectAccommodation: s.selectAccommodation,
+      deselectAccommodation: s.deselectAccommodation,
+      deleteStage: s.deleteStage,
+      insertRestDay: s.insertRestDay,
+      insertStagePlaceholder: s.insertStagePlaceholder,
+      updatePacingSettingsInternal: s.updatePacingSettingsInternal,
+      setEbikeMode: s.setEbikeMode,
+      setEnabledAccommodationTypes: s.setEnabledAccommodationTypes,
+      updateStageAlerts: s.updateStageAlerts,
+      setIsLocked: s.setIsLocked,
+      setDepartureHour: s.setDepartureHour,
+    })),
   );
-  const selectAccommodationInStore = useTripStore((s) => s.selectAccommodation);
-  const deselectAccommodationInStore = useTripStore(
-    (s) => s.deselectAccommodation,
-  );
-  const deleteStage = useTripStore((s) => s.deleteStage);
-  const insertRestDay = useTripStore((s) => s.insertRestDay);
-  const insertStagePlaceholder = useTripStore((s) => s.insertStagePlaceholder);
-  const fatigueFactor = useTripStore((s) => s.fatigueFactor);
-  const elevationPenalty = useTripStore((s) => s.elevationPenalty);
-  const maxDistancePerDay = useTripStore((s) => s.maxDistancePerDay);
-  const averageSpeed = useTripStore((s) => s.averageSpeed);
-  const ebikeMode = useTripStore((s) => s.ebikeMode);
-  const departureHour = useTripStore((s) => s.departureHour);
-  const setDepartureHour = useTripStore((s) => s.setDepartureHour);
-  const enabledAccommodationTypes = useTripStore(
-    (s) => s.enabledAccommodationTypes,
-  );
-  const updatePacingSettingsInternal = useTripStore(
-    (s) => s.updatePacingSettingsInternal,
-  );
-  const setEbikeMode = useTripStore((s) => s.setEbikeMode);
-  const setEnabledAccommodationTypes = useTripStore(
-    (s) => s.setEnabledAccommodationTypes,
-  );
-  const updateStageAlerts = useTripStore((s) => s.updateStageAlerts);
-  const isLocked = useTripStore((s) => s.isLocked);
-  const setIsLocked = useTripStore((s) => s.setIsLocked);
+
+  // UI store
   const isProcessing = useUiStore((s) => s.isProcessing);
   const setProcessing = useUiStore((s) => s.setProcessing);
   const setAccommodationScanning = useUiStore(
@@ -97,23 +134,18 @@ export function useTripPlanner() {
   useMercure(tripId, mercureToken);
 
   async function handleMagicLink(sourceUrl: string) {
-    clearTrip();
+    actions.clearTrip();
     setMercureToken(null);
     setProcessing(true);
     setAccommodationScanning(true);
 
     try {
+      const pacing = getPacingState();
       const { data, error, response } = await apiClient.POST("/trips", {
         body: {
           sourceUrl,
-          fatigueFactor,
-          elevationPenalty,
-          maxDistancePerDay,
-          averageSpeed,
-          ebikeMode,
-          departureHour,
-          startDate: startDate,
-          enabledAccommodationTypes,
+          ...pacing,
+          startDate: useTripStore.getState().startDate,
         },
       });
 
@@ -125,10 +157,10 @@ export function useTripPlanner() {
         return;
       }
 
-      setIsLocked(data.isLocked === true);
+      actions.setIsLocked(data.isLocked === true);
       const token = response.headers.get("X-Mercure-Token");
       if (token) setMercureToken(token);
-      setTrip({
+      actions.setTrip({
         id: data.id ?? "",
         title: getRandomTripName(),
         sourceUrl,
@@ -146,20 +178,16 @@ export function useTripPlanner() {
   }
 
   async function handleGpxUpload(file: File) {
-    clearTrip();
+    actions.clearTrip();
     setMercureToken(null);
     setProcessing(true);
     setAccommodationScanning(true);
 
     try {
+      const pacing = getPacingState();
       const { data, error, response } = await uploadGpxFile(file, {
-        fatigueFactor,
-        elevationPenalty,
-        maxDistancePerDay,
-        averageSpeed,
-        ebikeMode,
-        startDate: startDate,
-        enabledAccommodationTypes,
+        ...pacing,
+        startDate: useTripStore.getState().startDate,
       });
 
       if (error || !data) {
@@ -171,13 +199,13 @@ export function useTripPlanner() {
 
       const gpxToken = response?.headers.get("X-Mercure-Token");
       if (gpxToken) setMercureToken(gpxToken);
-      setTrip({
+      actions.setTrip({
         id: data.id,
         title: data.title ?? file.name.replace(/\.gpx$/i, ""),
         sourceUrl: "",
       });
 
-      updateRouteData({
+      actions.updateRouteData({
         totalDistance: data.totalDistance,
         totalElevation: data.totalElevation,
         totalElevationLoss: data.totalElevationLoss,
@@ -199,23 +227,18 @@ export function useTripPlanner() {
     newStart: string | null,
     newEnd: string | null,
   ) {
-    updateDates(newStart, newEnd);
+    actions.updateDates(newStart, newEnd);
     if (!tripId) return;
 
     try {
+      const pacing = getPacingState();
       const { data, error, response } = await apiClient.PATCH("/trips/{id}", {
         params: { path: { id: tripId } },
         headers: { "Content-Type": "application/merge-patch+json" },
         body: {
           startDate: newStart,
           endDate: newEnd,
-          fatigueFactor,
-          elevationPenalty,
-          maxDistancePerDay,
-          averageSpeed,
-          ebikeMode,
-          departureHour,
-          enabledAccommodationTypes,
+          ...pacing,
         },
       });
 
@@ -223,7 +246,7 @@ export function useTripPlanner() {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
       } else {
-        if (data) setIsLocked(data.isLocked === true);
+        if (data) actions.setIsLocked(data.isLocked === true);
         setProcessing(true);
         setAccommodationScanning(true);
       }
@@ -233,22 +256,17 @@ export function useTripPlanner() {
   }
 
   async function handleTitleChange(newTitle: string) {
-    updateTitle(newTitle);
+    actions.updateTitle(newTitle);
     if (!tripId) return;
 
     try {
+      const pacing = getPacingState();
       await apiClient.PATCH("/trips/{id}", {
         params: { path: { id: tripId } },
         headers: { "Content-Type": "application/merge-patch+json" },
         body: {
           title: newTitle,
-          fatigueFactor,
-          elevationPenalty,
-          maxDistancePerDay,
-          averageSpeed,
-          ebikeMode,
-          departureHour,
-          enabledAccommodationTypes,
+          ...pacing,
         },
       });
     } catch {
@@ -259,9 +277,10 @@ export function useTripPlanner() {
   async function handleDeleteStage(index: number) {
     if (!tripId) return;
 
-    const isRestDay = stages[index]?.isRestDay ?? false;
-    const snapshot = [...stages];
-    deleteStage(index);
+    const currentStages = useTripStore.getState().stages;
+    const isRestDay = currentStages[index]?.isRestDay ?? false;
+    const snapshot = [...currentStages];
+    actions.deleteStage(index);
 
     try {
       const { error, response } = await apiClient.DELETE(
@@ -289,8 +308,8 @@ export function useTripPlanner() {
   async function handleInsertRestDay(afterIndex: number) {
     if (!tripId) return;
 
-    const snapshot = [...stages];
-    insertRestDay(afterIndex);
+    const snapshot = [...useTripStore.getState().stages];
+    actions.insertRestDay(afterIndex);
 
     try {
       const { response } = await apiClient.POST(
@@ -319,8 +338,9 @@ export function useTripPlanner() {
   async function handleAddStage(afterIndex: number) {
     if (!tripId) return;
 
-    const prevStage = stages[afterIndex];
-    const nextStage = stages[afterIndex + 1];
+    const currentStages = useTripStore.getState().stages;
+    const prevStage = currentStages[afterIndex];
+    const nextStage = currentStages[afterIndex + 1];
     const startPoint = prevStage?.endPoint ?? prevStage?.startPoint;
     const endPoint = nextStage?.startPoint ?? prevStage?.endPoint;
 
@@ -357,7 +377,7 @@ export function useTripPlanner() {
       isRestDay: false,
     };
     // insertStagePlaceholder pushes an undo snapshot internally before mutating.
-    insertStagePlaceholder(afterIndex, placeholder);
+    actions.insertStagePlaceholder(afterIndex, placeholder);
 
     try {
       const { error, response } = await apiClient.POST(
@@ -371,7 +391,7 @@ export function useTripPlanner() {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
         useTripTemporalStore.getState()._pop();
-        useTripStore.getState().setStages(stages);
+        useTripStore.getState().setStages(currentStages);
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
@@ -379,7 +399,7 @@ export function useTripPlanner() {
     } catch {
       toast.error(t("errors.failedAddStage"));
       useTripTemporalStore.getState()._pop();
-      useTripStore.getState().setStages(stages);
+      useTripStore.getState().setStages(currentStages);
     }
   }
 
@@ -423,6 +443,8 @@ export function useTripPlanner() {
     if (!tripId) return;
 
     try {
+      const { departureHour: dh, enabledAccommodationTypes: eat } =
+        getPacingState();
       const { error, response } = await apiClient.PATCH("/trips/{id}", {
         params: { path: { id: tripId } },
         headers: { "Content-Type": "application/merge-patch+json" },
@@ -432,8 +454,8 @@ export function useTripPlanner() {
           maxDistancePerDay: newMaxDistance,
           averageSpeed: newAverageSpeed,
           ebikeMode: newEbikeMode,
-          departureHour,
-          enabledAccommodationTypes,
+          departureHour: dh,
+          enabledAccommodationTypes: eat,
         },
       });
 
@@ -463,7 +485,7 @@ export function useTripPlanner() {
     if (preDragPacingSnapshot.current === null) {
       preDragPacingSnapshot.current = getUndoableSlice(useTripStore.getState());
     }
-    updatePacingSettingsInternal(
+    actions.updatePacingSettingsInternal(
       newFatigue,
       newElevation,
       newMaxDistance,
@@ -485,7 +507,7 @@ export function useTripPlanner() {
       getUndoableSlice(useTripStore.getState());
     preDragPacingSnapshot.current = null;
     useTripTemporalStore.getState()._push(snapshot);
-    updatePacingSettingsInternal(
+    actions.updatePacingSettingsInternal(
       newFatigue,
       newElevation,
       newMaxDistance,
@@ -496,27 +518,23 @@ export function useTripPlanner() {
       newElevation,
       newMaxDistance,
       newAverageSpeed,
-      ebikeMode,
+      getPacingState().ebikeMode,
       true,
     );
   }
 
   async function handleDepartureHourChange(newDepartureHour: number) {
-    setDepartureHour(newDepartureHour);
+    actions.setDepartureHour(newDepartureHour);
     if (!tripId) return;
 
     try {
+      const pacing = getPacingState();
       const { error, response } = await apiClient.PATCH("/trips/{id}", {
         params: { path: { id: tripId } },
         headers: { "Content-Type": "application/merge-patch+json" },
         body: {
-          fatigueFactor,
-          elevationPenalty,
-          maxDistancePerDay,
-          averageSpeed,
-          ebikeMode,
+          ...pacing,
           departureHour: newDepartureHour,
-          enabledAccommodationTypes,
         },
       });
 
@@ -533,42 +551,42 @@ export function useTripPlanner() {
   }
 
   async function handleEbikeModeChange(newEbikeMode: boolean) {
-    setEbikeMode(newEbikeMode);
+    actions.setEbikeMode(newEbikeMode);
     if (!newEbikeMode) {
-      stages.forEach((_, i) => updateStageAlerts(i, [], "terrain"));
+      const currentStages = useTripStore.getState().stages;
+      currentStages.forEach((_, i) =>
+        actions.updateStageAlerts(i, [], "terrain"),
+      );
     }
+    const pacing = getPacingState();
     await patchPacingSettings(
-      fatigueFactor,
-      elevationPenalty,
-      maxDistancePerDay,
-      averageSpeed,
+      pacing.fatigueFactor,
+      pacing.elevationPenalty,
+      pacing.maxDistancePerDay,
+      pacing.averageSpeed,
       newEbikeMode,
       false,
     );
   }
 
   async function handleAccommodationTypesChange(newTypes: AccommodationType[]) {
-    const previous = enabledAccommodationTypes;
-    setEnabledAccommodationTypes(newTypes);
+    const previous = useTripStore.getState().enabledAccommodationTypes;
+    actions.setEnabledAccommodationTypes(newTypes);
     if (!tripId) return;
 
     try {
+      const pacing = getPacingState();
       const { error, response } = await apiClient.PATCH("/trips/{id}", {
         params: { path: { id: tripId } },
         headers: { "Content-Type": "application/merge-patch+json" },
         body: {
-          fatigueFactor,
-          elevationPenalty,
-          maxDistancePerDay,
-          averageSpeed,
-          ebikeMode,
-          departureHour,
+          ...pacing,
           enabledAccommodationTypes: newTypes,
         },
       });
 
       if (error) {
-        setEnabledAccommodationTypes(previous);
+        actions.setEnabledAccommodationTypes(previous);
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
       } else {
@@ -576,7 +594,7 @@ export function useTripPlanner() {
         setAccommodationScanning(true);
       }
     } catch {
-      setEnabledAccommodationTypes(previous);
+      actions.setEnabledAccommodationTypes(previous);
       toast.error(t("errors.failedUpdateAccommodationTypes"));
     }
   }
@@ -674,7 +692,7 @@ export function useTripPlanner() {
       possibleClosed: false,
       distanceToEndPoint: 0,
     };
-    addLocalAccommodation(stageIndex, newAcc);
+    actions.addLocalAccommodation(stageIndex, newAcc);
     setNewAccKey(`${stageIndex}-${accIndex}`);
   }
 
@@ -684,14 +702,15 @@ export function useTripPlanner() {
   ) {
     if (!tripId) return;
 
-    const acc = stages[stageIndex]?.accommodations[accIndex];
+    const currentStages = useTripStore.getState().stages;
+    const acc = currentStages[stageIndex]?.accommodations[accIndex];
     if (!acc) return;
 
     const nextStageIndex =
-      stageIndex + 1 < stages.length ? stageIndex + 1 : null;
+      stageIndex + 1 < currentStages.length ? stageIndex + 1 : null;
 
     // Optimistic update
-    selectAccommodationInStore(stageIndex, accIndex, nextStageIndex);
+    actions.selectAccommodation(stageIndex, accIndex, nextStageIndex);
 
     try {
       const { error, response } = await apiClient.PATCH(
@@ -709,7 +728,7 @@ export function useTripPlanner() {
         // 409 Conflict: the backend accommodation list was refreshed by a concurrent
         // scan — trigger a fresh scan for this stage so the user can retry.
         if (response.status === 409) {
-          useTripStore.getState().setStages([...stages]);
+          useTripStore.getState().setStages([...currentStages]);
           toast.info(t("errors.accommodationStale"));
           const ok = await scanAccommodations(
             tripId,
@@ -725,7 +744,7 @@ export function useTripPlanner() {
           const apiError = parseApiError(response.status, error);
           toast.error(apiError.message);
           // Rollback on error: restore accommodations from store snapshot
-          useTripStore.getState().setStages([...stages]);
+          useTripStore.getState().setStages([...currentStages]);
         }
       } else {
         setProcessing(true);
@@ -733,15 +752,16 @@ export function useTripPlanner() {
       }
     } catch {
       toast.error(t("errors.failedSelectAccommodation"));
-      useTripStore.getState().setStages([...stages]);
+      useTripStore.getState().setStages([...currentStages]);
     }
   }
 
   async function handleDeselectAccommodation(stageIndex: number) {
     if (!tripId) return;
 
+    const currentStages = useTripStore.getState().stages;
     // Optimistic update
-    deselectAccommodationInStore(stageIndex);
+    actions.deselectAccommodation(stageIndex);
 
     try {
       const { error, response } = await apiClient.PATCH(
@@ -758,14 +778,14 @@ export function useTripPlanner() {
       if (error) {
         const apiError = parseApiError(response.status, error);
         toast.error(apiError.message);
-        useTripStore.getState().setStages([...stages]);
+        useTripStore.getState().setStages([...currentStages]);
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
       }
     } catch {
       toast.error(t("errors.failedDeselectAccommodation"));
-      useTripStore.getState().setStages([...stages]);
+      useTripStore.getState().setStages([...currentStages]);
     }
   }
 
@@ -795,8 +815,8 @@ export function useTripPlanner() {
     enabledAccommodationTypes,
     handleAccommodationTypesChange,
     handleTitleChange,
-    updateLocalAccommodation,
-    removeLocalAccommodation,
+    updateLocalAccommodation: actions.updateLocalAccommodation,
+    removeLocalAccommodation: actions.removeLocalAccommodation,
     handleMagicLink,
     handleGpxUpload,
     handleDatesChange,
