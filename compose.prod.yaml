@@ -13,6 +13,8 @@ services:
       target: frankenphp_prod
     restart: unless-stopped
     read_only: true
+    tmpfs:
+      - /tmp
     depends_on:
       database:
         condition: service_healthy
@@ -82,6 +84,8 @@ services:
     command: bin/console messenger:consume async --time-limit=3600 -vv
     restart: unless-stopped
     read_only: true
+    tmpfs:
+      - /tmp
     deploy:
       replicas: ${WORKER_REPLICAS:-5}
     depends_on:

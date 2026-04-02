@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
 import { getTripId } from "../../fixtures/api-mocks";
+import { SHARE_BUTTON_TESTID } from "./common.steps";
 
 // ---------------------------------------------------------------------------
 // Sharing — FR + EN
@@ -102,19 +103,29 @@ Then("the share link is no longer visible", async ({ mockedPage }) => {
 
 Then(
   "le bouton {string} s'affiche",
-  async ({ mockedPage }, btnTestId: string) => {
-    await expect(mockedPage.getByTestId("share-create-link-button")).toBeVisible(
-      { timeout: 5000 },
-    );
+  async ({ mockedPage }, btnName: string) => {
+    const testId = SHARE_BUTTON_TESTID[btnName];
+    if (testId) {
+      await expect(mockedPage.getByTestId(testId)).toBeVisible({ timeout: 5000 });
+    } else {
+      await expect(
+        mockedPage.getByRole("button", { name: btnName }),
+      ).toBeVisible({ timeout: 5000 });
+    }
   },
 );
 
 Then(
   "the {string} button is displayed",
-  async ({ mockedPage }, _btnName: string) => {
-    await expect(mockedPage.getByTestId("share-create-link-button")).toBeVisible(
-      { timeout: 5000 },
-    );
+  async ({ mockedPage }, btnName: string) => {
+    const testId = SHARE_BUTTON_TESTID[btnName];
+    if (testId) {
+      await expect(mockedPage.getByTestId(testId)).toBeVisible({ timeout: 5000 });
+    } else {
+      await expect(
+        mockedPage.getByRole("button", { name: btnName }),
+      ).toBeVisible({ timeout: 5000 });
+    }
   },
 );
 

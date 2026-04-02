@@ -587,7 +587,7 @@ When("I click the {string} button", async ({ page }, name: string) => {
 
 // Generic click — shared by all domains (FR + EN)
 // Share-specific button names are resolved via testIdMap; all others fall back to role lookup.
-const SHARE_BUTTON_TESTID: Record<string, string> = {
+export const SHARE_BUTTON_TESTID: Record<string, string> = {
   "Copier le lien": "share-copy-link-button",
   "Copy link": "share-copy-link-button",
   "Révoquer le lien": "share-revoke-link-button",
