@@ -135,7 +135,7 @@ Then("the elevation tooltip is displayed", async ({ mockedPage }) => {
 
 Then(
   "le bouton {string} n'est pas visible",
-  async ({ mockedPage }, btnName: string) => {
+  async ({ mockedPage }, _btnName: string) => {
     await expect(
       mockedPage.getByTestId("map-reset-view"),
     ).not.toBeVisible();
