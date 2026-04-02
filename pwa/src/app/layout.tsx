@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { DEFAULT_LOCALE } from "@/i18n/locale";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -47,8 +48,8 @@ export default async function RootLayout({
     messages = await getMessages();
   } catch {
     // Static export prerendering: next-intl server context unavailable
-    locale = "fr";
-    messages = (await import("../../messages/fr.json")).default;
+    locale = DEFAULT_LOCALE;
+    messages = (await import(`../../messages/${DEFAULT_LOCALE}.json`)).default;
   }
 
   return (

@@ -7,6 +7,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
+    {/* lang hardcoded: GlobalError replaces the root layout so next-intl context is unavailable */}
     <html lang="fr">
       <body>
         <div
