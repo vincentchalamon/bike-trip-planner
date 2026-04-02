@@ -46,20 +46,6 @@ When(
   },
 );
 
-When(
-  "je clique sur {string}",
-  async ({ page }, btnName: string) => {
-    await page.getByRole("button", { name: btnName }).click();
-  },
-);
-
-When(
-  "I click {string}",
-  async ({ page }, btnName: string) => {
-    await page.getByRole("button", { name: btnName }).click();
-  },
-);
-
 Then("je vois un champ email", async ({ page }) => {
   await expect(page.locator('input[type="email"]')).toBeVisible();
 });

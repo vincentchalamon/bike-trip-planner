@@ -137,26 +137,6 @@ Then("the link is not yet visible", async ({ mockedPage }) => {
   await expect(mockedPage.getByTestId("share-link-text")).not.toBeVisible();
 });
 
-When("je clique sur {string}", async ({ mockedPage }, btnName: string) => {
-  const testIdMap: Record<string, string> = {
-    "Copier le lien": "share-copy-link-button",
-    "Copy link": "share-copy-link-button",
-    "Révoquer le lien": "share-revoke-link-button",
-    "Revoke link": "share-revoke-link-button",
-    "Créer un lien de partage": "share-create-link-button",
-    "Create share link": "share-create-link-button",
-    "Télécharger l'infographie": "share-download-png-button",
-    "Download infographic": "share-download-png-button",
-    "Copier le texte": "share-copy-text-button",
-    "Copy text": "share-copy-text-button",
-  };
-  const testId = testIdMap[btnName];
-  if (testId) {
-    await mockedPage.getByTestId(testId).click();
-  } else {
-    await mockedPage.getByRole("button", { name: btnName }).click();
-  }
-});
 
 Then(
   "le lien court est copié dans le presse-papiers",

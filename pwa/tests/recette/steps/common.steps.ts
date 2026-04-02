@@ -576,13 +576,46 @@ When("I open the settings panel", async ({ mockedPage }) => {
 
 When(
   "je clique sur le bouton {string}",
-  async ({ mockedPage }, name: string) => {
-    await mockedPage.getByRole("button", { name }).click();
+  async ({ page }, name: string) => {
+    await page.getByRole("button", { name }).click();
   },
 );
 
-When("I click the {string} button", async ({ mockedPage }, name: string) => {
-  await mockedPage.getByRole("button", { name }).click();
+When("I click the {string} button", async ({ page }, name: string) => {
+  await page.getByRole("button", { name }).click();
+});
+
+// Generic click — shared by all domains (FR + EN)
+// Share-specific button names are resolved via testIdMap; all others fall back to role lookup.
+const SHARE_BUTTON_TESTID: Record<string, string> = {
+  "Copier le lien": "share-copy-link-button",
+  "Copy link": "share-copy-link-button",
+  "Révoquer le lien": "share-revoke-link-button",
+  "Revoke link": "share-revoke-link-button",
+  "Créer un lien de partage": "share-create-link-button",
+  "Create share link": "share-create-link-button",
+  "Télécharger l'infographie": "share-download-png-button",
+  "Download infographic": "share-download-png-button",
+  "Copier le texte": "share-copy-text-button",
+  "Copy text": "share-copy-text-button",
+};
+
+When("je clique sur {string}", async ({ page }, btnName: string) => {
+  const testId = SHARE_BUTTON_TESTID[btnName];
+  if (testId) {
+    await page.getByTestId(testId).click();
+  } else {
+    await page.getByRole("button", { name: new RegExp(btnName, "i") }).click();
+  }
+});
+
+When("I click {string}", async ({ page }, btnName: string) => {
+  const testId = SHARE_BUTTON_TESTID[btnName];
+  if (testId) {
+    await page.getByTestId(testId).click();
+  } else {
+    await page.getByRole("button", { name: new RegExp(btnName, "i") }).click();
+  }
 });
 
 Then("le panneau de paramètres s'affiche", async ({ mockedPage }) => {

@@ -3,7 +3,10 @@ import { defineBddConfig, cucumberReporter } from "playwright-bdd";
 
 const testDir = defineBddConfig({
   features: "tests/recette/features/**/*.feature",
-  steps: "tests/recette/steps/**/*.ts",
+  steps: [
+    "tests/recette/steps/**/*.ts",
+    "tests/recette/support/hooks.ts",
+  ],
   outputDir: ".features-gen",
   verbose: false,
 });

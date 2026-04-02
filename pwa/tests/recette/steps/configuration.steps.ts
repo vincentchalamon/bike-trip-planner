@@ -5,10 +5,6 @@ import { When, Then } from "../support/fixtures";
 // Settings panel — FR + EN
 // ---------------------------------------------------------------------------
 
-When("je clique sur le bouton {string}", async ({ mockedPage }, name: string) => {
-  await mockedPage.getByRole("button", { name }).click();
-});
-
 When("j'ouvre le panneau de paramètres via le bouton engrenage", async ({ mockedPage }) => {
   await mockedPage.getByRole("button", { name: "Ouvrir les paramètres" }).click();
 });

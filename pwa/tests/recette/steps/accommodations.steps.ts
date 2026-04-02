@@ -270,17 +270,6 @@ Then(
   },
 );
 
-When(
-  "je clique sur {string}",
-  async ({ mockedPage }, btnName: string) => {
-    await mockedPage.getByRole("button", { name: new RegExp(btnName) }).click();
-  },
-);
-
-When("I click {string}", async ({ mockedPage }, btnName: string) => {
-  await mockedPage.getByRole("button", { name: new RegExp(btnName) }).click();
-});
-
 Then(
   "une requête de scan avec radiusKm={int} est envoyée",
   async ({ mockedPage }, radius: number) => {
