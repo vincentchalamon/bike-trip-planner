@@ -13,9 +13,7 @@ import { mockAllApis } from "../fixtures/api-mocks";
 test.describe("Offline mode", () => {
   test.describe("Offline banner", () => {
     test("banner is not visible when online", async ({ mockedPage }) => {
-      await expect(
-        mockedPage.getByTestId("offline-banner"),
-      ).not.toBeVisible();
+      await expect(mockedPage.getByTestId("offline-banner")).not.toBeVisible();
     });
 
     test("shows offline banner when browser goes offline", async ({
@@ -61,7 +59,9 @@ test.describe("Offline mode", () => {
       const banner = mockedPage.getByTestId("offline-banner");
       await expect(banner).toBeVisible({ timeout: 3000 });
       // locale-agnostic: matches either French or English copy
-      await expect(banner).toContainText(/Connexion rétablie|Connection restored/);
+      await expect(banner).toContainText(
+        /Connexion rétablie|Connection restored/,
+      );
     });
 
     test("reconnection banner auto-dismisses after 3 seconds", async ({
