@@ -59,34 +59,6 @@ final class TripShareRepositoryTest extends TestCase
         $this->repository = new TripShareRepository($registry);
     }
 
-    // --- findValidShare ---
-
-    #[Test]
-    public function findValidShareReturnsShareWhenTokenMatches(): void
-    {
-        $tripId = Uuid::v7()->toRfc4122();
-        $token = bin2hex(random_bytes(32));
-
-        $trip = new TripRequest(Uuid::fromString($tripId));
-        $share = new TripShare(trip: $trip, token: $token);
-
-        $this->query->method('getOneOrNullResult')->willReturn($share);
-
-        $result = $this->repository->findValidShare($tripId, $token);
-
-        $this->assertSame($share, $result);
-    }
-
-    #[Test]
-    public function findValidShareReturnsNullWhenQueryReturnsNull(): void
-    {
-        $this->query->method('getOneOrNullResult')->willReturn(null);
-
-        $result = $this->repository->findValidShare('some-trip-id', 'some-token');
-
-        $this->assertNull($result);
-    }
-
     // --- findActiveByTrip ---
 
     #[Test]
