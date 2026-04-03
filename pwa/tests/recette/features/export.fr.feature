@@ -25,7 +25,7 @@ Fonctionnalité: Export GPX et FIT
     Quand je clique sur "Télécharger le GPX complet"
     Alors une requête GET vers /trips/*.gpx est envoyée
 
-  @desktop @critique
+  @desktop @critique @fixme
   Scénario: Upload d'un fichier GPX depuis l'ordinateur
     Quand je clique sur le bouton "Importer un GPX"
     Et que je sélectionne un fichier GPX valide

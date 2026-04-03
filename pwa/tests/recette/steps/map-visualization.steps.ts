@@ -7,8 +7,7 @@ import { Given, When, Then } from "../support/fixtures";
 
 Given(
   "les étapes n'ont pas de données de géométrie",
-  async ({ submitUrl, injectEvent }) => {
-    await submitUrl();
+  async ({ injectEvent }) => {
     await injectEvent({
       type: "stages_computed",
       data: {
@@ -29,8 +28,7 @@ Given(
   },
 );
 
-Given("stages have no geometry data", async ({ submitUrl, injectEvent }) => {
-  await submitUrl();
+Given("stages have no geometry data", async ({ injectEvent }) => {
   await injectEvent({
     type: "stages_computed",
     data: {
@@ -74,19 +72,12 @@ Then(
   },
 );
 
-Then(
-  "le profil altimétrique n'est pas visible",
-  async ({ mockedPage }) => {
-    await expect(
-      mockedPage.getByTestId("elevation-profile"),
-    ).not.toBeVisible();
-  },
-);
+Then("le profil altimétrique n'est pas visible", async ({ mockedPage }) => {
+  await expect(mockedPage.getByTestId("elevation-profile")).not.toBeVisible();
+});
 
 Then("the elevation profile is not visible", async ({ mockedPage }) => {
-  await expect(
-    mockedPage.getByTestId("elevation-profile"),
-  ).not.toBeVisible();
+  await expect(mockedPage.getByTestId("elevation-profile")).not.toBeVisible();
 });
 
 When("je survole le profil altimétrique", async ({ mockedPage }) => {
@@ -111,43 +102,39 @@ When("I hover over the elevation profile", async ({ mockedPage }) => {
 
 Then("le réticule vertical est visible", async ({ mockedPage }) => {
   const profile = mockedPage.getByTestId("elevation-profile");
-  await expect(profile.locator("svg").getByTestId("elevation-crosshair")).toBeAttached();
+  await expect(
+    profile.locator("svg").getByTestId("elevation-crosshair"),
+  ).toBeAttached();
 });
 
 Then("the vertical crosshair is visible", async ({ mockedPage }) => {
   const profile = mockedPage.getByTestId("elevation-profile");
-  await expect(profile.locator("svg").getByTestId("elevation-crosshair")).toBeAttached();
+  await expect(
+    profile.locator("svg").getByTestId("elevation-crosshair"),
+  ).toBeAttached();
 });
 
 Then("l'info-bulle altimétrique est affichée", async ({ mockedPage }) => {
   const profile = mockedPage.getByTestId("elevation-profile");
-  await expect(
-    profile.getByTestId("elevation-tooltip-bg"),
-  ).toBeVisible();
+  await expect(profile.getByTestId("elevation-tooltip-bg")).toBeVisible();
 });
 
 Then("the elevation tooltip is displayed", async ({ mockedPage }) => {
   const profile = mockedPage.getByTestId("elevation-profile");
-  await expect(
-    profile.getByTestId("elevation-tooltip-bg"),
-  ).toBeVisible();
+  await expect(profile.getByTestId("elevation-tooltip-bg")).toBeVisible();
 });
 
 Then(
   "le bouton {string} n'est pas visible",
   async ({ mockedPage }, _btnName: string) => {
-    await expect(
-      mockedPage.getByTestId("map-reset-view"),
-    ).not.toBeVisible();
+    await expect(mockedPage.getByTestId("map-reset-view")).not.toBeVisible();
   },
 );
 
 Then(
   "the {string} button is not visible",
   async ({ mockedPage }, _btnName: string) => {
-    await expect(
-      mockedPage.getByTestId("map-reset-view"),
-    ).not.toBeVisible();
+    await expect(mockedPage.getByTestId("map-reset-view")).not.toBeVisible();
   },
 );
 
@@ -220,23 +207,23 @@ Then("je vois les deux panneaux côte à côte", async () => {});
 
 Then("I see both panels side by side", async () => {});
 
-Then("chaque étape est représentée avec une couleur distincte sur la carte", async () => {});
-
-Then("each stage is represented with a distinct color on the map", async () => {});
-
-When(
-  "je consulte le voyage sur un écran mobile",
-  async ({ $test }) => {
-    $test.fixme();
-  },
+Then(
+  "chaque étape est représentée avec une couleur distincte sur la carte",
+  async () => {},
 );
 
-When(
-  "I view the trip on a mobile screen",
-  async ({ $test }) => {
-    $test.fixme();
-  },
+Then(
+  "each stage is represented with a distinct color on the map",
+  async () => {},
 );
+
+When("je consulte le voyage sur un écran mobile", async ({ $test }) => {
+  $test.fixme();
+});
+
+When("I view the trip on a mobile screen", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then("la carte s'adapte à la taille de l'écran", async () => {});
 

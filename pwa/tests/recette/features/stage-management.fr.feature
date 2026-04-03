@@ -71,5 +71,6 @@ Fonctionnalité: Gestion des étapes
 
   @desktop
   Scénario: Barre de progression pendant le calcul
+    Étant donné que je suis sur la page d'accueil
     Quand je soumets un lien Komoot valide
     Alors je vois une barre de progression pendant le calcul des étapes

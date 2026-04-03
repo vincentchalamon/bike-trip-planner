@@ -70,5 +70,6 @@ Feature: Stage management
 
   @desktop
   Scenario: Progress bar during computation
+    Given I am on the home page
     When I submit a valid Komoot link
     Then I see a progress bar while stages are being computed

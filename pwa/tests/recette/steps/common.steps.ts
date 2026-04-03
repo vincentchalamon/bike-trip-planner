@@ -54,13 +54,19 @@ When("je recharge la page", async ({ page }) => {
 // Trip creation — FR + EN
 // ---------------------------------------------------------------------------
 
-Given("j'ai créé un voyage complet avec 3 étapes", async ({ createFullTrip }) => {
-  await createFullTrip();
-});
+Given(
+  "j'ai créé un voyage complet avec 3 étapes",
+  async ({ createFullTrip }) => {
+    await createFullTrip();
+  },
+);
 
-Given("I have created a full trip with 3 stages", async ({ createFullTrip }) => {
-  await createFullTrip();
-});
+Given(
+  "I have created a full trip with 3 stages",
+  async ({ createFullTrip }) => {
+    await createFullTrip();
+  },
+);
 
 Given(
   "j'ai créé un voyage avec des étapes contenant des données géométriques",
@@ -186,19 +192,13 @@ When("I submit the link {string}", async ({ submitUrl }, link: string) => {
   await submitUrl(link);
 });
 
-When(
-  "l'événement route_parsed est reçu",
-  async ({ injectEvent }) => {
-    await injectEvent(routeParsedEvent());
-  },
-);
+When("l'événement route_parsed est reçu", async ({ injectEvent }) => {
+  await injectEvent(routeParsedEvent());
+});
 
-When(
-  "the route_parsed event is received",
-  async ({ injectEvent }) => {
-    await injectEvent(routeParsedEvent());
-  },
-);
+When("the route_parsed event is received", async ({ injectEvent }) => {
+  await injectEvent(routeParsedEvent());
+});
 
 When(
   "les événements route_parsed et stages_computed sont reçus",
@@ -275,25 +275,19 @@ Then(
   },
 );
 
-Then(
-  "I see the trip title or its loading skeleton",
-  async ({ mockedPage }) => {
-    await expect(
-      mockedPage
-        .getByTestId("trip-title-skeleton")
-        .or(mockedPage.getByTestId("trip-title")),
-    ).toBeVisible({ timeout: 5000 });
-  },
-);
+Then("I see the trip title or its loading skeleton", async ({ mockedPage }) => {
+  await expect(
+    mockedPage
+      .getByTestId("trip-title-skeleton")
+      .or(mockedPage.getByTestId("trip-title")),
+  ).toBeVisible({ timeout: 5000 });
+});
 
-Then(
-  "je vois la carte de l'étape {int}",
-  async ({ mockedPage }, n: number) => {
-    await expect(mockedPage.getByTestId(`stage-card-${n}`)).toBeVisible({
-      timeout: 10000,
-    });
-  },
-);
+Then("je vois la carte de l'étape {int}", async ({ mockedPage }, n: number) => {
+  await expect(mockedPage.getByTestId(`stage-card-${n}`)).toBeVisible({
+    timeout: 10000,
+  });
+});
 
 Then("I see stage card {int}", async ({ mockedPage }, n: number) => {
   await expect(mockedPage.getByTestId(`stage-card-${n}`)).toBeVisible({
@@ -308,21 +302,28 @@ Then(
   },
 );
 
-Then("the total distance shows {string}", async ({ mockedPage }, value: string) => {
-  await expect(mockedPage.getByTestId("total-distance")).toContainText(value);
-});
+Then(
+  "the total distance shows {string}",
+  async ({ mockedPage }, value: string) => {
+    await expect(mockedPage.getByTestId("total-distance")).toContainText(value);
+  },
+);
 
 Then(
   "le dénivelé total affiche {string}",
   async ({ mockedPage }, value: string) => {
-    await expect(mockedPage.getByTestId("total-elevation")).toContainText(value);
+    await expect(mockedPage.getByTestId("total-elevation")).toContainText(
+      value,
+    );
   },
 );
 
 Then(
   "the total elevation shows {string}",
   async ({ mockedPage }, value: string) => {
-    await expect(mockedPage.getByTestId("total-elevation")).toContainText(value);
+    await expect(mockedPage.getByTestId("total-elevation")).toContainText(
+      value,
+    );
   },
 );
 
@@ -436,11 +437,14 @@ Then("I no longer see the error message", async ({ mockedPage }) => {
 // Offline mode — FR + EN
 // ---------------------------------------------------------------------------
 
-Given("j'utilise l'application sur un appareil mobile", async ({ mockedPage }) => {
-  // Handled by viewport in project config
-  await mockedPage.goto("/");
-  await mockedPage.waitForLoadState("networkidle");
-});
+Given(
+  "j'utilise l'application sur un appareil mobile",
+  async ({ mockedPage }) => {
+    // Handled by viewport in project config
+    await mockedPage.goto("/");
+    await mockedPage.waitForLoadState("networkidle");
+  },
+);
 
 Given("I am using the app on a mobile device", async ({ mockedPage }) => {
   await mockedPage.goto("/");
@@ -483,23 +487,17 @@ Then("the offline banner is visible", async ({ mockedPage }) => {
   });
 });
 
-Then(
-  "il contient le texte {string}",
-  async ({ mockedPage }, text: string) => {
-    await expect(mockedPage.getByTestId("offline-banner")).toContainText(text);
-  },
-);
+Then("il contient le texte {string}", async ({ mockedPage }, text: string) => {
+  await expect(mockedPage.getByTestId("offline-banner")).toContainText(text);
+});
 
 Then("it contains the text {string}", async ({ mockedPage }, text: string) => {
   await expect(mockedPage.getByTestId("offline-banner")).toContainText(text);
 });
 
-Then(
-  "le bandeau hors ligne n'est plus visible",
-  async ({ mockedPage }) => {
-    await expect(mockedPage.getByTestId("offline-banner")).not.toBeVisible();
-  },
-);
+Then("le bandeau hors ligne n'est plus visible", async ({ mockedPage }) => {
+  await expect(mockedPage.getByTestId("offline-banner")).not.toBeVisible();
+});
 
 Then("the offline banner is no longer visible", async ({ mockedPage }) => {
   await expect(mockedPage.getByTestId("offline-banner")).not.toBeVisible();
@@ -574,12 +572,9 @@ When("I open the settings panel", async ({ mockedPage }) => {
   ).toBeInViewport();
 });
 
-When(
-  "je clique sur le bouton {string}",
-  async ({ page }, name: string) => {
-    await page.getByRole("button", { name }).click();
-  },
-);
+When("je clique sur le bouton {string}", async ({ page }, name: string) => {
+  await page.getByRole("button", { name }).click();
+});
 
 When("I click the {string} button", async ({ page }, name: string) => {
   await page.getByRole("button", { name }).click();
@@ -650,19 +645,38 @@ Given(
   "j'ai créé un voyage complet avec un lien de partage actif",
   async ({ createFullTrip, mockedPage }) => {
     const { getTripId } = await import("../../fixtures/api-mocks");
+    await mockedPage
+      .context()
+      .grantPermissions(["clipboard-read", "clipboard-write"]);
     await mockedPage.route(
       `**/trips/${getTripId()}/share`,
       (route, request) => {
-        if (request.method() !== "GET") return route.fallback();
-        return route.fulfill({
-          status: 200,
-          contentType: "application/ld+json",
-          body: JSON.stringify({
-            shortCode: "Ab3kX9mP",
-            token: "share-token-xyz",
-            createdAt: new Date().toISOString(),
-          }),
-        });
+        if (request.method() === "GET") {
+          return route.fulfill({
+            status: 200,
+            contentType: "application/ld+json",
+            body: JSON.stringify({
+              shortCode: "Ab3kX9mP",
+              token: "share-token-xyz",
+              createdAt: new Date().toISOString(),
+            }),
+          });
+        }
+        if (request.method() === "DELETE") {
+          return route.fulfill({ status: 204, body: "" });
+        }
+        if (request.method() === "POST") {
+          return route.fulfill({
+            status: 201,
+            contentType: "application/ld+json",
+            body: JSON.stringify({
+              shortCode: "NewCode1",
+              token: "new-token",
+              createdAt: new Date().toISOString(),
+            }),
+          });
+        }
+        return route.fallback();
       },
     );
     await createFullTrip();
@@ -673,19 +687,38 @@ Given(
   "I have created a full trip with an active share link",
   async ({ createFullTrip, mockedPage }) => {
     const { getTripId } = await import("../../fixtures/api-mocks");
+    await mockedPage
+      .context()
+      .grantPermissions(["clipboard-read", "clipboard-write"]);
     await mockedPage.route(
       `**/trips/${getTripId()}/share`,
       (route, request) => {
-        if (request.method() !== "GET") return route.fallback();
-        return route.fulfill({
-          status: 200,
-          contentType: "application/ld+json",
-          body: JSON.stringify({
-            shortCode: "Ab3kX9mP",
-            token: "share-token-xyz",
-            createdAt: new Date().toISOString(),
-          }),
-        });
+        if (request.method() === "GET") {
+          return route.fulfill({
+            status: 200,
+            contentType: "application/ld+json",
+            body: JSON.stringify({
+              shortCode: "Ab3kX9mP",
+              token: "share-token-xyz",
+              createdAt: new Date().toISOString(),
+            }),
+          });
+        }
+        if (request.method() === "DELETE") {
+          return route.fulfill({ status: 204, body: "" });
+        }
+        if (request.method() === "POST") {
+          return route.fulfill({
+            status: 201,
+            contentType: "application/ld+json",
+            body: JSON.stringify({
+              shortCode: "NewCode1",
+              token: "new-token",
+              createdAt: new Date().toISOString(),
+            }),
+          });
+        }
+        return route.fallback();
       },
     );
     await createFullTrip();

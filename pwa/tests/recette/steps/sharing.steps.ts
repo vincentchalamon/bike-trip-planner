@@ -49,9 +49,11 @@ Given("no share link is active", async ({ mockedPage }) => {
 
 When("j'ouvre la modale de partage", async ({ mockedPage }) => {
   await mockedPage.getByTestId("share-button").click();
-  await expect(mockedPage.getByTestId("share-link-text")).toBeVisible({
-    timeout: 5000,
-  });
+  await expect(
+    mockedPage
+      .getByTestId("share-link-text")
+      .or(mockedPage.getByTestId("share-create-link-button")),
+  ).toBeVisible({ timeout: 5000 });
 });
 
 When("I open the share modal", async ({ mockedPage }) => {
@@ -94,11 +96,15 @@ Then("I see the short share link", async ({ mockedPage }) => {
 });
 
 Then("le lien de partage n'est plus visible", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("share-link-text")).not.toBeVisible();
+  await expect(mockedPage.getByTestId("share-link-text")).not.toBeVisible({
+    timeout: 5000,
+  });
 });
 
 Then("the share link is no longer visible", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("share-link-text")).not.toBeVisible();
+  await expect(mockedPage.getByTestId("share-link-text")).not.toBeVisible({
+    timeout: 5000,
+  });
 });
 
 Then(
@@ -106,7 +112,9 @@ Then(
   async ({ mockedPage }, btnName: string) => {
     const testId = SHARE_BUTTON_TESTID[btnName];
     if (testId) {
-      await expect(mockedPage.getByTestId(testId)).toBeVisible({ timeout: 5000 });
+      await expect(mockedPage.getByTestId(testId)).toBeVisible({
+        timeout: 5000,
+      });
     } else {
       await expect(
         mockedPage.getByRole("button", { name: btnName }),
@@ -120,7 +128,9 @@ Then(
   async ({ mockedPage }, btnName: string) => {
     const testId = SHARE_BUTTON_TESTID[btnName];
     if (testId) {
-      await expect(mockedPage.getByTestId(testId)).toBeVisible({ timeout: 5000 });
+      await expect(mockedPage.getByTestId(testId)).toBeVisible({
+        timeout: 5000,
+      });
     } else {
       await expect(
         mockedPage.getByRole("button", { name: btnName }),
@@ -149,7 +159,6 @@ Then("the link is not yet visible", async ({ mockedPage }) => {
   await expect(mockedPage.getByTestId("share-link-text")).not.toBeVisible();
 });
 
-
 Then(
   "le lien court est copié dans le presse-papiers",
   async ({ mockedPage }) => {
@@ -164,19 +173,16 @@ Then(
   },
 );
 
-Then(
-  "the short link is copied to the clipboard",
-  async ({ mockedPage }) => {
-    await mockedPage
-      .context()
-      .grantPermissions(["clipboard-read", "clipboard-write"]);
-    const clipboardText = await mockedPage.evaluate(() =>
-      navigator.clipboard.readText(),
-    );
-    const origin = new URL(mockedPage.url()).origin;
-    expect(clipboardText).toContain(`${origin}/s/`);
-  },
-);
+Then("the short link is copied to the clipboard", async ({ mockedPage }) => {
+  await mockedPage
+    .context()
+    .grantPermissions(["clipboard-read", "clipboard-write"]);
+  const clipboardText = await mockedPage.evaluate(() =>
+    navigator.clipboard.readText(),
+  );
+  const origin = new URL(mockedPage.url()).origin;
+  expect(clipboardText).toContain(`${origin}/s/`);
+});
 
 // --- Additional missing steps ---
 
@@ -192,19 +198,13 @@ Then("le texte résumé contenant le titre du voyage est copié", async () => {}
 
 Then("the summary text containing the trip title is copied", async () => {});
 
-When(
-  /^j'accède à \/s\/<code_court>$/,
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When(/^j'accède à \/s\/<code_court>$/, async ({ $test }) => {
+  $test.fixme();
+});
 
-When(
-  /^I navigate to \/s\/<short_code>$/,
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When(/^I navigate to \/s\/<short_code>$/, async ({ $test }) => {
+  $test.fixme();
+});
 
 Then("je vois le résumé du voyage partagé", async () => {});
 

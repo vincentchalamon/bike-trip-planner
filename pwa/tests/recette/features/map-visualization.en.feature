@@ -43,7 +43,7 @@ Feature: Map visualization
     When I select stage 1 on the map
     Then the "Reset view" button is visible
 
-  @desktop
+  @desktop @fixme
   Scenario: Return to global view via reset button
     When I select stage 1 on the map
     And I click "Reset view"

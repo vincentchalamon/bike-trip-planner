@@ -1,11 +1,8 @@
 import { expect } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
 import {
-  routeParsedEvent,
-  stagesComputedEvent,
   emptyAccommodationsFoundEvent,
   accommodationsFoundEvent,
-  tripCompleteEvent,
 } from "../../fixtures/mock-data";
 
 // ---------------------------------------------------------------------------
@@ -14,53 +11,29 @@ import {
 
 Given(
   "aucun hébergement n'est trouvé dans un rayon de {int} km pour l'étape {int}",
-  async ({ submitUrl, injectSequence }, radius: number, _stage: number) => {
-    await submitUrl();
-    await injectSequence([
-      routeParsedEvent(),
-      stagesComputedEvent(),
-      emptyAccommodationsFoundEvent(0, radius),
-      tripCompleteEvent(),
-    ]);
+  async ({ injectSequence }, radius: number, _stage: number) => {
+    await injectSequence([emptyAccommodationsFoundEvent(0, radius)]);
   },
 );
 
 Given(
   "no accommodation is found within {int} km for stage {int}",
-  async ({ submitUrl, injectSequence }, radius: number, _stage: number) => {
-    await submitUrl();
-    await injectSequence([
-      routeParsedEvent(),
-      stagesComputedEvent(),
-      emptyAccommodationsFoundEvent(0, radius),
-      tripCompleteEvent(),
-    ]);
+  async ({ injectSequence }, radius: number, _stage: number) => {
+    await injectSequence([emptyAccommodationsFoundEvent(0, radius)]);
   },
 );
 
 Given(
   "des hébergements sont trouvés dans un rayon de {int} km",
-  async ({ submitUrl, injectSequence }, radius: number) => {
-    await submitUrl();
-    await injectSequence([
-      routeParsedEvent(),
-      stagesComputedEvent(),
-      accommodationsFoundEvent(0, radius),
-      tripCompleteEvent(),
-    ]);
+  async ({ injectSequence }, radius: number) => {
+    await injectSequence([accommodationsFoundEvent(0, radius)]);
   },
 );
 
 Given(
   "accommodations are found within a {int} km radius",
-  async ({ submitUrl, injectSequence }, radius: number) => {
-    await submitUrl();
-    await injectSequence([
-      routeParsedEvent(),
-      stagesComputedEvent(),
-      accommodationsFoundEvent(0, radius),
-      tripCompleteEvent(),
-    ]);
+  async ({ injectSequence }, radius: number) => {
+    await injectSequence([accommodationsFoundEvent(0, radius)]);
   },
 );
 
@@ -192,9 +165,7 @@ Then(
   "la carte de la dernière étape n'affiche pas le bouton {string}",
   async ({ mockedPage }, btnName: string) => {
     const lastStage = mockedPage.getByTestId("stage-card-3");
-    await expect(
-      lastStage.getByRole("button", { name: btnName }),
-    ).toBeHidden();
+    await expect(lastStage.getByRole("button", { name: btnName })).toBeHidden();
   },
 );
 
@@ -202,9 +173,7 @@ Then(
   "the last stage card does not show the {string} button",
   async ({ mockedPage }, btnName: string) => {
     const lastStage = mockedPage.getByTestId("stage-card-3");
-    await expect(
-      lastStage.getByRole("button", { name: btnName }),
-    ).toBeHidden();
+    await expect(lastStage.getByRole("button", { name: btnName })).toBeHidden();
   },
 );
 
@@ -321,13 +290,13 @@ When(
   },
 );
 
-When(
-  "an accommodation is exactly at the endpoint",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When("an accommodation is exactly at the endpoint", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("aucun badge de distance n'est affiché pour cet hébergement", async () => {});
+Then(
+  "aucun badge de distance n'est affiché pour cet hébergement",
+  async () => {},
+);
 
 Then("no distance badge is displayed for that accommodation", async () => {});

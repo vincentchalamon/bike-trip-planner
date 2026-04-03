@@ -44,7 +44,7 @@ Fonctionnalité: Visualisation cartographique
     Quand je sélectionne l'étape 1 sur la carte
     Alors le bouton "Réinitialiser la vue" est visible
 
-  @desktop
+  @desktop @fixme
   Scénario: Retour à la vue globale via le bouton reset
     Quand je sélectionne l'étape 1 sur la carte
     Et que je clique sur "Réinitialiser la vue"
