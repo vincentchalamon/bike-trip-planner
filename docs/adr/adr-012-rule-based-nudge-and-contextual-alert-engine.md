@@ -85,7 +85,7 @@ class, automatically tagged and injected into an `AnalyzerRegistry` that iterate
 Option A guarantees technical debt within the first month of development. Option B sacrifices the strict typing
 guarantee established in ADR-002.
 
-Option C perfectly leverages the Symfony 7 ecosystem. By using the `#[AutoconfigureTag]` attribute, the DI container
+Option C perfectly leverages the Symfony 8 ecosystem. By using the `#[AutoconfigureTag]` attribute, the DI container
 automatically discovers any class implementing the `AnalyzerInterface` and adds it to the pipeline.
 
 ---

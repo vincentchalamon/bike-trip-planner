@@ -37,7 +37,7 @@ Before evaluating storage engines, it is important to characterize the data:
 ## Decision Drivers
 
 - **Durability** — Trip data must survive indefinitely, not expire after 30 minutes.
-- **Ecosystem fit** — Must integrate cleanly with Symfony 8, API Platform 4.2, and the existing State Provider/Processor pattern.
+- **Ecosystem fit** — Must integrate cleanly with Symfony 8, API Platform 4.3, and the existing State Provider/Processor pattern.
 - **Operational simplicity** — Minimal additional infrastructure for a single-developer project.
 - **Future-proofing** — Must support relational patterns (User → Trip) introduced in Sprint 12.
 - **Performance** — Concurrent writes from async workers must not degrade under normal load.

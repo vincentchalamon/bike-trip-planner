@@ -57,7 +57,7 @@ This boots multiple services:
 
 > **TLS:** Caddy generates a self-signed certificate for `localhost`. Accept the browser warning on first load, or install the certificate into your system trust store.
 
-The application is ready when all services as healthy.
+The application is ready when all services are healthy.
 
 ---
 

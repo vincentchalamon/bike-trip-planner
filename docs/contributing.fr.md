@@ -56,8 +56,6 @@ git checkout -b feat/ma-fonctionnalite
 make qa           # Doit passer avant chaque commit
 ```
 
-Le hook pre-commit exécute `make qa` automatiquement. Un commit est rejeté si le QA échoue.
-
 ### 3. Lancer des tests ciblés
 
 ```bash
@@ -225,16 +223,6 @@ Claude est aussi disponible directement depuis GitHub, sans session Claude Code 
 
 Les workflows sont définis dans `.github/workflows/claude.yml` et `.github/workflows/claude-code-review.yml`.
 
-### Serveurs MCP
-
-Le `.mcp.json` à la racine du projet configure le **serveur MCP Apidog**, qui charge la spec OpenAPI live depuis `https://localhost/docs.json` comme contexte Claude. Cela permet :
-
-- Valider le code frontend par rapport au contrat API actuel
-- Générer du code client API type-safe à partir des endpoints
-- Détecter les dérives DTO/TypeScript sans lancer le pipeline QA complet
-
-> **Prérequis :** Le backend PHP doit tourner (`make start-dev`) pour que le serveur MCP Apidog puisse récupérer la spec.
-
 ### Outils supplémentaires recommandés
 
 Voir [docs/claude-code-tooling.fr.md](claude-code-tooling.fr.md) pour le guide complet, incluant :
@@ -312,7 +300,6 @@ bike-trip-planner/
 +-- .claude/
 |   +-- settings.json             # Hooks (auto-formatting, protection de fichiers)
 |   +-- skills/                   # Commandes slash personnalisées (pick, sprint)
-+-- .mcp.json                     # Configuration serveur MCP (Apidog OpenAPI)
 ```
 
 ---
