@@ -1,12 +1,12 @@
 <h1 align="center">Bike Trip Planner</h1>
 
 <p align="center">
-  <strong>Plan your bikepacking adventures with confidence — no account required.</strong>
+  <strong>Plan your bikepacking adventures with confidence.</strong>
 </p>
 
 <p align="center">
-  Paste a route URL, upload a GPX file, and get a structured day-by-day roadbook<br />
-  with smart pacing, safety alerts, and accommodation suggestions — all running locally in your browser.
+  Paste a Komoot URL or upload a GPX file, and get a structured day-by-day roadbook<br />
+  with smart pacing, safety alerts, and accommodation suggestions.
 </p>
 
 <p align="center">
@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white" alt="Next.js 16" />
   <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19" />
   <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/API%20Platform-4.2-38B2AC?logo=api-platform&logoColor=white" alt="API Platform 4.2" />
+  <img src="https://img.shields.io/badge/API%20Platform-4.3-38B2AC?logo=api-platform&logoColor=white" alt="API Platform 4.3" />
   <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker" />
 </p>
 
@@ -26,9 +26,13 @@
 
 > **Desktop** — Split view with day-by-day timeline, contextual alerts, and interactive map.
 
+# TODO update screenshot with latest features
+
 ![Desktop - Split view](docs/assets/screenshots/desktop-split-view.png)
 
 > **Mobile** — Responsive timeline with weather, difficulty badge, and supply points.
+
+# TODO update screenshot with latest features and mobile simulation
 
 <p align="center">
   <img src="docs/assets/screenshots/mobile-timeline.png" alt="Mobile - Timeline" width="300" />
@@ -51,8 +55,6 @@
 **Real-time processing** — Async workers compute your trip in parallel; live status updates stream to the browser via Mercure SSE. No page reload needed.
 
 **Multi-format export** — Export enriched GPX files with waypoints for accommodation, water points, and POIs — ready for your GPS device. Download per-stage FIT files for Garmin, or generate a text roadbook summary.
-
-**100% local-first** — No account, no cloud database. Trip data lives entirely in your browser during the session. Your routes stay yours.
 
 ---
 
@@ -86,6 +88,8 @@ See [Getting Started](docs/getting-started.md) for prerequisites and detailed se
 
 ## Alert engine
 
+# TODO show examples with color
+
 The backend runs a pipeline of analyzers on each stage. Three severity levels are used:
 
 | Level | Color | Description |
@@ -95,6 +99,8 @@ The backend runs a pipeline of analyzers on each stage. Three severity levels ar
 | `nudge` | Blue | Informational suggestion |
 
 Rules are executed in priority order (lower = higher priority):
+
+# TODO use color for severity column
 
 | Rule | Priority | Severity | Trigger |
 |------|----------|----------|---------|
@@ -148,7 +154,7 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 
 | Layer | Technology |
 |---|---|
-| Backend | PHP 8.5, Symfony 8, API Platform 4.2, Caddy |
+| Backend | PHP 8.5, Symfony 8, API Platform 4.3, Caddy |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript (strict) |
 | State | Zustand + Immer (in-memory), Mercure SSE (real-time) |
 | Styling | Tailwind CSS |
