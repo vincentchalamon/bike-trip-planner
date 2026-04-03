@@ -12,22 +12,21 @@ import { Given, When, Then } from "../support/fixtures";
 
 Then(
   "je vois un champ de saisie avec le placeholder {string}",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
-Then(
-  "je vois le champ de saisie du lien magique",
-  async () => {},
-);
+Then("je vois le champ de saisie du lien magique", async ({ $test }) => {
+  $test.fixme();
+});
 
 // --- Then steps EN ---
 
-Then(
-  "I see an input field with placeholder {string}",
-  async () => {},
-);
+Then("I see an input field with placeholder {string}", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then(
-  "I see the magic link input field",
-  async () => {},
-);
+Then("I see the magic link input field", async ({ $test }) => {
+  $test.fixme();
+});

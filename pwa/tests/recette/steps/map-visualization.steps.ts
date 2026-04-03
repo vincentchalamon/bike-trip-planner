@@ -181,9 +181,13 @@ Then(
 
 // --- Additional missing steps ---
 
-Then("la vue revient à l'ensemble du parcours", async () => {});
+Then("la vue revient à l'ensemble du parcours", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("the view returns to the full route", async () => {});
+Then("the view returns to the full route", async ({ $test }) => {
+  $test.fixme();
+});
 
 When(
   "je clique sur le bouton de mode {string}",
@@ -199,22 +203,34 @@ When(
   },
 );
 
-Then("je vois uniquement le panneau carte", async () => {});
+Then("je vois uniquement le panneau carte", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("I only see the map panel", async () => {});
+Then("I only see the map panel", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("je vois les deux panneaux côte à côte", async () => {});
+Then("je vois les deux panneaux côte à côte", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("I see both panels side by side", async () => {});
+Then("I see both panels side by side", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then(
   "chaque étape est représentée avec une couleur distincte sur la carte",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 Then(
   "each stage is represented with a distinct color on the map",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 When("je consulte le voyage sur un écran mobile", async ({ $test }) => {
@@ -225,6 +241,10 @@ When("I view the trip on a mobile screen", async ({ $test }) => {
   $test.fixme();
 });
 
-Then("la carte s'adapte à la taille de l'écran", async () => {});
+Then("la carte s'adapte à la taille de l'écran", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("the map adapts to the screen size", async () => {});
+Then("the map adapts to the screen size", async ({ $test }) => {
+  $test.fixme();
+});

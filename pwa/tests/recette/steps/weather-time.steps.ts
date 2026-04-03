@@ -34,19 +34,13 @@ When(
   },
 );
 
-When(
-  "le facteur de fatigue est activé",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When("le facteur de fatigue est activé", async ({ $test }) => {
+  $test.fixme();
+});
 
-When(
-  "le mode e-bike est activé",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When("le mode e-bike est activé", async ({ $test }) => {
+  $test.fixme();
+});
 
 // --- When steps EN ---
 
@@ -78,120 +72,124 @@ When(
   },
 );
 
-When(
-  "the fatigue factor is enabled",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When("the fatigue factor is enabled", async ({ $test }) => {
+  $test.fixme();
+});
 
-When(
-  "e-bike mode is enabled",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When("e-bike mode is enabled", async ({ $test }) => {
+  $test.fixme();
+});
 
 // --- Then steps FR ---
 
 Then(
   "la carte de l'étape {int} affiche les conditions météo",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 Then(
   "je vois la plage de températures {string} sur l'étape {int}",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 Then(
   "chaque carte d'étape affiche un temps de trajet estimé",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
-Then(
-  "je vois l'heure d'arrivée prévue sur chaque étape",
-  async () => {},
-);
+Then("je vois l'heure d'arrivée prévue sur chaque étape", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then(
-  "je vois une alerte de froid sur l'étape {int}",
-  async () => {},
-);
+Then("je vois une alerte de froid sur l'étape {int}", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then(
-  "je vois une alerte pluie sur l'étape {int}",
-  async () => {},
-);
+Then("je vois une alerte pluie sur l'étape {int}", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then(
   "chaque étape affiche une icône météo correspondant aux conditions",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 Then(
   "les temps de trajet de toutes les étapes sont mis à jour",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 Then(
   "la distance cible des étapes diminue progressivement",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 Then(
   "les temps de trajet sont recalculés avec une vitesse supérieure",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 // --- Then steps EN ---
 
-Then(
-  "stage card {int} shows weather conditions",
-  async () => {},
-);
+Then("stage card {int} shows weather conditions", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then(
   "I see the temperature range {string} on stage {int}",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
-Then(
-  "each stage card shows an estimated travel time",
-  async () => {},
-);
+Then("each stage card shows an estimated travel time", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then(
-  "I see the estimated arrival time on each stage",
-  async () => {},
-);
+Then("I see the estimated arrival time on each stage", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then(
-  "I see a cold weather alert on stage {int}",
-  async () => {},
-);
+Then("I see a cold weather alert on stage {int}", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then(
-  "I see a rain alert on stage {int}",
-  async () => {},
-);
+Then("I see a rain alert on stage {int}", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then(
   "each stage shows a weather icon matching its conditions",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
-Then(
-  "the travel times of all stages are updated",
-  async () => {},
-);
+Then("the travel times of all stages are updated", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then(
   "the target distance decreases progressively across stages",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
-Then(
-  "travel times are recalculated with a higher speed",
-  async () => {},
-);
+Then("travel times are recalculated with a higher speed", async ({ $test }) => {
+  $test.fixme();
+});

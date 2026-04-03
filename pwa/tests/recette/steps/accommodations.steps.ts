@@ -296,7 +296,14 @@ When("an accommodation is exactly at the endpoint", async ({ $test }) => {
 
 Then(
   "aucun badge de distance n'est affiché pour cet hébergement",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
-Then("no distance badge is displayed for that accommodation", async () => {});
+Then(
+  "no distance badge is displayed for that accommodation",
+  async ({ $test }) => {
+    $test.fixme();
+  },
+);

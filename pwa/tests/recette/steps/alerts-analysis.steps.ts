@@ -6,15 +6,13 @@ import { Given, When, Then } from "../support/fixtures";
 
 // --- When steps FR ---
 
-When(
-  "une étape dépasse la distance maximale configurée",
-  async () => {},
-);
+When("une étape dépasse la distance maximale configurée", async ({ $test }) => {
+  $test.fixme();
+});
 
-When(
-  "une étape a un dénivelé supérieur à 2000m",
-  async () => {},
-);
+When("une étape a un dénivelé supérieur à 2000m", async ({ $test }) => {
+  $test.fixme();
+});
 
 When(
   "les données météo indiquent de la pluie sur l'étape {int}",
@@ -37,26 +35,17 @@ When(
   },
 );
 
-When(
-  "les dernières étapes cumulent trop de dénivelé",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When("les dernières étapes cumulent trop de dénivelé", async ({ $test }) => {
+  $test.fixme();
+});
 
-When(
-  "une étape passe près d'un site touristique majeur",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When("une étape passe près d'un site touristique majeur", async ({ $test }) => {
+  $test.fixme();
+});
 
-When(
-  "plusieurs alertes existent sur une même étape",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When("plusieurs alertes existent sur une même étape", async ({ $test }) => {
+  $test.fixme();
+});
 
 When(
   "l'étape a une distance de {int} km et un dénivelé de {int} m",
@@ -67,15 +56,13 @@ When(
 
 // --- When steps EN ---
 
-When(
-  "a stage exceeds the configured maximum distance",
-  async () => {},
-);
+When("a stage exceeds the configured maximum distance", async ({ $test }) => {
+  $test.fixme();
+});
 
-When(
-  "a stage has more than {int}m elevation gain",
-  async () => {},
-);
+When("a stage has more than {int}m elevation gain", async ({ $test }) => {
+  $test.fixme();
+});
 
 When(
   "weather data indicates rain on stage {int}",
@@ -91,12 +78,9 @@ When(
   },
 );
 
-When(
-  "a long route section has no supply points",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When("a long route section has no supply points", async ({ $test }) => {
+  $test.fixme();
+});
 
 When(
   "the last stages accumulate too much elevation gain",
@@ -105,19 +89,13 @@ When(
   },
 );
 
-When(
-  "a stage passes near a major tourist site",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When("a stage passes near a major tourist site", async ({ $test }) => {
+  $test.fixme();
+});
 
-When(
-  "multiple alerts exist on the same stage",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When("multiple alerts exist on the same stage", async ({ $test }) => {
+  $test.fixme();
+});
 
 When(
   "the stage has a distance of {int} km and elevation of {int} m",
@@ -130,116 +108,124 @@ When(
 
 Given(
   "toutes les étapes sont dans des limites raisonnables",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 // --- Given steps EN ---
 
-Given(
-  "all stages are within reasonable limits",
-  async () => {},
-);
+Given("all stages are within reasonable limits", async ({ $test }) => {
+  $test.fixme();
+});
 
 // --- Then steps FR ---
 
 Then(
   "je vois une alerte de distance excessive sur cette étape",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 Then(
   "je vois une alerte de dénivelé important sur cette étape",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 Then(
   "je vois une alerte météo sur la carte de l'étape {int}",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
-Then(
-  "je vois une alerte d'hébergement sur cette étape",
-  async () => {},
-);
+Then("je vois une alerte d'hébergement sur cette étape", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then(
   "je vois une alerte de ravitaillement sur l'étape concernée",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 Then(
   "je vois une alerte de fatigue progressive sur les dernières étapes",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
 Then(
   "je vois une notification de POI culturel sur cette étape",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
-Then(
-  "aucune alerte critique n'est affichée",
-  async () => {},
-);
+Then("aucune alerte critique n'est affichée", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then(
   "elles s'affichent dans l'ordre de sévérité décroissante",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
-Then(
-  "le niveau de difficulté est {string}",
-  async () => {},
-);
+Then("le niveau de difficulté est {string}", async ({ $test }) => {
+  $test.fixme();
+});
 
 // --- Then steps EN ---
 
-Then(
-  "I see an excessive distance alert on that stage",
-  async () => {},
-);
+Then("I see an excessive distance alert on that stage", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then(
-  "I see a high elevation alert on that stage",
-  async () => {},
-);
+Then("I see a high elevation alert on that stage", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then(
-  "I see a weather alert on stage card {int}",
-  async () => {},
-);
+Then("I see a weather alert on stage card {int}", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then(
-  "I see an accommodation alert on that stage",
-  async () => {},
-);
+Then("I see an accommodation alert on that stage", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then(
-  "I see a supply alert on the affected stage",
-  async () => {},
-);
+Then("I see a supply alert on the affected stage", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then(
   "I see a progressive fatigue alert on the last stages",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
-Then(
-  "I see a cultural POI notification on that stage",
-  async () => {},
-);
+Then("I see a cultural POI notification on that stage", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then(
-  "no critical alerts are displayed",
-  async () => {},
-);
+Then("no critical alerts are displayed", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then(
   "they are displayed in descending order of severity",
-  async () => {},
+  async ({ $test }) => {
+    $test.fixme();
+  },
 );
 
-Then(
-  "the difficulty level is {string}",
-  async () => {},
-);
+Then("the difficulty level is {string}", async ({ $test }) => {
+  $test.fixme();
+});

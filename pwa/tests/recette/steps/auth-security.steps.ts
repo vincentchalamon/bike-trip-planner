@@ -39,12 +39,9 @@ When(
   },
 );
 
-When(
-  "I enter {string} in the email field",
-  async ({ page }, email: string) => {
-    await page.locator('input[type="email"]').fill(email);
-  },
-);
+When("I enter {string} in the email field", async ({ page }, email: string) => {
+  await page.locator('input[type="email"]').fill(email);
+});
 
 Then("je vois un champ email", async ({ page }) => {
   await expect(page.locator('input[type="email"]')).toBeVisible();
@@ -72,48 +69,45 @@ Then("I see the email confirmation message", async ({ page }) => {
   ).toBeVisible();
 });
 
-When(
-  /^je navigue vers \/auth\/verify\/token-valide$/,
-  async ({ page }) => {
-    await page.route("**/auth/verify", (route, req) => {
-      if (req.method() !== "POST") return route.fallback();
+When(/^je navigue vers \/auth\/verify\/token-valide$/, async ({ page }) => {
+  await page.route("**/auth/verify", (route, req) => {
+    if (req.method() !== "POST") return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+    });
+  });
+  await page.route("**/auth/refresh", (route, req) => {
+    if (req.method() !== "POST") return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+    });
+  });
+  await page.route(
+    (url) => url.pathname === "/trips",
+    (route, req) => {
+      if (req.method() !== "GET") return route.fallback();
       return route.fulfill({
         status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+        contentType: "application/ld+json",
+        body: JSON.stringify({
+          "@context": "/contexts/Trip",
+          "@id": "/trips",
+          "@type": "hydra:Collection",
+          "hydra:totalItems": 0,
+          "hydra:member": [],
+          member: [],
+          totalItems: 0,
+        }),
       });
-    });
-    await page.route("**/auth/refresh", (route, req) => {
-      if (req.method() !== "POST") return route.fallback();
-      return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
-      });
-    });
-    await page.route(
-      (url) => url.pathname === "/trips",
-      (route, req) => {
-        if (req.method() !== "GET") return route.fallback();
-        return route.fulfill({
-          status: 200,
-          contentType: "application/ld+json",
-          body: JSON.stringify({
-            "@context": "/contexts/Trip",
-            "@id": "/trips",
-            "@type": "hydra:Collection",
-            "hydra:totalItems": 0,
-            "hydra:member": [],
-            member: [],
-            totalItems: 0,
-          }),
-        });
-      },
-    );
-    await page.route("**/.well-known/mercure*", (route) => route.abort());
-    await page.goto("/auth/verify/test-token");
-  },
-);
+    },
+  );
+  await page.route("**/.well-known/mercure*", (route) => route.abort());
+  await page.goto("/auth/verify/test-token");
+});
 
 When(/^I navigate to \/auth\/verify\/valid-token$/, async ({ page }) => {
   await page.route("**/auth/verify", (route, req) => {
@@ -173,92 +167,94 @@ When("I navigate to the home page", async ({ page }) => {
   await page.goto("/");
 });
 
-When(
-  "je clique sur le bouton de déconnexion",
+When("je clique sur le bouton de déconnexion", async ({ $test }) => {
+  $test.fixme();
+});
+
+When("I click the logout button", async ({ $test }) => {
+  $test.fixme();
+});
+
+Then("je suis redirigé vers la page de connexion", async ({ $test }) => {
+  $test.fixme();
+});
+
+Then("I am redirected to the login page", async ({ $test }) => {
+  $test.fixme();
+});
+
+When("une erreur serveur se produit", async ({ $test }) => {
+  $test.fixme();
+});
+
+When("a server error occurs", async ({ $test }) => {
+  $test.fixme();
+});
+
+Then(
+  "aucune trace de pile PHP n'est affichée à l'utilisateur",
   async ({ $test }) => {
     $test.fixme();
   },
 );
 
-When(
-  "I click the logout button",
+Then("no PHP stack trace is shown to the user", async ({ $test }) => {
+  $test.fixme();
+});
+
+When("je charge la page d'accueil", async ({ $test }) => {
+  $test.fixme();
+});
+
+When("I load the home page", async ({ $test }) => {
+  $test.fixme();
+});
+
+Then(
+  "les headers CSP, HSTS et X-Frame-Options sont présents",
   async ({ $test }) => {
     $test.fixme();
   },
 );
 
-Then("je suis redirigé vers la page de connexion", async () => {});
-
-Then("I am redirected to the login page", async () => {});
-
-When(
-  "une erreur serveur se produit",
+Then(
+  "the CSP, HSTS and X-Frame-Options headers are present",
   async ({ $test }) => {
     $test.fixme();
   },
 );
 
-When(
-  "a server error occurs",
+Then("toutes les ressources chargées utilisent HTTPS", async ({ $test }) => {
+  $test.fixme();
+});
+
+Then("all loaded resources use HTTPS", async ({ $test }) => {
+  $test.fixme();
+});
+
+Given("je suis connecté en tant qu'utilisateur A", async ({ $test }) => {
+  $test.fixme();
+});
+
+Given("I am logged in as user A", async ({ $test }) => {
+  $test.fixme();
+});
+
+When("je tente d'accéder au voyage de l'utilisateur B", async ({ $test }) => {
+  $test.fixme();
+});
+
+When("I try to access user B's trip", async ({ $test }) => {
+  $test.fixme();
+});
+
+Then(
+  "j'obtiens une erreur {int} ou une page non trouvée",
   async ({ $test }) => {
     $test.fixme();
   },
 );
 
-Then("aucune trace de pile PHP n'est affichée à l'utilisateur", async () => {});
-
-Then("no PHP stack trace is shown to the user", async () => {});
-
-When(
-  "je charge la page d'accueil",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
-
-When(
-  "I load the home page",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
-
-Then("les headers CSP, HSTS et X-Frame-Options sont présents", async () => {});
-
-Then("the CSP, HSTS and X-Frame-Options headers are present", async () => {});
-
-Then("toutes les ressources chargées utilisent HTTPS", async () => {});
-
-Then("all loaded resources use HTTPS", async () => {});
-
-Given(
-  "je suis connecté en tant qu'utilisateur A",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
-
-Given(
-  "I am logged in as user A",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
-
-When(
-  "je tente d'accéder au voyage de l'utilisateur B",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
-
-When(
-  "I try to access user B's trip",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
-
-Then("j'obtiens une erreur {int} ou une page non trouvée", async () => {});
-
-Then("I get a {int} error or a not found page", async () => {});
+Then("I get a {int} error or a not found page", async ({ $test }) => {
+  $test.fixme();
+});

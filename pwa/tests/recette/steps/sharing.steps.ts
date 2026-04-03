@@ -186,17 +186,35 @@ Then("the short link is copied to the clipboard", async ({ mockedPage }) => {
 
 // --- Additional missing steps ---
 
-Then("je vois le bouton {string}", async () => {});
+Then("je vois le bouton {string}", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("I see the {string} button", async () => {});
+Then("I see the {string} button", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("un fichier PNG est téléchargé", async () => {});
+Then("un fichier PNG est téléchargé", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("a PNG file is downloaded", async () => {});
+Then("a PNG file is downloaded", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("le texte résumé contenant le titre du voyage est copié", async () => {});
+Then(
+  "le texte résumé contenant le titre du voyage est copié",
+  async ({ $test }) => {
+    $test.fixme();
+  },
+);
 
-Then("the summary text containing the trip title is copied", async () => {});
+Then(
+  "the summary text containing the trip title is copied",
+  async ({ $test }) => {
+    $test.fixme();
+  },
+);
 
 When(/^j'accède à \/s\/<code_court>$/, async ({ $test }) => {
   $test.fixme();
@@ -206,6 +224,10 @@ When(/^I navigate to \/s\/<short_code>$/, async ({ $test }) => {
   $test.fixme();
 });
 
-Then("je vois le résumé du voyage partagé", async () => {});
+Then("je vois le résumé du voyage partagé", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("I see the shared trip summary", async () => {});
+Then("I see the shared trip summary", async ({ $test }) => {
+  $test.fixme();
+});

@@ -5,9 +5,14 @@ import { When, Then } from "../support/fixtures";
 // Settings panel — FR + EN
 // ---------------------------------------------------------------------------
 
-When("j'ouvre le panneau de paramètres via le bouton engrenage", async ({ mockedPage }) => {
-  await mockedPage.getByRole("button", { name: "Ouvrir les paramètres" }).click();
-});
+When(
+  "j'ouvre le panneau de paramètres via le bouton engrenage",
+  async ({ mockedPage }) => {
+    await mockedPage
+      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .click();
+  },
+);
 
 When("je clique en dehors du panneau", async ({ mockedPage }) => {
   await mockedPage.mouse.click(100, 300);
@@ -74,7 +79,7 @@ Then(
 );
 
 Then(
-  'I see switches for types {string}',
+  "I see switches for types {string}",
   async ({ mockedPage }, typesStr: string) => {
     const types = typesStr.split(", ").map((t) => t.trim());
     for (const label of types) {
@@ -120,9 +125,13 @@ When(
   },
 );
 
-Then("les temps de trajet sont recalculés", async () => {});
+Then("les temps de trajet sont recalculés", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("travel times are recalculated", async () => {});
+Then("travel times are recalculated", async ({ $test }) => {
+  $test.fixme();
+});
 
 When(
   "je modifie la distance maximale à {int} km",
@@ -138,34 +147,39 @@ When(
   },
 );
 
-Then("les étapes sont recalculées en tenant compte de cette limite", async () => {});
-
-Then("stages are recalculated respecting that limit", async () => {});
-
-When(
-  "j'active le mode e-bike",
+Then(
+  "les étapes sont recalculées en tenant compte de cette limite",
   async ({ $test }) => {
     $test.fixme();
   },
 );
 
-When(
-  "I enable e-bike mode",
+Then("stages are recalculated respecting that limit", async ({ $test }) => {
+  $test.fixme();
+});
+
+When("j'active le mode e-bike", async ({ $test }) => {
+  $test.fixme();
+});
+
+When("I enable e-bike mode", async ({ $test }) => {
+  $test.fixme();
+});
+
+Then(
+  "les calculs tiennent compte d'une vitesse plus élevée",
   async ({ $test }) => {
     $test.fixme();
   },
 );
 
-Then("les calculs tiennent compte d'une vitesse plus élevée", async () => {});
+Then("computations account for a higher speed", async ({ $test }) => {
+  $test.fixme();
+});
 
-Then("computations account for a higher speed", async () => {});
-
-When(
-  "je règle l'heure de départ à 9h00",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+When("je règle l'heure de départ à 9h00", async ({ $test }) => {
+  $test.fixme();
+});
 
 When(
   "I set the departure time to {int}:{int} AM",
@@ -174,6 +188,16 @@ When(
   },
 );
 
-Then("l'heure d'arrivée prévue est recalculée pour chaque étape", async () => {});
+Then(
+  "l'heure d'arrivée prévue est recalculée pour chaque étape",
+  async ({ $test }) => {
+    $test.fixme();
+  },
+);
 
-Then("the estimated arrival time is recalculated for each stage", async () => {});
+Then(
+  "the estimated arrival time is recalculated for each stage",
+  async ({ $test }) => {
+    $test.fixme();
+  },
+);
