@@ -6,8 +6,8 @@ const testDir = defineBddConfig({
   steps: [
     "tests/recette/steps/**/*.ts",
     "tests/recette/support/hooks.ts",
+    "tests/recette/support/fixtures.ts",
   ],
-  importTestFrom: "tests/recette/support/fixtures.ts",
   outputDir: ".features-gen",
   verbose: false,
 });

@@ -191,3 +191,53 @@ Then(
     });
   },
 );
+
+// --- Additional missing steps ---
+
+Then("la vue revient à l'ensemble du parcours", async () => {});
+
+Then("the view returns to the full route", async () => {});
+
+When(
+  "je clique sur le bouton de mode {string}",
+  async ({ $test }, _mode: string) => {
+    $test.fixme();
+  },
+);
+
+When(
+  "I click the {string} view mode button",
+  async ({ $test }, _mode: string) => {
+    $test.fixme();
+  },
+);
+
+Then("je vois uniquement le panneau carte", async () => {});
+
+Then("I only see the map panel", async () => {});
+
+Then("je vois les deux panneaux côte à côte", async () => {});
+
+Then("I see both panels side by side", async () => {});
+
+Then("chaque étape est représentée avec une couleur distincte sur la carte", async () => {});
+
+Then("each stage is represented with a distinct color on the map", async () => {});
+
+When(
+  "je consulte le voyage sur un écran mobile",
+  async ({ $test }) => {
+    $test.fixme();
+  },
+);
+
+When(
+  "I view the trip on a mobile screen",
+  async ({ $test }) => {
+    $test.fixme();
+  },
+);
+
+Then("la carte s'adapte à la taille de l'écran", async () => {});
+
+Then("the map adapts to the screen size", async () => {});

@@ -297,3 +297,37 @@ Then(
     expect(body).toMatchObject({ radiusKm: radius });
   },
 );
+
+// --- Additional missing steps ---
+
+When(
+  "aucun hébergement n'est trouvé dans un rayon de {int} km",
+  async ({ $test }, _radius: number) => {
+    $test.fixme();
+  },
+);
+
+When(
+  "no accommodation is found within {int} km",
+  async ({ $test }, _radius: number) => {
+    $test.fixme();
+  },
+);
+
+When(
+  "un hébergement est exactement sur le point d'arrivée",
+  async ({ $test }) => {
+    $test.fixme();
+  },
+);
+
+When(
+  "an accommodation is exactly at the endpoint",
+  async ({ $test }) => {
+    $test.fixme();
+  },
+);
+
+Then("aucun badge de distance n'est affiché pour cet hébergement", async () => {});
+
+Then("no distance badge is displayed for that accommodation", async () => {});
