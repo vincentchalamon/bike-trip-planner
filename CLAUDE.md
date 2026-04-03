@@ -8,7 +8,7 @@ Bike Trip Planner — a bikepacking trip planner. Decoupled architecture: PHP ba
 
 ## Tech Stack
 
-- **Backend:** PHP 8.5, API Platform 4.2, Symfony 8, Doctrine ORM 3, PostgreSQL 18, Caddy (Docker)
+- **Backend:** PHP 8.5, API Platform 4.3, Symfony 8, Doctrine ORM 3, PostgreSQL 18, Caddy (Docker)
 - **Frontend:** Next.js 16 (App Router), React 19, TypeScript (strict), Zustand + Immer, Tailwind CSS
 - **Testing:** PHPUnit 13 (backend), Playwright 1.58 (E2E)
 - **Quality:** PHPStan Level 9, PHP-CS-Fixer (PSR-12/Symfony), ESLint, Prettier

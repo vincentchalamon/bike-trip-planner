@@ -20,10 +20,14 @@ Cela démarre plusieurs services en mode développement :
 |---------|-----|-------------|
 | `php` | `https://localhost/docs` | Backend API Platform |
 | `pwa` | `https://localhost` | Frontend Next.js |
-| `worker` | Interne uniquement | Worker de messages asynchrones |
+| `worker` | Interne uniquement | Worker de messages asynchrones (×5) |
 | `mercure` | `https://localhost/.well-known/mercure/ui/` | Microservice de push serveur |
-| `redis` | Interne uniquement | Microservice de cache |
-| `caddy` | Interne uniquement | Microservice serveur web |
+| `redis` | Interne uniquement | Cache et transport Messenger |
+| `database` | Interne uniquement | Stockage persistant PostgreSQL 18 |
+| `caddy` | Interne uniquement | Serveur web et reverse proxy |
+| `overpass` | Interne uniquement | API OpenStreetMap Overpass |
+| `valhalla` | Interne uniquement | Moteur de routage Valhalla |
+| `mailcatcher` | `http://localhost:1080` | Capture d'emails (développement uniquement) |
 
 > **TLS :** Caddy génère un certificat auto-signé pour `localhost`. Acceptez l'avertissement du navigateur au premier chargement, ou installez le certificat dans le magasin de confiance de votre système.
 
