@@ -26,13 +26,9 @@
 
 > **Desktop** — Split view with day-by-day timeline, contextual alerts, and interactive map.
 
-# TODO update screenshot with latest features
-
 ![Desktop - Split view](docs/assets/screenshots/desktop-split-view.png)
 
 > **Mobile** — Responsive timeline with weather, difficulty badge, and supply points.
-
-# TODO update screenshot with latest features and mobile simulation
 
 <p align="center">
   <img src="docs/assets/screenshots/mobile-timeline.png" alt="Mobile - Timeline" width="300" />
@@ -88,45 +84,41 @@ See [Getting Started](docs/getting-started.md) for prerequisites and detailed se
 
 ## Alert engine
 
-# TODO show examples with color
-
 The backend runs a pipeline of analyzers on each stage. Three severity levels are used:
 
-| Level | Color | Description |
+| Level | Badge | Description |
 |-------|-------|-------------|
-| `critical` | Red | Blocking issue requiring immediate attention |
-| `warning` | Orange | Significant issue to watch |
-| `nudge` | Blue | Informational suggestion |
+| `critical` | ![critical](https://img.shields.io/badge/-critical-d32f2f) | Blocking issue requiring immediate attention |
+| `warning` | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Significant issue to watch |
+| `nudge` | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Informational suggestion |
 
 Rules are executed in priority order (lower = higher priority):
 
-# TODO use color for severity column
-
 | Rule | Priority | Severity | Trigger |
 |------|----------|----------|---------|
-| **Continuity** | 5 | critical | Gap > 500 m between consecutive stages |
-| **Continuity** | 5 | warning | Gap 100-500 m between stages |
-| **Elevation** | 10 | warning | Elevation gain > 1 200 m on a stage |
-| **Steep gradient** | 20 | warning | Sustained >= 8 % gradient over >= 500 m |
-| **Surface** | 20 | warning | Unpaved section >= 500 m (gravel, dirt, mud, grass, sand...) |
-| **Surface** | 20 | warning | OSM surface data missing on >= 30 % of ways |
-| **Traffic** | 20 | critical | Primary/trunk road without cycle infrastructure >= 500 m |
-| **Traffic** | 20 | warning | Secondary road, no cycleway, speed limit > 50 km/h |
-| **Traffic** | 20 | nudge | Secondary road, speed limit <= 50 km/h |
-| **E-bike range** | 20 | warning | Day distance > effective range (80 km - elevation / 25) |
-| **Sunset** | 20 | warning | Estimated arrival time exceeds civil twilight end at stage end point |
-| **Calendar** | -- | nudge | Stage falls on a French public holiday |
-| **Calendar** | -- | nudge | Stage falls on a Sunday (businesses may be closed) |
-| **Wind** | -- | warning | Headwind >= 25 km/h on >= 60 % of stages with weather data |
-| **Comfort** | -- | warning | Poor comfort index (< 40/100) on at least one stage |
-| **Bike shops** | -- | nudge | No repair shop within 2 km of stage midpoint (trips > 5 stages) |
-| **Bike shops** | -- | nudge | Nearby shop sells bikes but does not offer repair service |
-| **Resupply** | -- | nudge | Stage >= 40 km with no food/resupply POI along the route |
-| **Resupply** | -- | warning | All resupply POIs on the stage are closed at estimated passage time |
-| **Accommodation** | -- | warning | All detected accommodations on the stage are likely closed due to seasonality |
-| **Water points** | -- | nudge | Stretch > 30 km without a detected drinking water source |
-| **Rest day** | 100 | nudge | Every N consecutive cycling days without a rest day (default: every 3 days) |
-| **Cultural POI** | -- | nudge | Museum, monument, castle, church, viewpoint, or attraction within 500 m of route |
+| **Continuity** | 5 | ![critical](https://img.shields.io/badge/-critical-d32f2f) | Gap > 500 m between consecutive stages |
+| **Continuity** | 5 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Gap 100-500 m between stages |
+| **Elevation** | 10 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Elevation gain > 1 200 m on a stage |
+| **Steep gradient** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Sustained >= 8 % gradient over >= 500 m |
+| **Surface** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Unpaved section >= 500 m (gravel, dirt, mud, grass, sand...) |
+| **Surface** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | OSM surface data missing on >= 30 % of ways |
+| **Traffic** | 20 | ![critical](https://img.shields.io/badge/-critical-d32f2f) | Primary/trunk road without cycle infrastructure >= 500 m |
+| **Traffic** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Secondary road, no cycleway, speed limit > 50 km/h |
+| **Traffic** | 20 | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Secondary road, speed limit <= 50 km/h |
+| **E-bike range** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Day distance > effective range (80 km - elevation / 25) |
+| **Sunset** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Estimated arrival time exceeds civil twilight end at stage end point |
+| **Calendar** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage falls on a French public holiday |
+| **Calendar** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage falls on a Sunday (businesses may be closed) |
+| **Wind** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Headwind >= 25 km/h on >= 60 % of stages with weather data |
+| **Comfort** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Poor comfort index (< 40/100) on at least one stage |
+| **Bike shops** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | No repair shop within 2 km of stage midpoint (trips > 5 stages) |
+| **Bike shops** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Nearby shop sells bikes but does not offer repair service |
+| **Resupply** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage >= 40 km with no food/resupply POI along the route |
+| **Resupply** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | All resupply POIs on the stage are closed at estimated passage time |
+| **Accommodation** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | All detected accommodations on the stage are likely closed due to seasonality |
+| **Water points** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stretch > 30 km without a detected drinking water source |
+| **Rest day** | 100 | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Every N consecutive cycling days without a rest day (default: every 3 days) |
+| **Cultural POI** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Museum, monument, castle, church, viewpoint, or attraction within 500 m of route |
 
 **Terrain rules** (Continuity, Elevation, Steep gradient, Surface, Traffic, E-bike range, Sunset, Rest day) implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`. Rules with `--` priority (Calendar, Wind + Comfort, Bike shops, Resupply, Accommodation, Water points, Cultural POI) are separate async Symfony Message handlers; Comfort is co-located with Wind inside `AnalyzeWindHandler`.
 
@@ -136,7 +128,7 @@ Rules are executed in priority order (lower = higher priority):
 
 <!-- markdownlint-disable MD040 -->
 ```
-Browser (Next.js 16)           PHP Backend (API Platform 4.2)
+Browser (Next.js 16)           PHP Backend (API Platform 4.3)
   Zustand + Immer (in-memory)    Stateless computation
   Zod validation                 GPX parsing + pacing engine
   openapi-fetch (typed)          OSM Overpass + weather APIs
@@ -144,7 +136,7 @@ Browser (Next.js 16)           PHP Backend (API Platform 4.2)
                                  Redis cache + Mercure publisher
 ```
 
-The frontend sends a trip request via REST; the backend processes it asynchronously across multiple workers and pushes status updates via Mercure SSE. No database — Redis cache for transient state, filesystem cache for external API responses.
+The frontend sends a trip request via REST; the backend processes it asynchronously across multiple workers and pushes status updates via Mercure SSE. PostgreSQL 18 persists trip configuration and stages; Redis handles transient computation state, Messenger transport, and external API caches.
 
 Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform exports an OpenAPI spec -> `npm run typegen` generates TypeScript types -> `openapi-fetch` provides type-safe API calls. A schema change on the backend intentionally causes a TypeScript compilation failure.
 
@@ -161,7 +153,7 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 | Testing | PHPUnit 13 (backend), Playwright 1.58 (E2E) |
 | Quality | PHPStan level 9, PHP-CS-Fixer, ESLint, Prettier |
 | Async | Symfony Messenger, Redis transport, 5 workers |
-| Runtime | Docker (Caddy, Mercure, Redis, Node) |
+| Runtime | Docker (Caddy, Mercure, Redis, PostgreSQL, Node) |
 
 ---
 
@@ -171,7 +163,7 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 |---|---|
 | [Getting Started](docs/getting-started.md) | Requirements, installation, and local setup |
 | [Contributing](docs/contributing.md) | Development workflow, standards, and tooling |
-| [Architecture Decisions](docs/adr/) | 21 ADRs explaining every major technical choice |
+| [Architecture Decisions](docs/adr/) | 24 ADRs explaining every major technical choice |
 | [Claude Code Tooling](docs/claude-code-tooling.md) | MCP servers, hooks, and skills for AI-assisted development |
 
 ---

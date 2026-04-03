@@ -20,10 +20,14 @@ Cela démarre plusieurs services en mode développement :
 |---------|-----|-------------|
 | `php` | `https://localhost/docs` | Backend API Platform |
 | `pwa` | `https://localhost` | Frontend Next.js |
-| `worker` | Interne uniquement | Worker de messages asynchrones |
+| `worker` | Interne uniquement | Worker de messages asynchrones (×5) |
 | `mercure` | `https://localhost/.well-known/mercure/ui/` | Microservice de push serveur |
-| `redis` | Interne uniquement | Microservice de cache |
-| `caddy` | Interne uniquement | Microservice serveur web |
+| `redis` | Interne uniquement | Cache et transport Messenger |
+| `database` | Interne uniquement | Stockage persistant PostgreSQL 18 |
+| `caddy` | Interne uniquement | Serveur web et reverse proxy |
+| `overpass` | Interne uniquement | API OpenStreetMap Overpass |
+| `valhalla` | Interne uniquement | Moteur de routage Valhalla |
+| `mailcatcher` | `http://localhost:1080` | Capture d'emails (développement uniquement) |
 
 > **TLS :** Caddy génère un certificat auto-signé pour `localhost`. Acceptez l'avertissement du navigateur au premier chargement, ou installez le certificat dans le magasin de confiance de votre système.
 
@@ -55,8 +59,6 @@ git checkout -b feat/ma-fonctionnalite
 ```bash
 make qa           # Doit passer avant chaque commit
 ```
-
-Le hook pre-commit exécute `make qa` automatiquement. Un commit est rejeté si le QA échoue.
 
 ### 3. Lancer des tests ciblés
 
@@ -225,16 +227,6 @@ Claude est aussi disponible directement depuis GitHub, sans session Claude Code 
 
 Les workflows sont définis dans `.github/workflows/claude.yml` et `.github/workflows/claude-code-review.yml`.
 
-### Serveurs MCP
-
-Le `.mcp.json` à la racine du projet configure le **serveur MCP Apidog**, qui charge la spec OpenAPI live depuis `https://localhost/docs.json` comme contexte Claude. Cela permet :
-
-- Valider le code frontend par rapport au contrat API actuel
-- Générer du code client API type-safe à partir des endpoints
-- Détecter les dérives DTO/TypeScript sans lancer le pipeline QA complet
-
-> **Prérequis :** Le backend PHP doit tourner (`make start-dev`) pour que le serveur MCP Apidog puisse récupérer la spec.
-
 ### Outils supplémentaires recommandés
 
 Voir [docs/claude-code-tooling.fr.md](claude-code-tooling.fr.md) pour le guide complet, incluant :
@@ -312,7 +304,6 @@ bike-trip-planner/
 +-- .claude/
 |   +-- settings.json             # Hooks (auto-formatting, protection de fichiers)
 |   +-- skills/                   # Commandes slash personnalisées (pick, sprint)
-+-- .mcp.json                     # Configuration serveur MCP (Apidog OpenAPI)
 ```
 
 ---

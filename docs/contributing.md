@@ -16,14 +16,18 @@ make start-dev
 
 This boots multiple services in development mode:
 
-| Service     | URL                                         | Description                 |
-|-------------|---------------------------------------------|-----------------------------|
-| `php`       | `https://localhost/docs`                    | API Platform backend        |
-| `pwa`       | `https://localhost`                         | Next.js frontend            |
-| `worker`    | Internal only                               | Async messages worker       |
-| `mercure`   | `https://localhost/.well-known/mercure/ui/` | Server-push microservice    |
-| `redis`     | Internal only                               | Cache microservice          |
-| `caddy`     | Internal only                               | Web server microservice     |
+| Service       | URL                                         | Description                          |
+|---------------|---------------------------------------------|--------------------------------------|
+| `php`         | `https://localhost/docs`                    | API Platform backend                 |
+| `pwa`         | `https://localhost`                         | Next.js frontend                     |
+| `worker`      | Internal only                               | Async messages worker (×5)           |
+| `mercure`     | `https://localhost/.well-known/mercure/ui/` | Server-push microservice             |
+| `redis`       | Internal only                               | Cache and Messenger transport        |
+| `database`    | Internal only                               | PostgreSQL 18 persistent storage     |
+| `caddy`       | Internal only                               | Web server and reverse proxy         |
+| `overpass`    | Internal only                               | OpenStreetMap Overpass API            |
+| `valhalla`    | Internal only                               | Valhalla routing engine              |
+| `mailcatcher` | `http://localhost:1080`                     | Email catcher (development only)     |
 
 > **TLS:** Caddy generates a self-signed certificate for `localhost`. Accept the browser warning on first load, or install the certificate into your system trust store.
 
@@ -55,8 +59,6 @@ git checkout -b feat/my-feature
 ```bash
 make qa           # Must pass before every commit
 ```
-
-The pre-commit hook runs `make qa` automatically. A commit is rejected if QA fails.
 
 ### 3. Run targeted tests
 
@@ -225,16 +227,6 @@ Claude is also available directly from GitHub, without needing a local Claude Co
 
 The workflows are defined in `.github/workflows/claude.yml` and `.github/workflows/claude-code-review.yml`.
 
-### MCP servers
-
-The `.mcp.json` at the project root configures the **Apidog MCP server**, which loads the live OpenAPI spec from `https://localhost/docs.json` as Claude context. This enables:
-
-- Validating frontend code against the current API contract
-- Generating type-safe API client code from endpoints
-- Catching DTO/TypeScript drift without running the full QA pipeline
-
-> **Requirement:** The PHP backend must be running (`make start-dev`) for the Apidog MCP server to fetch the spec.
-
 ### Recommended additional tools
 
 See [docs/claude-code-tooling.md](claude-code-tooling.md) for the full guide, including:
@@ -307,7 +299,6 @@ bike-trip-planner/
 ├── .claude/
 │   ├── settings.json             # Hooks (auto-formatting, file protection)
 │   └── skills/                   # Custom slash commands (pick, sprint)
-└── .mcp.json                     # MCP server config (Apidog OpenAPI)
 ```
 
 ---

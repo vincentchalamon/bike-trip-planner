@@ -46,18 +46,20 @@ make start
 
 This boots multiple services:
 
-| Service     | URL                      | Description                 |
-|-------------|--------------------------|-----------------------------|
-| `php`       | `https://localhost/docs` | API Platform backend        |
-| `pwa`       | `https://localhost`      | Next.js frontend            |
-| `worker`    | Internal only            | Async messages worker       |
-| `mercure`   | Internal only            | Server-push microservice    |
-| `redis`     | Internal only            | Cache microservice          |
-| `caddy`     | Internal only            | Web server microservice     |
+| Service    | URL                      | Description                                        |
+|------------|--------------------------|----------------------------------------------------|
+| `php`      | `https://localhost/docs` | API Platform backend (FrankenPHP with built-in Caddy) |
+| `pwa`      | `https://localhost`      | Next.js frontend                                   |
+| `worker`   | Internal only            | Async messages worker (×5)                         |
+| `mercure`  | Internal only            | Server-push microservice                           |
+| `redis`    | Internal only            | Cache and Messenger transport                      |
+| `database` | Internal only            | PostgreSQL 18 persistent storage                   |
+| `overpass` | Internal only            | OpenStreetMap Overpass API                          |
+| `valhalla` | Internal only            | Valhalla routing engine                            |
 
 > **TLS:** Caddy generates a self-signed certificate for `localhost`. Accept the browser warning on first load, or install the certificate into your system trust store.
 
-The application is ready when all services as healthy.
+The application is ready when all services are healthy.
 
 ---
 

@@ -130,7 +130,7 @@ Hooks are deterministic shell commands triggered at specific points in the Claud
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'Bike Trip Planner: local-first, no DB. Types generated from OpenAPI (npm run typegen). Check docs/adr/ before architectural changes. make qa before commit.'"
+            "command": "echo 'Bike Trip Planner: PostgreSQL 18 for persistence, Redis for transient state. Types generated from OpenAPI (npm run typegen). Check docs/adr/ before architectural changes. make qa before commit.'"
           }
         ]
       }
