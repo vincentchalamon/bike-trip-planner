@@ -4,6 +4,11 @@ import { mockAllApis } from "../../fixtures/api-mocks";
 import { injectSseEvent, injectSseSequence } from "../../fixtures/sse-helpers";
 import { fullTripEventSequence } from "../../fixtures/mock-data";
 import type { MercureEvent } from "../../../src/lib/mercure/types";
+import {
+  clearCurrentRecettePage,
+  setCurrentRecettePage,
+} from "./current-recette-page";
+import { resetAccommodationScanRequest } from "./accommodation-scan-tracker";
 import { resetExportDownloadTracker } from "./export-download-tracker";
 
 interface RecetteFixtures {
@@ -17,6 +22,8 @@ interface RecetteFixtures {
 export const test = base.extend<RecetteFixtures>({
   mockedPage: async ({ page }, use, testInfo) => {
     resetExportDownloadTracker();
+    clearCurrentRecettePage();
+    resetAccommodationScanRequest();
     const locale = testInfo.file.includes(".en.feature.") ? "en" : "fr";
     await page.context().addCookies([
       {
@@ -26,9 +33,12 @@ export const test = base.extend<RecetteFixtures>({
       },
     ]);
     await mockAllApis(page);
+    setCurrentRecettePage(page);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
     await use(page);
+    clearCurrentRecettePage();
+    resetAccommodationScanRequest();
   },
 
   injectEvent: async ({ mockedPage }, use) => {
@@ -45,6 +55,10 @@ export const test = base.extend<RecetteFixtures>({
     const { expect } = await import("@playwright/test");
     await use(async (url?: string) => {
       const input = mockedPage.getByTestId("magic-link-input");
+      if (!(await input.isVisible().catch(() => false))) {
+        await mockedPage.goto("/");
+        await mockedPage.waitForLoadState("networkidle");
+      }
       await input.fill(url ?? "https://www.komoot.com/fr-fr/tour/2795080048");
       await input.press("Enter");
       await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });

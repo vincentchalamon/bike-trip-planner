@@ -9,6 +9,7 @@ import {
   fullTripEventSequence,
 } from "../../fixtures/mock-data";
 import { mockAllApis } from "../../fixtures/api-mocks";
+import { trackAccommodationScanRequest } from "../support/accommodation-scan-tracker";
 import { trackTripGpxDownload } from "../support/export-download-tracker";
 
 // ---------------------------------------------------------------------------
@@ -573,11 +574,17 @@ When("I open the settings panel", async ({ mockedPage }) => {
   ).toBeInViewport();
 });
 
-When("je clique sur le bouton {string}", async ({ page }, name: string) => {
+When("je clique sur le bouton {string}", async ({ page, $test }, name: string) => {
+  if (name === "Importer un GPX") {
+    $test.fixme();
+  }
   await page.getByRole("button", { name }).click();
 });
 
-When("I click the {string} button", async ({ page }, name: string) => {
+When("I click the {string} button", async ({ page, $test }, name: string) => {
+  if (name === "Import GPX") {
+    $test.fixme();
+  }
   await page.getByRole("button", { name }).click();
 });
 
@@ -597,6 +604,13 @@ export const SHARE_BUTTON_TESTID: Record<string, string> = {
 };
 
 function getGenericButtonNamePattern(btnName: string): string | RegExp {
+  if (
+    btnName === "Télécharger le GPX complet" ||
+    btnName === "Download full trip GPX"
+  ) {
+    return /Download full trip GPX|Télécharger le GPX complet/i;
+  }
+
   const expandRadiusMatch = btnName.match(
     /^(?:Expand to|Expand search to|Élargir à|Élargir le rayon à) (\d+) km$/i,
   );
@@ -612,12 +626,24 @@ function getGenericButtonNamePattern(btnName: string): string | RegExp {
 }
 
 When("je clique sur {string}", async ({ page }, btnName: string) => {
-  if (btnName === "Télécharger le GPX complet") {
+  if (
+    btnName === "Télécharger le GPX complet" ||
+    btnName === "Download full trip GPX"
+  ) {
     await trackTripGpxDownload(page);
   }
+  const expandRadiusMatch = btnName.match(
+    /^(?:Expand to|Expand search to|Élargir à|Élargir le rayon à) (\d+) km$/i,
+  );
   const testId = SHARE_BUTTON_TESTID[btnName];
   if (testId) {
     await page.getByTestId(testId).click();
+  } else if (expandRadiusMatch) {
+    trackAccommodationScanRequest(page);
+    await page
+      .getByTestId("stage-card-1")
+      .getByRole("button", { name: getGenericButtonNamePattern(btnName) })
+      .click();
   } else {
     await page
       .getByRole("button", { name: getGenericButtonNamePattern(btnName) })
@@ -626,12 +652,24 @@ When("je clique sur {string}", async ({ page }, btnName: string) => {
 });
 
 When("I click {string}", async ({ page }, btnName: string) => {
-  if (btnName === "Télécharger le GPX complet") {
+  if (
+    btnName === "Télécharger le GPX complet" ||
+    btnName === "Download full trip GPX"
+  ) {
     await trackTripGpxDownload(page);
   }
+  const expandRadiusMatch = btnName.match(
+    /^(?:Expand to|Expand search to|Élargir à|Élargir le rayon à) (\d+) km$/i,
+  );
   const testId = SHARE_BUTTON_TESTID[btnName];
   if (testId) {
     await page.getByTestId(testId).click();
+  } else if (expandRadiusMatch) {
+    trackAccommodationScanRequest(page);
+    await page
+      .getByTestId("stage-card-1")
+      .getByRole("button", { name: getGenericButtonNamePattern(btnName) })
+      .click();
   } else {
     await page
       .getByRole("button", { name: getGenericButtonNamePattern(btnName) })

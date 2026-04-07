@@ -4,6 +4,18 @@ import {
   emptyAccommodationsFoundEvent,
   accommodationsFoundEvent,
 } from "../../fixtures/mock-data";
+import { injectSseSequence } from "../../fixtures/sse-helpers";
+import { takeAccommodationScanRequest } from "../support/accommodation-scan-tracker";
+import { getCurrentRecettePage } from "../support/current-recette-page";
+
+function getAccommodationTextAlias(text: string): string {
+  const aliases: Record<string, string> = {
+    "Hôtel": "Hotel",
+    "Ajouter un hébergement": "Add accommodation",
+  };
+
+  return aliases[text] ?? text;
+}
 
 // ---------------------------------------------------------------------------
 // Accommodations — FR + EN
@@ -70,7 +82,7 @@ Then(
   "stage card {int} shows the label {string}",
   async ({ mockedPage }, n: number, label: string) => {
     await expect(mockedPage.getByTestId(`stage-card-${n}`)).toContainText(
-      label,
+      getAccommodationTextAlias(label),
     );
   },
 );
@@ -101,7 +113,9 @@ When(
   "I click {string} on stage card {int}",
   async ({ mockedPage }, btnText: string, n: number) => {
     const stageCard = mockedPage.getByTestId(`stage-card-${n}`);
-    await stageCard.getByRole("button", { name: btnText }).click();
+    await stageCard
+      .getByRole("button", { name: getAccommodationTextAlias(btnText) })
+      .click();
   },
 );
 
@@ -116,7 +130,9 @@ Then(
 
 Then("the add accommodation form appears", async ({ mockedPage }) => {
   await expect(
-    mockedPage.getByRole("textbox", { name: "Nom de l'hébergement" }),
+    mockedPage.getByRole("textbox", {
+      name: /Accommodation name|Nom de l'hébergement/,
+    }),
   ).toBeVisible();
 });
 
@@ -137,7 +153,7 @@ When(
   async ({ mockedPage }, _name: string, n: number) => {
     const stageCard = mockedPage.getByTestId(`stage-card-${n}`);
     const removeButtons = stageCard.getByRole("button", {
-      name: "Supprimer l'hébergement",
+      name: /Remove accommodation|Supprimer l'hébergement/,
     });
     await removeButtons.first().click();
   },
@@ -173,7 +189,11 @@ Then(
   "the last stage card does not show the {string} button",
   async ({ mockedPage }, btnName: string) => {
     const lastStage = mockedPage.getByTestId("stage-card-3");
-    await expect(lastStage.getByRole("button", { name: btnName })).toBeHidden();
+    await expect(
+      lastStage.getByRole("button", {
+        name: getAccommodationTextAlias(btnName),
+      }),
+    ).toBeHidden();
   },
 );
 
@@ -241,13 +261,8 @@ Then(
 
 Then(
   "une requête de scan avec radiusKm={int} est envoyée",
-  async ({ mockedPage }, radius: number) => {
-    const requestPromise = mockedPage.waitForRequest(
-      (req) =>
-        req.url().includes("/accommodations/scan") && req.method() === "POST",
-      { timeout: 5000 },
-    );
-    const request = await requestPromise;
+  async ({}, radius: number) => {
+    const request = await takeAccommodationScanRequest();
     const body = JSON.parse(request.postData() ?? "{}");
     expect(body).toMatchObject({ radiusKm: radius });
   },
@@ -255,13 +270,8 @@ Then(
 
 Then(
   "a scan request with radiusKm={int} is sent",
-  async ({ mockedPage }, radius: number) => {
-    const requestPromise = mockedPage.waitForRequest(
-      (req) =>
-        req.url().includes("/accommodations/scan") && req.method() === "POST",
-      { timeout: 5000 },
-    );
-    const request = await requestPromise;
+  async ({}, radius: number) => {
+    const request = await takeAccommodationScanRequest();
     const body = JSON.parse(request.postData() ?? "{}");
     expect(body).toMatchObject({ radiusKm: radius });
   },
@@ -278,8 +288,10 @@ When(
 
 When(
   "no accommodation is found within {int} km",
-  async ({ injectSequence }, radius: number) => {
-    await injectSequence([emptyAccommodationsFoundEvent(0, radius)]);
+  async ({}, radius: number) => {
+    await injectSseSequence(getCurrentRecettePage(), [
+      emptyAccommodationsFoundEvent(0, radius),
+    ]);
   },
 );
 
@@ -313,8 +325,8 @@ When(
 
 When(
   "an accommodation is exactly at the endpoint",
-  async ({ injectSequence }) => {
-    await injectSequence([
+  async () => {
+    await injectSseSequence(getCurrentRecettePage(), [
       {
         type: "accommodations_found",
         data: {
@@ -353,9 +365,9 @@ Then(
 
 Then(
   "no distance badge is displayed for that accommodation",
-  async ({ mockedPage }) => {
-    const stageCard = mockedPage.getByTestId("stage-card-1");
-    await expect(stageCard).toContainText("Gîte du Terminus", {
+  async () => {
+    const stageCard = getCurrentRecettePage().getByTestId("stage-card-1");
+    await expect(stageCard).toContainText(/Gîte du Terminus|Terminus Guest House/, {
       timeout: 5000,
     });
     await expect(stageCard.locator('[aria-label*="0 km"]')).toHaveCount(0);

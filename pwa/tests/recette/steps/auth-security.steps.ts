@@ -106,7 +106,7 @@ When(/^je navigue vers \/auth\/verify\/token-valide$/, async ({ page }) => {
     },
   );
   await page.route("**/.well-known/mercure*", (route) => route.abort());
-  await page.goto("/auth/verify/test-token");
+  await page.goto("/auth/verify/token-valide");
 });
 
 When(/^I navigate to \/auth\/verify\/valid-token$/, async ({ page }) => {
@@ -146,7 +146,7 @@ When(/^I navigate to \/auth\/verify\/valid-token$/, async ({ page }) => {
     },
   );
   await page.route("**/.well-known/mercure*", (route) => route.abort());
-  await page.goto("/auth/verify/test-token");
+  await page.goto("/auth/verify/valid-token");
 });
 
 When("je tente d'accéder à mes voyages", async ({ page }) => {
