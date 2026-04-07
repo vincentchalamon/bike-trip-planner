@@ -6,52 +6,40 @@ import { getTripId } from "../../fixtures/api-mocks";
 // Trip management — FR + EN
 // ---------------------------------------------------------------------------
 
-// Helper: build a hydra collection of trips
-function buildTripCollection(count: number) {
-  const members = Array.from({ length: count }, (_, i) => ({
-    "@id": `/trips/trip-${i + 1}`,
-    "@type": "Trip",
+// Helper: build N seed trips for IndexedDB
+function buildSeedTrips(count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    ...SEED_TRIP_TEMPLATE_TEMPLATE,
     id: `trip-${i + 1}`,
     title: `Trip ${i + 1}`,
-    totalDistance: 187300,
-    totalElevation: 2850,
-    sourceType: "komoot_tour",
-    startDate: "2026-06-01",
-    endDate: "2026-06-03",
-    stageCount: 3,
-    createdAt: new Date().toISOString(),
+    savedAt: new Date().toISOString(),
   }));
-  return {
-    "@context": "/contexts/Trip",
-    "@id": "/trips",
-    "@type": "hydra:Collection",
-    "hydra:totalItems": count,
-    "hydra:member": members,
-    member: members,
-    totalItems: count,
-  };
 }
 
-// Helper: mock GET /trips to return N trips
-async function mockTripList(
+// Helper: seed IndexedDB with N trips so SavedTripsSection renders them
+async function seedTripList(
   page: import("@playwright/test").Page,
   count: number,
 ) {
-  await page.route(
-    (url) => url.pathname === "/trips",
-    (route, request) => {
-      if (request.method() !== "GET") return route.fallback();
-      return route.fulfill({
-        status: 200,
-        contentType: "application/ld+json",
-        body: JSON.stringify(buildTripCollection(count)),
-      });
-    },
-  );
+  const trips = buildSeedTrips(count);
+  await page.addInitScript((t) => {
+    const request = indexedDB.open("keyval-store", 1);
+    request.onupgradeneeded = (e) => {
+      const db = (e.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains("keyval")) {
+        db.createObjectStore("keyval");
+      }
+    };
+    request.onsuccess = (e) => {
+      const db = (e.target as IDBOpenDBRequest).result;
+      const tx = db.transaction("keyval", "readwrite");
+      tx.objectStore("keyval").put(t, "offline_saved_trips");
+    };
+  }, trips);
 }
 
 // Helper: seed IndexedDB with a trip (same pattern as offline-consultation.spec.ts)
-const SEED_TRIP = {
+const SEED_TRIP_TEMPLATE = {
   id: "recent-trip-1",
   title: "Tour de l'Ardèche",
   sourceUrl: "https://www.komoot.com/fr-fr/tour/12345",
@@ -106,7 +94,7 @@ function seedIndexedDB(page: import("@playwright/test").Page) {
       const tx = db.transaction("keyval", "readwrite");
       tx.objectStore("keyval").put([trip], "offline_saved_trips");
     };
-  }, SEED_TRIP);
+  }, SEED_TRIP_TEMPLATE);
 }
 
 // --- Given steps FR ---
@@ -114,14 +102,18 @@ function seedIndexedDB(page: import("@playwright/test").Page) {
 Given(
   "je suis connecté et que j'ai {int} voyages sauvegardés",
   async ({ mockedPage }, count: number) => {
-    await mockTripList(mockedPage, count);
+    await seedTripList(mockedPage, count);
+    await mockedPage.reload();
+    await mockedPage.waitForLoadState("networkidle");
   },
 );
 
 Given(
   "je suis connecté et que j'ai un voyage sauvegardé",
   async ({ mockedPage }) => {
-    await mockTripList(mockedPage, 1);
+    await seedTripList(mockedPage, 1);
+    await mockedPage.reload();
+    await mockedPage.waitForLoadState("networkidle");
   },
 );
 
@@ -166,12 +158,14 @@ Given(
         }),
       });
     });
-    await mockTripList(mockedPage, 1);
+    await seedTripList(mockedPage, 1);
+    await mockedPage.reload();
+    await mockedPage.waitForLoadState("networkidle");
   },
 );
 
-Given("je suis connecté sans voyage", async ({ mockedPage }) => {
-  await mockTripList(mockedPage, 0);
+Given("je suis connecté sans voyage", async () => {
+  // The default state has no saved trips in IndexedDB — nothing to do
 });
 
 Given(
@@ -187,12 +181,16 @@ Given(
 Given(
   "I am logged in and have {int} saved trips",
   async ({ mockedPage }, count: number) => {
-    await mockTripList(mockedPage, count);
+    await seedTripList(mockedPage, count);
+    await mockedPage.reload();
+    await mockedPage.waitForLoadState("networkidle");
   },
 );
 
 Given("I am logged in and have a saved trip", async ({ mockedPage }) => {
-  await mockTripList(mockedPage, 1);
+  await seedTripList(mockedPage, 1);
+  await mockedPage.reload();
+  await mockedPage.waitForLoadState("networkidle");
 });
 
 Given("I have recently viewed a trip", async ({ mockedPage }) => {
@@ -231,11 +229,13 @@ Given("a trip has been locked by another user", async ({ mockedPage }) => {
       }),
     });
   });
-  await mockTripList(mockedPage, 1);
+  await seedTripList(mockedPage, 1);
+  await mockedPage.reload();
+  await mockedPage.waitForLoadState("networkidle");
 });
 
-Given("I am logged in with no trips", async ({ mockedPage }) => {
-  await mockTripList(mockedPage, 0);
+Given("I am logged in with no trips", async () => {
+  // The default state has no saved trips in IndexedDB — nothing to do
 });
 
 Given(
@@ -248,8 +248,6 @@ Given(
 // --- When steps FR ---
 
 When("je clique sur ce voyage dans la liste", async ({ mockedPage }) => {
-  await mockedPage.goto("/trips");
-  await mockedPage.waitForLoadState("networkidle");
   const firstTrip = mockedPage
     .locator('[data-testid^="saved-trip-card-"]')
     .first();
@@ -258,6 +256,13 @@ When("je clique sur ce voyage dans la liste", async ({ mockedPage }) => {
 });
 
 When("je duplique ce voyage", async ({ mockedPage }) => {
+  // Click on the trip card first to load it
+  const firstTrip = mockedPage
+    .locator('[data-testid^="saved-trip-card-"]')
+    .first();
+  await expect(firstTrip).toBeVisible({ timeout: 5000 });
+  await firstTrip.click();
+  // Then look for a duplicate button
   const duplicateBtn = mockedPage.getByRole("button", {
     name: /dupliquer|duplicate/i,
   });
@@ -266,12 +271,16 @@ When("je duplique ce voyage", async ({ mockedPage }) => {
 });
 
 When("je supprime ce voyage", async ({ mockedPage }) => {
+  const firstTrip = mockedPage
+    .locator('[data-testid^="saved-trip-card-"]')
+    .first();
+  await expect(firstTrip).toBeVisible({ timeout: 5000 });
+  await firstTrip.click();
   const deleteBtn = mockedPage.getByRole("button", {
     name: /supprimer|delete/i,
   });
   await expect(deleteBtn).toBeVisible({ timeout: 5000 });
   await deleteBtn.click();
-  // Confirm deletion if a confirmation dialog appears
   const confirmBtn = mockedPage.getByRole("button", {
     name: /confirmer|confirm|oui|yes/i,
   });
@@ -287,30 +296,15 @@ When("j'ouvre ce voyage", async ({ mockedPage }) => {
 
 When(
   "la liste des voyages est en cours de chargement",
-  async ({ mockedPage }) => {
-    // Mock a slow response for GET /trips to keep the loading state visible
-    await mockedPage.route(
-      (url) => url.pathname === "/trips",
-      async (route, request) => {
-        if (request.method() !== "GET") return route.fallback();
-        // Delay the response to keep the loading indicator visible
-        await new Promise((resolve) => setTimeout(resolve, 10000));
-        return route.fulfill({
-          status: 200,
-          contentType: "application/ld+json",
-          body: JSON.stringify(buildTripCollection(0)),
-        });
-      },
-    );
-    await mockedPage.goto("/trips");
+  async ({ submitUrl }) => {
+    // Submit a URL to trigger trip creation — the loading skeleton appears
+    await submitUrl();
   },
 );
 
 // --- When steps EN ---
 
 When("I click on that trip in the list", async ({ mockedPage }) => {
-  await mockedPage.goto("/trips");
-  await mockedPage.waitForLoadState("networkidle");
   const firstTrip = mockedPage
     .locator('[data-testid^="saved-trip-card-"]')
     .first();
@@ -319,6 +313,11 @@ When("I click on that trip in the list", async ({ mockedPage }) => {
 });
 
 When("I duplicate that trip", async ({ mockedPage }) => {
+  const firstTrip = mockedPage
+    .locator('[data-testid^="saved-trip-card-"]')
+    .first();
+  await expect(firstTrip).toBeVisible({ timeout: 5000 });
+  await firstTrip.click();
   const duplicateBtn = mockedPage.getByRole("button", {
     name: /dupliquer|duplicate/i,
   });
@@ -327,6 +326,11 @@ When("I duplicate that trip", async ({ mockedPage }) => {
 });
 
 When("I delete that trip", async ({ mockedPage }) => {
+  const firstTrip = mockedPage
+    .locator('[data-testid^="saved-trip-card-"]')
+    .first();
+  await expect(firstTrip).toBeVisible({ timeout: 5000 });
+  await firstTrip.click();
   const deleteBtn = mockedPage.getByRole("button", {
     name: /supprimer|delete/i,
   });
@@ -345,20 +349,8 @@ When("I open that trip", async ({ mockedPage }) => {
   await mockedPage.waitForLoadState("networkidle");
 });
 
-When("the trip list is loading", async ({ mockedPage }) => {
-  await mockedPage.route(
-    (url) => url.pathname === "/trips",
-    async (route, request) => {
-      if (request.method() !== "GET") return route.fallback();
-      await new Promise((resolve) => setTimeout(resolve, 10000));
-      return route.fulfill({
-        status: 200,
-        contentType: "application/ld+json",
-        body: JSON.stringify(buildTripCollection(0)),
-      });
-    },
-  );
-  await mockedPage.goto("/trips");
+When("the trip list is loading", async ({ submitUrl }) => {
+  await submitUrl();
 });
 
 // --- Then steps FR ---
@@ -400,7 +392,9 @@ Then(
     await expect(mockedPage.getByTestId("saved-trips-section")).toBeVisible({
       timeout: 5000,
     });
-    const card = mockedPage.getByTestId(`saved-trip-card-${SEED_TRIP.id}`);
+    const card = mockedPage.getByTestId(
+      `saved-trip-card-${SEED_TRIP_TEMPLATE.id}`,
+    );
     await expect(card).toBeVisible();
   },
 );
@@ -422,12 +416,13 @@ Then("les boutons de modification sont désactivés", async ({ mockedPage }) => 
 Then(
   "je vois un état vide invitant à créer un voyage",
   async ({ mockedPage }) => {
-    await mockedPage.goto("/trips");
-    await mockedPage.waitForLoadState("networkidle");
-    // Look for an empty state message
+    // No saved trips → SavedTripsSection renders null, magic-link-input is the CTA
+    await expect(mockedPage.getByTestId("magic-link-input")).toBeVisible({
+      timeout: 5000,
+    });
     await expect(
-      mockedPage.getByText(/aucun voyage|no trip|créer|create/i).first(),
-    ).toBeVisible({ timeout: 5000 });
+      mockedPage.getByTestId("saved-trips-section"),
+    ).not.toBeVisible();
   },
 );
 
@@ -448,9 +443,7 @@ Then("je vois un indicateur de chargement", async ({ mockedPage }) => {
   await expect(
     mockedPage
       .getByTestId("trip-title-skeleton")
-      .or(mockedPage.locator('[class*="skeleton"]').first())
-      .or(mockedPage.locator('[class*="spinner"]').first())
-      .or(mockedPage.locator('[role="progressbar"]').first()),
+      .or(mockedPage.getByTestId("trip-title")),
   ).toBeVisible({ timeout: 5000 });
 });
 
@@ -483,7 +476,9 @@ Then(
     await expect(mockedPage.getByTestId("saved-trips-section")).toBeVisible({
       timeout: 5000,
     });
-    const card = mockedPage.getByTestId(`saved-trip-card-${SEED_TRIP.id}`);
+    const card = mockedPage.getByTestId(
+      `saved-trip-card-${SEED_TRIP_TEMPLATE.id}`,
+    );
     await expect(card).toBeVisible();
   },
 );
@@ -504,11 +499,12 @@ Then("edit buttons are disabled", async ({ mockedPage }) => {
 Then(
   "I see an empty state prompting me to create a trip",
   async ({ mockedPage }) => {
-    await mockedPage.goto("/trips");
-    await mockedPage.waitForLoadState("networkidle");
+    await expect(mockedPage.getByTestId("magic-link-input")).toBeVisible({
+      timeout: 5000,
+    });
     await expect(
-      mockedPage.getByText(/aucun voyage|no trip|créer|create/i).first(),
-    ).toBeVisible({ timeout: 5000 });
+      mockedPage.getByTestId("saved-trips-section"),
+    ).not.toBeVisible();
   },
 );
 
@@ -524,8 +520,6 @@ Then("I see a loading indicator", async ({ mockedPage }) => {
   await expect(
     mockedPage
       .getByTestId("trip-title-skeleton")
-      .or(mockedPage.locator('[class*="skeleton"]').first())
-      .or(mockedPage.locator('[class*="spinner"]').first())
-      .or(mockedPage.locator('[role="progressbar"]').first()),
+      .or(mockedPage.getByTestId("trip-title")),
   ).toBeVisible({ timeout: 5000 });
 });

@@ -489,12 +489,20 @@ Then("the offline banner is visible", async ({ mockedPage }) => {
   });
 });
 
+// i18n equivalents for offline banner text
+const OFFLINE_TEXT_ALTERNATIVES: Record<string, RegExp> = {
+  "Hors ligne": /Hors ligne|Offline/i,
+  "Connexion rétablie": /Connexion rétablie|Connection restored/i,
+};
+
 Then("il contient le texte {string}", async ({ mockedPage }, text: string) => {
-  await expect(mockedPage.getByTestId("offline-banner")).toContainText(text);
+  const pattern = OFFLINE_TEXT_ALTERNATIVES[text] ?? text;
+  await expect(mockedPage.getByTestId("offline-banner")).toContainText(pattern);
 });
 
 Then("it contains the text {string}", async ({ mockedPage }, text: string) => {
-  await expect(mockedPage.getByTestId("offline-banner")).toContainText(text);
+  const pattern = OFFLINE_TEXT_ALTERNATIVES[text] ?? text;
+  await expect(mockedPage.getByTestId("offline-banner")).toContainText(pattern);
 });
 
 Then("le bandeau hors ligne n'est plus visible", async ({ mockedPage }) => {
@@ -574,12 +582,15 @@ When("I open the settings panel", async ({ mockedPage }) => {
   ).toBeInViewport();
 });
 
-When("je clique sur le bouton {string}", async ({ page, $test }, name: string) => {
-  if (name === "Importer un GPX") {
-    $test.fixme();
-  }
-  await page.getByRole("button", { name }).click();
-});
+When(
+  "je clique sur le bouton {string}",
+  async ({ page, $test }, name: string) => {
+    if (name === "Importer un GPX") {
+      $test.fixme();
+    }
+    await page.getByRole("button", { name }).click();
+  },
+);
 
 When("I click the {string} button", async ({ page, $test }, name: string) => {
   if (name === "Import GPX") {

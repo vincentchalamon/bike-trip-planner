@@ -33,20 +33,17 @@ When(
   },
 );
 
-When(
-  "une étape a un dénivelé supérieur à 2000m",
-  async ({ injectEvent }) => {
-    const event = stagesComputedEvent();
-    const data = event.data as {
-      stages: Array<Record<string, unknown>>;
-    };
-    data.stages[0] = {
-      ...data.stages[0],
-      elevation: 2500,
-    };
-    await injectEvent(event);
-  },
-);
+When("une étape a un dénivelé supérieur à 2000m", async ({ injectEvent }) => {
+  const event = stagesComputedEvent();
+  const data = event.data as {
+    stages: Array<Record<string, unknown>>;
+  };
+  data.stages[0] = {
+    ...data.stages[0],
+    elevation: 2500,
+  };
+  await injectEvent(event);
+});
 
 When(
   "les données météo indiquent de la pluie sur l'étape {int}",
@@ -214,9 +211,12 @@ When(
   },
 );
 
-When("a long route section has no supply points", async ({ injectSequence }) => {
-  await injectSequence([stagesComputedEvent(), tripCompleteEvent()]);
-});
+When(
+  "a long route section has no supply points",
+  async ({ injectSequence }) => {
+    await injectSequence([stagesComputedEvent(), tripCompleteEvent()]);
+  },
+);
 
 When(
   "the last stages accumulate too much elevation gain",
@@ -288,12 +288,9 @@ Given(
 
 // --- Given steps EN ---
 
-Given(
-  "all stages are within reasonable limits",
-  async ({ injectSequence }) => {
-    await injectSequence(fullTripEventSequence());
-  },
-);
+Given("all stages are within reasonable limits", async ({ injectSequence }) => {
+  await injectSequence(fullTripEventSequence());
+});
 
 // --- Then steps FR ---
 
@@ -362,8 +359,11 @@ Then(
 
 Then("aucune alerte critique n'est affichée", async ({ mockedPage }) => {
   // Critical alerts have role="alert" in AlertBadge component
-  const criticalAlerts = mockedPage.locator('[role="alert"]');
-  await expect(criticalAlerts).toHaveCount(0);
+  // Exclude the Next.js route announcer which also has role="alert"
+  const criticalAlerts = mockedPage.locator(
+    '[role="alert"]:not(#__next-route-announcer__)',
+  );
+  await expect(criticalAlerts).toHaveCount(0, { timeout: 5000 });
 });
 
 Then(
@@ -396,13 +396,10 @@ Then(
   },
 );
 
-Then(
-  "I see a high elevation alert on that stage",
-  async ({ mockedPage }) => {
-    const card = mockedPage.getByTestId("stage-card-1");
-    await expect(card).toContainText("2500", { timeout: 10000 });
-  },
-);
+Then("I see a high elevation alert on that stage", async ({ mockedPage }) => {
+  const card = mockedPage.getByTestId("stage-card-1");
+  await expect(card).toContainText("2500", { timeout: 10000 });
+});
 
 Then(
   "I see a weather alert on stage card {int}",
@@ -412,21 +409,15 @@ Then(
   },
 );
 
-Then(
-  "I see an accommodation alert on that stage",
-  async ({ mockedPage }) => {
-    const card = mockedPage.getByTestId("stage-card-1");
-    await expect(card).toBeVisible({ timeout: 10000 });
-  },
-);
+Then("I see an accommodation alert on that stage", async ({ mockedPage }) => {
+  const card = mockedPage.getByTestId("stage-card-1");
+  await expect(card).toBeVisible({ timeout: 10000 });
+});
 
-Then(
-  "I see a supply alert on the affected stage",
-  async ({ mockedPage }) => {
-    const card = mockedPage.getByTestId("stage-card-1");
-    await expect(card).toBeVisible({ timeout: 10000 });
-  },
-);
+Then("I see a supply alert on the affected stage", async ({ mockedPage }) => {
+  const card = mockedPage.getByTestId("stage-card-1");
+  await expect(card).toBeVisible({ timeout: 10000 });
+});
 
 Then(
   "I see a progressive fatigue alert on the last stages",
@@ -449,8 +440,10 @@ Then(
 );
 
 Then("no critical alerts are displayed", async ({ mockedPage }) => {
-  const criticalAlerts = mockedPage.locator('[role="alert"]');
-  await expect(criticalAlerts).toHaveCount(0);
+  const criticalAlerts = mockedPage.locator(
+    '[role="alert"]:not(#__next-route-announcer__)',
+  );
+  await expect(criticalAlerts).toHaveCount(0, { timeout: 5000 });
 });
 
 Then(
@@ -462,7 +455,10 @@ Then(
   },
 );
 
-Then("the difficulty level is {string}", async ({ mockedPage }, level: string) => {
-  const card = mockedPage.getByTestId("stage-card-1");
-  await expect(card).toContainText(level, { timeout: 10000 });
-});
+Then(
+  "the difficulty level is {string}",
+  async ({ mockedPage }, level: string) => {
+    const card = mockedPage.getByTestId("stage-card-1");
+    await expect(card).toContainText(level, { timeout: 10000 });
+  },
+);

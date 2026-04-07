@@ -184,6 +184,12 @@ Then("the short link is copied to the clipboard", async ({ mockedPage }) => {
   expect(clipboardText).toContain(`${origin}/s/`);
 });
 
+// i18n-equivalent button names (feature files may use FR text even in EN scenarios)
+const BUTTON_NAME_ALTERNATIVES: Record<string, RegExp> = {
+  "Recevoir un lien de connexion":
+    /Recevoir un lien de connexion|Send sign-in link/i,
+};
+
 // --- Additional missing steps ---
 
 Then("je vois le bouton {string}", async ({ mockedPage }, btnName: string) => {
@@ -191,7 +197,8 @@ Then("je vois le bouton {string}", async ({ mockedPage }, btnName: string) => {
   if (testId) {
     await expect(mockedPage.getByTestId(testId)).toBeVisible({ timeout: 5000 });
   } else {
-    await expect(mockedPage.getByRole("button", { name: btnName })).toBeVisible(
+    const pattern = BUTTON_NAME_ALTERNATIVES[btnName] ?? btnName;
+    await expect(mockedPage.getByRole("button", { name: pattern })).toBeVisible(
       { timeout: 5000 },
     );
   }
@@ -202,7 +209,8 @@ Then("I see the {string} button", async ({ mockedPage }, btnName: string) => {
   if (testId) {
     await expect(mockedPage.getByTestId(testId)).toBeVisible({ timeout: 5000 });
   } else {
-    await expect(mockedPage.getByRole("button", { name: btnName })).toBeVisible(
+    const pattern = BUTTON_NAME_ALTERNATIVES[btnName] ?? btnName;
+    await expect(mockedPage.getByRole("button", { name: pattern })).toBeVisible(
       { timeout: 5000 },
     );
   }

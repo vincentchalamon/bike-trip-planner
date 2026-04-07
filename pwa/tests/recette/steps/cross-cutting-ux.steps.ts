@@ -30,26 +30,27 @@ Given(
   },
 );
 
-Given("l'interface est en anglais", async ({ mockedPage }) => {
+Given("l'interface est en anglais", async ({ createFullTrip, mockedPage }) => {
+  await createFullTrip();
   await mockedPage.getByTestId("config-open-button").click();
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: /param|settings/i }),
   ).toBeInViewport();
   await mockedPage.getByTestId("locale-switch-en").click();
   await mockedPage.keyboard.press("Escape");
 });
 
-Given("le thème sombre est activé", async ({ mockedPage }) => {
+Given("le thème sombre est activé", async ({ createFullTrip, mockedPage }) => {
+  await createFullTrip();
   await mockedPage.getByTestId("config-open-button").click();
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: /param|settings/i }),
   ).toBeInViewport();
-  const darkSwitch = mockedPage.getByRole("switch", {
-    name: /sombre|dark/i,
+  const themeToggle = mockedPage.getByRole("button", {
+    name: /sombre|dark|thème|theme/i,
   });
-  if (await darkSwitch.isVisible().catch(() => false)) {
-    const isChecked = await darkSwitch.isChecked();
-    if (!isChecked) await darkSwitch.click();
+  if (await themeToggle.isVisible().catch(() => false)) {
+    await themeToggle.click();
   }
   await mockedPage.keyboard.press("Escape");
 });
@@ -97,26 +98,27 @@ Given(
   },
 );
 
-Given("the interface is in English", async ({ mockedPage }) => {
+Given("the interface is in English", async ({ createFullTrip, mockedPage }) => {
+  await createFullTrip();
   await mockedPage.getByTestId("config-open-button").click();
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: /param|settings/i }),
   ).toBeInViewport();
   await mockedPage.getByTestId("locale-switch-en").click();
   await mockedPage.keyboard.press("Escape");
 });
 
-Given("dark theme is enabled", async ({ mockedPage }) => {
+Given("dark theme is enabled", async ({ createFullTrip, mockedPage }) => {
+  await createFullTrip();
   await mockedPage.getByTestId("config-open-button").click();
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: /param|settings/i }),
   ).toBeInViewport();
-  const darkSwitch = mockedPage.getByRole("switch", {
-    name: /sombre|dark/i,
+  const themeToggle = mockedPage.getByRole("button", {
+    name: /sombre|dark|thème|theme/i,
   });
-  if (await darkSwitch.isVisible().catch(() => false)) {
-    const isChecked = await darkSwitch.isChecked();
-    if (!isChecked) await darkSwitch.click();
+  if (await themeToggle.isVisible().catch(() => false)) {
+    await themeToggle.click();
   }
   await mockedPage.keyboard.press("Escape");
 });
@@ -154,8 +156,13 @@ When("j'appuie sur Ctrl+Y", async ({ mockedPage }) => {
 
 When(
   "je change la langue vers {string}",
-  async ({ mockedPage }, lang: string) => {
-    await mockedPage.getByTestId("config-open-button").click();
+  async ({ createFullTrip, mockedPage }, lang: string) => {
+    // Ensure we're on a trip page where the config button is visible
+    const configBtn = mockedPage.getByTestId("config-open-button");
+    if (!(await configBtn.isVisible().catch(() => false))) {
+      await createFullTrip();
+    }
+    await configBtn.click();
     await expect(
       mockedPage.getByRole("dialog", { name: /param|settings/i }),
     ).toBeInViewport();
@@ -164,27 +171,41 @@ When(
   },
 );
 
-When("je bascule vers le thème sombre", async ({ mockedPage }) => {
-  await mockedPage.getByTestId("config-open-button").click();
-  await expect(
-    mockedPage.getByRole("dialog", { name: /param|settings/i }),
-  ).toBeInViewport();
-  const darkSwitch = mockedPage.getByRole("switch", {
-    name: /sombre|dark/i,
-  });
-  await darkSwitch.click();
-});
+When(
+  "je bascule vers le thème sombre",
+  async ({ createFullTrip, mockedPage }) => {
+    const configBtn = mockedPage.getByTestId("config-open-button");
+    if (!(await configBtn.isVisible().catch(() => false))) {
+      await createFullTrip();
+    }
+    await configBtn.click();
+    await expect(
+      mockedPage.getByRole("dialog", { name: /param|settings/i }),
+    ).toBeInViewport();
+    const themeToggle = mockedPage.getByRole("button", {
+      name: /sombre|dark|thème|theme/i,
+    });
+    await themeToggle.click();
+  },
+);
 
-When("je bascule vers le thème clair", async ({ mockedPage }) => {
-  await mockedPage.getByTestId("config-open-button").click();
-  await expect(
-    mockedPage.getByRole("dialog", { name: /param|settings/i }),
-  ).toBeInViewport();
-  const lightSwitch = mockedPage.getByRole("switch", {
-    name: /sombre|dark/i,
-  });
-  await lightSwitch.click();
-});
+When(
+  "je bascule vers le thème clair",
+  async ({ createFullTrip, mockedPage }) => {
+    const configBtn = mockedPage.getByTestId("config-open-button");
+    if (!(await configBtn.isVisible().catch(() => false))) {
+      await createFullTrip();
+    }
+    await configBtn.click();
+    await expect(
+      mockedPage.getByRole("dialog", { name: /param|settings/i }),
+    ).toBeInViewport();
+    const themeToggle = mockedPage.getByRole("button", {
+      name: /sombre|dark|thème|theme/i,
+    });
+    await themeToggle.click();
+  },
+);
 
 When("je le ferme", async ({ $test }) => {
   // Depends on onboarding guide having a close button
@@ -201,15 +222,13 @@ When(
 
 When(
   "j'effectue une action qui génère une notification",
-  async ({ mockedPage }) => {
-    // Copy share link triggers a toast — grant permissions and click copy
+  async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
     await mockedPage
       .context()
       .grantPermissions(["clipboard-read", "clipboard-write"]);
-    const copyBtn = mockedPage.getByTestId("share-copy-link-button");
-    if (await copyBtn.isVisible().catch(() => false)) {
-      await copyBtn.click();
-    }
+    // Delete a stage — this triggers a toast notification
+    await mockedPage.getByTestId("delete-stage-3").click();
   },
 );
 
@@ -243,8 +262,12 @@ When("I press Ctrl+Y", async ({ mockedPage }) => {
 
 When(
   "I change the language to {string}",
-  async ({ mockedPage }, lang: string) => {
-    await mockedPage.getByTestId("config-open-button").click();
+  async ({ createFullTrip, mockedPage }, lang: string) => {
+    const configBtn = mockedPage.getByTestId("config-open-button");
+    if (!(await configBtn.isVisible().catch(() => false))) {
+      await createFullTrip();
+    }
+    await configBtn.click();
     await expect(
       mockedPage.getByRole("dialog", { name: /param|settings/i }),
     ).toBeInViewport();
@@ -253,26 +276,34 @@ When(
   },
 );
 
-When("I toggle to dark theme", async ({ mockedPage }) => {
-  await mockedPage.getByTestId("config-open-button").click();
+When("I toggle to dark theme", async ({ createFullTrip, mockedPage }) => {
+  const configBtn = mockedPage.getByTestId("config-open-button");
+  if (!(await configBtn.isVisible().catch(() => false))) {
+    await createFullTrip();
+  }
+  await configBtn.click();
   await expect(
     mockedPage.getByRole("dialog", { name: /param|settings/i }),
   ).toBeInViewport();
-  const darkSwitch = mockedPage.getByRole("switch", {
-    name: /sombre|dark/i,
+  const themeToggle = mockedPage.getByRole("button", {
+    name: /sombre|dark|thème|theme/i,
   });
-  await darkSwitch.click();
+  await themeToggle.click();
 });
 
-When("I toggle to light theme", async ({ mockedPage }) => {
-  await mockedPage.getByTestId("config-open-button").click();
+When("I toggle to light theme", async ({ createFullTrip, mockedPage }) => {
+  const configBtn = mockedPage.getByTestId("config-open-button");
+  if (!(await configBtn.isVisible().catch(() => false))) {
+    await createFullTrip();
+  }
+  await configBtn.click();
   await expect(
     mockedPage.getByRole("dialog", { name: /param|settings/i }),
   ).toBeInViewport();
-  const lightSwitch = mockedPage.getByRole("switch", {
-    name: /sombre|dark/i,
+  const themeToggle = mockedPage.getByRole("button", {
+    name: /sombre|dark|thème|theme/i,
   });
-  await lightSwitch.click();
+  await themeToggle.click();
 });
 
 When("I close it", async ({ $test }) => {
@@ -287,14 +318,13 @@ When("I navigate with Tab key in the form", async ({ mockedPage }) => {
 
 When(
   "I perform an action that generates a notification",
-  async ({ mockedPage }) => {
+  async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
     await mockedPage
       .context()
       .grantPermissions(["clipboard-read", "clipboard-write"]);
-    const copyBtn = mockedPage.getByTestId("share-copy-link-button");
-    if (await copyBtn.isVisible().catch(() => false)) {
-      await copyBtn.click();
-    }
+    // Delete a stage — this triggers a toast notification
+    await mockedPage.getByTestId("delete-stage-3").click();
   },
 );
 

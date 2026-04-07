@@ -206,7 +206,7 @@ When(
       chronologie: "view-mode-timeline",
     };
     const testId = modeMap[mode] ?? `view-mode-${mode}`;
-    await mockedPage.getByTestId(testId).click();
+    await mockedPage.getByTestId(testId).first().click();
   },
 );
 
@@ -219,7 +219,7 @@ When(
       timeline: "view-mode-timeline",
     };
     const testId = modeMap[mode] ?? `view-mode-${mode}`;
-    await mockedPage.getByTestId(testId).click();
+    await mockedPage.getByTestId(testId).first().click();
   },
 );
 

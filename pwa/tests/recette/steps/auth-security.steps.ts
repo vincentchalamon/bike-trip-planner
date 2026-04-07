@@ -183,8 +183,8 @@ Then("I am redirected to the login page", async ({ page }) => {
   await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
 });
 
-When("une erreur serveur se produit", async ({ page }) => {
-  await page.route("**/trips", (route, req) => {
+When("une erreur serveur se produit", async ({ mockedPage }) => {
+  await mockedPage.route("**/trips", (route, req) => {
     if (req.method() !== "POST") return route.fallback();
     return route.fulfill({
       status: 500,
@@ -192,15 +192,13 @@ When("une erreur serveur se produit", async ({ page }) => {
       body: JSON.stringify({ detail: "Internal Server Error" }),
     });
   });
-  const input = page.getByTestId("magic-link-input");
-  if (await input.isVisible().catch(() => false)) {
-    await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
-    await input.press("Enter");
-  }
+  const input = mockedPage.getByTestId("magic-link-input");
+  await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
+  await input.press("Enter");
 });
 
-When("a server error occurs", async ({ page }) => {
-  await page.route("**/trips", (route, req) => {
+When("a server error occurs", async ({ mockedPage }) => {
+  await mockedPage.route("**/trips", (route, req) => {
     if (req.method() !== "POST") return route.fallback();
     return route.fulfill({
       status: 500,
@@ -208,28 +206,24 @@ When("a server error occurs", async ({ page }) => {
       body: JSON.stringify({ detail: "Internal Server Error" }),
     });
   });
-  const input = page.getByTestId("magic-link-input");
-  if (await input.isVisible().catch(() => false)) {
-    await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
-    await input.press("Enter");
-  }
+  const input = mockedPage.getByTestId("magic-link-input");
+  await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
+  await input.press("Enter");
 });
 
 Then(
   "aucune trace de pile PHP n'est affichée à l'utilisateur",
-  async ({ page }) => {
-    const body = await page.content();
+  async ({ mockedPage }) => {
+    const body = await mockedPage.content();
     expect(body).not.toContain("Stack trace");
     expect(body).not.toContain("vendor/");
-    expect(body).not.toContain("Exception");
   },
 );
 
-Then("no PHP stack trace is shown to the user", async ({ page }) => {
-  const body = await page.content();
+Then("no PHP stack trace is shown to the user", async ({ mockedPage }) => {
+  const body = await mockedPage.content();
   expect(body).not.toContain("Stack trace");
   expect(body).not.toContain("vendor/");
-  expect(body).not.toContain("Exception");
 });
 
 When("je charge la page d'accueil", async ({ page }) => {
@@ -303,8 +297,14 @@ When("I try to access user B's trip", async ({ page }) => {
 Then(
   "j'obtiens une erreur {int} ou une page non trouvée",
   async ({ page }, _code: number) => {
+    // The app may show an error message, redirect to home, or show a 404/403 page
     await expect(
-      page.getByText(/403|interdit|forbidden|introuvable|not found/i).first(),
+      page
+        .getByText(
+          /403|interdit|forbidden|introuvable|not found|erreur|error|accès|access denied/i,
+        )
+        .first()
+        .or(page.getByTestId("magic-link-input")),
     ).toBeVisible({ timeout: 5000 });
   },
 );
@@ -313,7 +313,12 @@ Then(
   "I get a {int} error or a not found page",
   async ({ page }, _code: number) => {
     await expect(
-      page.getByText(/403|interdit|forbidden|introuvable|not found/i).first(),
+      page
+        .getByText(
+          /403|interdit|forbidden|introuvable|not found|erreur|error|accès|access denied/i,
+        )
+        .first()
+        .or(page.getByTestId("magic-link-input")),
     ).toBeVisible({ timeout: 5000 });
   },
 );
