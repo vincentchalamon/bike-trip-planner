@@ -168,11 +168,11 @@ When("I navigate to the home page", async ({ page }) => {
 });
 
 When("je clique sur le bouton de déconnexion", async ({ page }) => {
-  await page.getByRole("button", { name: /déconnex|logout/i }).click();
+  await page.getByRole("button", { name: /déconnex|logout|sign out/i }).click();
 });
 
 When("I click the logout button", async ({ page }) => {
-  await page.getByRole("button", { name: /déconnex|logout/i }).click();
+  await page.getByRole("button", { name: /déconnex|logout|sign out/i }).click();
 });
 
 Then("je suis redirigé vers la page de connexion", async ({ page }) => {

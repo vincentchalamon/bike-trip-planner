@@ -25,7 +25,7 @@ When(
     const departureSlider = mockedPage.getByRole("slider", {
       name: "Heure de départ",
     });
-    await departureSlider.fill(hours);
+    await departureSlider.fill(String(hours));
   },
 );
 
@@ -131,7 +131,7 @@ When(
     const departureSlider = mockedPage.getByRole("slider", {
       name: "Heure de départ",
     });
-    await departureSlider.fill(hours);
+    await departureSlider.fill(String(hours));
   },
 );
 

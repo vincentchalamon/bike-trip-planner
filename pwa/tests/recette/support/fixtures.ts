@@ -4,6 +4,7 @@ import { mockAllApis } from "../../fixtures/api-mocks";
 import { injectSseEvent, injectSseSequence } from "../../fixtures/sse-helpers";
 import { fullTripEventSequence } from "../../fixtures/mock-data";
 import type { MercureEvent } from "../../../src/lib/mercure/types";
+import { resetExportDownloadTracker } from "./export-download-tracker";
 
 interface RecetteFixtures {
   mockedPage: Page;
@@ -14,7 +15,16 @@ interface RecetteFixtures {
 }
 
 export const test = base.extend<RecetteFixtures>({
-  mockedPage: async ({ page }, use) => {
+  mockedPage: async ({ page }, use, testInfo) => {
+    resetExportDownloadTracker();
+    const locale = testInfo.file.includes(".en.feature.") ? "en" : "fr";
+    await page.context().addCookies([
+      {
+        name: "locale",
+        value: locale,
+        url: "https://localhost",
+      },
+    ]);
     await mockAllApis(page);
     await page.goto("/");
     await page.waitForLoadState("networkidle");

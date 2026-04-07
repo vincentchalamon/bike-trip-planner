@@ -4,6 +4,15 @@ import {
   routeParsedEvent,
   stagesComputedEvent,
 } from "../../fixtures/mock-data";
+import {
+  getTrackedStageExportRequests,
+  getTrackedStageFitRequests,
+  getTrackedStageGpxRequests,
+  getTrackedTripGpxRequests,
+  trackStageExportDownload,
+  trackStageFitDownload,
+  trackStageGpxDownload,
+} from "../support/export-download-tracker";
 
 // ---------------------------------------------------------------------------
 // Export GPX and FIT — FR + EN
@@ -14,6 +23,7 @@ import {
 When(
   'je clique sur "Télécharger le GPX" de l\'étape {int}',
   async ({ mockedPage }, stage: number) => {
+    await trackStageGpxDownload(mockedPage);
     const stageCard = mockedPage.getByTestId(`stage-card-${stage}`);
     const gpxButton = stageCard.getByRole("button", {
       name: /Télécharger le GPX/,
@@ -35,6 +45,7 @@ When("je tente d'importer un fichier non-GPX", async ({ $test }) => {
 When(
   'je clique sur "Télécharger le FIT" de l\'étape {int}',
   async ({ mockedPage }, stage: number) => {
+    await trackStageFitDownload(mockedPage);
     const stageCard = mockedPage.getByTestId(`stage-card-${stage}`);
     const fitButton = stageCard.getByRole("button", {
       name: /Télécharger le FIT/,
@@ -55,6 +66,7 @@ When(
 When(
   "je clique sur le bouton export de format {string} de l'étape {int}",
   async ({ mockedPage }, format: string, stage: number) => {
+    await trackStageExportDownload(mockedPage, format.toLowerCase());
     const stageCard = mockedPage.getByTestId(`stage-card-${stage}`);
     const exportButton = stageCard.getByRole("button", {
       name: new RegExp(format, "i"),
@@ -68,6 +80,7 @@ When(
 When(
   'I click "Download GPX" for stage {int}',
   async ({ mockedPage }, stage: number) => {
+    await trackStageGpxDownload(mockedPage);
     const stageCard = mockedPage.getByTestId(`stage-card-${stage}`);
     const gpxButton = stageCard.getByRole("button", {
       name: /Télécharger le GPX/,
@@ -89,6 +102,7 @@ When("I try to import a non-GPX file", async ({ $test }) => {
 When(
   'I click "Download FIT" for stage {int}',
   async ({ mockedPage }, stage: number) => {
+    await trackStageFitDownload(mockedPage);
     const stageCard = mockedPage.getByTestId(`stage-card-${stage}`);
     const fitButton = stageCard.getByRole("button", {
       name: /Télécharger le FIT/,
@@ -109,6 +123,7 @@ When(
 When(
   "I click the export button for format {string} on stage {int}",
   async ({ mockedPage }, format: string, stage: number) => {
+    await trackStageExportDownload(mockedPage, format.toLowerCase());
     const stageCard = mockedPage.getByTestId(`stage-card-${stage}`);
     const exportButton = stageCard.getByRole("button", {
       name: new RegExp(format, "i"),
@@ -132,16 +147,8 @@ Then(
 
 Then(
   /^une requête GET vers \/trips\/\*\/stages\/0\.gpx est envoyée$/,
-  async ({ mockedPage }) => {
-    const gpxRequests: string[] = [];
-    await mockedPage.route("**/trips/*/stages/*.gpx", (route) => {
-      gpxRequests.push(route.request().url());
-      return route.fulfill({
-        status: 200,
-        contentType: "application/gpx+xml",
-        body: `<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="44.7" lon="4.5"><ele>280</ele></trkpt></trkseg></trk></gpx>`,
-      });
-    });
+  async () => {
+    const gpxRequests = getTrackedStageGpxRequests();
     await expect
       .poll(() => gpxRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
@@ -162,16 +169,8 @@ Then(
 
 Then(
   /^une requête GET vers \/trips\/\*\.gpx est envoyée$/,
-  async ({ mockedPage }) => {
-    const tripGpxRequests: string[] = [];
-    await mockedPage.route("**/trips/*.gpx", (route) => {
-      tripGpxRequests.push(route.request().url());
-      return route.fulfill({
-        status: 200,
-        contentType: "application/gpx+xml",
-        body: `<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="44.7" lon="4.5"><ele>280</ele></trkpt></trkseg></trk></gpx>`,
-      });
-    });
+  async () => {
+    const tripGpxRequests = getTrackedTripGpxRequests();
     await expect
       .poll(() => tripGpxRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
@@ -192,16 +191,8 @@ Then("un message d'erreur s'affiche", async ({ mockedPage }) => {
 
 Then(
   /^une requête GET vers \/trips\/\*\/stages\/0\.fit est envoyée$/,
-  async ({ mockedPage }) => {
-    const fitRequests: string[] = [];
-    await mockedPage.route("**/trips/*/stages/*.fit", (route) => {
-      fitRequests.push(route.request().url());
-      return route.fulfill({
-        status: 200,
-        contentType: "application/octet-stream",
-        body: "",
-      });
-    });
+  async () => {
+    const fitRequests = getTrackedStageFitRequests();
     await expect
       .poll(() => fitRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
@@ -222,17 +213,8 @@ Then(
 
 Then(
   "le fichier téléchargé a l'extension {string}",
-  async ({ mockedPage }, ext: string) => {
-    // Track the download request URL and verify extension
-    const downloadRequests: string[] = [];
-    await mockedPage.route(`**/trips/*/stages/*.${ext}`, (route) => {
-      downloadRequests.push(route.request().url());
-      return route.fulfill({
-        status: 200,
-        contentType: "application/octet-stream",
-        body: "",
-      });
-    });
+  async (_fixtures, ext: string) => {
+    const downloadRequests = getTrackedStageExportRequests();
     await expect
       .poll(() => downloadRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
@@ -255,16 +237,8 @@ Then(
 
 Then(
   /^a GET request to \/trips\/\*\/stages\/0\.gpx is sent$/,
-  async ({ mockedPage }) => {
-    const gpxRequests: string[] = [];
-    await mockedPage.route("**/trips/*/stages/*.gpx", (route) => {
-      gpxRequests.push(route.request().url());
-      return route.fulfill({
-        status: 200,
-        contentType: "application/gpx+xml",
-        body: `<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="44.7" lon="4.5"><ele>280</ele></trkpt></trkseg></trk></gpx>`,
-      });
-    });
+  async () => {
+    const gpxRequests = getTrackedStageGpxRequests();
     await expect
       .poll(() => gpxRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
@@ -283,16 +257,8 @@ Then(
   },
 );
 
-Then(/^a GET request to \/trips\/\*\.gpx is sent$/, async ({ mockedPage }) => {
-  const tripGpxRequests: string[] = [];
-  await mockedPage.route("**/trips/*.gpx", (route) => {
-    tripGpxRequests.push(route.request().url());
-    return route.fulfill({
-      status: 200,
-      contentType: "application/gpx+xml",
-      body: `<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="44.7" lon="4.5"><ele>280</ele></trkpt></trkseg></trk></gpx>`,
-    });
-  });
+Then(/^a GET request to \/trips\/\*\.gpx is sent$/, async () => {
+  const tripGpxRequests = getTrackedTripGpxRequests();
   await expect
     .poll(() => tripGpxRequests.length, { timeout: 5000 })
     .toBeGreaterThan(0);
@@ -312,16 +278,8 @@ Then("an error message is displayed", async ({ mockedPage }) => {
 
 Then(
   /^a GET request to \/trips\/\*\/stages\/0\.fit is sent$/,
-  async ({ mockedPage }) => {
-    const fitRequests: string[] = [];
-    await mockedPage.route("**/trips/*/stages/*.fit", (route) => {
-      fitRequests.push(route.request().url());
-      return route.fulfill({
-        status: 200,
-        contentType: "application/octet-stream",
-        body: "",
-      });
-    });
+  async () => {
+    const fitRequests = getTrackedStageFitRequests();
     await expect
       .poll(() => fitRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
@@ -342,16 +300,8 @@ Then(
 
 Then(
   "the downloaded file has extension {string}",
-  async ({ mockedPage }, ext: string) => {
-    const downloadRequests: string[] = [];
-    await mockedPage.route(`**/trips/*/stages/*.${ext}`, (route) => {
-      downloadRequests.push(route.request().url());
-      return route.fulfill({
-        status: 200,
-        contentType: "application/octet-stream",
-        body: "",
-      });
-    });
+  async (_fixtures, ext: string) => {
+    const downloadRequests = getTrackedStageExportRequests();
     await expect
       .poll(() => downloadRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);

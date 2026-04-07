@@ -9,6 +9,7 @@ import {
   fullTripEventSequence,
 } from "../../fixtures/mock-data";
 import { mockAllApis } from "../../fixtures/api-mocks";
+import { trackTripGpxDownload } from "../support/export-download-tracker";
 
 // ---------------------------------------------------------------------------
 // Navigation — FR + EN
@@ -595,21 +596,46 @@ export const SHARE_BUTTON_TESTID: Record<string, string> = {
   "Copy text": "share-copy-text-button",
 };
 
+function getGenericButtonNamePattern(btnName: string): string | RegExp {
+  const expandRadiusMatch = btnName.match(
+    /^(?:Expand to|Expand search to|Élargir à|Élargir le rayon à) (\d+) km$/i,
+  );
+  if (expandRadiusMatch) {
+    const [, radius] = expandRadiusMatch;
+    return new RegExp(
+      `(?:Expand(?: search)? to|Élargir(?: le rayon)? à) ${radius} km`,
+      "i",
+    );
+  }
+
+  return new RegExp(btnName, "i");
+}
+
 When("je clique sur {string}", async ({ page }, btnName: string) => {
+  if (btnName === "Télécharger le GPX complet") {
+    await trackTripGpxDownload(page);
+  }
   const testId = SHARE_BUTTON_TESTID[btnName];
   if (testId) {
     await page.getByTestId(testId).click();
   } else {
-    await page.getByRole("button", { name: new RegExp(btnName, "i") }).click();
+    await page
+      .getByRole("button", { name: getGenericButtonNamePattern(btnName) })
+      .click();
   }
 });
 
 When("I click {string}", async ({ page }, btnName: string) => {
+  if (btnName === "Télécharger le GPX complet") {
+    await trackTripGpxDownload(page);
+  }
   const testId = SHARE_BUTTON_TESTID[btnName];
   if (testId) {
     await page.getByTestId(testId).click();
   } else {
-    await page.getByRole("button", { name: new RegExp(btnName, "i") }).click();
+    await page
+      .getByRole("button", { name: getGenericButtonNamePattern(btnName) })
+      .click();
   }
 });
 
