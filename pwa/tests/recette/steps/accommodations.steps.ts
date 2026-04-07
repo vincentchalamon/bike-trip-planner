@@ -271,39 +271,93 @@ Then(
 
 When(
   "aucun hébergement n'est trouvé dans un rayon de {int} km",
-  async ({ $test }, _radius: number) => {
-    $test.fixme();
+  async ({ injectSequence }, radius: number) => {
+    await injectSequence([emptyAccommodationsFoundEvent(0, radius)]);
   },
 );
 
 When(
   "no accommodation is found within {int} km",
-  async ({ $test }, _radius: number) => {
-    $test.fixme();
+  async ({ injectSequence }, radius: number) => {
+    await injectSequence([emptyAccommodationsFoundEvent(0, radius)]);
   },
 );
 
 When(
   "un hébergement est exactement sur le point d'arrivée",
-  async ({ $test }) => {
-    $test.fixme();
+  async ({ injectSequence }) => {
+    await injectSequence([
+      {
+        type: "accommodations_found",
+        data: {
+          stageIndex: 0,
+          searchRadiusKm: 5,
+          accommodations: [
+            {
+              name: "Gîte du Terminus",
+              type: "guest_house",
+              lat: 44.532,
+              lon: 4.392,
+              estimatedPriceMin: 45,
+              estimatedPriceMax: 60,
+              isExactPrice: false,
+              possibleClosed: false,
+              distanceToEndPoint: 0,
+            },
+          ],
+        },
+      },
+    ]);
   },
 );
 
-When("an accommodation is exactly at the endpoint", async ({ $test }) => {
-  $test.fixme();
-});
+When(
+  "an accommodation is exactly at the endpoint",
+  async ({ injectSequence }) => {
+    await injectSequence([
+      {
+        type: "accommodations_found",
+        data: {
+          stageIndex: 0,
+          searchRadiusKm: 5,
+          accommodations: [
+            {
+              name: "Gîte du Terminus",
+              type: "guest_house",
+              lat: 44.532,
+              lon: 4.392,
+              estimatedPriceMin: 45,
+              estimatedPriceMax: 60,
+              isExactPrice: false,
+              possibleClosed: false,
+              distanceToEndPoint: 0,
+            },
+          ],
+        },
+      },
+    ]);
+  },
+);
 
 Then(
   "aucun badge de distance n'est affiché pour cet hébergement",
-  async ({ $test }) => {
-    $test.fixme();
+  async ({ mockedPage }) => {
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard).toContainText("Gîte du Terminus", {
+      timeout: 5000,
+    });
+    // When distanceToEndPoint is 0, no "X.X km" badge should be shown for that accommodation
+    await expect(stageCard.locator('[aria-label*="0 km"]')).toHaveCount(0);
   },
 );
 
 Then(
   "no distance badge is displayed for that accommodation",
-  async ({ $test }) => {
-    $test.fixme();
+  async ({ mockedPage }) => {
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard).toContainText("Gîte du Terminus", {
+      timeout: 5000,
+    });
+    await expect(stageCard.locator('[aria-label*="0 km"]')).toHaveCount(0);
   },
 );

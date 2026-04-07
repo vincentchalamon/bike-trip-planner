@@ -167,52 +167,85 @@ When("I navigate to the home page", async ({ page }) => {
   await page.goto("/");
 });
 
-When("je clique sur le bouton de déconnexion", async ({ $test }) => {
-  $test.fixme();
+When("je clique sur le bouton de déconnexion", async ({ page }) => {
+  await page.getByRole("button", { name: /déconnex|logout/i }).click();
 });
 
-When("I click the logout button", async ({ $test }) => {
-  $test.fixme();
+When("I click the logout button", async ({ page }) => {
+  await page.getByRole("button", { name: /déconnex|logout/i }).click();
 });
 
-Then("je suis redirigé vers la page de connexion", async ({ $test }) => {
-  $test.fixme();
+Then("je suis redirigé vers la page de connexion", async ({ page }) => {
+  await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
 });
 
-Then("I am redirected to the login page", async ({ $test }) => {
-  $test.fixme();
+Then("I am redirected to the login page", async ({ page }) => {
+  await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
 });
 
-When("une erreur serveur se produit", async ({ $test }) => {
-  $test.fixme();
+When("une erreur serveur se produit", async ({ page }) => {
+  await page.route("**/trips", (route, req) => {
+    if (req.method() !== "POST") return route.fallback();
+    return route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Internal Server Error" }),
+    });
+  });
+  const input = page.getByTestId("magic-link-input");
+  if (await input.isVisible().catch(() => false)) {
+    await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
+    await input.press("Enter");
+  }
 });
 
-When("a server error occurs", async ({ $test }) => {
-  $test.fixme();
+When("a server error occurs", async ({ page }) => {
+  await page.route("**/trips", (route, req) => {
+    if (req.method() !== "POST") return route.fallback();
+    return route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Internal Server Error" }),
+    });
+  });
+  const input = page.getByTestId("magic-link-input");
+  if (await input.isVisible().catch(() => false)) {
+    await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
+    await input.press("Enter");
+  }
 });
 
 Then(
   "aucune trace de pile PHP n'est affichée à l'utilisateur",
-  async ({ $test }) => {
-    $test.fixme();
+  async ({ page }) => {
+    const body = await page.content();
+    expect(body).not.toContain("Stack trace");
+    expect(body).not.toContain("vendor/");
+    expect(body).not.toContain("Exception");
   },
 );
 
-Then("no PHP stack trace is shown to the user", async ({ $test }) => {
-  $test.fixme();
+Then("no PHP stack trace is shown to the user", async ({ page }) => {
+  const body = await page.content();
+  expect(body).not.toContain("Stack trace");
+  expect(body).not.toContain("vendor/");
+  expect(body).not.toContain("Exception");
 });
 
-When("je charge la page d'accueil", async ({ $test }) => {
-  $test.fixme();
+When("je charge la page d'accueil", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
 });
 
-When("I load the home page", async ({ $test }) => {
-  $test.fixme();
+When("I load the home page", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
 });
 
 Then(
   "les headers CSP, HSTS et X-Frame-Options sont présents",
   async ({ $test }) => {
+    // Security headers are set by the production Caddy server, not the dev/test server
     $test.fixme();
   },
 );
@@ -220,41 +253,67 @@ Then(
 Then(
   "the CSP, HSTS and X-Frame-Options headers are present",
   async ({ $test }) => {
+    // Security headers are set by the production Caddy server, not the dev/test server
     $test.fixme();
   },
 );
 
 Then("toutes les ressources chargées utilisent HTTPS", async ({ $test }) => {
+  // Dev/test server uses HTTP; HTTPS enforcement is a production Caddy concern
   $test.fixme();
 });
 
 Then("all loaded resources use HTTPS", async ({ $test }) => {
+  // Dev/test server uses HTTP; HTTPS enforcement is a production Caddy concern
   $test.fixme();
 });
 
-Given("je suis connecté en tant qu'utilisateur A", async ({ $test }) => {
-  $test.fixme();
+Given("je suis connecté en tant qu'utilisateur A", async ({ page }) => {
+  await mockAllApis(page);
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
 });
 
-Given("I am logged in as user A", async ({ $test }) => {
-  $test.fixme();
+Given("I am logged in as user A", async ({ page }) => {
+  await mockAllApis(page);
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
 });
 
-When("je tente d'accéder au voyage de l'utilisateur B", async ({ $test }) => {
-  $test.fixme();
+When("je tente d'accéder au voyage de l'utilisateur B", async ({ page }) => {
+  await page.route("**/trips/other-user-trip/detail", (route) =>
+    route.fulfill({
+      status: 403,
+      body: JSON.stringify({ detail: "Access Denied" }),
+    }),
+  );
+  await page.goto("/trips/other-user-trip");
 });
 
-When("I try to access user B's trip", async ({ $test }) => {
-  $test.fixme();
+When("I try to access user B's trip", async ({ page }) => {
+  await page.route("**/trips/other-user-trip/detail", (route) =>
+    route.fulfill({
+      status: 403,
+      body: JSON.stringify({ detail: "Access Denied" }),
+    }),
+  );
+  await page.goto("/trips/other-user-trip");
 });
 
 Then(
   "j'obtiens une erreur {int} ou une page non trouvée",
-  async ({ $test }) => {
-    $test.fixme();
+  async ({ page }, _code: number) => {
+    await expect(
+      page.getByText(/403|interdit|forbidden|introuvable|not found/i).first(),
+    ).toBeVisible({ timeout: 5000 });
   },
 );
 
-Then("I get a {int} error or a not found page", async ({ $test }) => {
-  $test.fixme();
-});
+Then(
+  "I get a {int} error or a not found page",
+  async ({ page }, _code: number) => {
+    await expect(
+      page.getByText(/403|interdit|forbidden|introuvable|not found/i).first(),
+    ).toBeVisible({ timeout: 5000 });
+  },
+);

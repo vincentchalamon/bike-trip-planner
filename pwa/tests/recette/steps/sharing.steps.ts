@@ -186,48 +186,124 @@ Then("the short link is copied to the clipboard", async ({ mockedPage }) => {
 
 // --- Additional missing steps ---
 
-Then("je vois le bouton {string}", async ({ $test }) => {
-  $test.fixme();
+Then("je vois le bouton {string}", async ({ mockedPage }, btnName: string) => {
+  const testId = SHARE_BUTTON_TESTID[btnName];
+  if (testId) {
+    await expect(mockedPage.getByTestId(testId)).toBeVisible({ timeout: 5000 });
+  } else {
+    await expect(mockedPage.getByRole("button", { name: btnName })).toBeVisible(
+      { timeout: 5000 },
+    );
+  }
 });
 
-Then("I see the {string} button", async ({ $test }) => {
-  $test.fixme();
+Then("I see the {string} button", async ({ mockedPage }, btnName: string) => {
+  const testId = SHARE_BUTTON_TESTID[btnName];
+  if (testId) {
+    await expect(mockedPage.getByTestId(testId)).toBeVisible({ timeout: 5000 });
+  } else {
+    await expect(mockedPage.getByRole("button", { name: btnName })).toBeVisible(
+      { timeout: 5000 },
+    );
+  }
 });
 
-Then("un fichier PNG est téléchargé", async ({ $test }) => {
-  $test.fixme();
+Then("un fichier PNG est téléchargé", async ({ mockedPage }) => {
+  const downloadPromise = mockedPage.waitForEvent("download");
+  await mockedPage.getByTestId("share-download-png-button").click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toContain(".png");
 });
 
-Then("a PNG file is downloaded", async ({ $test }) => {
-  $test.fixme();
+Then("a PNG file is downloaded", async ({ mockedPage }) => {
+  const downloadPromise = mockedPage.waitForEvent("download");
+  await mockedPage.getByTestId("share-download-png-button").click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toContain(".png");
 });
 
 Then(
   "le texte résumé contenant le titre du voyage est copié",
-  async ({ $test }) => {
-    $test.fixme();
+  async ({ mockedPage }) => {
+    await mockedPage
+      .context()
+      .grantPermissions(["clipboard-read", "clipboard-write"]);
+    const clipboardText = await mockedPage.evaluate(() =>
+      navigator.clipboard.readText(),
+    );
+    expect(clipboardText).toContain("Tour de l'Ardeche");
   },
 );
 
 Then(
   "the summary text containing the trip title is copied",
-  async ({ $test }) => {
-    $test.fixme();
+  async ({ mockedPage }) => {
+    await mockedPage
+      .context()
+      .grantPermissions(["clipboard-read", "clipboard-write"]);
+    const clipboardText = await mockedPage.evaluate(() =>
+      navigator.clipboard.readText(),
+    );
+    expect(clipboardText).toContain("Tour de l'Ardeche");
   },
 );
 
-When(/^j'accède à \/s\/<code_court>$/, async ({ $test }) => {
-  $test.fixme();
+When(/^j'accède à \/s\/<code_court>$/, async ({ mockedPage }) => {
+  const shortCode = "Ab3kX9mP";
+  await mockedPage.route(`**/s/${shortCode}`, (route, request) => {
+    if (request.method() !== "GET") return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/ld+json",
+      body: JSON.stringify({
+        title: "Tour de l'Ardeche",
+        startDate: null,
+        endDate: null,
+        fatigueFactor: 0.9,
+        elevationPenalty: 50,
+        maxDistancePerDay: 80,
+        averageSpeed: 15,
+        stages: [],
+      }),
+    });
+  });
+  await mockedPage.goto(`/s/${shortCode}`);
 });
 
-When(/^I navigate to \/s\/<short_code>$/, async ({ $test }) => {
-  $test.fixme();
+When(/^I navigate to \/s\/<short_code>$/, async ({ mockedPage }) => {
+  const shortCode = "Ab3kX9mP";
+  await mockedPage.route(`**/s/${shortCode}`, (route, request) => {
+    if (request.method() !== "GET") return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/ld+json",
+      body: JSON.stringify({
+        title: "Tour de l'Ardeche",
+        startDate: null,
+        endDate: null,
+        fatigueFactor: 0.9,
+        elevationPenalty: 50,
+        maxDistancePerDay: 80,
+        averageSpeed: 15,
+        stages: [],
+      }),
+    });
+  });
+  await mockedPage.goto(`/s/${shortCode}`);
 });
 
-Then("je vois le résumé du voyage partagé", async ({ $test }) => {
-  $test.fixme();
+Then("je vois le résumé du voyage partagé", async ({ mockedPage }) => {
+  await expect(
+    mockedPage
+      .getByTestId("trip-title")
+      .or(mockedPage.getByText("Tour de l'Ardeche")),
+  ).toBeVisible({ timeout: 5000 });
 });
 
-Then("I see the shared trip summary", async ({ $test }) => {
-  $test.fixme();
+Then("I see the shared trip summary", async ({ mockedPage }) => {
+  await expect(
+    mockedPage
+      .getByTestId("trip-title")
+      .or(mockedPage.getByText("Tour de l'Ardeche")),
+  ).toBeVisible({ timeout: 5000 });
 });
