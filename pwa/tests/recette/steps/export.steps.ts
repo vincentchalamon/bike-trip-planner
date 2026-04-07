@@ -213,7 +213,7 @@ Then(
 
 Then(
   "le fichier téléchargé a l'extension {string}",
-  async (_fixtures, ext: string) => {
+  async ({}, ext: string) => {
     const downloadRequests = getTrackedStageExportRequests();
     await expect
       .poll(() => downloadRequests.length, { timeout: 5000 })
@@ -300,7 +300,7 @@ Then(
 
 Then(
   "the downloaded file has extension {string}",
-  async (_fixtures, ext: string) => {
+  async ({}, ext: string) => {
     const downloadRequests = getTrackedStageExportRequests();
     await expect
       .poll(() => downloadRequests.length, { timeout: 5000 })
