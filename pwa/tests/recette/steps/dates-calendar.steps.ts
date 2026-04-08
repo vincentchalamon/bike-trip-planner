@@ -103,15 +103,7 @@ async function selectCalendarDate(
     'button[aria-label*="suivant"], button[aria-label*="next"], button[aria-label*="Next"]',
   );
   for (let i = 0; i < 24; i++) {
-    const header = mockedPage
-      .locator(".text-sm.font-semibold")
-      .first()
-      .or(
-        mockedPage
-          .locator('[class*="font-semibold"]')
-          .filter({ hasText: /\d{4}/ })
-          .first(),
-      );
+    const header = mockedPage.locator('[class*="font-semibold"]').filter({ hasText: /\d{4}/ }).first();
     const headerText = await header.textContent();
     if (!headerText) {
       await nextButton.first().click();
@@ -402,10 +394,7 @@ Then(
   "le calendrier affiche toutes les étapes avec leurs dates",
   async ({ mockedPage }) => {
     await expect(
-      mockedPage
-        .getByRole("grid")
-        .first()
-        .or(mockedPage.locator('[data-testid^="stage-card-"]').first()),
+      mockedPage.locator('[data-testid^="stage-card-"]').first(),
     ).toBeVisible({ timeout: 5000 });
   },
 );
@@ -455,10 +444,7 @@ Then(
   "the calendar shows all stages with their dates",
   async ({ mockedPage }) => {
     await expect(
-      mockedPage
-        .getByRole("grid")
-        .first()
-        .or(mockedPage.locator('[data-testid^="stage-card-"]').first()),
+      mockedPage.locator('[data-testid^="stage-card-"]').first(),
     ).toBeVisible({ timeout: 5000 });
   },
 );
