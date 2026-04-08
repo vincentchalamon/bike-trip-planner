@@ -50,6 +50,7 @@ Fonctionnalité: Cas limites et robustesse
 
   @desktop
   Scénario: Navigation vers un voyage inexistant
+    Étant donné que le endpoint de détail du voyage renvoie 404
     Quand je navigue vers "/trips/voyage-inexistant"
     Alors je vois une page 404 ou un message d'erreur
 

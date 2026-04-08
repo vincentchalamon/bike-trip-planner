@@ -299,7 +299,9 @@ Then("the trip is created from the GPX file", async ({ $test }) => {
 
 Then("an error message is displayed", async ({ mockedPage }) => {
   await expect(
-    mockedPage.getByRole("alert").or(mockedPage.getByText(/error/i)),
+    mockedPage.getByText(
+      /network error|please check your connection|unable|impossible|erreur/i,
+    ),
   ).toBeVisible({ timeout: 5000 });
 });
 

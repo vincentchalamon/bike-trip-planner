@@ -11,19 +11,27 @@ import type { MercureEvent } from "../../../src/lib/mercure/types";
 // Weather and travel time — FR + EN
 // ---------------------------------------------------------------------------
 
+const SETTINGS_BUTTON_NAME = /Ouvrir les paramètres|Open settings/i;
+const SETTINGS_DIALOG_NAME = /Paramètres|Settings/i;
+const SPEED_SLIDER_NAME = /Vitesse moyenne \(km\/h\)|Average cycling speed \(km\/h\)/i;
+const FATIGUE_SLIDER_NAME =
+  /Indice de fatigue accumulée|Accumulated fatigue index/i;
+const EBIKE_SWITCH_NAME = /Mode VAE|E-bike mode/i;
+const DEPARTURE_SLIDER_NAME = /Heure de départ|Departure hour/i;
+
 // --- When steps FR ---
 
 When(
   /^l'heure de départ est configurée à (\d+)h(\d+)$/,
   async ({ mockedPage }, hours: string, _minutes: string) => {
     await mockedPage
-      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .getByRole("button", { name: SETTINGS_BUTTON_NAME })
       .click();
     await expect(
-      mockedPage.getByRole("dialog", { name: "Paramètres" }),
+      mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
     ).toBeInViewport();
     const departureSlider = mockedPage.getByRole("slider", {
-      name: "Heure de départ",
+      name: DEPARTURE_SLIDER_NAME,
     });
     await departureSlider.fill(String(hours));
   },
@@ -81,13 +89,13 @@ When(
   /^je modifie la vitesse moyenne à (\d+) km\/h dans les paramètres$/,
   async ({ mockedPage }, speed: number) => {
     await mockedPage
-      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .getByRole("button", { name: SETTINGS_BUTTON_NAME })
       .click();
     await expect(
-      mockedPage.getByRole("dialog", { name: "Paramètres" }),
+      mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
     ).toBeInViewport();
     const speedSlider = mockedPage.getByRole("slider", {
-      name: "Vitesse moyenne (km/h)",
+      name: SPEED_SLIDER_NAME,
     });
     await speedSlider.fill(String(speed));
   },
@@ -95,25 +103,25 @@ When(
 
 When("le facteur de fatigue est activé", async ({ mockedPage }) => {
   await mockedPage
-    .getByRole("button", { name: "Ouvrir les paramètres" })
+    .getByRole("button", { name: SETTINGS_BUTTON_NAME })
     .click();
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).toBeInViewport();
   const fatigueSlider = mockedPage.getByRole("slider", {
-    name: "Indice de fatigue accumulée",
+    name: FATIGUE_SLIDER_NAME,
   });
   await fatigueSlider.fill("30");
 });
 
 When("le mode e-bike est activé", async ({ mockedPage }) => {
   await mockedPage
-    .getByRole("button", { name: "Ouvrir les paramètres" })
+    .getByRole("button", { name: SETTINGS_BUTTON_NAME })
     .click();
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).toBeInViewport();
-  const ebikeToggle = mockedPage.getByRole("switch", { name: "Mode VAE" });
+  const ebikeToggle = mockedPage.getByRole("switch", { name: EBIKE_SWITCH_NAME });
   await ebikeToggle.click();
 });
 
@@ -123,13 +131,13 @@ When(
   /^the departure time is set to (\d+):(\d+) AM$/,
   async ({ mockedPage }, hours: string, _minutes: string) => {
     await mockedPage
-      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .getByRole("button", { name: SETTINGS_BUTTON_NAME })
       .click();
     await expect(
-      mockedPage.getByRole("dialog", { name: "Paramètres" }),
+      mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
     ).toBeInViewport();
     const departureSlider = mockedPage.getByRole("slider", {
-      name: "Heure de départ",
+      name: DEPARTURE_SLIDER_NAME,
     });
     await departureSlider.fill(String(hours));
   },
@@ -187,13 +195,13 @@ When(
   /^I change the average speed to (\d+) km\/h in settings$/,
   async ({ mockedPage }, speed: number) => {
     await mockedPage
-      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .getByRole("button", { name: SETTINGS_BUTTON_NAME })
       .click();
     await expect(
-      mockedPage.getByRole("dialog", { name: "Paramètres" }),
+      mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
     ).toBeInViewport();
     const speedSlider = mockedPage.getByRole("slider", {
-      name: "Vitesse moyenne (km/h)",
+      name: SPEED_SLIDER_NAME,
     });
     await speedSlider.fill(String(speed));
   },
@@ -201,25 +209,25 @@ When(
 
 When("the fatigue factor is enabled", async ({ mockedPage }) => {
   await mockedPage
-    .getByRole("button", { name: "Ouvrir les paramètres" })
+    .getByRole("button", { name: SETTINGS_BUTTON_NAME })
     .click();
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).toBeInViewport();
   const fatigueSlider = mockedPage.getByRole("slider", {
-    name: "Indice de fatigue accumulée",
+    name: FATIGUE_SLIDER_NAME,
   });
   await fatigueSlider.fill("30");
 });
 
 When("e-bike mode is enabled", async ({ mockedPage }) => {
   await mockedPage
-    .getByRole("button", { name: "Ouvrir les paramètres" })
+    .getByRole("button", { name: SETTINGS_BUTTON_NAME })
     .click();
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).toBeInViewport();
-  const ebikeToggle = mockedPage.getByRole("switch", { name: "Mode VAE" });
+  const ebikeToggle = mockedPage.getByRole("switch", { name: EBIKE_SWITCH_NAME });
   await ebikeToggle.click();
 });
 

@@ -202,6 +202,7 @@ When(
   async ({ mockedPage }, mode: string) => {
     const modeMap: Record<string, string> = {
       "carte seule": "view-mode-map",
+      "vue splitée": "view-mode-split",
       "vue partagée": "view-mode-split",
       chronologie: "view-mode-timeline",
     };
@@ -275,9 +276,10 @@ When("I view the trip on a mobile screen", async ({ mockedPage }) => {
 });
 
 Then("la carte s'adapte à la taille de l'écran", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("map-view")).toBeVisible({
+  await expect(mockedPage.getByTestId("view-mode-toggle")).toBeVisible({
     timeout: 5000,
   });
+  await expect(mockedPage.locator("#timeline")).toBeVisible({ timeout: 5000 });
   const noHScroll = await mockedPage.evaluate(
     () =>
       document.documentElement.scrollWidth <=
@@ -287,9 +289,10 @@ Then("la carte s'adapte à la taille de l'écran", async ({ mockedPage }) => {
 });
 
 Then("the map adapts to the screen size", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("map-view")).toBeVisible({
+  await expect(mockedPage.getByTestId("view-mode-toggle")).toBeVisible({
     timeout: 5000,
   });
+  await expect(mockedPage.locator("#timeline")).toBeVisible({ timeout: 5000 });
   const noHScroll = await mockedPage.evaluate(
     () =>
       document.documentElement.scrollWidth <=

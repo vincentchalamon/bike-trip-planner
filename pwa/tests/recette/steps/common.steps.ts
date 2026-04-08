@@ -12,6 +12,22 @@ import { mockAllApis } from "../../fixtures/api-mocks";
 import { trackAccommodationScanRequest } from "../support/accommodation-scan-tracker";
 import { trackTripGpxDownload } from "../support/export-download-tracker";
 
+const SETTINGS_DIALOG_NAME = /Paramètres|Settings/i;
+
+async function clickSettingsOpenButton(
+  page: import("@playwright/test").Page,
+): Promise<void> {
+  await page.getByTestId("config-open-button").click();
+}
+
+async function clickSettingsCloseButton(
+  page: import("@playwright/test").Page,
+): Promise<void> {
+  const dialog = page.getByRole("dialog", { name: SETTINGS_DIALOG_NAME });
+  await expect(dialog).toBeVisible({ timeout: 5000 });
+  await dialog.locator("button").first().click();
+}
+
 // ---------------------------------------------------------------------------
 // Navigation — FR + EN
 // ---------------------------------------------------------------------------
@@ -431,7 +447,9 @@ Then("je ne vois plus le message d'erreur", async ({ mockedPage }) => {
 
 Then("I no longer see the error message", async ({ mockedPage }) => {
   await expect(
-    mockedPage.getByText("Veuillez entrer une URL valide."),
+    mockedPage.getByText(
+      /Veuillez entrer une URL valide\.|Please enter a valid URL\./,
+    ),
   ).toBeHidden();
 });
 
@@ -565,20 +583,16 @@ Given(
 );
 
 When("j'ouvre le panneau de paramètres", async ({ mockedPage }) => {
-  await mockedPage
-    .getByRole("button", { name: "Ouvrir les paramètres" })
-    .click();
+  await clickSettingsOpenButton(mockedPage);
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).toBeInViewport();
 });
 
 When("I open the settings panel", async ({ mockedPage }) => {
-  await mockedPage
-    .getByRole("button", { name: "Ouvrir les paramètres" })
-    .click();
+  await clickSettingsOpenButton(mockedPage);
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).toBeInViewport();
 });
 
@@ -588,7 +602,18 @@ When(
     if (name === "Importer un GPX") {
       $test.fixme();
     }
-    await page.getByRole("button", { name }).click();
+    if (name === "Ouvrir les paramètres" || name === "Open settings") {
+      await clickSettingsOpenButton(page);
+      return;
+    }
+    if (name === "Fermer les paramètres" || name === "Close settings") {
+      await clickSettingsCloseButton(page);
+      return;
+    }
+    await page
+      .getByRole("button", { name: getGenericButtonNamePattern(name) })
+      .first()
+      .click();
   },
 );
 
@@ -596,7 +621,18 @@ When("I click the {string} button", async ({ page, $test }, name: string) => {
   if (name === "Import GPX") {
     $test.fixme();
   }
-  await page.getByRole("button", { name }).click();
+  if (name === "Ouvrir les paramètres" || name === "Open settings") {
+    await clickSettingsOpenButton(page);
+    return;
+  }
+  if (name === "Fermer les paramètres" || name === "Close settings") {
+    await clickSettingsCloseButton(page);
+    return;
+  }
+  await page
+    .getByRole("button", { name: getGenericButtonNamePattern(name) })
+    .first()
+    .click();
 });
 
 // Generic click — shared by all domains (FR + EN)
@@ -615,6 +651,14 @@ export const SHARE_BUTTON_TESTID: Record<string, string> = {
 };
 
 function getGenericButtonNamePattern(btnName: string): string | RegExp {
+  if (btnName === "Ouvrir les paramètres" || btnName === "Open settings") {
+    return /Ouvrir les paramètres|Open settings/i;
+  }
+
+  if (btnName === "Fermer les paramètres" || btnName === "Close settings") {
+    return /Fermer les paramètres|Close settings/i;
+  }
+
   if (
     btnName === "Télécharger le GPX complet" ||
     btnName === "Download full trip GPX"
@@ -654,10 +698,12 @@ When("je clique sur {string}", async ({ page }, btnName: string) => {
     await page
       .getByTestId("stage-card-1")
       .getByRole("button", { name: getGenericButtonNamePattern(btnName) })
+      .first()
       .click();
   } else {
     await page
       .getByRole("button", { name: getGenericButtonNamePattern(btnName) })
+      .first()
       .click();
   }
 });
@@ -690,25 +736,25 @@ When("I click {string}", async ({ page }, btnName: string) => {
 
 Then("le panneau de paramètres s'affiche", async ({ mockedPage }) => {
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).toBeInViewport();
 });
 
 Then("the settings panel is displayed", async ({ mockedPage }) => {
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).toBeInViewport();
 });
 
 Then("le panneau de paramètres est fermé", async ({ mockedPage }) => {
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).not.toBeInViewport();
 });
 
 Then("the settings panel is closed", async ({ mockedPage }) => {
   await expect(
-    mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).not.toBeInViewport();
 });
 

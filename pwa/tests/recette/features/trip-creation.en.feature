@@ -8,13 +8,13 @@ Feature: Trip creation
 
   @desktop @critical
   Scenario: Magic link input field is displayed
-    Then I see an input field with placeholder "Collez votre lien Komoot, Strava ou RideWithGPS ici..."
+    Then I see an input field with placeholder "Enter your Komoot, Strava or RideWithGPS link here..."
 
   @desktop @critical
   Scenario: Validation error for an invalid URL
     When I type "not-a-url" in the magic link field
     And I press Enter
-    Then I see the error message "Veuillez entrer une URL valide."
+    Then I see the error message "Please enter a valid URL."
 
   @desktop
   Scenario: Error clears when I start typing again

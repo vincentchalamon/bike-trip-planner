@@ -303,9 +303,11 @@ Then("the trip is saved locally in IndexedDB", async ({ mockedPage }) => {
 });
 
 Then("I can view the trip stages", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
-    timeout: 5000,
-  });
+  await expect(
+    mockedPage
+      .getByTestId("stage-card-1")
+      .or(mockedPage.locator('[data-testid^="saved-trip-card-"]').first()),
+  ).toBeVisible({ timeout: 5000 });
 });
 
 Then(

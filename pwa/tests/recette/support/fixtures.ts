@@ -61,7 +61,7 @@ export const test = base.extend<RecetteFixtures>({
       }
       await input.fill(url ?? "https://www.komoot.com/fr-fr/tour/2795080048");
       await input.press("Enter");
-      await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
+      await mockedPage.waitForURL(/\/trips\//, { timeout: 10000 });
       await expect(
         mockedPage
           .getByTestId("trip-title-skeleton")

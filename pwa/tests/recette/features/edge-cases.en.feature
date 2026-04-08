@@ -49,6 +49,7 @@ Feature: Edge cases and robustness
 
   @desktop
   Scenario: Navigation to a non-existent trip
+    Given the trip detail endpoint returns 404
     When I navigate to "/trips/non-existent-trip"
     Then I see a 404 page or error message
 
