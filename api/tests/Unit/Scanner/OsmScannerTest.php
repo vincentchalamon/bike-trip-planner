@@ -87,6 +87,23 @@ final class OsmScannerTest extends TestCase
     }
 
     #[Test]
+    public function queryFailureReturnsEmptyGracefully(): void
+    {
+        $client = new MockHttpClient(fn (): MockResponse => new MockResponse('Server Error', ['http_code' => 500]), 'https://overpass-api.de');
+
+        $scanner = new OsmScanner(
+            $client,
+            $this->createPassthroughCache(),
+            $this->createEmptyCachePool(),
+            new NullLogger(),
+        );
+
+        $result = $scanner->query(self::QUERY_A);
+
+        $this->assertSame([], $result);
+    }
+
+    #[Test]
     public function queryBatchFailureReturnsEmptyGracefully(): void
     {
         $client = new MockHttpClient(fn (): MockResponse => new MockResponse('Server Error', ['http_code' => 500]), 'https://overpass-api.de');
