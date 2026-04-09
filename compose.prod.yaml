@@ -1,3 +1,9 @@
+secrets:
+  jwt_private_key:
+    file: ${JWT_PRIVATE_KEY_PATH:-/etc/bike-trip-planner/jwt/private.pem}
+  jwt_public_key:
+    file: ${JWT_PUBLIC_KEY_PATH:-/etc/bike-trip-planner/jwt/public.pem}
+
 services:
   php:
     image: ${PHP_IMAGE:-bike-trip-planner-php:ci}
@@ -6,6 +12,9 @@ services:
       dockerfile: .docker/php/Dockerfile
       target: frankenphp_prod
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
     depends_on:
       database:
         condition: service_healthy
@@ -32,9 +41,14 @@ services:
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      JWT_SECRET_KEY: /run/secrets/jwt_private_key
+      JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
       FRONTEND_URL: "${FRONTEND_URL}"
       MAILER_DSN: "${MAILER_DSN}"
+    secrets:
+      - jwt_private_key
+      - jwt_public_key
     tty: true
     ports:
       - target: 80
@@ -47,11 +61,13 @@ services:
         published: ${HTTPS_PORT:-443}
         protocol: udp
     volumes:
-      - jwt_keys:/app/config/jwt
+      - caddy_data:/data
+      - caddy_config:/config
+      - php_var:/app/var
       # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
       # and our date.timezone=UTC override takes effect.
-      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini
-      - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
+      - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini:ro
     healthcheck:
       test: curl --fail http://php/docs || exit 1
       start_period: 30s
@@ -67,6 +83,9 @@ services:
       target: frankenphp_prod
     command: bin/console messenger:consume async --time-limit=3600 -vv
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
     deploy:
       replicas: ${WORKER_REPLICAS:-5}
     depends_on:
@@ -93,15 +112,20 @@ services:
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      JWT_SECRET_KEY: /run/secrets/jwt_private_key
+      JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
       FRONTEND_URL: "${FRONTEND_URL}"
       MAILER_DSN: "${MAILER_DSN}"
+    secrets:
+      - jwt_private_key
+      - jwt_public_key
     volumes:
-      - jwt_keys:/app/config/jwt
+      - php_var:/app/var
       # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
       # and our date.timezone=UTC override takes effect.
-      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini
-      - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
+      - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini:ro
     healthcheck:
       test: pgrep -f messenger:consume || exit 1
       start_period: 30s
@@ -213,9 +237,9 @@ services:
 volumes:
   caddy_data: ~
   caddy_config: ~
+  php_var: ~
   database_data: ~
   overpass-data: ~
   valhalla-tiles: ~
   pwa_node_modules: ~
   pwa_next: ~
-  jwt_keys: ~
