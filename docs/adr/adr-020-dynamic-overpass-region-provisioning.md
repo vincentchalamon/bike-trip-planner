@@ -1,9 +1,10 @@
 # ADR-020: Dynamic Overpass Region Provisioning
 
-- **Status:** Proposed
+- **Status:** Superseded
 - **Date:** 2026-03-05
 - **Extends:** ADR-017 (Valhalla Routing Engine and Self-Hosted Overpass Integration)
 - **Depends on:** ADR-016 Option F (Self-hosted Overpass — foundation implemented)
+- **Superseded by:** [ADR-025](adr-025-removal-of-self-hosted-overpass.md) — Self-hosted Overpass removed. The provisioner and PBF pipeline remain active for Valhalla only.
 
 ## Context and Problem Statement
 

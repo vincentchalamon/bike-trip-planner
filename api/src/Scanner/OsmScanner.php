@@ -15,24 +15,20 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 /**
  * OpenStreetMap scanner combined with {@see OsmOverpassQueryBuilder}.
  *
- * Queries the local Overpass instance first (if ready), falling back
- * to the public overpass-api.de when local is unavailable or returns
- * empty results (route outside imported region).
+ * Queries the public Overpass API (overpass-api.de) with Redis caching
+ * (24h TTL) and graceful degradation (returns empty array on failure).
  */
 final readonly class OsmScanner implements ScannerInterface
 {
     private const int CACHE_TTL = 86400; // 24 hours
 
     public function __construct(
-        #[Autowire(service: 'overpass.local.client')]
-        private HttpClientInterface $localClient,
-        #[Autowire(service: 'overpass.public.client')]
-        private HttpClientInterface $publicClient,
+        #[Autowire(service: 'overpass.client')]
+        private HttpClientInterface $client,
         #[Autowire(service: 'cache.osm')]
         private CacheInterface $osmCache,
         #[Autowire(service: 'cache.osm')]
         private CacheItemPoolInterface $osmCachePool,
-        private OverpassStatusCheckerInterface $statusChecker,
         private LoggerInterface $logger,
     ) {
     }
@@ -52,17 +48,7 @@ final readonly class OsmScanner implements ScannerInterface
             return $this->osmCache->get($cacheKey, function (ItemInterface $item) use ($query): array {
                 $item->expiresAfter(self::CACHE_TTL);
 
-                if ($this->statusChecker->isReady()) {
-                    $result = $this->executeQuery($this->localClient, $query);
-
-                    if ($this->hasResults($result)) {
-                        return $result;
-                    }
-
-                    $this->logger->info('Local Overpass returned empty results, falling back to public API.');
-                }
-
-                return $this->executeQuery($this->publicClient, $query);
+                return $this->executeQuery($this->client, $query);
             });
         } catch (\Throwable $throwable) {
             $this->logger->warning('Overpass query failed, returning empty result.', [
@@ -74,12 +60,10 @@ final readonly class OsmScanner implements ScannerInterface
     }
 
     /**
-     * Executes multiple Overpass QL queries concurrently with cache lookup and two-wave
-     * fallback (local -> public).
+     * Executes multiple Overpass QL queries concurrently with cache lookup.
      *
      * Phase 1: Check cache for all queries via PSR-6.
-     * Phase 2 (Wave 1): Fire all uncached queries on the local client concurrently.
-     * Phase 3 (Wave 2): Fire queries that returned empty/failed results on the public client.
+     * Phase 2: Fire all uncached queries concurrently.
      *
      * @param array<string, string> $queries Map of logical name => Overpass QL query
      *
@@ -121,28 +105,17 @@ final readonly class OsmScanner implements ScannerInterface
             return $results;
         }
 
-        if ($this->statusChecker->isReady()) {
-            [$localEmpties, $localFailures] = $this->executeWave($this->localClient, $uncached, $results);
-            $needsPublic = array_merge($localEmpties, $localFailures);
-        } else {
-            $needsPublic = $uncached;
-        }
-
-        if ([] === $needsPublic) {
-            return $results;
-        }
-
-        // Phase 3 (Wave 2): Fire remaining queries on public client concurrently
-        [$publicEmpties, $publicFailures] = $this->executeWave($this->publicClient, $needsPublic, $results);
+        // Phase 2: Fire all uncached queries concurrently
+        [$empties, $failures] = $this->executeWave($this->client, $uncached, $results);
 
         // Genuine empty results (no OSM data in this area): cache [] to honour the 24 h TTL contract.
-        foreach ($publicEmpties as $name => $query) {
+        foreach ($empties as $name => $query) {
             $results[$name] = [];
             $this->cacheResult($query, []);
         }
 
         // Transient HTTP failures: return [] gracefully but do NOT cache — the error may be temporary.
-        foreach ($publicFailures as $name => $query) {
+        foreach ($failures as $name => $query) {
             $results[$name] = [];
         }
 
@@ -188,13 +161,13 @@ final readonly class OsmScanner implements ScannerInterface
                     $results[$name] = $result;
                     $this->cacheResult($queries[$name], $result);
                 } else {
-                    $this->logger->info('Overpass returned empty results for "{name}", falling back.', [
+                    $this->logger->info('Overpass returned empty results for "{name}".', [
                         'name' => $name,
                     ]);
                     $empties[$name] = $queries[$name];
                 }
             } catch (\Throwable $throwable) {
-                $this->logger->warning('Overpass query "{name}" failed, falling back.', [
+                $this->logger->warning('Overpass query "{name}" failed.', [
                     'name' => $name,
                     'error' => $throwable->getMessage(),
                 ]);

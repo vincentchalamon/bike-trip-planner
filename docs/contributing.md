@@ -25,7 +25,6 @@ This boots multiple services in development mode:
 | `redis`       | Internal only                               | Cache and Messenger transport        |
 | `database`    | Internal only                               | PostgreSQL 18 persistent storage     |
 | `caddy`       | Internal only                               | Web server and reverse proxy         |
-| `overpass`    | Internal only                               | OpenStreetMap Overpass API            |
 | `valhalla`    | Internal only                               | Valhalla routing engine              |
 | `mailcatcher` | `http://localhost:1080`                     | Email catcher (development only)     |
 

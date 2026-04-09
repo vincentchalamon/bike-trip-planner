@@ -54,7 +54,6 @@ This boots multiple services:
 | `mercure`  | Internal only            | Server-push microservice                           |
 | `redis`    | Internal only            | Cache and Messenger transport                      |
 | `database` | Internal only            | PostgreSQL 18 persistent storage                   |
-| `overpass` | Internal only            | OpenStreetMap Overpass API                          |
 | `valhalla` | Internal only            | Valhalla routing engine                            |
 
 > **TLS:** Caddy generates a self-signed certificate for `localhost`. Accept the browser warning on first load, or install the certificate into your system trust store.

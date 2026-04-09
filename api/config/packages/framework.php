@@ -47,11 +47,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'User-Agent' => 'BikeTripPlanner/1.0',
                     ],
                 ],
-                'overpass.local.client' => [
-                    'base_uri' => 'http://overpass:80',
-                    'timeout' => 5,
-                ],
-                'overpass.public.client' => [
+                'overpass.client' => [
                     'base_uri' => 'https://overpass-api.de',
                     'timeout' => 15,
                 ],

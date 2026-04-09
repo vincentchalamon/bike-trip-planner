@@ -94,8 +94,6 @@ services:
         condition: service_healthy
       mercure:
         condition: service_started
-      overpass:
-        condition: service_started
       php:
         condition: service_started
       redis:
@@ -157,27 +155,6 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
-
-  overpass:
-    image: wiktorn/overpass-api:latest
-    restart: unless-stopped
-    volumes:
-      - .docker/osm/data/default.osm.pbf:/data/osm/default.osm.pbf:ro
-      - .docker/osm/fix-permissions.sh:/docker-entrypoint-initdb.d/fix-permissions.sh:ro
-      - overpass-data:/db
-    environment:
-      OVERPASS_META: "yes"
-      OVERPASS_MODE: init
-      OVERPASS_PLANET_URL: file:///data/osm/default.osm.pbf
-      OVERPASS_PLANET_PREPROCESS: 'mv /db/planet.osm.bz2 /db/planet.osm.pbf && osmium cat -o /db/planet.osm.bz2 /db/planet.osm.pbf && rm /db/planet.osm.pbf'
-      OVERPASS_USE_AREAS: "false"
-      OVERPASS_RULES_LOAD: 10
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost/api/status || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 120s
 
   valhalla:
     image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
@@ -270,7 +247,6 @@ volumes:
   caddy_data: ~
   caddy_config: ~
   database_data: ~
-  overpass-data: ~
   valhalla-tiles: ~
   pwa_node_modules: ~
   pwa_next: ~
