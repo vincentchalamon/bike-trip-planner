@@ -346,7 +346,47 @@ Phase de recette approfondie couvrant l'ensemble des sprints 1 à 15 (desktop + 
 
 ---
 
-## Sprint 17 — Garmin Connect
+## Sprint 17 — Performance pipeline async
+
+Optimisation du pipeline d'analyse : timeouts, batch Overpass, cache warming.
+
+| Ordre | ID                                                                      | Titre                                              | Effort | PRs | Dépend de |
+|-------|-------------------------------------------------------------------------|----------------------------------------------------|--------|-----|-----------|
+| 1     | [#277](https://github.com/vincentchalamon/bike-trip-planner/issues/277) | Réduire les timeouts de scraping d'hébergements    | S      |     | —         |
+| 2     | [#278](https://github.com/vincentchalamon/bike-trip-planner/issues/278) | Fusionner les requêtes Overpass per-stage en batch  | M      |     | —         |
+| 3     | [#279](https://github.com/vincentchalamon/bike-trip-planner/issues/279) | Vérifier et optimiser le cache warming ScanAllOsmData | M   |     | —         |
+| 4     | [#280](https://github.com/vincentchalamon/bike-trip-planner/issues/280) | Augmenter la limite d'upload GPX à 30 MB           | S      |     | —         |
+
+---
+
+## Sprint 18 — Alertes actionnables + nouvelles règles
+
+Champ `action` sur le modèle Alert, actions contextuelles sur les analyseurs existants, nouveaux handlers. Parallélisable avec sprint 17.
+
+| Ordre | ID                                                                      | Titre                                                      | Effort | PRs | Dépend de |
+|-------|-------------------------------------------------------------------------|------------------------------------------------------------|--------|-----|-----------|
+| 1     | [#281](https://github.com/vincentchalamon/bike-trip-planner/issues/281) | Ajouter le champ `action` au modèle Alert                  | M      |     | —         |
+| 2     | [#282](https://github.com/vincentchalamon/bike-trip-planner/issues/282) | Ajouter des actions contextuelles aux analyseurs existants  | L      |     | #281      |
+| 3     | [#283](https://github.com/vincentchalamon/bike-trip-planner/issues/283) | Nouvel analyseur : gare SNCF de secours (nudge)            | S      |     | —         |
+| 4     | [#284](https://github.com/vincentchalamon/bike-trip-planner/issues/284) | Nouvel analyseur : pharmacie/hôpital à proximité (nudge)   | S      |     | —         |
+| 5     | [#285](https://github.com/vincentchalamon/bike-trip-planner/issues/285) | Nouvel analyseur : passage frontière (nudge)               | M      |     | —         |
+
+---
+
+## Sprint 19 — Landing page + accès anticipé
+
+Page d'accueil marketing, système d'accès anticipé (HMAC, throttling, CLI), page FAQ.
+
+| Ordre | ID                                                                      | Titre                                                         | Effort | PRs | Dépend de |
+|-------|-------------------------------------------------------------------------|---------------------------------------------------------------|--------|-----|-----------|
+| 1     | [#286](https://github.com/vincentchalamon/bike-trip-planner/issues/286) | Landing page : page d'accueil marketing (8 sections)          | L      |     | —         |
+| 2     | [#287](https://github.com/vincentchalamon/bike-trip-planner/issues/287) | Système d'accès anticipé : backend (entité, HMAC, throttling) | L      |     | —         |
+| 3     | [#288](https://github.com/vincentchalamon/bike-trip-planner/issues/288) | Système d'accès anticipé : frontend (formulaire, login)       | M      |     | #287      |
+| 4     | [#289](https://github.com/vincentchalamon/bike-trip-planner/issues/289) | Page FAQ : différenciation et questions fréquentes            | S      |     | —         |
+
+---
+
+## Sprint 20 — Garmin Connect
 
 Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase 2). Voir [ADR-018](docs/adr/adr-018-garmin-export-and-device-sync-strategy.md). Test local via ngrok pour le callback OAuth.
 
@@ -356,9 +396,9 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 |-------|-----------------------------------------------------------------------|----------------|--------|-----|-----------------------------------------------------------------------|
 | 1     | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Garmin Connect | L      | 3   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) |
 
-### Recette Sprint 17
+### Recette Sprint 20
 
-- **Tests E2E :** `tests/recette/sprint-17.spec.ts`
+- **Tests E2E :** `tests/recette/sprint-20.spec.ts`
 - **Checklist manuelle :**
   - [ ] Export FIT téléchargeable par étape
   - [ ] Flux OAuth Garmin Connect complet (via ngrok)
@@ -367,7 +407,7 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 
 ---
 
-## Sprint 18 — Déploiement
+## Sprint 21 — Déploiement
 
 Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructure-strategy.md). Issues GitHub à créer au moment venu.
 
@@ -381,7 +421,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 6     | Monitoring & healthchecks                          | M      |
 | 7     | Migration données + smoke test production          | M      |
 
-### Recette Sprint 18
+### Recette Sprint 21
 
 - **Checklist manuelle :**
   - [ ] Application accessible via URL publique
@@ -405,24 +445,27 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 
 ## Récapitulatif
 
-| Sprint    | Thème                  | Tickets | PRs estimées |
-|-----------|------------------------|---------|--------------|
-| 1         | Quick Wins Alertes     | 5       | 5            |
-| 2         | Alertes Frontend + UX  | 3       | 3            |
-| 3         | Hébergements           | 3       | 4            |
-| 4         | Configuration & Profil | 4       | 4            |
-| 5         | Météo & Temps          | 3       | 4            |
-| 6         | Export                 | 3       | 3            |
-| 7         | Carte Interactive      | 4       | 9            |
-| 8         | UX & Onboarding        | 3       | 4            |
-| 9         | Sources Routes & Infra | 3       | 5            |
-| 10        | i18n & Documentation   | 5       | 7            |
-| 11        | Persistance            | 1       | 6            |
-| 12        | Gestion Trips          | 3       | 4            |
-| 13        | Auth & Sécurité        | 5       | 8            |
-| 14        | Partage                | 2       | 3            |
-| 15        | Mobile                 | 6       | 11           |
-| 16        | Recette Globale        | 7       | ~6           |
-| 17        | Garmin Connect         | 1       | 3            |
-| 18        | Déploiement            | 7       | ~7           |
-| **Total** |                        | **68**  | **~96**      |
+| Sprint    | Thème                          | Tickets | PRs estimées |
+|-----------|--------------------------------|---------|--------------|
+| 1         | Quick Wins Alertes             | 5       | 5            |
+| 2         | Alertes Frontend + UX          | 3       | 3            |
+| 3         | Hébergements                   | 3       | 4            |
+| 4         | Configuration & Profil         | 4       | 4            |
+| 5         | Météo & Temps                  | 3       | 4            |
+| 6         | Export                         | 3       | 3            |
+| 7         | Carte Interactive              | 4       | 9            |
+| 8         | UX & Onboarding                | 3       | 4            |
+| 9         | Sources Routes & Infra         | 3       | 5            |
+| 10        | i18n & Documentation           | 5       | 7            |
+| 11        | Persistance                    | 1       | 6            |
+| 12        | Gestion Trips                  | 3       | 4            |
+| 13        | Auth & Sécurité                | 5       | 8            |
+| 14        | Partage                        | 2       | 3            |
+| 15        | Mobile                         | 6       | 11           |
+| 16        | Recette Globale                | 7       | ~6           |
+| 17        | Performance pipeline async     | 4       | ~4           |
+| 18        | Alertes actionnables + règles  | 5       | ~6           |
+| 19        | Landing page + accès anticipé  | 4       | ~5           |
+| 20        | Garmin Connect                 | 1       | 3            |
+| 21        | Déploiement                    | 7       | ~7           |
+| **Total** |                                | **81**  | **~111**     |
