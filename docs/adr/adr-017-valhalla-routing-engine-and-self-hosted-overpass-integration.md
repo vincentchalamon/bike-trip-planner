@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-03-03
 - **Supersedes:** ADR-016 Option F (Self-hosted Overpass — deferred)
+- **Partially superseded by:** [ADR-025](adr-025-removal-of-self-hosted-overpass.md) — Self-hosted Overpass removed; sections §17.1 (Overpass Docker service), §17.4 (Overpass fallback strategy), and §17.5 (OSM data update strategy) are no longer in effect. Valhalla routing (§17.2, §17.3) remains active.
 
 ## Context and Problem Statement
 

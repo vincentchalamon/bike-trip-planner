@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Scanner;
 
 use App\Scanner\OsmScanner;
-use App\Scanner\OverpassStatusCheckerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
@@ -28,17 +27,11 @@ final class OsmScannerTest extends TestCase
     public function queryBatchAllCachedMakesZeroHttpCalls(): void
     {
         $httpCallCount = 0;
-        $localClient = new MockHttpClient(function () use (&$httpCallCount): MockResponse {
+        $client = new MockHttpClient(function () use (&$httpCallCount): MockResponse {
             ++$httpCallCount;
 
             return new MockResponse('{}');
-        }, 'http://overpass-local');
-
-        $publicClient = new MockHttpClient(function () use (&$httpCallCount): MockResponse {
-            ++$httpCallCount;
-
-            return new MockResponse('{}');
-        }, 'http://overpass-public');
+        }, 'https://overpass-api.de');
 
         $resultA = ['elements' => [['id' => 1]]];
         $resultB = ['elements' => [['id' => 2]]];
@@ -49,11 +42,9 @@ final class OsmScannerTest extends TestCase
         ]);
 
         $scanner = new OsmScanner(
-            $localClient,
-            $publicClient,
+            $client,
             $this->createPassthroughCache(),
             $cachePool,
-            $this->createStatusChecker(true),
             new NullLogger(),
         );
 
@@ -68,29 +59,20 @@ final class OsmScannerTest extends TestCase
     }
 
     #[Test]
-    public function queryBatchAllUncachedLocalSucceedsNoPublicCalls(): void
+    public function queryBatchAllUncachedSucceeds(): void
     {
-        $localCallCount = 0;
-        $publicCallCount = 0;
+        $callCount = 0;
 
-        $localClient = new MockHttpClient(function () use (&$localCallCount): MockResponse {
-            ++$localCallCount;
+        $client = new MockHttpClient(function () use (&$callCount): MockResponse {
+            ++$callCount;
 
-            return new MockResponse(json_encode(['elements' => [['id' => $localCallCount]]], \JSON_THROW_ON_ERROR));
-        }, 'http://overpass-local');
-
-        $publicClient = new MockHttpClient(function () use (&$publicCallCount): MockResponse {
-            ++$publicCallCount;
-
-            return new MockResponse('{}');
-        }, 'http://overpass-public');
+            return new MockResponse(json_encode(['elements' => [['id' => $callCount]]], \JSON_THROW_ON_ERROR));
+        }, 'https://overpass-api.de');
 
         $scanner = new OsmScanner(
-            $localClient,
-            $publicClient,
+            $client,
             $this->createPassthroughCache(),
             $this->createEmptyCachePool(),
-            $this->createStatusChecker(true),
             new NullLogger(),
         );
 
@@ -101,109 +83,38 @@ final class OsmScannerTest extends TestCase
         ]);
 
         $this->assertCount(3, $results);
-        $this->assertSame(3, $localCallCount);
-        $this->assertSame(0, $publicCallCount);
+        $this->assertSame(3, $callCount);
     }
 
     #[Test]
-    public function queryBatchLocalUnavailableAllGoToPublic(): void
+    public function queryFailureReturnsEmptyGracefully(): void
     {
-        $localCallCount = 0;
-        $publicCallCount = 0;
-
-        $localClient = new MockHttpClient(function () use (&$localCallCount): MockResponse {
-            ++$localCallCount;
-
-            return new MockResponse('{}');
-        }, 'http://overpass-local');
-
-        $publicClient = new MockHttpClient(function () use (&$publicCallCount): MockResponse {
-            ++$publicCallCount;
-
-            return new MockResponse(json_encode(['elements' => [['id' => $publicCallCount]]], \JSON_THROW_ON_ERROR));
-        }, 'http://overpass-public');
-
-        $storedKeys = [];
-        $cachePool = $this->createEmptyCachePool($storedKeys);
+        $client = new MockHttpClient(fn (): MockResponse => new MockResponse('Server Error', ['http_code' => 500]), 'https://overpass-api.de');
 
         $scanner = new OsmScanner(
-            $localClient,
-            $publicClient,
-            $this->createPassthroughCache(),
-            $cachePool,
-            $this->createStatusChecker(false),
-            new NullLogger(),
-        );
-
-        $results = $scanner->queryBatch([
-            'a' => self::QUERY_A,
-            'b' => self::QUERY_B,
-        ]);
-
-        $this->assertCount(2, $results);
-        $this->assertSame(0, $localCallCount);
-        $this->assertSame(2, $publicCallCount);
-        $this->assertCount(2, $storedKeys, 'Public-wave successful results must be written to cache.');
-    }
-
-    #[Test]
-    public function queryBatchLocalEmptyForSomeFallsBackToPublic(): void
-    {
-        $localRequestIndex = 0;
-        $localClient = new MockHttpClient(function () use (&$localRequestIndex): MockResponse {
-            ++$localRequestIndex;
-
-            // First query returns results, second returns empty
-            if (1 === $localRequestIndex) {
-                return new MockResponse(json_encode(['elements' => [['id' => 1]]], \JSON_THROW_ON_ERROR));
-            }
-
-            return new MockResponse(json_encode(['elements' => []], \JSON_THROW_ON_ERROR));
-        }, 'http://overpass-local');
-
-        $publicCallCount = 0;
-        $publicClient = new MockHttpClient(function () use (&$publicCallCount): MockResponse {
-            ++$publicCallCount;
-
-            return new MockResponse(json_encode(['elements' => [['id' => 99]]], \JSON_THROW_ON_ERROR));
-        }, 'http://overpass-public');
-
-        $scanner = new OsmScanner(
-            $localClient,
-            $publicClient,
+            $client,
             $this->createPassthroughCache(),
             $this->createEmptyCachePool(),
-            $this->createStatusChecker(true),
             new NullLogger(),
         );
 
-        $results = $scanner->queryBatch([
-            'a' => self::QUERY_A,
-            'b' => self::QUERY_B,
-        ]);
+        $result = $scanner->query(self::QUERY_A);
 
-        $this->assertCount(2, $results);
-        $this->assertSame([['id' => 1]], $results['a']['elements']);
-        $this->assertSame([['id' => 99]], $results['b']['elements']);
-        $this->assertSame(1, $publicCallCount);
+        $this->assertSame([], $result);
     }
 
     #[Test]
-    public function queryBatchPublicFailureReturnsEmptyGracefully(): void
+    public function queryBatchFailureReturnsEmptyGracefully(): void
     {
-        $localClient = new MockHttpClient(fn (): MockResponse => new MockResponse(json_encode(['elements' => []], \JSON_THROW_ON_ERROR)), 'http://overpass-local');
-
-        $publicClient = new MockHttpClient(fn (): MockResponse => new MockResponse('Server Error', ['http_code' => 500]), 'http://overpass-public');
+        $client = new MockHttpClient(fn (): MockResponse => new MockResponse('Server Error', ['http_code' => 500]), 'https://overpass-api.de');
 
         $storedKeys = [];
         $cachePool = $this->createEmptyCachePool($storedKeys);
 
         $scanner = new OsmScanner(
-            $localClient,
-            $publicClient,
+            $client,
             $this->createPassthroughCache(),
             $cachePool,
-            $this->createStatusChecker(true),
             new NullLogger(),
         );
 
@@ -211,7 +122,7 @@ final class OsmScannerTest extends TestCase
             'a' => self::QUERY_A,
         ]);
 
-        // Failed query returns empty array (consistent with query() graceful degradation)
+        // Failed query returns empty array (graceful degradation)
         $this->assertArrayHasKey('a', $results);
         $this->assertSame([], $results['a']);
         // Transient HTTP failure must NOT be written to the cache
@@ -222,13 +133,11 @@ final class OsmScannerTest extends TestCase
     public function queryBatchMixedCacheHitAndMissUsesHttpOnlyForMisses(): void
     {
         $httpCallCount = 0;
-        $localClient = new MockHttpClient(function () use (&$httpCallCount): MockResponse {
+        $client = new MockHttpClient(function () use (&$httpCallCount): MockResponse {
             ++$httpCallCount;
 
             return new MockResponse(json_encode(['elements' => [['id' => 99]]], \JSON_THROW_ON_ERROR));
-        }, 'http://overpass-local');
-
-        $publicClient = new MockHttpClient([], 'http://overpass-public');
+        }, 'https://overpass-api.de');
 
         $cachedResult = ['elements' => [['id' => 1]]];
         $cachePool = $this->createCachePool([
@@ -236,17 +145,15 @@ final class OsmScannerTest extends TestCase
         ]);
 
         $scanner = new OsmScanner(
-            $localClient,
-            $publicClient,
+            $client,
             $this->createPassthroughCache(),
             $cachePool,
-            $this->createStatusChecker(true),
             new NullLogger(),
         );
 
         $results = $scanner->queryBatch([
             'a' => self::QUERY_A, // cache hit
-            'b' => self::QUERY_B, // cache miss → local HTTP
+            'b' => self::QUERY_B, // cache miss → HTTP
         ]);
 
         $this->assertSame($cachedResult, $results['a']);
@@ -264,16 +171,12 @@ final class OsmScannerTest extends TestCase
         $storedKeys = [];
         $cachePool = $this->createEmptyCachePool($storedKeys);
 
-        $localClient = new MockHttpClient(fn (): MockResponse => new MockResponse(json_encode($expectedResult, \JSON_THROW_ON_ERROR)), 'http://overpass-local');
-
-        $publicClient = new MockHttpClient([], 'http://overpass-public');
+        $client = new MockHttpClient(fn (): MockResponse => new MockResponse(json_encode($expectedResult, \JSON_THROW_ON_ERROR)), 'https://overpass-api.de');
 
         $scanner = new OsmScanner(
-            $localClient,
-            $publicClient,
+            $client,
             $this->createPassthroughCache(),
             $cachePool,
-            $this->createStatusChecker(true),
             new NullLogger(),
         );
 
@@ -284,17 +187,35 @@ final class OsmScannerTest extends TestCase
         $this->assertContains($expectedKey, $storedKeys);
     }
 
+    #[Test]
+    public function queryBatchGenuineEmptyResultIsCached(): void
+    {
+        $client = new MockHttpClient(fn (): MockResponse => new MockResponse(json_encode(['elements' => []], \JSON_THROW_ON_ERROR)), 'https://overpass-api.de');
+
+        $storedKeys = [];
+        $cachePool = $this->createEmptyCachePool($storedKeys);
+
+        $scanner = new OsmScanner(
+            $client,
+            $this->createPassthroughCache(),
+            $cachePool,
+            new NullLogger(),
+        );
+
+        $results = $scanner->queryBatch([
+            'a' => self::QUERY_A,
+        ]);
+
+        $this->assertArrayHasKey('a', $results);
+        $this->assertSame([], $results['a']);
+        // Genuine empty result (no OSM data) MUST be cached to avoid redundant API calls
+        $expectedKey = 'osm.'.hash('xxh128', self::QUERY_A);
+        $this->assertContains($expectedKey, $storedKeys, 'A genuine empty result must be written to the cache.');
+    }
+
     private function cacheKey(string $query): string
     {
         return 'osm.'.hash('xxh128', $query);
-    }
-
-    private function createStatusChecker(bool $ready): OverpassStatusCheckerInterface
-    {
-        $checker = $this->createStub(OverpassStatusCheckerInterface::class);
-        $checker->method('isReady')->willReturn($ready);
-
-        return $checker;
     }
 
     private function createPassthroughCache(): CacheInterface
