@@ -6,11 +6,13 @@ import { When, Then } from "../support/fixtures";
 // ---------------------------------------------------------------------------
 
 const SETTINGS_BUTTON_NAME = /Ouvrir les paramètres|Open settings/i;
-const SPEED_SLIDER_NAME = /Vitesse moyenne \(km\/h\)|Average cycling speed \(km\/h\)/i;
+const SPEED_SLIDER_NAME =
+  /Vitesse moyenne \(km\/h\)|Average cycling speed \(km\/h\)/i;
 const MAX_DISTANCE_SLIDER_NAME =
   /Distance maximale par jour \(km\)|Maximum distance per day \(km\)/i;
 const EBIKE_SWITCH_NAME = /Mode VAE|E-bike mode/i;
-const DEPARTURE_SLIDER_NAME = /Heure de départ \(0-23\)|Departure hour \(0-23\)/i;
+const DEPARTURE_SLIDER_NAME =
+  /Heure de départ \(0-23\)|Departure hour \(0-23\)/i;
 const ACCOMMODATION_SECTION_HEADING =
   /Types d'hébergements|Accommodation types/i;
 
@@ -95,12 +97,9 @@ Then(
   },
 );
 
-Then(
-  "the last switch is disabled and cannot be toggled",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+Then("the last switch is disabled and cannot be toggled", async ({ $test }) => {
+  $test.fixme();
+});
 
 // --- Additional missing steps ---
 // "je suis sur la page du voyage avec les étapes calculées" / "I am on the trip page with computed stages" defined in common.steps.ts
@@ -178,12 +177,16 @@ Then(
 );
 
 When("j'active le mode e-bike", async ({ mockedPage }) => {
-  const ebikeToggle = mockedPage.getByRole("switch", { name: EBIKE_SWITCH_NAME });
+  const ebikeToggle = mockedPage.getByRole("switch", {
+    name: EBIKE_SWITCH_NAME,
+  });
   await ebikeToggle.click();
 });
 
 When("I enable e-bike mode", async ({ mockedPage }) => {
-  const ebikeToggle = mockedPage.getByRole("switch", { name: EBIKE_SWITCH_NAME });
+  const ebikeToggle = mockedPage.getByRole("switch", {
+    name: EBIKE_SWITCH_NAME,
+  });
   await ebikeToggle.click();
 });
 

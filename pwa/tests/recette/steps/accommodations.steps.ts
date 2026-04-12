@@ -10,7 +10,7 @@ import { getCurrentRecettePage } from "../support/current-recette-page";
 
 function getAccommodationTextAlias(text: string): string {
   const aliases: Record<string, string> = {
-    "Hôtel": "Hotel",
+    Hôtel: "Hotel",
     "Ajouter un hébergement": "Add accommodation",
   };
 
@@ -323,33 +323,30 @@ When(
   },
 );
 
-When(
-  "an accommodation is exactly at the endpoint",
-  async () => {
-    await injectSseSequence(getCurrentRecettePage(), [
-      {
-        type: "accommodations_found",
-        data: {
-          stageIndex: 0,
-          searchRadiusKm: 5,
-          accommodations: [
-            {
-              name: "Gîte du Terminus",
-              type: "guest_house",
-              lat: 44.532,
-              lon: 4.392,
-              estimatedPriceMin: 45,
-              estimatedPriceMax: 60,
-              isExactPrice: false,
-              possibleClosed: false,
-              distanceToEndPoint: 0,
-            },
-          ],
-        },
+When("an accommodation is exactly at the endpoint", async () => {
+  await injectSseSequence(getCurrentRecettePage(), [
+    {
+      type: "accommodations_found",
+      data: {
+        stageIndex: 0,
+        searchRadiusKm: 5,
+        accommodations: [
+          {
+            name: "Gîte du Terminus",
+            type: "guest_house",
+            lat: 44.532,
+            lon: 4.392,
+            estimatedPriceMin: 45,
+            estimatedPriceMax: 60,
+            isExactPrice: false,
+            possibleClosed: false,
+            distanceToEndPoint: 0,
+          },
+        ],
       },
-    ]);
-  },
-);
+    },
+  ]);
+});
 
 Then(
   "aucun badge de distance n'est affiché pour cet hébergement",
@@ -363,13 +360,13 @@ Then(
   },
 );
 
-Then(
-  "no distance badge is displayed for that accommodation",
-  async () => {
-    const stageCard = getCurrentRecettePage().getByTestId("stage-card-1");
-    await expect(stageCard).toContainText(/Gîte du Terminus|Terminus Guest House/, {
+Then("no distance badge is displayed for that accommodation", async () => {
+  const stageCard = getCurrentRecettePage().getByTestId("stage-card-1");
+  await expect(stageCard).toContainText(
+    /Gîte du Terminus|Terminus Guest House/,
+    {
       timeout: 5000,
-    });
-    await expect(stageCard.locator('[aria-label*="0 km"]')).toHaveCount(0);
-  },
-);
+    },
+  );
+  await expect(stageCard.locator('[aria-label*="0 km"]')).toHaveCount(0);
+});

@@ -80,7 +80,9 @@ export async function trackStageExportDownload(
       return route.fulfill({
         status: 200,
         contentType:
-          extension === "gpx" ? "application/gpx+xml" : "application/octet-stream",
+          extension === "gpx"
+            ? "application/gpx+xml"
+            : "application/octet-stream",
         body: extension === "gpx" ? GPX_BODY : "",
       });
     },
