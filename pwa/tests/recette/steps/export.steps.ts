@@ -73,13 +73,10 @@ When(
   },
 );
 
-When(
-  "le calcul des étapes est en cours",
-  async ({ $test }) => {
-    // The current UI does not disable FIT downloads based on computation state alone.
-    $test.fixme();
-  },
-);
+When("le calcul des étapes est en cours", async ({ $test }) => {
+  // The current UI does not disable FIT downloads based on computation state alone.
+  $test.fixme();
+});
 
 When(
   "je clique sur le bouton export de format {string} de l'étape {int}",
@@ -96,18 +93,15 @@ When(
 
 // --- When steps EN ---
 
-When(
-  'I click "Download GPX" for stage {int}',
-  async ({}, stage: number) => {
-    const page = getCurrentRecettePage();
-    await trackStageGpxDownload(page);
-    const stageCard = page.getByTestId(`stage-card-${stage}`);
-    const gpxButton = stageCard.getByRole("button", {
-      name: /Download GPX/,
-    });
-    await gpxButton.click();
-  },
-);
+When('I click "Download GPX" for stage {int}', async ({}, stage: number) => {
+  const page = getCurrentRecettePage();
+  await trackStageGpxDownload(page);
+  const stageCard = page.getByTestId(`stage-card-${stage}`);
+  const gpxButton = stageCard.getByRole("button", {
+    name: /Download GPX/,
+  });
+  await gpxButton.click();
+});
 
 When("I select a valid GPX file", async ({ $test }) => {
   // $test.fixme: file upload requires a real GPX file fixture — part of @fixme scenario
@@ -119,26 +113,20 @@ When("I try to import a non-GPX file", async ({ $test }) => {
   $test.fixme();
 });
 
-When(
-  'I click "Download FIT" for stage {int}',
-  async ({}, stage: number) => {
-    const page = getCurrentRecettePage();
-    await trackStageFitDownload(page);
-    const stageCard = page.getByTestId(`stage-card-${stage}`);
-    const fitButton = stageCard.getByRole("button", {
-      name: /Download FIT/,
-    });
-    await fitButton.click();
-  },
-);
+When('I click "Download FIT" for stage {int}', async ({}, stage: number) => {
+  const page = getCurrentRecettePage();
+  await trackStageFitDownload(page);
+  const stageCard = page.getByTestId(`stage-card-${stage}`);
+  const fitButton = stageCard.getByRole("button", {
+    name: /Download FIT/,
+  });
+  await fitButton.click();
+});
 
-When(
-  "stage computation is in progress",
-  async ({ $test }) => {
-    // The current UI does not disable FIT downloads based on computation state alone.
-    $test.fixme();
-  },
-);
+When("stage computation is in progress", async ({ $test }) => {
+  // The current UI does not disable FIT downloads based on computation state alone.
+  $test.fixme();
+});
 
 When(
   "I click the export button for format {string} on stage {int}",
@@ -190,16 +178,13 @@ Then(
   },
 );
 
-Then(
-  /^une requête GET vers \/trips\/\*\.gpx est envoyée$/,
-  async () => {
-    const tripGpxRequests = getTrackedTripGpxRequests();
-    await expect
-      .poll(() => tripGpxRequests.length, { timeout: 5000 })
-      .toBeGreaterThan(0);
-    expect(tripGpxRequests[0]).toMatch(/\/trips\/[^/]+\.gpx$/);
-  },
-);
+Then(/^une requête GET vers \/trips\/\*\.gpx est envoyée$/, async () => {
+  const tripGpxRequests = getTrackedTripGpxRequests();
+  await expect
+    .poll(() => tripGpxRequests.length, { timeout: 5000 })
+    .toBeGreaterThan(0);
+  expect(tripGpxRequests[0]).toMatch(/\/trips\/[^/]+\.gpx$/);
+});
 
 Then("le voyage est créé à partir du fichier GPX", async ({ $test }) => {
   // $test.fixme: part of @fixme scenario (GPX file upload not yet testable)
@@ -261,16 +246,13 @@ Then(
   },
 );
 
-Then(
-  /^a GET request to \/trips\/\*\/stages\/0\.gpx is sent$/,
-  async () => {
-    const gpxRequests = getTrackedStageGpxRequests();
-    await expect
-      .poll(() => gpxRequests.length, { timeout: 5000 })
-      .toBeGreaterThan(0);
-    expect(gpxRequests[0]).toContain("/stages/0.gpx");
-  },
-);
+Then(/^a GET request to \/trips\/\*\/stages\/0\.gpx is sent$/, async () => {
+  const gpxRequests = getTrackedStageGpxRequests();
+  await expect
+    .poll(() => gpxRequests.length, { timeout: 5000 })
+    .toBeGreaterThan(0);
+  expect(gpxRequests[0]).toContain("/stages/0.gpx");
+});
 
 Then(
   'the "Télécharger le GPX complet" button is visible and enabled',
@@ -305,16 +287,13 @@ Then("an error message is displayed", async ({ mockedPage }) => {
   ).toBeVisible({ timeout: 5000 });
 });
 
-Then(
-  /^a GET request to \/trips\/\*\/stages\/0\.fit is sent$/,
-  async () => {
-    const fitRequests = getTrackedStageFitRequests();
-    await expect
-      .poll(() => fitRequests.length, { timeout: 5000 })
-      .toBeGreaterThan(0);
-    expect(fitRequests[0]).toContain("/stages/0.fit");
-  },
-);
+Then(/^a GET request to \/trips\/\*\/stages\/0\.fit is sent$/, async () => {
+  const fitRequests = getTrackedStageFitRequests();
+  await expect
+    .poll(() => fitRequests.length, { timeout: 5000 })
+    .toBeGreaterThan(0);
+  expect(fitRequests[0]).toContain("/stages/0.fit");
+});
 
 Then(
   "the FIT button for stage {int} is disabled",
@@ -328,14 +307,11 @@ Then(
   },
 );
 
-Then(
-  "the downloaded file has extension {string}",
-  async ({}, ext: string) => {
-    const downloadRequests = getTrackedStageExportRequests();
-    const normalizedExt = ext.replace(/^\./, "");
-    await expect
-      .poll(() => downloadRequests.length, { timeout: 5000 })
-      .toBeGreaterThan(0);
-    expect(downloadRequests[0]).toContain(`.${normalizedExt}`);
-  },
-);
+Then("the downloaded file has extension {string}", async ({}, ext: string) => {
+  const downloadRequests = getTrackedStageExportRequests();
+  const normalizedExt = ext.replace(/^\./, "");
+  await expect
+    .poll(() => downloadRequests.length, { timeout: 5000 })
+    .toBeGreaterThan(0);
+  expect(downloadRequests[0]).toContain(`.${normalizedExt}`);
+});

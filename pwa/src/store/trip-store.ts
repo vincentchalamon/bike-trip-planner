@@ -467,7 +467,11 @@ export const useTripStore = create<TripState>()(
     loadFromSavedTrip: (trip) => {
       useTripTemporalStore.getState().clear();
       set((state) => {
-        state.trip = { id: trip.id, title: trip.title, sourceUrl: trip.sourceUrl };
+        state.trip = {
+          id: trip.id,
+          title: trip.title,
+          sourceUrl: trip.sourceUrl,
+        };
         state.startDate = trip.startDate;
         state.endDate = trip.endDate;
         state.fatigueFactor = trip.fatigueFactor;

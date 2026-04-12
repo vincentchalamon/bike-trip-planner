@@ -103,7 +103,10 @@ async function selectCalendarDate(
     'button[aria-label*="suivant"], button[aria-label*="next"], button[aria-label*="Next"]',
   );
   for (let i = 0; i < 24; i++) {
-    const header = mockedPage.locator('[class*="font-semibold"]').filter({ hasText: /\d{4}/ }).first();
+    const header = mockedPage
+      .locator('[class*="font-semibold"]')
+      .filter({ hasText: /\d{4}/ })
+      .first();
     const headerText = await header.textContent();
     if (!headerText) {
       await nextButton.first().click();
@@ -376,12 +379,9 @@ When("I navigate to the next month", async ({ mockedPage }) => {
 
 // --- Then steps FR ---
 
-Then(
-  "la date de départ affichée est {string}",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+Then("la date de départ affichée est {string}", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then(/^l'étape (\d+) est prévue le \d+ \w+ \d+$/, async ({ mockedPage }) => {
   // Stage cards show sunrise/sunset times when a start date is set,
@@ -428,12 +428,9 @@ Then("le mois suivant est affiché", async ({ mockedPage }) => {
 
 // --- Then steps EN ---
 
-Then(
-  "the displayed departure date is {string}",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+Then("the displayed departure date is {string}", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then(/^stage (\d+) is scheduled for \w+ \d+, \d+$/, async ({ mockedPage }) => {
   const stageCards = mockedPage.locator('[data-testid^="stage-card-"]');
