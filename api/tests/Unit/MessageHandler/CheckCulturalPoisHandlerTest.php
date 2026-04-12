@@ -9,6 +9,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Geo\GeoDistanceInterface;
+use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
@@ -59,6 +60,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         );
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
 
         return new CheckCulturalPoisHandler(
             $computationTracker,
@@ -68,6 +70,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             $tripStateManager,
             $scanner,
             $queryBuilder,
+            $distributor,
             $haversine,
             $translator,
         );
