@@ -420,12 +420,9 @@ Then(
   },
 );
 
-Then(
-  "un toast de confirmation s'affiche brièvement",
-  async ({ $test }) => {
-    $test.fixme();
-  },
-);
+Then("un toast de confirmation s'affiche brièvement", async ({ $test }) => {
+  $test.fixme();
+});
 
 Then(
   "un message d'erreur compréhensible est affiché à l'utilisateur",

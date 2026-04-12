@@ -31,5 +31,10 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "capacitor.config.ts", "playwright.bdd.config.ts", "tests/recette"]
+  "exclude": [
+    "node_modules",
+    "capacitor.config.ts",
+    "playwright.bdd.config.ts",
+    "tests/recette"
+  ]
 }
