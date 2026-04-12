@@ -227,6 +227,33 @@ final class OsmOverpassQueryBuilderTest extends TestCase
     }
 
     #[Test]
+    public function buildBatchCulturalPoiQueryMergesAllStages(): void
+    {
+        $stage1 = [new Coordinate(45.0, 5.0), new Coordinate(45.1, 5.1)];
+        $stage2 = [new Coordinate(46.0, 6.0), new Coordinate(46.1, 6.1)];
+
+        $query = $this->builder->buildBatchCulturalPoiQuery([$stage1, $stage2]);
+
+        // All points from both stages should be in the polyline
+        $this->assertStringContainsString('45.000000,5.000000', $query);
+        $this->assertStringContainsString('46.000000,6.000000', $query);
+        $this->assertStringContainsString('"tourism"="museum"', $query);
+        $this->assertStringContainsString('"historic"~"^(castle|monument|memorial|ruins|archaeological_site|church|cathedral|abbey|fort)$"', $query);
+        $this->assertStringContainsString('out center tags 100', $query);
+    }
+
+    #[Test]
+    public function buildBatchCulturalPoiQueryUsesCustomRadius(): void
+    {
+        $stage1 = [new Coordinate(45.0, 5.0)];
+
+        $query = $this->builder->buildBatchCulturalPoiQuery([$stage1], 1000);
+
+        $this->assertStringContainsString('around:1000', $query);
+        $this->assertStringNotContainsString('around:500', $query);
+    }
+
+    #[Test]
     public function buildBatchBikeShopQueryMergesAllStages(): void
     {
         $stage1 = [new Coordinate(45.0, 5.0)];

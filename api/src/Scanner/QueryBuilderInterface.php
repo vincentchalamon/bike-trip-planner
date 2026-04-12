@@ -78,4 +78,11 @@ interface QueryBuilderInterface
      * @param list<Coordinate> $stageGeometry
      */
     public function buildCulturalPoiQuery(array $stageGeometry, int $radiusMeters = 500): string;
+
+    /**
+     * Build a single Overpass query for cultural POIs along all stages.
+     *
+     * @param list<list<Coordinate>> $stageGeometries geometry points per stage
+     */
+    public function buildBatchCulturalPoiQuery(array $stageGeometries, int $radiusMeters = 500): string;
 }

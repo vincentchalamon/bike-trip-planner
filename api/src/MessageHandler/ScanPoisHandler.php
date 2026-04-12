@@ -71,7 +71,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         $averageSpeed = $request instanceof TripRequest ? $request->averageSpeed : 15.0;
 
         $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour, $averageSpeed): void {
-            // Build one POI query per stage + one global cemetery query (concurrent via queryBatch)
+            // Build one batch POI query + one global cemetery query (concurrent via queryBatch)
             /** @var list<list<Coordinate>> $stageGeometries */
             $stageGeometries = array_map(
                 static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
@@ -81,40 +81,38 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             $allPoints = array_merge(...$stageGeometries);
 
             /** @var array<string, string> $queries */
-            $queries = ['cemetery' => $this->queryBuilder->buildCemeteryQuery($allPoints)];
-            foreach ($stages as $i => $stage) {
-                $queries['poi_'.$i] = $this->queryBuilder->buildPoiQuery($stageGeometries[$i]);
-            }
+            $queries = [
+                'cemetery' => $this->queryBuilder->buildCemeteryQuery($allPoints),
+                'poi' => $this->queryBuilder->buildBatchPoiQuery($stageGeometries),
+            ];
 
             $results = $this->scanner->queryBatch($queries);
 
-            // Parse POIs per stage, then redistribute via geometry to deduplicate boundary overlaps
+            // Parse all POIs from the single batch result, then redistribute via geometry
             /** @var list<array{name: string, category: string, lat: float, lon: float}> $allPois */
             $allPois = [];
-            foreach ($stages as $i => $stage) {
-                $poiResult = $results['poi_'.$i] ?? [];
-                /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
-                $elements = \is_array($poiResult['elements'] ?? null) ? $poiResult['elements'] : [];
+            $poiResult = $results['poi'] ?? [];
+            /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
+            $elements = \is_array($poiResult['elements'] ?? null) ? $poiResult['elements'] : [];
 
-                foreach ($elements as $element) {
-                    $tags = $element['tags'] ?? [];
-                    $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                    $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
+            foreach ($elements as $element) {
+                $tags = $element['tags'] ?? [];
+                $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
+                $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
 
-                    if (null === $lat || null === $lon) {
-                        continue;
-                    }
-
-                    $category = $tags['amenity'] ?? $tags['shop'] ?? $tags['tourism'] ?? 'unknown';
-                    $name = $tags['name'] ?? $category;
-
-                    $allPois[] = [
-                        'name' => $name,
-                        'category' => $category,
-                        'lat' => (float) $lat,
-                        'lon' => (float) $lon,
-                    ];
+                if (null === $lat || null === $lon) {
+                    continue;
                 }
+
+                $category = $tags['amenity'] ?? $tags['shop'] ?? $tags['tourism'] ?? 'unknown';
+                $name = $tags['name'] ?? $category;
+
+                $allPois[] = [
+                    'name' => $name,
+                    'category' => $category,
+                    'lat' => (float) $lat,
+                    'lon' => (float) $lon,
+                ];
             }
 
             /** @var array<int, list<array{name: string, category: string, lat: float, lon: float}>> $poisByStage */

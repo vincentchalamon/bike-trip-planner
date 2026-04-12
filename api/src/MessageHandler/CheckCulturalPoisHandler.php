@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
+use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
@@ -64,6 +66,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
+        private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
     ) {
@@ -83,47 +86,83 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::CULTURAL_POIS, function () use ($tripId, $stages, $locale): void {
-            $alerts = [];
-
+            // Collect geometries for non-rest-day stages
+            /** @var list<list<Coordinate>> $stageGeometries */
+            $stageGeometries = [];
+            /** @var list<int> $activeStageIndices */
+            $activeStageIndices = [];
+            /** @var list<Stage> $activeStages */
+            $activeStages = [];
             foreach ($stages as $i => $stage) {
                 if ($stage->isRestDay) {
                     continue;
                 }
+                $activeStageIndices[] = $i;
+                $activeStages[] = $stage;
+                $stageGeometries[] = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
+            }
 
+            if ([] === $stageGeometries) {
+                $this->publisher->publish($tripId, MercureEventType::CULTURAL_POI_ALERTS, [
+                    'alerts' => [],
+                ]);
+
+                return;
+            }
+
+            // Single batch query for all active stages
+            $query = $this->queryBuilder->buildBatchCulturalPoiQuery($stageGeometries, self::CULTURAL_POI_RADIUS_METERS);
+            $result = $this->scanner->query($query);
+
+            /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
+            $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
+
+            // Parse all cultural POIs from the batch result
+            /** @var list<array{name: string, type: string, lat: float, lon: float}> $allCulturalPois */
+            $allCulturalPois = [];
+            foreach ($elements as $element) {
+                $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
+                $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
+
+                if (null === $lat || null === $lon) {
+                    continue;
+                }
+
+                $tags = $element['tags'] ?? [];
+                $poiType = $this->resolveCulturalPoiType($tags);
+
+                if (null === $poiType) {
+                    continue;
+                }
+
+                $name = $tags['name'] ?? $poiType;
+
+                $allCulturalPois[] = [
+                    'name' => $name,
+                    'type' => $poiType,
+                    'lat' => (float) $lat,
+                    'lon' => (float) $lon,
+                ];
+            }
+
+            // Distribute POIs to the nearest active stage via geometry
+            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float}>> $poisByActiveStage */
+            $poisByActiveStage = $this->distributor->distributeByGeometry($allCulturalPois, $activeStages);
+
+            $alerts = [];
+            foreach ($activeStages as $activeIdx => $stage) {
+                $originalIndex = $activeStageIndices[$activeIdx];
                 $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
 
-                $query = $this->queryBuilder->buildCulturalPoiQuery($geometry, self::CULTURAL_POI_RADIUS_METERS);
-                $result = $this->scanner->query($query);
-
-                /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
-                $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
-
                 $stagePois = [];
-                foreach ($elements as $element) {
-                    $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                    $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
-
-                    if (null === $lat || null === $lon) {
-                        continue;
-                    }
-
-                    $tags = $element['tags'] ?? [];
-                    $poiType = $this->resolveCulturalPoiType($tags);
-
-                    if (null === $poiType) {
-                        continue;
-                    }
-
-                    $name = $tags['name'] ?? $poiType;
-
-                    // Find the nearest geometry point and its distance to the POI
-                    $distanceFromRoute = $this->findMinDistanceToRoute($geometry, (float) $lat, (float) $lon);
+                foreach ($poisByActiveStage[$activeIdx] ?? [] as $poi) {
+                    $distanceFromRoute = $this->findMinDistanceToRoute($geometry, $poi['lat'], $poi['lon']);
 
                     $stagePois[] = [
-                        'name' => $name,
-                        'type' => $poiType,
-                        'lat' => (float) $lat,
-                        'lon' => (float) $lon,
+                        'name' => $poi['name'],
+                        'type' => $poi['type'],
+                        'lat' => $poi['lat'],
+                        'lon' => $poi['lon'],
                         'distanceFromRoute' => $distanceFromRoute,
                     ];
                 }
@@ -146,7 +185,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                     );
 
                     $alerts[] = [
-                        'stageIndex' => $i,
+                        'stageIndex' => $originalIndex,
                         'dayNumber' => $stage->dayNumber,
                         'type' => AlertType::NUDGE->value,
                         'message' => $alertMessage,
