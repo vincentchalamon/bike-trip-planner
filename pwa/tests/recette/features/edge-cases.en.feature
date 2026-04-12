@@ -60,8 +60,8 @@ Feature: Edge cases and robustness
     Then tab 2 reflects the change or shows a warning
 
   @desktop @performance
-  Scenario: Large GPX file import (15MB)
-    When I import a 15MB GPX file
+  Scenario: Large GPX file import (30MB)
+    When I import a 30MB GPX file
     Then the import is processed in under 30 seconds
     And no memory error occurs
 

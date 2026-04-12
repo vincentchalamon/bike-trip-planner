@@ -27,6 +27,11 @@
     root /app/public
     encode zstd br gzip
 
+    # Limit request body to 30 MB (GPX upload)
+    request_body {
+        max_size 30MB
+    }
+
     mercure {
         # Transport to use (default to Bolt)
         transport bolt {
