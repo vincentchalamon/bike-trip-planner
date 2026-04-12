@@ -302,7 +302,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         $mainResponses = [];
         foreach ($scrapableItems as $key => $item) {
             try {
-                $mainResponses[$key] = $this->scraperClient->request('GET', $item['url'], ['timeout' => 5]);
+                $mainResponses[$key] = $this->scraperClient->request('GET', $item['url'], ['timeout' => 3]);
             } catch (\Throwable) {
                 // Skip malformed URLs
             }
@@ -360,7 +360,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     $priceResponses[] = [
                         'stageIdx' => $item['stageIdx'],
                         'candidateIdx' => $item['candidateIdx'],
-                        'response' => $this->scraperClient->request('GET', $pricePageUrl, ['timeout' => 3]),
+                        'response' => $this->scraperClient->request('GET', $pricePageUrl, ['timeout' => 2]),
                     ];
                 } catch (\Throwable) {
                     // Skip malformed URLs
