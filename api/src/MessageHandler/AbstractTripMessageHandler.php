@@ -9,6 +9,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\TripUpdatePublisherInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Stopwatch\Stopwatch;
 
 abstract readonly class AbstractTripMessageHandler
 {
@@ -67,6 +68,9 @@ abstract readonly class AbstractTripMessageHandler
 
         $this->computationTracker->markRunning($tripId, $computation);
 
+        $stopwatch = new Stopwatch();
+        $stopwatch->start($computation->value);
+
         try {
             $callback();
             $this->computationTracker->markDone($tripId, $computation);
@@ -75,6 +79,14 @@ abstract readonly class AbstractTripMessageHandler
             $this->publisher->publishComputationError($tripId, $computation->value, $throwable->getMessage());
 
             throw $throwable;
+        } finally {
+            $event = $stopwatch->stop($computation->value);
+            $this->logger->info('Handler {name} completed in {duration}ms (memory: {memory}MB).', [
+                'name' => $computation->value,
+                'duration' => $event->getDuration(),
+                'memory' => round($event->getMemory() / 1_048_576, 1),
+                'tripId' => $tripId,
+            ]);
         }
 
         if ($this->computationTracker->isAllComplete($tripId)) {
