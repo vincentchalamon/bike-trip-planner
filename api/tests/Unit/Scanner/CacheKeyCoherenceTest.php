@@ -71,22 +71,6 @@ final class CacheKeyCoherenceTest extends TestCase
     }
 
     /**
-     * The cache key is `osm.` + xxh128(query). Verify that the same query
-     * always maps to the same cache key.
-     */
-    #[Test]
-    #[DataProvider('warmedQueryProvider')]
-    public function cacheKeyIsStableForWarmedQuery(string $buildMethod): void
-    {
-        $query = $this->queryBuilder->{$buildMethod}($this->decimatedPoints);
-
-        $key1 = 'osm.'.hash('xxh128', (string) $query);
-        $key2 = 'osm.'.hash('xxh128', (string) $query);
-
-        self::assertSame($key1, $key2);
-    }
-
-    /**
      * ScanAllOsmDataHandler warms the cache for `buildPoiQuery(decimatedPoints)`.
      * ScanPoisHandler must use the same call to benefit from the cache.
      * This test documents the contract: a single global POI query, not per-stage queries.

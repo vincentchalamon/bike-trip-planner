@@ -74,12 +74,6 @@ abstract readonly class AbstractTripMessageHandler
         try {
             $callback();
             $this->computationTracker->markDone($tripId, $computation);
-        } catch (\Throwable $throwable) {
-            $this->computationTracker->markFailed($tripId, $computation);
-            $this->publisher->publishComputationError($tripId, $computation->value, $throwable->getMessage());
-
-            throw $throwable;
-        } finally {
             $event = $stopwatch->stop($computation->value);
             $this->logger->info('Handler {name} completed in {duration}ms (memory: {memory}MB).', [
                 'name' => $computation->value,
@@ -87,6 +81,18 @@ abstract readonly class AbstractTripMessageHandler
                 'memory' => round($event->getMemory() / 1_048_576, 1),
                 'tripId' => $tripId,
             ]);
+        } catch (\Throwable $throwable) {
+            $event = $stopwatch->stop($computation->value);
+            $this->computationTracker->markFailed($tripId, $computation);
+            $this->publisher->publishComputationError($tripId, $computation->value, $throwable->getMessage());
+            $this->logger->warning('Handler {name} failed after {duration}ms (memory: {memory}MB).', [
+                'name' => $computation->value,
+                'duration' => $event->getDuration(),
+                'memory' => round($event->getMemory() / 1_048_576, 1),
+                'tripId' => $tripId,
+            ]);
+
+            throw $throwable;
         }
 
         if ($this->computationTracker->isAllComplete($tripId)) {
