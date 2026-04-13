@@ -9,7 +9,6 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\TripUpdatePublisherInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Stopwatch\Stopwatch;
 
 abstract readonly class AbstractTripMessageHandler
 {
@@ -68,27 +67,22 @@ abstract readonly class AbstractTripMessageHandler
 
         $this->computationTracker->markRunning($tripId, $computation);
 
-        $stopwatch = new Stopwatch();
-        $stopwatch->start($computation->value);
+        $startTime = hrtime(true);
 
         try {
             $callback();
             $this->computationTracker->markDone($tripId, $computation);
-            $event = $stopwatch->stop($computation->value);
-            $this->logger->info('Handler {name} completed in {duration}ms (memory: {memory}MB).', [
+            $this->logger->info('Handler {name} completed in {duration}ms.', [
                 'name' => $computation->value,
-                'duration' => $event->getDuration(),
-                'memory' => round($event->getMemory() / 1_048_576, 1),
+                'duration' => (int) ((hrtime(true) - $startTime) / 1_000_000),
                 'tripId' => $tripId,
             ]);
         } catch (\Throwable $throwable) {
-            $event = $stopwatch->stop($computation->value);
             $this->computationTracker->markFailed($tripId, $computation);
             $this->publisher->publishComputationError($tripId, $computation->value, $throwable->getMessage());
-            $this->logger->warning('Handler {name} failed after {duration}ms (memory: {memory}MB).', [
+            $this->logger->warning('Handler {name} failed after {duration}ms.', [
                 'name' => $computation->value,
-                'duration' => $event->getDuration(),
-                'memory' => round($event->getMemory() / 1_048_576, 1),
+                'duration' => (int) ((hrtime(true) - $startTime) / 1_000_000),
                 'tripId' => $tripId,
             ]);
 
