@@ -386,7 +386,150 @@ Page d'accueil marketing, système d'accès anticipé (HMAC, throttling, CLI), p
 
 ---
 
-## Sprint 20 — Garmin Connect
+## Sprint 20 — Recette complète & Audit
+
+Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 19) et audit complet : performance, sécurité, accessibilité, SEO, qualité de code, couverture de tests. Deux phases : **audit** (cartographier les problèmes) puis **corrections** (fixer par lots thématiques).
+
+### Phase 1 — Outillage automatisé
+
+| Ordre | Titre                                                          | Effort |
+|-------|----------------------------------------------------------------|--------|
+| 1     | Intégrer `@axe-core/playwright` dans les fixtures E2E          | S      |
+| 2     | Intégrer Lighthouse CI (`make lighthouse`)                     | M      |
+| 3     | Script de complétude i18n FR/EN (`make i18n-check`)            | S      |
+| 4     | Monitoring console errors + requêtes 500 dans les fixtures E2E | S      |
+| 5     | Ajouter `npm audit` au workflow CI                             | S      |
+| 6     | Visual regression screenshots Playwright (36 baselines)        | M      |
+
+### Phase 2 — Audit
+
+| Ordre | Titre                                                                     | Effort |
+|-------|---------------------------------------------------------------------------|--------|
+| 7     | Audit sécurité : headers HTTP (CSP, HSTS, X-Frame-Options) dans Caddy    | S      |
+| 8     | Audit sécurité : isolation Mercure entre utilisateurs                     | M      |
+| 9     | Audit sécurité : auth exhaustive sur tous les endpoints (401/403)         | M      |
+| 10    | Audit sécurité : rate limiting effectif (magic link, trip create, scrape) | S      |
+| 11    | Audit sécurité : XSS dans les champs éditables (titre, locations)        | S      |
+| 12    | Audit performance : Lighthouse CI sur toutes les pages                    | M      |
+| 13    | Audit performance : N+1 Doctrine (TripDetail, stages, accommodations)    | M      |
+| 14    | Audit performance : bundle size Next.js + code splitting                  | S      |
+| 15    | Audit performance : temps calcul async complet (upload → dernier SSE)    | M      |
+| 16    | Audit accessibilité : axe-core 0 violation critique                      | M      |
+| 17    | Audit accessibilité : navigation clavier complète (carte, sidebar, modales) | M   |
+| 18    | Audit SEO : meta tags, Open Graph sur les pages de partage               | S      |
+| 19    | Audit i18n : complétude FR/EN, formatage dates/nombres, clés visibles    | S      |
+
+### Phase 3 — Recette manuelle
+
+| Ordre | Titre                                                          | Effort |
+|-------|----------------------------------------------------------------|--------|
+| 20    | Golden path A : trip depuis lien Komoot (parcours complet)     | L      |
+| 21    | Golden path B : trip depuis upload GPX (drag & drop, ~25 MB)   | M      |
+| 22    | Golden path C : trip via URL (`/?link=...`)                    | S      |
+| 23    | Cas limites : inputs invalides (GPX malformé, > 30 MB, 0 pts) | M      |
+| 24    | Cas limites : auth (token expiré, double-clic, 2 onglets, inactivité 15 min) | M |
+| 25    | Cas limites : réseau (coupure pendant calcul, SSE déconnecté, worker crash) | M  |
+| 26    | Cas limites : undo/redo séquences complexes (repos + hébergement + distance) | S |
+| 27    | Cas limites : trip 20+ étapes, 0 hébergement, dénivelé > 3000m | S     |
+| 28    | Audit visuel : desktop Chrome clair FR + Firefox sombre EN     | M      |
+| 29    | Audit visuel : tablette 768×1024 + mobile 375×812 (clair/sombre) | M    |
+| 30    | Audit visuel : mode sombre complet (carte, elevation, modales, toasts) | M |
+| 31    | Audit visuel : états vides + états d'erreur sur toutes les pages | S     |
+
+### Phase 4 — Corrections
+
+| Ordre | Titre                                                      | Effort |
+|-------|------------------------------------------------------------|--------|
+| 32    | Fix : headers de sécurité manquants dans Caddy             | S      |
+| 33    | Fix : bugs bloquants (P0) et fonctionnels dégradés (P1)    | L      |
+| 34    | Fix : régressions UX/UI (P2)                               | M      |
+| 35    | Fix : performance et polish (P3)                           | M      |
+| 36    | Re-test : golden path A final après corrections            | M      |
+
+### Recette Sprint 20 — Golden Path A (Komoot)
+
+- **Checklist :**
+  - [ ] Connexion via magic link (email → Mailcatcher → clic → connecté)
+  - [ ] Coller un lien Komoot tour → barre de progression SSE → stages générées
+  - [ ] Vérifier : distances, dénivelés, carte avec tracé coloré, profil altimétrique
+  - [ ] Configurer les dates (2 semaines dans le futur)
+  - [ ] Modifier le profil cyclo (touring, 70 km/jour) → recalcul des stages
+  - [ ] Activer le mode VAE → alertes batterie visibles
+  - [ ] Insérer un jour de repos au milieu → décalage des dates
+  - [ ] Sélectionner un hébergement → recalcul point d'arrivée
+  - [ ] Exporter en texte → contenu cohérent
+  - [ ] Télécharger le GPX global → ouvrir dans un logiciel tiers
+  - [ ] Partager le trip → ouvrir le lien en navigation privée → lecture seule
+  - [ ] Révoquer le partage → le lien ne fonctionne plus
+  - [ ] Dupliquer le trip → modifier le duplicata → l'original est inchangé
+  - [ ] Se déconnecter → se reconnecter → le trip est toujours là
+
+### Recette Sprint 20 — Cas limites
+
+- **Inputs invalides :**
+  - [ ] GPX malformé (XML invalide) → message d'erreur clair
+  - [ ] GPX vide (0 point) → message d'erreur
+  - [ ] GPX > 30 MB → erreur propre (pas de 502/413 brut)
+  - [ ] URL Komoot invalide → validation avant envoi
+  - [ ] URL Strava privée → gestion de l'erreur
+  - [ ] Dates très éloignées (2 ans) → pas de crash (météo non dispo)
+- **Auth edge cases :**
+  - [ ] Token magic link expiré → message clair + redemander
+  - [ ] Token déjà utilisé → message clair
+  - [ ] Double-clic sur le lien magic link → pas de crash
+  - [ ] 2 onglets ouverts → silent refresh ne casse pas l'autre onglet
+  - [ ] Inactivité 15+ min (JWT expiré) → refresh silencieux à la prochaine action
+  - [ ] Cookie refresh supprimé manuellement → redirect /login
+- **Réseau / async :**
+  - [ ] Coupure réseau pendant un calcul → UI pas bloquée indéfiniment
+  - [ ] Worker crash → retry Messenger (3×, backoff exponentiel) fonctionne
+  - [ ] SSE Mercure déconnecté → reconnexion automatique
+- **Limites :**
+  - [ ] Trip 20+ étapes → performance carte et timeline acceptable
+  - [ ] 0 hébergement trouvé → message informatif
+  - [ ] Undo jusqu'au début → bouton disabled, pas de crash
+
+### Recette Sprint 20 — Audit visuel multi-device
+
+| Device | Navigateur | Thème | Langue | OK ? |
+|---|---|---|---|---|
+| Desktop 1920×1080 | Chrome | Clair | FR | [ ] |
+| Desktop 1920×1080 | Firefox | Sombre | EN | [ ] |
+| Desktop 1440×900 | Chrome | Sombre | FR | [ ] |
+| Tablette 768×1024 | Chrome | Clair | EN | [ ] |
+| Mobile 375×812 | Chrome | Clair | FR | [ ] |
+| Mobile 375×812 | WebKit | Sombre | EN | [ ] |
+
+- **Par combinaison, vérifier :**
+  - [ ] Pas d'overflow horizontal
+  - [ ] Carte utilisable (zoom, pan, markers cliquables)
+  - [ ] Profil altimétrique lisible
+  - [ ] Modales ne débordent pas de l'écran
+  - [ ] Toasts visibles et ne masquent rien
+  - [ ] Switch de vue (timeline/map/split) fonctionnel
+  - [ ] Pas de flash blanc au chargement en dark mode
+
+### Recette Sprint 20 — Audits automatisés
+
+- **Seuils :**
+  - [ ] `make qa` : 0 erreur
+  - [ ] `make test-php` : green
+  - [ ] `make test-unit` : green
+  - [ ] `make test-e2e` : green
+  - [ ] `make test-recette` : green
+  - [ ] `composer audit` : 0 vulnérabilité haute/critique
+  - [ ] `npm audit` : 0 vulnérabilité haute/critique
+  - [ ] `make lighthouse` : Performance ≥ 80, Accessibility ≥ 90, SEO ≥ 90, Best Practices ≥ 90
+  - [ ] `make coverage` : PHPUnit ≥ 80%
+  - [ ] axe-core : 0 violation critique
+  - [ ] `make i18n-check` : 0 clé manquante
+  - [ ] Headers sécurité présents : CSP, HSTS, X-Content-Type-Options, X-Frame-Options
+  - [ ] Aucune stack trace exposée en `APP_ENV=prod`
+  - [ ] Tous les bugs trouvés reportés en issues GitHub avec labels (`bug`, `ux`, `perf`, `security`, `a11y`)
+
+---
+
+## Sprint 21 — Garmin Connect
 
 Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase 2). Voir [ADR-018](docs/adr/adr-018-garmin-export-and-device-sync-strategy.md). Test local via ngrok pour le callback OAuth.
 
@@ -396,9 +539,9 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 |-------|-----------------------------------------------------------------------|----------------|--------|-----|-----------------------------------------------------------------------|
 | 1     | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Garmin Connect | L      | 3   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) |
 
-### Recette Sprint 20
+### Recette Sprint 21
 
-- **Tests E2E :** `tests/recette/sprint-20.spec.ts`
+- **Tests E2E :** `tests/recette/sprint-21.spec.ts`
 - **Checklist manuelle :**
   - [ ] Export FIT téléchargeable par étape
   - [ ] Flux OAuth Garmin Connect complet (via ngrok)
@@ -407,7 +550,7 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 
 ---
 
-## Sprint 21 — Déploiement
+## Sprint 22 — Déploiement
 
 Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructure-strategy.md). Issues GitHub à créer au moment venu.
 
@@ -421,7 +564,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 6     | Monitoring & healthchecks                          | M      |
 | 7     | Migration données + smoke test production          | M      |
 
-### Recette Sprint 21
+### Recette Sprint 22
 
 - **Checklist manuelle :**
   - [ ] Application accessible via URL publique
@@ -466,6 +609,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 17        | Performance pipeline async     | 4       | ~4           |
 | 18        | Alertes actionnables + règles  | 5       | ~6           |
 | 19        | Landing page + accès anticipé  | 4       | ~5           |
-| 20        | Garmin Connect                 | 1       | 3            |
-| 21        | Déploiement                    | 7       | ~7           |
-| **Total** |                                | **81**  | **~111**     |
+| 20        | Recette complète & Audit       | 36      | ~12          |
+| 21        | Garmin Connect                 | 1       | 3            |
+| 22        | Déploiement                    | 7       | ~7           |
+| **Total** |                                | **117** | **~123**     |
