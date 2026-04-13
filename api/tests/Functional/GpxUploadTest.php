@@ -6,11 +6,13 @@ namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Controller\GpxUploadController;
 use App\Enum\ComputationName;
 use App\Message\GenerateStages;
 use App\Message\ScanAllOsmData;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 
 final class GpxUploadTest extends ApiTestCase
@@ -212,6 +214,31 @@ final class GpxUploadTest extends ApiTestCase
         } finally {
             unlink($tempFile);
         }
+    }
+
+    /**
+     * Tests the application-level MAX_FILE_SIZE guard by calling the controller
+     * directly — bypasses BrowserKit, which reconstructs UploadedFile objects
+     * and discards mock overrides.
+     */
+    #[Test]
+    public function rejectsOversizedFile(): void
+    {
+        $file = $this->createStub(UploadedFile::class);
+        $file->method('isValid')->willReturn(true);
+        $file->method('getSize')->willReturn(31 * 1024 * 1024);
+
+        $request = new Request([], [], [], [], ['gpxFile' => $file]);
+
+        /** @var GpxUploadController $controller */
+        $controller = self::getContainer()->get(GpxUploadController::class);
+        $response = $controller($request);
+
+        $this->assertSame(400, $response->getStatusCode());
+        $this->assertSame(
+            ['error' => 'File exceeds maximum size of 30 MB.'],
+            json_decode((string) $response->getContent(), true),
+        );
     }
 
     #[Test]

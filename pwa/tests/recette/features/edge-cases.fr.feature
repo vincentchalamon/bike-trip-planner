@@ -61,8 +61,8 @@ Fonctionnalité: Cas limites et robustesse
     Alors l'onglet 2 reflète le changement ou affiche un avertissement
 
   @desktop @performance
-  Scénario: Import d'un fichier GPX de grande taille (15MB)
-    Quand j'importe un fichier GPX de 15MB
+  Scénario: Import d'un fichier GPX de grande taille (30MB)
+    Quand j'importe un fichier GPX de 30MB
     Alors l'import est traité en moins de 30 secondes
     Et aucune erreur de mémoire ne se produit
 

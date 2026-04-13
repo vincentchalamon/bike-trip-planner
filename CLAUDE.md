@@ -96,7 +96,7 @@ Backend PHP DTOs define the schema → API Platform exports OpenAPI spec → `np
   - RideWithGPS route: `^https://ridewithgps\.com/routes/\d+`
 - HTTP clients scoped to specific base URIs, max 2 redirects, 10s timeout
 - XMLReader hardened with `LIBXML_NONET` + `LIBXML_NOENT` (XXE prevention)
-- Upload limits: 15MB (Caddy + PHP), 128MB PHP memory limit
+- Upload limits: 30MB (Caddy + PHP), 128MB PHP memory limit
 
 ## ADR Documentation
 

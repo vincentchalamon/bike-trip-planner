@@ -8,6 +8,11 @@
 	log
 	encode zstd gzip
 
+	# Limit request body to 30 MB (GPX upload)
+	request_body {
+		max_size 30MB
+	}
+
 	handle /.well-known/mercure* {
 		reverse_proxy {$MERCURE_UPSTREAM:mercure:80}
 	}

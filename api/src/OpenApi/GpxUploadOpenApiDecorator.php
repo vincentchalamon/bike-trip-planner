@@ -98,7 +98,7 @@ final readonly class GpxUploadOpenApiDecorator implements OpenApiFactoryInterfac
                             schema: new \ArrayObject([
                                 'type' => 'object',
                                 'properties' => [
-                                    'gpxFile' => ['type' => 'string', 'format' => 'binary', 'description' => 'GPX file (max 15 MB)'],
+                                    'gpxFile' => ['type' => 'string', 'format' => 'binary', 'description' => 'GPX file (max 30 MB)'],
                                     'startDate' => ['type' => 'string', 'format' => 'date', 'description' => 'Trip start date'],
                                     'endDate' => ['type' => 'string', 'format' => 'date', 'description' => 'Trip end date'],
                                     'fatigueFactor' => ['type' => 'number', 'description' => 'Fatigue factor (0-1)'],

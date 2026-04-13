@@ -20,7 +20,7 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 final readonly class GpxUploadController
 {
-    private const int MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
+    private const int MAX_FILE_SIZE = 30 * 1024 * 1024; // 30 MB
 
     public function __construct(
         private GpxUploadService $gpxUploadService,
@@ -48,7 +48,7 @@ final readonly class GpxUploadController
 
         if ($file->getSize() > self::MAX_FILE_SIZE) {
             return new JsonResponse(
-                ['error' => 'File exceeds maximum size of 15 MB.'],
+                ['error' => 'File exceeds maximum size of 30 MB.'],
                 Response::HTTP_BAD_REQUEST,
             );
         }
