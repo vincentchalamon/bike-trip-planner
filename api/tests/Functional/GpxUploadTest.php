@@ -215,6 +215,34 @@ final class GpxUploadTest extends ApiTestCase
     }
 
     #[Test]
+    public function rejectsOversizedFile(): void
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'test');
+        \assert(false !== $tempFile);
+        file_put_contents($tempFile, str_repeat('x', 1024));
+
+        try {
+            $file = $this->getMockBuilder(UploadedFile::class)
+                ->setConstructorArgs([$tempFile, 'big.gpx', 'application/gpx+xml', null, true])
+                ->onlyMethods(['getSize'])
+                ->getMock();
+            $file->method('getSize')->willReturn(31 * 1024 * 1024);
+
+            $this->client->request('POST', '/trips/gpx-upload', [
+                'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
+                'extra' => [
+                    'files' => ['gpxFile' => $file],
+                ],
+            ]);
+
+            $this->assertResponseStatusCodeSame(400);
+            $this->assertJsonContains(['error' => 'File exceeds maximum size of 30 MB.']);
+        } finally {
+            unlink($tempFile);
+        }
+    }
+
+    #[Test]
     public function applyOptionalParametersIgnoresInvalidValues(): void
     {
         $file = new UploadedFile(

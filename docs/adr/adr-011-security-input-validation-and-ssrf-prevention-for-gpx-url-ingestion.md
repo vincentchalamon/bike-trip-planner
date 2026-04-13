@@ -194,7 +194,7 @@ server {
 ```ini
 ; Restrict execution time and memory for the parsing scripts
 upload_max_filesize = 30M
-post_max_size = 30M
+post_max_size = 32M
 memory_limit = 128M
 max_execution_time = 30
 ```
