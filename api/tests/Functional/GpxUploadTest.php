@@ -224,7 +224,7 @@ final class GpxUploadTest extends ApiTestCase
     #[Test]
     public function rejectsOversizedFile(): void
     {
-        $file = $this->createMock(UploadedFile::class);
+        $file = $this->createStub(UploadedFile::class);
         $file->method('isValid')->willReturn(true);
         $file->method('getSize')->willReturn(31 * 1024 * 1024);
 
