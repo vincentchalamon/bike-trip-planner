@@ -80,8 +80,8 @@ final class CacheKeyCoherenceTest extends TestCase
     {
         $query = $this->queryBuilder->{$buildMethod}($this->decimatedPoints);
 
-        $key1 = 'osm.'.hash('xxh128', $query);
-        $key2 = 'osm.'.hash('xxh128', $query);
+        $key1 = 'osm.'.hash('xxh128', (string) $query);
+        $key2 = 'osm.'.hash('xxh128', (string) $query);
 
         self::assertSame($key1, $key2);
     }
