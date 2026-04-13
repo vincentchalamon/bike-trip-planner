@@ -158,7 +158,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             });
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCulturalPoiQuery')->willReturn('query');
+        $queryBuilder->method('buildBatchCulturalPoiQuery')->willReturn('query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturn(200.0);
@@ -194,7 +194,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             });
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCulturalPoiQuery')->willReturn('query');
+        $queryBuilder->method('buildBatchCulturalPoiQuery')->willReturn('query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturn(100.0);

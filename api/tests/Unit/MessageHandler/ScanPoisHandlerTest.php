@@ -340,7 +340,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi_0' => [
+            'poi' => [
                 'elements' => [
                     ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['shop' => 'bakery', 'name' => 'Boulangerie']],
                 ],
@@ -392,7 +392,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi_0' => [
+            'poi' => [
                 'elements' => [
                     ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Bistrot A']],
                     ['lat' => 48.2, 'lon' => 2.2001, 'tags' => ['amenity' => 'restaurant', 'name' => 'Bistrot B']],
@@ -509,7 +509,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi_0' => [
+            'poi' => [
                 'elements' => [
                     ['lat' => 48.0, 'lon' => 2.0, 'tags' => ['amenity' => 'restaurant', 'name' => 'POI A']],
                     ['lat' => 48.0, 'lon' => 2.005, 'tags' => ['amenity' => 'restaurant', 'name' => 'POI B']],

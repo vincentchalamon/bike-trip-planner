@@ -153,6 +153,9 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
 
     /**
      * @param list<list<Coordinate>> $stageGeometries
+     *
+     * Note: 'out center tags 100' caps the result set globally across all stages.
+     * Acceptable for typical bikepacking trips (≤7 stages, sparse cultural POIs).
      */
     public function buildBatchCulturalPoiQuery(array $stageGeometries, int $radiusMeters = 500): string
     {
