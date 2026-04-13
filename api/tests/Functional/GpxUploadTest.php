@@ -6,11 +6,13 @@ namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Controller\GpxUploadController;
 use App\Enum\ComputationName;
 use App\Message\GenerateStages;
 use App\Message\ScanAllOsmData;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 
 final class GpxUploadTest extends ApiTestCase
