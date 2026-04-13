@@ -226,7 +226,7 @@ final class GpxUploadTest extends ApiTestCase
                 ->setConstructorArgs([$tempFile, 'big.gpx', 'application/gpx+xml', null, true])
                 ->onlyMethods(['getSize'])
                 ->getMock();
-            $file->method('getSize')->willReturn(31 * 1024 * 1024);
+            $file->expects($this->any())->method('getSize')->willReturn(31 * 1024 * 1024);
 
             $this->client->request('POST', '/trips/gpx-upload', [
                 'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
