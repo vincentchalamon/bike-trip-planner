@@ -21,6 +21,7 @@ enum ComputationName: string
     case CULTURAL_POIS = 'cultural_pois';
     case RAILWAY_STATIONS = 'railway_stations';
     case HEALTH_SERVICES = 'health_services';
+    case BORDER_CROSSING = 'border_crossing';
 
     /**
      * Computations initialized at trip creation (the main pipeline).

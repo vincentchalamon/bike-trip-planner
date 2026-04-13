@@ -19,6 +19,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
+use App\Message\CheckBorderCrossing;
 use App\Message\CheckCalendar;
 use App\Message\CheckCulturalPois;
 use App\Message\CheckHealthServices;
@@ -113,6 +114,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
             $this->messageBus->dispatch(new CheckHealthServices($tripId, $generation));
             $this->messageBus->dispatch(new CheckCulturalPois($tripId, $generation));
             $this->messageBus->dispatch(new CheckRailwayStations($tripId, $generation));
+            $this->messageBus->dispatch(new CheckBorderCrossing($tripId, $generation));
         }, $generation);
     }
 

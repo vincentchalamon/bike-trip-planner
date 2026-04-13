@@ -223,6 +223,20 @@ export type MercureEvent =
       };
     }
   | {
+      type: "border_crossing_alerts";
+      data: {
+        alerts: {
+          stageIndex: number;
+          dayNumber: number;
+          type: string;
+          message: string;
+          action: string;
+          lat: number;
+          lon: number;
+        }[];
+      };
+    }
+  | {
       type: "route_segment_recalculated";
       data: {
         stageIndex: number;

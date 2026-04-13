@@ -32,7 +32,7 @@ const MERCURE_URL =
  * - `pois_scanned` — points of interest with optional alerts
  * - `accommodations_found` — accommodation options per stage
  * - `supply_timeline` — clustered supply markers per stage (water + food POIs)
- * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` / `water_point_alerts` / `railway_station_alerts` / `health_service_alerts` — alert categories
+ * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` / `water_point_alerts` / `railway_station_alerts` / `health_service_alerts` / `border_crossing_alerts` — alert categories
  * - `trip_complete` — final computation status, stops processing spinner
  * - `validation_error` / `computation_error` — error toasts and recovery
  */
@@ -346,6 +346,28 @@ function dispatchEvent(event: MercureEvent): void {
               : {}),
           })),
           "railway_station",
+        );
+      }
+      break;
+    }
+
+    case "border_crossing_alerts": {
+      const borderByStage = new Map<number, typeof event.data.alerts>();
+      for (const alert of event.data.alerts) {
+        const existing = borderByStage.get(alert.stageIndex) ?? [];
+        existing.push(alert);
+        borderByStage.set(alert.stageIndex, existing);
+      }
+      for (const [stageIndex, alerts] of borderByStage) {
+        store.updateStageAlerts(
+          stageIndex,
+          alerts.map((a) => ({
+            type: a.type as "nudge",
+            message: a.message,
+            lat: a.lat,
+            lon: a.lon,
+          })),
+          "border_crossing",
         );
       }
       break;
