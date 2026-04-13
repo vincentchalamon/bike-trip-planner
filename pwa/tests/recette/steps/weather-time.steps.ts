@@ -13,7 +13,8 @@ import type { MercureEvent } from "../../../src/lib/mercure/types";
 
 const SETTINGS_BUTTON_NAME = /Ouvrir les paramètres|Open settings/i;
 const SETTINGS_DIALOG_NAME = /Paramètres|Settings/i;
-const SPEED_SLIDER_NAME = /Vitesse moyenne \(km\/h\)|Average cycling speed \(km\/h\)/i;
+const SPEED_SLIDER_NAME =
+  /Vitesse moyenne \(km\/h\)|Average cycling speed \(km\/h\)/i;
 const FATIGUE_SLIDER_NAME =
   /Indice de fatigue accumulée|Accumulated fatigue index/i;
 const EBIKE_SWITCH_NAME = /Mode VAE|E-bike mode/i;
@@ -102,9 +103,7 @@ When(
 );
 
 When("le facteur de fatigue est activé", async ({ mockedPage }) => {
-  await mockedPage
-    .getByRole("button", { name: SETTINGS_BUTTON_NAME })
-    .click();
+  await mockedPage.getByRole("button", { name: SETTINGS_BUTTON_NAME }).click();
   await expect(
     mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).toBeInViewport();
@@ -115,13 +114,13 @@ When("le facteur de fatigue est activé", async ({ mockedPage }) => {
 });
 
 When("le mode e-bike est activé", async ({ mockedPage }) => {
-  await mockedPage
-    .getByRole("button", { name: SETTINGS_BUTTON_NAME })
-    .click();
+  await mockedPage.getByRole("button", { name: SETTINGS_BUTTON_NAME }).click();
   await expect(
     mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).toBeInViewport();
-  const ebikeToggle = mockedPage.getByRole("switch", { name: EBIKE_SWITCH_NAME });
+  const ebikeToggle = mockedPage.getByRole("switch", {
+    name: EBIKE_SWITCH_NAME,
+  });
   await ebikeToggle.click();
 });
 
@@ -208,9 +207,7 @@ When(
 );
 
 When("the fatigue factor is enabled", async ({ mockedPage }) => {
-  await mockedPage
-    .getByRole("button", { name: SETTINGS_BUTTON_NAME })
-    .click();
+  await mockedPage.getByRole("button", { name: SETTINGS_BUTTON_NAME }).click();
   await expect(
     mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).toBeInViewport();
@@ -221,13 +218,13 @@ When("the fatigue factor is enabled", async ({ mockedPage }) => {
 });
 
 When("e-bike mode is enabled", async ({ mockedPage }) => {
-  await mockedPage
-    .getByRole("button", { name: SETTINGS_BUTTON_NAME })
-    .click();
+  await mockedPage.getByRole("button", { name: SETTINGS_BUTTON_NAME }).click();
   await expect(
     mockedPage.getByRole("dialog", { name: SETTINGS_DIALOG_NAME }),
   ).toBeInViewport();
-  const ebikeToggle = mockedPage.getByRole("switch", { name: EBIKE_SWITCH_NAME });
+  const ebikeToggle = mockedPage.getByRole("switch", {
+    name: EBIKE_SWITCH_NAME,
+  });
   await ebikeToggle.click();
 });
 
@@ -383,13 +380,10 @@ Then(
   },
 );
 
-Then(
-  "I see a rain alert on stage {int}",
-  async ({ mockedPage }, n: number) => {
-    const card = mockedPage.getByTestId(`stage-card-${n}`);
-    await expect(card).toContainText(/Heavy rain/, { timeout: 10000 });
-  },
-);
+Then("I see a rain alert on stage {int}", async ({ mockedPage }, n: number) => {
+  const card = mockedPage.getByTestId(`stage-card-${n}`);
+  await expect(card).toContainText(/Heavy rain/, { timeout: 10000 });
+});
 
 Then(
   "each stage shows a weather icon matching its conditions",
@@ -401,15 +395,12 @@ Then(
   },
 );
 
-Then(
-  "the travel times of all stages are updated",
-  async ({ mockedPage }) => {
-    for (let i = 1; i <= 3; i++) {
-      const card = mockedPage.getByTestId(`stage-card-${i}`);
-      await expect(card).toContainText(/\d+h\d{2}/, { timeout: 10000 });
-    }
-  },
-);
+Then("the travel times of all stages are updated", async ({ mockedPage }) => {
+  for (let i = 1; i <= 3; i++) {
+    const card = mockedPage.getByTestId(`stage-card-${i}`);
+    await expect(card).toContainText(/\d+h\d{2}/, { timeout: 10000 });
+  }
+});
 
 Then(
   "the target distance decreases progressively across stages",
