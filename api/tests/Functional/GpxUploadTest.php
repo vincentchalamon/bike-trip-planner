@@ -224,9 +224,10 @@ final class GpxUploadTest extends ApiTestCase
         try {
             $file = $this->getMockBuilder(UploadedFile::class)
                 ->setConstructorArgs([$tempFile, 'big.gpx', 'application/gpx+xml', null, true])
-                ->onlyMethods(['getSize'])
+                ->onlyMethods(['getSize', 'isValid'])
                 ->getMock();
             $file->expects($this->any())->method('getSize')->willReturn(31 * 1024 * 1024);
+            $file->expects($this->any())->method('isValid')->willReturn(true);
 
             $this->client->request('POST', '/trips/gpx-upload', [
                 'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
@@ -236,6 +237,7 @@ final class GpxUploadTest extends ApiTestCase
             ]);
 
             $this->assertResponseStatusCodeSame(400);
+            $this->assertJsonContains(['error' => 'File exceeds maximum size of 30 MB.']);
         } finally {
             unlink($tempFile);
         }
