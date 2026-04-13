@@ -563,6 +563,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 5     | Docker configs production (PostgreSQL, Redis, Mercure, Caddy) | L      |
 | 6     | Monitoring & healthchecks                          | M      |
 | 7     | Migration données + smoke test production          | M      |
+| 8     | [#312](https://github.com/vincentchalamon/bike-trip-planner/issues/312) | Feature-deploy : preview par PR | L | Étapes 1-7 |
 
 ### Recette Sprint 22
 
@@ -574,6 +575,9 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
   - [ ] CI/CD : déploiement automatique sur push main
   - [ ] Monitoring : healthchecks + alertes basiques
   - [ ] Garmin Connect : callback OAuth sur URL production
+  - [ ] Preview déployée via label `deploy:preview` sur une PR de test
+  - [ ] URL `pr-<N>.biketrip.example.com` accessible en HTTPS
+  - [ ] Cleanup automatique à la fermeture de la PR
 
 ---
 
@@ -611,5 +615,5 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 19        | Landing page + accès anticipé  | 4       | ~5           |
 | 20        | Recette complète & Audit       | 36      | ~12          |
 | 21        | Garmin Connect                 | 1       | 3            |
-| 22        | Déploiement                    | 7       | ~7           |
-| **Total** |                                | **117** | **~123**     |
+| 22        | Déploiement                    | 8       | ~8           |
+| **Total** |                                | **118** | **~124**     |
