@@ -466,7 +466,7 @@ final class ScanPoisHandlerTest extends TestCase
         // buildPoiQuery should be called once with all decimated points (cache-aligned with ScanAllOsmData)
         $queryBuilder->expects($this->once())
             ->method('buildPoiQuery')
-            ->with($this->callback(static fn(array $points): bool => 2 === \count($points)
+            ->with($this->callback(static fn (array $points): bool => 2 === \count($points)
                 && $points[0] instanceof Coordinate
                 && 48.0 === $points[0]->lat
                 && 2.0 === $points[0]->lon
