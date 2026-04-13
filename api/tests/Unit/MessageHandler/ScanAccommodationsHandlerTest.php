@@ -656,9 +656,9 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inKilometers')->willReturn(1.5);
 
-        // Wave 1: return HTML with no price (triggers wave 2)
+        // Wave 1: return HTML with price-page link (triggers wave 2)
         $wave1Response = $this->createStub(ResponseInterface::class);
-        $wave1Response->method('getContent')->willReturn('<html><body><h1>Hotel Wave2</h1></body></html>');
+        $wave1Response->method('getContent')->willReturn('<html><body><a href="https://wave2.example.com/tarifs">Tarifs</a></body></html>');
 
         // Wave 2: timeout on price page
         $wave2Response = $this->createStub(ResponseInterface::class);
