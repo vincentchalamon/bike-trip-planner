@@ -35,7 +35,7 @@ export interface WeatherPayload {
 export interface AlertActionPayload {
   kind: "auto_fix" | "detour" | "navigate" | "dismiss";
   label: string;
-  payload?: Record<string, unknown>;
+  payload: Record<string, unknown>;
 }
 
 export interface AlertPayload {
