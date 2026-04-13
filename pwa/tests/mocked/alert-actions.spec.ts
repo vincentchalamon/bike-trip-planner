@@ -95,8 +95,6 @@ test.describe("Alert actions", () => {
 
     // Stage 3 has no alerts at all
     const stage3 = mockedPage.getByTestId("stage-card-3");
-    await expect(
-      stage3.getByTestId("alert-action-button"),
-    ).not.toBeVisible();
+    await expect(stage3.getByTestId("alert-action-button")).not.toBeVisible();
   });
 });

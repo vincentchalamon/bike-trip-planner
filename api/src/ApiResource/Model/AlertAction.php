@@ -14,10 +14,8 @@ final readonly class AlertAction
     public function __construct(
         #[ApiProperty(description: 'Type of action: auto_fix, detour, navigate, dismiss.')]
         public AlertActionKind $kind,
-
         #[ApiProperty(description: 'Human-readable label for the action button.')]
         public string $label,
-
         #[ApiProperty(description: 'Machine-readable payload for the action.')]
         public array $payload = [],
     ) {
