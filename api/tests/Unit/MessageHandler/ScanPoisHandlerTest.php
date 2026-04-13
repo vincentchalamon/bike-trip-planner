@@ -412,7 +412,7 @@ final class ScanPoisHandlerTest extends TestCase
         );
 
         [$queryBuilder, $riderTimeEstimator] = [$this->createStub(QueryBuilderInterface::class), $this->createStub(RiderTimeEstimatorInterface::class)];
-        $queryBuilder->method('buildPoiQuery')->willReturn('query');
+        $queryBuilder->method('buildBatchPoiQuery')->willReturn('batch_poi_query');
         $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
@@ -532,7 +532,7 @@ final class ScanPoisHandlerTest extends TestCase
             $this->createStub(QueryBuilderInterface::class),
             $this->createStub(RiderTimeEstimatorInterface::class),
         ];
-        $queryBuilder->method('buildPoiQuery')->willReturn('query');
+        $queryBuilder->method('buildBatchPoiQuery')->willReturn('batch_poi_query');
         $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
