@@ -198,6 +198,21 @@ export type MercureEvent =
       };
     }
   | {
+      type: "railway_station_alerts";
+      data: {
+        alerts: {
+          stageIndex: number;
+          dayNumber: number;
+          type: string;
+          message: string;
+          action?: "navigate";
+          actionLat?: number;
+          actionLon?: number;
+          stationName?: string | null;
+        }[];
+      };
+    }
+  | {
       type: "route_segment_recalculated";
       data: {
         stageIndex: number;

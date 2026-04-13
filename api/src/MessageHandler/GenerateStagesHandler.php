@@ -21,6 +21,7 @@ use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
 use App\Message\CheckCalendar;
 use App\Message\CheckCulturalPois;
+use App\Message\CheckRailwayStations;
 use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
 use App\Message\GenerateStages;
@@ -109,6 +110,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
             $this->messageBus->dispatch(new CheckBikeShops($tripId, $generation));
             $this->messageBus->dispatch(new CheckWaterPoints($tripId, $generation));
             $this->messageBus->dispatch(new CheckCulturalPois($tripId, $generation));
+            $this->messageBus->dispatch(new CheckRailwayStations($tripId, $generation));
         }, $generation);
     }
 
