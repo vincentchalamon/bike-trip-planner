@@ -239,19 +239,4 @@ final class OsmOverpassQueryBuilderTest extends TestCase
         $this->assertStringContainsString('around:1000', $query);
         $this->assertStringNotContainsString('around:500', $query);
     }
-
-    #[Test]
-    public function buildBatchBikeShopQueryMergesAllStages(): void
-    {
-        $stage1 = [new Coordinate(45.0, 5.0)];
-        $stage2 = [new Coordinate(46.0, 6.0)];
-
-        $query = $this->builder->buildBatchBikeShopQuery([$stage1, $stage2]);
-
-        $this->assertStringContainsString('45.000000,5.000000', $query);
-        $this->assertStringContainsString('46.000000,6.000000', $query);
-        $this->assertStringContainsString('"shop"="bicycle"', $query);
-        $this->assertStringContainsString('"service:bicycle:repair"="yes"', $query);
-        $this->assertStringContainsString('out center tags 50', $query);
-    }
 }

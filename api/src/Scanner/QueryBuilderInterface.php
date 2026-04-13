@@ -37,13 +37,6 @@ interface QueryBuilderInterface
     public function buildBikeShopQuery(array $decimatedPoints): string;
 
     /**
-     * Build a single Overpass query for bike shops along all stages.
-     *
-     * @param list<list<Coordinate>> $stageGeometries geometry points per stage
-     */
-    public function buildBatchBikeShopQuery(array $stageGeometries): string;
-
-    /**
      * Queries road/path ways along the route with surface and highway tags.
      *
      * Returns ways with their tags and geometry, used by terrain analyzers

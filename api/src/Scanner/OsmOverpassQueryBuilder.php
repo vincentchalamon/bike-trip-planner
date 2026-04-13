@@ -68,21 +68,6 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
     }
 
     /**
-     * @param list<list<Coordinate>> $stageGeometries
-     */
-    public function buildBatchBikeShopQuery(array $stageGeometries): string
-    {
-        $allPoints = array_merge(...$stageGeometries);
-        $polyline = $this->buildPolyline($allPoints);
-
-        return \sprintf(
-            '[out:json][timeout:15];(nwr["shop"="bicycle"](around:%1$d,%2$s);nwr["service:bicycle:repair"="yes"](around:%1$d,%2$s););out center tags 50;',
-            self::AROUND_RADIUS_METERS,
-            $polyline,
-        );
-    }
-
-    /**
      * @param list<Coordinate> $decimatedPoints
      */
     public function buildWaysQuery(array $decimatedPoints): string
