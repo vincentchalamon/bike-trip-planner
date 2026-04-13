@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Analyzer;
 
 use App\Analyzer\Rules\RestDayNudgeAnalyzer;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
@@ -64,6 +65,9 @@ final class RestDayNudgeAnalyzerTest extends TestCase
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::AUTO_FIX, $alerts[0]->action->kind);
+        $this->assertSame(3, $alerts[0]->action->payload['afterStage']);
     }
 
     #[Test]

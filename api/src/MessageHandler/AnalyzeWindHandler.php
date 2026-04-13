@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -79,6 +81,11 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
 
             $stagesWithWeather = \count(array_filter($stages, static fn (Stage $s): bool => $s->weather instanceof WeatherForecast));
 
+            $dismissAction = new AlertAction(
+                kind: AlertActionKind::DISMISS,
+                label: $this->translator->trans('alert.wind.action', [], 'alerts', $locale),
+            );
+
             if (
                 $stagesWithWeather > 0
                 && ($headwindCount / $stagesWithWeather) >= self::HEADWIND_RATIO_THRESHOLD
@@ -89,8 +96,16 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                     'alerts',
                     $locale,
                 );
-                $alert = new Alert(type: AlertType::WARNING, message: $message);
-                $alerts[] = ['type' => $alert->type->value, 'message' => $alert->message];
+                $alert = new Alert(type: AlertType::WARNING, message: $message, action: $dismissAction);
+                $alerts[] = [
+                    'type' => $alert->type->value,
+                    'message' => $alert->message,
+                    'action' => [
+                        'kind' => $dismissAction->kind->value,
+                        'label' => $dismissAction->label,
+                        'payload' => $dismissAction->payload,
+                    ],
+                ];
             }
 
             if ($stagesWithWeather > 0 && $poorComfortCount > 0) {
@@ -100,8 +115,16 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                     'alerts',
                     $locale,
                 );
-                $alert = new Alert(type: AlertType::WARNING, message: $message);
-                $alerts[] = ['type' => $alert->type->value, 'message' => $alert->message];
+                $alert = new Alert(type: AlertType::WARNING, message: $message, action: $dismissAction);
+                $alerts[] = [
+                    'type' => $alert->type->value,
+                    'message' => $alert->message,
+                    'action' => [
+                        'kind' => $dismissAction->kind->value,
+                        'label' => $dismissAction->label,
+                        'payload' => $dismissAction->payload,
+                    ],
+                ];
             }
 
             $this->publisher->publish($tripId, MercureEventType::WIND_ALERTS, [

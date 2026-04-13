@@ -86,7 +86,9 @@ final class CheckCalendarHandlerTest extends TestCase
                     return 1 === \count($nudges)
                         && 'sunday' === $nudges[0]['type']
                         && 0 === $nudges[0]['stageIndex']
-                        && str_contains((string) $nudges[0]['message'], 'Sunday');
+                        && str_contains((string) $nudges[0]['message'], 'Sunday')
+                        && \is_array($nudges[0]['action'])
+                        && 'dismiss' === $nudges[0]['action']['kind'];
                 }),
             );
 
@@ -120,7 +122,9 @@ final class CheckCalendarHandlerTest extends TestCase
 
                     return 1 === \count($nudges)
                         && 'holiday' === $nudges[0]['type']
-                        && 0 === $nudges[0]['stageIndex'];
+                        && 0 === $nudges[0]['stageIndex']
+                        && \is_array($nudges[0]['action'])
+                        && 'dismiss' === $nudges[0]['action']['kind'];
                 }),
             );
 

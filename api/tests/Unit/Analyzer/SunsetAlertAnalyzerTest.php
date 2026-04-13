@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Analyzer;
 
 use App\Analyzer\Rules\SunsetAlertAnalyzer;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\RiderTimeEstimatorInterface;
@@ -87,6 +88,13 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
         $this->assertEqualsWithDelta(48.85, $alerts[0]->lat ?? 0.0, 0.01);
         $this->assertEqualsWithDelta(2.35, $alerts[0]->lon ?? 0.0, 0.01);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::AUTO_FIX, $alerts[0]->action->kind);
+        $this->assertArrayHasKey('departureHour', $alerts[0]->action->payload);
+        // Suggested departure should be earlier than the current departure (8)
+        $this->assertLessThanOrEqual(8, $alerts[0]->action->payload['departureHour']);
+        // And at least 5 (minimum)
+        $this->assertGreaterThanOrEqual(5, $alerts[0]->action->payload['departureHour']);
     }
 
     #[Test]

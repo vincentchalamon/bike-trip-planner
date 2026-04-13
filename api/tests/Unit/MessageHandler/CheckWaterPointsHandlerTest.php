@@ -171,7 +171,8 @@ final class CheckWaterPointsHandlerTest extends TestCase
                     return 1 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
                         && 0 === $alerts[0]['stageIndex']
-                        && 1 === $alerts[0]['dayNumber'];
+                        && 1 === $alerts[0]['dayNumber']
+                        && null === $alerts[0]['action'];
                 }),
             );
 

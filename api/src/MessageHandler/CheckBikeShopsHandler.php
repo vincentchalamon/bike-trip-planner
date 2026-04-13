@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\ApiResource\Model\AlertActionKind;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
@@ -119,6 +120,8 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                 $hasNearbySaleOnly = array_any($saleOnlyShopLocations, fn (array $shop): bool => $this->haversine->inMeters($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']) < self::BIKE_SHOP_PROXIMITY_METERS);
 
                 $translationKey = $hasNearbySaleOnly ? 'alert.bike_shop.no_repair_nudge' : 'alert.bike_shop.nudge';
+                $allShops = [...$repairShopLocations, ...$saleOnlyShopLocations];
+                $nearestShop = $this->findNearestShop($midpoint, $allShops);
                 $stagesWithoutBikeShop[] = [
                     'stageIndex' => $i,
                     'dayNumber' => $stage->dayNumber,
@@ -129,6 +132,11 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                         'alerts',
                         $locale,
                     ),
+                    'action' => null !== $nearestShop ? [
+                        'kind' => AlertActionKind::NAVIGATE->value,
+                        'label' => $this->translator->trans('alert.bike_shop.action', [], 'alerts', $locale),
+                        'payload' => ['lat' => $nearestShop['lat'], 'lon' => $nearestShop['lon']],
+                    ] : null,
                 ];
             }
 
@@ -136,5 +144,32 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                 'alerts' => $stagesWithoutBikeShop,
             ]);
         }, $generation);
+    }
+
+    /**
+     * Finds the nearest bike shop to a given midpoint.
+     *
+     * @param list<array{lat: float, lon: float}> $shops
+     *
+     * @return array{lat: float, lon: float}|null
+     */
+    private function findNearestShop(Coordinate $midpoint, array $shops): ?array
+    {
+        if ([] === $shops) {
+            return null;
+        }
+
+        $minDist = PHP_FLOAT_MAX;
+        $nearest = null;
+
+        foreach ($shops as $shop) {
+            $dist = $this->haversine->inMeters($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']);
+            if ($dist < $minDist) {
+                $minDist = $dist;
+                $nearest = $shop;
+            }
+        }
+
+        return $nearest;
     }
 }

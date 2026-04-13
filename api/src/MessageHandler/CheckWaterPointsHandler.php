@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\ApiResource\Model\AlertActionKind;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
@@ -96,6 +97,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                 ];
 
                 if ($this->hasWaterGap($stage, $waterPointsWithDistance)) {
+                    $nearestWp = $this->findNearestWaterPoint($stage, $allWaterPoints);
                     $alerts[] = [
                         'stageIndex' => $i,
                         'dayNumber' => $stage->dayNumber,
@@ -106,6 +108,11 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                             'alerts',
                             $locale,
                         ),
+                        'action' => null !== $nearestWp ? [
+                            'kind' => AlertActionKind::NAVIGATE->value,
+                            'label' => $this->translator->trans('alert.cemetery.action', [], 'alerts', $locale),
+                            'payload' => ['lat' => $nearestWp['lat'], 'lon' => $nearestWp['lon']],
+                        ] : null,
                     ];
                 }
             }
@@ -214,6 +221,36 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
             if ($dist < $minDist) {
                 $minDist = $dist;
                 $nearest = $i;
+            }
+        }
+
+        return $nearest;
+    }
+
+    /**
+     * Finds the nearest water point to the stage midpoint.
+     *
+     * @param list<array{lat: float, lon: float}> $allWaterPoints
+     *
+     * @return array{lat: float, lon: float}|null
+     */
+    private function findNearestWaterPoint(Stage $stage, array $allWaterPoints): ?array
+    {
+        if ([] === $allWaterPoints) {
+            return null;
+        }
+
+        $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
+        $midpoint = $geometry[(int) (\count($geometry) / 2)];
+
+        $minDist = PHP_FLOAT_MAX;
+        $nearest = null;
+
+        foreach ($allWaterPoints as $wp) {
+            $dist = $this->haversine->inMeters($midpoint->lat, $midpoint->lon, $wp['lat'], $wp['lon']);
+            if ($dist < $minDist) {
+                $minDist = $dist;
+                $nearest = $wp;
             }
         }
 

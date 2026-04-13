@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Analyzer;
 
 use App\Analyzer\Rules\EbikeRangeAnalyzer;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
@@ -56,6 +57,9 @@ final class EbikeRangeAnalyzerTest extends TestCase
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::AUTO_FIX, $alerts[0]->action->kind);
+        $this->assertSame(80.0, $alerts[0]->action->payload['maxDistance']);
     }
 
     #[Test]
@@ -68,6 +72,9 @@ final class EbikeRangeAnalyzerTest extends TestCase
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::AUTO_FIX, $alerts[0]->action->kind);
+        $this->assertSame(40.0, $alerts[0]->action->payload['maxDistance']);
     }
 
     #[Test]

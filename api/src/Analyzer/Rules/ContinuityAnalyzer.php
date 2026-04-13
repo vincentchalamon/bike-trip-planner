@@ -6,6 +6,8 @@ namespace App\Analyzer\Rules;
 
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\AlertType;
@@ -52,6 +54,11 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
                 ),
                 lat: $stage->endPoint->lat,
                 lon: $stage->endPoint->lon,
+                action: new AlertAction(
+                    kind: AlertActionKind::NAVIGATE,
+                    label: $this->translator->trans('alert.continuity.action', [], 'alerts', $locale),
+                    payload: ['lat' => $stage->endPoint->lat, 'lon' => $stage->endPoint->lon],
+                ),
             )];
         }
 
@@ -70,6 +77,11 @@ final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
                 ),
                 lat: $stage->endPoint->lat,
                 lon: $stage->endPoint->lon,
+                action: new AlertAction(
+                    kind: AlertActionKind::NAVIGATE,
+                    label: $this->translator->trans('alert.continuity.action', [], 'alerts', $locale),
+                    payload: ['lat' => $stage->endPoint->lat, 'lon' => $stage->endPoint->lon],
+                ),
             )];
         }
 

@@ -6,6 +6,8 @@ namespace App\Analyzer\Rules;
 
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
@@ -105,6 +107,11 @@ final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
             ),
             lat: $start->lat,
             lon: $start->lon,
+            action: new AlertAction(
+                kind: AlertActionKind::NAVIGATE,
+                label: $this->translator->trans('alert.steep_gradient.action', [], 'alerts', $locale),
+                payload: ['lat' => $start->lat, 'lon' => $start->lon],
+            ),
         );
     }
 }

@@ -157,7 +157,11 @@ final class CheckBikeShopsHandlerTest extends TestCase
 
                     return 6 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && str_contains((string) $alerts[0]['message'], 'no repair');
+                        && str_contains((string) $alerts[0]['message'], 'no repair')
+                        && \is_array($alerts[0]['action'])
+                        && 'navigate' === $alerts[0]['action']['kind']
+                        && 48.5 === $alerts[0]['action']['payload']['lat']
+                        && 2.5 === $alerts[0]['action']['payload']['lon'];
                 }),
             );
 
@@ -194,7 +198,8 @@ final class CheckBikeShopsHandlerTest extends TestCase
 
                     return 6 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && str_contains((string) $alerts[0]['message'], 'No bike shop on stage 1');
+                        && str_contains((string) $alerts[0]['message'], 'No bike shop on stage 1')
+                        && null === $alerts[0]['action'];
                 }),
             );
 

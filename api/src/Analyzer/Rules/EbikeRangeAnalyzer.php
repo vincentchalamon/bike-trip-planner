@@ -6,6 +6,8 @@ namespace App\Analyzer\Rules;
 
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -47,6 +49,11 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
                 ],
                 'alerts',
                 $locale,
+            ),
+            action: new AlertAction(
+                kind: AlertActionKind::AUTO_FIX,
+                label: $this->translator->trans('alert.ebike_range.action', [], 'alerts', $locale),
+                payload: ['maxDistance' => round($effectiveRange, 1)],
             ),
         )];
     }
