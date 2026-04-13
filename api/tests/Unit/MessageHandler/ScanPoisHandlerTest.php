@@ -498,6 +498,43 @@ final class ScanPoisHandlerTest extends TestCase
     }
 
     #[Test]
+    public function fallsBackToStageGeometryWhenDecimatedPointsUnavailable(): void
+    {
+        $stage = $this->createStage('trip-1', 1, 80.0);
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getRequest')->willReturn(new TripRequest());
+        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
+
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('queryBatch')->willReturn([
+            'poi' => ['elements' => []],
+            'cemetery' => ['elements' => []],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturn([]);
+
+        [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
+            });
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler(new ScanPois('trip-1'));
+
+        // Handler should complete normally using stage geometry as fallback
+        $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
+        self::assertCount(1, $poisScannedEvents);
+    }
+
+    #[Test]
     public function chainedPoisBeyondAnchorRadiusAreNotMerged(): void
     {
         // Scenario: A (anchor, 0 km) → B (490m from A, within cluster) → C (490m from B but 980m from A)

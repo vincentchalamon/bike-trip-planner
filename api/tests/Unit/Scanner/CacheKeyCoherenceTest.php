@@ -89,7 +89,8 @@ final class CacheKeyCoherenceTest extends TestCase
     }
 
     /**
-     * The 5 warmed categories must produce distinct queries (no accidental collision).
+     * The 4 point-only warmed categories must produce distinct queries (no accidental collision).
+     * `buildAccommodationQuery` is excluded — it accepts extra parameters beyond `$points`.
      */
     #[Test]
     public function allWarmedQueriesAreDistinct(): void
