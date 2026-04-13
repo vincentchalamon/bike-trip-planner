@@ -9,6 +9,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Geo\GeoDistanceInterface;
+use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
@@ -49,6 +50,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         ScannerInterface $scanner,
         QueryBuilderInterface $queryBuilder,
         GeoDistanceInterface $haversine,
+        ?GeometryDistributorInterface $distributor = null,
     ): CheckCulturalPoisHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
@@ -59,6 +61,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         );
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $distributor ??= $this->createStub(GeometryDistributorInterface::class);
 
         return new CheckCulturalPoisHandler(
             $computationTracker,
@@ -68,6 +71,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             $tripStateManager,
             $scanner,
             $queryBuilder,
+            $distributor,
             $haversine,
             $translator,
         );
@@ -154,12 +158,17 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             });
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCulturalPoiQuery')->willReturn('query');
+        $queryBuilder->method('buildBatchCulturalPoiQuery')->willReturn('query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturn(200.0);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnCallback(
+            static fn (array $items): array => [0 => $items],
+        );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -190,12 +199,17 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             });
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCulturalPoiQuery')->willReturn('query');
+        $queryBuilder->method('buildBatchCulturalPoiQuery')->willReturn('query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturn(100.0);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnCallback(
+            static fn (array $items): array => [0 => $items],
+        );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -230,7 +244,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             });
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCulturalPoiQuery')->willReturn('query');
+        $queryBuilder->method('buildBatchCulturalPoiQuery')->willReturn('query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         // Museum D is farthest from all geometry points
@@ -254,7 +268,13 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             },
         );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        // Distributor returns all 4 POIs assigned to stage 0
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnCallback(
+            static fn (array $items): array => [0 => $items],
+        );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -290,12 +310,18 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             });
 
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCulturalPoiQuery')->willReturn('query');
+        $queryBuilder->method('buildBatchCulturalPoiQuery')->willReturn('query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturn(250.0);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        // Distributor returns the single POI assigned to stage 0
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnCallback(
+            static fn (array $items): array => [0 => $items],
+        );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);

@@ -72,10 +72,9 @@ interface QueryBuilderInterface
     public function buildCemeteryQuery(array $decimatedPoints): string;
 
     /**
-     * Queries cultural POIs (museums, monuments, churches, castles, viewpoints)
-     * within a given radius of each stage geometry point.
+     * Build a single Overpass query for cultural POIs along all stages.
      *
-     * @param list<Coordinate> $stageGeometry
+     * @param list<list<Coordinate>> $stageGeometries geometry points per stage
      */
-    public function buildCulturalPoiQuery(array $stageGeometry, int $radiusMeters = 500): string;
+    public function buildBatchCulturalPoiQuery(array $stageGeometries, int $radiusMeters = 500): string;
 }
