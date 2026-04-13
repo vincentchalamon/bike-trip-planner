@@ -524,7 +524,23 @@ final class ScanPoisHandlerTest extends TestCase
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
 
-        [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        $queryBuilder = $this->createMock(QueryBuilderInterface::class);
+        $queryBuilder->expects($this->once())
+            ->method('buildPoiQuery')
+            ->with($this->callback(static fn (array $points): bool => 6 === \count($points)
+                && $points[0] instanceof Coordinate
+                && 48.0 === $points[0]->lat
+                && 2.0 === $points[0]->lon))
+            ->willReturn('fallback_query');
+        $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inKilometers')->willReturn(10.0);
+        $haversine->method('inMeters')->willReturnCallback(
+            static fn (float $lat1, float $lon1, float $lat2, float $lon2): float => ($lat1 === $lat2 && $lon1 === $lon2) ? 0.0 : 10000.0,
+        );
+
+        $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
