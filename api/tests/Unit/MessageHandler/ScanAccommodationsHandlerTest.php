@@ -563,6 +563,69 @@ final class ScanAccommodationsHandlerTest extends TestCase
     }
 
     #[Test]
+    public function scraperClientUsesTwoSecondTimeoutForWaveTwo(): void
+    {
+        $stage = $this->createStage('trip-timeout2', 48.5, 2.5);
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getRequest')->willReturn(null);
+
+        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
+        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
+
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('query')->willReturn([
+            'elements' => [
+                ['lat' => 48.6, 'lon' => 2.6, 'tags' => ['tourism' => 'hotel', 'name' => 'Hotel Test', 'website' => 'https://example.com']],
+            ],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByEndpoint')->willReturn([
+            0 => [['name' => 'Hotel Test', 'type' => 'hotel', 'lat' => 48.6, 'lon' => 2.6,
+                'priceMin' => 50.0, 'priceMax' => 100.0, 'isExact' => false,
+                'url' => 'https://example.com', 'tagCount' => 3, 'hasWebsite' => true,
+                'tags' => ['tourism' => 'hotel', 'name' => 'Hotel Test', 'website' => 'https://example.com']]],
+        ]);
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inKilometers')->willReturn(1.0);
+
+        // Wave 1: return HTML with no price but with a price-page link (triggers wave 2)
+        $wave1Response = $this->createStub(ResponseInterface::class);
+        $wave1Response->method('getContent')->willReturn('<html><body><a href="https://example.com/tarifs">Tarifs</a></body></html>');
+
+        // Wave 2: return simple HTML
+        $wave2Response = $this->createStub(ResponseInterface::class);
+        $wave2Response->method('getContent')->willReturn('<html><body>65€ per night</body></html>');
+
+        $scraperClient = $this->createMock(HttpClientInterface::class);
+        $scraperClient->expects($this->exactly(2))
+            ->method('request')
+            ->willReturnCallback(
+                function (string $method, string $url, array $options) use ($wave1Response, $wave2Response): ResponseInterface {
+                    if ('https://example.com' === $url) {
+                        $this->assertSame(['timeout' => 3], $options);
+
+                        return $wave1Response;
+                    }
+
+                    $this->assertSame('https://example.com/tarifs', $url);
+                    $this->assertSame(['timeout' => 2], $options);
+
+                    return $wave2Response;
+                },
+            );
+
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor, $scraperClient);
+        $handler(new ScanAccommodations('trip-timeout2'));
+    }
+
+    #[Test]
     public function wave2TimeoutPreservesHeuristicPriceAndDoesNotThrow(): void
     {
         $stage = $this->createStage('trip-wave2', 48.5, 2.5);
