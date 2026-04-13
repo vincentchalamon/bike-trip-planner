@@ -173,19 +173,6 @@ final class OsmOverpassQueryBuilderTest extends TestCase
     }
 
     #[Test]
-    public function buildBatchPoiQueryMergesAllStages(): void
-    {
-        $stage1 = [new Coordinate(45.0, 5.0), new Coordinate(45.1, 5.1)];
-        $stage2 = [new Coordinate(46.0, 6.0), new Coordinate(46.1, 6.1)];
-
-        $query = $this->builder->buildBatchPoiQuery([$stage1, $stage2]);
-
-        // All points from both stages should be in the polyline
-        $this->assertStringContainsString('45.000000,5.000000', $query);
-        $this->assertStringContainsString('46.000000,6.000000', $query);
-    }
-
-    #[Test]
     public function buildCemeteryQueryContainsCemeteryTags(): void
     {
         $points = [new Coordinate(45.0, 5.0)];
