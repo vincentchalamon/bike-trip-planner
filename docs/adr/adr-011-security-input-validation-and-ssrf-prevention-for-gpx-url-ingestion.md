@@ -184,8 +184,8 @@ at the infrastructure level (Nginx) and the PHP-FPM level.
 ```nginx
 server {
     # ...
-    # Limit file uploads to 15MB (A massive 1500km GPX is rarely larger than 10MB)
-    client_max_body_size 15M; 
+    # Limit file uploads to 30MB (A massive 1500km GPX is rarely larger than 10MB)
+    client_max_body_size 30M; 
 }
 ```
 
@@ -193,8 +193,8 @@ server {
 
 ```ini
 ; Restrict execution time and memory for the parsing scripts
-upload_max_filesize = 15M
-post_max_size = 15M
+upload_max_filesize = 30M
+post_max_size = 30M
 memory_limit = 128M
 max_execution_time = 30
 ```
@@ -244,7 +244,7 @@ max_execution_time = 30
 ### Negative
 
 * **Legitimate Edge Cases:** If a user attempts to upload an exceptionally highly-detailed, uncompressed GPX file larger
-  than 15MB, they will be blocked. They will need to compress or decimate their file using a third-party tool before
+  than 30MB, they will be blocked. They will need to compress or decimate their file using a third-party tool before
   using Bike Trip Planner.
 
 ### Neutral

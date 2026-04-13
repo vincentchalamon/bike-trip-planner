@@ -2045,7 +2045,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description GPX file (max 15 MB)
+                     * @description GPX file (max 30 MB)
                      */
                     gpxFile: string;
                     /**

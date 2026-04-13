@@ -215,6 +215,43 @@ final class GpxUploadTest extends ApiTestCase
     }
 
     #[Test]
+    public function rejectsOversizedFile(): void
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'test');
+        \assert(false !== $tempFile);
+
+        // Create a sparse file just over 30 MB without writing actual data
+        $handle = fopen($tempFile, 'r+');
+        \assert(false !== $handle);
+        ftruncate($handle, 30 * 1024 * 1024 + 1);
+        fclose($handle);
+
+        try {
+            $file = new UploadedFile(
+                $tempFile,
+                'oversized.gpx',
+                'application/gpx+xml',
+                null,
+                true,
+            );
+
+            $response = $this->client->request('POST', '/trips/gpx-upload', [
+                'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
+                'extra' => [
+                    'files' => ['gpxFile' => $file],
+                ],
+            ]);
+
+            $this->assertResponseStatusCodeSame(400);
+
+            $data = $response->toArray(false);
+            $this->assertStringContainsString('30 MB', $data['error']);
+        } finally {
+            unlink($tempFile);
+        }
+    }
+
+    #[Test]
     public function applyOptionalParametersIgnoresInvalidValues(): void
     {
         $file = new UploadedFile(
