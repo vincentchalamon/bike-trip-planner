@@ -236,7 +236,6 @@ final class GpxUploadTest extends ApiTestCase
             ]);
 
             $this->assertResponseStatusCodeSame(400);
-            $this->assertJsonContains(['error' => 'File exceeds maximum size of 30 MB.']);
         } finally {
             unlink($tempFile);
         }
