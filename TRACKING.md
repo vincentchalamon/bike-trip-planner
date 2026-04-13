@@ -352,10 +352,10 @@ Optimisation du pipeline d'analyse : timeouts, batch Overpass, cache warming.
 
 | Ordre | ID                                                                      | Titre                                              | Effort | PRs | Dépend de |
 |-------|-------------------------------------------------------------------------|----------------------------------------------------|--------|-----|-----------|
-| 1     | [#277](https://github.com/vincentchalamon/bike-trip-planner/issues/277) | Réduire les timeouts de scraping d'hébergements    | S      |     | —         |
-| 2     | [#278](https://github.com/vincentchalamon/bike-trip-planner/issues/278) | Fusionner les requêtes Overpass per-stage en batch  | M      |     | —         |
-| 3     | [#279](https://github.com/vincentchalamon/bike-trip-planner/issues/279) | Vérifier et optimiser le cache warming ScanAllOsmData | M   |     | —         |
-| 4     | [#280](https://github.com/vincentchalamon/bike-trip-planner/issues/280) | Augmenter la limite d'upload GPX à 30 MB           | S      |     | —         |
+| 1     | [#277](https://github.com/vincentchalamon/bike-trip-planner/issues/277) | Réduire les timeouts de scraping d'hébergements    | S      | [#292](https://github.com/vincentchalamon/bike-trip-planner/pull/292) | —         |
+| 2     | [#278](https://github.com/vincentchalamon/bike-trip-planner/issues/278) | Fusionner les requêtes Overpass per-stage en batch  | M      | [#293](https://github.com/vincentchalamon/bike-trip-planner/pull/293) | —         |
+| 3     | [#279](https://github.com/vincentchalamon/bike-trip-planner/issues/279) | Vérifier et optimiser le cache warming ScanAllOsmData | M   | [#294](https://github.com/vincentchalamon/bike-trip-planner/pull/294) | —         |
+| 4     | [#280](https://github.com/vincentchalamon/bike-trip-planner/issues/280) | Augmenter la limite d'upload GPX à 30 MB           | S      | [#295](https://github.com/vincentchalamon/bike-trip-planner/pull/295) | —         |
 
 ---
 
