@@ -108,7 +108,6 @@ final class ScanPoisHandlerTest extends TestCase
     private function createDefaultStubs(): array
     {
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildPoiQuery')->willReturn('query');
         $queryBuilder->method('buildBatchPoiQuery')->willReturn('batch_poi_query');
         $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
 
@@ -133,7 +132,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi_0' => [
+            'poi' => [
                 'elements' => [
                     ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Le Bistrot']],
                     ['lat' => 48.3, 'lon' => 2.3, 'tags' => ['amenity' => 'restaurant', 'name' => 'Chez Paul']],
@@ -186,7 +185,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi_0' => [
+            'poi' => [
                 'elements' => [
                     ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Le Bistrot']],
                     ['lat' => 48.3, 'lon' => 2.3, 'tags' => ['shop' => 'supermarket', 'name' => 'Carrefour']],
@@ -239,7 +238,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi_0' => [
+            'poi' => [
                 'elements' => [
                     ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['tourism' => 'viewpoint', 'name' => 'Belvedere']],
                 ],
@@ -303,7 +302,7 @@ final class ScanPoisHandlerTest extends TestCase
 
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('queryBatch')->willReturn([
-            'poi_0' => ['elements' => []],
+            'poi' => ['elements' => []],
             'cemetery' => ['elements' => []],
         ]);
 

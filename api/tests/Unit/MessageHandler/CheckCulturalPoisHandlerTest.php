@@ -163,7 +163,12 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturn(200.0);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnCallback(
+            static fn (array $items): array => [0 => $items],
+        );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -199,7 +204,12 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturn(100.0);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnCallback(
+            static fn (array $items): array => [0 => $items],
+        );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
