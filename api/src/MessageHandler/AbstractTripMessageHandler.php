@@ -67,12 +67,26 @@ abstract readonly class AbstractTripMessageHandler
 
         $this->computationTracker->markRunning($tripId, $computation);
 
+        $startTime = hrtime(true);
+
         try {
             $callback();
+            $duration = (int) ((hrtime(true) - $startTime) / 1_000_000);
             $this->computationTracker->markDone($tripId, $computation);
+            $this->logger->info('Handler {name} completed in {duration}ms.', [
+                'name' => $computation->value,
+                'duration' => $duration,
+                'tripId' => $tripId,
+            ]);
         } catch (\Throwable $throwable) {
+            $duration = (int) ((hrtime(true) - $startTime) / 1_000_000);
             $this->computationTracker->markFailed($tripId, $computation);
             $this->publisher->publishComputationError($tripId, $computation->value, $throwable->getMessage());
+            $this->logger->warning('Handler {name} failed after {duration}ms.', [
+                'name' => $computation->value,
+                'duration' => $duration,
+                'tripId' => $tripId,
+            ]);
 
             throw $throwable;
         }

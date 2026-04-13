@@ -26,13 +26,6 @@ interface QueryBuilderInterface
     public function buildPoiQuery(array $decimatedPoints): string;
 
     /**
-     * Build a single Overpass query for POIs along all stages.
-     *
-     * @param list<list<Coordinate>> $stageGeometries geometry points per stage
-     */
-    public function buildBatchPoiQuery(array $stageGeometries): string;
-
-    /**
      * @param array<int, Coordinate> $endPoints
      * @param list<string>           $enabledTypes OSM tourism types to include (default: all 7)
      */
@@ -42,13 +35,6 @@ interface QueryBuilderInterface
      * @param list<Coordinate> $decimatedPoints
      */
     public function buildBikeShopQuery(array $decimatedPoints): string;
-
-    /**
-     * Build a single Overpass query for bike shops along all stages.
-     *
-     * @param list<list<Coordinate>> $stageGeometries geometry points per stage
-     */
-    public function buildBatchBikeShopQuery(array $stageGeometries): string;
 
     /**
      * Queries road/path ways along the route with surface and highway tags.

@@ -71,30 +71,29 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         $averageSpeed = $request instanceof TripRequest ? $request->averageSpeed : 15.0;
 
         $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour, $averageSpeed): void {
-            // Build one batch POI query + one global cemetery query (concurrent via queryBatch)
-            /** @var list<list<Coordinate>> $stageGeometries */
-            $stageGeometries = array_map(
-                static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
-                $stages,
-            );
+            // Use decimated route points so the POI query matches the one warmed by ScanAllOsmDataHandler
+            $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
+            $allPoints = null !== $decimatedData
+                ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
+                : array_merge(...array_map(
+                    static fn (Stage $stage): array => $stage->geometry ?: [$stage->startPoint, $stage->endPoint],
+                    $stages,
+                ));
 
-            $allPoints = array_merge(...$stageGeometries);
-
-            /** @var array<string, string> $queries */
-            $queries = [
+            // Single POI query over all decimated points (cache-aligned with ScanAllOsmData)
+            // + one global cemetery query — both benefit from the warming cache
+            $results = $this->scanner->queryBatch([
+                'poi' => $this->queryBuilder->buildPoiQuery($allPoints),
                 'cemetery' => $this->queryBuilder->buildCemeteryQuery($allPoints),
-                'poi' => $this->queryBuilder->buildBatchPoiQuery($stageGeometries),
-            ];
+            ]);
 
-            $results = $this->scanner->queryBatch($queries);
-
-            // Parse all POIs from the single batch result, then redistribute via geometry
-            /** @var list<array{name: string, category: string, lat: float, lon: float}> $allPois */
-            $allPois = [];
+            // Parse all POIs from the single global query, then distribute to stages via geometry
             $poiResult = $results['poi'] ?? [];
             /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
             $elements = \is_array($poiResult['elements'] ?? null) ? $poiResult['elements'] : [];
 
+            /** @var list<array{name: string, category: string, lat: float, lon: float}> $allPois */
+            $allPois = [];
             foreach ($elements as $element) {
                 $tags = $element['tags'] ?? [];
                 $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);

@@ -108,7 +108,7 @@ final class ScanPoisHandlerTest extends TestCase
     private function createDefaultStubs(): array
     {
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildBatchPoiQuery')->willReturn('batch_poi_query');
+        $queryBuilder->method('buildPoiQuery')->willReturn('query');
         $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
@@ -412,7 +412,7 @@ final class ScanPoisHandlerTest extends TestCase
         );
 
         [$queryBuilder, $riderTimeEstimator] = [$this->createStub(QueryBuilderInterface::class), $this->createStub(RiderTimeEstimatorInterface::class)];
-        $queryBuilder->method('buildBatchPoiQuery')->willReturn('batch_poi_query');
+        $queryBuilder->method('buildPoiQuery')->willReturn('query');
         $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
@@ -455,7 +455,7 @@ final class ScanPoisHandlerTest extends TestCase
     }
 
     #[Test]
-    public function poiQueryUsesBatchForAllStages(): void
+    public function poiQueryUsesDecimatedPointsForCacheAlignment(): void
     {
         $stage1 = $this->createStage('trip-1', 1, 50.0);
         $stage2 = $this->createStage('trip-1', 2, 50.0);
@@ -463,17 +463,24 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager([$stage1, $stage2]);
 
         $queryBuilder = $this->createMock(QueryBuilderInterface::class);
-        // buildBatchPoiQuery should be called once with all stage geometries
+        // buildPoiQuery should be called once with all decimated points (cache-aligned with ScanAllOsmData)
         $queryBuilder->expects($this->once())
-            ->method('buildBatchPoiQuery')
-            ->willReturn('batch_poi_query');
+            ->method('buildPoiQuery')
+            ->with($this->callback(static fn (array $points): bool => 2 === \count($points)
+                && $points[0] instanceof Coordinate
+                && 48.0 === $points[0]->lat
+                && 2.0 === $points[0]->lon
+                && $points[1] instanceof Coordinate
+                && 48.5 === $points[1]->lat
+                && 2.5 === $points[1]->lon))
+            ->willReturn('global_poi_query');
         $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
 
         $scanner = $this->createMock(ScannerInterface::class);
         $scanner->expects($this->once())
             ->method('queryBatch')
             ->with($this->callback(
-                // Must have poi and cemetery keys (batch format)
+                // Must have a single 'poi' key and 'cemetery' key (not per-stage keys)
                 static fn (array $queries): bool => isset($queries['poi'], $queries['cemetery'])
                 && 2 === \count($queries)
             ))
@@ -495,6 +502,59 @@ final class ScanPoisHandlerTest extends TestCase
 
         $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
+    }
+
+    #[Test]
+    public function fallsBackToStageGeometryWhenDecimatedPointsUnavailable(): void
+    {
+        $stage = $this->createStage('trip-1', 1, 80.0);
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getRequest')->willReturn(new TripRequest());
+        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
+
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('queryBatch')->willReturn([
+            'poi' => ['elements' => []],
+            'cemetery' => ['elements' => []],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturn([]);
+
+        $queryBuilder = $this->createMock(QueryBuilderInterface::class);
+        $queryBuilder->expects($this->once())
+            ->method('buildPoiQuery')
+            ->with($this->callback(static fn (array $points): bool => 6 === \count($points)
+                && $points[0] instanceof Coordinate
+                && 48.0 === $points[0]->lat
+                && 2.0 === $points[0]->lon))
+            ->willReturn('fallback_query');
+        $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inKilometers')->willReturn(10.0);
+        $haversine->method('inMeters')->willReturnCallback(
+            static fn (float $lat1, float $lon1, float $lat2, float $lon2): float => ($lat1 === $lat2 && $lon1 === $lon2) ? 0.0 : 10000.0,
+        );
+
+        $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
+
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
+            });
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler(new ScanPois('trip-1'));
+
+        // Handler should complete normally using stage geometry as fallback
+        $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
+        self::assertCount(1, $poisScannedEvents);
     }
 
     #[Test]
@@ -532,7 +592,7 @@ final class ScanPoisHandlerTest extends TestCase
             $this->createStub(QueryBuilderInterface::class),
             $this->createStub(RiderTimeEstimatorInterface::class),
         ];
-        $queryBuilder->method('buildBatchPoiQuery')->willReturn('batch_poi_query');
+        $queryBuilder->method('buildPoiQuery')->willReturn('query');
         $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);

@@ -32,25 +32,6 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
     }
 
     /**
-     * @param list<list<Coordinate>> $stageGeometries
-     */
-    public function buildBatchPoiQuery(array $stageGeometries): string
-    {
-        $allPoints = array_merge(...$stageGeometries);
-        $polyline = $this->buildPolyline($allPoints);
-
-        return \sprintf(
-            '[out:json][timeout:15];(nwr["amenity"~"^(restaurant|cafe|bar|pharmacy|fast_food|marketplace)$"](around:%d,%s);nwr["shop"~"^(convenience|supermarket|bakery|butcher|pastry|deli|greengrocer|general|farm)$"](around:%d,%s);nwr["tourism"~"^(viewpoint|attraction)$"](around:%d,%s););out center 200;',
-            self::AROUND_RADIUS_METERS,
-            $polyline,
-            self::AROUND_RADIUS_METERS,
-            $polyline,
-            self::AROUND_RADIUS_METERS,
-            $polyline,
-        );
-    }
-
-    /**
      * @param array<int, Coordinate> $endPoints
      * @param list<string>           $enabledTypes OSM tourism types to include (default: all 7)
      */
@@ -78,21 +59,6 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
     public function buildBikeShopQuery(array $decimatedPoints): string
     {
         $polyline = $this->buildPolyline($decimatedPoints);
-
-        return \sprintf(
-            '[out:json][timeout:15];(nwr["shop"="bicycle"](around:%1$d,%2$s);nwr["service:bicycle:repair"="yes"](around:%1$d,%2$s););out center tags 50;',
-            self::AROUND_RADIUS_METERS,
-            $polyline,
-        );
-    }
-
-    /**
-     * @param list<list<Coordinate>> $stageGeometries
-     */
-    public function buildBatchBikeShopQuery(array $stageGeometries): string
-    {
-        $allPoints = array_merge(...$stageGeometries);
-        $polyline = $this->buildPolyline($allPoints);
 
         return \sprintf(
             '[out:json][timeout:15];(nwr["shop"="bicycle"](around:%1$d,%2$s);nwr["service:bicycle:repair"="yes"](around:%1$d,%2$s););out center tags 50;',
