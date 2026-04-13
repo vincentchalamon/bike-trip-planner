@@ -215,32 +215,28 @@ final class GpxUploadTest extends ApiTestCase
     }
 
     /**
-     * Oversized files must be rejected with HTTP 400.
-     *
-     * Note: Symfony BrowserKit reconstructs UploadedFile objects internally,
-     * so mock overrides (getSize, isValid) are lost. In CI where
-     * upload_max_filesize=2MB, PHP rejects the file before the controller.
-     * Both paths return 400 — only the message differs.
+     * Tests the application-level MAX_FILE_SIZE guard by calling the controller
+     * directly — bypasses BrowserKit, which reconstructs UploadedFile objects
+     * and discards mock overrides.
      */
     #[Test]
     public function rejectsOversizedFile(): void
     {
-        $file = new UploadedFile(
-            self::FIXTURES_DIR.'/valid-route.gpx',
-            'oversized.gpx',
-            'application/gpx+xml',
-            \UPLOAD_ERR_INI_SIZE,
-            true,
+        $file = $this->createMock(UploadedFile::class);
+        $file->method('isValid')->willReturn(true);
+        $file->method('getSize')->willReturn(31 * 1024 * 1024);
+
+        $request = new Request([], [], [], [], ['gpxFile' => $file]);
+
+        /** @var GpxUploadController $controller */
+        $controller = self::getContainer()->get(GpxUploadController::class);
+        $response = $controller($request);
+
+        $this->assertSame(400, $response->getStatusCode());
+        $this->assertSame(
+            ['error' => 'File exceeds maximum size of 30 MB.'],
+            json_decode((string) $response->getContent(), true),
         );
-
-        $this->client->request('POST', '/trips/gpx-upload', [
-            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
-            'extra' => [
-                'files' => ['gpxFile' => $file],
-            ],
-        ]);
-
-        $this->assertResponseStatusCodeSame(400);
     }
 
     #[Test]
