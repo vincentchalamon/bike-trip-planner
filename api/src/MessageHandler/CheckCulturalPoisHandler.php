@@ -97,6 +97,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                 if ($stage->isRestDay) {
                     continue;
                 }
+
                 $activeStageIndices[] = $i;
                 $activeStages[] = $stage;
                 $stageGeometries[] = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
