@@ -32,11 +32,18 @@ export interface WeatherPayload {
   } | null;
 }
 
+export interface AlertActionPayload {
+  kind: "auto_fix" | "detour" | "navigate" | "dismiss";
+  label: string;
+  payload?: Record<string, unknown>;
+}
+
 export interface AlertPayload {
   type: "critical" | "warning" | "nudge";
   message: string;
   lat: number | null;
   lon: number | null;
+  action?: AlertActionPayload | null;
 }
 
 export interface PoiPayload {

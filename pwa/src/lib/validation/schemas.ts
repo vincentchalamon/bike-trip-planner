@@ -7,6 +7,12 @@ export const CoordinateSchema = z.object({
   ele: z.number().default(0),
 });
 
+export const AlertActionSchema = z.object({
+  kind: z.enum(["auto_fix", "detour", "navigate", "dismiss"]),
+  label: z.string(),
+  payload: z.record(z.string(), z.unknown()).optional().default({}),
+});
+
 export const AlertSchema = z.object({
   type: z.enum(["critical", "warning", "nudge"]),
   message: z.string(),
@@ -19,6 +25,8 @@ export const AlertSchema = z.object({
   poiLat: z.number().optional(),
   poiLon: z.number().optional(),
   distanceFromRoute: z.number().optional(),
+  // Optional contextual action
+  action: AlertActionSchema.nullable().optional(),
 });
 
 export const WeatherForecastSchema = z.object({
@@ -128,6 +136,7 @@ export const TripStateSchema = z.object({
 });
 
 export type CoordinateData = z.infer<typeof CoordinateSchema>;
+export type AlertActionData = z.infer<typeof AlertActionSchema>;
 export type AlertData = z.infer<typeof AlertSchema>;
 export type WeatherData = z.infer<typeof WeatherForecastSchema>;
 export type PoiData = z.infer<typeof PointOfInterestSchema>;

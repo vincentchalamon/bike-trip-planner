@@ -31,7 +31,8 @@ final readonly class CulturalPoiAlert extends Alert
         public float $poiLon = 0.0,
         #[ApiProperty(description: 'Approximate distance from the nearest route point, in metres.')]
         public int $distanceFromRoute = 0,
+        ?AlertAction $action = null,
     ) {
-        parent::__construct($type, $message, $lat, $lon);
+        parent::__construct($type, $message, $lat, $lon, $action);
     }
 }

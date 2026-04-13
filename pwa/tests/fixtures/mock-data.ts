@@ -170,6 +170,11 @@ export function terrainAlertsEvent(): MercureEvent {
             message: "Route non goudronnee sur 3km",
             lat: 44.6,
             lon: 4.5,
+            action: {
+              kind: "detour",
+              label: "Show alternative",
+              payload: { alternativeId: "alt-1" },
+            },
           },
         ],
         "1": [
@@ -178,6 +183,58 @@ export function terrainAlertsEvent(): MercureEvent {
             message: "Passage en altitude (820m)",
             lat: 44.4,
             lon: 4.2,
+            action: {
+              kind: "dismiss",
+              label: "Dismiss",
+              payload: {},
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+export function alertsWithActionsEvent(): MercureEvent {
+  return {
+    type: "terrain_alerts",
+    data: {
+      alertsByStage: {
+        "0": [
+          {
+            type: "warning",
+            message: "Steep gradient detected (12%)",
+            lat: 44.6,
+            lon: 4.5,
+            action: {
+              kind: "navigate",
+              label: "Zoom to location",
+              payload: { lat: 44.6, lon: 4.5 },
+            },
+          },
+          {
+            type: "nudge",
+            message: "Minor road surface issue",
+            lat: 44.55,
+            lon: 4.45,
+            action: {
+              kind: "dismiss",
+              label: "Got it",
+              payload: {},
+            },
+          },
+        ],
+        "1": [
+          {
+            type: "critical",
+            message: "E-bike range exceeded",
+            lat: 44.4,
+            lon: 4.2,
+            action: {
+              kind: "auto_fix",
+              label: "Split stage",
+              payload: { splitAt: 45.0 },
+            },
           },
         ],
       },
