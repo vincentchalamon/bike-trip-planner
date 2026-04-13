@@ -109,6 +109,7 @@ final class ScanPoisHandlerTest extends TestCase
     {
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
         $queryBuilder->method('buildPoiQuery')->willReturn('query');
+        $queryBuilder->method('buildBatchPoiQuery')->willReturn('batch_poi_query');
         $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
@@ -455,7 +456,7 @@ final class ScanPoisHandlerTest extends TestCase
     }
 
     #[Test]
-    public function poiQueryIsBuiltPerStageNotGlobally(): void
+    public function poiQueryUsesBatchForAllStages(): void
     {
         $stage1 = $this->createStage('trip-1', 1, 50.0);
         $stage2 = $this->createStage('trip-1', 2, 50.0);
@@ -463,23 +464,22 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager([$stage1, $stage2]);
 
         $queryBuilder = $this->createMock(QueryBuilderInterface::class);
-        // buildPoiQuery should be called twice: once per stage
-        $queryBuilder->expects($this->exactly(2))
-            ->method('buildPoiQuery')
-            ->willReturn('stage_query');
+        // buildBatchPoiQuery should be called once with all stage geometries
+        $queryBuilder->expects($this->once())
+            ->method('buildBatchPoiQuery')
+            ->willReturn('batch_poi_query');
         $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
 
         $scanner = $this->createMock(ScannerInterface::class);
         $scanner->expects($this->once())
             ->method('queryBatch')
             ->with($this->callback(
-                // Must have poi_0, poi_1, and cemetery keys
-                static fn (array $queries): bool => isset($queries['poi_0'], $queries['poi_1'], $queries['cemetery'])
-                && 3 === \count($queries)
+                // Must have poi and cemetery keys (batch format)
+                static fn (array $queries): bool => isset($queries['poi'], $queries['cemetery'])
+                && 2 === \count($queries)
             ))
             ->willReturn([
-                'poi_0' => ['elements' => []],
-                'poi_1' => ['elements' => []],
+                'poi' => ['elements' => []],
                 'cemetery' => ['elements' => []],
             ]);
 
