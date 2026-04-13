@@ -23,6 +23,7 @@ alert.accommodation.seasonal_warning: "Tous les hébergements détectés à l'é
 alert.rest_day.nudge: "L'étape %stage% est le %days%e jour consécutif de vélo sans pause. Envisagez d'insérer un jour de repos."
 alert.sunset.warning: "Étape %stage% : arrivée estimée après le crépuscule (%twilight%, coucher %sunset%). Vous risquez de rouler de nuit."
 alert.railway_station.nudge: "Aucune gare ferroviaire à moins de 10 km de l'étape %stage%. En cas d'urgence, la gare la plus proche peut être éloignée."
+alert.health_service.nudge: "Aucune pharmacie ni hôpital détecté dans un rayon de 15 km autour de l'étape %stage%. Emportez une trousse de premiers secours et vérifiez les villes proches avant le départ."
 alert.cultural_poi.suggestion: "Point d'intérêt culturel à proximité de l'étape %stage% : %name% (%type%, %distance%m du tracé). L'ajouter à votre itinéraire ?"
 stage.label: "Étape %day%"
 weather.clear_sky: "Ciel dégagé"

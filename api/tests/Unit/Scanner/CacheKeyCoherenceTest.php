@@ -40,7 +40,7 @@ final class CacheKeyCoherenceTest extends TestCase
     }
 
     /**
-     * Returns builder method names for the 4 categories that ScanAllOsmData
+     * Returns builder method names for the 5 categories that ScanAllOsmData
      * warms using the full decimated route points.
      *
      * @return iterable<string, array{string}>
@@ -51,6 +51,7 @@ final class CacheKeyCoherenceTest extends TestCase
         yield 'bikeShop' => ['buildBikeShopQuery'];
         yield 'cemetery' => ['buildCemeteryQuery'];
         yield 'ways' => ['buildWaysQuery'];
+        yield 'healthService' => ['buildHealthServiceQuery'];
     }
 
     /**
@@ -89,7 +90,7 @@ final class CacheKeyCoherenceTest extends TestCase
     }
 
     /**
-     * The 4 point-only warmed categories must produce distinct queries (no accidental collision).
+     * The 5 point-only warmed categories must produce distinct queries (no accidental collision).
      * `buildAccommodationQuery` is excluded — it accepts extra parameters beyond `$points`.
      */
     #[Test]
@@ -100,6 +101,7 @@ final class CacheKeyCoherenceTest extends TestCase
             'bikeShop' => $this->queryBuilder->buildBikeShopQuery($this->decimatedPoints),
             'cemetery' => $this->queryBuilder->buildCemeteryQuery($this->decimatedPoints),
             'ways' => $this->queryBuilder->buildWaysQuery($this->decimatedPoints),
+            'healthService' => $this->queryBuilder->buildHealthServiceQuery($this->decimatedPoints),
         ];
 
         $uniqueQueries = array_unique($queries);

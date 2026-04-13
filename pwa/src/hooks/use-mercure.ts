@@ -32,7 +32,7 @@ const MERCURE_URL =
  * - `pois_scanned` — points of interest with optional alerts
  * - `accommodations_found` — accommodation options per stage
  * - `supply_timeline` — clustered supply markers per stage (water + food POIs)
- * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` / `water_point_alerts` / `railway_station_alerts` — alert categories
+ * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` / `water_point_alerts` / `railway_station_alerts` / `health_service_alerts` — alert categories
  * - `trip_complete` — final computation status, stops processing spinner
  * - `validation_error` / `computation_error` — error toasts and recovery
  */
@@ -266,6 +266,28 @@ function dispatchEvent(event: MercureEvent): void {
             lon: null,
           })),
           "water_point",
+        );
+      }
+      break;
+    }
+
+    case "health_service_alerts": {
+      const healthByStage = new Map<number, typeof event.data.alerts>();
+      for (const alert of event.data.alerts) {
+        const existing = healthByStage.get(alert.stageIndex) ?? [];
+        existing.push(alert);
+        healthByStage.set(alert.stageIndex, existing);
+      }
+      for (const [stageIndex, alerts] of healthByStage) {
+        store.updateStageAlerts(
+          stageIndex,
+          alerts.map((a) => ({
+            type: a.type as "nudge",
+            message: a.message,
+            lat: a.nearestLat,
+            lon: a.nearestLon,
+          })),
+          "health_service",
         );
       }
       break;

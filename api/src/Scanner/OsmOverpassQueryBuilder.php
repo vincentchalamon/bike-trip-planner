@@ -13,6 +13,8 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
 
     private const int WAYS_RADIUS_METERS = 100;
 
+    private const int HEALTH_SERVICE_RADIUS_METERS = 15000;
+
     /**
      * @param list<Coordinate> $decimatedPoints
      */
@@ -113,6 +115,20 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         return \sprintf(
             '[out:json][timeout:15];nwr["railway"="station"]["usage"!="tourism"](around:%d,%s);out center tags 500;',
             $radiusMeters,
+            $polyline,
+        );
+    }
+
+    /**
+     * @param list<Coordinate> $decimatedPoints
+     */
+    public function buildHealthServiceQuery(array $decimatedPoints): string
+    {
+        $polyline = $this->buildPolyline($decimatedPoints);
+
+        return \sprintf(
+            '[out:json][timeout:15];(nwr["amenity"~"^(pharmacy|hospital|clinic)$"](around:%d,%s););out center 200;',
+            self::HEALTH_SERVICE_RADIUS_METERS,
             $polyline,
         );
     }
