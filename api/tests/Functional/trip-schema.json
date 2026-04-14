@@ -44,7 +44,8 @@
         "water_points",
         "cultural_pois",
         "railway_stations",
-        "health_services"
+        "health_services",
+        "border_crossing"
       ],
       "additionalProperties": false,
       "properties": {
@@ -166,6 +167,15 @@
           ]
         },
         "health_services": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "border_crossing": {
           "type": "string",
           "enum": [
             "pending",
