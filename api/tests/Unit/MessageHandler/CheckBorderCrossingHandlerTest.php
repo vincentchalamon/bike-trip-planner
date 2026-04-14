@@ -54,11 +54,11 @@ final class CheckBorderCrossingHandlerTest extends TestCase
     }
 
     /** @param list<Stage>|null $stages */
-    private function createTripStateManager(?array $stages): TripRequestRepositoryInterface
+    private function createTripStateManager(?array $stages, string $locale = 'en'): TripRequestRepositoryInterface
     {
         $manager = $this->createStub(TripRequestRepositoryInterface::class);
         $manager->method('getStages')->willReturn($stages);
-        $manager->method('getLocale')->willReturn('en');
+        $manager->method('getLocale')->willReturn($locale);
 
         return $manager;
     }
@@ -362,6 +362,47 @@ final class CheckBorderCrossingHandlerTest extends TestCase
         $scanner->method('queryBatch')->willReturn([
             'point_0' => ['elements' => [['tags' => ['name' => 'France']]]],
             'point_1' => ['elements' => [['tags' => ['name' => 'Belgique / België']]]],
+        ]);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::BORDER_CROSSING_ALERTS,
+                $this->callback(static fn (array $data): bool => 1 === \count($data['alerts'])
+                    && str_contains((string) $data['alerts'][0]['message'], 'Belgique')),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder);
+        $handler(new CheckBorderCrossing('trip-1'));
+    }
+
+    #[Test]
+    public function localeAwareCountryNameUsesLocalizedName(): void
+    {
+        $stages = [
+            new Stage(
+                tripId: 'trip-1',
+                dayNumber: 1,
+                distance: 80.0,
+                elevation: 200.0,
+                startPoint: new Coordinate(50.6292, 3.0573),
+                endPoint: new Coordinate(50.8279, 3.2646),
+            ),
+        ];
+
+        // French locale: should prefer name:fr over name:en
+        $tripStateManager = $this->createTripStateManager($stages, 'fr');
+
+        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
+        $queryBuilder->method('buildCountryQuery')->willReturn('query');
+
+        // Both name:fr and name:en available — should pick name:fr
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('queryBatch')->willReturn([
+            'point_0' => ['elements' => [['tags' => ['name:fr' => 'France', 'name:en' => 'France']]]],
+            'point_1' => ['elements' => [['tags' => ['name:fr' => 'Belgique', 'name:en' => 'Belgium']]]],
         ]);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);

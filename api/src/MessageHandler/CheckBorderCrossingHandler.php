@@ -69,7 +69,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
             }
 
             // Resolve country for each checkpoint via Overpass is_in
-            $countries = $this->resolveCountries($checkPoints);
+            $countries = $this->resolveCountries($checkPoints, $locale);
 
             // Detect border crossings: when consecutive countries differ
             $alerts = [];
@@ -158,7 +158,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
      *
      * @return list<string|null>
      */
-    private function resolveCountries(array $points): array
+    private function resolveCountries(array $points, string $locale): array
     {
         $queries = [];
         foreach ($points as $i => $point) {
@@ -170,7 +170,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
         $countries = [];
         foreach (array_keys($points) as $i) {
             $result = $results['point_'.$i] ?? [];
-            $countries[] = $this->extractCountryName($result);
+            $countries[] = $this->extractCountryName($result, $locale);
         }
 
         return $countries;
@@ -179,15 +179,23 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
     /**
      * Extracts the country name from an Overpass is_in result.
      *
+     * Tries locale-specific name first (e.g. name:fr → "Belgique"),
+     * then falls back to name:en, then the generic name tag.
+     *
      * @param array<string, mixed> $result
      */
-    private function extractCountryName(array $result): ?string
+    private function extractCountryName(array $result, string $locale): ?string
     {
         /** @var list<array{tags?: array<string, string>}> $elements */
         $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
 
         foreach ($elements as $element) {
             $tags = $element['tags'] ?? [];
+
+            $localeKey = 'name:'.$locale;
+            if (isset($tags[$localeKey])) {
+                return $tags[$localeKey];
+            }
 
             if (isset($tags['name:en'])) {
                 return $tags['name:en'];
