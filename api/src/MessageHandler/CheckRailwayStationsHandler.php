@@ -64,7 +64,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
             // Collect all stage endpoints (start + end of each stage)
             $endPoints = $this->collectEndpoints($stages);
 
-            $query = $this->queryBuilder->buildRailwayStationQuery($endPoints);
+            $query = $this->queryBuilder->buildRailwayStationQuery($endPoints, self::STATION_PROXIMITY_METERS);
             $result = $this->scanner->query($query);
 
             /** @var list<array{lat?: float, lon?: float, center?: array{lat: float, lon: float}, tags?: array<string, string>}> $elements */
