@@ -43,7 +43,8 @@
         "bike_shops",
         "water_points",
         "cultural_pois",
-        "railway_stations"
+        "railway_stations",
+        "health_services"
       ],
       "additionalProperties": false,
       "properties": {
@@ -156,6 +157,15 @@
           ]
         },
         "railway_stations": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "health_services": {
           "type": "string",
           "enum": [
             "pending",
