@@ -523,7 +523,7 @@ export interface components {
             label?: string;
             /** @description Machine-readable payload for the action. */
             payload?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             };
         };
         "AlertAction.gpx": {
@@ -536,7 +536,7 @@ export interface components {
             label?: string;
             /** @description Machine-readable payload for the action. */
             payload?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             };
         };
         "AlertAction.jsonld": {
@@ -549,7 +549,7 @@ export interface components {
             label?: string;
             /** @description Machine-readable payload for the action. */
             payload?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             };
         };
         Auth: {

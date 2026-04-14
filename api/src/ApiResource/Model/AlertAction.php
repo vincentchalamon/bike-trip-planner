@@ -16,7 +16,10 @@ final readonly class AlertAction
         public AlertActionKind $kind,
         #[ApiProperty(description: 'Human-readable label for the action button.')]
         public string $label,
-        #[ApiProperty(description: 'Machine-readable payload for the action.')]
+        #[ApiProperty(
+            description: 'Machine-readable payload for the action.',
+            openapiContext: ['type' => 'object', 'additionalProperties' => true],
+        )]
         public array $payload = [],
     ) {
     }
