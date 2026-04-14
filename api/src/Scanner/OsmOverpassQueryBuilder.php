@@ -127,7 +127,7 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         $polyline = $this->buildPolyline($decimatedPoints);
 
         return \sprintf(
-            '[out:json][timeout:15];(nwr["amenity"~"^(pharmacy|hospital|clinic)$"](around:%d,%s););out center 200;',
+            '[out:json][timeout:15];(nwr["amenity"~"^(pharmacy|hospital|clinic)$"](around:%d,%s););out center 500;',
             self::HEALTH_SERVICE_RADIUS_METERS,
             $polyline,
         );

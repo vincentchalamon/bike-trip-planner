@@ -284,8 +284,8 @@ function dispatchEvent(event: MercureEvent): void {
           alerts.map((a) => ({
             type: a.type as "nudge",
             message: a.message,
-            lat: a.nearestLat,
-            lon: a.nearestLon,
+            lat: a.nearestLat ?? undefined,
+            lon: a.nearestLon ?? undefined,
           })),
           "health_service",
         );
