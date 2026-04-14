@@ -111,7 +111,7 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         $polyline = $this->buildPolyline($endPoints);
 
         return \sprintf(
-            '[out:json][timeout:15];nwr["railway"="station"]["usage"!="tourism"](around:%d,%s);out center tags 100;',
+            '[out:json][timeout:15];nwr["railway"="station"]["usage"!="tourism"](around:%d,%s);out center tags 500;',
             $radiusMeters,
             $polyline,
         );

@@ -156,6 +156,8 @@ final class CheckRailwayStationsHandlerTest extends TestCase
     #[Test]
     public function stationFarFromOneStageEmitsNudgeWithNavigateAction(): void
     {
+        // Stage 1: start(48.0,2.0) end(48.5,2.5) — station at start, within range
+        // Stage 2: start(48.5,2.5) end(49.0,3.0) — both endpoints far from station
         $stages = $this->createStages('trip-1', 2);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
@@ -165,42 +167,22 @@ final class CheckRailwayStationsHandlerTest extends TestCase
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
         $queryBuilder->method('buildRailwayStationQuery')->willReturn('query');
 
-        // One station found, near stage 1 but far from stage 2
+        // Station at Stage 1's start point — near Stage 1, far from Stage 2
         $scanner = $this->createStub(ScannerInterface::class);
         $scanner->method('query')->willReturn([
             'elements' => [
                 [
-                    'lat' => 48.5,
-                    'lon' => 2.5,
+                    'lat' => 48.0,
+                    'lon' => 2.0,
                     'tags' => ['name' => 'Gare de Lyon'],
                 ],
             ],
         ]);
 
-        // Return different distances based on which points are being compared:
-        // - Stage 1 endpoints are near the station (5 km)
-        // - Stage 2 endpoints are far (15 km)
+        // lat1 is the stage endpoint lat; lat1 < 48.5 means Stage 1 endpoints (near), lat1 >= 48.5 means Stage 2 endpoints (far)
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturnCallback(
-            static function (float $lat1, float $lon1, float $lat2, float $lon2): float {
-                // Station is at (48.5, 2.5)
-                // Stage 1: start(48.0,2.0) end(48.5,2.5) — end is close
-                // Stage 2: start(48.5,2.5) end(49.0,3.0) — start is close
-                if (48.5 === $lat1 && 2.5 === $lon1 && 48.5 === $lat2 && 2.5 === $lon2) {
-                    return 0.0;
-                }
-
-                if (48.5 === $lat2 && 2.5 === $lon2) {
-                    // Check proximity to station
-                    if (48.5 === $lat1 && 2.5 === $lon1) {
-                        return 0.0;
-                    }
-
-                    return 15000.0; // Far from station
-                }
-
-                return 5000.0; // Near station
-            },
+            static fn(float $lat1): float => $lat1 >= 48.5 ? 15000.0 : 5000.0,
         );
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
@@ -212,19 +194,12 @@ final class CheckRailwayStationsHandlerTest extends TestCase
                 $this->callback(static function (array $data): bool {
                     $alerts = $data['alerts'];
 
-                    // Some stages may or may not have alerts depending on distance calculation
-                    // We just verify that alerts with navigate action exist when a station is found
-                    foreach ($alerts as $alert) {
-                        if ('nudge' !== $alert['type']) {
-                            return false;
-                        }
-
-                        if (isset($alert['action']) && 'navigate' !== $alert['action']) {
-                            return false;
-                        }
-                    }
-
-                    return true;
+                    // Only Stage 2 has no nearby station and gets a nudge alert
+                    return 1 === \count($alerts)
+                        && 'nudge' === $alerts[0]['type']
+                        && 'navigate' === $alerts[0]['action']
+                        && isset($alerts[0]['actionLat'])
+                        && isset($alerts[0]['actionLon']);
                 }),
             );
 
