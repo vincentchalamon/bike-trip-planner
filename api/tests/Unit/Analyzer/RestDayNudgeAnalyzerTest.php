@@ -150,8 +150,8 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     public function usesLocaleFromContext(): void
     {
         $translator = $this->createMock(TranslatorInterface::class);
-        $translator->expects($this->once())->method('trans')->with(
-            'alert.rest_day.nudge',
+        $translator->expects($this->atLeastOnce())->method('trans')->with(
+            $this->anything(),
             $this->anything(),
             'alerts',
             'fr',

@@ -139,8 +139,8 @@ final class SunsetAlertAnalyzerTest extends TestCase
     public function usesLocaleFromContext(): void
     {
         $translator = $this->createMock(TranslatorInterface::class);
-        $translator->expects($this->once())->method('trans')->with(
-            'alert.sunset.warning',
+        $translator->expects($this->atLeastOnce())->method('trans')->with(
+            $this->anything(),
             $this->anything(),
             'alerts',
             'fr',

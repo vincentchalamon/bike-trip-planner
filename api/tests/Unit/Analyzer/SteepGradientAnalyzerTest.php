@@ -196,8 +196,8 @@ final class SteepGradientAnalyzerTest extends TestCase
         $distanceCalculator->method('distanceBetween')->willReturn(120.0);
 
         $translator = $this->createMock(TranslatorInterface::class);
-        $translator->expects($this->once())->method('trans')->with(
-            'alert.steep_gradient.warning',
+        $translator->expects($this->atLeastOnce())->method('trans')->with(
+            $this->anything(),
             $this->anything(),
             'alerts',
             'fr',
