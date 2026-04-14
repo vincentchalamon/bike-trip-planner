@@ -228,9 +228,9 @@ export type MercureEvent =
         alerts: {
           stageIndex: number;
           dayNumber: number;
-          type: string;
+          type: "nudge";
           message: string;
-          action: string;
+          action: "navigate";
           lat: number;
           lon: number;
         }[];
