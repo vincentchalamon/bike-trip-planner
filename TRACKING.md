@@ -370,12 +370,15 @@ Champ `action` sur le modèle Alert, actions contextuelles sur les analyseurs ex
 | 3     | [#283](https://github.com/vincentchalamon/bike-trip-planner/issues/283) | Nouvel analyseur : gare SNCF de secours (nudge)            | S      |     | —         |
 | 4     | [#284](https://github.com/vincentchalamon/bike-trip-planner/issues/284) | Nouvel analyseur : pharmacie/hôpital à proximité (nudge)   | S      |     | —         |
 | 5     | [#285](https://github.com/vincentchalamon/bike-trip-planner/issues/285) | Nouvel analyseur : passage frontière (nudge)               | M      |     | —         |
+| 6     | [#313](https://github.com/vincentchalamon/bike-trip-planner/issues/313) | Nouvel analyseur : départ avant l'aube (warning)           | S      |     | —         |
+| 7     | [#314](https://github.com/vincentchalamon/bike-trip-planner/issues/314) | Nouvel analyseur : traversée cours d'eau sans pont (nudge) | M      |     | —         |
+| 8     | [#315](https://github.com/vincentchalamon/bike-trip-planner/issues/315) | ADR-028 : alertes actionnables (action DTO, 4 types)       | S      |     | —         |
 
 ---
 
 ## Sprint 19 — Landing page + accès anticipé
 
-Page d'accueil marketing, système d'accès anticipé (HMAC, throttling, CLI), page FAQ.
+Page d'accueil marketing, système d'accès anticipé (HMAC, throttling, CLI), page FAQ. ADR-029.
 
 | Ordre | ID                                                                      | Titre                                                         | Effort | PRs | Dépend de |
 |-------|-------------------------------------------------------------------------|---------------------------------------------------------------|--------|-----|-----------|
@@ -383,10 +386,59 @@ Page d'accueil marketing, système d'accès anticipé (HMAC, throttling, CLI), p
 | 2     | [#287](https://github.com/vincentchalamon/bike-trip-planner/issues/287) | Système d'accès anticipé : backend (entité, HMAC, throttling) | L      |     | —         |
 | 3     | [#288](https://github.com/vincentchalamon/bike-trip-planner/issues/288) | Système d'accès anticipé : frontend (formulaire, login)       | M      |     | #287      |
 | 4     | [#289](https://github.com/vincentchalamon/bike-trip-planner/issues/289) | Page FAQ : différenciation et questions fréquentes            | S      |     | —         |
+| 5     | [#316](https://github.com/vincentchalamon/bike-trip-planner/issues/316) | ADR-029 : système d'accès anticipé (HMAC, throttling, CLI)   | S      |     | —         |
 
 ---
 
-## Sprint 20 — Intégration Ollama : fondations backend
+## Sprint 20 — Stepper + Refonte du flux
+
+Composant Stepper navigation 4 actes, liste des voyages avec statuts, ADR-026 (pipeline 2 phases).
+
+| Ordre | ID                                                                      | Titre                                                                          | Effort | PRs | Dépend de |
+|-------|-------------------------------------------------------------------------|--------------------------------------------------------------------------------|--------|-----|-----------|
+| 1     | [#319](https://github.com/vincentchalamon/bike-trip-planner/issues/319) | ADR-026 : gate mechanism et pipeline 2 phases (prévisualisation → analyse)     | S      |     | —         |
+| 2     | [#317](https://github.com/vincentchalamon/bike-trip-planner/issues/317) | Composant Stepper : navigation 4 étapes (Préparation → Aperçu → Analyse → MV) | M      |     | —         |
+| 3     | [#318](https://github.com/vincentchalamon/bike-trip-planner/issues/318) | Liste des voyages avec statuts + header "Mes voyages"                          | M      |     | —         |
+
+---
+
+## Sprint 21 — Acte 1 : Card Selection + Acte 1.5 : Aperçu
+
+Interface d'entrée de l'itinéraire (cartes Lien/GPX), écran de prévisualisation, et endpoint `POST /trips/{id}/analyze`.
+
+| Ordre | ID                                                                      | Titre                                                                     | Effort | PRs | Dépend de |
+|-------|-------------------------------------------------------------------------|---------------------------------------------------------------------------|--------|-----|-----------|
+| 1     | [#320](https://github.com/vincentchalamon/bike-trip-planner/issues/320) | Acte 1 — Card Selection : entrée mutuellement exclusive (Lien + GPX)      | L      |     | #317      |
+| 2     | [#321](https://github.com/vincentchalamon/bike-trip-planner/issues/321) | Acte 1.5 — Écran Aperçu : prévisualisation avant analyse                 | M      |     | #317 #320 |
+| 3     | [#322](https://github.com/vincentchalamon/bike-trip-planner/issues/322) | Endpoint `POST /trips/{id}/analyze` : découplage prévisualisation/analyse | M      |     | —         |
+
+---
+
+## Sprint 22 — Acte 2 + Acte 3 : progression et résultats
+
+Écran de progression narrative (Acte 2), events Mercure restructurés, refonte résultats avec alertes repliables (Acte 3).
+
+| Ordre | ID                                                                      | Titre                                                                           | Effort | PRs | Dépend de |
+|-------|-------------------------------------------------------------------------|---------------------------------------------------------------------------------|--------|-----|-----------|
+| 1     | [#324](https://github.com/vincentchalamon/bike-trip-planner/issues/324) | Events Mercure dual mode : computation_step_completed + TRIP_READY + STAGE_UPDATED | L   |     | #322      |
+| 2     | [#323](https://github.com/vincentchalamon/bike-trip-planner/issues/323) | Acte 2 — ProcessingProgress : écran de progression narrative par catégorie      | L      |     | #317 #324 |
+| 3     | [#325](https://github.com/vincentchalamon/bike-trip-planner/issues/325) | Acte 3 — Refonte résultats : alertes repliables + affichage structuré           | L      |     | #323 #324 |
+
+---
+
+## Sprint 23 — UX avancé : recomputation inline + batch mode
+
+Shimmer/skeleton sur les étapes en recalcul, batch mode (ModificationQueue), diff post-recalcul.
+
+| Ordre | ID                                                                      | Titre                                                                     | Effort | PRs | Dépend de |
+|-------|-------------------------------------------------------------------------|---------------------------------------------------------------------------|--------|-----|-----------|
+| 1     | [#326](https://github.com/vincentchalamon/bike-trip-planner/issues/326) | Recomputation inline : shimmer/skeleton + barre de progression discrète   | L      |     | #324 #325 |
+| 2     | [#327](https://github.com/vincentchalamon/bike-trip-planner/issues/327) | Batch mode : ModificationQueue (accumulation + recalcul unique)           | L      |     | #326      |
+| 3     | [#328](https://github.com/vincentchalamon/bike-trip-planner/issues/328) | Diff post-recalcul : surbrillance des changements après recomputation     | M      |     | #326      |
+
+---
+
+## Sprint 24 — Intégration Ollama : fondations backend
 
 Service OllamaClient PHP, configuration Docker Ollama, gate mechanism dans ComputationTracker, system prompts cyclotourisme versionnés. ADR-027.
 
@@ -399,7 +451,7 @@ Service OllamaClient PHP, configuration Docker Ollama, gate mechanism dans Compu
 
 ---
 
-## Sprint 21 — LLaMA 8B : analyse 2 passes
+## Sprint 25 — LLaMA 8B : analyse 2 passes
 
 Pipeline d'analyse IA : passe 1 par étape (parallélisable via Messenger), passe 2 vue d'ensemble, orchestration gate → LLaMA → TRIP_READY, fallback gracieux.
 
@@ -412,7 +464,7 @@ Pipeline d'analyse IA : passe 1 par étape (parallélisable via Messenger), pass
 
 ---
 
-## Sprint 22 — Frontend IA : résumés + affichage hybride
+## Sprint 26 — Frontend IA : résumés + affichage hybride
 
 Affichage des résumés IA (global + par étape), layout hybride résumé/alertes repliables, analyse IA différée, fallback frontend sans LLaMA.
 
@@ -425,7 +477,7 @@ Affichage des résumés IA (global + par étape), layout hybride résumé/alerte
 
 ---
 
-## Sprint 23 — Bulle IA (LLaMA 3B) : dialogue context-aware
+## Sprint 27 — Bulle IA (LLaMA 3B) : dialogue context-aware
 
 Assistant conversationnel via bulle flottante, LLaMA 3B pour interpréter les intentions, intégration avec la recomputation inline.
 
@@ -437,9 +489,9 @@ Assistant conversationnel via bulle flottante, LLaMA 3B pour interpréter les in
 
 ---
 
-## Sprint 24 — Recette complète & Audit
+## Sprint 28 — Recette complète & Audit
 
-Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 23) et audit complet : performance, sécurité, accessibilité, SEO, qualité de code, couverture de tests. Deux phases : **audit** (cartographier les problèmes) puis **corrections** (fixer par lots thématiques).
+Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 27) et audit complet : performance, sécurité, accessibilité, SEO, qualité de code, couverture de tests. Deux phases : **audit** (cartographier les problèmes) puis **corrections** (fixer par lots thématiques).
 
 ### Phase 1 — Outillage automatisé
 
@@ -497,7 +549,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 23
 | 35    | Fix : performance et polish (P3)                           | M      |
 | 36    | Re-test : golden path A final après corrections            | M      |
 
-### Recette Sprint 24 — Golden Path A (Komoot)
+### Recette Sprint 28 — Golden Path A (Komoot)
 
 - **Checklist :**
   - [ ] Connexion via magic link (email → Mailcatcher → clic → connecté)
@@ -515,7 +567,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 23
   - [ ] Dupliquer le trip → modifier le duplicata → l'original est inchangé
   - [ ] Se déconnecter → se reconnecter → le trip est toujours là
 
-### Recette Sprint 24 — Cas limites
+### Recette Sprint 28 — Cas limites
 
 - **Inputs invalides :**
   - [ ] GPX malformé (XML invalide) → message d'erreur clair
@@ -540,7 +592,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 23
   - [ ] 0 hébergement trouvé → message informatif
   - [ ] Undo jusqu'au début → bouton disabled, pas de crash
 
-### Recette Sprint 24 — Audit visuel multi-device
+### Recette Sprint 28 — Audit visuel multi-device
 
 | Device | Navigateur | Thème | Langue | OK ? |
 |---|---|---|---|---|
@@ -560,7 +612,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 23
   - [ ] Switch de vue (timeline/map/split) fonctionnel
   - [ ] Pas de flash blanc au chargement en dark mode
 
-### Recette Sprint 24 — Audits automatisés
+### Recette Sprint 28 — Audits automatisés
 
 - **Seuils :**
   - [ ] `make qa` : 0 erreur
@@ -580,7 +632,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 23
 
 ---
 
-## Sprint 25 — Garmin Connect
+## Sprint 29 — Garmin Connect
 
 Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase 2). Voir [ADR-018](docs/adr/adr-018-garmin-export-and-device-sync-strategy.md). Test local via ngrok pour le callback OAuth.
 
@@ -590,9 +642,9 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 |-------|-----------------------------------------------------------------------|----------------|--------|-----|-----------------------------------------------------------------------|
 | 1     | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Garmin Connect | L      | 3   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) |
 
-### Recette Sprint 25
+### Recette Sprint 29
 
-- **Tests E2E :** `tests/recette/sprint-25.spec.ts`
+- **Tests E2E :** `tests/recette/sprint-29.spec.ts`
 - **Checklist manuelle :**
   - [ ] Export FIT téléchargeable par étape
   - [ ] Flux OAuth Garmin Connect complet (via ngrok)
@@ -601,7 +653,7 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 
 ---
 
-## Sprint 26 — Déploiement
+## Sprint 30 — Déploiement
 
 Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructure-strategy.md). Issues GitHub à créer au moment venu.
 
@@ -616,7 +668,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 7     | Migration données + smoke test production          | M      |
 | 8     | [#312](https://github.com/vincentchalamon/bike-trip-planner/issues/312) | Feature-deploy : preview par PR | L | Étapes 1-7 |
 
-### Recette Sprint 26
+### Recette Sprint 30
 
 - **Checklist manuelle :**
   - [ ] Application accessible via URL publique
@@ -637,7 +689,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | ID  | Titre                            | Note                     |
 |-----|----------------------------------|--------------------------|
 | #5  | Add unit tests                   | Continu, à chaque sprint |
-| #67 | Générer un itinéraire (LLaMA 3B) | Card "Assistant IA" Acte 1 — dépend de Valhalla + sprints 20-23 |
+| #67 | Générer un itinéraire (LLaMA 3B) | Card "Assistant IA" Acte 1 — dépend de Valhalla + sprints 24-27 |
 
 ---
 
@@ -662,13 +714,17 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 15        | Mobile                         | 6       | 11           |
 | 16        | Recette Globale                | 7       | ~6           |
 | 17        | Performance pipeline async     | 4       | ~4           |
-| 18        | Alertes actionnables + règles  | 5       | ~6           |
-| 19        | Landing page + accès anticipé  | 4       | ~5           |
-| 20        | Intégration Ollama : fondations| 4       | ~4           |
-| 21        | LLaMA 8B : analyse 2 passes   | 4       | ~5           |
-| 22        | Frontend IA : résumés hybrides | 4       | ~5           |
-| 23        | Bulle IA (LLaMA 3B) dialogue  | 3       | ~4           |
-| 24        | Recette complète & Audit       | 36      | ~12          |
-| 25        | Garmin Connect                 | 1       | 3            |
-| 26        | Déploiement                    | 8       | ~8           |
-| **Total** |                                | **133** | **~142**     |
+| 18        | Alertes actionnables + règles  | 8       | ~9           |
+| 19        | Landing page + accès anticipé  | 5       | ~6           |
+| 20        | Stepper + Refonte du flux      | 3       | ~3           |
+| 21        | Acte 1 Card Selection + Aperçu | 3       | ~3           |
+| 22        | Acte 2 + Acte 3 : progression | 3       | ~4           |
+| 23        | UX avancé : recomputation     | 3       | ~4           |
+| 24        | Intégration Ollama : fondations| 4       | ~4           |
+| 25        | LLaMA 8B : analyse 2 passes   | 4       | ~5           |
+| 26        | Frontend IA : résumés hybrides | 4       | ~5           |
+| 27        | Bulle IA (LLaMA 3B) dialogue  | 3       | ~4           |
+| 28        | Recette complète & Audit       | 36      | ~12          |
+| 29        | Garmin Connect                 | 1       | 3            |
+| 30        | Déploiement                    | 8       | ~8           |
+| **Total** |                                | **149** | **~160**     |
