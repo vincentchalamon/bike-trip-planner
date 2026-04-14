@@ -213,6 +213,10 @@ final class TrafficDangerAnalyzerTest extends TestCase
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
         $this->assertEqualsWithDelta(45.5, $alerts[0]->lat, 0.001);
         $this->assertEqualsWithDelta(5.5, $alerts[0]->lon, 0.001);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::NAVIGATE, $alerts[0]->action->kind);
+        $this->assertEqualsWithDelta(45.5, $alerts[0]->action->payload['lat'], 0.001);
+        $this->assertEqualsWithDelta(5.5, $alerts[0]->action->payload['lon'], 0.001);
     }
 
     #[Test]
