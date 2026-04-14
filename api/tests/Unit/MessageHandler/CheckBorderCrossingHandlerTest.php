@@ -53,6 +53,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
         );
     }
 
+    /** @param list<Stage>|null $stages */
     private function createTripStateManager(?array $stages): TripRequestRepositoryInterface
     {
         $manager = $this->createStub(TripRequestRepositoryInterface::class);
