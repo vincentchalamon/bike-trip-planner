@@ -208,7 +208,6 @@ export type MercureEvent =
           action?: "navigate";
           actionLat?: number;
           actionLon?: number;
-          stationName?: string | null;
         }[];
       };
     }
