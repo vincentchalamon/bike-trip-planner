@@ -35,12 +35,12 @@ function isCulturalPoiAlert(alert: AlertData): boolean {
 
 export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
   const t = useTranslations("alertList");
-  const [dismissedIndices, setDismissedIndices] = useState<Set<number>>(
+  const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(
     new Set(),
   );
 
-  const handleDismiss = useCallback((index: number) => {
-    setDismissedIndices((prev) => new Set(prev).add(index));
+  const handleDismiss = useCallback((key: string) => {
+    setDismissedKeys((prev) => new Set(prev).add(key));
   }, []);
 
   if (alerts.length === 0) return null;
@@ -51,14 +51,15 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      {sorted.map((alert, index) => {
-        const isDismissed = dismissedIndices.has(index);
+      {sorted.map((alert) => {
+        const alertKey = `${alert.type}-${alert.source ?? ""}-${alert.message}`;
+        const isDismissed = dismissedKeys.has(alertKey);
         const action = alert.action;
         const ActionIcon = action ? actionIcons[action.kind] : null;
 
         return (
           <div
-            key={`${alert.type}-${alert.source}-${index}`}
+            key={alertKey}
             className={isDismissed ? "opacity-50" : undefined}
             data-testid={isDismissed ? "alert-dismissed" : undefined}
           >
@@ -80,12 +81,11 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                 variant="outline"
                 size="sm"
                 className="mt-1 ml-1 h-6 px-2 text-xs text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                disabled={action.kind !== "dismiss"}
                 onClick={() => {
                   if (action.kind === "dismiss") {
-                    handleDismiss(index);
+                    handleDismiss(alertKey);
                   }
-                  // auto_fix and detour: backend handlers not yet implemented
-                  // navigate: could zoom to lat/lon if available
                 }}
                 data-testid="alert-action-button"
               >
