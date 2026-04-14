@@ -35,9 +35,7 @@ function isCulturalPoiAlert(alert: AlertData): boolean {
 
 export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
   const t = useTranslations("alertList");
-  const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(
-    new Set(),
-  );
+  const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
 
   const handleDismiss = useCallback((key: string) => {
     setDismissedKeys((prev) => new Set(prev).add(key));
