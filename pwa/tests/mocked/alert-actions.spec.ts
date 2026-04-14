@@ -78,6 +78,7 @@ test.describe("Alert actions", () => {
     const stage2 = mockedPage.getByTestId("stage-card-2");
     await expect(stage2).toContainText("E-bike range exceeded");
     await expect(stage2.getByText("Split stage")).toBeVisible();
+    await expect(stage2.getByText("Split stage")).toBeDisabled();
   });
 
   test("alerts without actions do not show action buttons", async ({
