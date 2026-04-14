@@ -170,11 +170,6 @@ export function terrainAlertsEvent(): MercureEvent {
             message: "Route non goudronnee sur 3km",
             lat: 44.6,
             lon: 4.5,
-            action: {
-              kind: "detour",
-              label: "Show alternative",
-              payload: { alternativeId: "alt-1" },
-            },
           },
         ],
         "1": [
@@ -183,11 +178,6 @@ export function terrainAlertsEvent(): MercureEvent {
             message: "Passage en altitude (820m)",
             lat: 44.4,
             lon: 4.2,
-            action: {
-              kind: "dismiss",
-              label: "Dismiss",
-              payload: {},
-            },
           },
         ],
       },

@@ -3,6 +3,7 @@ import {
   routeParsedEvent,
   stagesComputedEvent,
   alertsWithActionsEvent,
+  terrainAlertsEvent,
   tripCompleteEvent,
 } from "../fixtures/mock-data";
 
@@ -88,13 +89,13 @@ test.describe("Alert actions", () => {
     await injectSequence([
       routeParsedEvent(),
       stagesComputedEvent(),
-      // Use terrain alerts event which now has actions, but stage 3 has no alerts
-      alertsWithActionsEvent(),
+      terrainAlertsEvent(),
       tripCompleteEvent(),
     ]);
 
-    // Stage 3 has no alerts at all
-    const stage3 = mockedPage.getByTestId("stage-card-3");
-    await expect(stage3.getByTestId("alert-action-button")).not.toBeVisible();
+    // terrainAlertsEvent has alerts on stages 0 and 1 but without actions
+    const stage1 = mockedPage.getByTestId("stage-card-1");
+    await expect(stage1).toContainText("Route non goudronnee sur 3km");
+    await expect(stage1.getByTestId("alert-action-button")).not.toBeVisible();
   });
 });
