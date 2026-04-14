@@ -189,6 +189,7 @@ final class CheckRailwayStationsHandlerTest extends TestCase
                 if (48.5 === $lat1 && 2.5 === $lon1 && 48.5 === $lat2 && 2.5 === $lon2) {
                     return 0.0;
                 }
+
                 if (48.5 === $lat2 && 2.5 === $lon2) {
                     // Check proximity to station
                     if (48.5 === $lat1 && 2.5 === $lon1) {
