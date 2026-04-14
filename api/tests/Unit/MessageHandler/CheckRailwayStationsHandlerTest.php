@@ -218,6 +218,7 @@ final class CheckRailwayStationsHandlerTest extends TestCase
                         if ('nudge' !== $alert['type']) {
                             return false;
                         }
+
                         if (isset($alert['action']) && 'navigate' !== $alert['action']) {
                             return false;
                         }
