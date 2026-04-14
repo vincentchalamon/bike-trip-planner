@@ -42,7 +42,8 @@
         "wind",
         "bike_shops",
         "water_points",
-        "cultural_pois"
+        "cultural_pois",
+        "railway_stations"
       ],
       "additionalProperties": false,
       "properties": {
@@ -146,6 +147,15 @@
           ]
         },
         "cultural_pois": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "railway_stations": {
           "type": "string",
           "enum": [
             "pending",
