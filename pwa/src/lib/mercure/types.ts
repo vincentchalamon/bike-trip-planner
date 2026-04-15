@@ -187,7 +187,6 @@ export type MercureEvent =
           dayNumber: number;
           type: string;
           message: string;
-          action: "navigate";
           nearestLat: number | null;
           nearestLon: number | null;
         }[];

@@ -127,7 +127,6 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
                         'alerts',
                         $locale,
                     ),
-                    'action' => 'navigate',
                     'nearestLat' => $nearestLat,
                     'nearestLon' => $nearestLon,
                 ];
