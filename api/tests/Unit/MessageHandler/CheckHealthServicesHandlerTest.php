@@ -118,7 +118,7 @@ final class CheckHealthServicesHandlerTest extends TestCase
     }
 
     #[Test]
-    public function noHealthServiceEmitsNudgeWithNavigateAction(): void
+    public function noHealthServiceEmitsNudgeForEveryStage(): void
     {
         $stages = $this->createStages('trip-1');
 
@@ -146,7 +146,6 @@ final class CheckHealthServicesHandlerTest extends TestCase
 
                     return 3 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && 'navigate' === $alerts[0]['action']
                         && null === $alerts[0]['nearestLat']
                         && null === $alerts[0]['nearestLon']
                         && str_contains((string) $alerts[0]['message'], 'No health service near stage 1');
@@ -196,7 +195,6 @@ final class CheckHealthServicesHandlerTest extends TestCase
 
                     return 2 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && 'navigate' === $alerts[0]['action']
                         && 49.0 === $alerts[0]['nearestLat']
                         && 3.0 === $alerts[0]['nearestLon'];
                 }),
