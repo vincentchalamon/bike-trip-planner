@@ -146,8 +146,6 @@ final class CheckHealthServicesHandlerTest extends TestCase
 
                     return 3 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && null === $alerts[0]['nearestLat']
-                        && null === $alerts[0]['nearestLon']
                         && str_contains((string) $alerts[0]['message'], 'No health service near stage 1');
                 }),
             );
@@ -157,7 +155,7 @@ final class CheckHealthServicesHandlerTest extends TestCase
     }
 
     #[Test]
-    public function distantHealthServiceEmitsNudgeWithNearestCoordinates(): void
+    public function distantHealthServiceEmitsNudge(): void
     {
         $stages = $this->createStages('trip-1', 2);
 
@@ -194,9 +192,7 @@ final class CheckHealthServicesHandlerTest extends TestCase
                     $alerts = $data['alerts'];
 
                     return 2 === \count($alerts)
-                        && 'nudge' === $alerts[0]['type']
-                        && 49.0 === $alerts[0]['nearestLat']
-                        && 3.0 === $alerts[0]['nearestLon'];
+                        && 'nudge' === $alerts[0]['type'];
                 }),
             );
 

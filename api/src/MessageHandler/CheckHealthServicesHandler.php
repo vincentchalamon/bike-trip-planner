@@ -94,19 +94,8 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
                 $midpoint = $geometry[(int) (\count($geometry) / 2)];
 
                 $hasNearby = false;
-                $nearestDistance = PHP_FLOAT_MAX;
-                $nearestLat = null;
-                $nearestLon = null;
-
                 foreach ($healthServiceLocations as $service) {
                     $distance = $this->haversine->inMeters($midpoint->lat, $midpoint->lon, $service['lat'], $service['lon']);
-
-                    if ($distance < $nearestDistance) {
-                        $nearestDistance = $distance;
-                        $nearestLat = $service['lat'];
-                        $nearestLon = $service['lon'];
-                    }
-
                     if ($distance < self::HEALTH_SERVICE_PROXIMITY_METERS) {
                         $hasNearby = true;
                         break;
@@ -127,8 +116,6 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
                         'alerts',
                         $locale,
                     ),
-                    'nearestLat' => $nearestLat,
-                    'nearestLon' => $nearestLon,
                 ];
             }
 
