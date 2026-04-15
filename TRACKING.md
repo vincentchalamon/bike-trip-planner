@@ -666,7 +666,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 5     | Docker configs production (PostgreSQL, Redis, Mercure, Caddy) | L      |
 | 6     | Monitoring & healthchecks                          | M      |
 | 7     | Migration données + smoke test production          | M      |
-| 8     | [#312](https://github.com/vincentchalamon/bike-trip-planner/issues/312) Feature-deploy : preview par PR (dépend étapes 1-7) | L      |
+| 8     | [#312](https://github.com/vincentchalamon/bike-trip-planner/issues/312) Feature-deploy : preview par PR (Étapes 1-7) | L |
 
 ### Recette Sprint 30
 
