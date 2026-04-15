@@ -208,6 +208,48 @@ final class CheckRailwayStationsHandlerTest extends TestCase
     }
 
     #[Test]
+    public function restDayStageIsSkippedAndEmitsNoAlert(): void
+    {
+        $stages = $this->createStages('trip-1', 2);
+        // Override stage 1 as a rest day — stage 2 remains a cycling stage
+        $stages[0] = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 1,
+            distance: 0.0,
+            elevation: 0.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.0, 2.0),
+            isRestDay: true,
+        );
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn($stages);
+        $tripStateManager->method('getLocale')->willReturn('en');
+
+        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
+        $queryBuilder->method('buildRailwayStationQuery')->willReturn('query');
+
+        // No stations found — without the rest-day guard, both stages would produce alerts
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('query')->willReturn(['elements' => []]);
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::RAILWAY_STATION_ALERTS,
+                // Only stage 2 gets an alert — stage 1 is a rest day and must be skipped
+                $this->callback(static fn (array $data): bool => 1 === \count($data['alerts'])),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        $handler(new CheckRailwayStations('trip-1'));
+    }
+
+    #[Test]
     public function nullStagesReturnsEarly(): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
