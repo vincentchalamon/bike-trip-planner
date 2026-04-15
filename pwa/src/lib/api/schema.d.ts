@@ -518,9 +518,9 @@ export interface components {
              * @description Type of action: auto_fix, detour, navigate, dismiss.
              * @enum {string}
              */
-            kind?: "auto_fix" | "detour" | "navigate" | "dismiss";
+            kind: "auto_fix" | "detour" | "navigate" | "dismiss";
             /** @description Human-readable label for the action button. */
-            label?: string;
+            label: string;
             /** @description Machine-readable payload for the action. */
             payload?: {
                 [key: string]: unknown;
@@ -531,9 +531,9 @@ export interface components {
              * @description Type of action: auto_fix, detour, navigate, dismiss.
              * @enum {string}
              */
-            kind?: "auto_fix" | "detour" | "navigate" | "dismiss";
+            kind: "auto_fix" | "detour" | "navigate" | "dismiss";
             /** @description Human-readable label for the action button. */
-            label?: string;
+            label: string;
             /** @description Machine-readable payload for the action. */
             payload?: {
                 [key: string]: unknown;
@@ -544,9 +544,9 @@ export interface components {
              * @description Type of action: auto_fix, detour, navigate, dismiss.
              * @enum {string}
              */
-            kind?: "auto_fix" | "detour" | "navigate" | "dismiss";
+            kind: "auto_fix" | "detour" | "navigate" | "dismiss";
             /** @description Human-readable label for the action button. */
-            label?: string;
+            label: string;
             /** @description Machine-readable payload for the action. */
             payload?: {
                 [key: string]: unknown;
