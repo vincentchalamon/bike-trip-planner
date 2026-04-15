@@ -195,13 +195,15 @@ final class SteepGradientAnalyzerTest extends TestCase
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
         $distanceCalculator->method('distanceBetween')->willReturn(120.0);
 
+        $translationKeys = [];
         $translator = $this->createMock(TranslatorInterface::class);
-        $translator->expects($this->atLeastOnce())->method('trans')->with(
-            $this->anything(),
-            $this->anything(),
-            'alerts',
-            'fr',
-        )->willReturn('Montée raide');
+        $translator->method('trans')->willReturnCallback(
+            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
+                $translationKeys[] = [$id, $domain, $locale];
+
+                return $id;
+            }
+        );
 
         $analyzer = new SteepGradientAnalyzer($distanceCalculator, $translator);
 
@@ -217,6 +219,7 @@ final class SteepGradientAnalyzerTest extends TestCase
         $alerts = $analyzer->analyze($stage, ['locale' => 'fr']);
 
         $this->assertCount(1, $alerts);
+        $this->assertContains(['alert.steep_gradient.warning', 'alerts', 'fr'], $translationKeys);
     }
 
     #[Test]

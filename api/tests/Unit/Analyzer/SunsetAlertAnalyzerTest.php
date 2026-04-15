@@ -138,13 +138,15 @@ final class SunsetAlertAnalyzerTest extends TestCase
     #[Test]
     public function usesLocaleFromContext(): void
     {
+        $translationKeys = [];
         $translator = $this->createMock(TranslatorInterface::class);
-        $translator->expects($this->atLeastOnce())->method('trans')->with(
-            $this->anything(),
-            $this->anything(),
-            'alerts',
-            'fr',
-        )->willReturn('Alerte coucher de soleil');
+        $translator->method('trans')->willReturnCallback(
+            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
+                $translationKeys[] = [$id, $domain, $locale];
+
+                return $id;
+            }
+        );
 
         /** @var Stub&RiderTimeEstimatorInterface $riderTimeEstimator */
         $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
@@ -160,6 +162,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         ]);
 
         $this->assertCount(1, $alerts);
+        $this->assertContains(['alert.sunset.warning', 'alerts', 'fr'], $translationKeys);
     }
 
     #[Test]

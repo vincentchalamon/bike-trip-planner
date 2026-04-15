@@ -149,13 +149,15 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     #[Test]
     public function usesLocaleFromContext(): void
     {
+        $translationKeys = [];
         $translator = $this->createMock(TranslatorInterface::class);
-        $translator->expects($this->atLeastOnce())->method('trans')->with(
-            $this->anything(),
-            $this->anything(),
-            'alerts',
-            'fr',
-        )->willReturn('Repos suggéré');
+        $translator->method('trans')->willReturnCallback(
+            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
+                $translationKeys[] = [$id, $domain, $locale];
+
+                return $id;
+            }
+        );
 
         $analyzer = new RestDayNudgeAnalyzer($translator, 3);
         $stages = [
@@ -167,6 +169,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
         $alerts = $analyzer->analyze($stages[2], ['allStages' => $stages, 'locale' => 'fr']);
 
         $this->assertCount(1, $alerts);
+        $this->assertContains(['alert.rest_day.nudge', 'alerts', 'fr'], $translationKeys);
     }
 
     #[Test]

@@ -111,6 +111,28 @@ final class EbikeRangeAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function usesLocaleFromContext(): void
+    {
+        $translationKeys = [];
+        $translator = $this->createMock(TranslatorInterface::class);
+        $translator->method('trans')->willReturnCallback(
+            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
+                $translationKeys[] = [$id, $domain, $locale];
+
+                return $id;
+            }
+        );
+
+        $analyzer = new EbikeRangeAnalyzer($translator);
+        $stage = $this->createStage(distance: 90.0, elevation: 0.0);
+
+        $alerts = $analyzer->analyze($stage, ['ebikeMode' => true, 'locale' => 'fr']);
+
+        $this->assertCount(1, $alerts);
+        $this->assertContains(['alert.ebike_range.warning', 'alerts', 'fr'], $translationKeys);
+    }
+
+    #[Test]
     public function priority(): void
     {
         $this->assertSame(20, EbikeRangeAnalyzer::getPriority());

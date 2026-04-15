@@ -78,13 +78,15 @@ final class ElevationAlertAnalyzerTest extends TestCase
     #[Test]
     public function usesLocaleFromContext(): void
     {
+        $translationKeys = [];
         $translator = $this->createMock(TranslatorInterface::class);
-        $translator->expects($this->atLeastOnce())->method('trans')->with(
-            $this->anything(),
-            $this->anything(),
-            'alerts',
-            'fr',
-        )->willReturn('Alerte élévation');
+        $translator->method('trans')->willReturnCallback(
+            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
+                $translationKeys[] = [$id, $domain, $locale];
+
+                return $id;
+            }
+        );
 
         $analyzer = new ElevationAlertAnalyzer($translator);
         $stage = $this->createStage(1500.0);
@@ -92,18 +94,21 @@ final class ElevationAlertAnalyzerTest extends TestCase
         $alerts = $analyzer->analyze($stage, ['locale' => 'fr']);
 
         $this->assertCount(1, $alerts);
+        $this->assertContains(['alert.elevation.warning', 'alerts', 'fr'], $translationKeys);
     }
 
     #[Test]
     public function defaultsToEnglishLocale(): void
     {
+        $translationKeys = [];
         $translator = $this->createMock(TranslatorInterface::class);
-        $translator->expects($this->atLeastOnce())->method('trans')->with(
-            $this->anything(),
-            $this->anything(),
-            'alerts',
-            'en',
-        )->willReturn('Elevation warning');
+        $translator->method('trans')->willReturnCallback(
+            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
+                $translationKeys[] = [$id, $domain, $locale];
+
+                return $id;
+            }
+        );
 
         $analyzer = new ElevationAlertAnalyzer($translator);
         $stage = $this->createStage(1500.0);
@@ -111,6 +116,7 @@ final class ElevationAlertAnalyzerTest extends TestCase
         $alerts = $analyzer->analyze($stage);
 
         $this->assertCount(1, $alerts);
+        $this->assertContains(['alert.elevation.warning', 'alerts', 'en'], $translationKeys);
     }
 
     #[Test]

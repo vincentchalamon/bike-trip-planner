@@ -96,7 +96,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                     'alerts',
                     $locale,
                 );
-                $alert = new Alert(type: AlertType::WARNING, message: $message, action: $dismissAction);
+                $alert = new Alert(type: AlertType::WARNING, message: $message);
                 $alerts[] = [
                     'type' => $alert->type->value,
                     'message' => $alert->message,
@@ -115,7 +115,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
                     'alerts',
                     $locale,
                 );
-                $alert = new Alert(type: AlertType::WARNING, message: $message, action: $dismissAction);
+                $alert = new Alert(type: AlertType::WARNING, message: $message);
                 $alerts[] = [
                     'type' => $alert->type->value,
                     'message' => $alert->message,
