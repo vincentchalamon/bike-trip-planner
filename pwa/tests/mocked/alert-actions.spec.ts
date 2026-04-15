@@ -101,4 +101,23 @@ test.describe("Alert actions", () => {
     await expect(stage1).toContainText("Route non goudronnee sur 3km");
     await expect(stage1.getByTestId("alert-action-button")).not.toBeVisible();
   });
+
+  test("detour action button is displayed and disabled", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      alertsWithActionsEvent(),
+      tripCompleteEvent(),
+    ]);
+
+    const stage3 = mockedPage.getByTestId("stage-card-3");
+    await expect(stage3).toContainText("Difficult terrain ahead");
+    await expect(stage3.getByText("Take detour")).toBeVisible();
+    await expect(stage3.getByText("Take detour")).toBeDisabled();
+  });
 });

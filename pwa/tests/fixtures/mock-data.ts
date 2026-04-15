@@ -227,6 +227,19 @@ export function alertsWithActionsEvent(): MercureEvent {
             },
           },
         ],
+        "2": [
+          {
+            type: "warning",
+            message: "Difficult terrain ahead",
+            lat: 44.295,
+            lon: 4.087,
+            action: {
+              kind: "detour",
+              label: "Take detour",
+              payload: {},
+            },
+          },
+        ],
       },
     },
   };
