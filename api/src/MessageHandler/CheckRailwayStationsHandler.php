@@ -80,8 +80,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
                     continue;
                 }
 
-                $name = $element['tags']['name'] ?? null;
-                $stationLocations[] = ['lat' => (float) $lat, 'lon' => (float) $lon, 'name' => $name];
+                $stationLocations[] = ['lat' => (float) $lat, 'lon' => (float) $lon];
             }
 
             // Check each stage for nearby stations and build alerts
@@ -114,7 +113,6 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
                     $alert['action'] = 'navigate';
                     $alert['actionLat'] = $nearestStation['lat'];
                     $alert['actionLon'] = $nearestStation['lon'];
-                    $alert['stationName'] = $nearestStation['name'];
                 }
 
                 $alerts[] = $alert;
@@ -147,7 +145,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
     /**
      * Checks whether a station is within proximity of either endpoint of the stage.
      *
-     * @param list<array{lat: float, lon: float, name: string|null}> $stationLocations
+     * @param list<array{lat: float, lon: float}> $stationLocations
      */
     private function hasNearbyStation(Stage $stage, array $stationLocations): bool
     {
@@ -166,9 +164,9 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
     /**
      * Finds the nearest station to a given point across all discovered stations.
      *
-     * @param list<array{lat: float, lon: float, name: string|null}> $stationLocations
+     * @param list<array{lat: float, lon: float}> $stationLocations
      *
-     * @return array{lat: float, lon: float, name: string|null}|null
+     * @return array{lat: float, lon: float}|null
      */
     private function findNearestStation(Coordinate $point, array $stationLocations): ?array
     {
