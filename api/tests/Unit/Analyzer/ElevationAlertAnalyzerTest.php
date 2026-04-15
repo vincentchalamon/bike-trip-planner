@@ -79,7 +79,7 @@ final class ElevationAlertAnalyzerTest extends TestCase
     public function usesLocaleFromContext(): void
     {
         $translationKeys = [];
-        $translator = $this->createMock(TranslatorInterface::class);
+        $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturnCallback(
             static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
                 $translationKeys[] = [$id, $domain, $locale];
@@ -101,7 +101,7 @@ final class ElevationAlertAnalyzerTest extends TestCase
     public function defaultsToEnglishLocale(): void
     {
         $translationKeys = [];
-        $translator = $this->createMock(TranslatorInterface::class);
+        $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturnCallback(
             static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
                 $translationKeys[] = [$id, $domain, $locale];

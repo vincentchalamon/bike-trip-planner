@@ -196,7 +196,7 @@ final class SteepGradientAnalyzerTest extends TestCase
         $distanceCalculator->method('distanceBetween')->willReturn(120.0);
 
         $translationKeys = [];
-        $translator = $this->createMock(TranslatorInterface::class);
+        $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturnCallback(
             static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
                 $translationKeys[] = [$id, $domain, $locale];
