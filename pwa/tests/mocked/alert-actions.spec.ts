@@ -30,9 +30,11 @@ test.describe("Alert actions", () => {
     const actionButtons = stage1.getByTestId("alert-action-button");
     await expect(actionButtons).toHaveCount(2);
 
-    // Verify labels
+    // Verify labels and disabled state of unimplemented actions
     await expect(stage1.getByText("Zoom to location")).toBeVisible();
+    await expect(stage1.getByText("Zoom to location")).toBeDisabled();
     await expect(stage1.getByText("Got it")).toBeVisible();
+    await expect(stage1.getByText("Got it")).not.toBeDisabled();
   });
 
   test("dismiss action marks alert as read", async ({
