@@ -127,7 +127,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
     }
 
     /**
-     * Collects start and end points from all stages (deduplicated).
+     * Collects start and end points from all stages.
      *
      * @param list<Stage> $stages
      *
