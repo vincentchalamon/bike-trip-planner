@@ -182,7 +182,7 @@ final class CheckRailwayStationsHandlerTest extends TestCase
         // lat1 is the stage endpoint lat; lat1 < 48.5 means Stage 1 endpoints (near), lat1 >= 48.5 means Stage 2 endpoints (far)
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturnCallback(
-            static fn(float $lat1): float => $lat1 >= 48.5 ? 15000.0 : 5000.0,
+            static fn (float $lat1): float => $lat1 >= 48.5 ? 15000.0 : 5000.0,
         );
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
