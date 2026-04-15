@@ -1,10 +1,24 @@
+import { useState, useCallback } from "react";
 import { AlertBadge } from "@/components/alert-badge";
 import type { AlertData } from "@/lib/validation/schemas";
 import { Button } from "@/components/ui/button";
-import { MapPin } from "lucide-react";
+import {
+  MapPin,
+  Wrench,
+  Map as MapIcon,
+  Navigation,
+  Check,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 
 const severityOrder = { critical: 0, warning: 1, nudge: 2 } as const;
+
+const actionIcons = {
+  auto_fix: Wrench,
+  detour: MapIcon,
+  navigate: Navigation,
+  dismiss: Check,
+} as const;
 
 interface AlertListProps {
   alerts: AlertData[];
@@ -21,6 +35,11 @@ function isCulturalPoiAlert(alert: AlertData): boolean {
 
 export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
   const t = useTranslations("alertList");
+  const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
+
+  const handleDismiss = useCallback((key: string) => {
+    setDismissedKeys((prev) => new Set(prev).add(key));
+  }, []);
 
   if (alerts.length === 0) return null;
 
@@ -30,23 +49,51 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      {sorted.map((alert, index) => (
-        <div key={`${alert.type}-${alert.source}-${index}`}>
-          <AlertBadge type={alert.type} message={alert.message} />
-          {isCulturalPoiAlert(alert) && onAddPoiWaypoint && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-1 ml-1 h-6 px-2 text-xs text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-              onClick={() => onAddPoiWaypoint(alert.poiLat!, alert.poiLon!)}
-              data-testid="add-poi-to-itinerary"
-            >
-              <MapPin className="h-3 w-3 mr-1" />
-              {t("addToItinerary")}
-            </Button>
-          )}
-        </div>
-      ))}
+      {sorted.map((alert) => {
+        const alertKey = `${alert.type}-${alert.source ?? ""}-${alert.message}`;
+        const isDismissed = dismissedKeys.has(alertKey);
+        const action = alert.action;
+        const ActionIcon = action ? actionIcons[action.kind] : null;
+
+        return (
+          <div
+            key={alertKey}
+            className={isDismissed ? "opacity-50" : undefined}
+            data-testid={isDismissed ? "alert-dismissed" : undefined}
+          >
+            <AlertBadge type={alert.type} message={alert.message} />
+            {isCulturalPoiAlert(alert) && onAddPoiWaypoint && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-1 ml-1 h-6 px-2 text-xs text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                onClick={() => onAddPoiWaypoint(alert.poiLat!, alert.poiLon!)}
+                data-testid="add-poi-to-itinerary"
+              >
+                <MapPin className="h-3 w-3 mr-1" />
+                {t("addToItinerary")}
+              </Button>
+            )}
+            {action && !isDismissed && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-1 ml-1 h-6 px-2 text-xs text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                disabled={action.kind !== "dismiss"}
+                onClick={() => {
+                  if (action.kind === "dismiss") {
+                    handleDismiss(alertKey);
+                  }
+                }}
+                data-testid="alert-action-button"
+              >
+                {ActionIcon && <ActionIcon className="h-3 w-3 mr-1" />}
+                {action.label}
+              </Button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

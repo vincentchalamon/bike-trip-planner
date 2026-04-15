@@ -495,6 +495,7 @@ export interface components {
             message?: string;
             lat?: number | null;
             lon?: number | null;
+            action?: components["schemas"]["AlertAction.fit"] | null;
         };
         "Alert.gpx": {
             /** @enum {string} */
@@ -502,6 +503,7 @@ export interface components {
             message?: string;
             lat?: number | null;
             lon?: number | null;
+            action?: components["schemas"]["AlertAction.gpx"] | null;
         };
         "Alert.jsonld": {
             /** @enum {string} */
@@ -509,6 +511,46 @@ export interface components {
             message?: string;
             lat?: number | null;
             lon?: number | null;
+            action?: components["schemas"]["AlertAction.jsonld"] | null;
+        };
+        "AlertAction.fit": {
+            /**
+             * @description Type of action: auto_fix, detour, navigate, dismiss.
+             * @enum {string}
+             */
+            kind: "auto_fix" | "detour" | "navigate" | "dismiss";
+            /** @description Human-readable label for the action button. */
+            label: string;
+            /** @description Machine-readable payload for the action. */
+            payload?: {
+                [key: string]: unknown;
+            };
+        };
+        "AlertAction.gpx": {
+            /**
+             * @description Type of action: auto_fix, detour, navigate, dismiss.
+             * @enum {string}
+             */
+            kind: "auto_fix" | "detour" | "navigate" | "dismiss";
+            /** @description Human-readable label for the action button. */
+            label: string;
+            /** @description Machine-readable payload for the action. */
+            payload?: {
+                [key: string]: unknown;
+            };
+        };
+        "AlertAction.jsonld": {
+            /**
+             * @description Type of action: auto_fix, detour, navigate, dismiss.
+             * @enum {string}
+             */
+            kind: "auto_fix" | "detour" | "navigate" | "dismiss";
+            /** @description Human-readable label for the action button. */
+            label: string;
+            /** @description Machine-readable payload for the action. */
+            payload?: {
+                [key: string]: unknown;
+            };
         };
         Auth: {
             /** Format: email */
