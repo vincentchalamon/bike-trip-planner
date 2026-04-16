@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Analyzer;
 
 use App\Analyzer\Rules\ElevationAlertAnalyzer;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
@@ -58,6 +59,9 @@ final class ElevationAlertAnalyzerTest extends TestCase
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
         $this->assertEqualsWithDelta($stage->startPoint->lat, $alerts[0]->lat, 0.001);
         $this->assertEqualsWithDelta($stage->startPoint->lon, $alerts[0]->lon, 0.001);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::AUTO_FIX, $alerts[0]->action->kind);
+        $this->assertSame(40.0, $alerts[0]->action->payload['splitAtKm']);
     }
 
     #[Test]
@@ -74,13 +78,15 @@ final class ElevationAlertAnalyzerTest extends TestCase
     #[Test]
     public function usesLocaleFromContext(): void
     {
-        $translator = $this->createMock(TranslatorInterface::class);
-        $translator->expects($this->once())->method('trans')->with(
-            'alert.elevation.warning',
-            $this->anything(),
-            'alerts',
-            'fr',
-        )->willReturn('Alerte élévation');
+        $translationKeys = [];
+        $translator = $this->createStub(TranslatorInterface::class);
+        $translator->method('trans')->willReturnCallback(
+            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
+                $translationKeys[] = [$id, $domain, $locale];
+
+                return $id;
+            }
+        );
 
         $analyzer = new ElevationAlertAnalyzer($translator);
         $stage = $this->createStage(1500.0);
@@ -88,18 +94,21 @@ final class ElevationAlertAnalyzerTest extends TestCase
         $alerts = $analyzer->analyze($stage, ['locale' => 'fr']);
 
         $this->assertCount(1, $alerts);
+        $this->assertContains(['alert.elevation.warning', 'alerts', 'fr'], $translationKeys);
     }
 
     #[Test]
     public function defaultsToEnglishLocale(): void
     {
-        $translator = $this->createMock(TranslatorInterface::class);
-        $translator->expects($this->once())->method('trans')->with(
-            'alert.elevation.warning',
-            $this->anything(),
-            'alerts',
-            'en',
-        )->willReturn('Elevation warning');
+        $translationKeys = [];
+        $translator = $this->createStub(TranslatorInterface::class);
+        $translator->method('trans')->willReturnCallback(
+            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
+                $translationKeys[] = [$id, $domain, $locale];
+
+                return $id;
+            }
+        );
 
         $analyzer = new ElevationAlertAnalyzer($translator);
         $stage = $this->createStage(1500.0);
@@ -107,6 +116,7 @@ final class ElevationAlertAnalyzerTest extends TestCase
         $alerts = $analyzer->analyze($stage);
 
         $this->assertCount(1, $alerts);
+        $this->assertContains(['alert.elevation.warning', 'alerts', 'en'], $translationKeys);
     }
 
     #[Test]

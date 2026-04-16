@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Analyzer;
 
 use App\Analyzer\Rules\SurfaceAlertAnalyzer;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
@@ -91,6 +92,10 @@ final class SurfaceAlertAnalyzerTest extends TestCase
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
         $this->assertEqualsWithDelta($stage->startPoint->lat, $alerts[0]->lat, 0.001);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::NAVIGATE, $alerts[0]->action->kind);
+        $this->assertEqualsWithDelta($stage->startPoint->lat, $alerts[0]->action->payload['lat'], 0.001);
+        $this->assertEqualsWithDelta($stage->startPoint->lon, $alerts[0]->action->payload['lon'], 0.001);
     }
 
     /**
@@ -218,6 +223,7 @@ final class SurfaceAlertAnalyzerTest extends TestCase
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
         $this->assertStringContainsString('alert.surface.missing_data', $alerts[0]->message);
         $this->assertStringContainsString('50', $alerts[0]->message);
+        $this->assertNull($alerts[0]->action);
     }
 
     #[Test]

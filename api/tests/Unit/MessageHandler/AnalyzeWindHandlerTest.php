@@ -127,7 +127,9 @@ final class AnalyzeWindHandlerTest extends TestCase
 
                     return 1 === \count($alerts)
                         && 'warning' === $alerts[0]['type']
-                        && str_contains((string) $alerts[0]['message'], 'Poor comfort on 2/3');
+                        && str_contains((string) $alerts[0]['message'], 'Poor comfort on 2/3')
+                        && \is_array($alerts[0]['action'])
+                        && 'dismiss' === $alerts[0]['action']['kind'];
                 }),
             );
 
@@ -157,7 +159,9 @@ final class AnalyzeWindHandlerTest extends TestCase
 
                     return 1 === \count($alerts)
                         && 'warning' === $alerts[0]['type']
-                        && str_contains((string) $alerts[0]['message'], 'Headwind on 2/3');
+                        && str_contains((string) $alerts[0]['message'], 'Headwind on 2/3')
+                        && \is_array($alerts[0]['action'])
+                        && 'dismiss' === $alerts[0]['action']['kind'];
                 }),
             );
 

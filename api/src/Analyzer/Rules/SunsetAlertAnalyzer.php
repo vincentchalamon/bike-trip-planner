@@ -6,6 +6,8 @@ namespace App\Analyzer\Rules;
 
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Engine\RiderTimeEstimatorInterface;
 use App\Enum\AlertType;
@@ -100,6 +102,10 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
         $sunsetHm = $sunsetDate->format('H:i');
         $twilightHm = $twilightDate->format('H:i');
 
+        // Compute suggested earlier departure: shift departure so arrival matches twilight
+        $ridingDuration = $estimatedArrival - $departureHour;
+        $suggestedDeparture = max(5, (int) floor($twilightDecimalHours - $ridingDuration));
+
         return [new Alert(
             type: AlertType::WARNING,
             message: $this->translator->trans(
@@ -114,6 +120,11 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
             ),
             lat: $stage->endPoint->lat,
             lon: $stage->endPoint->lon,
+            action: new AlertAction(
+                kind: AlertActionKind::AUTO_FIX,
+                label: $this->translator->trans('alert.sunset.action', [], 'alerts', $locale),
+                payload: ['departureHour' => $suggestedDeparture],
+            ),
         )];
     }
 

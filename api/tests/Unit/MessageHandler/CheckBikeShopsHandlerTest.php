@@ -154,10 +154,18 @@ final class CheckBikeShopsHandlerTest extends TestCase
                 MercureEventType::BIKE_SHOP_ALERTS,
                 $this->callback(static function (array $data): bool {
                     $alerts = $data['alerts'];
+                    \assert(\is_array($alerts) && \is_array($alerts[0]));
+                    $action = $alerts[0]['action'];
+                    \assert(\is_array($action));
+                    $payload = $action['payload'];
+                    \assert(\is_array($payload));
 
                     return 6 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && str_contains((string) $alerts[0]['message'], 'no repair');
+                        && str_contains((string) $alerts[0]['message'], 'no repair')
+                        && 'navigate' === $action['kind']
+                        && 48.5 === $payload['lat']
+                        && 2.5 === $payload['lon'];
                 }),
             );
 
@@ -194,7 +202,8 @@ final class CheckBikeShopsHandlerTest extends TestCase
 
                     return 6 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && str_contains((string) $alerts[0]['message'], 'No bike shop on stage 1');
+                        && str_contains((string) $alerts[0]['message'], 'No bike shop on stage 1')
+                        && null === $alerts[0]['action'];
                 }),
             );
 

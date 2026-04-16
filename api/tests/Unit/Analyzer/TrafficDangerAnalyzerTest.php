@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Analyzer;
 
 use App\Analyzer\Rules\TrafficDangerAnalyzer;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
@@ -176,6 +177,10 @@ final class TrafficDangerAnalyzerTest extends TestCase
         $this->assertSame(AlertType::CRITICAL, $alerts[0]->type);
         $this->assertEqualsWithDelta(45.5, $alerts[0]->lat, 0.001);
         $this->assertEqualsWithDelta(5.5, $alerts[0]->lon, 0.001);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::NAVIGATE, $alerts[0]->action->kind);
+        $this->assertEqualsWithDelta(45.5, $alerts[0]->action->payload['lat'], 0.001);
+        $this->assertEqualsWithDelta(5.5, $alerts[0]->action->payload['lon'], 0.001);
     }
 
     #[Test]
@@ -208,6 +213,10 @@ final class TrafficDangerAnalyzerTest extends TestCase
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
         $this->assertEqualsWithDelta(45.5, $alerts[0]->lat, 0.001);
         $this->assertEqualsWithDelta(5.5, $alerts[0]->lon, 0.001);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::NAVIGATE, $alerts[0]->action->kind);
+        $this->assertEqualsWithDelta(45.5, $alerts[0]->action->payload['lat'], 0.001);
+        $this->assertEqualsWithDelta(5.5, $alerts[0]->action->payload['lon'], 0.001);
     }
 
     #[Test]
@@ -225,6 +234,8 @@ final class TrafficDangerAnalyzerTest extends TestCase
         $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
         $this->assertEqualsWithDelta(45.5, $alerts[0]->lat, 0.001);
         $this->assertEqualsWithDelta(5.5, $alerts[0]->lon, 0.001);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::NAVIGATE, $alerts[0]->action->kind);
     }
 
     #[Test]

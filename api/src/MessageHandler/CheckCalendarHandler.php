@@ -10,6 +10,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\ApiResource\Model\AlertActionKind;
 use App\Message\CheckCalendar;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
@@ -81,6 +82,11 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                             'alerts',
                             $locale,
                         ),
+                        'action' => [
+                            'kind' => AlertActionKind::DISMISS->value,
+                            'label' => $this->translator->trans('alert.calendar.action', [], 'alerts', $locale),
+                            'payload' => [],
+                        ],
                     ];
                 } elseif ($isSunday) {
                     $nudges[] = [
@@ -93,6 +99,11 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
                             'alerts',
                             $locale,
                         ),
+                        'action' => [
+                            'kind' => AlertActionKind::DISMISS->value,
+                            'label' => $this->translator->trans('alert.calendar.action', [], 'alerts', $locale),
+                            'payload' => [],
+                        ],
                     ];
                 }
             }

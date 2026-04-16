@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -171,7 +172,8 @@ final class CheckWaterPointsHandlerTest extends TestCase
                     return 1 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
                         && 0 === $alerts[0]['stageIndex']
-                        && 1 === $alerts[0]['dayNumber'];
+                        && 1 === $alerts[0]['dayNumber']
+                        && null === $alerts[0]['action'];
                 }),
             );
 
@@ -229,6 +231,63 @@ final class CheckWaterPointsHandlerTest extends TestCase
         $queryBuilder = $this->createStub(QueryBuilderInterface::class);
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $haversine = $this->createStub(GeoDistanceInterface::class);
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine);
+        $handler(new CheckWaterPoints('trip-1'));
+    }
+
+    #[Test]
+    public function longStageWithoutNearbyWaterPointEmitsNudgeWithNavigateAction(): void
+    {
+        $stages = [$this->createStage('trip-1', 1, 50.0)];
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn($stages);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getDecimatedPoints')->willReturn([
+            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
+            ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
+        ]);
+
+        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
+        $queryBuilder->method('buildCemeteryQuery')->willReturn('query');
+
+        // Scanner returns one water point globally
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('query')->willReturn([
+            'elements' => [
+                ['lat' => 48.25, 'lon' => 2.25],
+            ],
+        ]);
+
+        // Distributor assigns no water points to stage 0 → triggers water gap
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturn([]);
+
+        // findNearestWaterPoint uses midpoint = geometry[3] = (48.3, 2.3)
+        // and computes distance from midpoint to the global water point
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inMeters')->willReturn(5000.0);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::WATER_POINT_ALERTS,
+                $this->callback(static function (array $data): bool {
+                    $alerts = $data['alerts'];
+
+                    return 1 === \count($alerts)
+                        && 'nudge' === $alerts[0]['type']
+                        && 0 === $alerts[0]['stageIndex']
+                        && 1 === $alerts[0]['dayNumber']
+                        && null !== $alerts[0]['action']
+                        && AlertActionKind::NAVIGATE->value === $alerts[0]['action']['kind']
+                        && 48.25 === $alerts[0]['action']['payload']['lat']
+                        && 2.25 === $alerts[0]['action']['payload']['lon'];
+                }),
+            );
 
         $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine);
         $handler(new CheckWaterPoints('trip-1'));

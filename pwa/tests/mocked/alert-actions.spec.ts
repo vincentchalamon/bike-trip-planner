@@ -96,10 +96,9 @@ test.describe("Alert actions", () => {
       tripCompleteEvent(),
     ]);
 
-    // terrainAlertsEvent has alerts on stages 0 and 1 but without actions
-    const stage1 = mockedPage.getByTestId("stage-card-1");
-    await expect(stage1).toContainText("Route non goudronnee sur 3km");
-    await expect(stage1.getByTestId("alert-action-button")).not.toBeVisible();
+    // terrainAlertsEvent only has alerts on stages 0 and 1; stage 2 (card 3) has none
+    const stage3 = mockedPage.getByTestId("stage-card-3");
+    await expect(stage3.getByTestId("alert-action-button")).not.toBeVisible();
   });
 
   test("detour action button is displayed and disabled", async ({

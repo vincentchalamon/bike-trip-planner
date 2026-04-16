@@ -6,6 +6,8 @@ namespace App\Analyzer\Rules;
 
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -87,6 +89,11 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
             ),
             lat: $stage->startPoint->lat,
             lon: $stage->startPoint->lon,
+            action: new AlertAction(
+                kind: AlertActionKind::NAVIGATE,
+                label: $this->translator->trans('alert.surface.action', [], 'alerts', $locale),
+                payload: ['lat' => $stage->startPoint->lat, 'lon' => $stage->startPoint->lon],
+            ),
         )];
     }
 

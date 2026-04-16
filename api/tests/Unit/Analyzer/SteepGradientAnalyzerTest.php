@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Analyzer;
 
 use App\Analyzer\Rules\SteepGradientAnalyzer;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
@@ -110,6 +111,10 @@ final class SteepGradientAnalyzerTest extends TestCase
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
         $this->assertEqualsWithDelta(45.0, $alerts[0]->lat, 0.001);
         $this->assertEqualsWithDelta(5.0, $alerts[0]->lon, 0.001);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::NAVIGATE, $alerts[0]->action->kind);
+        $this->assertEqualsWithDelta(45.0, $alerts[0]->action->payload['lat'], 0.001);
+        $this->assertEqualsWithDelta(5.0, $alerts[0]->action->payload['lon'], 0.001);
     }
 
     #[Test]
@@ -190,13 +195,15 @@ final class SteepGradientAnalyzerTest extends TestCase
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
         $distanceCalculator->method('distanceBetween')->willReturn(120.0);
 
-        $translator = $this->createMock(TranslatorInterface::class);
-        $translator->expects($this->once())->method('trans')->with(
-            'alert.steep_gradient.warning',
-            $this->anything(),
-            'alerts',
-            'fr',
-        )->willReturn('Montée raide');
+        $translationKeys = [];
+        $translator = $this->createStub(TranslatorInterface::class);
+        $translator->method('trans')->willReturnCallback(
+            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
+                $translationKeys[] = [$id, $domain, $locale];
+
+                return $id;
+            }
+        );
 
         $analyzer = new SteepGradientAnalyzer($distanceCalculator, $translator);
 
@@ -212,6 +219,7 @@ final class SteepGradientAnalyzerTest extends TestCase
         $alerts = $analyzer->analyze($stage, ['locale' => 'fr']);
 
         $this->assertCount(1, $alerts);
+        $this->assertContains(['alert.steep_gradient.warning', 'alerts', 'fr'], $translationKeys);
     }
 
     #[Test]

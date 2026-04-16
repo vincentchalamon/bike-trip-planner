@@ -6,6 +6,8 @@ namespace App\Analyzer\Rules;
 
 use App\Analyzer\StageAnalyzerInterface;
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -75,6 +77,8 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
         if ([] !== $criticalSegments) {
             $first = $criticalSegments[0];
             $totalLength = (int) array_sum(array_column($criticalSegments, 'length'));
+            $lat = $first['lat'] ?? $stage->startPoint->lat;
+            $lon = $first['lon'] ?? $stage->startPoint->lon;
             $alerts[] = new Alert(
                 type: AlertType::CRITICAL,
                 message: $this->translator->trans(
@@ -83,14 +87,21 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
                     'alerts',
                     $locale,
                 ),
-                lat: $first['lat'] ?? $stage->startPoint->lat,
-                lon: $first['lon'] ?? $stage->startPoint->lon,
+                lat: $lat,
+                lon: $lon,
+                action: new AlertAction(
+                    kind: AlertActionKind::NAVIGATE,
+                    label: $this->translator->trans('alert.traffic.action', [], 'alerts', $locale),
+                    payload: ['lat' => $lat, 'lon' => $lon],
+                ),
             );
         }
 
         if ([] !== $warningSegments) {
             $first = $warningSegments[0];
             $totalLength = (int) array_sum(array_column($warningSegments, 'length'));
+            $lat = $first['lat'] ?? $stage->startPoint->lat;
+            $lon = $first['lon'] ?? $stage->startPoint->lon;
             $alerts[] = new Alert(
                 type: AlertType::WARNING,
                 message: $this->translator->trans(
@@ -99,8 +110,13 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
                     'alerts',
                     $locale,
                 ),
-                lat: $first['lat'] ?? $stage->startPoint->lat,
-                lon: $first['lon'] ?? $stage->startPoint->lon,
+                lat: $lat,
+                lon: $lon,
+                action: new AlertAction(
+                    kind: AlertActionKind::NAVIGATE,
+                    label: $this->translator->trans('alert.traffic.action', [], 'alerts', $locale),
+                    payload: ['lat' => $lat, 'lon' => $lon],
+                ),
             );
         }
 
@@ -112,6 +128,8 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
                 $nudgeSegments,
             ));
             $maxspeed = [] !== $speeds ? max($speeds) : self::NUDGE_MAX_SPEED;
+            $lat = $first['lat'] ?? $stage->startPoint->lat;
+            $lon = $first['lon'] ?? $stage->startPoint->lon;
             $alerts[] = new Alert(
                 type: AlertType::NUDGE,
                 message: $this->translator->trans(
@@ -120,8 +138,13 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
                     'alerts',
                     $locale,
                 ),
-                lat: $first['lat'] ?? $stage->startPoint->lat,
-                lon: $first['lon'] ?? $stage->startPoint->lon,
+                lat: $lat,
+                lon: $lon,
+                action: new AlertAction(
+                    kind: AlertActionKind::NAVIGATE,
+                    label: $this->translator->trans('alert.traffic.action', [], 'alerts', $locale),
+                    payload: ['lat' => $lat, 'lon' => $lon],
+                ),
             );
         }
 

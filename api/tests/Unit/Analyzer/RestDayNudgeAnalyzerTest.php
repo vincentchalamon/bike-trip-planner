@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Analyzer;
 
 use App\Analyzer\Rules\RestDayNudgeAnalyzer;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
@@ -64,6 +65,9 @@ final class RestDayNudgeAnalyzerTest extends TestCase
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::AUTO_FIX, $alerts[0]->action->kind);
+        $this->assertSame(3, $alerts[0]->action->payload['afterStage']);
     }
 
     #[Test]
@@ -145,13 +149,15 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     #[Test]
     public function usesLocaleFromContext(): void
     {
-        $translator = $this->createMock(TranslatorInterface::class);
-        $translator->expects($this->once())->method('trans')->with(
-            'alert.rest_day.nudge',
-            $this->anything(),
-            'alerts',
-            'fr',
-        )->willReturn('Repos suggéré');
+        $translationKeys = [];
+        $translator = $this->createStub(TranslatorInterface::class);
+        $translator->method('trans')->willReturnCallback(
+            static function (string $id, array $params = [], ?string $domain = null, ?string $locale = null) use (&$translationKeys): string {
+                $translationKeys[] = [$id, $domain, $locale];
+
+                return $id;
+            }
+        );
 
         $analyzer = new RestDayNudgeAnalyzer($translator, 3);
         $stages = [
@@ -163,6 +169,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
         $alerts = $analyzer->analyze($stages[2], ['allStages' => $stages, 'locale' => 'fr']);
 
         $this->assertCount(1, $alerts);
+        $this->assertContains(['alert.rest_day.nudge', 'alerts', 'fr'], $translationKeys);
     }
 
     #[Test]
