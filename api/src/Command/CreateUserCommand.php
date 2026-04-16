@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use Symfony\Contracts\Translation\TranslatorInterface;
+use App\Entity\AccessRequest;
 use App\Entity\MagicLink;
 use App\Entity\User;
+use App\Repository\AccessRequestRepository;
 use App\Repository\MagicLinkRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -20,6 +21,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
 
 /**
@@ -35,6 +37,7 @@ final class CreateUserCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly MagicLinkRepository $magicLinkRepository,
+        private readonly AccessRequestRepository $accessRequestRepository,
         private readonly MailerInterface $mailer,
         private readonly Environment $twig,
         private readonly TranslatorInterface $translator,
@@ -88,6 +91,12 @@ final class CreateUserCommand extends Command
         $user->setLocale($locale);
 
         $this->entityManager->persist($user);
+
+        // Remove corresponding AccessRequest if it exists (early-access workflow)
+        $accessRequest = $this->entityManager->getRepository(AccessRequest::class)->findOneBy(['email' => $email]);
+        if ($accessRequest instanceof AccessRequest) {
+            $this->entityManager->remove($accessRequest);
+        }
 
         // Create magic link for invitation
         $magicLink = $this->magicLinkRepository->create($user);
