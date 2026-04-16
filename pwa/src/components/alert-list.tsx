@@ -88,7 +88,9 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                 data-testid="alert-action-button"
               >
                 {ActionIcon && <ActionIcon className="h-3 w-3 mr-1" />}
-                {action.label}
+                {action.kind === "navigate"
+                  ? t("navigateToStation")
+                  : action.label}
               </Button>
             )}
           </div>

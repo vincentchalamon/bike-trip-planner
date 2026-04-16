@@ -242,7 +242,8 @@
     "elevationProfileAriaLabel": "Profil altimétrique interactif du voyage"
   },
   "alertList": {
-    "addToItinerary": "Ajouter à l'itinéraire"
+    "addToItinerary": "Ajouter à l'itinéraire",
+    "navigateToStation": "Aller à la gare"
   },
   "onboarding": {
     "nextBtn": "Suivant",
