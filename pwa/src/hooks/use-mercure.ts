@@ -362,10 +362,15 @@ function dispatchEvent(event: MercureEvent): void {
         store.updateStageAlerts(
           stageIndex,
           alerts.map((a) => ({
-            type: a.type as "nudge",
+            type: a.type,
             message: a.message,
             lat: a.lat,
             lon: a.lon,
+            action: {
+              kind: "navigate" as const,
+              label: "Navigate to crossing",
+              payload: { lat: a.lat, lon: a.lon },
+            },
           })),
           "border_crossing",
         );

@@ -103,7 +103,10 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                 {action.kind === "navigate" &&
                 alert.source === "railway_station"
                   ? t("navigateToStation")
-                  : action.label}
+                  : action.kind === "navigate" &&
+                      alert.source === "border_crossing"
+                    ? t("navigateToCrossing")
+                    : action.label}
               </Button>
             )}
           </div>

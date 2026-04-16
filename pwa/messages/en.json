@@ -243,7 +243,8 @@
   },
   "alertList": {
     "addToItinerary": "Add to itinerary",
-    "navigateToStation": "Navigate to station"
+    "navigateToStation": "Navigate to station",
+    "navigateToCrossing": "Navigate to crossing"
   },
   "onboarding": {
     "nextBtn": "Next",
