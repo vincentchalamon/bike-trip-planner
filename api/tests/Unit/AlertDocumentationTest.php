@@ -45,6 +45,7 @@ final class AlertDocumentationTest extends TestCase
         'sunset' => 'Sunset',
         'cultural_poi' => 'Cultural POI',
         'railway_station' => 'Railway station',
+        'health_service' => 'Health services',
     ];
 
     /**

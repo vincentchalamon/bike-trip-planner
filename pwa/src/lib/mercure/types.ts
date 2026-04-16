@@ -180,6 +180,17 @@ export type MercureEvent =
       };
     }
   | {
+      type: "health_service_alerts";
+      data: {
+        alerts: {
+          stageIndex: number;
+          dayNumber: number;
+          type: string;
+          message: string;
+        }[];
+      };
+    }
+  | {
       type: "cultural_poi_alerts";
       data: {
         alerts: {

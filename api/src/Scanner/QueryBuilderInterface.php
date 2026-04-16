@@ -68,6 +68,16 @@ interface QueryBuilderInterface
     public function buildRailwayStationQuery(array $endPoints, int $radiusMeters = 10000): string;
 
     /**
+     * Queries pharmacies, hospitals and clinics along the route.
+     *
+     * Used by the health-services checker to detect stages with no
+     * nearby medical facility within 15 km.
+     *
+     * @param list<Coordinate> $decimatedPoints
+     */
+    public function buildHealthServiceQuery(array $decimatedPoints): string;
+
+    /**
      * Build a single Overpass query for cultural POIs along all stages.
      *
      * @param list<list<Coordinate>> $stageGeometries geometry points per stage
