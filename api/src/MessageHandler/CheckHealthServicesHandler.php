@@ -24,12 +24,12 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 /**
  * Checks for pharmacies, hospitals and clinics within 15 km of each stage.
  *
- * Emits a NUDGE alert when no health service is found near a stage,
- * with the coordinates of the nearest health service for navigation.
+ * Emits a NUDGE alert when no health service is found near a stage.
  */
 #[AsMessageHandler]
 final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandler
 {
+    /** Must be ≤ OsmOverpassQueryBuilder::HEALTH_SERVICE_RADIUS_METERS to avoid false alerts. */
     private const float HEALTH_SERVICE_PROXIMITY_METERS = 15000.0;
 
     public function __construct(
