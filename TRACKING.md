@@ -365,11 +365,11 @@ Champ `action` sur le modèle Alert, actions contextuelles sur les analyseurs ex
 
 | Ordre | ID                                                                      | Titre                                                      | Effort | PRs | Dépend de |
 |-------|-------------------------------------------------------------------------|------------------------------------------------------------|--------|-----|-----------|
-| 1     | [#281](https://github.com/vincentchalamon/bike-trip-planner/issues/281) | Ajouter le champ `action` au modèle Alert                  | M      |     | —         |
-| 2     | [#282](https://github.com/vincentchalamon/bike-trip-planner/issues/282) | Ajouter des actions contextuelles aux analyseurs existants  | L      |     | #281      |
-| 3     | [#283](https://github.com/vincentchalamon/bike-trip-planner/issues/283) | Nouvel analyseur : gare SNCF de secours (nudge)            | S      |     | —         |
-| 4     | [#284](https://github.com/vincentchalamon/bike-trip-planner/issues/284) | Nouvel analyseur : pharmacie/hôpital à proximité (nudge)   | S      |     | —         |
-| 5     | [#285](https://github.com/vincentchalamon/bike-trip-planner/issues/285) | Nouvel analyseur : passage frontière (nudge)               | M      |     | —         |
+| 1     | [#281](https://github.com/vincentchalamon/bike-trip-planner/issues/281) | Ajouter le champ `action` au modèle Alert                  | M      | [#329](https://github.com/vincentchalamon/bike-trip-planner/pull/329) | —         |
+| 2     | [#282](https://github.com/vincentchalamon/bike-trip-planner/issues/282) | Ajouter des actions contextuelles aux analyseurs existants  | L      | [#333](https://github.com/vincentchalamon/bike-trip-planner/pull/333) | #281      |
+| 3     | [#283](https://github.com/vincentchalamon/bike-trip-planner/issues/283) | Nouvel analyseur : gare SNCF de secours (nudge)            | S      | [#330](https://github.com/vincentchalamon/bike-trip-planner/pull/330) | —         |
+| 4     | [#284](https://github.com/vincentchalamon/bike-trip-planner/issues/284) | Nouvel analyseur : pharmacie/hôpital à proximité (nudge)   | S      | [#331](https://github.com/vincentchalamon/bike-trip-planner/pull/331) | —         |
+| 5     | [#285](https://github.com/vincentchalamon/bike-trip-planner/issues/285) | Nouvel analyseur : passage frontière (nudge)               | M      | [#332](https://github.com/vincentchalamon/bike-trip-planner/pull/332) | —         |
 | 6     | [#313](https://github.com/vincentchalamon/bike-trip-planner/issues/313) | Nouvel analyseur : départ avant l'aube (warning)           | S      |     | —         |
 | 7     | [#314](https://github.com/vincentchalamon/bike-trip-planner/issues/314) | Nouvel analyseur : traversée cours d'eau sans pont (nudge) | M      |     | —         |
 | 8     | [#315](https://github.com/vincentchalamon/bike-trip-planner/issues/315) | ADR-028 : alertes actionnables (action DTO, 4 types)       | S      |     | —         |
@@ -666,7 +666,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 5     | Docker configs production (PostgreSQL, Redis, Mercure, Caddy) | L      |
 | 6     | Monitoring & healthchecks                          | M      |
 | 7     | Migration données + smoke test production          | M      |
-| 8     | [#312](https://github.com/vincentchalamon/bike-trip-planner/issues/312) Feature-deploy : preview par PR (dépend étapes 1-7) | L      |
+| 8     | [#312](https://github.com/vincentchalamon/bike-trip-planner/issues/312) Feature-deploy : preview par PR (Étapes 1-7) | L |
 
 ### Recette Sprint 30
 
