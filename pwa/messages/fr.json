@@ -400,5 +400,34 @@
       "noDate": "Non daté",
       "offlineBadge": "Hors ligne"
     }
+  },
+  "faq": {
+    "title": "Foire aux questions",
+    "description": "Tout ce que vous devez savoir sur Bike Trip Planner.",
+    "backToHome": "Retour à l'accueil",
+    "categoryProject": "Le projet",
+    "categoryHowItWorks": "Fonctionnement",
+    "categoryAccess": "Accès",
+    "q1": "Qu'est-ce qui différencie Bike Trip Planner de Komoot ou RideWithGPS ?",
+    "a1": "Komoot et RideWithGPS sont des plateformes de navigation GPS. Bike Trip Planner est un outil de planification d'itinéraire multi-étapes : il découpe automatiquement votre parcours en étapes journalières en tenant compte de votre profil cycliste (vitesse, fatigue accumulée, dénivelé), suggère des hébergements au point d'arrivée de chaque étape, et génère des alertes contextuelles (météo, ravitaillement, services de santé, etc.). Il complète vos outils de navigation plutôt qu'il ne les remplace.",
+    "q2": "Pourquoi utiliser cet outil plutôt que de planifier manuellement sur une carte ?",
+    "a2": "La planification manuelle prend du temps et sous-estime souvent la fatigue accumulée sur plusieurs jours. Bike Trip Planner applique une formule de pacing automatique qui réduit progressivement la distance journalière pour tenir compte de la fatigue, intègre le dénivelé dans le calcul, et propose des hébergements directement au point d'arrivée de chaque étape — le tout en quelques secondes.",
+    "q3": "Le projet est-il indépendant des plateformes comme Komoot ou Strava ?",
+    "a3": "Oui. Bike Trip Planner est un projet indépendant. Il utilise les exports GPX ou les liens partagés de Komoot, Strava et RideWithGPS uniquement pour récupérer les données de tracé, mais ne dépend d'aucun partenariat commercial avec ces plateformes.",
+    "q4": "Quelles données sont stockées sur le serveur ?",
+    "a4": "Votre configuration de voyage (dates, profil, étapes) est stockée en base de données pour vous permettre d'y accéder depuis n'importe quel appareil. Les données de tracé brutes (points GPS) sont conservées temporairement en cache Redis et supprimées automatiquement. Aucune donnée personnelle autre que votre adresse email n'est collectée.",
+    "q5": "Quelles sources d'itinéraires sont supportées ?",
+    "a5": "Bike Trip Planner accepte les liens de tours et collections Komoot, les routes Strava et les routes RideWithGPS. Vous pouvez également importer directement un fichier GPX depuis votre ordinateur.",
+    "q6": "L'application fonctionne-t-elle hors ligne ?",
+    "a6": "Partiellement. En mode hors ligne, vous pouvez consulter vos voyages déjà chargés en lecture seule. La création ou modification d'un voyage nécessite une connexion internet, car les calculs (pacing, alertes, suggestions d'hébergements) sont effectués côté serveur.",
+    "q7": "L'application est-elle utilisable sur mobile ?",
+    "a7": "Oui. L'application est une PWA (Progressive Web App) responsive, optimisée pour mobile et tablette. Vous pouvez l'installer sur votre écran d'accueil depuis votre navigateur mobile pour un accès rapide, même sans passer par un store d'applications.",
+    "q8": "Comment obtenir un accès à l'application ?",
+    "a8": "L'application utilise un système de connexion par lien magique : entrez votre adresse email sur la page de connexion et vous recevrez un lien de connexion sécurisé. Aucun mot de passe n'est requis.",
+    "q9": "L'application est-elle gratuite et open source ?",
+    "a9": "Le code source est open source et disponible sur GitHub. L'application hébergée est accessible gratuitement. Des coûts d'infrastructure peuvent à terme justifier une offre freemium, mais aucun accès payant n'est prévu à ce stade."
+  },
+  "footer": {
+    "faq": "FAQ"
   }
 }

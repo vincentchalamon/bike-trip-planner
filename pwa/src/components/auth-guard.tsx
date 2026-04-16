@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/auth-store";
  * Paths that do not require authentication.
  * Uses startsWith matching so that nested routes are also public.
  */
-const PUBLIC_PATHS = ["/login", "/auth/verify", "/s/"];
+const PUBLIC_PATHS = ["/login", "/auth/verify", "/s/", "/faq"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
