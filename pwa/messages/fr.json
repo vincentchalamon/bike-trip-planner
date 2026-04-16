@@ -243,7 +243,8 @@
   },
   "alertList": {
     "addToItinerary": "Ajouter à l'itinéraire",
-    "navigateToStation": "Aller à la gare"
+    "navigateToStation": "Aller à la gare",
+    "navigateToCrossing": "Aller au passage frontière"
   },
   "onboarding": {
     "nextBtn": "Suivant",

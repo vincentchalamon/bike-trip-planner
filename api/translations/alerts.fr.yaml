@@ -25,6 +25,7 @@ alert.sunset.warning: "Étape %stage% : arrivée estimée après le crépuscule 
 alert.railway_station.nudge: "Aucune gare ferroviaire à moins de 10 km de l'étape %stage%. En cas d'urgence, la gare la plus proche peut être éloignée."
 alert.health_service.nudge: "Aucune pharmacie, hôpital ni clinique détecté dans un rayon de 15 km autour de l'étape %stage%. Emportez une trousse de premiers secours et vérifiez les villes proches avant le départ."
 alert.cultural_poi.suggestion: "Point d'intérêt culturel à proximité de l'étape %stage% : %name% (%type%, %distance%m du tracé). L'ajouter à votre itinéraire ?"
+alert.border_crossing.nudge: "Vous passez en %country%. Vérifiez la couverture téléphonique, les moyens de paiement et la réglementation locale."
 stage.label: "Étape %day%"
 weather.clear_sky: "Ciel dégagé"
 weather.mainly_clear: "Plutôt dégagé"

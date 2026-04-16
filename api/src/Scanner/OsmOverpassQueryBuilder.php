@@ -151,6 +151,15 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         );
     }
 
+    public function buildCountryQuery(Coordinate $point): string
+    {
+        return \sprintf(
+            '[out:json][timeout:10];is_in(%F,%F)->.a;area.a["admin_level"="2"]["boundary"="administrative"];out tags 1;',
+            $point->lat,
+            $point->lon,
+        );
+    }
+
     /** @param list<Coordinate> $points */
     private function buildPolyline(array $points): string
     {

@@ -83,4 +83,12 @@ interface QueryBuilderInterface
      * @param list<list<Coordinate>> $stageGeometries geometry points per stage
      */
     public function buildBatchCulturalPoiQuery(array $stageGeometries, int $radiusMeters = 500): string;
+
+    /**
+     * Queries the country (admin_level=2) for a given coordinate using Overpass is_in.
+     *
+     * Returns relations with admin_level=2 and boundary=administrative that contain the point,
+     * allowing border crossing detection by comparing countries at different route positions.
+     */
+    public function buildCountryQuery(Coordinate $point): string;
 }
