@@ -64,6 +64,12 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
             // Collect all stage endpoints (start + end of each stage)
             $endPoints = $this->collectEndpoints($stages);
 
+            if ([] === $endPoints) {
+                $this->publisher->publish($tripId, MercureEventType::RAILWAY_STATION_ALERTS, ['alerts' => []]);
+
+                return;
+            }
+
             $query = $this->queryBuilder->buildRailwayStationQuery($endPoints, self::STATION_PROXIMITY_METERS);
             $result = $this->scanner->query($query);
 
