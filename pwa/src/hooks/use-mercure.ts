@@ -309,10 +309,21 @@ function dispatchEvent(event: MercureEvent): void {
         store.updateStageAlerts(
           stageIndex,
           alerts.map((a) => ({
-            type: a.type as "nudge",
+            type: "nudge" as const,
             message: a.message,
             lat: a.actionLat ?? null,
             lon: a.actionLon ?? null,
+            ...(a.action === "navigate" &&
+            a.actionLat != null &&
+            a.actionLon != null
+              ? {
+                  action: {
+                    kind: "navigate" as const,
+                    label: "Navigate to station",
+                    payload: { lat: a.actionLat, lon: a.actionLon },
+                  },
+                }
+              : {}),
           })),
           "railway_station",
         );
