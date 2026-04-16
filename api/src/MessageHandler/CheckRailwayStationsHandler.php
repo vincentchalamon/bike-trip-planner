@@ -135,6 +135,10 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
     {
         $points = [];
         foreach ($stages as $stage) {
+            if ($stage->isRestDay) {
+                continue;
+            }
+
             $points[] = $stage->startPoint;
             $points[] = $stage->endPoint;
         }
