@@ -237,53 +237,6 @@ export function alertsWithActionsEvent(): MercureEvent {
             },
           },
         ],
-      },
-    },
-  };
-}
-
-export function alertsWithActionsEvent(): MercureEvent {
-  return {
-    type: "terrain_alerts",
-    data: {
-      alertsByStage: {
-        "0": [
-          {
-            type: "warning",
-            message: "Steep gradient detected (12%)",
-            lat: 44.6,
-            lon: 4.5,
-            action: {
-              kind: "navigate",
-              label: "Zoom to location",
-              payload: { lat: 44.6, lon: 4.5 },
-            },
-          },
-          {
-            type: "nudge",
-            message: "Minor road surface issue",
-            lat: 44.55,
-            lon: 4.45,
-            action: {
-              kind: "dismiss",
-              label: "Got it",
-              payload: {},
-            },
-          },
-        ],
-        "1": [
-          {
-            type: "critical",
-            message: "E-bike range exceeded",
-            lat: 44.4,
-            lon: 4.2,
-            action: {
-              kind: "auto_fix",
-              label: "Split stage",
-              payload: { splitAt: 45.0 },
-            },
-          },
-        ],
         "2": [
           {
             type: "warning",
