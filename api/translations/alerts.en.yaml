@@ -23,7 +23,7 @@ alert.accommodation.seasonal_warning: "All detected accommodations on stage %sta
 alert.rest_day.nudge: "Stage %stage% is day %days% of cycling without a break. Consider inserting a rest day."
 alert.sunset.warning: "Stage %stage%: estimated arrival after twilight end (%twilight%, sunset %sunset%). You may be riding in the dark."
 alert.railway_station.nudge: "No train station within 10 km of stage %stage%. In case of emergency, the nearest station may be far away."
-alert.health_service.nudge: "No pharmacy or hospital detected within 15 km of stage %stage%. Carry a first-aid kit and check nearby towns before departure."
+alert.health_service.nudge: "No pharmacy, hospital, or clinic detected within 15 km of stage %stage%. Carry a first-aid kit and check nearby towns before departure."
 alert.cultural_poi.suggestion: "Cultural POI nearby on stage %stage%: %name% (%type%, %distance%m from route). Add it to your itinerary?"
 stage.label: "Stage %day%"
 weather.clear_sky: "Clear sky"
