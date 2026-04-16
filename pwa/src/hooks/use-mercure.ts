@@ -32,7 +32,7 @@ const MERCURE_URL =
  * - `pois_scanned` — points of interest with optional alerts
  * - `accommodations_found` — accommodation options per stage
  * - `supply_timeline` — clustered supply markers per stage (water + food POIs)
- * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` / `water_point_alerts` — alert categories
+ * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` / `water_point_alerts` / `railway_station_alerts` — alert categories
  * - `trip_complete` — final computation status, stops processing spinner
  * - `validation_error` / `computation_error` — error toasts and recovery
  */
@@ -293,6 +293,39 @@ function dispatchEvent(event: MercureEvent): void {
             distanceFromRoute: a.distanceFromRoute,
           })),
           "cultural_poi",
+        );
+      }
+      break;
+    }
+
+    case "railway_station_alerts": {
+      const railwayByStage = new Map<number, typeof event.data.alerts>();
+      for (const alert of event.data.alerts) {
+        const existing = railwayByStage.get(alert.stageIndex) ?? [];
+        existing.push(alert);
+        railwayByStage.set(alert.stageIndex, existing);
+      }
+      for (const [stageIndex, alerts] of railwayByStage) {
+        store.updateStageAlerts(
+          stageIndex,
+          alerts.map((a) => ({
+            type: "nudge" as const,
+            message: a.message,
+            lat: a.actionLat ?? null,
+            lon: a.actionLon ?? null,
+            ...(a.action === "navigate" &&
+            a.actionLat != null &&
+            a.actionLon != null
+              ? {
+                  action: {
+                    kind: "navigate" as const,
+                    label: "Navigate to station",
+                    payload: { lat: a.actionLat, lon: a.actionLon },
+                  },
+                }
+              : {}),
+          })),
+          "railway_station",
         );
       }
       break;

@@ -19,6 +19,7 @@ enum ComputationName: string
     case WATER_POINTS = 'water_points';
     case ROUTE_SEGMENT = 'route_segment';
     case CULTURAL_POIS = 'cultural_pois';
+    case RAILWAY_STATIONS = 'railway_stations';
 
     /**
      * Computations initialized at trip creation (the main pipeline).

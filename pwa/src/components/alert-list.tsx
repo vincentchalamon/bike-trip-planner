@@ -79,16 +79,31 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                 variant="outline"
                 size="sm"
                 className="mt-1 ml-1 h-6 px-2 text-xs text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-                disabled={action.kind !== "dismiss"}
+                disabled={
+                  action.kind !== "dismiss" && action.kind !== "navigate"
+                }
                 onClick={() => {
                   if (action.kind === "dismiss") {
                     handleDismiss(alertKey);
+                  } else if (action.kind === "navigate") {
+                    const { lat, lon } = action.payload as {
+                      lat: number;
+                      lon: number;
+                    };
+                    window.open(
+                      `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=15`,
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
                   }
                 }}
                 data-testid="alert-action-button"
               >
                 {ActionIcon && <ActionIcon className="h-3 w-3 mr-1" />}
-                {action.label}
+                {action.kind === "navigate" &&
+                alert.source === "railway_station"
+                  ? t("navigateToStation")
+                  : action.label}
               </Button>
             )}
           </div>

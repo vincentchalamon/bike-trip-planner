@@ -242,7 +242,8 @@
     "elevationProfileAriaLabel": "Interactive elevation profile for the trip"
   },
   "alertList": {
-    "addToItinerary": "Add to itinerary"
+    "addToItinerary": "Add to itinerary",
+    "navigateToStation": "Navigate to station"
   },
   "onboarding": {
     "nextBtn": "Next",
