@@ -391,6 +391,112 @@
     "readOnlyBanner": "You are viewing a read-only shared trip.",
     "noStages": "This trip has no stages yet."
   },
+  "landing": {
+    "hero": {
+      "badge": "Early Access — Limited spots",
+      "title": "Your co-pilot for every kilometre",
+      "subtitle": "Plan your cycling trip with complete peace of mind. Route analysis, terrain alerts, weather, accommodation and resupply — all in one place.",
+      "ctaPrimary": "Create an itinerary",
+      "ctaDemo": "Watch a demo"
+    },
+    "howItWorks": {
+      "title": "How it works",
+      "step1Title": "Import your route",
+      "step1Description": "Paste a Komoot, Strava, RideWithGPS link or upload a GPX file.",
+      "step2Title": "Preview your trip",
+      "step2Description": "Map and timeline display your automatically computed stages.",
+      "step3Title": "We analyse everything",
+      "step3Description": "Our engine detects terrain alerts, weather, accommodation and resupply points.",
+      "step4Title": "Set off with confidence",
+      "step4Description": "Download your optimised GPX/FIT and depart with peace of mind."
+    },
+    "features": {
+      "title": "Features",
+      "terrain": {
+        "title": "Terrain & Safety",
+        "description": "Alerts for border crossings, train stations, nearby emergency services."
+      },
+      "supply": {
+        "title": "Resupply",
+        "description": "Water points, grocery shops, restaurants detected along your route."
+      },
+      "ai": {
+        "title": "AI Assistant",
+        "description": "Generate or optimise your itinerary with artificial intelligence. Import from a conversation, route variant suggestions."
+      },
+      "accommodation": {
+        "title": "Accommodation",
+        "description": "Campsites, gîtes, hotels suggested at each stage with estimated budget."
+      },
+      "weather": {
+        "title": "Weather",
+        "description": "7-day weather forecasts for each stage of your trip."
+      },
+      "services": {
+        "title": "Services",
+        "description": "Pharmacies, doctors, bike repair shops flagged in case of emergency."
+      }
+    },
+    "sources": {
+      "title": "Supported sources"
+    },
+    "availability": {
+      "title": "Available everywhere",
+      "responsive": "Responsive site",
+      "responsiveDescription": "Optimised for all screen sizes, from smartphone to widescreen.",
+      "pwa": "Installable PWA",
+      "pwaDescription": "Install the app on your device like a native application.",
+      "android": "Android app",
+      "androidDescription": "Native Android version for an optimal mobile experience.",
+      "offline": "Offline mode",
+      "offlineDescription": "Browse your trips without a connection during your journey."
+    },
+    "screenshots": {
+      "title": "App preview",
+      "map": "Global map",
+      "stage": "Stage detail",
+      "analysis": "AI analysis"
+    },
+    "testimonials": {
+      "title": "What testers say",
+      "1": {
+        "text": "An indispensable tool for planning my bikepacking trips. The terrain alerts saved me from several nasty surprises!",
+        "author": "Marie L.",
+        "role": "Cycle tourist, beta tester"
+      },
+      "2": {
+        "text": "The automatic stage management and Komoot integration are mind-blowing. I can't imagine planning without this tool anymore.",
+        "author": "Thomas B.",
+        "role": "Long-distance cyclist, beta tester"
+      },
+      "3": {
+        "text": "The AI assistant is really useful for generating route variants. The app is still in beta but already very comprehensive.",
+        "author": "Sophie M.",
+        "role": "Bikepacker, beta tester"
+      }
+    },
+    "earlyAccess": {
+      "title": "Join early access",
+      "description": "Limited spots. Be among the first to plan your adventures with Bike Trip Planner.",
+      "ctaPrimary": "Create an itinerary",
+      "waitingListTitle": "Join the waiting list",
+      "emailPlaceholder": "your@email.com",
+      "emailLabel": "Email address",
+      "submit": "Sign me up",
+      "submitting": "Signing up...",
+      "successMessage": "Thank you! You will be notified as soon as new spots become available.",
+      "errorMessage": "An error occurred. Please try again."
+    },
+    "footer": {
+      "tagline": "The open-source co-pilot for your cycling adventures.",
+      "links": "Links",
+      "createTrip": "Create an itinerary",
+      "login": "Sign in",
+      "legal": "Legal notice",
+      "github": "GitHub (open-source)",
+      "copyright": "© {year} Bike Trip Planner. Open-source project."
+    }
+  },
   "offline": {
     "offlineMessage": "Offline — viewing cached data. Editing disabled.",
     "reconnected": "Connection restored.",
