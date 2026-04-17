@@ -380,13 +380,13 @@ Champ `action` sur le modèle Alert, actions contextuelles sur les analyseurs ex
 
 Page d'accueil marketing, système d'accès anticipé (HMAC, throttling, CLI), page FAQ. ADR-029.
 
-| Ordre | ID                                                                      | Titre                                                         | Effort | PRs | Dépend de |
-|-------|-------------------------------------------------------------------------|---------------------------------------------------------------|--------|-----|-----------|
-| 1     | [#286](https://github.com/vincentchalamon/bike-trip-planner/issues/286) | Landing page : page d'accueil marketing (8 sections)          | L      |     | —         |
-| 2     | [#287](https://github.com/vincentchalamon/bike-trip-planner/issues/287) | Système d'accès anticipé : backend (entité, HMAC, throttling) | L      |     | —         |
-| 3     | [#288](https://github.com/vincentchalamon/bike-trip-planner/issues/288) | Système d'accès anticipé : frontend (formulaire, login)       | M      |     | #287      |
-| 4     | [#289](https://github.com/vincentchalamon/bike-trip-planner/issues/289) | Page FAQ : différenciation et questions fréquentes            | S      |     | —         |
-| 5     | [#316](https://github.com/vincentchalamon/bike-trip-planner/issues/316) | ADR-029 : système d'accès anticipé (HMAC, throttling, CLI)   | S      |     | —         |
+| Ordre | ID                                                                      | Titre                                                         | Effort | PRs                                                                                | Dépend de |
+|-------|-------------------------------------------------------------------------|---------------------------------------------------------------|--------|------------------------------------------------------------------------------------|-----------|
+| 1     | [#286](https://github.com/vincentchalamon/bike-trip-planner/issues/286) | Landing page : page d'accueil marketing (8 sections)          | L      | [#338](https://github.com/vincentchalamon/bike-trip-planner/pull/338) `feature/286` | —         |
+| 2     | [#287](https://github.com/vincentchalamon/bike-trip-planner/issues/287) | Système d'accès anticipé : backend (entité, HMAC, throttling) | L      | [#337](https://github.com/vincentchalamon/bike-trip-planner/pull/337) `feature/287` | —         |
+| 3     | [#288](https://github.com/vincentchalamon/bike-trip-planner/issues/288) | Système d'accès anticipé : frontend (formulaire, login)       | M      | [#341](https://github.com/vincentchalamon/bike-trip-planner/pull/341) `feature/288` | #287      |
+| 4     | [#289](https://github.com/vincentchalamon/bike-trip-planner/issues/289) | Page FAQ : différenciation et questions fréquentes            | S      | [#340](https://github.com/vincentchalamon/bike-trip-planner/pull/340) `feature/289` | —         |
+| 5     | [#316](https://github.com/vincentchalamon/bike-trip-planner/issues/316) | ADR-029 : système d'accès anticipé (HMAC, throttling, CLI)   | S      | [#336](https://github.com/vincentchalamon/bike-trip-planner/pull/336) `feature/316` | —         |
 
 ---
 
