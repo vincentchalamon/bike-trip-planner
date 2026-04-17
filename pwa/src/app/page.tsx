@@ -17,7 +17,8 @@ import { TripPlannerErrorBoundary } from "@/components/trip-planner-error-bounda
  * a flash of the landing page for returning authenticated users.
  */
 function HomePageContent() {
-  const { isAuthenticated, silentRefresh } = useAuthStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const silentRefresh = useAuthStore((s) => s.silentRefresh);
   const [refreshAttempted, setRefreshAttempted] = useState(false);
 
   useEffect(() => {

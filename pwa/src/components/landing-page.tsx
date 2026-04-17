@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -20,40 +17,13 @@ import {
   WifiOff,
   Star,
   Github,
-  ChevronLeft,
-  ChevronRight,
   ArrowRight,
   Wifi,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/store/auth-store";
-
-// ─── CTA button (primary action) ─────────────────────────────────────────────
-
-function CtaButton({
-  label,
-  size = "default",
-  className = "",
-}: {
-  label: string;
-  size?: "default" | "lg" | "sm" | "icon";
-  className?: string;
-}) {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const href = isAuthenticated ? "/trips/new" : "/login";
-
-  return (
-    <Button
-      asChild
-      size={size}
-      className={`bg-brand hover:bg-brand-hover text-white font-semibold ${className}`}
-    >
-      <Link href={href} data-testid="cta-create-itinerary">
-        {label}
-      </Link>
-    </Button>
-  );
-}
+import { CtaButton } from "@/components/cta-button";
+import { ScreenshotsSection } from "@/components/screenshots-section";
+import { EarlyAccessSection } from "@/components/early-access-section";
 
 // ─── Section 1: Hero ─────────────────────────────────────────────────────────
 
@@ -446,92 +416,6 @@ function AvailabilitySection() {
   );
 }
 
-// ─── Section 6: Screenshots slider ───────────────────────────────────────────
-
-const SCREENSHOTS = [
-  { key: "map", src: "/images/screenshot-map.jpg" },
-  { key: "stage", src: "/images/screenshot-stage.jpg" },
-  { key: "analysis", src: "/images/screenshot-analysis.jpg" },
-] as const;
-
-function ScreenshotsSection() {
-  const t = useTranslations("landing.screenshots");
-  const [active, setActive] = useState(0);
-  const current = SCREENSHOTS[active] ?? SCREENSHOTS[0];
-
-  const prev = () =>
-    setActive((i) => (i === 0 ? SCREENSHOTS.length - 1 : i - 1));
-  const next = () =>
-    setActive((i) => (i === SCREENSHOTS.length - 1 ? 0 : i + 1));
-
-  return (
-    <section
-      id="screenshots"
-      className="py-20 md:py-28 bg-background"
-      data-testid="section-screenshots"
-    >
-      <div className="max-w-5xl mx-auto px-4 md:px-6">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
-          {t("title")}
-        </h2>
-
-        <div className="relative">
-          {/* Main screenshot */}
-          <div className="relative aspect-video rounded-2xl overflow-hidden border bg-muted shadow-xl">
-            <Image
-              src={current.src}
-              alt={t(current.key)}
-              fill
-              loading="lazy"
-              className="object-cover"
-            />
-          </div>
-
-          {/* Nav arrows */}
-          <button
-            type="button"
-            onClick={prev}
-            aria-label={t("prev")}
-            data-testid="screenshot-prev"
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border shadow-md flex items-center justify-center hover:bg-background transition-colors"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            onClick={next}
-            aria-label={t("next")}
-            data-testid="screenshot-next"
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border shadow-md flex items-center justify-center hover:bg-background transition-colors"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Dot indicators */}
-        <div className="flex items-center justify-center gap-3 mt-6">
-          {SCREENSHOTS.map((s, i) => (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => setActive(i)}
-              aria-label={t(s.key)}
-              aria-current={i === active ? "true" : undefined}
-              className={`h-2 rounded-full transition-all duration-200 ${
-                i === active ? "w-8 bg-brand" : "w-2 bg-muted-foreground/30"
-              }`}
-            />
-          ))}
-        </div>
-
-        <p className="text-center text-sm text-muted-foreground mt-3">
-          {t(current.key)}
-        </p>
-      </div>
-    </section>
-  );
-}
-
 // ─── Section 7: Testimonials ──────────────────────────────────────────────────
 
 function TestimonialsSection() {
@@ -608,45 +492,6 @@ function TestimonialsSection() {
             </footer>
           </blockquote>
         </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Section 8: Early access CTA ─────────────────────────────────────────────
-
-function EarlyAccessSection() {
-  const t = useTranslations("landing.earlyAccess");
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-
-  return (
-    <section
-      className="py-24 md:py-32 bg-foreground text-background"
-      data-testid="section-early-access"
-    >
-      <div className="max-w-2xl mx-auto px-4 md:px-6 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("title")}</h2>
-        <p className="text-lg opacity-75 mb-10">{t("description")}</p>
-
-        <CtaButton label={t("ctaPrimary")} size="lg" className="mb-10" />
-
-        {/*
-         * Waiting list — displayed only for unauthenticated visitors.
-         * No collection form yet: the backend endpoint is not implemented
-         * (see discussion on PR #338). A "coming soon" notice prevents the
-         * UI from silently discarding real email addresses.
-         */}
-        {!isAuthenticated && (
-          <div
-            className="border border-background/20 rounded-2xl p-6 bg-background/5 backdrop-blur-sm"
-            data-testid="waiting-list-notice"
-          >
-            <p className="text-sm font-semibold opacity-80 mb-2">
-              {t("waitingListTitle")}
-            </p>
-            <p className="text-sm opacity-70">{t("waitingListComingSoon")}</p>
-          </div>
-        )}
       </div>
     </section>
   );
