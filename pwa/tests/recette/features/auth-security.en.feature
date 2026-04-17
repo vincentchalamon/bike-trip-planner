@@ -19,10 +19,10 @@ Feature: Authentication and security
     Then I see the email confirmation message
 
   @desktop @critical
-  Scenario: Unauthenticated user redirected to login
+  Scenario: Unauthenticated user sees landing page at home
     Given I am not logged in
     When I navigate to the home page
-    Then I am redirected to /login
+    Then I see the early access form
 
   @desktop @critical
   Scenario: Redirect to home after token verification

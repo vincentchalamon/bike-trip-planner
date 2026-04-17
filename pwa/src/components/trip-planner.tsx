@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Settings, HelpCircle, Loader2, X, Share2 } from "lucide-react";
+import Link from "next/link";
+import { Settings, HelpCircle, Loader2, X, Share2, Map } from "lucide-react";
 import { MagicLinkInput } from "@/components/magic-link-input";
 import { GpxUploadButton } from "@/components/gpx-upload-button";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
@@ -240,9 +241,26 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const isWelcome = !trip && !isProcessing;
   const isLoading = !trip && isProcessing;
 
+  const tEarlyAccess = useTranslations("earlyAccess");
+
   // Action buttons shared across all states
   const actionButtons = (
     <div className="flex items-center gap-1">
+      {/* "Mes voyages" link — visible only when authenticated and no trip is open */}
+      {!trip && (
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="h-9 gap-1 cursor-pointer"
+          data-testid="my-trips-link"
+        >
+          <Link href="/trips">
+            <Map className="h-4 w-4" />
+            <span className="hidden sm:inline">{tEarlyAccess("myTrips")}</span>
+          </Link>
+        </Button>
+      )}
       {trip && <TripDownloads tripId={trip.id} tripTitle={trip.title} />}
       {trip && (
         <Button

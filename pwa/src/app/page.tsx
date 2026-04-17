@@ -1,9 +1,57 @@
-import { Suspense } from "react";
+"use client";
+
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useAuthStore } from "@/store/auth-store";
 import { HydrationBoundary } from "@/components/hydration-boundary";
 import { TripPlanner } from "@/components/trip-planner";
 import { TripPlannerErrorBoundary } from "@/components/trip-planner-error-boundary";
+import { LandingPage } from "@/components/landing-page";
 
-export default function Page() {
+/**
+ * Home page.
+ *
+ * - Authenticated users see the TripPlanner.
+ * - Unauthenticated users see the public LandingPage with early access form.
+ *
+ * Since `/` is a public route (no AuthGuard redirect), this component performs
+ * its own silent auth check on mount to avoid flashing the landing page to
+ * users who have a valid refresh token.
+ */
+function HomeContent() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [authChecked, setAuthChecked] = useState(isAuthenticated);
+  const checkStarted = useRef(false);
+
+  useEffect(() => {
+    if (checkStarted.current) return;
+    checkStarted.current = true;
+
+    if (isAuthenticated) {
+      setAuthChecked(true);
+      return;
+    }
+
+    const check = async () => {
+      await useAuthStore.getState().silentRefresh();
+      setAuthChecked(true);
+    };
+
+    void check();
+  }, [isAuthenticated]);
+
+  // Render nothing while checking auth to avoid flash
+  if (!authChecked) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Suspense fallback={null}>
+        <LandingPage />
+      </Suspense>
+    );
+  }
+
   return (
     <HydrationBoundary>
       <TripPlannerErrorBoundary>
@@ -13,4 +61,8 @@ export default function Page() {
       </TripPlannerErrorBoundary>
     </HydrationBoundary>
   );
+}
+
+export default function Page() {
+  return <HomeContent />;
 }

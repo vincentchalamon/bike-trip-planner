@@ -400,5 +400,23 @@
       "noDate": "Non daté",
       "offlineBadge": "Hors ligne"
     }
+  },
+  "earlyAccess": {
+    "sectionTitle": "Demander un accès anticipé",
+    "sectionDescription": "Bike Trip Planner est actuellement en bêta privée. Laissez votre adresse email pour être notifié lorsque votre accès est accordé.",
+    "emailLabel": "Adresse email",
+    "emailPlaceholder": "vous@exemple.com",
+    "invalidEmail": "Veuillez entrer une adresse email valide.",
+    "submitButton": "Demander l'accès",
+    "sending": "Envoi en cours...",
+    "successMessage": "Merci ! Vous allez recevoir un email de confirmation.",
+    "throttledMessage": "Trop de requêtes. Veuillez patienter quelques minutes avant de réessayer.",
+    "verifying": "Vérification de votre adresse email...",
+    "accessConfirmed": "Votre adresse email a été confirmée ! Vous serez notifié lorsque votre accès sera accordé.",
+    "loginBoxTitle": "Pas encore de compte ?",
+    "loginBoxDescription": "Bike Trip Planner est actuellement en bêta privée. Inscrivez-vous pour recevoir une invitation.",
+    "loginBoxCta": "Demander un accès anticipé",
+    "ctaCreateTrip": "Créer un itinéraire",
+    "myTrips": "Mes voyages"
   }
 }

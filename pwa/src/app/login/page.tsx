@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
+  const tEarlyAccess = useTranslations("earlyAccess");
   const router = useRouter();
   const { isAuthenticated, requestMagicLink } = useAuthStore();
   const [email, setEmail] = useState("");
@@ -61,7 +63,7 @@ export default function LoginPage() {
             {t("linkSent")}
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
                 {t("emailLabel")}
@@ -83,6 +85,24 @@ export default function LoginPage() {
             </Button>
           </form>
         )}
+
+        {/* Early access info box — for users not yet registered */}
+        <div
+          className="rounded-lg border border-muted bg-muted/40 p-4 space-y-2 text-center"
+          data-testid="early-access-banner"
+        >
+          <p className="text-sm font-medium">{tEarlyAccess("loginBoxTitle")}</p>
+          <p className="text-xs text-muted-foreground">
+            {tEarlyAccess("loginBoxDescription")}
+          </p>
+          <Link
+            href="/#early-access"
+            className="inline-block text-xs text-primary underline underline-offset-4 hover:text-primary/80"
+            data-testid="early-access-link"
+          >
+            {tEarlyAccess("loginBoxCta")}
+          </Link>
+        </div>
       </div>
     </div>
   );

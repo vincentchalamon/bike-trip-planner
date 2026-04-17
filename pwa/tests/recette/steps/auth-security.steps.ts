@@ -183,6 +183,20 @@ Then("I am redirected to the login page", async ({ page }) => {
   await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
 });
 
+Then("I see the early access form", async ({ page }) => {
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByTestId("early-access-form")).toBeVisible({
+    timeout: 5000,
+  });
+});
+
+Then("je vois le formulaire d'accès anticipé", async ({ page }) => {
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByTestId("early-access-form")).toBeVisible({
+    timeout: 5000,
+  });
+});
+
 When("une erreur serveur se produit", async ({ mockedPage }) => {
   await mockedPage.route("**/trips", (route, req) => {
     if (req.method() !== "POST") return route.fallback();
