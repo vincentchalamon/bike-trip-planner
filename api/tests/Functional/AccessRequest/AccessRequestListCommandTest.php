@@ -107,6 +107,36 @@ final class AccessRequestListCommandTest extends ApiTestCase
     }
 
     #[Test]
+    public function listFiltersWithBeforeDate(): void
+    {
+        $this->createVerifiedRequest('filter-before-1@example.com');
+        $this->createVerifiedRequest('filter-before-2@example.com');
+
+        $tester = $this->createCommandTester();
+        $tester->execute(['--before' => new \DateTimeImmutable('-1 day')->format(\DateTimeInterface::ATOM)]);
+
+        $this->assertSame(Command::SUCCESS, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+        $this->assertStringNotContainsString('filter-before-1@example.com', $display);
+        $this->assertStringNotContainsString('filter-before-2@example.com', $display);
+    }
+
+    #[Test]
+    public function listFiltersWithAfterDate(): void
+    {
+        $this->createVerifiedRequest('filter-after-1@example.com');
+        $this->createVerifiedRequest('filter-after-2@example.com');
+
+        $tester = $this->createCommandTester();
+        $tester->execute(['--after' => new \DateTimeImmutable('+1 day')->format(\DateTimeInterface::ATOM)]);
+
+        $this->assertSame(Command::SUCCESS, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+        $this->assertStringNotContainsString('filter-after-1@example.com', $display);
+        $this->assertStringNotContainsString('filter-after-2@example.com', $display);
+    }
+
+    #[Test]
     public function listWithPaginationOptions(): void
     {
         $this->createVerifiedRequest('page@example.com');

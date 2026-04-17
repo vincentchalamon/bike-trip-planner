@@ -122,7 +122,17 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
             ->subject($this->translator->trans('access_request.email.verify.subject', [], 'access_request'))
             ->html($html);
 
-        $this->mailer->send($emailMessage);
+        try {
+            $this->mailer->send($emailMessage);
+        } catch (\Throwable $throwable) {
+            $this->logger->error('Failed to send access request verification email — removing record to allow retry', [
+                'email' => $email,
+                'error' => $throwable->getMessage(),
+            ]);
+            $this->entityManager->remove($accessRequest);
+            $this->entityManager->flush();
+            throw $throwable;
+        }
 
         $this->logger->debug('Access request created and verification email sent', ['email' => $email]);
 
