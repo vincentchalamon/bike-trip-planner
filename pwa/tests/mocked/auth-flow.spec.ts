@@ -62,7 +62,9 @@ test.describe("Auth flow", () => {
     await expect(page.getByTestId("landing-page")).toBeVisible();
   });
 
-  test("unauthenticated user is redirected to login when accessing protected route", async ({ page }) => {
+  test("unauthenticated user is redirected to login when accessing protected route", async ({
+    page,
+  }) => {
     // Mock auth/refresh as 401 (no valid session)
     await page.route("**/auth/refresh", (route, request) => {
       if (request.method() !== "POST") return route.fallback();

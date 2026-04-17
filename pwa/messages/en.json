@@ -455,10 +455,13 @@
       "title": "App preview",
       "map": "Global map",
       "stage": "Stage detail",
-      "analysis": "AI analysis"
+      "analysis": "AI analysis",
+      "prev": "Previous",
+      "next": "Next"
     },
     "testimonials": {
       "title": "What testers say",
+      "starsLabel": "5 stars out of 5",
       "1": {
         "text": "An indispensable tool for planning my bikepacking trips. The terrain alerts saved me from several nasty surprises!",
         "author": "Marie L.",
@@ -484,8 +487,7 @@
       "emailLabel": "Email address",
       "submit": "Sign me up",
       "submitting": "Signing up...",
-      "successMessage": "Thank you! You will be notified as soon as new spots become available.",
-      "errorMessage": "An error occurred. Please try again."
+      "successMessage": "Thank you! You will be notified as soon as new spots become available."
     },
     "footer": {
       "tagline": "The open-source co-pilot for your cycling adventures.",

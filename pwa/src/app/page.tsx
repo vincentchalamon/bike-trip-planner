@@ -18,18 +18,15 @@ import { TripPlannerErrorBoundary } from "@/components/trip-planner-error-bounda
  */
 function HomePageContent() {
   const { isAuthenticated, silentRefresh } = useAuthStore();
-  const [authChecked, setAuthChecked] = useState(isAuthenticated);
+  const [refreshAttempted, setRefreshAttempted] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      setAuthChecked(true);
-      return;
-    }
-    void silentRefresh().finally(() => setAuthChecked(true));
+    if (isAuthenticated) return;
+    void silentRefresh().finally(() => setRefreshAttempted(true));
   }, [isAuthenticated, silentRefresh]);
 
   // Show nothing while the initial auth check is in flight
-  if (!authChecked) {
+  if (!isAuthenticated && !refreshAttempted) {
     return null;
   }
 

@@ -240,7 +240,9 @@ function FeaturesSection() {
             <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center mb-4">
               <ShieldCheck className="h-6 w-6 text-brand" />
             </div>
-            <h3 className="text-base font-semibold mb-2">{t("terrain.title")}</h3>
+            <h3 className="text-base font-semibold mb-2">
+              {t("terrain.title")}
+            </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {t("terrain.description")}
             </p>
@@ -251,7 +253,9 @@ function FeaturesSection() {
             <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center mb-4">
               <ShoppingCart className="h-6 w-6 text-brand" />
             </div>
-            <h3 className="text-base font-semibold mb-2">{t("supply.title")}</h3>
+            <h3 className="text-base font-semibold mb-2">
+              {t("supply.title")}
+            </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {t("supply.description")}
             </p>
@@ -273,7 +277,9 @@ function FeaturesSection() {
             <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center mb-4">
               <Home className="h-6 w-6 text-brand" />
             </div>
-            <h3 className="text-base font-semibold mb-2">{t("accommodation.title")}</h3>
+            <h3 className="text-base font-semibold mb-2">
+              {t("accommodation.title")}
+            </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {t("accommodation.description")}
             </p>
@@ -284,7 +290,9 @@ function FeaturesSection() {
             <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center mb-4">
               <CloudSun className="h-6 w-6 text-brand" />
             </div>
-            <h3 className="text-base font-semibold mb-2">{t("weather.title")}</h3>
+            <h3 className="text-base font-semibold mb-2">
+              {t("weather.title")}
+            </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {t("weather.description")}
             </p>
@@ -295,7 +303,9 @@ function FeaturesSection() {
             <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center mb-4">
               <Stethoscope className="h-6 w-6 text-brand" />
             </div>
-            <h3 className="text-base font-semibold mb-2">{t("services.title")}</h3>
+            <h3 className="text-base font-semibold mb-2">
+              {t("services.title")}
+            </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {t("services.description")}
             </p>
@@ -447,6 +457,7 @@ const SCREENSHOTS = [
 function ScreenshotsSection() {
   const t = useTranslations("landing.screenshots");
   const [active, setActive] = useState(0);
+  const current = SCREENSHOTS[active] ?? SCREENSHOTS[0];
 
   const prev = () =>
     setActive((i) => (i === 0 ? SCREENSHOTS.length - 1 : i - 1));
@@ -468,8 +479,8 @@ function ScreenshotsSection() {
           {/* Main screenshot */}
           <div className="relative aspect-video rounded-2xl overflow-hidden border bg-muted shadow-xl">
             <Image
-              src={SCREENSHOTS[active].src}
-              alt={t(SCREENSHOTS[active].key)}
+              src={current.src}
+              alt={t(current.key)}
               fill
               loading="lazy"
               className="object-cover"
@@ -480,7 +491,7 @@ function ScreenshotsSection() {
           <button
             type="button"
             onClick={prev}
-            aria-label="Précédent"
+            aria-label={t("prev")}
             className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border shadow-md flex items-center justify-center hover:bg-background transition-colors"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -488,7 +499,7 @@ function ScreenshotsSection() {
           <button
             type="button"
             onClick={next}
-            aria-label="Suivant"
+            aria-label={t("next")}
             className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border shadow-md flex items-center justify-center hover:bg-background transition-colors"
           >
             <ChevronRight className="h-5 w-5" />
@@ -505,16 +516,14 @@ function ScreenshotsSection() {
               aria-label={t(s.key)}
               aria-current={i === active ? "true" : undefined}
               className={`h-2 rounded-full transition-all duration-200 ${
-                i === active
-                  ? "w-8 bg-brand"
-                  : "w-2 bg-muted-foreground/30"
+                i === active ? "w-8 bg-brand" : "w-2 bg-muted-foreground/30"
               }`}
             />
           ))}
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-3">
-          {t(SCREENSHOTS[active].key)}
+          {t(current.key)}
         </p>
       </div>
     </section>
@@ -539,7 +548,7 @@ function TestimonialsSection() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Testimonial 1 */}
           <blockquote className="rounded-2xl border bg-card p-6 shadow-sm flex flex-col gap-4">
-            <div className="flex gap-1" aria-label="5 étoiles">
+            <div className="flex gap-1" aria-label={t("starsLabel")}>
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
                   key={i}
@@ -559,7 +568,7 @@ function TestimonialsSection() {
 
           {/* Testimonial 2 */}
           <blockquote className="rounded-2xl border bg-card p-6 shadow-sm flex flex-col gap-4">
-            <div className="flex gap-1" aria-label="5 étoiles">
+            <div className="flex gap-1" aria-label={t("starsLabel")}>
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
                   key={i}
@@ -579,7 +588,7 @@ function TestimonialsSection() {
 
           {/* Testimonial 3 */}
           <blockquote className="rounded-2xl border bg-card p-6 shadow-sm flex flex-col gap-4">
-            <div className="flex gap-1" aria-label="5 étoiles">
+            <div className="flex gap-1" aria-label={t("starsLabel")}>
               {Array.from({ length: 5 }).map((_, i) => (
                 <Star
                   key={i}
@@ -610,19 +619,15 @@ function EarlyAccessSection() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
     setSubmitting(true);
-    setError(false);
     try {
       // Waiting list submission — graceful no-op for now (backend endpoint TBD)
       await new Promise<void>((resolve) => setTimeout(resolve, 600));
       setSubmitted(true);
-    } catch {
-      setError(true);
     } finally {
       setSubmitting(false);
     }
@@ -683,12 +688,6 @@ function EarlyAccessSection() {
                   {submitting ? t("submitting") : t("submit")}
                 </Button>
               </form>
-            )}
-
-            {error && (
-              <p className="text-sm text-red-300 mt-2" role="alert">
-                {t("errorMessage")}
-              </p>
             )}
           </div>
         )}

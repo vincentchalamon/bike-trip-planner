@@ -455,10 +455,13 @@
       "title": "Aperçu de l'application",
       "map": "Carte globale",
       "stage": "Étape détaillée",
-      "analysis": "Analyse IA"
+      "analysis": "Analyse IA",
+      "prev": "Précédent",
+      "next": "Suivant"
     },
     "testimonials": {
       "title": "Ils l'ont testé",
+      "starsLabel": "5 étoiles sur 5",
       "1": {
         "text": "Un outil indispensable pour préparer mes voyages bikepacking. Les alertes terrain m'ont évité plusieurs mauvaises surprises !",
         "author": "Marie L.",
@@ -484,8 +487,7 @@
       "emailLabel": "Adresse email",
       "submit": "M'inscrire",
       "submitting": "Inscription...",
-      "successMessage": "Merci ! Vous serez notifié(e) dès que de nouvelles places seront disponibles.",
-      "errorMessage": "Une erreur est survenue. Veuillez réessayer."
+      "successMessage": "Merci ! Vous serez notifié(e) dès que de nouvelles places seront disponibles."
     },
     "footer": {
       "tagline": "Le copilote open-source pour vos aventures à vélo.",

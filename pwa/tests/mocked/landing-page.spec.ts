@@ -34,14 +34,18 @@ test.describe("Landing page", () => {
       await expect(page.getByTestId("section-footer")).toBeVisible();
     });
 
-    test("CTA 'Créer un itinéraire' links to /login when unauthenticated", async ({ page }) => {
+    test("CTA 'Créer un itinéraire' links to /login when unauthenticated", async ({
+      page,
+    }) => {
       const ctaLink = page.getByTestId("cta-create-itinerary").first();
       await expect(ctaLink).toBeVisible();
       const href = await ctaLink.getAttribute("href");
       expect(href).toBe("/login");
     });
 
-    test("waiting list email form is present in section 8", async ({ page }) => {
+    test("waiting list email form is present in section 8", async ({
+      page,
+    }) => {
       await page.getByTestId("section-early-access").scrollIntoViewIfNeeded();
       const form = page.getByTestId("waiting-list-form");
       await expect(form).toBeVisible();
@@ -49,11 +53,15 @@ test.describe("Landing page", () => {
       await expect(page.getByTestId("waiting-list-submit")).toBeVisible();
     });
 
-    test("waiting list form submission shows success message", async ({ page }) => {
+    test("waiting list form submission shows success message", async ({
+      page,
+    }) => {
       await page.getByTestId("section-early-access").scrollIntoViewIfNeeded();
       await page.getByTestId("waiting-list-email").fill("test@example.com");
       await page.getByTestId("waiting-list-submit").click();
-      await expect(page.getByTestId("waiting-list-success")).toBeVisible({ timeout: 3000 });
+      await expect(page.getByTestId("waiting-list-success")).toBeVisible({
+        timeout: 3000,
+      });
     });
 
     test("footer GitHub link is present", async ({ page }) => {
@@ -77,7 +85,9 @@ test.describe("Landing page", () => {
   // ── /trips/new accessible for authenticated users ────────────────────────
 
   test.describe("authenticated user — /trips/new", () => {
-    test("authenticated user can access /trips/new (trip planner)", async ({ page }) => {
+    test("authenticated user can access /trips/new (trip planner)", async ({
+      page,
+    }) => {
       // Mock auth/refresh as 200 — user is logged in
       await page.route("**/auth/refresh", (route, request) => {
         if (request.method() !== "POST") return route.fallback();
@@ -115,7 +125,9 @@ test.describe("Landing page", () => {
       await page.goto("/trips/new");
       await page.waitForLoadState("networkidle");
       // Authenticated users on /trips/new should see the trip planner
-      await expect(page.getByTestId("magic-link-input")).toBeVisible({ timeout: 5000 });
+      await expect(page.getByTestId("magic-link-input")).toBeVisible({
+        timeout: 5000,
+      });
     });
   });
 
