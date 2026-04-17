@@ -5,9 +5,9 @@ test.describe("/faq page", () => {
     await page.goto("/faq");
     await page.waitForLoadState("networkidle");
 
-    await expect(
-      page.getByRole("heading", { level: 1 }),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test("displays all three FAQ categories", async ({ page }) => {
@@ -125,6 +125,28 @@ test.describe("/faq page", () => {
     });
 
     await page.goto("/login");
+    await page.waitForLoadState("networkidle");
+
+    const faqLink = page.getByTestId("footer-faq-link");
+    await expect(faqLink).toBeVisible();
+    await expect(faqLink).toHaveAttribute("href", "/faq");
+  });
+
+  test("FAQ footer link is present on the landing page", async ({ page }) => {
+    // Mock successful auth so the landing page renders
+    await page.route("**/auth/refresh", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          token:
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJ1c2VybmFtZSI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjk5OTk5OTk5OTl9.ZmFrZS1zaWduYXR1cmU",
+        }),
+      });
+    });
+
+    await page.goto("/");
     await page.waitForLoadState("networkidle");
 
     const faqLink = page.getByTestId("footer-faq-link");
