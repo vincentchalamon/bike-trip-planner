@@ -25,6 +25,12 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '60 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
+            'access_request_ip' => [
+                'policy' => 'sliding_window',
+                'limit' => 3,
+                'interval' => '3600 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
             'accommodation_scrape' => [
                 'policy' => 'sliding_window',
                 'limit' => 20,

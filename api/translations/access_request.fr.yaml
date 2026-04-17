@@ -1,0 +1,9 @@
+access_request:
+  email:
+    verify:
+      subject: "Confirmez votre adresse email — Bike Trip Planner"
+      body: "Cliquez sur le bouton ci-dessous pour confirmer votre adresse email et rejoindre la liste d'accès anticipé."
+      button: "Confirmer mon adresse email"
+      expires: "Ce lien expire dans 24 heures."
+      ignore: "Si vous n'avez pas demandé l'accès à Bike Trip Planner, vous pouvez ignorer cet email."
+  neutral_message: "Si votre adresse est valide, vous recevrez un email de confirmation."
