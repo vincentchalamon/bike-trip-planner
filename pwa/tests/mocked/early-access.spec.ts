@@ -121,6 +121,18 @@ test.describe("Early access form", () => {
 
     await expect(page.getByTestId("early-access-email-error")).toBeVisible();
   });
+
+  test("shows validation error when submitting empty email", async ({
+    page,
+  }) => {
+    await mockUnauthenticated(page);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByTestId("early-access-submit").click();
+
+    await expect(page.getByTestId("early-access-email-error")).toBeVisible();
+  });
 });
 
 test.describe("CTA navigation", () => {

@@ -24,7 +24,10 @@ export function EarlyAccessForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = email.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      setEmailError(t("invalidEmail"));
+      return;
+    }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       setEmailError(t("invalidEmail"));
