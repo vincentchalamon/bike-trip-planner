@@ -52,8 +52,9 @@ final class AccessRequestRepository extends ServiceEntityRepository
         }
 
         if (null !== $emailPattern) {
-            $qb->andWhere('ar.email LIKE :email')
-                ->setParameter('email', '%'.$emailPattern.'%');
+            $safe = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $emailPattern);
+            $qb->andWhere("ar.email LIKE :email ESCAPE '!'")
+                ->setParameter('email', '%'.$safe.'%');
         }
 
         /** @var list<AccessRequest> $result */
