@@ -45,7 +45,7 @@ function AccordionItem({
       </button>
       <div
         className={`overflow-hidden transition-all duration-200 ${
-          isOpen ? "max-h-96 pb-4" : "max-h-0"
+          isOpen ? "max-h-[9999px] pb-4" : "max-h-0"
         }`}
       >
         <p className="text-sm text-muted-foreground leading-relaxed">
