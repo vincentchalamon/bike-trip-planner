@@ -115,10 +115,10 @@ final class AccessRequestVerifyTest extends ApiTestCase
         $em->flush();
 
         // Build an expired signature manually
-        $expiredTs = (new \DateTimeImmutable('-1 day'))->getTimestamp();
+        $expiredTs = new \DateTimeImmutable('-1 day')->getTimestamp();
         $secret = self::getContainer()->getParameter('kernel.secret');
         \assert(\is_string($secret));
-        $expiredSignature = hash_hmac('sha256', 'expired@example.com'.$expiredTs, $secret);
+        $expiredSignature = hash_hmac('sha256', 'expired@example.com|'.$expiredTs, $secret);
 
         $response = self::createClient(['followRedirects' => false])->request(
             'GET',
@@ -147,6 +147,7 @@ final class AccessRequestVerifyTest extends ApiTestCase
         $em = $this->getEntityManager();
         $accessRequest = new AccessRequest('alreadyverified@example.com', '127.0.0.1');
         $accessRequest->verify();
+
         $em->persist($accessRequest);
         $em->flush();
 
@@ -170,5 +171,27 @@ final class AccessRequestVerifyTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(302);
         $location = $response->getHeaders(false)['location'][0] ?? '';
         $this->assertStringContainsString('access=confirmed', $location);
+    }
+
+    #[Test]
+    public function verifyValidSignatureWithNoExistingRecordCreatesAndVerifies(): void
+    {
+        $em = $this->getEntityManager();
+
+        // No AccessRequest record in DB before verification (edge case: email sent but persist failed)
+        $url = $this->buildVerifyUrl('noexist@example.com');
+
+        $response = self::createClient(['followRedirects' => false])->request('GET', $url);
+
+        $this->assertResponseStatusCodeSame(302);
+        $location = $response->getHeaders(false)['location'][0] ?? '';
+        $this->assertStringContainsString('access=confirmed', $location);
+
+        // A new verified AccessRequest should have been created
+        $em->clear();
+        $created = $em->getRepository(AccessRequest::class)->findOneBy(['email' => 'noexist@example.com']);
+        $this->assertInstanceOf(AccessRequest::class, $created);
+        $this->assertSame(AccessRequestStatus::VERIFIED, $created->getStatus());
+        $this->assertNotNull($created->getVerifiedAt());
     }
 }

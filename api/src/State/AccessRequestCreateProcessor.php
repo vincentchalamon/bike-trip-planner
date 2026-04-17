@@ -55,6 +55,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): JsonResponse
     {
         $email = $data->email;
+        \assert('' !== $email);
         $request = $this->requestStack->getCurrentRequest();
         $clientIp = $request?->getClientIp() ?? 'unknown';
 
@@ -78,7 +79,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
 
         // Silently ignore if access request already exists
         $existingRequest = $this->accessRequestRepository->findByEmail($email);
-        if (null !== $existingRequest) {
+        if ($existingRequest instanceof AccessRequest) {
             $this->logger->debug('Access request already exists — silently ignored', ['email' => $email]);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
@@ -101,7 +102,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
 
         $html = $this->twig->render('email/access_request_verify.html.twig', [
             'verifyUrl' => $verifyUrl,
-            'locale' => 'fr',
+            'locale' => $this->translator->getLocale(),
         ]);
 
         $emailMessage = new Email()

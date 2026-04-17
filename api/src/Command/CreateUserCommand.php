@@ -93,7 +93,7 @@ final class CreateUserCommand extends Command
         $this->entityManager->persist($user);
 
         // Remove corresponding AccessRequest if it exists (early-access workflow)
-        $accessRequest = $this->entityManager->getRepository(AccessRequest::class)->findOneBy(['email' => $email]);
+        $accessRequest = $this->accessRequestRepository->findByEmail($email);
         if ($accessRequest instanceof AccessRequest) {
             $this->entityManager->remove($accessRequest);
         }

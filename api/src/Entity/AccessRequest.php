@@ -19,7 +19,7 @@ class AccessRequest
     #[ORM\Column(type: 'uuid')]
     private Uuid $id;
 
-    #[ORM\Column(type: 'string', enumType: AccessRequestStatus::class, length: 32)]
+    #[ORM\Column(type: 'string', length: 32, enumType: AccessRequestStatus::class)]
     private AccessRequestStatus $status = AccessRequestStatus::PENDING_VERIFICATION;
 
     #[ORM\Column(nullable: true)]

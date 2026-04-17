@@ -67,8 +67,8 @@ final class AccessRequestHmacServiceTest extends TestCase
     #[Test]
     public function verifyReturnsFalseForExpiredPayload(): void
     {
-        $expires = (new \DateTimeImmutable('-1 day'))->getTimestamp();
-        $signature = hash_hmac('sha256', 'alice@example.com'.$expires, 'test-secret-key');
+        $expires = new \DateTimeImmutable('-1 day')->getTimestamp();
+        $signature = hash_hmac('sha256', 'alice@example.com|'.$expires, 'test-secret-key');
 
         $result = $this->service->verify([
             'email' => 'alice@example.com',
@@ -104,9 +104,9 @@ final class AccessRequestHmacServiceTest extends TestCase
         $expires = time() + 3600;
         $service = new AccessRequestHmacService('test-secret-key');
 
-        $sig1 = $service->generatePayload('same@example.com');
+        $service->generatePayload('same@example.com');
         // Signatures differ because expires changes each call — test consistency via verify()
-        $payload = ['email' => 'same@example.com', 'expires' => $expires, 'signature' => hash_hmac('sha256', 'same@example.com'.$expires, 'test-secret-key')];
+        $payload = ['email' => 'same@example.com', 'expires' => $expires, 'signature' => hash_hmac('sha256', 'same@example.com|'.$expires, 'test-secret-key')];
 
         $this->assertTrue($service->verify($payload));
     }

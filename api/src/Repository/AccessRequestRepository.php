@@ -41,12 +41,12 @@ final class AccessRequestRepository extends ServiceEntityRepository
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 
-        if (null !== $before) {
+        if ($before instanceof \DateTimeImmutable) {
             $qb->andWhere('ar.verifiedAt < :before')
                 ->setParameter('before', $before);
         }
 
-        if (null !== $after) {
+        if ($after instanceof \DateTimeImmutable) {
             $qb->andWhere('ar.verifiedAt > :after')
                 ->setParameter('after', $after);
         }
@@ -56,7 +56,9 @@ final class AccessRequestRepository extends ServiceEntityRepository
                 ->setParameter('email', '%'.$emailPattern.'%');
         }
 
-        /** @var list<AccessRequest> */
-        return $qb->getQuery()->getResult();
+        /** @var list<AccessRequest> $result */
+        $result = $qb->getQuery()->getResult();
+
+        return $result;
     }
 }

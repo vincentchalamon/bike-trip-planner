@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\AccessRequest;
-use App\Entity\User;
 use App\Repository\AccessRequestRepository;
+use App\Repository\UserRepository;
 use App\Service\AccessRequestHmacService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -26,6 +26,7 @@ final readonly class AccessRequestVerifyController
     public function __construct(
         private EntityManagerInterface $entityManager,
         private AccessRequestRepository $accessRequestRepository,
+        private UserRepository $userRepository,
         private AccessRequestHmacService $hmacService,
         private LoggerInterface $logger,
         #[Autowire(env: 'FRONTEND_URL')]
@@ -47,11 +48,11 @@ final readonly class AccessRequestVerifyController
             return new RedirectResponse($landingUrl.'?access=confirmed');
         }
 
-        /** @var string $email */
-        $email = $params['email'];
+        $email = $params['email'] ?? '';
+        \assert(\is_string($email) && '' !== $email);
 
         // Silently ignore if user already exists
-        $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+        $existingUser = $this->userRepository->findOneBy(['email' => $email]);
         if (null !== $existingUser) {
             $this->logger->debug('Access request verify: user already exists — silently ignored', ['email' => $email]);
 
@@ -61,13 +62,13 @@ final readonly class AccessRequestVerifyController
         $accessRequest = $this->accessRequestRepository->findByEmail($email);
 
         // Silently ignore if already verified
-        if (null !== $accessRequest && $accessRequest->isVerified()) {
+        if ($accessRequest instanceof AccessRequest && $accessRequest->isVerified()) {
             $this->logger->debug('Access request verify: already verified — silently ignored', ['email' => $email]);
 
             return new RedirectResponse($landingUrl.'?access=confirmed');
         }
 
-        if (null === $accessRequest) {
+        if (!$accessRequest instanceof AccessRequest) {
             // Edge case: link was sent but the request record was not created yet
             // (e.g., email was sent but persist failed). Create a verified record directly.
             $clientIp = $request->getClientIp() ?? 'unknown';

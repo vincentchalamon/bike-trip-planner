@@ -33,11 +33,15 @@ final class AccessRequestListCommandTest extends ApiTestCase
         return new CommandTester($command);
     }
 
+    /**
+     * @param non-empty-string $email
+     */
     private function createVerifiedRequest(string $email, string $ip = '127.0.0.1'): AccessRequest
     {
         $em = $this->getEntityManager();
         $request = new AccessRequest($email, $ip);
         $request->verify();
+
         $em->persist($request);
         $em->flush();
 

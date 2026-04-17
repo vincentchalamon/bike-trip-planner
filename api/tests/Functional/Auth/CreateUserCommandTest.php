@@ -145,6 +145,7 @@ final class CreateUserCommandTest extends ApiTestCase
         $em = $this->getEntityManager();
         $accessRequest = new AccessRequest('earlyaccess@example.com', '127.0.0.1');
         $accessRequest->verify();
+
         $em->persist($accessRequest);
         $em->flush();
 

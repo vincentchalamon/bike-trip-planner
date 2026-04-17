@@ -30,7 +30,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         'access_control' => [
             ['path' => '^/docs', 'roles' => 'PUBLIC_ACCESS'],
             ['path' => '^/auth/(request-link|refresh|verify)$', 'roles' => 'PUBLIC_ACCESS'],
-            ['path' => '^/access-requests', 'roles' => 'PUBLIC_ACCESS'],
+            ['path' => '^/access-requests(/verify)?$', 'roles' => 'PUBLIC_ACCESS'],
             ['path' => '^/auth/logout', 'roles' => 'IS_AUTHENTICATED_FULLY'],
             ['path' => '^/s/', 'roles' => 'PUBLIC_ACCESS'],
             ['path' => '^/', 'roles' => 'IS_AUTHENTICATED_FULLY'],
