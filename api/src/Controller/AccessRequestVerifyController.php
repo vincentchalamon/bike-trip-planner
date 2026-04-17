@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use App\Entity\AccessRequest;
 use App\Repository\AccessRequestRepository;
 use App\Repository\UserRepository;
@@ -77,7 +78,13 @@ final readonly class AccessRequestVerifyController
         }
 
         $accessRequest->verify();
-        $this->entityManager->flush();
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            $this->logger->debug('Access request verify: race condition — silently ignored', ['email' => $email]);
+
+            return new RedirectResponse($landingUrl.'?access=confirmed');
+        }
 
         $this->logger->debug('Access request verified', ['email' => $email]);
 
