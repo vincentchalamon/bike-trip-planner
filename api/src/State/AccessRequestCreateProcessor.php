@@ -29,7 +29,7 @@ use Twig\Environment;
 /**
  * Handles access request creation: rate limiting, email deduplication, HMAC link generation and email sending.
  *
- * Returns 202 for all normal cases (new request, duplicate, existing user, rate limit) to prevent email enumeration.
+ * Returns 429 when the IP rate limit is exceeded; returns 202 for all other normal cases (new request, duplicate email, existing user) to prevent email enumeration.
  * Throws on infrastructure failure (e.g. mailer down) after removing the persisted record, so the client receives a 500 and can retry.
  *
  * @implements ProcessorInterface<AccessRequestDto, JsonResponse>

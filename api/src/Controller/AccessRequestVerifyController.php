@@ -50,7 +50,9 @@ final readonly class AccessRequestVerifyController
         }
 
         $email = $params['email'] ?? '';
-        \assert(\is_string($email) && '' !== $email);
+        if (!\is_string($email) || '' === $email) {
+            return new RedirectResponse($landingUrl.'?access=confirmed');
+        }
 
         // Silently ignore if user already exists
         $existingUser = $this->userRepository->findOneBy(['email' => $email]);
