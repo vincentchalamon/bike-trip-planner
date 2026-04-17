@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\Entity\User;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\AccessRequest as AccessRequestDto;
 use App\Entity\AccessRequest;
-use App\Entity\User;
 use App\Repository\AccessRequestRepository;
+use App\Repository\UserRepository;
 use App\Service\AccessRequestHmacService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -36,6 +38,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
     public function __construct(
         private EntityManagerInterface $entityManager,
         private AccessRequestRepository $accessRequestRepository,
+        private UserRepository $userRepository,
         private MailerInterface $mailer,
         private Environment $twig,
         private RequestStack $requestStack,
@@ -46,6 +49,8 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         private RateLimiterFactory $accessRequestIpLimiter,
         #[Autowire(env: 'FRONTEND_URL')]
         private string $frontendUrl = 'https://localhost',
+        #[Autowire(env: 'MAILER_SENDER_EMAIL')]
+        private string $senderEmail = 'noreply@bike-trip-planner.com',
     ) {
     }
 
@@ -70,8 +75,8 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         }
 
         // Silently ignore if user already exists
-        $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
-        if (null !== $existingUser) {
+        $existingUser = $this->userRepository->findByEmail($email);
+        if ($existingUser instanceof User) {
             $this->logger->debug('Access request for existing user — silently ignored', ['email' => $email]);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
@@ -88,7 +93,13 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         // Persist new access request
         $accessRequest = new AccessRequest($email, $clientIp);
         $this->entityManager->persist($accessRequest);
-        $this->entityManager->flush();
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            $this->logger->debug('Access request race condition — silently ignored', ['email' => $email]);
+
+            return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
+        }
 
         // Generate HMAC-signed verification URL
         $payload = $this->hmacService->generatePayload($email);
@@ -106,7 +117,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         ]);
 
         $emailMessage = new Email()
-            ->from(new Address('noreply@bike-trip-planner.com', 'Bike Trip Planner'))
+            ->from(new Address($this->senderEmail, 'Bike Trip Planner'))
             ->to($email)
             ->subject($this->translator->trans('access_request.email.verify.subject', [], 'access_request'))
             ->html($html);
