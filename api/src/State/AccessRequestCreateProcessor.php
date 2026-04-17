@@ -47,8 +47,8 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         private AccessRequestHmacService $hmacService,
         #[Autowire(service: 'limiter.access_request_ip')]
         private RateLimiterFactory $accessRequestIpLimiter,
-        #[Autowire(env: 'FRONTEND_URL')]
-        private string $frontendUrl = 'https://localhost',
+        #[Autowire(env: 'BACKEND_URL')]
+        private string $backendUrl = 'https://localhost',
         #[Autowire(env: 'MAILER_SENDER_EMAIL')]
         private string $senderEmail = 'noreply@bike-trip-planner.com',
     ) {
@@ -105,7 +105,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         $payload = $this->hmacService->generatePayload($email);
         $verifyUrl = \sprintf(
             '%s/access-requests/verify?email=%s&expires=%d&signature=%s',
-            rtrim($this->frontendUrl, '/'),
+            rtrim($this->backendUrl, '/'),
             urlencode($payload['email']),
             $payload['expires'],
             $payload['signature'],

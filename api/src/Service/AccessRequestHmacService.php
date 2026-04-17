@@ -21,6 +21,9 @@ final readonly class AccessRequestHmacService
         #[Autowire(env: 'ACCESS_REQUEST_HMAC_SECRET')]
         private string $secret,
     ) {
+        if ('' === $secret) {
+            throw new \InvalidArgumentException('ACCESS_REQUEST_HMAC_SECRET must not be empty.');
+        }
     }
 
     /**
