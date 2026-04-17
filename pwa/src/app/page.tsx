@@ -31,8 +31,11 @@ function HomeContent() {
     if (isAuthenticated) return;
 
     const check = async () => {
-      await useAuthStore.getState().silentRefresh();
-      setRefreshDone(true);
+      try {
+        await useAuthStore.getState().silentRefresh();
+      } finally {
+        setRefreshDone(true);
+      }
     };
 
     void check();

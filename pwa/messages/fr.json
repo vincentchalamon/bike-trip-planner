@@ -417,7 +417,9 @@
     "loginBoxTitle": "Pas encore de compte ?",
     "loginBoxDescription": "Bike Trip Planner est actuellement en bêta privée. Inscrivez-vous pour recevoir une invitation.",
     "loginBoxCta": "Demander un accès anticipé",
-    "ctaCreateTrip": "Créer un itinéraire",
+    "ctaCreateTrip": "Créer un itinéraire"
+  },
+  "navigation": {
     "myTrips": "Mes voyages"
   }
 }

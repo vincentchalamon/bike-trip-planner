@@ -150,11 +150,11 @@ When(/^I navigate to \/auth\/verify\/valid-token$/, async ({ page }) => {
 });
 
 When("je tente d'accéder à mes voyages", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/trips/new");
 });
 
 When("I try to access my trips", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/trips/new");
 });
 
 // --- Additional missing steps ---

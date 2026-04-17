@@ -172,17 +172,21 @@ test.describe("Access request verification", () => {
   test("verify page redirects to backend verify endpoint", async ({ page }) => {
     await mockUnauthenticated(page);
 
-    // Intercept the backend verify request
+    // Intercept any GET to /access-requests/verify?... and redirect back to
+    // the landing page with ?access=confirmed. A relative Location avoids
+    // dangling absolute URLs that are unreachable in CI.
     let backendVerifyCalled = false;
-    await page.route("**/access-requests/verify*", (route, request) => {
-      if (request.method() !== "GET") return route.fallback();
-      backendVerifyCalled = true;
-      // Simulate backend redirect to frontend ?access=confirmed
-      return route.fulfill({
-        status: 302,
-        headers: { Location: "http://localhost:3000/?access=confirmed" },
-      });
-    });
+    await page.route(
+      /\/access-requests\/verify\?.*signature=/,
+      (route, request) => {
+        if (request.method() !== "GET") return route.fallback();
+        backendVerifyCalled = true;
+        return route.fulfill({
+          status: 302,
+          headers: { Location: "/?access=confirmed" },
+        });
+      },
+    );
 
     await page.goto(
       "/access-requests/verify?email=test@example.com&expires=9999999999&signature=abc123",

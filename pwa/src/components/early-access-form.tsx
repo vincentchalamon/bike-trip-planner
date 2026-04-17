@@ -79,6 +79,7 @@ export function EarlyAccessForm() {
   return (
     <form
       onSubmit={(e) => void handleSubmit(e)}
+      noValidate
       className="flex flex-col sm:flex-row gap-3 w-full max-w-md"
       data-testid="early-access-form"
     >

@@ -241,7 +241,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const isWelcome = !trip && !isProcessing;
   const isLoading = !trip && isProcessing;
 
-  const tEarlyAccess = useTranslations("earlyAccess");
+  const tNav = useTranslations("navigation");
 
   // Action buttons shared across all states
   const actionButtons = (
@@ -257,7 +257,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
         >
           <Link href="/trips">
             <Map className="h-4 w-4" />
-            <span className="hidden sm:inline">{tEarlyAccess("myTrips")}</span>
+            <span className="hidden sm:inline">{tNav("myTrips")}</span>
           </Link>
         </Button>
       )}
