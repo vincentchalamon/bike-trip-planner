@@ -492,6 +492,7 @@ function ScreenshotsSection() {
             type="button"
             onClick={prev}
             aria-label={t("prev")}
+            data-testid="screenshot-prev"
             className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border shadow-md flex items-center justify-center hover:bg-background transition-colors"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -500,6 +501,7 @@ function ScreenshotsSection() {
             type="button"
             onClick={next}
             aria-label={t("next")}
+            data-testid="screenshot-next"
             className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border shadow-md flex items-center justify-center hover:bg-background transition-colors"
           >
             <ChevronRight className="h-5 w-5" />
@@ -616,22 +618,6 @@ function TestimonialsSection() {
 function EarlyAccessSection() {
   const t = useTranslations("landing.earlyAccess");
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setSubmitting(true);
-    try {
-      // Waiting list submission — graceful no-op for now (backend endpoint TBD)
-      await new Promise<void>((resolve) => setTimeout(resolve, 600));
-      setSubmitted(true);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <section
@@ -644,51 +630,21 @@ function EarlyAccessSection() {
 
         <CtaButton label={t("ctaPrimary")} size="lg" className="mb-10" />
 
-        {/* Waiting list form — only for unauthenticated visitors */}
+        {/*
+         * Waiting list — displayed only for unauthenticated visitors.
+         * No collection form yet: the backend endpoint is not implemented
+         * (see discussion on PR #338). A "coming soon" notice prevents the
+         * UI from silently discarding real email addresses.
+         */}
         {!isAuthenticated && (
-          <div className="border border-background/20 rounded-2xl p-6 bg-background/5 backdrop-blur-sm">
-            <p className="text-sm font-semibold opacity-80 mb-4">
+          <div
+            className="border border-background/20 rounded-2xl p-6 bg-background/5 backdrop-blur-sm"
+            data-testid="waiting-list-notice"
+          >
+            <p className="text-sm font-semibold opacity-80 mb-2">
               {t("waitingListTitle")}
             </p>
-
-            {submitted ? (
-              <p
-                className="text-sm text-green-300"
-                role="status"
-                data-testid="waiting-list-success"
-              >
-                {t("successMessage")}
-              </p>
-            ) : (
-              <form
-                onSubmit={(e) => void handleSubmit(e)}
-                className="flex flex-col sm:flex-row gap-3"
-                data-testid="waiting-list-form"
-              >
-                <label htmlFor="waiting-list-email" className="sr-only">
-                  {t("emailLabel")}
-                </label>
-                <input
-                  id="waiting-list-email"
-                  type="email"
-                  required
-                  placeholder={t("emailPlaceholder")}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={submitting}
-                  className="flex-1 rounded-lg border border-background/30 bg-background/10 px-4 py-2 text-sm text-background placeholder:text-background/50 focus:outline-none focus:ring-2 focus:ring-brand"
-                  data-testid="waiting-list-email"
-                />
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-brand hover:bg-brand-hover text-white font-semibold shrink-0"
-                  data-testid="waiting-list-submit"
-                >
-                  {submitting ? t("submitting") : t("submit")}
-                </Button>
-              </form>
-            )}
+            <p className="text-sm opacity-70">{t("waitingListComingSoon")}</p>
           </div>
         )}
       </div>

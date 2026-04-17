@@ -4,7 +4,7 @@ import { FAKE_JWT_TOKEN } from "../fixtures/api-mocks";
 /**
  * Landing page tests — verifies the 8 sections render correctly,
  * the CTA button behaves according to auth state,
- * and the waiting list email form is present.
+ * and the waiting list "coming soon" notice is present.
  */
 
 test.describe("Landing page", () => {
@@ -43,25 +43,11 @@ test.describe("Landing page", () => {
       expect(href).toBe("/login");
     });
 
-    test("waiting list email form is present in section 8", async ({
+    test("waiting list 'coming soon' notice is present in section 8", async ({
       page,
     }) => {
       await page.getByTestId("section-early-access").scrollIntoViewIfNeeded();
-      const form = page.getByTestId("waiting-list-form");
-      await expect(form).toBeVisible();
-      await expect(page.getByTestId("waiting-list-email")).toBeVisible();
-      await expect(page.getByTestId("waiting-list-submit")).toBeVisible();
-    });
-
-    test("waiting list form submission shows success message", async ({
-      page,
-    }) => {
-      await page.getByTestId("section-early-access").scrollIntoViewIfNeeded();
-      await page.getByTestId("waiting-list-email").fill("test@example.com");
-      await page.getByTestId("waiting-list-submit").click();
-      await expect(page.getByTestId("waiting-list-success")).toBeVisible({
-        timeout: 3000,
-      });
+      await expect(page.getByTestId("waiting-list-notice")).toBeVisible();
     });
 
     test("footer GitHub link is present", async ({ page }) => {
@@ -77,8 +63,8 @@ test.describe("Landing page", () => {
     test("screenshot slider navigation works", async ({ page }) => {
       await page.getByTestId("section-screenshots").scrollIntoViewIfNeeded();
       await expect(page.getByTestId("section-screenshots")).toBeVisible();
-      // Navigate to next slide
-      await page.getByRole("button", { name: "Suivant" }).click();
+      // Navigate to next slide (stable selector — locale-independent)
+      await page.getByTestId("screenshot-next").click();
     });
   });
 
@@ -162,7 +148,7 @@ test.describe("Landing page", () => {
     test("early access section renders on mobile", async ({ page }) => {
       await page.getByTestId("section-early-access").scrollIntoViewIfNeeded();
       await expect(page.getByTestId("section-early-access")).toBeVisible();
-      await expect(page.getByTestId("waiting-list-form")).toBeVisible();
+      await expect(page.getByTestId("waiting-list-notice")).toBeVisible();
     });
 
     test("features section visible on mobile", async ({ page }) => {

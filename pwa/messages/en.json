@@ -483,11 +483,7 @@
       "description": "Limited spots. Be among the first to plan your adventures with Bike Trip Planner.",
       "ctaPrimary": "Create an itinerary",
       "waitingListTitle": "Join the waiting list",
-      "emailPlaceholder": "your@email.com",
-      "emailLabel": "Email address",
-      "submit": "Sign me up",
-      "submitting": "Signing up...",
-      "successMessage": "Thank you! You will be notified as soon as new spots become available."
+      "waitingListComingSoon": "Sign-ups opening soon. Check back shortly!"
     },
     "footer": {
       "tagline": "The open-source co-pilot for your cycling adventures.",

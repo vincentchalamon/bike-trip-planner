@@ -483,11 +483,7 @@
       "description": "Places limitées. Soyez parmi les premiers à planifier vos aventures avec Bike Trip Planner.",
       "ctaPrimary": "Créer un itinéraire",
       "waitingListTitle": "Rejoindre la liste d'attente",
-      "emailPlaceholder": "votre@email.com",
-      "emailLabel": "Adresse email",
-      "submit": "M'inscrire",
-      "submitting": "Inscription...",
-      "successMessage": "Merci ! Vous serez notifié(e) dès que de nouvelles places seront disponibles."
+      "waitingListComingSoon": "Inscriptions bientôt disponibles. Revenez très vite !"
     },
     "footer": {
       "tagline": "Le copilote open-source pour vos aventures à vélo.",
