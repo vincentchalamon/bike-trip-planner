@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { API_URL } from "@/lib/constants";
+import { apiClient } from "@/lib/api/client";
 
 /**
  * Early access email signup form.
@@ -35,13 +35,11 @@ export function EarlyAccessForm() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/access-requests`, {
-        method: "POST",
-        headers: { "Content-Type": "application/ld+json" },
-        body: JSON.stringify({ email: trimmed }),
+      const { response } = await apiClient.POST("/access-requests", {
+        body: { email: trimmed },
       });
 
-      if (res.status === 429) {
+      if (response.status === 429) {
         setStatus("throttled");
       } else {
         setStatus("success");
@@ -101,15 +99,12 @@ export function EarlyAccessForm() {
           aria-describedby={emailError ? "early-access-error" : undefined}
           aria-invalid={!!emailError}
           data-testid="early-access-email-input"
-          className={
-            emailError
-              ? "ring-2 ring-destructive"
-              : ""
-          }
+          className={emailError ? "ring-2 ring-destructive" : ""}
         />
         {emailError && (
           <p
             id="early-access-error"
+            data-testid="early-access-email-error"
             className="text-xs text-destructive"
           >
             {emailError}

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -21,13 +20,7 @@ import { EarlyAccessForm } from "@/components/early-access-form";
 export function LandingPage() {
   const t = useTranslations("earlyAccess");
   const searchParams = useSearchParams();
-  const [accessConfirmed, setAccessConfirmed] = useState(false);
-
-  useEffect(() => {
-    if (searchParams.get("access") === "confirmed") {
-      setAccessConfirmed(true);
-    }
-  }, [searchParams]);
+  const accessConfirmed = searchParams.get("access") === "confirmed";
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -69,7 +62,7 @@ export function LandingPage() {
               {t("sectionTitle")}
             </h2>
             <p className="text-muted-foreground text-sm max-w-md">
-              {t("sectionDescription")}
+              {t("earlyAccessDescription")}
             </p>
           </div>
 

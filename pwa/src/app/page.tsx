@@ -19,28 +19,27 @@ import { LandingPage } from "@/components/landing-page";
  */
 function HomeContent() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const [authChecked, setAuthChecked] = useState(isAuthenticated);
+  // When the user is already authenticated on mount we can render immediately;
+  // otherwise we must await the silent refresh before deciding what to render.
+  const [refreshDone, setRefreshDone] = useState(false);
   const checkStarted = useRef(false);
 
   useEffect(() => {
     if (checkStarted.current) return;
     checkStarted.current = true;
 
-    if (isAuthenticated) {
-      setAuthChecked(true);
-      return;
-    }
+    if (isAuthenticated) return;
 
     const check = async () => {
       await useAuthStore.getState().silentRefresh();
-      setAuthChecked(true);
+      setRefreshDone(true);
     };
 
     void check();
   }, [isAuthenticated]);
 
   // Render nothing while checking auth to avoid flash
-  if (!authChecked) {
+  if (!isAuthenticated && !refreshDone) {
     return null;
   }
 

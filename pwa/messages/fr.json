@@ -404,6 +404,7 @@
   "earlyAccess": {
     "sectionTitle": "Demander un accès anticipé",
     "sectionDescription": "Bike Trip Planner est actuellement en bêta privée. Laissez votre adresse email pour être notifié lorsque votre accès est accordé.",
+    "earlyAccessDescription": "Laissez votre email, nous vous préviendrons dès que votre place sera disponible.",
     "emailLabel": "Adresse email",
     "emailPlaceholder": "vous@exemple.com",
     "invalidEmail": "Veuillez entrer une adresse email valide.",

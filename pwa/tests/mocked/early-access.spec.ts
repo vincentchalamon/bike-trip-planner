@@ -80,9 +80,7 @@ test.describe("Early access form", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    await page
-      .getByTestId("early-access-email-input")
-      .fill("test@example.com");
+    await page.getByTestId("early-access-email-input").fill("test@example.com");
     await page.getByTestId("early-access-submit").click();
 
     await expect(page.getByTestId("early-access-success")).toBeVisible();
@@ -105,9 +103,7 @@ test.describe("Early access form", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    await page
-      .getByTestId("early-access-email-input")
-      .fill("test@example.com");
+    await page.getByTestId("early-access-email-input").fill("test@example.com");
     await page.getByTestId("early-access-submit").click();
 
     await expect(page.getByTestId("early-access-throttled")).toBeVisible();
@@ -123,9 +119,7 @@ test.describe("Early access form", () => {
     await page.getByTestId("early-access-email-input").fill("not-an-email");
     await page.getByTestId("early-access-submit").click();
 
-    await expect(
-      page.getByText("Veuillez entrer une adresse email valide."),
-    ).toBeVisible();
+    await expect(page.getByTestId("early-access-email-error")).toBeVisible();
   });
 });
 
