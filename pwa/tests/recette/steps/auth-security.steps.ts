@@ -150,21 +150,27 @@ When(/^I navigate to \/auth\/verify\/valid-token$/, async ({ page }) => {
 });
 
 When("je tente d'accéder à mes voyages", async ({ page }) => {
-  await page.goto("/");
+  // Protected route: unauthenticated access should redirect to /login.
+  await page.goto("/trips/new");
 });
 
 When("I try to access my trips", async ({ page }) => {
-  await page.goto("/");
+  // Protected route: unauthenticated access should redirect to /login.
+  await page.goto("/trips/new");
 });
 
 // --- Additional missing steps ---
 
 When("je navigue vers la page d'accueil", async ({ page }) => {
-  await page.goto("/");
+  // "Home page" for an unauthenticated user means a protected route;
+  // `/` is the public landing page and does not redirect.
+  await page.goto("/trips/new");
 });
 
 When("I navigate to the home page", async ({ page }) => {
-  await page.goto("/");
+  // "Home page" for an unauthenticated user means a protected route;
+  // `/` is the public landing page and does not redirect.
+  await page.goto("/trips/new");
 });
 
 When("je clique sur le bouton de déconnexion", async ({ $test }) => {

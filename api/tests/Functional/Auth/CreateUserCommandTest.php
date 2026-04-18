@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Auth;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use App\Entity\AccessRequest;
 use App\Entity\User;
 use App\Repository\MagicLinkRepository;
 use App\Repository\UserRepository;
@@ -136,5 +137,25 @@ final class CreateUserCommandTest extends ApiTestCase
 
         $this->assertSame(Command::FAILURE, $tester->getStatusCode());
         $this->assertStringContainsString('Unsupported locale', $tester->getDisplay());
+    }
+
+    #[Test]
+    public function createUserDeletesExistingAccessRequest(): void
+    {
+        $em = $this->getEntityManager();
+        $accessRequest = new AccessRequest('earlyaccess@example.com', '127.0.0.1');
+        $accessRequest->verify();
+
+        $em->persist($accessRequest);
+        $em->flush();
+
+        $tester = $this->createCommandTester();
+        $tester->execute(['email' => 'earlyaccess@example.com']);
+
+        $this->assertSame(Command::SUCCESS, $tester->getStatusCode());
+
+        $em->clear();
+        $deleted = $em->getRepository(AccessRequest::class)->findOneBy(['email' => 'earlyaccess@example.com']);
+        $this->assertNull($deleted, 'AccessRequest should be deleted after user creation');
     }
 }
