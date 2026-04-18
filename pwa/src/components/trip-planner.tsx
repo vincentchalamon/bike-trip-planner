@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Settings, HelpCircle, Loader2, X, Share2 } from "lucide-react";
 import { MagicLinkInput } from "@/components/magic-link-input";
 import { GpxUploadButton } from "@/components/gpx-upload-button";
@@ -319,6 +320,15 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
             {actionButtons}
             <RecentTrips />
             <SavedTripsSection />
+            <footer className="mt-4 text-center">
+              <Link
+                href="/faq"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="footer-faq-link"
+              >
+                {t("footer.faq")}
+              </Link>
+            </footer>
           </div>
         )}
 

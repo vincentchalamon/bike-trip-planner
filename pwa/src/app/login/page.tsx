@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
+  const tFooter = useTranslations("footer");
   const router = useRouter();
   const { isAuthenticated, requestMagicLink } = useAuthStore();
   const [email, setEmail] = useState("");
@@ -42,7 +44,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-bold tracking-tight">
@@ -84,6 +86,15 @@ export default function LoginPage() {
           </form>
         )}
       </div>
+      <footer className="mt-8 text-center">
+        <Link
+          href="/faq"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          data-testid="footer-faq-link"
+        >
+          {tFooter("faq")}
+        </Link>
+      </footer>
     </div>
   );
 }

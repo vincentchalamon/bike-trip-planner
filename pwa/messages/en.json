@@ -504,5 +504,34 @@
       "noDate": "No date",
       "offlineBadge": "Offline"
     }
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "description": "Everything you need to know about Bike Trip Planner.",
+    "backToHome": "Back to home",
+    "categoryProject": "The project",
+    "categoryHowItWorks": "How it works",
+    "categoryAccess": "Access",
+    "q1": "What sets Bike Trip Planner apart from Komoot or RideWithGPS?",
+    "a1": "Komoot and RideWithGPS are GPS navigation platforms. Bike Trip Planner is a multi-day itinerary planning tool: it automatically splits your route into daily stages based on your cyclist profile (speed, accumulated fatigue, elevation), suggests accommodations at each stage endpoint, and generates contextual alerts (weather, resupply, health services, etc.). It complements your navigation apps rather than replacing them.",
+    "q2": "Why use this tool instead of planning manually on a map?",
+    "a2": "Manual planning is time-consuming and often underestimates accumulated fatigue over multiple days. Bike Trip Planner applies an automatic pacing formula that progressively reduces daily distance to account for fatigue, incorporates elevation into the calculation, and suggests accommodations directly at each stage endpoint — all within seconds.",
+    "q3": "Is the project independent of platforms like Komoot or Strava?",
+    "a3": "Yes. Bike Trip Planner is an independent project. It uses GPX exports or shared links from Komoot, Strava, and RideWithGPS only to retrieve route data, but does not depend on any commercial partnership with those platforms.",
+    "q4": "What data is stored on the server?",
+    "a4": "Your trip configuration (dates, profile, stages) is stored in a database so you can access it from any device. Raw route data (GPS points) is cached temporarily in Redis and deleted automatically. No personal data other than your email address is collected.",
+    "q5": "Which route sources are supported?",
+    "a5": "Bike Trip Planner accepts Komoot tour and collection links, Strava routes, and RideWithGPS routes. You can also import a GPX file directly from your computer.",
+    "q6": "Does the app work offline?",
+    "a6": "Partially. In offline mode, you can view previously loaded trips in read-only mode. Creating or editing a trip requires an internet connection, as computations (pacing, alerts, accommodation suggestions) are performed server-side.",
+    "q7": "Can I use the app on mobile?",
+    "a7": "Yes. The app is a responsive PWA (Progressive Web App) optimised for mobile and tablet. You can install it on your home screen from your mobile browser for quick access, without going through an app store.",
+    "q8": "How do I get access to the app?",
+    "a8": "The app uses a magic link sign-in system: enter your email address on the sign-in page and you will receive a secure sign-in link. No password is required.",
+    "q9": "Is the app free and open source?",
+    "a9": "The source code is open source and available on GitHub. The hosted app is free to use. Infrastructure costs may eventually justify a freemium model, but no paid access is planned at this stage."
+  },
+  "footer": {
+    "faq": "FAQ"
   }
 }
