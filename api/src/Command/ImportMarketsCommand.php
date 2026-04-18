@@ -47,8 +47,8 @@ final class ImportMarketsCommand extends Command
         private readonly LoggerInterface $logger,
         #[Autowire(service: 'http_client')]
         private readonly HttpClientInterface $httpClient,
-        #[Autowire(env: 'default:https://www.data.gouv.fr/fr/datasets/r/8067f5e0-15a7-48c3-9eb9-c9df2de96a1c:MARKETS_DATASET_URL')]
-        private readonly string $datasetUrl,
+        #[Autowire(env: 'default::MARKETS_DATASET_URL')]
+        private readonly ?string $datasetUrl = null,
     ) {
         parent::__construct();
     }
@@ -68,7 +68,7 @@ final class ImportMarketsCommand extends Command
         $isDryRun = (bool) $input->getOption('dry-run');
         $limit = (int) $input->getOption('limit');
 
-        $url = $this->datasetUrl;
+        $url = $this->datasetUrl ?? 'https://www.data.gouv.fr/fr/datasets/r/8067f5e0-15a7-48c3-9eb9-c9df2de96a1c';
 
         $io->title('Import weekly markets from data.gouv.fr');
 
