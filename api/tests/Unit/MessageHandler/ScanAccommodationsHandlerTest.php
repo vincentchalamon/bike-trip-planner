@@ -626,6 +626,192 @@ final class ScanAccommodationsHandlerTest extends TestCase
     }
 
     #[Test]
+    public function wildernessHutIsRecognisedAsTypeWildernessHut(): void
+    {
+        $stage = $this->createStage('trip-wilderness', 48.5, 2.5);
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getRequest')->willReturn(null);
+
+        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
+        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
+
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('query')->willReturn([
+            'elements' => [
+                ['lat' => 48.6, 'lon' => 2.6, 'tags' => ['tourism' => 'wilderness_hut', 'name' => 'Refuge du Sommet']],
+            ],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByEndpoint')->willReturn([
+            0 => [
+                [
+                    'name' => 'Refuge du Sommet',
+                    'type' => 'wilderness_hut',
+                    'lat' => 48.6,
+                    'lon' => 2.6,
+                    'priceMin' => 0.0,
+                    'priceMax' => 10.0,
+                    'isExact' => false,
+                    'url' => null,
+                    'tagCount' => 2,
+                    'hasWebsite' => false,
+                    'tags' => ['tourism' => 'wilderness_hut', 'name' => 'Refuge du Sommet'],
+                ],
+            ],
+        ]);
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inKilometers')->willReturn(1.0);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-wilderness',
+                MercureEventType::ACCOMMODATIONS_FOUND,
+                $this->callback(static function (array $data): bool {
+                    $acc = $data['accommodations'][0] ?? null;
+
+                    return null !== $acc
+                        && 'wilderness_hut' === $acc['type']
+                        && 0.0 === $acc['estimatedPriceMin']
+                        && 10.0 === $acc['estimatedPriceMax'];
+                }),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
+        $handler(new ScanAccommodations('trip-wilderness'));
+    }
+
+    #[Test]
+    public function amenityShelterElementIsMappedToTypeShelt(): void
+    {
+        $stage = $this->createStage('trip-shelter', 48.5, 2.5);
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getRequest')->willReturn(null);
+
+        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
+        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
+
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('query')->willReturn([
+            'elements' => [
+                ['lat' => 48.6, 'lon' => 2.6, 'tags' => ['amenity' => 'shelter', 'shelter_type' => 'lean_to', 'name' => 'Lean-To Shelter']],
+            ],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByEndpoint')->willReturn([
+            0 => [
+                [
+                    'name' => 'Lean-To Shelter',
+                    'type' => 'shelter',
+                    'lat' => 48.6,
+                    'lon' => 2.6,
+                    'priceMin' => 0.0,
+                    'priceMax' => 0.0,
+                    'isExact' => false,
+                    'url' => null,
+                    'tagCount' => 3,
+                    'hasWebsite' => false,
+                    'tags' => ['amenity' => 'shelter', 'shelter_type' => 'lean_to', 'name' => 'Lean-To Shelter'],
+                ],
+            ],
+        ]);
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inKilometers')->willReturn(0.5);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-shelter',
+                MercureEventType::ACCOMMODATIONS_FOUND,
+                $this->callback(static function (array $data): bool {
+                    $acc = $data['accommodations'][0] ?? null;
+
+                    return null !== $acc
+                        && 'shelter' === $acc['type']
+                        && 0.0 === $acc['estimatedPriceMin']
+                        && 0.0 === $acc['estimatedPriceMax'];
+                }),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
+        $handler(new ScanAccommodations('trip-shelter'));
+    }
+
+    #[Test]
+    public function campSiteWithBackpackYesReceivesBikepackerFriendlyPricing(): void
+    {
+        $stage = $this->createStage('trip-backpack', 48.5, 2.5);
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getRequest')->willReturn(null);
+
+        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
+        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
+
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('query')->willReturn([
+            'elements' => [
+                ['lat' => 48.6, 'lon' => 2.6, 'tags' => ['tourism' => 'camp_site', 'backpack' => 'yes', 'name' => 'Wild Camp']],
+            ],
+        ]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByEndpoint')->willReturn([
+            0 => [
+                [
+                    'name' => 'Wild Camp',
+                    'type' => 'camp_site',
+                    'lat' => 48.6,
+                    'lon' => 2.6,
+                    'priceMin' => 8.0,
+                    'priceMax' => 15.0,
+                    'isExact' => false,
+                    'url' => null,
+                    'tagCount' => 3,
+                    'hasWebsite' => false,
+                    'tags' => ['tourism' => 'camp_site', 'backpack' => 'yes', 'name' => 'Wild Camp'],
+                ],
+            ],
+        ]);
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inKilometers')->willReturn(2.0);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-backpack',
+                MercureEventType::ACCOMMODATIONS_FOUND,
+                $this->callback(static function (array $data): bool {
+                    $acc = $data['accommodations'][0] ?? null;
+
+                    return null !== $acc
+                        && 'camp_site' === $acc['type']
+                        && 8.0 === $acc['estimatedPriceMin']
+                        && 15.0 === $acc['estimatedPriceMax'];
+                }),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
+        $handler(new ScanAccommodations('trip-backpack'));
+    }
+
+    #[Test]
     public function wave2TimeoutPreservesHeuristicPriceAndDoesNotThrow(): void
     {
         $stage = $this->createStage('trip-wave2', 48.5, 2.5);

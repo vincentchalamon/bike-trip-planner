@@ -31,6 +31,8 @@ final class PricingHeuristicEngineTest extends TestCase
         yield 'guest_house' => ['guest_house', 40.0, 80.0];
         yield 'motel' => ['motel', 45.0, 90.0];
         yield 'hotel' => ['hotel', 50.0, 120.0];
+        yield 'wilderness_hut' => ['wilderness_hut', 0.0, 10.0];
+        yield 'shelter' => ['shelter', 0.0, 0.0];
     }
 
     #[DataProvider('priceBracketProvider')]
@@ -111,6 +113,56 @@ final class PricingHeuristicEngineTest extends TestCase
 
         $this->assertSame(20.0, $result['min']);
         $this->assertSame(35.0, $result['max']);
+        $this->assertFalse($result['isExact']);
+    }
+
+    #[Test]
+    public function estimatePriceAppliesBikepackerCapForCampSiteWithBackpackYes(): void
+    {
+        $result = $this->engine->estimatePrice('camp_site', ['backpack' => 'yes']);
+
+        $this->assertSame(8.0, $result['min']);
+        $this->assertSame(15.0, $result['max']);
+        $this->assertFalse($result['isExact']);
+    }
+
+    #[Test]
+    public function estimatePriceAppliesBikepackerCapForCampSiteWithTentsYes(): void
+    {
+        $result = $this->engine->estimatePrice('camp_site', ['tents' => 'yes']);
+
+        $this->assertSame(8.0, $result['min']);
+        $this->assertSame(15.0, $result['max']);
+        $this->assertFalse($result['isExact']);
+    }
+
+    #[Test]
+    public function estimatePriceDoesNotApplyBikepackerCapForCampSiteWithoutBikepackerTags(): void
+    {
+        $result = $this->engine->estimatePrice('camp_site', ['name' => 'Camping Standard']);
+
+        $this->assertSame(8.0, $result['min']);
+        $this->assertSame(25.0, $result['max']);
+        $this->assertFalse($result['isExact']);
+    }
+
+    #[Test]
+    public function estimatePriceReturnsFreeForShelter(): void
+    {
+        $result = $this->engine->estimatePrice('shelter');
+
+        $this->assertSame(0.0, $result['min']);
+        $this->assertSame(0.0, $result['max']);
+        $this->assertFalse($result['isExact']);
+    }
+
+    #[Test]
+    public function estimatePriceReturnsFreeDonationRangeForWildernessHut(): void
+    {
+        $result = $this->engine->estimatePrice('wilderness_hut');
+
+        $this->assertSame(0.0, $result['min']);
+        $this->assertSame(10.0, $result['max']);
         $this->assertFalse($result['isExact']);
     }
 }

@@ -27,7 +27,7 @@ interface QueryBuilderInterface
 
     /**
      * @param array<int, Coordinate> $endPoints
-     * @param list<string>           $enabledTypes OSM tourism types to include (default: all 7)
+     * @param list<string>           $enabledTypes OSM accommodation types to include (default: all 9)
      */
     public function buildAccommodationQuery(array $endPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS, array $enabledTypes = TripRequest::ALL_ACCOMMODATION_TYPES): string;
 
