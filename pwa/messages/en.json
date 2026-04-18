@@ -505,6 +505,27 @@
       "offlineBadge": "Offline"
     }
   },
+  "earlyAccess": {
+    "sectionTitle": "Request early access",
+    "sectionDescription": "Bike Trip Planner is currently in private beta. Leave your email address to be notified when your access is granted.",
+    "earlyAccessDescription": "Leave your email address and we'll notify you as soon as your spot opens up.",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "invalidEmail": "Please enter a valid email address.",
+    "submitButton": "Request access",
+    "sending": "Sending...",
+    "successMessage": "Thank you! You will receive a confirmation email shortly.",
+    "throttledMessage": "Too many requests. Please wait a few minutes before trying again.",
+    "verifying": "Verifying your email address...",
+    "accessConfirmed": "Your email address has been confirmed! We will notify you when your access is granted.",
+    "loginBoxTitle": "Don't have an account yet?",
+    "loginBoxDescription": "Bike Trip Planner is currently in private beta. Register your interest to receive an invitation.",
+    "loginBoxCta": "Request early access",
+    "ctaCreateTrip": "Create a trip"
+  },
+  "navigation": {
+    "myTrips": "My trips"
+  },
   "faq": {
     "title": "Frequently Asked Questions",
     "description": "Everything you need to know about Bike Trip Planner.",

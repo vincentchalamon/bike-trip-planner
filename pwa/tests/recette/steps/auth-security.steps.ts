@@ -162,15 +162,11 @@ When("I try to access my trips", async ({ page }) => {
 // --- Additional missing steps ---
 
 When("je navigue vers la page d'accueil", async ({ page }) => {
-  // "Home page" for an unauthenticated user means a protected route;
-  // `/` is the public landing page and does not redirect.
-  await page.goto("/trips/new");
+  await page.goto("/");
 });
 
 When("I navigate to the home page", async ({ page }) => {
-  // "Home page" for an unauthenticated user means a protected route;
-  // `/` is the public landing page and does not redirect.
-  await page.goto("/trips/new");
+  await page.goto("/");
 });
 
 When("je clique sur le bouton de déconnexion", async ({ $test }) => {
@@ -187,6 +183,20 @@ Then("je suis redirigé vers la page de connexion", async ({ page }) => {
 
 Then("I am redirected to the login page", async ({ page }) => {
   await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
+});
+
+Then("I see the early access form", async ({ page }) => {
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByTestId("early-access-form")).toBeVisible({
+    timeout: 5000,
+  });
+});
+
+Then("je vois le formulaire d'accès anticipé", async ({ page }) => {
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByTestId("early-access-form")).toBeVisible({
+    timeout: 5000,
+  });
 });
 
 When("une erreur serveur se produit", async ({ mockedPage }) => {

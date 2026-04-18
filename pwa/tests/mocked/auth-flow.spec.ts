@@ -60,6 +60,7 @@ test.describe("Auth flow", () => {
 
     await expect(page).toHaveURL("/");
     await expect(page.getByTestId("landing-page")).toBeVisible();
+    await expect(page.getByTestId("early-access-form")).toBeVisible();
   });
 
   test("unauthenticated user is redirected to login when accessing protected route", async ({

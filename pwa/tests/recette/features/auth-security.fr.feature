@@ -20,10 +20,10 @@ Fonctionnalité: Authentification et sécurité
     Alors je vois le message de confirmation d'envoi
 
   @desktop @critique
-  Scénario: Utilisateur non connecté redirigé vers la connexion
+  Scénario: Utilisateur non connecté voit la page d'accueil publique
     Étant donné que je ne suis pas connecté
     Quand je navigue vers la page d'accueil
-    Alors je suis redirigé vers /login
+    Alors je vois le formulaire d'accès anticipé
 
   @desktop @critique
   Scénario: Redirection vers l'accueil après vérification du token

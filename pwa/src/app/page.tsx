@@ -1,38 +1,57 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/store/auth-store";
-import { LandingPage } from "@/components/landing-page";
 import { HydrationBoundary } from "@/components/hydration-boundary";
 import { TripPlanner } from "@/components/trip-planner";
 import { TripPlannerErrorBoundary } from "@/components/trip-planner-error-boundary";
+import { LandingPage } from "@/components/landing-page";
 
 /**
- * Home page — dual-mode component:
- * - Unauthenticated visitors (after auth check): marketing landing page
- * - Authenticated users: trip planner (existing behaviour)
+ * Home page.
  *
- * Runs a silent refresh on mount to restore the session from the httpOnly
- * refresh_token cookie before deciding which view to render. This prevents
- * a flash of the landing page for returning authenticated users.
+ * - Authenticated users see the TripPlanner.
+ * - Unauthenticated users see the public LandingPage with early access form.
+ *
+ * Since `/` is a public route (no AuthGuard redirect), this component performs
+ * its own silent auth check on mount to avoid flashing the landing page to
+ * users who have a valid refresh token.
  */
-function HomePageContent() {
+function HomeContent() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const silentRefresh = useAuthStore((s) => s.silentRefresh);
-  const [refreshAttempted, setRefreshAttempted] = useState(false);
+  // When the user is already authenticated on mount we can render immediately;
+  // otherwise we must await the silent refresh before deciding what to render.
+  const [refreshDone, setRefreshDone] = useState(false);
+  const checkStarted = useRef(false);
 
   useEffect(() => {
-    if (isAuthenticated) return;
-    void silentRefresh().finally(() => setRefreshAttempted(true));
-  }, [isAuthenticated, silentRefresh]);
+    if (checkStarted.current) return;
+    checkStarted.current = true;
 
-  // Show nothing while the initial auth check is in flight
-  if (!isAuthenticated && !refreshAttempted) {
+    if (isAuthenticated) return;
+
+    const check = async () => {
+      try {
+        await useAuthStore.getState().silentRefresh();
+      } finally {
+        setRefreshDone(true);
+      }
+    };
+
+    void check();
+  }, [isAuthenticated]);
+
+  // Render nothing while checking auth to avoid flash
+  if (!isAuthenticated && !refreshDone) {
     return null;
   }
 
   if (!isAuthenticated) {
-    return <LandingPage />;
+    return (
+      <Suspense fallback={null}>
+        <LandingPage />
+      </Suspense>
+    );
   }
 
   return (
@@ -49,7 +68,7 @@ function HomePageContent() {
 export default function Page() {
   return (
     <Suspense fallback={null}>
-      <HomePageContent />
+      <HomeContent />
     </Suspense>
   );
 }
