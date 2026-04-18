@@ -64,6 +64,7 @@ export interface AccommodationPayload {
   isExactPrice: boolean;
   possibleClosed: boolean;
   distanceToEndPoint: number;
+  source: "osm" | "datatourisme";
 }
 
 export interface SupplyWaterPoint {

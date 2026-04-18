@@ -87,6 +87,7 @@ export const AccommodationSchema = z.object({
   url: z.string().nullable().optional(),
   possibleClosed: z.boolean().default(false),
   distanceToEndPoint: z.number().default(0),
+  source: z.enum(["osm", "datatourisme"]).default("osm"),
 });
 
 export const StageDataSchema = z.object({
