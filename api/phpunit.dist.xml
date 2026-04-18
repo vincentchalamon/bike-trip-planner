@@ -30,6 +30,7 @@
         <env name="MESSENGER_FAILED_DSN" value="in-memory://" force="true" />
 
         <env name="MAILER_DSN" value="null://null"/>
+        <env name="ACCESS_REQUEST_HMAC_SECRET" value="test-hmac-secret-for-phpunit" force="true"/>
     </php>
 
     <testsuites>

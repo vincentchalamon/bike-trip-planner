@@ -391,6 +391,110 @@
     "readOnlyBanner": "Vous consultez un voyage partagé en lecture seule.",
     "noStages": "Ce voyage n'a pas encore d'étapes."
   },
+  "landing": {
+    "hero": {
+      "badge": "Accès anticipé — Places limitées",
+      "title": "Votre copilote pour chaque kilomètre",
+      "subtitle": "Préparez votre voyage à vélo en toute sérénité. Analyse d'itinéraire, alertes de terrain, météo, hébergements et ravitaillement — tout en un.",
+      "ctaPrimary": "Créer un itinéraire",
+      "ctaDemo": "Voir une démo"
+    },
+    "howItWorks": {
+      "title": "Comment ça marche",
+      "step1Title": "Importez votre itinéraire",
+      "step1Description": "Collez un lien Komoot, Strava, RideWithGPS ou importez un fichier GPX.",
+      "step2Title": "Prévisualisez votre voyage",
+      "step2Description": "La carte et la timeline affichent vos étapes calculées automatiquement.",
+      "step3Title": "On analyse tout",
+      "step3Description": "Notre moteur détecte les alertes terrain, météo, hébergements et ravitaillement.",
+      "step4Title": "Partez serein",
+      "step4Description": "Téléchargez votre GPX/FIT optimisé et partez l'esprit tranquille."
+    },
+    "features": {
+      "title": "Fonctionnalités",
+      "terrain": {
+        "title": "Terrain & Sécurité",
+        "description": "Alertes passages frontaliers, gares SNCF, services d'urgence à proximité."
+      },
+      "supply": {
+        "title": "Ravitaillement",
+        "description": "Points d'eau, épiceries, restaurants détectés sur votre tracé."
+      },
+      "ai": {
+        "title": "Assistant IA",
+        "description": "Générez ou optimisez votre itinéraire avec l'intelligence artificielle. Import depuis une conversation, suggestions de variantes."
+      },
+      "accommodation": {
+        "title": "Hébergements",
+        "description": "Campings, gîtes, hôtels suggérés à chaque étape avec budget estimé."
+      },
+      "weather": {
+        "title": "Météo",
+        "description": "Prévisions météo à 7 jours pour chaque étape de votre voyage."
+      },
+      "services": {
+        "title": "Services",
+        "description": "Pharmacies, médecins, réparateurs vélo signalés en cas d'urgence."
+      }
+    },
+    "sources": {
+      "title": "Sources supportées"
+    },
+    "availability": {
+      "title": "Disponible partout",
+      "responsive": "Site responsive",
+      "responsiveDescription": "Optimisé pour tous les écrans, du smartphone à l'écran large.",
+      "pwa": "PWA installable",
+      "pwaDescription": "Installez l'application sur votre appareil comme une app native.",
+      "android": "Application Android",
+      "androidDescription": "Version Android native pour une expérience mobile optimale.",
+      "offline": "Mode hors ligne",
+      "offlineDescription": "Consultez vos voyages sans connexion pendant le trajet."
+    },
+    "screenshots": {
+      "title": "Aperçu de l'application",
+      "map": "Carte globale",
+      "stage": "Étape détaillée",
+      "analysis": "Analyse IA",
+      "prev": "Précédent",
+      "next": "Suivant"
+    },
+    "testimonials": {
+      "title": "Ils l'ont testé",
+      "starsLabel": "5 étoiles sur 5",
+      "1": {
+        "text": "Un outil indispensable pour préparer mes voyages bikepacking. Les alertes terrain m'ont évité plusieurs mauvaises surprises !",
+        "author": "Marie L.",
+        "role": "Cyclotouriste, testeuse bêta"
+      },
+      "2": {
+        "text": "La gestion automatique des étapes et l'intégration Komoot sont bluffantes. Je n'imagine plus planifier sans cet outil.",
+        "author": "Thomas B.",
+        "role": "Biker longue distance, testeur bêta"
+      },
+      "3": {
+        "text": "L'assistant IA est vraiment utile pour générer des variantes d'itinéraire. L'application est encore en bêta mais déjà très complète.",
+        "author": "Sophie M.",
+        "role": "Randonneuse à vélo, testeuse bêta"
+      }
+    },
+    "earlyAccess": {
+      "title": "Rejoignez l'accès anticipé",
+      "description": "Places limitées. Soyez parmi les premiers à planifier vos aventures avec Bike Trip Planner.",
+      "ctaPrimary": "Créer un itinéraire",
+      "waitingListTitle": "Rejoindre la liste d'attente",
+      "waitingListComingSoon": "Inscriptions bientôt disponibles. Revenez très vite !"
+    },
+    "footer": {
+      "tagline": "Le copilote open-source pour vos aventures à vélo.",
+      "links": "Liens",
+      "createTrip": "Créer un itinéraire",
+      "login": "Connexion",
+      "legal": "Mentions légales",
+      "github": "GitHub (open-source)",
+      "copyright": "© {year} Bike Trip Planner. Projet open-source."
+    }
+  },
   "offline": {
     "offlineMessage": "Hors ligne — consultation des données en cache. Modification désactivée.",
     "reconnected": "Connexion rétablie.",
