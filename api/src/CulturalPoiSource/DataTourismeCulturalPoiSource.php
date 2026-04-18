@@ -95,7 +95,7 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
             }
         }
 
-        if ([] === $allLats) {
+        if ([] === $allLats || [] === $allLons) {
             return [0.0, 0.0, 0.0, 0.0];
         }
 
@@ -139,9 +139,6 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
         ];
     }
 
-    /**
-     * @param mixed $label
-     */
     private function extractLabel(mixed $label): ?string
     {
         if (\is_string($label)) {
@@ -150,9 +147,10 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
 
         if (\is_array($label)) {
             foreach ($label as $entry) {
-                if (\is_array($entry) && isset($entry['@value'])) {
+                if (\is_array($entry) && isset($entry['@value']) && \is_scalar($entry['@value'])) {
                     return (string) $entry['@value'];
                 }
+
                 if (\is_string($entry)) {
                     return $entry;
                 }
@@ -177,16 +175,13 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
         $lat = $geometry['schema:latitude'] ?? $geometry['lat'] ?? null;
         $lon = $geometry['schema:longitude'] ?? $geometry['lon'] ?? null;
 
-        if (null === $lat || null === $lon) {
+        if (!is_numeric($lat) || !is_numeric($lon)) {
             return null;
         }
 
         return ['lat' => (float) $lat, 'lon' => (float) $lon];
     }
 
-    /**
-     * @param mixed $types
-     */
     private function resolveType(mixed $types): string
     {
         if (\is_string($types)) {
@@ -213,9 +208,6 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
         return 'attraction';
     }
 
-    /**
-     * @param mixed $specs
-     */
     private function extractOpeningHours(mixed $specs): ?string
     {
         if (!\is_array($specs)) {
@@ -236,11 +228,23 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
             $opens = $spec['schema:opens'] ?? null;
             $closes = $spec['schema:closes'] ?? null;
 
-            if (null === $opens || null === $closes) {
+            if (!\is_string($opens) || !\is_string($closes)) {
                 continue;
             }
 
-            $dayStr = \is_array($days) ? implode(', ', array_map([$this, 'formatDay'], $days)) : ($days ?? '');
+            if (\is_array($days)) {
+                $dayParts = [];
+                foreach ($days as $day) {
+                    if (\is_string($day)) {
+                        $dayParts[] = $this->formatDay($day);
+                    }
+                }
+
+                $dayStr = implode(', ', $dayParts);
+            } else {
+                $dayStr = \is_string($days) ? $days : '';
+            }
+
             $parts[] = trim(\sprintf('%s %s–%s', $dayStr, $opens, $closes));
         }
 
@@ -262,9 +266,6 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
         return $map[$day] ?? $day;
     }
 
-    /**
-     * @param mixed $offers
-     */
     private function extractPrice(mixed $offers): ?float
     {
         if (!\is_array($offers)) {
@@ -297,7 +298,7 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
                 $price = $spec['schema:price'] ?? $spec['price'] ?? null;
                 $currency = $spec['schema:priceCurrency'] ?? $spec['priceCurrency'] ?? null;
 
-                if (null !== $price && (null === $currency || 'EUR' === $currency)) {
+                if (is_numeric($price) && (null === $currency || 'EUR' === $currency)) {
                     return (float) $price;
                 }
             }
@@ -319,9 +320,10 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
 
         if (\is_array($raw)) {
             foreach ($raw as $entry) {
-                if (\is_array($entry) && isset($entry['@value'])) {
+                if (\is_array($entry) && isset($entry['@value']) && \is_scalar($entry['@value'])) {
                     return (string) $entry['@value'];
                 }
+
                 if (\is_string($entry)) {
                     return $entry;
                 }
@@ -331,9 +333,6 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
         return null;
     }
 
-    /**
-     * @param mixed $sameAs
-     */
     private function extractWikidataId(mixed $sameAs): ?string
     {
         if (\is_string($sameAs)) {

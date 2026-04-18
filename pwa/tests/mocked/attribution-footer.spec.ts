@@ -50,7 +50,9 @@ test.describe("attribution footer", () => {
     await expect(list).toBeVisible();
 
     await expect(page.getByTestId("attribution-osm-link")).toBeVisible();
-    await expect(page.getByTestId("attribution-datatourisme-link")).toBeVisible();
+    await expect(
+      page.getByTestId("attribution-datatourisme-link"),
+    ).toBeVisible();
     await expect(page.getByTestId("attribution-wikidata-link")).toBeVisible();
     await expect(page.getByTestId("attribution-datagouv-link")).toBeVisible();
   });

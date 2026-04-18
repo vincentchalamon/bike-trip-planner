@@ -25,10 +25,7 @@ export function AttributionFooter() {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          className="max-w-md"
-          data-testid="attribution-modal"
-        >
+        <DialogContent className="max-w-md" data-testid="attribution-modal">
           <DialogHeader>
             <DialogTitle>{t("title")}</DialogTitle>
             <DialogDescription>{t("description")}</DialogDescription>

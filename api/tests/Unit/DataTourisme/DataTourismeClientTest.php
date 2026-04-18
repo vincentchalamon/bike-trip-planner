@@ -9,7 +9,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\RateLimiter\LimiterInterface;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\RateLimiter\RateLimit;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
@@ -71,7 +71,7 @@ final class DataTourismeClientTest extends TestCase
         $httpClient = $this->createMock(HttpClientInterface::class);
         $httpClient->expects($this->never())->method('request');
 
-        $rateLimiter = $this->createMock(RateLimiterFactory::class);
+        $rateLimiter = $this->createMock(RateLimiterFactoryInterface::class);
         $rateLimiter->expects($this->never())->method('create');
 
         $client = $this->makeClient(cache: $cache, httpClient: $httpClient, rateLimiter: $rateLimiter);
@@ -96,20 +96,18 @@ final class DataTourismeClientTest extends TestCase
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects($this->once())
             ->method('get')
-            ->willReturnCallback(static function (string $key, callable $callback) use ($item): mixed {
-                return $callback($item);
-            });
+            ->willReturnCallback(static fn (string $key, callable $callback): mixed => $callback($item));
 
-        $rateLimit = $this->createMock(RateLimit::class);
+        $rateLimit = $this->createStub(RateLimit::class);
         $rateLimit->method('isAccepted')->willReturn(true);
 
-        $limiter = $this->createMock(LimiterInterface::class);
+        $limiter = $this->createStub(LimiterInterface::class);
         $limiter->method('consume')->willReturn($rateLimit);
 
-        $rateLimiter = $this->createMock(RateLimiterFactory::class);
+        $rateLimiter = $this->createStub(RateLimiterFactoryInterface::class);
         $rateLimiter->method('create')->willReturn($limiter);
 
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('toArray')->willReturn($apiResponse);
 
         $httpClient = $this->createMock(HttpClientInterface::class);
@@ -134,23 +132,21 @@ final class DataTourismeClientTest extends TestCase
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects($this->once())
             ->method('get')
-            ->willReturnCallback(static function (string $key, callable $callback) use ($item): mixed {
-                return $callback($item);
-            });
+            ->willReturnCallback(static fn (string $key, callable $callback): mixed => $callback($item));
 
-        $rateLimit = $this->createMock(RateLimit::class);
+        $rateLimit = $this->createStub(RateLimit::class);
         $rateLimit->method('isAccepted')->willReturn(true);
 
-        $limiter = $this->createMock(LimiterInterface::class);
+        $limiter = $this->createStub(LimiterInterface::class);
         $limiter->method('consume')->willReturn($rateLimit);
 
-        $rateLimiter = $this->createMock(RateLimiterFactory::class);
+        $rateLimiter = $this->createStub(RateLimiterFactoryInterface::class);
         $rateLimiter->method('create')->willReturn($limiter);
 
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('toArray')->willReturn([]);
 
-        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient = $this->createStub(HttpClientInterface::class);
         $httpClient->method('request')->willReturn($response);
 
         $client = $this->makeClient(cache: $cache, httpClient: $httpClient, rateLimiter: $rateLimiter);
@@ -165,23 +161,21 @@ final class DataTourismeClientTest extends TestCase
     #[Test]
     public function requestReturnsEmptyAndLogsWarningWhenRateLimitExhausted(): void
     {
-        $item = $this->createMock(ItemInterface::class);
+        $item = $this->createStub(ItemInterface::class);
         $item->method('expiresAfter')->willReturnSelf();
 
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects($this->once())
             ->method('get')
-            ->willReturnCallback(static function (string $key, callable $callback) use ($item): mixed {
-                return $callback($item);
-            });
+            ->willReturnCallback(static fn (string $key, callable $callback): mixed => $callback($item));
 
-        $rateLimit = $this->createMock(RateLimit::class);
+        $rateLimit = $this->createStub(RateLimit::class);
         $rateLimit->method('isAccepted')->willReturn(false);
 
-        $limiter = $this->createMock(LimiterInterface::class);
+        $limiter = $this->createStub(LimiterInterface::class);
         $limiter->method('consume')->willReturn($rateLimit);
 
-        $rateLimiter = $this->createMock(RateLimiterFactory::class);
+        $rateLimiter = $this->createStub(RateLimiterFactoryInterface::class);
         $rateLimiter->method('create')->willReturn($limiter);
 
         $httpClient = $this->createMock(HttpClientInterface::class);
@@ -206,26 +200,24 @@ final class DataTourismeClientTest extends TestCase
     #[Test]
     public function requestReturnsEmptyAndLogsWarningOnHttpError(): void
     {
-        $item = $this->createMock(ItemInterface::class);
+        $item = $this->createStub(ItemInterface::class);
         $item->method('expiresAfter')->willReturnSelf();
 
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects($this->once())
             ->method('get')
-            ->willReturnCallback(static function (string $key, callable $callback) use ($item): mixed {
-                return $callback($item);
-            });
+            ->willReturnCallback(static fn (string $key, callable $callback): mixed => $callback($item));
 
-        $rateLimit = $this->createMock(RateLimit::class);
+        $rateLimit = $this->createStub(RateLimit::class);
         $rateLimit->method('isAccepted')->willReturn(true);
 
-        $limiter = $this->createMock(LimiterInterface::class);
+        $limiter = $this->createStub(LimiterInterface::class);
         $limiter->method('consume')->willReturn($rateLimit);
 
-        $rateLimiter = $this->createMock(RateLimiterFactory::class);
+        $rateLimiter = $this->createStub(RateLimiterFactoryInterface::class);
         $rateLimiter->method('create')->willReturn($limiter);
 
-        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient = $this->createStub(HttpClientInterface::class);
         $httpClient->method('request')->willThrowException(new \RuntimeException('Connection refused'));
 
         $logger = $this->createMock(LoggerInterface::class);
@@ -247,7 +239,7 @@ final class DataTourismeClientTest extends TestCase
     private function makeClient(
         ?CacheInterface $cache = null,
         ?HttpClientInterface $httpClient = null,
-        ?RateLimiterFactory $rateLimiter = null,
+        ?RateLimiterFactoryInterface $rateLimiter = null,
         ?LoggerInterface $logger = null,
         string $apiKey = 'test-api-key',
         bool $enabled = true,
@@ -255,7 +247,7 @@ final class DataTourismeClientTest extends TestCase
         return new DataTourismeClient(
             httpClient: $httpClient ?? $this->createStub(HttpClientInterface::class),
             cache: $cache ?? $this->createStub(CacheInterface::class),
-            rateLimiter: $rateLimiter ?? $this->createStub(RateLimiterFactory::class),
+            rateLimiter: $rateLimiter ?? $this->createStub(RateLimiterFactoryInterface::class),
             logger: $logger ?? $this->createStub(LoggerInterface::class),
             apiKey: $apiKey,
             enabled: $enabled,

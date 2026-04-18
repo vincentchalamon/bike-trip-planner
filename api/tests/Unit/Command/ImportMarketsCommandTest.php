@@ -10,6 +10,7 @@ use App\Repository\MarketRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
@@ -31,20 +32,20 @@ final class ImportMarketsCommandTest extends TestCase
         CSV;
 
     /** @var MarketRepositoryInterface&MockObject */
-    private MarketRepositoryInterface $marketRepository;
+    private MockObject $marketRepository;
 
     /** @var EntityManagerInterface&MockObject */
-    private EntityManagerInterface $entityManager;
+    private MockObject $entityManager;
 
-    /** @var HttpClientInterface&MockObject */
-    private HttpClientInterface $httpClient;
+    /** @var HttpClientInterface&Stub */
+    private Stub $httpClient;
 
     #[\Override]
     protected function setUp(): void
     {
         $this->marketRepository = $this->createMock(MarketRepositoryInterface::class);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->httpClient = $this->createMock(HttpClientInterface::class);
+        $this->httpClient = $this->createStub(HttpClientInterface::class);
     }
 
     private function createCommandWithFixtureCsv(string $csvContent): CommandTester
@@ -58,11 +59,9 @@ final class ImportMarketsCommandTest extends TestCase
         $chunk->method('getContent')->willReturn(file_get_contents($tmpFile) ?: '');
         $chunk->method('isLast')->willReturn(true);
 
-        $stream = $this->createMock(ResponseStreamInterface::class);
+        $stream = $this->createStub(ResponseStreamInterface::class);
         $stream->method('current')->willReturn($chunk);
         $stream->method('valid')->willReturnOnConsecutiveCalls(true, false);
-        $stream->method('rewind')->willReturn(null);
-        $stream->method('next')->willReturn(null);
 
         $this->httpClient->method('request')->willReturn($response);
         $this->httpClient->method('stream')->willReturn($stream);
@@ -174,6 +173,10 @@ final class ImportMarketsCommandTest extends TestCase
         $this->marketRepository
             ->expects($this->exactly(2))
             ->method('save');
+
+        $this->entityManager
+            ->expects($this->once())
+            ->method('flush');
 
         $tester = $this->createCommandWithFixtureCsv(self::FIXTURE_CSV);
         $exitCode = $tester->execute(['--limit' => '2']);

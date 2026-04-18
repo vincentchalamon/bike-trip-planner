@@ -289,7 +289,7 @@ final class ScanEventsHandlerTest extends TestCase
             static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type'],
         );
 
-        $event = array_values($eventsPublished)[0] ?? null;
+        $event = array_first($eventsPublished) ?? null;
         self::assertNotNull($event);
         self::assertCount(0, $event['payload']['events']);
     }

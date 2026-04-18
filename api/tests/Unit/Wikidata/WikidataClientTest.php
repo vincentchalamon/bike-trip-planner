@@ -52,7 +52,9 @@ final class WikidataClientTest extends TestCase
             (string) file_get_contents(__DIR__.'/../../Fixtures/wikidata/batch-response.json'),
             true,
         );
-        /** @var array<string, mixed> $fixture */
+        \assert(\is_array($fixture));
+        \assert(isset($fixture['results']) && \is_array($fixture['results']));
+        \assert(isset($fixture['results']['bindings']) && \is_array($fixture['results']['bindings']));
         $bindings = $fixture['results']['bindings'];
 
         $item = $this->createMock(ItemInterface::class);
@@ -61,11 +63,9 @@ final class WikidataClientTest extends TestCase
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects($this->once())
             ->method('get')
-            ->willReturnCallback(static function (string $key, callable $callback) use ($item): mixed {
-                return $callback($item);
-            });
+            ->willReturnCallback(static fn (string $key, callable $callback): mixed => $callback($item));
 
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('toArray')->willReturn($fixture);
 
         $httpClient = $this->createMock(HttpClientInterface::class);
@@ -90,16 +90,13 @@ final class WikidataClientTest extends TestCase
     {
         $sparql = 'SELECT ?item WHERE { wd:Q1 ?p ?o }';
 
-        $item = $this->createMock(ItemInterface::class);
-        $item->method('expiresAfter');
+        $item = $this->createStub(ItemInterface::class);
 
-        $cache = $this->createMock(CacheInterface::class);
+        $cache = $this->createStub(CacheInterface::class);
         $cache->method('get')
-            ->willReturnCallback(static function (string $key, callable $callback) use ($item): mixed {
-                return $callback($item);
-            });
+            ->willReturnCallback(static fn (string $key, callable $callback): mixed => $callback($item));
 
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('toArray')->willReturn(['results' => ['bindings' => []]]);
 
         $httpClient = $this->createMock(HttpClientInterface::class);
@@ -108,11 +105,9 @@ final class WikidataClientTest extends TestCase
             ->with(
                 'GET',
                 'https://query.wikidata.org/sparql',
-                $this->callback(static function (array $options) use ($sparql): bool {
-                    return isset($options['query']['query'])
-                        && $sparql === $options['query']['query']
-                        && 'json' === $options['query']['format'];
-                }),
+                $this->callback(static fn (array $options): bool => isset($options['query']['query'])
+                    && $sparql === $options['query']['query']
+                    && 'json' === $options['query']['format']),
             )
             ->willReturn($response);
 
@@ -127,16 +122,13 @@ final class WikidataClientTest extends TestCase
     #[Test]
     public function queryLogsWarningAndReturnsEmptyOnHttpError(): void
     {
-        $item = $this->createMock(ItemInterface::class);
-        $item->method('expiresAfter');
+        $item = $this->createStub(ItemInterface::class);
 
-        $cache = $this->createMock(CacheInterface::class);
+        $cache = $this->createStub(CacheInterface::class);
         $cache->method('get')
-            ->willReturnCallback(static function (string $key, callable $callback) use ($item): mixed {
-                return $callback($item);
-            });
+            ->willReturnCallback(static fn (string $key, callable $callback): mixed => $callback($item));
 
-        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient = $this->createStub(HttpClientInterface::class);
         $httpClient->method('request')->willThrowException(new \RuntimeException('Connection timeout'));
 
         $logger = $this->createMock(LoggerInterface::class);
@@ -154,19 +146,16 @@ final class WikidataClientTest extends TestCase
     #[Test]
     public function queryReturnsEmptyArrayWhenBindingsMissing(): void
     {
-        $item = $this->createMock(ItemInterface::class);
-        $item->method('expiresAfter');
+        $item = $this->createStub(ItemInterface::class);
 
-        $cache = $this->createMock(CacheInterface::class);
+        $cache = $this->createStub(CacheInterface::class);
         $cache->method('get')
-            ->willReturnCallback(static function (string $key, callable $callback) use ($item): mixed {
-                return $callback($item);
-            });
+            ->willReturnCallback(static fn (string $key, callable $callback): mixed => $callback($item));
 
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $response->method('toArray')->willReturn(['results' => []]);
 
-        $httpClient = $this->createMock(HttpClientInterface::class);
+        $httpClient = $this->createStub(HttpClientInterface::class);
         $httpClient->method('request')->willReturn($response);
 
         $client = $this->makeClient(cache: $cache, httpClient: $httpClient);

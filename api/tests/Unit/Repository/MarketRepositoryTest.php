@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Repository;
 
+use Doctrine\ORM\UnitOfWork;
+use Doctrine\ORM\Persisters\Entity\EntityPersister;
 use App\Entity\Market;
 use App\Repository\MarketRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -97,9 +99,9 @@ final class MarketRepositoryTest extends TestCase
     #[Test]
     public function findByExternalIdReturnsNullWhenNotFound(): void
     {
-        $unitOfWork = $this->createStub(\Doctrine\ORM\UnitOfWork::class);
+        $unitOfWork = $this->createStub(UnitOfWork::class);
         $unitOfWork->method('getEntityPersister')->willReturn(
-            $this->createConfiguredStub(\Doctrine\ORM\Persisters\Entity\EntityPersister::class, [
+            $this->createConfiguredStub(EntityPersister::class, [
                 'load' => null,
             ])
         );
