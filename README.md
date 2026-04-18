@@ -210,6 +210,22 @@ When `DATATOURISME_ENABLED=false` (the default) or the API key is absent, all Da
 
 ---
 
+### Wikidata
+
+[Wikidata](https://www.wikidata.org) enriches POI, accommodation, and event data already returned by other sources that carry a Wikidata Q-ID (via OSM tag `wikidata=Q12345` or DataTourisme property `owl:sameAs`). Coverage is **European**. Licence is **CC0** — no attribution required.
+
+Fields added: multilingual description (FR/EN/DE/ES/IT), Wikimedia Commons thumbnail, Wikipedia article link, official website, and structured opening hours when available.
+
+**Configuration:**
+
+```env
+WIKIDATA_USER_AGENT=BikeTripPlanner/1.0 (contact@example.org)
+```
+
+Wikidata is always enabled. Results are cached in Redis for 7 days. Errors (timeout, 5xx) are handled silently — the application continues without enrichment.
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please read the [Contributing Guide](docs/contributing.md) before submitting a pull request.

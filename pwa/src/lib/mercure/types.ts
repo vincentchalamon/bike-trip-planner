@@ -65,6 +65,10 @@ export interface AccommodationPayload {
   possibleClosed: boolean;
   distanceToEndPoint: number;
   source: "osm" | "datatourisme";
+  description?: string | null;
+  imageUrl?: string | null;
+  wikipediaUrl?: string | null;
+  openingHours?: string | null;
 }
 
 export interface EventPayload {
@@ -80,6 +84,9 @@ export interface EventPayload {
   distanceToEndPoint: number;
   source: string;
   wikidataId: string | null;
+  imageUrl?: string | null;
+  wikipediaUrl?: string | null;
+  openingHours?: string | null;
 }
 
 export interface SupplyWaterPoint {
@@ -226,6 +233,8 @@ export type MercureEvent =
           description?: string;
           wikidataId?: string;
           source?: string;
+          imageUrl?: string;
+          wikipediaUrl?: string;
         }[];
       };
     }

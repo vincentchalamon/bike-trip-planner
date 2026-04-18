@@ -86,6 +86,15 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'Accept' => 'application/json',
                     ],
                 ],
+                'wikidata.client' => [
+                    'scope' => '^https://query\\.wikidata\\.org',
+                    'max_redirects' => 2,
+                    'timeout' => 15,
+                    'headers' => [
+                        'User-Agent' => '%env(WIKIDATA_USER_AGENT)%',
+                        'Accept' => 'application/sparql-results+json',
+                    ],
+                ],
             ],
         ],
     ]);

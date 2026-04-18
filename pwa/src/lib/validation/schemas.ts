@@ -29,6 +29,8 @@ export const AlertSchema = z.object({
   estimatedPrice: z.number().optional(),
   description: z.string().optional(),
   wikidataId: z.string().optional(),
+  imageUrl: z.string().optional(),
+  wikipediaUrl: z.string().optional(),
   // Optional contextual action
   action: AlertActionSchema.nullable().optional(),
 });
@@ -93,6 +95,9 @@ export const EventSchema = z.object({
   distanceToEndPoint: z.number().default(0),
   source: z.string().default("datatourisme"),
   wikidataId: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+  wikipediaUrl: z.string().nullable().optional(),
+  openingHours: z.string().nullable().optional(),
 });
 
 export const AccommodationSchema = z.object({
@@ -107,6 +112,10 @@ export const AccommodationSchema = z.object({
   possibleClosed: z.boolean().default(false),
   distanceToEndPoint: z.number().default(0),
   source: z.enum(["osm", "datatourisme"]).default("osm"),
+  description: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+  wikipediaUrl: z.string().nullable().optional(),
+  openingHours: z.string().nullable().optional(),
 });
 
 export const StageDataSchema = z.object({

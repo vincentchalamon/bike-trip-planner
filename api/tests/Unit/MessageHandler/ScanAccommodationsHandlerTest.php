@@ -19,6 +19,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
 use App\MessageHandler\ScanAccommodationsHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Wikidata\WikidataEnricherInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -79,6 +80,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
             $seasonalityChecker,
             $translator,
             $scraperClient,
+            $this->createStub(WikidataEnricherInterface::class),
         );
     }
 

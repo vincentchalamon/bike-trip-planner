@@ -22,6 +22,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Wikidata\WikidataEnricherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -49,6 +50,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         private TranslatorInterface $translator,
         #[Autowire(service: 'accommodation_scraper.client')]
         private HttpClientInterface $scraperClient,
+        private WikidataEnricherInterface $wikidataEnricher,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
@@ -97,6 +99,22 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             // Async scraping: 2 waves of parallel HTTP requests
             $retainedByStage = $this->scrapeAsync($retainedByStage);
 
+            // Wikidata enrichment: one batch SPARQL query for all retained candidates
+            $allRetained = [] !== $retainedByStage ? array_merge(...array_values($retainedByStage)) : [];
+            $qIds = array_values(array_filter(array_unique(array_column($allRetained, 'wikidataId'))));
+            $wikidataEnrichments = [] !== $qIds ? $this->wikidataEnricher->enrichBatch($qIds, $locale) : [];
+
+            foreach ($retainedByStage as $i => $candidates) {
+                foreach ($candidates as $j => $candidate) {
+                    $qId = $candidate['wikidataId'] ?? null;
+                    if (null !== $qId && isset($wikidataEnrichments[$qId])) {
+                        $wikidata = $wikidataEnrichments[$qId];
+                        // Wikidata never overwrites an already-filled field
+                        $retainedByStage[$i][$j] = array_merge($wikidata, $candidate);
+                    }
+                }
+            }
+
             // Build Accommodation DTOs, publish per stage, and store
             $startDate = $request?->startDate;
             foreach ($stagesToProcess as $i => $stage) {
@@ -119,6 +137,10 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                             'possibleClosed' => $existing->possibleClosed,
                             'distanceToEndPoint' => $existing->distanceToEndPoint,
                             'source' => $existing->source,
+                            'description' => $existing->description,
+                            'imageUrl' => $existing->imageUrl,
+                            'wikipediaUrl' => $existing->wikipediaUrl,
+                            'openingHours' => $existing->openingHours,
                         ];
                     }
                 } else {
@@ -158,6 +180,10 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         possibleClosed: $possibleClosed,
                         distanceToEndPoint: $distanceToEndPoint,
                         source: $raw['source'] ?? 'osm',
+                        description: $raw['description'] ?? null,
+                        imageUrl: $raw['imageUrl'] ?? null,
+                        wikipediaUrl: $raw['wikipediaUrl'] ?? null,
+                        openingHours: $raw['openingHours'] ?? null,
                     );
 
                     $stage->addAccommodation($accommodation);
@@ -173,6 +199,10 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                         'possibleClosed' => $accommodation->possibleClosed,
                         'distanceToEndPoint' => $accommodation->distanceToEndPoint,
                         'source' => $accommodation->source,
+                        'description' => $accommodation->description,
+                        'imageUrl' => $accommodation->imageUrl,
+                        'wikipediaUrl' => $accommodation->wikipediaUrl,
+                        'openingHours' => $accommodation->openingHours,
                     ];
                 }
 

@@ -17,6 +17,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Wikidata\WikidataEnricherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -53,6 +54,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
+        private WikidataEnricherInterface $wikidataEnricher,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
@@ -101,6 +103,21 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
 
             // Fetch all POIs from all enabled sources
             $allCulturalPois = $this->registry->fetchAllForStages($stageGeometries, self::CULTURAL_POI_RADIUS_METERS);
+
+            // Wikidata enrichment pass over all POIs (batch SPARQL)
+            $qIds = array_values(array_filter(array_unique(array_column($allCulturalPois, 'wikidataId'))));
+            $wikidataEnrichments = [] !== $qIds ? $this->wikidataEnricher->enrichBatch($qIds, $locale) : [];
+
+            if ([] !== $wikidataEnrichments) {
+                foreach ($allCulturalPois as $k => $poi) {
+                    $qId = $poi['wikidataId'] ?? null;
+                    if (null !== $qId && isset($wikidataEnrichments[$qId])) {
+                        $wikidata = $wikidataEnrichments[$qId];
+                        // Wikidata never overwrites an already-filled field
+                        $allCulturalPois[$k] = array_merge($wikidata, $poi);
+                    }
+                }
+            }
 
             // Distribute POIs to the nearest active stage via geometry
             /** @var array<int, list<array>> $poisByActiveStage */
@@ -167,6 +184,14 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
 
                     if (null !== ($poi['source'] ?? null)) {
                         $alert['source'] = $poi['source'];
+                    }
+
+                    if (null !== ($poi['imageUrl'] ?? null)) {
+                        $alert['imageUrl'] = $poi['imageUrl'];
+                    }
+
+                    if (null !== ($poi['wikipediaUrl'] ?? null)) {
+                        $alert['wikipediaUrl'] = $poi['wikipediaUrl'];
                     }
 
                     $alerts[] = $alert;

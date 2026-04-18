@@ -40,7 +40,7 @@ export function EventItem({ event }: EventItemProps) {
           <p className="text-sm font-medium leading-tight truncate">
             {event.name}
           </p>
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className="text-xs text-muted-foreground">{dateRange}</span>
             <span className="text-xs text-muted-foreground">·</span>
             <span className="text-xs text-muted-foreground">{typeLabel}</span>
@@ -58,19 +58,46 @@ export function EventItem({ event }: EventItemProps) {
               {event.description}
             </p>
           )}
+          {event.openingHours && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {event.openingHours}
+            </p>
+          )}
+          {event.wikipediaUrl && (
+            <a
+              href={event.wikipediaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-0.5 flex items-center gap-0.5 text-xs text-primary hover:underline"
+              aria-label={`Voir ${event.name} sur Wikipedia`}
+            >
+              <ExternalLink className="h-3 w-3" />
+              Voir sur Wikipedia
+            </a>
+          )}
         </div>
-        {event.url && (
-          <a
-            href={event.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 flex items-center gap-1 text-xs text-primary hover:underline"
-            aria-label={`Voir le site de ${event.name}`}
-          >
-            <ExternalLink className="h-3 w-3" />
-            <span className="hidden sm:inline">Voir le site</span>
-          </a>
-        )}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {event.imageUrl && (
+            <img
+              src={event.imageUrl}
+              alt={event.name}
+              loading="lazy"
+              className="rounded aspect-[3/2] object-cover w-16"
+            />
+          )}
+          {event.url && (
+            <a
+              href={event.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs text-primary hover:underline"
+              aria-label={`Voir le site de ${event.name}`}
+            >
+              <ExternalLink className="h-3 w-3" />
+              <span className="hidden sm:inline">Voir le site</span>
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -563,8 +563,19 @@ function LandingFooter() {
           </nav>
         </div>
 
-        <div className="mt-8 pt-6 border-t text-center text-xs text-muted-foreground">
-          {t("copyright", { year })}
+        <div className="mt-8 pt-6 border-t text-center text-xs text-muted-foreground space-y-1">
+          <p>{t("copyright", { year })}</p>
+          <p>Données enrichies par{" "}
+            <a
+              href="https://www.wikidata.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline"
+            >
+              Wikidata
+            </a>
+            {" "}(CC0)
+          </p>
         </div>
       </div>
     </footer>

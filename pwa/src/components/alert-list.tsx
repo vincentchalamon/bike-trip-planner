@@ -64,6 +64,14 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
             <AlertBadge type={alert.type} message={alert.message} />
             {isCulturalPoiAlert(alert) && (
               <div className="mt-1 ml-1 flex flex-col gap-0.5">
+                {alert.description && (
+                  <p
+                    className="text-xs text-muted-foreground line-clamp-2"
+                    data-testid="poi-description"
+                  >
+                    {alert.description}
+                  </p>
+                )}
                 {alert.openingHours && (
                   <span
                     className="text-xs text-muted-foreground"
@@ -81,6 +89,17 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                       ? t("free")
                       : `${alert.estimatedPrice.toFixed(2)} €`}
                   </span>
+                )}
+                {alert.wikipediaUrl && (
+                  <a
+                    href={alert.wikipediaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary flex items-center gap-0.5 hover:underline"
+                    data-testid="poi-wikipedia-link"
+                  >
+                    Voir sur Wikipedia
+                  </a>
                 )}
               </div>
             )}

@@ -15,6 +15,7 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanEvents;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Wikidata\WikidataEnricherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -41,6 +42,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private DataTourismeClientInterface $dataTourismeClient,
         private GeoDistanceInterface $haversine,
+        private WikidataEnricherInterface $wikidataEnricher,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
@@ -67,16 +69,58 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::EVENTS, function () use ($tripId, $stages, $startDate, $generation): void {
+        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
+
+        $this->executeWithTracking($tripId, ComputationName::EVENTS, function () use ($tripId, $stages, $startDate, $locale, $generation): void {
+            // Collect raw events per stage first, then enrich with Wikidata in one batch
+            /** @var array<int, list<Event>> $eventsByStage */
+            $eventsByStage = [];
             foreach ($stages as $i => $stage) {
                 if ($stage->isRestDay) {
                     continue;
                 }
 
                 $stageDate = $startDate->modify(\sprintf('+%d days', $i));
-                $events = $this->fetchEventsForStage($stage, $stageDate);
+                $eventsByStage[$i] = $this->fetchEventsForStage($stage, $stageDate);
+            }
 
+            // Wikidata enrichment: collect all Q-IDs and fetch in one batch
+            $allEvents = [] !== $eventsByStage ? array_merge(...array_values($eventsByStage)) : [];
+            $qIds = array_values(array_filter(array_unique(array_map(
+                static fn (Event $e): ?string => $e->wikidataId,
+                $allEvents,
+            ))));
+            $wikidataEnrichments = [] !== $qIds ? $this->wikidataEnricher->enrichBatch($qIds, $locale) : [];
+
+            foreach ($eventsByStage as $i => $events) {
+                $enrichedEvents = [];
                 foreach ($events as $event) {
+                    if (null !== $event->wikidataId && isset($wikidataEnrichments[$event->wikidataId])) {
+                        $wikidata = $wikidataEnrichments[$event->wikidataId];
+                        $event = new Event(
+                            name: $event->name,
+                            type: $event->type,
+                            lat: $event->lat,
+                            lon: $event->lon,
+                            startDate: $event->startDate,
+                            endDate: $event->endDate,
+                            url: $event->url,
+                            description: $event->description,
+                            priceMin: $event->priceMin,
+                            distanceToEndPoint: $event->distanceToEndPoint,
+                            source: $event->source,
+                            wikidataId: $event->wikidataId,
+                            imageUrl: $event->imageUrl ?? $wikidata['imageUrl'] ?? null,
+                            wikipediaUrl: $event->wikipediaUrl ?? $wikidata['wikipediaUrl'] ?? null,
+                            openingHours: $event->openingHours ?? $wikidata['openingHours'] ?? null,
+                        );
+                    }
+
+                    $enrichedEvents[] = $event;
+                }
+
+                $stage = $stages[$i];
+                foreach ($enrichedEvents as $event) {
                     $stage->addEvent($event);
                 }
 
@@ -96,8 +140,11 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                             'distanceToEndPoint' => $e->distanceToEndPoint,
                             'source' => $e->source,
                             'wikidataId' => $e->wikidataId,
+                            'imageUrl' => $e->imageUrl,
+                            'wikipediaUrl' => $e->wikipediaUrl,
+                            'openingHours' => $e->openingHours,
                         ],
-                        $events,
+                        $enrichedEvents,
                     ),
                 ];
 
