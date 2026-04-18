@@ -226,6 +226,27 @@ Wikidata is always enabled. Results are cached in Redis for 7 days. Errors (time
 
 ---
 
+## Administration commands
+
+### Import weekly markets
+
+```bash
+make markets-import
+```
+
+Downloads and imports the weekly market dataset from [data.gouv.fr](https://www.data.gouv.fr/) (Licence Ouverte 2.0). Markets are then included automatically in the event scan for each stage.
+
+Options available via `bin/console app:markets:import`:
+
+| Option | Description |
+|--------|-------------|
+| `--dry-run` | Prints statistics without writing to the database |
+| `--limit N` | Limits the number of rows processed (debug / CI) |
+
+The environment variable `MARKETS_DATASET_URL` can override the dataset URL.
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please read the [Contributing Guide](docs/contributing.md) before submitting a pull request.
