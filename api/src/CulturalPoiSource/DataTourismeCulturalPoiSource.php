@@ -39,17 +39,22 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
 
         [$minLat, $minLon, $maxLat, $maxLon] = $this->buildBbox($stageGeometries, $radiusMeters);
 
-        $response = $this->client->request('/', [
-            'query' => json_encode([
-                '@context' => 'https://schema.org',
-                '@type' => self::CULTURAL_ONTOLOGY_TYPES,
-                'isLocatedAt' => [
-                    'schema:geo' => [
-                        'schema:latitude' => ['>=', $minLat, '<=', $maxLat],
-                        'schema:longitude' => ['>=', $minLon, '<=', $maxLon],
-                    ],
-                ],
-            ]),
+        $response = $this->client->request('/api/v1/places', [
+            'filters[0][path]' => '@type',
+            'filters[0][operator]' => 'in',
+            'filters[0][value]' => implode(',', self::CULTURAL_ONTOLOGY_TYPES),
+            'filters[1][path]' => 'hasGeometry.latitude',
+            'filters[1][operator]' => 'gte',
+            'filters[1][value]' => $minLat,
+            'filters[2][path]' => 'hasGeometry.latitude',
+            'filters[2][operator]' => 'lte',
+            'filters[2][value]' => $maxLat,
+            'filters[3][path]' => 'hasGeometry.longitude',
+            'filters[3][operator]' => 'gte',
+            'filters[3][value]' => $minLon,
+            'filters[4][path]' => 'hasGeometry.longitude',
+            'filters[4][operator]' => 'lte',
+            'filters[4][value]' => $maxLon,
         ]);
 
         /** @var list<array<string, mixed>> $results */

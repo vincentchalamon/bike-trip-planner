@@ -45,7 +45,7 @@ final class ImportMarketsCommand extends Command
         private readonly MarketRepositoryInterface $marketRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly LoggerInterface $logger,
-        #[Autowire(service: 'http_client')]
+        #[Autowire(service: 'markets_dataset.client')]
         private readonly HttpClientInterface $httpClient,
         #[Autowire(env: 'default::MARKETS_DATASET_URL')]
         private readonly ?string $datasetUrl = null,

@@ -1,6 +1,7 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
+import { useLocale } from "next-intl";
 import type { EventData } from "@/lib/validation/schemas";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -10,11 +11,15 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   "urn:resource:FairOrShow": "Foire / Salon",
 };
 
-function formatDateRange(startDate: string, endDate: string): string {
+function formatDateRange(
+  startDate: string,
+  endDate: string,
+  locale: string,
+): string {
   const start = new Date(startDate);
   const end = new Date(endDate);
 
-  const fmt = new Intl.DateTimeFormat("fr-FR", {
+  const fmt = new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
   });
@@ -30,8 +35,9 @@ interface EventItemProps {
 }
 
 export function EventItem({ event }: EventItemProps) {
+  const locale = useLocale();
   const typeLabel = EVENT_TYPE_LABELS[event.type] ?? event.type;
-  const dateRange = formatDateRange(event.startDate, event.endDate);
+  const dateRange = formatDateRange(event.startDate, event.endDate, locale);
 
   return (
     <div className="py-2 first:pt-0 last:pb-0">

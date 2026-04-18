@@ -17,7 +17,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_pgsql, redis
+
+      - name: Install Composer dependencies
+        working-directory: api
+        run: composer install --no-interaction --prefer-dist
+
       - name: Import markets
+        working-directory: api
         env:
-          DRY_RUN: ${{ inputs.dry_run }}
-        run: make markets-import
+          APP_ENV: prod
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MARKETS_DATASET_URL: ${{ vars.MARKETS_DATASET_URL }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          DRY_RUN_FLAG=""
+          if [ "$INPUT_DRY_RUN" = "true" ]; then
+            DRY_RUN_FLAG="--dry-run"
+          fi
+          php bin/console app:markets:import $DRY_RUN_FLAG

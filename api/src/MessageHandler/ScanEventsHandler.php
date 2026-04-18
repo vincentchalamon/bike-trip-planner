@@ -55,6 +55,8 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         $generation = $message->generation;
 
         if (!$this->dataTourismeClient->isEnabled()) {
+            $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null, $generation);
+
             return;
         }
 
