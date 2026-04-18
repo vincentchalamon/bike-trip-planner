@@ -48,7 +48,6 @@ function AccordionItem({
       </button>
       <div
         id={panelId}
-        role="region"
         className={`overflow-hidden transition-all duration-200 ${
           isOpen ? "max-h-[9999px] pb-4" : "max-h-0"
         }`}
