@@ -162,15 +162,11 @@ When("I try to access my trips", async ({ page }) => {
 // --- Additional missing steps ---
 
 When("je navigue vers la page d'accueil", async ({ page }) => {
-  // "Home page" for an unauthenticated user means a protected route;
-  // `/` is the public landing page and does not redirect.
-  await page.goto("/trips/new");
+  await page.goto("/");
 });
 
 When("I navigate to the home page", async ({ page }) => {
-  // "Home page" for an unauthenticated user means a protected route;
-  // `/` is the public landing page and does not redirect.
-  await page.goto("/trips/new");
+  await page.goto("/");
 });
 
 When("je clique sur le bouton de déconnexion", async ({ $test }) => {
