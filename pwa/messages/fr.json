@@ -555,5 +555,15 @@
   },
   "footer": {
     "faq": "FAQ"
+  },
+  "attribution": {
+    "link": "À propos des données",
+    "title": "Sources de données",
+    "description": "Bike Trip Planner utilise les sources de données ouvertes suivantes.",
+    "osmCredit": "© les contributeurs OpenStreetMap —",
+    "datatourismeCredit": "© DataTourisme —",
+    "wikidataCredit": "Données sous",
+    "datagouvCredit": "Marchés hebdomadaires (data.gouv.fr) —",
+    "licenceOuverte": "Licence Ouverte 2.0"
   }
 }

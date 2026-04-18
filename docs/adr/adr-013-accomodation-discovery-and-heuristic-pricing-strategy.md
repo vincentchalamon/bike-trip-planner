@@ -1,6 +1,8 @@
 # ADR-013: Accommodation Discovery and Heuristic Pricing Strategy
 
-**Status:** Accepted
+**Status:** Accepted — Extended by ADR-026
+
+> **Note (Sprint 20):** This ADR describes the initial OSM-only accommodation discovery strategy. Sprint 20 extended it with a multi-source architecture: DataTourisme is now a complementary source for accommodations (gîtes d'étape, auberges routières) and cultural POIs, and Wikidata provides cross-cutting enrichment via Q-IDs. The interface registry pattern (`AccommodationSourceInterface`, `#[AutowireIterator]`) was introduced to abstract source origin from consumers. See [ADR-026: Multi-Source Data Integration](adr-026-multi-source-data-integration.md) for the full decision and consequences.
 
 **Date:** 2026-02-19
 
