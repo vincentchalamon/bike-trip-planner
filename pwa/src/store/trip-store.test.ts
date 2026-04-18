@@ -23,6 +23,7 @@ describe("getUndoableSlice", () => {
           accommodationSearchRadiusKm: 5,
           isRestDay: false,
           supplyTimeline: [],
+          events: [],
         },
       ],
       startDate: "2026-07-01",
@@ -65,6 +66,7 @@ describe("getUndoableSlice", () => {
       accommodationSearchRadiusKm: 5,
       isRestDay: false,
       supplyTimeline: [],
+      events: [],
     };
 
     const state = {

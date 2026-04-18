@@ -43,6 +43,7 @@ const SEED_TRIP = {
       accommodationSearchRadiusKm: 20,
       isRestDay: false,
       supplyTimeline: [],
+      events: [],
     },
     {
       dayNumber: 2,
@@ -62,6 +63,7 @@ const SEED_TRIP = {
       accommodationSearchRadiusKm: 20,
       isRestDay: false,
       supplyTimeline: [],
+      events: [],
     },
     {
       dayNumber: 3,
@@ -81,6 +83,7 @@ const SEED_TRIP = {
       accommodationSearchRadiusKm: 20,
       isRestDay: false,
       supplyTimeline: [],
+      events: [],
     },
   ],
   savedAt: new Date().toISOString(),

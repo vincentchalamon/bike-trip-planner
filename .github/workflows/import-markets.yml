@@ -1,0 +1,42 @@
+name: Import Markets
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no database writes)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  import:
+    name: Import weekly markets from data.gouv.fr
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_pgsql, redis
+
+      - name: Install Composer dependencies
+        working-directory: api
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Import markets
+        working-directory: api
+        env:
+          APP_ENV: prod
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MARKETS_DATASET_URL: ${{ vars.MARKETS_DATASET_URL }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          DRY_RUN_FLAG=""
+          if [ "$INPUT_DRY_RUN" = "true" ]; then
+            DRY_RUN_FLAG="--dry-run"
+          fi
+          php bin/console app:markets:import $DRY_RUN_FLAG

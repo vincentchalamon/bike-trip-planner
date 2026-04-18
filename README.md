@@ -65,6 +65,22 @@
 
 ---
 
+## Supported OSM accommodation tags
+
+| Logical type | OSM query | Pricing heuristic |
+|---|---|---|
+| `hotel` | `tourism=hotel` | €50–€120 |
+| `motel` | `tourism=motel` | €45–€90 |
+| `guest_house` | `tourism=guest_house` | €40–€80 |
+| `chalet` | `tourism=chalet` | €30–€70 |
+| `hostel` | `tourism=hostel` | €20–€35 |
+| `alpine_hut` | `tourism=alpine_hut` | €25–€45 |
+| `camp_site` | `tourism=camp_site` | €8–€25 (€8–€15 if `backpack=yes` or `tents=yes`) |
+| `wilderness_hut` | `tourism=wilderness_hut` | free / donation (€0–€10) |
+| `shelter` | `amenity=shelter` + `shelter_type~basic_hut\|weather_shelter\|lean_to` | free (€0) |
+
+---
+
 ## Quick start
 
 ```bash
@@ -118,7 +134,7 @@ Rules are executed in priority order (lower = higher priority):
 | **Accommodation** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | All detected accommodations on the stage are likely closed due to seasonality |
 | **Water points** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stretch > 30 km without a detected drinking water source |
 | **Rest day** | 100 | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Every N consecutive cycling days without a rest day (default: every 3 days) |
-| **Cultural POI** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Museum, monument, castle, church, viewpoint, or attraction within 500 m of route |
+| **Cultural POI** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Museum, monument, castle, church, viewpoint, or attraction within 500 m of route — enriched with opening hours, price and description when sourced from DataTourisme |
 | **Railway station** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | No train station within 10 km of a stage endpoint (emergency evacuation) |
 | **Health services** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | No pharmacy, hospital, or clinic within 15 km of a stage |
 | **Border crossing** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Route crosses an international border (country change detected via Overpass is_in) |
@@ -166,8 +182,75 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 |---|---|
 | [Getting Started](docs/getting-started.md) | Requirements, installation, and local setup |
 | [Contributing](docs/contributing.md) | Development workflow, standards, and tooling |
-| [Architecture Decisions](docs/adr/) | 24 ADRs explaining every major technical choice |
+| [Architecture Decisions](docs/adr/) | 26 ADRs explaining every major technical choice |
 | [Claude Code Tooling](docs/claude-code-tooling.md) | MCP servers, hooks, and skills for AI-assisted development |
+
+---
+
+## External data sources
+
+| Source | Role | Licence | Coverage | Prerequisite |
+|--------|------|---------|----------|-------------|
+| **OpenStreetMap** | Primary: roads, bike infra, water points, bike shops, resupply, base POIs & accommodations | [ODbL](https://opendatacommons.org/licenses/odbl/) | Global | None |
+| **DataTourisme** | Complementary: enriched accommodations and cultural POIs; exclusive: dated events | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | France | `DATATOURISME_API_KEY` |
+| **Wikidata** | Cross-cutting enricher: multilingual descriptions, images, Wikipedia links via Q-IDs | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | Europe | None |
+| **data.gouv.fr** | Weekly recurring markets (offline import) | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | France | `make markets-import` |
+
+### OpenStreetMap
+
+All geographic and infrastructure data is sourced from [OpenStreetMap](https://www.openstreetmap.org) via the public Overpass API. OSM data is cached in Redis for 24 hours per query.
+
+**Licence:** [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — attribution required: "© OpenStreetMap contributors".
+
+### DataTourisme
+
+[DataTourisme](https://www.datatourisme.fr) provides enriched POI data (accommodations, cultural sites, dated events) for France. It is used as an optional supplementary source alongside OpenStreetMap.
+
+**Licence:** [Licence Ouverte 2.0 Etalab](https://www.etalab.gouv.fr/licence-ouverte-open-licence) — commercial use and modification permitted; attribution required.
+
+**Quota:** 1 000 requests/hour, ~10 req/s sustained. Rate limiting is enforced server-side via a `fixed_window` limiter.
+
+**Registration:** [https://www.datatourisme.fr/](https://www.datatourisme.fr/) — free sign-up, personal API key delivered by email.
+
+To enable DataTourisme integration, set the following environment variables:
+
+```env
+DATATOURISME_API_KEY=your-api-key
+DATATOURISME_ENABLED=true
+```
+
+When `DATATOURISME_ENABLED=false` (the default) or the API key is absent, all DataTourisme calls are skipped and the application falls back to OpenStreetMap data exclusively.
+
+### Wikidata
+
+[Wikidata](https://www.wikidata.org) enriches POI, accommodation, and event data already returned by other sources that carry a Wikidata Q-ID (via OSM tag `wikidata=Q12345` or DataTourisme property `owl:sameAs`). Coverage is **European**. Licence is **CC0** — no attribution required.
+
+Fields added: multilingual description (FR/EN/DE/ES/IT), Wikimedia Commons thumbnail, Wikipedia article link, official website, and structured opening hours when available.
+
+**Configuration (optional):**
+
+```env
+WIKIDATA_USER_AGENT=BikeTripPlanner/1.0 (contact@example.org)
+```
+
+Wikidata is always enabled. Results are cached in Redis for 7 days. Errors (timeout, 5xx) are handled silently — the application continues without enrichment.
+
+### data.gouv.fr — Weekly markets
+
+The weekly market dataset from [data.gouv.fr](https://www.data.gouv.fr/) is imported into the PostgreSQL `market` table via a one-time (or periodic) CLI command. Markets are included automatically in the event scan for each stage.
+
+```bash
+make markets-import
+```
+
+Options available via `bin/console app:markets:import`:
+
+| Option | Description |
+|--------|-------------|
+| `--dry-run` | Prints statistics without writing to the database |
+| `--limit N` | Limits the number of rows processed (debug / CI) |
+
+The environment variable `MARKETS_DATASET_URL` can override the dataset URL.
 
 ---
 
