@@ -47,8 +47,8 @@ final class ImportMarketsCommand extends Command
         private readonly LoggerInterface $logger,
         #[Autowire(service: 'http_client')]
         private readonly HttpClientInterface $httpClient,
-        #[Autowire(env: 'default::MARKETS_DATASET_URL')]
-        private readonly string $datasetUrl = '',
+        #[Autowire(env: 'default:https://www.data.gouv.fr/fr/datasets/r/8067f5e0-15a7-48c3-9eb9-c9df2de96a1c:MARKETS_DATASET_URL')]
+        private readonly string $datasetUrl,
     ) {
         parent::__construct();
     }
@@ -68,9 +68,7 @@ final class ImportMarketsCommand extends Command
         $isDryRun = (bool) $input->getOption('dry-run');
         $limit = (int) $input->getOption('limit');
 
-        $url = '' !== $this->datasetUrl
-            ? $this->datasetUrl
-            : 'https://www.data.gouv.fr/fr/datasets/r/8067f5e0-15a7-48c3-9eb9-c9df2de96a1c';
+        $url = $this->datasetUrl;
 
         $io->title('Import weekly markets from data.gouv.fr');
 
@@ -89,7 +87,7 @@ final class ImportMarketsCommand extends Command
         }
 
         try {
-            [$inserted, $updated, $skipped] = $this->processFile($tmpFile, $isDryRun, $limit, $io);
+            [$inserted, $updated, $skipped] = $this->processFile($tmpFile, $isDryRun, $limit);
         } finally {
             @unlink($tmpFile);
         }
@@ -129,8 +127,8 @@ final class ImportMarketsCommand extends Command
             }
 
             fclose($fileHandle);
-        } catch (\Throwable $e) {
-            $this->logger->error('Failed to download markets dataset.', ['url' => $url, 'error' => $e->getMessage()]);
+        } catch (\Throwable $throwable) {
+            $this->logger->error('Failed to download markets dataset.', ['url' => $url, 'error' => $throwable->getMessage()]);
             @unlink($tmpFile);
 
             return null;
@@ -142,7 +140,7 @@ final class ImportMarketsCommand extends Command
     /**
      * @return array{int, int, int}
      */
-    private function processFile(string $filePath, bool $isDryRun, int $limit, SymfonyStyle $io): array
+    private function processFile(string $filePath, bool $isDryRun, int $limit): array
     {
         $handle = fopen($filePath, 'r');
 
@@ -150,7 +148,7 @@ final class ImportMarketsCommand extends Command
             return [0, 0, 0];
         }
 
-        $headers = fgetcsv($handle, 0, ';');
+        $headers = fgetcsv($handle, 0, ';', escape: '\\');
 
         if (false === $headers || [] === $headers) {
             fclose($handle);
@@ -158,7 +156,7 @@ final class ImportMarketsCommand extends Command
             return [0, 0, 0];
         }
 
-        $headers = array_map('trim', $headers);
+        $headers = array_map(trim(...), $headers);
         $headerIndex = array_flip($headers);
 
         $inserted = 0;
@@ -167,7 +165,7 @@ final class ImportMarketsCommand extends Command
         $processed = 0;
         $batchSize = 200;
 
-        while (false !== ($row = fgetcsv($handle, 0, ';'))) {
+        while (false !== ($row = fgetcsv($handle, 0, ';', escape: '\\'))) {
             if (0 < $limit && $processed >= $limit) {
                 break;
             }
@@ -175,7 +173,7 @@ final class ImportMarketsCommand extends Command
             /** @var array<string, string> $data */
             $data = [];
             foreach ($headers as $i => $header) {
-                $data[$header] = isset($row[$i]) ? trim((string) $row[$i]) : '';
+                $data[$header] = isset($row[$i]) ? trim($row[$i]) : '';
             }
 
             [$lat, $lon] = $this->extractLatLon($data, $headerIndex);
@@ -214,7 +212,7 @@ final class ImportMarketsCommand extends Command
             if (!$isDryRun) {
                 $existing = $this->marketRepository->findByExternalId($externalId);
 
-                if (null !== $existing) {
+                if ($existing instanceof Market) {
                     $existing->setName($name);
                     $existing->setLat($lat);
                     $existing->setLon($lon);
@@ -244,7 +242,7 @@ final class ImportMarketsCommand extends Command
                 }
             } else {
                 $existing = $this->marketRepository->findByExternalId($externalId);
-                if (null !== $existing) {
+                if ($existing instanceof Market) {
                     ++$updated;
                 } else {
                     ++$inserted;
@@ -273,7 +271,7 @@ final class ImportMarketsCommand extends Command
      *  - A combined "Geo Point" column with "lat,lon" or "lat lon" format
      *
      * @param array<string, string> $data
-     * @param array<string, int> $headerIndex
+     * @param array<string, int>    $headerIndex
      *
      * @return array{?float, ?float}
      */
@@ -314,8 +312,8 @@ final class ImportMarketsCommand extends Command
 
     /**
      * @param array<string, string> $data
-     * @param array<string, int> $headerIndex
-     * @param list<string> $candidates
+     * @param array<string, int>    $headerIndex
+     * @param list<string>          $candidates
      */
     private function extractScalarFloat(array $data, array $headerIndex, array $candidates): ?float
     {
@@ -341,8 +339,8 @@ final class ImportMarketsCommand extends Command
 
     /**
      * @param array<string, string> $data
-     * @param array<string, int> $headerIndex
-     * @param list<string> $candidates
+     * @param array<string, int>    $headerIndex
+     * @param list<string>          $candidates
      */
     private function extractString(array $data, array $headerIndex, array $candidates): string
     {
@@ -363,7 +361,7 @@ final class ImportMarketsCommand extends Command
 
     /**
      * @param array<string, string> $data
-     * @param array<string, int> $headerIndex
+     * @param array<string, int>    $headerIndex
      */
     private function extractDayOfWeek(array $data, array $headerIndex): ?int
     {
@@ -382,8 +380,8 @@ final class ImportMarketsCommand extends Command
 
     /**
      * @param array<string, string> $data
-     * @param array<string, int> $headerIndex
-     * @param list<string> $candidates
+     * @param array<string, int>    $headerIndex
+     * @param list<string>          $candidates
      */
     private function extractTime(array $data, array $headerIndex, array $candidates): ?string
     {
