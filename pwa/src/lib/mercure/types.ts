@@ -66,6 +66,21 @@ export interface AccommodationPayload {
   distanceToEndPoint: number;
 }
 
+export interface EventPayload {
+  name: string;
+  type: string;
+  lat: number;
+  lon: number;
+  startDate: string;
+  endDate: string;
+  url: string | null;
+  description: string | null;
+  priceMin: number | null;
+  distanceToEndPoint: number;
+  source: string;
+  wikidataId: string | null;
+}
+
 export interface SupplyWaterPoint {
   name: string | null;
   lat: number;
@@ -245,6 +260,13 @@ export type MercureEvent =
         elevationGain: number;
         duration: number;
         coordinates: { lat: number; lon: number; ele: number }[];
+      };
+    }
+  | {
+      type: "events_found";
+      data: {
+        stageIndex: number;
+        events: EventPayload[];
       };
     }
   | { type: "validation_error"; data: { code: string; message: string } }

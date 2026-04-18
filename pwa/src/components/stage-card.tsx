@@ -10,6 +10,7 @@ import { StageLocations } from "@/components/stage-locations";
 import { StageMetadata } from "@/components/stage-metadata";
 import { AlertList } from "@/components/alert-list";
 import { AccommodationPanel } from "@/components/accommodation-panel";
+import { EventsPanel } from "@/components/events-panel";
 import { StageDownloads } from "@/components/stage-downloads";
 import { StageDistanceEditor } from "@/components/stage-distance-editor";
 import { DifficultyGauge } from "@/components/difficulty-gauge";
@@ -199,6 +200,11 @@ export function StageCard({
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             <span>{t("loadingAlerts")}</span>
           </div>
+        )}
+
+        {/* Events */}
+        {(stage.events?.length ?? 0) > 0 && (
+          <EventsPanel events={stage.events ?? []} />
         )}
 
         {/* Accommodations */}

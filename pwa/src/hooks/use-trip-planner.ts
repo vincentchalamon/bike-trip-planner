@@ -374,6 +374,7 @@ export function useTripPlanner() {
       accommodations: [],
       accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
       supplyTimeline: [],
+      events: [],
       isRestDay: false,
     };
     // insertStagePlaceholder pushes an undo snapshot internally before mutating.

@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\NotExposed;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Model\Event;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\WeatherForecast;
 
@@ -34,6 +35,9 @@ final class StageResponse
     public array $accommodations = [];
 
     public ?Accommodation $selectedAccommodation = null;
+
+    /** @var Event[] */
+    public array $events = [];
 
     public Trip $trip;
 
