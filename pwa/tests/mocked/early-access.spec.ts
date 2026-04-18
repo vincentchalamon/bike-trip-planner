@@ -143,7 +143,7 @@ test.describe("CTA navigation", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    const cta = page.getByTestId("cta-create-trip");
+    const cta = page.getByTestId("cta-create-itinerary").first();
     await expect(cta).toBeVisible();
 
     // The CTA link should point to /login for unauthenticated users
