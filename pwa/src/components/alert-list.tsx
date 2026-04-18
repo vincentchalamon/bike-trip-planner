@@ -62,6 +62,28 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
             data-testid={isDismissed ? "alert-dismissed" : undefined}
           >
             <AlertBadge type={alert.type} message={alert.message} />
+            {isCulturalPoiAlert(alert) && (
+              <div className="mt-1 ml-1 flex flex-col gap-0.5">
+                {alert.openingHours && (
+                  <span
+                    className="text-xs text-muted-foreground"
+                    data-testid="poi-opening-hours"
+                  >
+                    {alert.openingHours}
+                  </span>
+                )}
+                {typeof alert.estimatedPrice === "number" && (
+                  <span
+                    className="text-xs text-muted-foreground"
+                    data-testid="poi-estimated-price"
+                  >
+                    {alert.estimatedPrice === 0
+                      ? t("free")
+                      : `${alert.estimatedPrice.toFixed(2)} €`}
+                  </span>
+                )}
+              </div>
+            )}
             {isCulturalPoiAlert(alert) && onAddPoiWaypoint && (
               <Button
                 variant="outline"

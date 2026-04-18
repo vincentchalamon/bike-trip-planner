@@ -205,6 +205,11 @@ export type MercureEvent =
           poiLat: number;
           poiLon: number;
           distanceFromRoute: number;
+          openingHours?: string;
+          estimatedPrice?: number;
+          description?: string;
+          wikidataId?: string;
+          source?: string;
         }[];
       };
     }

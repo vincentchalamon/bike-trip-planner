@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\CulturalPoiSource\CulturalPoiSourceRegistry;
 use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
@@ -16,8 +17,6 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -29,6 +28,9 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  * Each alert carries the POI coordinates so the frontend can display an
  * "add to itinerary" button that triggers route recalculation via
  * RecalculateRouteSegment (ADR-017).
+ *
+ * POIs are fetched from all enabled sources via CulturalPoiSourceRegistry
+ * (OSM via Overpass, DataTourisme when configured).
  */
 #[AsMessageHandler]
 final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
@@ -41,31 +43,13 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
      */
     private const int MAX_SUGGESTIONS_PER_STAGE = 3;
 
-    /**
-     * Overpass `historic=*` values that are considered notable enough to suggest.
-     *
-     * @var list<string>
-     */
-    private const array NOTABLE_HISTORIC_VALUES = [
-        'castle',
-        'monument',
-        'memorial',
-        'ruins',
-        'archaeological_site',
-        'church',
-        'cathedral',
-        'abbey',
-        'fort',
-    ];
-
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
-        private ScannerInterface $scanner,
-        private QueryBuilderInterface $queryBuilder,
+        private CulturalPoiSourceRegistry $registry,
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
@@ -87,7 +71,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
 
         $this->executeWithTracking($tripId, ComputationName::CULTURAL_POIS, function () use ($tripId, $stages, $locale): void {
             // Collect geometries for non-rest-day stages
-            /** @var list<list<Coordinate>> $stageGeometries */
+            /** @var list<list<array{lat: float, lon: float}>> $stageGeometries */
             $stageGeometries = [];
             /** @var list<int> $activeStageIndices */
             $activeStageIndices = [];
@@ -100,7 +84,11 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
 
                 $activeStageIndices[] = $i;
                 $activeStages[] = $stage;
-                $stageGeometries[] = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
+                $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
+                $stageGeometries[] = array_map(
+                    static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
+                    $geometry,
+                );
             }
 
             if ([] === $stageGeometries) {
@@ -111,43 +99,11 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                 return;
             }
 
-            // Single batch query for all active stages
-            $query = $this->queryBuilder->buildBatchCulturalPoiQuery($stageGeometries, self::CULTURAL_POI_RADIUS_METERS);
-            $result = $this->scanner->query($query);
-
-            /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
-            $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
-
-            // Parse all cultural POIs from the batch result
-            /** @var list<array{name: string, type: string, lat: float, lon: float}> $allCulturalPois */
-            $allCulturalPois = [];
-            foreach ($elements as $element) {
-                $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
-
-                if (null === $lat || null === $lon) {
-                    continue;
-                }
-
-                $tags = $element['tags'] ?? [];
-                $poiType = $this->resolveCulturalPoiType($tags);
-
-                if (null === $poiType) {
-                    continue;
-                }
-
-                $name = $tags['name'] ?? $poiType;
-
-                $allCulturalPois[] = [
-                    'name' => $name,
-                    'type' => $poiType,
-                    'lat' => (float) $lat,
-                    'lon' => (float) $lon,
-                ];
-            }
+            // Fetch all POIs from all enabled sources
+            $allCulturalPois = $this->registry->fetchAllForStages($stageGeometries, self::CULTURAL_POI_RADIUS_METERS);
 
             // Distribute POIs to the nearest active stage via geometry
-            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float}>> $poisByActiveStage */
+            /** @var array<int, list<array>> $poisByActiveStage */
             $poisByActiveStage = $this->distributor->distributeByGeometry($allCulturalPois, $activeStages);
 
             $alerts = [];
@@ -159,13 +115,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                 foreach ($poisByActiveStage[$activeIdx] ?? [] as $poi) {
                     $distanceFromRoute = $this->findMinDistanceToRoute($geometry, $poi['lat'], $poi['lon']);
 
-                    $stagePois[] = [
-                        'name' => $poi['name'],
-                        'type' => $poi['type'],
-                        'lat' => $poi['lat'],
-                        'lon' => $poi['lon'],
-                        'distanceFromRoute' => $distanceFromRoute,
-                    ];
+                    $stagePois[] = array_merge($poi, ['distanceFromRoute' => $distanceFromRoute]);
                 }
 
                 // Sort by proximity and keep only the closest N suggestions
@@ -185,7 +135,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                         $locale,
                     );
 
-                    $alerts[] = [
+                    $alert = [
                         'stageIndex' => $originalIndex,
                         'dayNumber' => $stage->dayNumber,
                         'type' => AlertType::NUDGE->value,
@@ -198,6 +148,28 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                         'poiLon' => $poi['lon'],
                         'distanceFromRoute' => $poi['distanceFromRoute'],
                     ];
+
+                    if (null !== ($poi['openingHours'] ?? null)) {
+                        $alert['openingHours'] = $poi['openingHours'];
+                    }
+
+                    if (null !== ($poi['estimatedPrice'] ?? null)) {
+                        $alert['estimatedPrice'] = $poi['estimatedPrice'];
+                    }
+
+                    if (null !== ($poi['description'] ?? null)) {
+                        $alert['description'] = $poi['description'];
+                    }
+
+                    if (null !== ($poi['wikidataId'] ?? null)) {
+                        $alert['wikidataId'] = $poi['wikidataId'];
+                    }
+
+                    if (null !== ($poi['source'] ?? null)) {
+                        $alert['source'] = $poi['source'];
+                    }
+
+                    $alerts[] = $alert;
                 }
             }
 
@@ -205,30 +177,6 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                 'alerts' => $alerts,
             ]);
         }, $generation);
-    }
-
-    /**
-     * Resolves the human-readable POI type from OSM tags.
-     * Returns null when the element does not qualify as a notable cultural POI.
-     *
-     * @param array<string, string> $tags
-     */
-    private function resolveCulturalPoiType(array $tags): ?string
-    {
-        if (isset($tags['tourism'])) {
-            return match ($tags['tourism']) {
-                'museum' => 'museum',
-                'attraction' => 'attraction',
-                'viewpoint' => 'viewpoint',
-                default => null,
-            };
-        }
-
-        if (isset($tags['historic']) && \in_array($tags['historic'], self::NOTABLE_HISTORIC_VALUES, true)) {
-            return $tags['historic'];
-        }
-
-        return null;
     }
 
     /**
