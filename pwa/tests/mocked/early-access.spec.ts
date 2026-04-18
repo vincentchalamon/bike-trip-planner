@@ -217,4 +217,14 @@ test.describe("Access request verification", () => {
 
     await expect(page.getByTestId("access-confirmed-message")).toBeVisible();
   });
+
+  test("verify page with missing params redirects to home", async ({
+    page,
+  }) => {
+    await mockUnauthenticated(page);
+    await page.goto("/access-requests/verify");
+    await page.waitForURL("/", { timeout: 5000 });
+
+    await expect(page).toHaveURL("/");
+  });
 });

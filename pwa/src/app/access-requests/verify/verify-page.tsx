@@ -32,8 +32,7 @@ export default function VerifyPage() {
     const signature = searchParams.get("signature");
 
     if (!email || !expires || !signature) {
-      // Missing params — redirect to home, backend will show generic confirmation
-      window.location.replace(`${API_URL}/access-requests/verify`);
+      window.location.replace(`${window.location.origin}/`);
       return;
     }
 
