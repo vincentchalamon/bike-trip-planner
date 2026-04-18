@@ -25,6 +25,10 @@ export const AlertSchema = z.object({
   poiLat: z.number().optional(),
   poiLon: z.number().optional(),
   distanceFromRoute: z.number().optional(),
+  openingHours: z.string().optional(),
+  estimatedPrice: z.number().optional(),
+  description: z.string().optional(),
+  wikidataId: z.string().optional(),
   // Optional contextual action
   action: AlertActionSchema.nullable().optional(),
 });

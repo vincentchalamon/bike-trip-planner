@@ -244,7 +244,8 @@
   "alertList": {
     "addToItinerary": "Ajouter à l'itinéraire",
     "navigateToStation": "Aller à la gare",
-    "navigateToCrossing": "Aller au passage frontière"
+    "navigateToCrossing": "Aller au passage frontière",
+    "free": "Entrée gratuite"
   },
   "onboarding": {
     "nextBtn": "Suivant",
