@@ -65,6 +65,22 @@
 
 ---
 
+## Supported OSM accommodation tags
+
+| Logical type | OSM query | Pricing heuristic |
+|---|---|---|
+| `hotel` | `tourism=hotel` | €50–€120 |
+| `motel` | `tourism=motel` | €45–€90 |
+| `guest_house` | `tourism=guest_house` | €40–€80 |
+| `chalet` | `tourism=chalet` | €30–€70 |
+| `hostel` | `tourism=hostel` | €20–€35 |
+| `alpine_hut` | `tourism=alpine_hut` | €25–€45 |
+| `camp_site` | `tourism=camp_site` | €8–€25 (€8–€15 if `backpack=yes` or `tents=yes`) |
+| `wilderness_hut` | `tourism=wilderness_hut` | free / donation (€0–€10) |
+| `shelter` | `amenity=shelter` + `shelter_type~basic_hut\|weather_shelter\|lean_to` | free (€0) |
+
+---
+
 ## Quick start
 
 ```bash

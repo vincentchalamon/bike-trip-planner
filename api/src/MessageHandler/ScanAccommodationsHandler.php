@@ -244,7 +244,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                     ? \sprintf('https://www.openstreetmap.org/%s/%d', $element['type'], $element['id'])
                     : null);
 
-            $type = $tags['tourism'] ?? 'hotel';
+            $type = $tags['tourism'] ?? ('shelter' === ($tags['amenity'] ?? null) ? 'shelter' : 'hotel');
             $name = $tags['name'] ?? $type;
             $tagCount = \count($tags);
             $pricing = $this->pricingEngine->estimatePrice($type, $tags);
