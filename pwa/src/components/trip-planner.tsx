@@ -337,6 +337,15 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
             {actionButtons}
             <RecentTrips />
             <SavedTripsSection />
+            <footer className="mt-4 text-center">
+              <Link
+                href="/faq"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="footer-faq-link"
+              >
+                {t("footer.faq")}
+              </Link>
+            </footer>
           </div>
         )}
 
