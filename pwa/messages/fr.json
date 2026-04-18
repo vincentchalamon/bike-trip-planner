@@ -85,6 +85,8 @@
     "type_guest_house": "Chambre d'hôte",
     "type_motel": "Motel",
     "type_alpine_hut": "Refuge",
+    "type_wilderness_hut": "Bivouac",
+    "type_shelter": "Abri",
     "type_other": "Autre",
     "hotel": "Hôtel",
     "gite": "Gîte",
