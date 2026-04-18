@@ -555,6 +555,18 @@
     "q9": "Is the app free and open source?",
     "a9": "The source code is open source and available on GitHub. The hosted app is free to use. Infrastructure costs may eventually justify a freemium model, but no paid access is planned at this stage."
   },
+  "events": {
+    "type_festival": "Festival",
+    "type_exhibition": "Exhibition",
+    "type_music_event": "Concert",
+    "type_fair_or_show": "Fair / Show",
+    "type_market": "Market",
+    "from_price": "From {price} €",
+    "see_on_wikipedia": "See on Wikipedia",
+    "see_on_wikipedia_label": "See {name} on Wikipedia",
+    "see_website": "Visit website",
+    "see_website_label": "Visit {name}'s website"
+  },
   "footer": {
     "faq": "FAQ"
   },

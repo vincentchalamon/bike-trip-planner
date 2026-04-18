@@ -22,6 +22,7 @@ use App\Wikidata\WikidataEnricherInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ScanEventsHandlerTest extends TestCase
 {
@@ -44,6 +45,7 @@ final class ScanEventsHandlerTest extends TestCase
         DataTourismeClientInterface $dataTourismeClient,
         GeoDistanceInterface $haversine,
         ?MarketRepositoryInterface $marketRepository = null,
+        ?TranslatorInterface $translator = null,
     ): ScanEventsHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
@@ -51,6 +53,7 @@ final class ScanEventsHandlerTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         $marketRepository ??= $this->createStub(MarketRepositoryInterface::class);
+        $translator ??= $this->createStub(TranslatorInterface::class);
 
         return new ScanEventsHandler(
             $computationTracker,
@@ -62,6 +65,7 @@ final class ScanEventsHandlerTest extends TestCase
             $haversine,
             $this->createStub(WikidataEnricherInterface::class),
             $marketRepository,
+            $translator,
         );
     }
 
@@ -191,12 +195,12 @@ final class ScanEventsHandlerTest extends TestCase
         $dataTourismeClient->method('request')->willReturnCallback(
             static function (string $path, array $query) use ($festivalResult, $exhibitionResult): array {
                 // stage 0: 2025-07-10 → festival is ongoing
-                if ('2025-07-10' === ($query['startDate[before]'] ?? null)) {
+                if ('2025-07-10' === ($query['filters[1][value]'] ?? null)) {
                     return ['results' => [$festivalResult]];
                 }
 
                 // stage 1: 2025-07-11 → exhibition starts
-                if ('2025-07-11' === ($query['startDate[before]'] ?? null)) {
+                if ('2025-07-11' === ($query['filters[1][value]'] ?? null)) {
                     return ['results' => [$exhibitionResult]];
                 }
 
@@ -378,6 +382,9 @@ final class ScanEventsHandlerTest extends TestCase
         $marketRepository = $this->createStub(MarketRepositoryInterface::class);
         $marketRepository->method('findNearEndpoint')->willReturn([$market]);
 
+        $translator = $this->createStub(TranslatorInterface::class);
+        $translator->method('trans')->willReturn('Weekly market');
+
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
         $publisher->method('publish')
@@ -392,7 +399,7 @@ final class ScanEventsHandlerTest extends TestCase
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturn(400.0);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine, $marketRepository);
+        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine, $marketRepository, $translator);
         $handler(new ScanEvents('trip-1'));
 
         $eventsPublished = array_values(array_filter(
@@ -412,6 +419,6 @@ final class ScanEventsHandlerTest extends TestCase
         self::assertCount(1, $marketEvents);
         self::assertSame('Marché du Lundi', $marketEvents[0]['name']);
         self::assertSame('market', $marketEvents[0]['type']);
-        self::assertSame('Marché hebdomadaire', $marketEvents[0]['description']);
+        self::assertSame('Weekly market', $marketEvents[0]['description']);
     }
 }
