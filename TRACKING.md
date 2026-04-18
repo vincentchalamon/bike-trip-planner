@@ -394,16 +394,16 @@ Page d'accueil marketing, système d'accès anticipé (HMAC, throttling, CLI), p
 
 Intégration multi-sources : DataTourisme (hébergements, POI culturels, événements datés) en complément d'OSM, Wikidata en enrichisseur transversal (descriptions multilingues, images, horaires) via SPARQL batch, marchés forains data.gouv.fr pour les événements récurrents. Architecture extensible via interfaces + registries auto-discovered. ADR-025.
 
-| Ordre | ID                                                                      | Titre                                                                          | Effort | PRs | Dépend de      |
-|-------|-------------------------------------------------------------------------|--------------------------------------------------------------------------------|--------|-----|----------------|
-| 1     | [#345](https://github.com/vincentchalamon/bike-trip-planner/issues/345) | Partie A — Enrichir requête OSM hébergements (wilderness_hut, shelter)         | S      |     | —              |
-| 2     | [#346](https://github.com/vincentchalamon/bike-trip-planner/issues/346) | Partie B — Infrastructure DataTourisme (client, cache, rate limiter)           | M      |     | —              |
-| 3     | [#347](https://github.com/vincentchalamon/bike-trip-planner/issues/347) | Partie C — Hébergements multi-sources (OSM + DataTourisme)                     | L      |     | #345 #346      |
-| 4     | [#348](https://github.com/vincentchalamon/bike-trip-planner/issues/348) | Partie D — POI culturels multi-sources (horaires, prix, description)           | L      |     | #346           |
-| 5     | [#349](https://github.com/vincentchalamon/bike-trip-planner/issues/349) | Partie E — Scan événements datés DataTourisme (festivals, expos)               | L      |     | #346           |
-| 6     | [#350](https://github.com/vincentchalamon/bike-trip-planner/issues/350) | Partie G — Wikidata enricher transversal (SPARQL batch)                        | L      |     | #347 #348 #349 |
-| 7     | [#351](https://github.com/vincentchalamon/bike-trip-planner/issues/351) | Partie H — Import marchés forains data.gouv.fr                                 | M      |     | #349           |
-| 8     | [#352](https://github.com/vincentchalamon/bike-trip-planner/issues/352) | Partie F — Documentation & attribution globale (ADR-025)                       | S      |     | #345..#351     |
+| Ordre | ID                                                                      | Titre                                                                          | Effort | PRs                                                                     | Dépend de      |
+|-------|-------------------------------------------------------------------------|--------------------------------------------------------------------------------|--------|-------------------------------------------------------------------------|----------------|
+| 1     | [#345](https://github.com/vincentchalamon/bike-trip-planner/issues/345) | Partie A — Enrichir requête OSM hébergements (wilderness_hut, shelter)         | S      | [#355](https://github.com/vincentchalamon/bike-trip-planner/pull/355)   | —              |
+| 2     | [#346](https://github.com/vincentchalamon/bike-trip-planner/issues/346) | Partie B — Infrastructure DataTourisme (client, cache, rate limiter)           | M      | [#356](https://github.com/vincentchalamon/bike-trip-planner/pull/356)   | —              |
+| 3     | [#347](https://github.com/vincentchalamon/bike-trip-planner/issues/347) | Partie C — Hébergements multi-sources (OSM + DataTourisme)                     | L      | [#357](https://github.com/vincentchalamon/bike-trip-planner/pull/357)   | #345 #346      |
+| 4     | [#348](https://github.com/vincentchalamon/bike-trip-planner/issues/348) | Partie D — POI culturels multi-sources (horaires, prix, description)           | L      | [#358](https://github.com/vincentchalamon/bike-trip-planner/pull/358)   | #346           |
+| 5     | [#349](https://github.com/vincentchalamon/bike-trip-planner/issues/349) | Partie E — Scan événements datés DataTourisme (festivals, expos)               | L      | [#359](https://github.com/vincentchalamon/bike-trip-planner/pull/359)   | #346           |
+| 6     | [#350](https://github.com/vincentchalamon/bike-trip-planner/issues/350) | Partie G — Wikidata enricher transversal (SPARQL batch)                        | L      | [#360](https://github.com/vincentchalamon/bike-trip-planner/pull/360)   | #347 #348 #349 |
+| 7     | [#351](https://github.com/vincentchalamon/bike-trip-planner/issues/351) | Partie H — Import marchés forains data.gouv.fr                                 | M      | [#361](https://github.com/vincentchalamon/bike-trip-planner/pull/361)   | #349           |
+| 8     | [#352](https://github.com/vincentchalamon/bike-trip-planner/issues/352) | Partie F — Documentation & attribution globale (ADR-025)                       | S      | [#354](https://github.com/vincentchalamon/bike-trip-planner/pull/354)   | #345..#351     |
 
 ---
 
