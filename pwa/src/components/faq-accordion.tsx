@@ -19,6 +19,7 @@ interface AccordionItemProps {
   answer: string;
   isOpen: boolean;
   onToggle: () => void;
+  panelId: string;
 }
 
 function AccordionItem({
@@ -26,6 +27,7 @@ function AccordionItem({
   answer,
   isOpen,
   onToggle,
+  panelId,
 }: AccordionItemProps) {
   return (
     <div className="border-b border-border last:border-0">
@@ -33,6 +35,7 @@ function AccordionItem({
         type="button"
         className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-medium transition-colors hover:text-foreground/80"
         aria-expanded={isOpen}
+        aria-controls={panelId}
         onClick={onToggle}
       >
         <span>{question}</span>
@@ -44,6 +47,8 @@ function AccordionItem({
         />
       </button>
       <div
+        id={panelId}
+        role="region"
         className={`overflow-hidden transition-all duration-200 ${
           isOpen ? "max-h-[9999px] pb-4" : "max-h-0"
         }`}
@@ -86,6 +91,7 @@ export function FaqAccordion({ categories }: FaqAccordionProps) {
               return (
                 <AccordionItem
                   key={key}
+                  panelId={`${key}-panel`}
                   question={item.question}
                   answer={item.answer}
                   isOpen={!!openItems[key]}

@@ -8,8 +8,8 @@ import { useAuthStore } from "@/store/auth-store";
  * Paths that do not require authentication.
  * "/" is matched exactly; other entries use startsWith so nested routes are also public.
  */
-const PUBLIC_EXACT_PATHS = ["/"];
-const PUBLIC_PREFIX_PATHS = ["/login", "/auth/verify", "/s/", "/faq"];
+const PUBLIC_EXACT_PATHS = ["/", "/faq"];
+const PUBLIC_PREFIX_PATHS = ["/login", "/auth/verify", "/s/"];
 
 function isPublicPath(pathname: string): boolean {
   return (
@@ -26,7 +26,7 @@ function isPublicPath(pathname: string): boolean {
  *    from the httpOnly refresh_token cookie.
  * 2. If the user is not authenticated and the current path is protected,
  *    redirects to `/login`.
- * 3. Public pages (`/`, `/login`, `/auth/verify/*`, `/s/*`) are always
+ * 3. Public pages (`/`, `/faq`, `/login`, `/auth/verify/*`, `/s/*`) are always
  *    accessible without authentication.
  *
  * Renders a blank screen during the initial auth check to prevent
