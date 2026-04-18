@@ -9,7 +9,12 @@ import { useAuthStore } from "@/store/auth-store";
  * "/" is matched exactly; other entries use startsWith so nested routes are also public.
  */
 const PUBLIC_EXACT_PATHS = ["/"];
-const PUBLIC_PREFIX_PATHS = ["/login", "/auth/verify", "/s/", "/access-requests/"];
+const PUBLIC_PREFIX_PATHS = [
+  "/login",
+  "/auth/verify",
+  "/s/",
+  "/access-requests/",
+];
 
 function isPublicPath(pathname: string): boolean {
   return (
