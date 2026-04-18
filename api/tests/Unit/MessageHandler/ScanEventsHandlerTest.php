@@ -10,11 +10,13 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\DataTourisme\DataTourismeClientInterface;
+use App\Entity\Market;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanEvents;
 use App\MessageHandler\ScanEventsHandler;
+use App\Repository\MarketRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -40,11 +42,14 @@ final class ScanEventsHandlerTest extends TestCase
         TripUpdatePublisherInterface $publisher,
         DataTourismeClientInterface $dataTourismeClient,
         GeoDistanceInterface $haversine,
+        ?MarketRepositoryInterface $marketRepository = null,
     ): ScanEventsHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+
+        $marketRepository ??= $this->createStub(MarketRepositoryInterface::class);
 
         return new ScanEventsHandler(
             $computationTracker,
@@ -54,6 +59,7 @@ final class ScanEventsHandlerTest extends TestCase
             $tripStateManager,
             $dataTourismeClient,
             $haversine,
+            $marketRepository,
         );
     }
 
@@ -329,5 +335,81 @@ final class ScanEventsHandlerTest extends TestCase
 
         self::assertCount(1, $eventsPublished);
         self::assertSame('Q12345', $eventsPublished[0]['payload']['events'][0]['wikidataId']);
+    }
+
+    #[Test]
+    public function mergesDataTourismeAndMarketEventsForSameStage(): void
+    {
+        // 2025-07-14 is a Monday (ISO day 1)
+        $startDate = new \DateTimeImmutable('2025-07-14');
+        $stage = $this->createStage(1);
+
+        $festivalResult = [
+            '@type' => ['schema:Festival'],
+            'rdfs:label' => 'Festival Jazz',
+            'hasGeometry' => ['latitude' => 48.5, 'longitude' => 2.5],
+            'startDate' => '2025-07-14',
+            'endDate' => '2025-07-18',
+        ];
+
+        $exhibitionResult = [
+            '@type' => ['schema:Exhibition'],
+            'rdfs:label' => 'Expo Impressionnisme',
+            'hasGeometry' => ['latitude' => 48.51, 'longitude' => 2.51],
+            'startDate' => '2025-07-12',
+            'endDate' => '2025-07-20',
+        ];
+
+        $dataTourismeClient = $this->createStub(DataTourismeClientInterface::class);
+        $dataTourismeClient->method('isEnabled')->willReturn(true);
+        $dataTourismeClient->method('request')->willReturn(['results' => [$festivalResult, $exhibitionResult]]);
+
+        $market = new Market('MKT-MON-001', 'Marché du Lundi');
+        $market->setLat(48.49);
+        $market->setLon(2.49);
+        $market->setDayOfWeek(1);
+        $market->setStartTime('07:00');
+        $market->setEndTime('13:00');
+        $market->setCommune('Paris');
+        $market->setDepartment('75');
+
+        $marketRepository = $this->createStub(MarketRepositoryInterface::class);
+        $marketRepository->method('findNearEndpoint')->willReturn([$market]);
+
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['type' => $type, 'payload' => $payload];
+            });
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getRequest')->willReturn($this->createTripRequest($startDate));
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inMeters')->willReturn(400.0);
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine, $marketRepository);
+        $handler(new ScanEvents('trip-1'));
+
+        $eventsPublished = array_values(array_filter(
+            $publishedEvents,
+            static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type'],
+        ));
+
+        self::assertCount(1, $eventsPublished);
+        $events = $eventsPublished[0]['payload']['events'];
+        self::assertCount(3, $events);
+
+        $sources = array_column($events, 'source');
+        self::assertContains('datatourisme', $sources);
+        self::assertContains('data_gouv_markets', $sources);
+
+        $marketEvents = array_values(array_filter($events, static fn (array $e): bool => 'data_gouv_markets' === $e['source']));
+        self::assertCount(1, $marketEvents);
+        self::assertSame('Marché du Lundi', $marketEvents[0]['name']);
+        self::assertSame('market', $marketEvents[0]['type']);
+        self::assertSame('Marché hebdomadaire', $marketEvents[0]['description']);
     }
 }

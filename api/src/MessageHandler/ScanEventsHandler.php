@@ -9,11 +9,13 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\DataTourisme\DataTourismeClientInterface;
+use App\Entity\Market;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanEvents;
+use App\Repository\MarketRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -41,6 +43,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private DataTourismeClientInterface $dataTourismeClient,
         private GeoDistanceInterface $haversine,
+        private MarketRepositoryInterface $marketRepository,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
@@ -75,6 +78,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
 
                 $stageDate = $startDate->modify(\sprintf('+%d days', $i));
                 $events = $this->fetchEventsForStage($stage, $stageDate);
+                $events = [...$events, ...$this->fetchMarketsForStage($stage, $stageDate)];
 
                 foreach ($events as $event) {
                     $stage->addEvent($event);
@@ -201,6 +205,57 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         }
 
         usort($events, static fn (Event $a, Event $b): int => $a->startDate <=> $b->startDate);
+
+        return $events;
+    }
+
+    /**
+     * @return list<Event>
+     */
+    private function fetchMarketsForStage(Stage $stage, \DateTimeImmutable $stageDate): array
+    {
+        $dayOfWeek = (int) $stageDate->format('N');
+
+        $markets = $this->marketRepository->findNearEndpoint(
+            $stage->endPoint->lat,
+            $stage->endPoint->lon,
+            self::EVENT_RADIUS_METERS,
+            $dayOfWeek,
+        );
+
+        $events = [];
+
+        foreach ($markets as $market) {
+            $startDate = $stageDate;
+            $endDate = $stageDate;
+
+            if (null !== $market->getStartTime()) {
+                $startDate = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $stageDate->format('Y-m-d').' '.$market->getStartTime()) ?: $stageDate;
+            }
+
+            if (null !== $market->getEndTime()) {
+                $endDate = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $stageDate->format('Y-m-d').' '.$market->getEndTime()) ?: $stageDate;
+            }
+
+            $distanceToEndPoint = $this->haversine->inMeters(
+                $market->getLat(),
+                $market->getLon(),
+                $stage->endPoint->lat,
+                $stage->endPoint->lon,
+            );
+
+            $events[] = new Event(
+                name: $market->getName(),
+                type: 'market',
+                lat: $market->getLat(),
+                lon: $market->getLon(),
+                startDate: $startDate,
+                endDate: $endDate,
+                description: 'Marché hebdomadaire',
+                distanceToEndPoint: $distanceToEndPoint,
+                source: 'data_gouv_markets',
+            );
+        }
 
         return $events;
     }

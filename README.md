@@ -194,6 +194,27 @@ When `DATATOURISME_ENABLED=false` (the default) or the API key is absent, all Da
 
 ---
 
+## Commandes d'administration
+
+### Import des marchés forains
+
+```bash
+make markets-import
+```
+
+Télécharge et importe le dataset des marchés forains hebdomadaires depuis [data.gouv.fr](https://www.data.gouv.fr/) (Licence Ouverte 2.0). Les marchés sont ensuite inclus automatiquement dans le scan d'événements de chaque étape.
+
+Options disponibles via `bin/console app:markets:import` :
+
+| Option | Description |
+|--------|-------------|
+| `--dry-run` | Affiche les statistiques sans écrire en base de données |
+| `--limit N` | Limite le nombre de lignes traitées (debug / CI) |
+
+La variable d'environnement `MARKETS_DATASET_URL` permet de surcharger l'URL du dataset.
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please read the [Contributing Guide](docs/contributing.md) before submitting a pull request.
