@@ -171,6 +171,29 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 
 ---
 
+## External data sources
+
+### DataTourisme
+
+[DataTourisme](https://www.datatourisme.fr) provides enriched POI data (accommodations, cultural sites, events) for France. It is used as an optional supplementary source alongside OpenStreetMap.
+
+**Licence:** [Licence Ouverte 2.0 Etalab](https://www.etalab.gouv.fr/licence-ouverte-open-licence) — commercial use and modification permitted; attribution required.
+
+**Quota:** 1 000 requests/hour, ~10 req/s sustained. Rate limiting is enforced server-side via a `fixed_window` limiter.
+
+**Registration:** [https://www.datatourisme.fr/](https://www.datatourisme.fr/) — free sign-up, personal API key delivered by email.
+
+To enable DataTourisme integration, set the following environment variables:
+
+```env
+DATATOURISME_API_KEY=your-api-key
+DATATOURISME_ENABLED=true
+```
+
+When `DATATOURISME_ENABLED=false` (the default) or the API key is absent, all DataTourisme calls are skipped and the application falls back to OpenStreetMap data exclusively.
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please read the [Contributing Guide](docs/contributing.md) before submitting a pull request.

@@ -77,6 +77,15 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'User-Agent' => 'Mozilla/5.0 (compatible; BikeTripPlanner/1.0)',
                     ],
                 ],
+                'datatourisme.client' => [
+                    'scope' => '^https://api\\.datatourisme\\.fr',
+                    'max_redirects' => 2,
+                    'timeout' => 10,
+                    'headers' => [
+                        'X-API-Key' => '%env(default::DATATOURISME_API_KEY)%',
+                        'Accept' => 'application/json',
+                    ],
+                ],
             ],
         ],
     ]);

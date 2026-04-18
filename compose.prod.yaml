@@ -46,6 +46,8 @@ services:
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
       FRONTEND_URL: "${FRONTEND_URL}"
       MAILER_DSN: "${MAILER_DSN}"
+      DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
+      DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
     secrets:
       - jwt_private_key
       - jwt_public_key
@@ -114,6 +116,8 @@ services:
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
       FRONTEND_URL: "${FRONTEND_URL}"
       MAILER_DSN: "${MAILER_DSN}"
+      DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
+      DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
     secrets:
       - jwt_private_key
       - jwt_public_key
