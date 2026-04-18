@@ -47,19 +47,36 @@ test.describe("Auth flow", () => {
     ).toBeVisible();
   });
 
-  test("unauthenticated user sees landing page at home", async ({ page }) => {
+  test("unauthenticated user sees landing page at /", async ({ page }) => {
     // Mock auth/refresh as 401 (no valid session)
     await page.route("**/auth/refresh", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       return route.fulfill({ status: 401, body: "" });
     });
 
+    // The home page is now a public landing page — no redirect to /login
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    // Unauthenticated users now see the landing page instead of being redirected
     await expect(page).toHaveURL("/");
+    await expect(page.getByTestId("landing-page")).toBeVisible();
     await expect(page.getByTestId("early-access-form")).toBeVisible();
+  });
+
+  test("unauthenticated user is redirected to login when accessing protected route", async ({
+    page,
+  }) => {
+    // Mock auth/refresh as 401 (no valid session)
+    await page.route("**/auth/refresh", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      return route.fulfill({ status: 401, body: "" });
+    });
+
+    // Protected routes (e.g. /trips) still redirect to /login
+    await page.goto("/trips");
+    await page.waitForURL(/\/login/, { timeout: 5000 });
+
+    await expect(page).toHaveURL(/\/login/);
   });
 
   test("verify page redirects to home on valid token", async ({ page }) => {

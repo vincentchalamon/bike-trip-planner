@@ -6,15 +6,15 @@ import { useAuthStore } from "@/store/auth-store";
 
 /**
  * Paths that do not require authentication.
- * Uses startsWith matching so that nested routes are also public.
+ * "/" is matched exactly; other entries use startsWith so nested routes are also public.
  */
-const PUBLIC_PATHS = ["/login", "/auth/verify", "/s/", "/access-requests/"];
-const PUBLIC_EXACT = ["/"];
+const PUBLIC_EXACT_PATHS = ["/"];
+const PUBLIC_PREFIX_PATHS = ["/login", "/auth/verify", "/s/", "/access-requests/"];
 
 function isPublicPath(pathname: string): boolean {
   return (
-    PUBLIC_EXACT.includes(pathname) ||
-    PUBLIC_PATHS.some((p) => pathname.startsWith(p))
+    PUBLIC_EXACT_PATHS.includes(pathname) ||
+    PUBLIC_PREFIX_PATHS.some((p) => pathname.startsWith(p))
   );
 }
 

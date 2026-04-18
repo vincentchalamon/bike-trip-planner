@@ -9,7 +9,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 /**
  * Stateless HMAC-based signed URL service for access request email verification.
  *
- * The signature is computed as: hash_hmac('sha256', email + '|' + expires, APP_SECRET)
+ * The signature is computed as: hash_hmac('sha256', email + '|' + expires, ACCESS_REQUEST_HMAC_SECRET)
  * The '|' separator prevents ambiguity (e.g. "a@b.com" + "1234" vs "a@b.com1" + "234").
  * No token is stored in the database — the signature IS the proof of authenticity.
  */
@@ -18,9 +18,12 @@ final readonly class AccessRequestHmacService
     private const int TTL_HOURS = 24;
 
     public function __construct(
-        #[Autowire(env: 'APP_SECRET')]
+        #[Autowire(env: 'ACCESS_REQUEST_HMAC_SECRET')]
         private string $secret,
     ) {
+        if ('' === $secret) {
+            throw new \InvalidArgumentException('ACCESS_REQUEST_HMAC_SECRET must not be empty.');
+        }
     }
 
     /**

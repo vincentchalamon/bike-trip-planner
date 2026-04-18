@@ -116,8 +116,8 @@ final class AccessRequestVerifyTest extends ApiTestCase
 
         // Build an expired signature manually
         $expiredTs = new \DateTimeImmutable('-1 day')->getTimestamp();
-        $secret = self::getContainer()->getParameter('kernel.secret');
-        \assert(\is_string($secret));
+        $secret = (string) getenv('ACCESS_REQUEST_HMAC_SECRET');
+        \assert('' !== $secret);
         $expiredSignature = hash_hmac('sha256', 'expired@example.com|'.$expiredTs, $secret);
 
         $response = self::createClient(['followRedirects' => false])->request(

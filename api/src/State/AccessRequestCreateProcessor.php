@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\Entity\User;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\AccessRequest as AccessRequestDto;
 use App\Entity\AccessRequest;
-use App\Entity\User;
 use App\Repository\AccessRequestRepository;
+use App\Repository\UserRepository;
 use App\Service\AccessRequestHmacService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -27,7 +29,8 @@ use Twig\Environment;
 /**
  * Handles access request creation: rate limiting, email deduplication, HMAC link generation and email sending.
  *
- * Always returns the same neutral 202 response to prevent email enumeration.
+ * Returns 429 when the IP rate limit is exceeded; returns 202 for all other normal cases (new request, duplicate email, existing user) to prevent email enumeration.
+ * Throws on infrastructure failure (e.g. mailer down) after removing the persisted record, so the client receives a 500 and can retry.
  *
  * @implements ProcessorInterface<AccessRequestDto, JsonResponse>
  */
@@ -36,6 +39,7 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
     public function __construct(
         private EntityManagerInterface $entityManager,
         private AccessRequestRepository $accessRequestRepository,
+        private UserRepository $userRepository,
         private MailerInterface $mailer,
         private Environment $twig,
         private RequestStack $requestStack,
@@ -44,8 +48,10 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         private AccessRequestHmacService $hmacService,
         #[Autowire(service: 'limiter.access_request_ip')]
         private RateLimiterFactory $accessRequestIpLimiter,
-        #[Autowire(env: 'FRONTEND_URL')]
-        private string $frontendUrl = 'https://localhost',
+        #[Autowire(env: 'BACKEND_URL')]
+        private string $backendUrl = 'https://localhost',
+        #[Autowire(env: 'MAILER_SENDER_EMAIL')]
+        private string $senderEmail = 'noreply@bike-trip-planner.com',
     ) {
     }
 
@@ -70,8 +76,8 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         }
 
         // Silently ignore if user already exists
-        $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
-        if (null !== $existingUser) {
+        $existingUser = $this->userRepository->findByEmail($email);
+        if ($existingUser instanceof User) {
             $this->logger->debug('Access request for existing user — silently ignored', ['email' => $email]);
 
             return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
@@ -88,13 +94,19 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         // Persist new access request
         $accessRequest = new AccessRequest($email, $clientIp);
         $this->entityManager->persist($accessRequest);
-        $this->entityManager->flush();
+        try {
+            $this->entityManager->flush();
+        } catch (UniqueConstraintViolationException) {
+            $this->logger->debug('Access request race condition — silently ignored', ['email' => $email]);
+
+            return new JsonResponse(['message' => $neutralMessage], Response::HTTP_ACCEPTED);
+        }
 
         // Generate HMAC-signed verification URL
         $payload = $this->hmacService->generatePayload($email);
         $verifyUrl = \sprintf(
             '%s/access-requests/verify?email=%s&expires=%d&signature=%s',
-            rtrim($this->frontendUrl, '/'),
+            rtrim($this->backendUrl, '/'),
             urlencode($payload['email']),
             $payload['expires'],
             $payload['signature'],
@@ -106,12 +118,22 @@ final readonly class AccessRequestCreateProcessor implements ProcessorInterface
         ]);
 
         $emailMessage = new Email()
-            ->from(new Address('noreply@bike-trip-planner.com', 'Bike Trip Planner'))
+            ->from(new Address($this->senderEmail, 'Bike Trip Planner'))
             ->to($email)
             ->subject($this->translator->trans('access_request.email.verify.subject', [], 'access_request'))
             ->html($html);
 
-        $this->mailer->send($emailMessage);
+        try {
+            $this->mailer->send($emailMessage);
+        } catch (\Throwable $throwable) {
+            $this->logger->error('Failed to send access request verification email — removing record to allow retry', [
+                'email' => $email,
+                'error' => $throwable->getMessage(),
+            ]);
+            $this->entityManager->remove($accessRequest);
+            $this->entityManager->flush();
+            throw $throwable;
+        }
 
         $this->logger->debug('Access request created and verification email sent', ['email' => $email]);
 
