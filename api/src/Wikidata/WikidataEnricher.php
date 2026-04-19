@@ -129,7 +129,8 @@ SPARQL;
         // fileUri looks like: http://commons.wikimedia.org/wiki/Special:FilePath/Foo.jpg
         // We want: https://commons.wikimedia.org/wiki/Special:FilePath/Foo.jpg?width=400
         $cleaned = str_replace('http://', 'https://', $fileUri);
+        $separator = str_contains($cleaned, '?') ? '&' : '?';
 
-        return $cleaned.'?width=400';
+        return $cleaned.$separator.'width=400';
     }
 }

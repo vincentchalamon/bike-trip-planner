@@ -29,8 +29,8 @@ export const AlertSchema = z.object({
   estimatedPrice: z.number().optional(),
   description: z.string().optional(),
   wikidataId: z.string().optional(),
-  imageUrl: z.string().optional(),
-  wikipediaUrl: z.string().optional(),
+  imageUrl: z.string().url().optional().catch(undefined),
+  wikipediaUrl: z.string().url().optional().catch(undefined),
   // Optional contextual action
   action: AlertActionSchema.nullable().optional(),
 });
@@ -89,14 +89,14 @@ export const EventSchema = z.object({
   lon: z.number(),
   startDate: z.string(),
   endDate: z.string(),
-  url: z.string().nullable().optional(),
+  url: z.string().url().nullable().optional().catch(null),
   description: z.string().nullable().optional(),
   priceMin: z.number().nullable().optional(),
   distanceToEndPoint: z.number().default(0),
   source: z.string().default("datatourisme"),
   wikidataId: z.string().nullable().optional(),
-  imageUrl: z.string().nullable().optional(),
-  wikipediaUrl: z.string().nullable().optional(),
+  imageUrl: z.string().url().nullable().optional().catch(null),
+  wikipediaUrl: z.string().url().nullable().optional().catch(null),
   openingHours: z.string().nullable().optional(),
 });
 
@@ -108,13 +108,13 @@ export const AccommodationSchema = z.object({
   estimatedPriceMin: z.number(),
   estimatedPriceMax: z.number(),
   isExactPrice: z.boolean(),
-  url: z.string().nullable().optional(),
+  url: z.string().url().nullable().optional().catch(null),
   possibleClosed: z.boolean().default(false),
   distanceToEndPoint: z.number().default(0),
   source: z.enum(["osm", "datatourisme"]).default("osm"),
   description: z.string().nullable().optional(),
-  imageUrl: z.string().nullable().optional(),
-  wikipediaUrl: z.string().nullable().optional(),
+  imageUrl: z.string().url().nullable().optional().catch(null),
+  wikipediaUrl: z.string().url().nullable().optional().catch(null),
   openingHours: z.string().nullable().optional(),
 });
 

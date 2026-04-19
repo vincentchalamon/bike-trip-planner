@@ -57,6 +57,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         $generation = $message->generation;
 
         $stages = $this->tripStateManager->getStages($tripId);
+
         if (null === $stages) {
             $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null, $generation);
 
@@ -65,6 +66,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
 
         $request = $this->tripStateManager->getRequest($tripId);
         $startDate = $request?->startDate;
+
         if (!$startDate instanceof \DateTimeImmutable) {
             $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null, $generation);
 
@@ -83,18 +85,18 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                     $stageDate = $startDate->modify(\sprintf('+%d days', $i));
                     $events = $this->fetchMarketsForStage($stage, $stageDate, $locale);
 
-                    foreach ($events as $event) {
-                        $stage->addEvent($event);
-                    }
-
                     if ([] !== $events) {
                         $this->publisher->publish($tripId, MercureEventType::EVENTS_FOUND, [
                             'stageIndex' => $i,
                             'events' => array_map($this->eventToArray(...), $events),
                         ]);
-                    }
 
-                    $stages[$i] = $stage;
+                        foreach ($events as $event) {
+                            $stage->addEvent($event);
+                        }
+
+                        $stages[$i] = $stage;
+                    }
                 }
 
                 $this->tripStateManager->storeStages($tripId, array_values($stages));
@@ -113,9 +115,9 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                 }
 
                 $stageDate = $startDate->modify(\sprintf('+%d days', $i));
-                $events = $this->fetchEventsForStage($stage, $stageDate);
-                $events = [...$events, ...$this->fetchMarketsForStage($stage, $stageDate, $locale)];
-                $eventsByStage[$i] = $events;
+                $dtEvents = $this->fetchEventsForStage($stage, $stageDate);
+                $marketEvents = $this->fetchMarketsForStage($stage, $stageDate, $locale);
+                $eventsByStage[$i] = array_merge($dtEvents, $marketEvents);
             }
 
             // Wikidata enrichment: collect all Q-IDs and fetch in one batch
@@ -158,10 +160,12 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                     $stage->addEvent($event);
                 }
 
-                $this->publisher->publish($tripId, MercureEventType::EVENTS_FOUND, [
+                $payload = [
                     'stageIndex' => $i,
                     'events' => array_map($this->eventToArray(...), $enrichedEvents),
-                ]);
+                ];
+
+                $this->publisher->publish($tripId, MercureEventType::EVENTS_FOUND, $payload);
 
                 $stages[$i] = $stage;
             }
@@ -188,7 +192,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
 
         $dateStr = $stageDate->format('Y-m-d');
 
-        $response = $this->dataTourismeClient->request('/api/v1/events', [
+        $response = $this->dataTourismeClient->request('/api/v1/places', [
             'filters[0][path]' => '@type',
             'filters[0][operator]' => 'in',
             'filters[0][value]' => implode(',', self::TARGETED_TYPES),
@@ -210,6 +214,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
             'filters[6][path]' => 'hasGeometry.longitude',
             'filters[6][operator]' => 'lte',
             'filters[6][value]' => $maxLon,
+            'limit' => 100,
         ]);
 
         /** @var list<array<string, mixed>> $results */
@@ -292,15 +297,15 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         $events = [];
 
         foreach ($markets as $market) {
-            $startDate = $stageDate;
-            $endDate = $stageDate;
+            $startTime = $market->getStartTime() ?? '00:00';
+            $endTime = $market->getEndTime() ?? '23:59';
+            $datePrefix = $stageDate->format('Y-m-d');
 
-            if (null !== $market->getStartTime()) {
-                $startDate = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $stageDate->format('Y-m-d').' '.$market->getStartTime()) ?: $stageDate;
-            }
+            $startDate = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $datePrefix.' '.$startTime);
+            $endDate = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $datePrefix.' '.$endTime);
 
-            if (null !== $market->getEndTime()) {
-                $endDate = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $stageDate->format('Y-m-d').' '.$market->getEndTime()) ?: $stageDate;
+            if (!$startDate instanceof \DateTimeImmutable || !$endDate instanceof \DateTimeImmutable) {
+                continue;
             }
 
             $distanceToEndPoint = $this->haversine->inMeters(
@@ -310,6 +315,8 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                 $stage->endPoint->lon,
             );
 
+            $description = $this->translator->trans('market.weekly_description', [], 'messages', $locale);
+
             $events[] = new Event(
                 name: $market->getName(),
                 type: 'market',
@@ -317,7 +324,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                 lon: $market->getLon(),
                 startDate: $startDate,
                 endDate: $endDate,
-                description: $this->translator->trans('market.weekly_description', [], 'messages', $locale),
+                description: $description,
                 distanceToEndPoint: $distanceToEndPoint,
                 source: 'data_gouv_markets',
             );
@@ -496,8 +503,10 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
     {
         if (str_contains($uri, 'wikidata.org/entity/')) {
             $parts = explode('/', $uri);
-
-            return end($parts) ?: null;
+            $id = end($parts) ?: null;
+            if (null !== $id && 1 === preg_match('/^Q\d+$/', $id)) {
+                return $id;
+            }
         }
 
         return null;

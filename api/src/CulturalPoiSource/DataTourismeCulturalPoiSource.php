@@ -55,6 +55,7 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
             'filters[4][path]' => 'hasGeometry.longitude',
             'filters[4][operator]' => 'lte',
             'filters[4][value]' => $maxLon,
+            'limit' => 100,
         ]);
 
         /** @var list<array<string, mixed>> $results */
@@ -100,10 +101,12 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
             }
         }
 
-        if ([] === $allLats || [] === $allLons) {
+        if ([] === $allLats) {
             return [0.0, 0.0, 0.0, 0.0];
         }
 
+        /** @var non-empty-array<int, float> $allLats */
+        /** @var non-empty-array<int, float> $allLons */
         $avgLat = (min($allLats) + max($allLats)) / 2.0;
         $latOffset = $radiusMeters / 111_000.0;
         $lonOffset = $radiusMeters / (111_000.0 * max(cos(deg2rad($avgLat)), 0.001));
@@ -154,8 +157,8 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
 
         if (\is_array($label)) {
             foreach ($label as $entry) {
-                if (\is_array($entry) && isset($entry['@value']) && \is_scalar($entry['@value'])) {
-                    return (string) $entry['@value'];
+                if (\is_array($entry) && isset($entry['@value']) && \is_string($entry['@value'])) {
+                    return $entry['@value'];
                 }
 
                 if (\is_string($entry)) {
@@ -179,8 +182,8 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
             return null;
         }
 
-        $lat = $geometry['schema:latitude'] ?? $geometry['lat'] ?? null;
-        $lon = $geometry['schema:longitude'] ?? $geometry['lon'] ?? null;
+        $lat = $geometry['schema:latitude'] ?? $geometry['latitude'] ?? $geometry['lat'] ?? null;
+        $lon = $geometry['schema:longitude'] ?? $geometry['longitude'] ?? $geometry['lon'] ?? null;
 
         if (!is_numeric($lat) || !is_numeric($lon)) {
             return null;
@@ -235,24 +238,14 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
             $opens = $spec['schema:opens'] ?? null;
             $closes = $spec['schema:closes'] ?? null;
 
-            if (!\is_string($opens) || !\is_string($closes)) {
+            if (null === $opens || null === $closes) {
                 continue;
             }
 
-            if (\is_array($days)) {
-                $dayParts = [];
-                foreach ($days as $day) {
-                    if (\is_string($day)) {
-                        $dayParts[] = $this->formatDay($day);
-                    }
-                }
-
-                $dayStr = implode(', ', $dayParts);
-            } else {
-                $dayStr = \is_string($days) ? $days : '';
-            }
-
-            $parts[] = trim(\sprintf('%s %s–%s', $dayStr, $opens, $closes));
+            $dayStr = \is_array($days)
+                ? implode(', ', array_map(fn (mixed $d): string => $this->formatDay(\is_string($d) ? $d : ''), $days))
+                : (\is_string($days) ? $days : '');
+            $parts[] = trim(\sprintf('%s %s\u{2013}%s', $dayStr, $opens, $closes));
         }
 
         return [] === $parts ? null : implode(' | ', $parts);
@@ -327,8 +320,8 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
 
         if (\is_array($raw)) {
             foreach ($raw as $entry) {
-                if (\is_array($entry) && isset($entry['@value']) && \is_scalar($entry['@value'])) {
-                    return (string) $entry['@value'];
+                if (\is_array($entry) && isset($entry['@value']) && \is_string($entry['@value'])) {
+                    return $entry['@value'];
                 }
 
                 if (\is_string($entry)) {
@@ -353,8 +346,10 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
         foreach ($sameAs as $uri) {
             if (\is_string($uri) && str_contains($uri, 'wikidata.org/entity/')) {
                 $parts = explode('/', $uri);
-
-                return end($parts) ?: null;
+                $id = end($parts) ?: null;
+                if (null !== $id && 1 === preg_match('/^Q\d+$/', $id)) {
+                    return $id;
+                }
             }
         }
 

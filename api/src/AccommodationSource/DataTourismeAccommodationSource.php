@@ -62,6 +62,7 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
             'filters[4][path]' => 'hasGeometry.latitude',
             'filters[4][operator]' => 'lte',
             'filters[4][value]' => $bbox['latMax'],
+            'limit' => 100,
         ]);
 
         /** @var list<array<string, mixed>> $items */
@@ -262,10 +263,12 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
         $candidates = \is_array($sameAs) ? $sameAs : (\is_string($sameAs) ? [$sameAs] : []);
 
         foreach ($candidates as $uri) {
-            if (\is_string($uri) && str_contains($uri, 'wikidata.org')) {
-                $parts = explode('/', rtrim($uri, '/'));
-
-                return end($parts) ?: null;
+            if (\is_string($uri) && str_contains($uri, 'wikidata.org/')) {
+                $parts = explode('/', $uri);
+                $id = end($parts) ?: null;
+                if (null !== $id && 1 === preg_match('/^Q\d+$/', $id)) {
+                    return $id;
+                }
             }
         }
 
