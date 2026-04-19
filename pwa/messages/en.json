@@ -85,6 +85,8 @@
     "type_guest_house": "Guest house",
     "type_motel": "Motel",
     "type_alpine_hut": "Alpine hut",
+    "type_wilderness_hut": "Wilderness hut",
+    "type_shelter": "Shelter",
     "type_other": "Other",
     "hotel": "Hotel",
     "gite": "Gite",

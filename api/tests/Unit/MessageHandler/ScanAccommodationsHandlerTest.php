@@ -688,7 +688,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
     }
 
     #[Test]
-    public function amenityShelterElementIsMappedToTypeShelt(): void
+    public function amenityShelterElementIsMappedToTypeShelter(): void
     {
         $stage = $this->createStage('trip-shelter', 48.5, 2.5);
 
@@ -707,24 +707,31 @@ final class ScanAccommodationsHandlerTest extends TestCase
             ],
         ]);
 
-        $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByEndpoint')->willReturn([
-            0 => [
-                [
-                    'name' => 'Lean-To Shelter',
-                    'type' => 'shelter',
-                    'lat' => 48.6,
-                    'lon' => 2.6,
-                    'priceMin' => 0.0,
-                    'priceMax' => 0.0,
-                    'isExact' => false,
-                    'url' => null,
-                    'tagCount' => 3,
-                    'hasWebsite' => false,
-                    'tags' => ['amenity' => 'shelter', 'shelter_type' => 'lean_to', 'name' => 'Lean-To Shelter'],
+        $distributor = $this->createMock(GeometryDistributorInterface::class);
+        $distributor->expects($this->once())
+            ->method('distributeByEndpoint')
+            ->with($this->callback(static function (array $byEndpoint): bool {
+                $candidate = $byEndpoint[0][0] ?? null;
+
+                return null !== $candidate && 'shelter' === $candidate['type'];
+            }))
+            ->willReturn([
+                0 => [
+                    [
+                        'name' => 'Lean-To Shelter',
+                        'type' => 'shelter',
+                        'lat' => 48.6,
+                        'lon' => 2.6,
+                        'priceMin' => 0.0,
+                        'priceMax' => 0.0,
+                        'isExact' => false,
+                        'url' => null,
+                        'tagCount' => 3,
+                        'hasWebsite' => false,
+                        'tags' => ['amenity' => 'shelter', 'shelter_type' => 'lean_to', 'name' => 'Lean-To Shelter'],
+                    ],
                 ],
-            ],
-        ]);
+            ]);
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inKilometers')->willReturn(0.5);
