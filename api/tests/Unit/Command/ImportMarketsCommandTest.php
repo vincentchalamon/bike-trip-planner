@@ -83,8 +83,8 @@ final class ImportMarketsCommandTest extends TestCase
     public function insertsNewMarketsAndSkipsMissingGeo(): void
     {
         $this->marketRepository
-            ->method('findByExternalId')
-            ->willReturn(null);
+            ->method('findByExternalIds')
+            ->willReturn([]);
 
         $this->marketRepository
             ->expects($this->exactly(4))
@@ -114,8 +114,8 @@ final class ImportMarketsCommandTest extends TestCase
         $existing->setDepartment('00');
 
         $this->marketRepository
-            ->method('findByExternalId')
-            ->willReturnCallback(static fn (string $id): ?Market => 'MKT-001' === $id ? $existing : null);
+            ->method('findByExternalIds')
+            ->willReturn(['MKT-001' => $existing]);
 
         $this->marketRepository
             ->expects($this->exactly(3))
@@ -143,8 +143,8 @@ final class ImportMarketsCommandTest extends TestCase
     public function dryRunDoesNotWriteToDatabase(): void
     {
         $this->marketRepository
-            ->method('findByExternalId')
-            ->willReturn(null);
+            ->method('findByExternalIds')
+            ->willReturn([]);
 
         $this->marketRepository
             ->expects($this->never())
@@ -167,8 +167,8 @@ final class ImportMarketsCommandTest extends TestCase
     public function limitOptionCapsProcessedRows(): void
     {
         $this->marketRepository
-            ->method('findByExternalId')
-            ->willReturn(null);
+            ->method('findByExternalIds')
+            ->willReturn([]);
 
         $this->marketRepository
             ->expects($this->exactly(2))

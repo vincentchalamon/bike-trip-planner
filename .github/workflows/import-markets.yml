@@ -21,22 +21,20 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: pdo_pgsql, redis
+          extensions: pdo_pgsql
 
-      - name: Install Composer dependencies
+      - name: Install dependencies
+        run: composer install --no-dev --optimize-autoloader
         working-directory: api
-        run: composer install --no-interaction --prefer-dist
 
       - name: Import markets
+        run: |
+          ARGS=""
+          if [ "$DRY_RUN" = "true" ]; then ARGS="--dry-run"; fi
+          php bin/console app:markets:import $ARGS
         working-directory: api
         env:
           APP_ENV: prod
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DRY_RUN: ${{ inputs.dry_run }}
           MARKETS_DATASET_URL: ${{ vars.MARKETS_DATASET_URL }}
-          INPUT_DRY_RUN: ${{ inputs.dry_run }}
-        run: |
-          DRY_RUN_FLAG=""
-          if [ "$INPUT_DRY_RUN" = "true" ]; then
-            DRY_RUN_FLAG="--dry-run"
-          fi
-          php bin/console app:markets:import $DRY_RUN_FLAG

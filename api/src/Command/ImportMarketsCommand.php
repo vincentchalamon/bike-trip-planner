@@ -45,7 +45,7 @@ final class ImportMarketsCommand extends Command
         private readonly MarketRepositoryInterface $marketRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly LoggerInterface $logger,
-        #[Autowire(service: 'markets_dataset.client')]
+        #[Autowire(service: 'markets.client')]
         private readonly HttpClientInterface $httpClient,
         #[Autowire(env: 'default::MARKETS_DATASET_URL')]
         private readonly ?string $datasetUrl = null,
@@ -90,10 +90,6 @@ final class ImportMarketsCommand extends Command
             [$inserted, $updated, $skipped] = $this->processFile($tmpFile, $isDryRun, $limit);
         } finally {
             @unlink($tmpFile);
-        }
-
-        if (!$isDryRun) {
-            $this->entityManager->flush();
         }
 
         $io->success(\sprintf(
@@ -165,6 +161,67 @@ final class ImportMarketsCommand extends Command
         $processed = 0;
         $batchSize = 200;
 
+        /**
+         * Each element: array{externalId: string, name: string, lat: float, lon: float,
+         *                     dayOfWeek: int, startTime: ?string, endTime: ?string,
+         *                     commune: string, department: string}.
+         *
+         * @var list<array{externalId: string, name: string, lat: float, lon: float, dayOfWeek: int, startTime: ?string, endTime: ?string, commune: string, department: string}> $pendingRows
+         */
+        $pendingRows = [];
+
+        $flushBatch = function () use (&$pendingRows, &$inserted, &$updated, $isDryRun): void {
+            if ([] === $pendingRows) {
+                return;
+            }
+
+            /** @var list<string> $batchIds */
+            $batchIds = array_column($pendingRows, 'externalId');
+            $existingMap = $this->marketRepository->findByExternalIds($batchIds);
+
+            foreach ($pendingRows as $row) {
+                $externalId = $row['externalId'];
+                $existing = $existingMap[$externalId] ?? null;
+
+                if (null !== $existing) {
+                    if (!$isDryRun) {
+                        $existing->setName($row['name']);
+                        $existing->setLat($row['lat']);
+                        $existing->setLon($row['lon']);
+                        $existing->setDayOfWeek($row['dayOfWeek']);
+                        $existing->setStartTime($row['startTime']);
+                        $existing->setEndTime($row['endTime']);
+                        $existing->setCommune($row['commune']);
+                        $existing->setDepartment($row['department']);
+                        $existing->setImportedAt(new \DateTimeImmutable());
+                    }
+
+                    ++$updated;
+                } else {
+                    if (!$isDryRun) {
+                        $market = new Market($externalId, $row['name']);
+                        $market->setLat($row['lat']);
+                        $market->setLon($row['lon']);
+                        $market->setDayOfWeek($row['dayOfWeek']);
+                        $market->setStartTime($row['startTime']);
+                        $market->setEndTime($row['endTime']);
+                        $market->setCommune($row['commune']);
+                        $market->setDepartment($row['department']);
+                        $this->marketRepository->save($market);
+                    }
+
+                    ++$inserted;
+                }
+            }
+
+            if (!$isDryRun) {
+                $this->entityManager->flush();
+                $this->entityManager->clear();
+            }
+
+            $pendingRows = [];
+        };
+
         while (false !== ($row = fgetcsv($handle, 0, ';', escape: '\\'))) {
             if (0 < $limit && $processed >= $limit) {
                 break;
@@ -209,48 +266,26 @@ final class ImportMarketsCommand extends Command
             $startTime = $this->extractTime($data, $headerIndex, ['Heure début', 'heure_debut', 'start_time', 'ouverture']);
             $endTime = $this->extractTime($data, $headerIndex, ['Heure fin', 'heure_fin', 'end_time', 'fermeture']);
 
-            if (!$isDryRun) {
-                $existing = $this->marketRepository->findByExternalId($externalId);
-
-                if ($existing instanceof Market) {
-                    $existing->setName($name);
-                    $existing->setLat($lat);
-                    $existing->setLon($lon);
-                    $existing->setDayOfWeek($dayOfWeek);
-                    $existing->setStartTime($startTime);
-                    $existing->setEndTime($endTime);
-                    $existing->setCommune($commune);
-                    $existing->setDepartment($department);
-                    $existing->setImportedAt(new \DateTimeImmutable());
-                    ++$updated;
-                } else {
-                    $market = new Market($externalId, $name);
-                    $market->setLat($lat);
-                    $market->setLon($lon);
-                    $market->setDayOfWeek($dayOfWeek);
-                    $market->setStartTime($startTime);
-                    $market->setEndTime($endTime);
-                    $market->setCommune($commune);
-                    $market->setDepartment($department);
-                    $this->marketRepository->save($market);
-                    ++$inserted;
-                }
-
-                if (0 === ($processed + 1) % $batchSize) {
-                    $this->entityManager->flush();
-                    $this->entityManager->clear();
-                }
-            } else {
-                $existing = $this->marketRepository->findByExternalId($externalId);
-                if ($existing instanceof Market) {
-                    ++$updated;
-                } else {
-                    ++$inserted;
-                }
-            }
+            $pendingRows[] = [
+                'externalId' => $externalId,
+                'name' => $name,
+                'lat' => $lat,
+                'lon' => $lon,
+                'dayOfWeek' => $dayOfWeek,
+                'startTime' => $startTime,
+                'endTime' => $endTime,
+                'commune' => $commune,
+                'department' => $department,
+            ];
 
             ++$processed;
+
+            if (0 === $processed % $batchSize) {
+                $flushBatch();
+            }
         }
+
+        $flushBatch();
 
         fclose($handle);
 

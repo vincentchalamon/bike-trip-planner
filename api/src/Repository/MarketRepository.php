@@ -67,6 +67,32 @@ final class MarketRepository extends ServiceEntityRepository implements MarketRe
         return $this->findOneBy(['externalId' => $externalId]);
     }
 
+    /**
+     * @param list<string> $ids
+     *
+     * @return array<string, Market> keyed by externalId
+     */
+    public function findByExternalIds(array $ids): array
+    {
+        if ([] === $ids) {
+            return [];
+        }
+
+        /** @var list<Market> $markets */
+        $markets = $this->createQueryBuilder('m')
+            ->where('m.externalId IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
+
+        $indexed = [];
+        foreach ($markets as $market) {
+            $indexed[$market->getExternalId()] = $market;
+        }
+
+        return $indexed;
+    }
+
     public function save(Market $market, bool $flush = false): void
     {
         $this->getEntityManager()->persist($market);

@@ -24,5 +24,12 @@ interface MarketRepositoryInterface
 
     public function findByExternalId(string $externalId): ?Market;
 
+    /**
+     * @param list<string> $ids
+     *
+     * @return array<string, Market> keyed by externalId
+     */
+    public function findByExternalIds(array $ids): array;
+
     public function save(Market $market, bool $flush = false): void;
 }
