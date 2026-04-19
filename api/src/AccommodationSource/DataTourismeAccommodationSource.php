@@ -87,16 +87,20 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
      */
     private function buildBbox(array $endPoints, int $radiusMeters): array
     {
-        $degreeOffset = $radiusMeters / 111_000.0;
-
         $lats = array_map(static fn (Coordinate $c): float => $c->lat, $endPoints);
         $lons = array_map(static fn (Coordinate $c): float => $c->lon, $endPoints);
 
+        $midLat = (\count($endPoints) > 0)
+            ? (array_sum(array_map(static fn (Coordinate $c): float => $c->lat, $endPoints)) / \count($endPoints))
+            : 0.0;
+        $latDegreeOffset = $radiusMeters / 111_000.0;
+        $lonDegreeOffset = $radiusMeters / (111_000.0 * max(cos(deg2rad($midLat)), 0.001));
+
         return [
-            'latMin' => min($lats) - $degreeOffset,
-            'latMax' => max($lats) + $degreeOffset,
-            'lonMin' => min($lons) - $degreeOffset,
-            'lonMax' => max($lons) + $degreeOffset,
+            'latMin' => min($lats) - $latDegreeOffset,
+            'latMax' => max($lats) + $latDegreeOffset,
+            'lonMin' => min($lons) - $lonDegreeOffset,
+            'lonMax' => max($lons) + $lonDegreeOffset,
         ];
     }
 
@@ -192,16 +196,10 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
     private function resolveUrl(array $item): ?string
     {
         $homepage = $item['foaf:homepage'] ?? null;
-
-        if (\is_string($homepage) && '' !== $homepage) {
-            return $homepage;
-        }
-
-        if (\is_array($homepage)) {
-            foreach ($homepage as $value) {
-                if (\is_string($value) && '' !== $value) {
-                    return $value;
-                }
+        $candidates = \is_array($homepage) ? $homepage : (\is_string($homepage) ? [$homepage] : []);
+        foreach ($candidates as $value) {
+            if (\is_string($value) && preg_match('#^https?://#i', $value)) {
+                return $value;
             }
         }
 
