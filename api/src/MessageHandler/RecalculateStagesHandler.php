@@ -15,6 +15,7 @@ use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
+use App\Message\ScanEvents;
 use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
@@ -110,6 +111,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
 
             $this->messageBus->dispatch(new CheckBikeShops($tripId, $generation));
             $this->messageBus->dispatch(new AnalyzeTerrain($tripId, $generation));
+            $this->messageBus->dispatch(new ScanEvents($tripId, $generation));
         }
     }
 }

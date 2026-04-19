@@ -118,6 +118,7 @@ function TripLoader({ tripId }: { tripId: string }) {
             accommodationSearchRadiusKm: 5,
             isRestDay: s.isRestDay ?? false,
             supplyTimeline: [],
+            events: [],
           };
         });
 

@@ -35,21 +35,34 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
 
     /**
      * @param array<int, Coordinate> $endPoints
-     * @param list<string>           $enabledTypes OSM tourism types to include (default: all 7)
+     * @param list<string>           $enabledTypes OSM accommodation types to include (default: all 9)
      */
     public function buildAccommodationQuery(array $endPoints, int $radiusMeters = self::DEFAULT_ACCOMMODATION_RADIUS_METERS, array $enabledTypes = TripRequest::ALL_ACCOMMODATION_TYPES): string
     {
-        $typesPattern = implode('|', array_map(preg_quote(...), $enabledTypes, array_fill(0, \count($enabledTypes), '/')));
+        $tourismTypes = array_values(array_filter($enabledTypes, static fn (string $t): bool => 'shelter' !== $t));
+        $includeShelter = \in_array('shelter', $enabledTypes, true);
 
         $filters = '';
         foreach ($endPoints as $point) {
-            $filters .= \sprintf(
-                'nwr["tourism"~"^(%s)$"](around:%d,%F,%F);',
-                $typesPattern,
-                $radiusMeters,
-                $point->lat,
-                $point->lon,
-            );
+            if ([] !== $tourismTypes) {
+                $typesPattern = implode('|', array_map(preg_quote(...), $tourismTypes, array_fill(0, \count($tourismTypes), '/')));
+                $filters .= \sprintf(
+                    'nwr["tourism"~"^(%s)$"](around:%d,%F,%F);',
+                    $typesPattern,
+                    $radiusMeters,
+                    $point->lat,
+                    $point->lon,
+                );
+            }
+
+            if ($includeShelter) {
+                $filters .= \sprintf(
+                    'nwr["amenity"="shelter"]["shelter_type"~"^(basic_hut|weather_shelter|lean_to)$"](around:%d,%F,%F);',
+                    $radiusMeters,
+                    $point->lat,
+                    $point->lon,
+                );
+            }
         }
 
         return \sprintf('[out:json][timeout:15];(%s);out center 100;', $filters);

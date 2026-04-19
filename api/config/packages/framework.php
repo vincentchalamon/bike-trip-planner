@@ -78,7 +78,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     ],
                 ],
                 'datatourisme.client' => [
-                    'base_uri' => 'https://api.datatourisme.fr',
                     'scope' => '^https://api\\.datatourisme\\.fr',
                     'max_redirects' => 2,
                     'timeout' => 10,
@@ -86,6 +85,20 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'X-API-Key' => '%env(default::DATATOURISME_API_KEY)%',
                         'Accept' => 'application/json',
                     ],
+                ],
+                'wikidata.client' => [
+                    'scope' => '^https://query\\.wikidata\\.org',
+                    'max_redirects' => 2,
+                    'timeout' => 10,
+                    'headers' => [
+                        'User-Agent' => '%env(WIKIDATA_USER_AGENT)%',
+                        'Accept' => 'application/sparql-results+json',
+                    ],
+                ],
+                'markets_dataset.client' => [
+                    'scope' => '^https://www\\.data\\.gouv\\.fr',
+                    'max_redirects' => 2,
+                    'timeout' => 60,
                 ],
             ],
         ],
