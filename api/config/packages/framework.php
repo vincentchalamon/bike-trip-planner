@@ -89,11 +89,16 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'wikidata.client' => [
                     'scope' => '^https://query\\.wikidata\\.org',
                     'max_redirects' => 2,
-                    'timeout' => 15,
+                    'timeout' => 10,
                     'headers' => [
                         'User-Agent' => '%env(WIKIDATA_USER_AGENT)%',
                         'Accept' => 'application/sparql-results+json',
                     ],
+                ],
+                'markets_dataset.client' => [
+                    'scope' => '^https://www\\.data\\.gouv\\.fr',
+                    'max_redirects' => 2,
+                    'timeout' => 60,
                 ],
             ],
         ],

@@ -16,6 +16,9 @@ final class DataTourismeCulturalPoiSourceTest extends TestCase
         return new DataTourismeCulturalPoiSource($client);
     }
 
+    /**
+     * @return list<list<array{lat: float, lon: float}>>
+     */
     private function stageGeometries(): array
     {
         return [

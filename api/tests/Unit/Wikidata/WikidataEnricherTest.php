@@ -37,7 +37,9 @@ final class WikidataEnricherTest extends TestCase
             (string) file_get_contents(__DIR__.'/../../Fixtures/wikidata/batch-response.json'),
             true,
         );
-        /** @var array<string, mixed> $fixture */
+        \assert(\is_array($fixture));
+        \assert(isset($fixture['results']) && \is_array($fixture['results']));
+        \assert(isset($fixture['results']['bindings']) && \is_array($fixture['results']['bindings']));
         $bindings = $fixture['results']['bindings'];
 
         $client = $this->createMock(WikidataClientInterface::class);
@@ -50,18 +52,27 @@ final class WikidataEnricherTest extends TestCase
         $result = $enricher->enrichBatch(['Q12345', 'Q67890'], 'fr');
 
         $this->assertArrayHasKey('Q12345', $result);
-        $this->assertSame('Château de Versailles', $result['Q12345']['label']);
-        $this->assertSame('Palais royal situé à Versailles, France.', $result['Q12345']['description']);
-        $this->assertStringContainsString('Versailles_Palace', $result['Q12345']['imageUrl']);
-        $this->assertStringContainsString('width=400', $result['Q12345']['imageUrl']);
-        $this->assertSame('https://www.chateauversailles.fr', $result['Q12345']['website']);
-        $this->assertSame('Tu-Su 09:00-17:30', $result['Q12345']['openingHours']);
-        $this->assertSame('https://fr.wikipedia.org/wiki/Château_de_Versailles', $result['Q12345']['wikipediaUrl']);
+        $versailles = $result['Q12345'];
+        $this->assertArrayHasKey('label', $versailles);
+        $this->assertArrayHasKey('description', $versailles);
+        $this->assertArrayHasKey('imageUrl', $versailles);
+        $this->assertArrayHasKey('website', $versailles);
+        $this->assertArrayHasKey('openingHours', $versailles);
+        $this->assertArrayHasKey('wikipediaUrl', $versailles);
+        $this->assertSame('Château de Versailles', $versailles['label']);
+        $this->assertSame('Palais royal situé à Versailles, France.', $versailles['description']);
+        $this->assertStringContainsString('Versailles_Palace', $versailles['imageUrl']);
+        $this->assertStringContainsString('width=400', $versailles['imageUrl']);
+        $this->assertSame('https://www.chateauversailles.fr', $versailles['website']);
+        $this->assertSame('Tu-Su 09:00-17:30', $versailles['openingHours']);
+        $this->assertSame('https://fr.wikipedia.org/wiki/Château_de_Versailles', $versailles['wikipediaUrl']);
 
         $this->assertArrayHasKey('Q67890', $result);
-        $this->assertSame('Tour Eiffel', $result['Q67890']['label']);
-        $this->assertArrayNotHasKey('website', $result['Q67890']);
-        $this->assertArrayNotHasKey('openingHours', $result['Q67890']);
+        $eiffel = $result['Q67890'];
+        $this->assertArrayHasKey('label', $eiffel);
+        $this->assertSame('Tour Eiffel', $eiffel['label']);
+        $this->assertArrayNotHasKey('website', $eiffel);
+        $this->assertArrayNotHasKey('openingHours', $eiffel);
     }
 
     // -------------------------------------------------------------------------
@@ -142,7 +153,7 @@ final class WikidataEnricherTest extends TestCase
             ],
         ];
 
-        $client = $this->createMock(WikidataClientInterface::class);
+        $client = $this->createStub(WikidataClientInterface::class);
         $client->method('query')->willReturn($bindings);
 
         $enricher = new WikidataEnricher($client);
@@ -158,6 +169,7 @@ final class WikidataEnricherTest extends TestCase
         // The candidate (right side) wins for all existing fields
         $merged = array_merge($enrichments['Q999'], $existing);
 
+        $this->assertArrayHasKey('label', $merged);
         $this->assertSame('Local Name', $merged['name']);
         $this->assertSame('Sa-Su 10:00-20:00', $merged['openingHours'], 'Existing openingHours must not be overwritten');
         $this->assertSame('Wikidata Label', $merged['label'], 'Wikidata-only field is still present');
@@ -170,7 +182,7 @@ final class WikidataEnricherTest extends TestCase
     #[Test]
     public function enrichBatchReturnsEmptyOnClientError(): void
     {
-        $client = $this->createMock(WikidataClientInterface::class);
+        $client = $this->createStub(WikidataClientInterface::class);
         $client->method('query')->willReturn([]);
 
         $enricher = new WikidataEnricher($client);
@@ -194,7 +206,7 @@ final class WikidataEnricherTest extends TestCase
             ],
         ];
 
-        $client = $this->createMock(WikidataClientInterface::class);
+        $client = $this->createStub(WikidataClientInterface::class);
         $client->method('query')->willReturn($bindings);
 
         $enricher = new WikidataEnricher($client);

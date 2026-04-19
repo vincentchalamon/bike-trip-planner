@@ -85,6 +85,8 @@
     "type_guest_house": "Guest house",
     "type_motel": "Motel",
     "type_alpine_hut": "Alpine hut",
+    "type_wilderness_hut": "Wilderness hut",
+    "type_shelter": "Shelter",
     "type_other": "Other",
     "hotel": "Hotel",
     "gite": "Gite",
@@ -553,7 +555,29 @@
     "q9": "Is the app free and open source?",
     "a9": "The source code is open source and available on GitHub. The hosted app is free to use. Infrastructure costs may eventually justify a freemium model, but no paid access is planned at this stage."
   },
+  "events": {
+    "type_festival": "Festival",
+    "type_exhibition": "Exhibition",
+    "type_music_event": "Concert",
+    "type_fair_or_show": "Fair / Show",
+    "type_market": "Market",
+    "from_price": "From {price} €",
+    "see_on_wikipedia": "See on Wikipedia",
+    "see_on_wikipedia_label": "See {name} on Wikipedia",
+    "see_website": "Visit website",
+    "see_website_label": "Visit {name}'s website"
+  },
   "footer": {
     "faq": "FAQ"
+  },
+  "attribution": {
+    "link": "About data",
+    "title": "Data sources",
+    "description": "Bike Trip Planner uses the following open data sources.",
+    "osmCredit": "© OpenStreetMap contributors —",
+    "datatourismeCredit": "© DataTourisme —",
+    "wikidataCredit": "Data under",
+    "datagouvCredit": "Weekly markets (data.gouv.fr) —",
+    "licenceOuverte": "Licence Ouverte 2.0"
   }
 }

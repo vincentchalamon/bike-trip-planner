@@ -88,6 +88,9 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         return $manager;
     }
 
+    /**
+     * @param list<array<string, mixed>> $pois
+     */
     private function makeRegistryWithPois(array $pois): CulturalPoiSourceRegistry
     {
         $registry = $this->createStub(CulturalPoiSourceRegistry::class);

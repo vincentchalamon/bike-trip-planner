@@ -31,23 +31,32 @@ final readonly class WikidataClient implements WikidataClientInterface
         $cacheKey = 'wikidata.'.hash('xxh128', $sparql);
 
         try {
-            /** @var list<array<string, array{type: string, value: string}>> */
-            return $this->cache->get($cacheKey, function (ItemInterface $item) use ($sparql): array {
+            /** @var list<array<string, array{type: string, value: string}>> $result */
+            $result = $this->cache->get($cacheKey, function (ItemInterface $item) use ($sparql): array {
                 $item->expiresAfter(self::DEFAULT_TTL);
 
                 $response = $this->httpClient->request('GET', 'https://query.wikidata.org/sparql', [
                     'query' => ['query' => $sparql, 'format' => 'json'],
                 ]);
 
-                /** @var array<string, mixed> $data */
                 $data = $response->toArray();
+                $results = $data['results'] ?? [];
+                if (!\is_array($results)) {
+                    return [];
+                }
 
-                /** @var list<array<string, array{type: string, value: string}>> */
-                return $data['results']['bindings'] ?? [];
+                $bindings = $results['bindings'] ?? [];
+                if (!\is_array($bindings)) {
+                    return [];
+                }
+
+                return array_values($bindings);
             });
-        } catch (\Throwable $e) {
+
+            return $result;
+        } catch (\Throwable $throwable) {
             $this->logger->warning('Wikidata SPARQL query failed, returning empty result.', [
-                'error' => $e->getMessage(),
+                'error' => $throwable->getMessage(),
             ]);
 
             return [];

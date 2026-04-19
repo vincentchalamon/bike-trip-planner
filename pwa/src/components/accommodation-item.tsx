@@ -354,7 +354,9 @@ export function AccommodationItem({
         )}
         {accommodation.source && accommodation.source !== "osm" && (
           <span className="inline-flex items-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70 bg-muted rounded px-1.5 py-0.5">
-            {accommodation.source === "datatourisme" ? "DataTourisme" : accommodation.source}
+            {accommodation.source === "datatourisme"
+              ? "DataTourisme"
+              : accommodation.source}
           </span>
         )}
       </div>

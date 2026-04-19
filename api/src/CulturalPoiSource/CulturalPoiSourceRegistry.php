@@ -6,10 +6,10 @@ namespace App\CulturalPoiSource;
 
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
-final readonly class CulturalPoiSourceRegistry
+class CulturalPoiSourceRegistry
 {
     /** @var list<CulturalPoiSourceInterface> */
-    private array $sources;
+    private readonly array $sources;
 
     /**
      * @param iterable<CulturalPoiSourceInterface> $sources
@@ -26,7 +26,7 @@ final readonly class CulturalPoiSourceRegistry
      *
      * @param list<list<array{lat: float, lon: float}>> $stageGeometries
      *
-     * @return list<array>
+     * @return list<array{name: string, type: string, lat: float, lon: float, openingHours: string|null, estimatedPrice: float|null, description: string|null, wikidataId: string|null, source: string}>
      */
     public function fetchAllForStages(array $stageGeometries, int $radiusMeters): array
     {

@@ -7,10 +7,10 @@ namespace App\AccommodationSource;
 use App\ApiResource\Model\Coordinate;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
-final readonly class AccommodationSourceRegistry
+class AccommodationSourceRegistry
 {
     /** @var list<AccommodationSourceInterface> */
-    private array $sources;
+    private readonly array $sources;
 
     /**
      * @param iterable<AccommodationSourceInterface> $sources
