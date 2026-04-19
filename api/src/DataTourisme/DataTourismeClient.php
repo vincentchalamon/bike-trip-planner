@@ -6,7 +6,7 @@ namespace App\DataTourisme;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -21,7 +21,7 @@ final readonly class DataTourismeClient implements DataTourismeClientInterface
         #[Autowire(service: 'cache.datatourisme')]
         private CacheInterface $cache,
         #[Autowire(service: 'limiter.datatourisme')]
-        private RateLimiterFactory $rateLimiter,
+        private RateLimiterFactoryInterface $rateLimiter,
         private LoggerInterface $logger,
         #[Autowire(env: 'default::DATATOURISME_API_KEY')]
         private string $apiKey,
@@ -46,8 +46,8 @@ final readonly class DataTourismeClient implements DataTourismeClientInterface
         $ttl = $ttlSeconds ?? self::DEFAULT_TTL;
 
         try {
-            /** @var array<string, mixed> */
-            return $this->cache->get($cacheKey, function (ItemInterface $item) use ($path, $query, $ttl): array {
+            /** @var array<string, mixed> $result */
+            $result = $this->cache->get($cacheKey, function (ItemInterface $item) use ($path, $query, $ttl): array {
                 $item->expiresAfter($ttl);
 
                 $limiter = $this->rateLimiter->create('datatourisme');
@@ -57,20 +57,21 @@ final readonly class DataTourismeClient implements DataTourismeClientInterface
 
                 $response = $this->httpClient->request('GET', $path, ['query' => $query]);
 
-                /** @var array<string, mixed> */
                 return $response->toArray();
             });
-        } catch (DataTourismeRateLimitException $e) {
-            $this->logger->warning('DataTourisme rate limit reached, returning empty result.', [
-                'error' => $e->getMessage(),
-            ]);
 
-            return ['results' => []];
-        } catch (\Throwable $e) {
-            $this->logger->warning('DataTourisme request failed, returning empty result.', [
-                'path' => $path,
-                'error' => $e->getMessage(),
-            ]);
+            return $result;
+        } catch (\Throwable $throwable) {
+            if ($throwable instanceof DataTourismeRateLimitException) {
+                $this->logger->warning('DataTourisme rate limit reached, returning empty result.', [
+                    'error' => $throwable->getMessage(),
+                ]);
+            } else {
+                $this->logger->warning('DataTourisme request failed, returning empty result.', [
+                    'path' => $path,
+                    'error' => $throwable->getMessage(),
+                ]);
+            }
 
             return ['results' => []];
         }

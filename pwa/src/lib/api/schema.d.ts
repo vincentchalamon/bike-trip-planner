@@ -471,6 +471,15 @@ export interface components {
             url?: string | null;
             possibleClosed?: boolean;
             distanceToEndPoint?: number;
+            source?: string;
+            /** @description Short description from Wikidata. */
+            description?: string | null;
+            /** @description Thumbnail image URL from Wikimedia Commons. */
+            imageUrl?: string | null;
+            /** @description Wikipedia article URL. */
+            wikipediaUrl?: string | null;
+            /** @description Opening hours (Wikidata P8989 or DataTourisme). */
+            openingHours?: string | null;
         };
         "Accommodation.gpx": {
             name?: string;
@@ -483,6 +492,15 @@ export interface components {
             url?: string | null;
             possibleClosed?: boolean;
             distanceToEndPoint?: number;
+            source?: string;
+            /** @description Short description from Wikidata. */
+            description?: string | null;
+            /** @description Thumbnail image URL from Wikimedia Commons. */
+            imageUrl?: string | null;
+            /** @description Wikipedia article URL. */
+            wikipediaUrl?: string | null;
+            /** @description Opening hours (Wikidata P8989 or DataTourisme). */
+            openingHours?: string | null;
         };
         "Accommodation.jsonld": {
             name?: string;
@@ -495,6 +513,15 @@ export interface components {
             url?: string | null;
             possibleClosed?: boolean;
             distanceToEndPoint?: number;
+            source?: string;
+            /** @description Short description from Wikidata. */
+            description?: string | null;
+            /** @description Thumbnail image URL from Wikimedia Commons. */
+            imageUrl?: string | null;
+            /** @description Wikipedia article URL. */
+            wikipediaUrl?: string | null;
+            /** @description Opening hours (Wikidata P8989 or DataTourisme). */
+            openingHours?: string | null;
         };
         "AccommodationScan.AccommodationScanRequest": {
             /**
@@ -681,6 +708,72 @@ export interface components {
             readonly type?: string;
             readonly description?: string | null;
         };
+        "Event.fit": {
+            name?: string;
+            type?: string;
+            lat?: number;
+            lon?: number;
+            /** Format: date-time */
+            startDate?: string;
+            /** Format: date-time */
+            endDate?: string;
+            url?: string | null;
+            description?: string | null;
+            priceMin?: number | null;
+            distanceToEndPoint?: number;
+            source?: string;
+            wikidataId?: string | null;
+            /** @description Thumbnail image URL from Wikimedia Commons. */
+            imageUrl?: string | null;
+            /** @description Wikipedia article URL. */
+            wikipediaUrl?: string | null;
+            /** @description Opening hours (Wikidata P8989). */
+            openingHours?: string | null;
+        };
+        "Event.gpx": {
+            name?: string;
+            type?: string;
+            lat?: number;
+            lon?: number;
+            /** Format: date-time */
+            startDate?: string;
+            /** Format: date-time */
+            endDate?: string;
+            url?: string | null;
+            description?: string | null;
+            priceMin?: number | null;
+            distanceToEndPoint?: number;
+            source?: string;
+            wikidataId?: string | null;
+            /** @description Thumbnail image URL from Wikimedia Commons. */
+            imageUrl?: string | null;
+            /** @description Wikipedia article URL. */
+            wikipediaUrl?: string | null;
+            /** @description Opening hours (Wikidata P8989). */
+            openingHours?: string | null;
+        };
+        "Event.jsonld": {
+            name?: string;
+            type?: string;
+            lat?: number;
+            lon?: number;
+            /** Format: date-time */
+            startDate?: string;
+            /** Format: date-time */
+            endDate?: string;
+            url?: string | null;
+            description?: string | null;
+            priceMin?: number | null;
+            distanceToEndPoint?: number;
+            source?: string;
+            wikidataId?: string | null;
+            /** @description Thumbnail image URL from Wikimedia Commons. */
+            imageUrl?: string | null;
+            /** @description Wikipedia article URL. */
+            wikipediaUrl?: string | null;
+            /** @description Opening hours (Wikidata P8989). */
+            openingHours?: string | null;
+        };
         HydraCollectionBaseSchema: components["schemas"]["HydraCollectionBaseSchemaNoPagination"] & {
             /**
              * @example {
@@ -780,6 +873,7 @@ export interface components {
             pois?: components["schemas"]["PointOfInterest.jsonld"][];
             accommodations?: components["schemas"]["Accommodation.jsonld"][];
             selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
+            events?: components["schemas"]["Event.jsonld"][];
             /**
              * Format: iri-reference
              * @example https://example.com/
@@ -808,6 +902,7 @@ export interface components {
             pois?: components["schemas"]["PointOfInterest.fit"][];
             accommodations?: components["schemas"]["Accommodation.fit"][];
             selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
+            events?: components["schemas"]["Event.fit"][];
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -825,6 +920,7 @@ export interface components {
             pois?: components["schemas"]["PointOfInterest.gpx"][];
             accommodations?: components["schemas"]["Accommodation.gpx"][];
             selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
+            events?: components["schemas"]["Event.gpx"][];
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -842,6 +938,7 @@ export interface components {
             pois?: components["schemas"]["PointOfInterest.jsonld"][];
             accommodations?: components["schemas"]["Accommodation.jsonld"][];
             selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
+            events?: components["schemas"]["Event.jsonld"][];
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -895,7 +992,7 @@ export interface components {
              */
             averageSpeed: number;
             /**
-             * @description Enabled OSM tourism types for accommodation search (default: all 7 types)
+             * @description Enabled OSM accommodation types for search (default: all 9 types)
              * @default [
              *       "camp_site",
              *       "hostel",
@@ -903,7 +1000,9 @@ export interface components {
              *       "chalet",
              *       "guest_house",
              *       "motel",
-             *       "hotel"
+             *       "hotel",
+             *       "wilderness_hut",
+             *       "shelter"
              *     ]
              */
             enabledAccommodationTypes: string[];
@@ -938,7 +1037,7 @@ export interface components {
              */
             averageSpeed: number;
             /**
-             * @description Enabled OSM tourism types for accommodation search (default: all 7 types)
+             * @description Enabled OSM accommodation types for search (default: all 9 types)
              * @default [
              *       "camp_site",
              *       "hostel",
@@ -946,7 +1045,9 @@ export interface components {
              *       "chalet",
              *       "guest_house",
              *       "motel",
-             *       "hotel"
+             *       "hotel",
+             *       "wilderness_hut",
+             *       "shelter"
              *     ]
              */
             enabledAccommodationTypes: string[];
@@ -1084,6 +1185,7 @@ export interface components {
             pois?: components["schemas"]["PointOfInterest.fit"][];
             accommodations?: components["schemas"]["Accommodation.fit"][];
             selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
+            events?: components["schemas"]["Event.fit"][];
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -1101,6 +1203,7 @@ export interface components {
             pois?: components["schemas"]["PointOfInterest.gpx"][];
             accommodations?: components["schemas"]["Accommodation.gpx"][];
             selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
+            events?: components["schemas"]["Event.gpx"][];
             tripId?: string;
             dayNumber?: number;
             distance?: number;

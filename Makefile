@@ -162,3 +162,6 @@ flush-queue: ## Stop workers, clear all Messenger queues, and purge trip state c
 	@# Redis visibility timeouts prevent double-processing of in-flight messages.
 	@docker compose exec php bin/console app:messenger:clear --all
 	@docker compose exec php bin/console cache:pool:clear cache.trip_state
+
+markets-import: ## Import weekly markets from data.gouv.fr into the database
+	@docker compose exec php bin/console app:markets:import

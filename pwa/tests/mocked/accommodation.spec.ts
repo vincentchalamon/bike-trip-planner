@@ -91,6 +91,7 @@ test.describe("Accommodations", () => {
               isExactPrice: false,
               possibleClosed: false,
               distanceToEndPoint: 0,
+              source: "osm",
             },
           ],
         },
