@@ -963,6 +963,8 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+            /** @description Computed trip status: draft | analyzing | analyzed */
+            status?: string;
         };
         "Trip.TripRequest": {
             sourceUrl: string | null;
