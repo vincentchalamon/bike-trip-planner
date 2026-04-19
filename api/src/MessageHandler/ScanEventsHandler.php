@@ -56,12 +56,6 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         $tripId = $message->tripId;
         $generation = $message->generation;
 
-        if (!$this->dataTourismeClient->isEnabled()) {
-            $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null, $generation);
-
-            return;
-        }
-
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -81,6 +75,52 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
 
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
+        if (!$this->dataTourismeClient->isEnabled()) {
+            $this->executeWithTracking($tripId, ComputationName::EVENTS, function () use ($tripId, $stages, $startDate, $locale): void {
+                foreach ($stages as $i => $stage) {
+                    if ($stage->isRestDay) {
+                        continue;
+                    }
+
+                    $stageDate = $startDate->modify(\sprintf('+%d days', $i));
+                    $events = $this->fetchMarketsForStage($stage, $stageDate, $locale);
+
+                    if ([] !== $events) {
+                        $this->publisher->publish($tripId, MercureEventType::EVENTS_FOUND, [
+                            'stageIndex' => $i,
+                            'events' => array_map(static fn (Event $e): array => [
+                                'name' => $e->name,
+                                'type' => $e->type,
+                                'lat' => $e->lat,
+                                'lon' => $e->lon,
+                                'startDate' => $e->startDate->format(\DateTimeInterface::ATOM),
+                                'endDate' => $e->endDate->format(\DateTimeInterface::ATOM),
+                                'url' => $e->url,
+                                'description' => $e->description,
+                                'priceMin' => $e->priceMin,
+                                'distanceToEndPoint' => $e->distanceToEndPoint,
+                                'source' => $e->source,
+                                'wikidataId' => $e->wikidataId,
+                                'imageUrl' => $e->imageUrl,
+                                'wikipediaUrl' => $e->wikipediaUrl,
+                                'openingHours' => $e->openingHours,
+                            ], $events),
+                        ]);
+
+                        foreach ($events as $event) {
+                            $stage->addEvent($event);
+                        }
+
+                        $stages[$i] = $stage;
+                    }
+                }
+
+                $this->tripStateManager->storeStages($tripId, array_values($stages));
+            }, $generation);
+
+            return;
+        }
+
         $this->executeWithTracking($tripId, ComputationName::EVENTS, function () use ($tripId, $stages, $startDate, $locale): void {
             // Collect raw events per stage first, then enrich with Wikidata in one batch
             /** @var array<int, list<Event>> $eventsByStage */
@@ -92,7 +132,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
 
                 $stageDate = $startDate->modify(\sprintf('+%d days', $i));
                 $dtEvents = $this->fetchEventsForStage($stage, $stageDate);
-                $marketEvents = $this->fetchMarketsForStage($stage, $stageDate);
+                $marketEvents = $this->fetchMarketsForStage($stage, $stageDate, $locale);
                 $eventsByStage[$i] = array_merge($dtEvents, $marketEvents);
             }
 
@@ -276,7 +316,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
     /**
      * @return list<Event>
      */
-    private function fetchMarketsForStage(Stage $stage, \DateTimeImmutable $stageDate): array
+    private function fetchMarketsForStage(Stage $stage, \DateTimeImmutable $stageDate, string $locale): array
     {
         $dayOfWeek = (int) $stageDate->format('N');
 
@@ -308,7 +348,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                 $stage->endPoint->lon,
             );
 
-            $description = $this->translator->trans('market.weekly_description');
+            $description = $this->translator->trans('market.weekly_description', [], 'messages', $locale);
 
             $events[] = new Event(
                 name: $market->getName(),
