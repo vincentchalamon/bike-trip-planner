@@ -6,10 +6,10 @@ namespace App\CulturalPoiSource;
 
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
-class CulturalPoiSourceRegistry
+readonly class CulturalPoiSourceRegistry
 {
     /** @var list<CulturalPoiSourceInterface> */
-    private readonly array $sources;
+    private array $sources;
 
     /**
      * @param iterable<CulturalPoiSourceInterface> $sources
@@ -22,7 +22,9 @@ class CulturalPoiSourceRegistry
     }
 
     /**
-     * Fetches POIs from all enabled sources and merges the results.
+     * Fetches POIs from all enabled sources, merges and deduplicates by wikidataId.
+     * When both OSM and DataTourisme provide a POI with the same wikidataId,
+     * the DataTourisme entry is preferred.
      *
      * @param list<list<array{lat: float, lon: float}>> $stageGeometries
      *
@@ -38,10 +40,20 @@ class CulturalPoiSourceRegistry
             }
 
             foreach ($source->fetchForStages($stageGeometries, $radiusMeters) as $poi) {
-                $all[] = $poi;
+                $wikidataId = $poi['wikidataId'] ?? null;
+                if (null !== $wikidataId && isset($all[$wikidataId])) {
+                    if ('datatourisme' === ($poi['source'] ?? null)) {
+                        $all[$wikidataId] = $poi;
+                    }
+
+                    continue;
+                }
+
+                $key = $wikidataId ?? count($all);
+                $all[$key] = $poi;
             }
         }
 
-        return $all;
+        return array_values($all);
     }
 }

@@ -85,4 +85,49 @@ final class CulturalPoiSourceRegistryTest extends TestCase
         $registry = new CulturalPoiSourceRegistry([$source]);
         $registry->fetchAllForStages($this->stageGeometries(), 1000);
     }
+
+    #[Test]
+    public function datatourismeOverridesOsmWhenSameWikidataId(): void
+    {
+        $osm = $this->createStub(CulturalPoiSourceInterface::class);
+        $osm->method('isEnabled')->willReturn(true);
+        $osm->method('fetchForStages')->willReturn([
+            ['name' => 'Louvre (OSM)', 'type' => 'museum', 'lat' => 48.86, 'lon' => 2.33,
+                'source' => 'osm', 'wikidataId' => 'Q19675',
+                'openingHours' => null, 'estimatedPrice' => null, 'description' => null],
+        ]);
+
+        $dt = $this->createStub(CulturalPoiSourceInterface::class);
+        $dt->method('isEnabled')->willReturn(true);
+        $dt->method('fetchForStages')->willReturn([
+            ['name' => 'Louvre (DT)', 'type' => 'museum', 'lat' => 48.86, 'lon' => 2.33,
+                'source' => 'datatourisme', 'wikidataId' => 'Q19675',
+                'openingHours' => 'Mon–Sun 09:00–18:00', 'estimatedPrice' => 17.0, 'description' => null],
+        ]);
+
+        $registry = new CulturalPoiSourceRegistry([$osm, $dt]);
+        $result = $registry->fetchAllForStages($this->stageGeometries(), 500);
+
+        self::assertCount(1, $result);
+        self::assertSame('datatourisme', $result[0]['source']);
+        self::assertSame('Louvre (DT)', $result[0]['name']);
+    }
+
+    #[Test]
+    public function poisWithoutWikidataIdAreAllKept(): void
+    {
+        $source = $this->createStub(CulturalPoiSourceInterface::class);
+        $source->method('isEnabled')->willReturn(true);
+        $source->method('fetchForStages')->willReturn([
+            ['name' => 'POI A', 'type' => 'museum', 'lat' => 48.1, 'lon' => 2.1, 'source' => 'osm', 'wikidataId' => null,
+                'openingHours' => null, 'estimatedPrice' => null, 'description' => null],
+            ['name' => 'POI B', 'type' => 'monument', 'lat' => 48.2, 'lon' => 2.2, 'source' => 'osm', 'wikidataId' => null,
+                'openingHours' => null, 'estimatedPrice' => null, 'description' => null],
+        ]);
+
+        $registry = new CulturalPoiSourceRegistry([$source]);
+        $result = $registry->fetchAllForStages($this->stageGeometries(), 500);
+
+        self::assertCount(2, $result);
+    }
 }
