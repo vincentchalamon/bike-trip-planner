@@ -374,6 +374,7 @@ export function useTripPlanner() {
       accommodations: [],
       accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
       supplyTimeline: [],
+      events: [],
       isRestDay: false,
     };
     // insertStagePlaceholder pushes an undo snapshot internally before mutating.
@@ -691,6 +692,7 @@ export function useTripPlanner() {
       isExactPrice: false,
       possibleClosed: false,
       distanceToEndPoint: 0,
+      source: "osm",
     };
     actions.addLocalAccommodation(stageIndex, newAcc);
     setNewAccKey(`${stageIndex}-${accIndex}`);

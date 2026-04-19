@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\CulturalPoiSource\CulturalPoiSourceRegistry;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
@@ -15,8 +16,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
 use App\MessageHandler\CheckCulturalPoisHandler;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
+use App\Wikidata\WikidataEnricherInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -47,8 +47,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
-        ScannerInterface $scanner,
-        QueryBuilderInterface $queryBuilder,
+        CulturalPoiSourceRegistry $registry,
         GeoDistanceInterface $haversine,
         ?GeometryDistributorInterface $distributor = null,
     ): CheckCulturalPoisHandler {
@@ -69,11 +68,11 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
-            $scanner,
-            $queryBuilder,
+            $registry,
             $distributor,
             $haversine,
             $translator,
+            $this->createStub(WikidataEnricherInterface::class),
         );
     }
 
@@ -89,6 +88,17 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         return $manager;
     }
 
+    /**
+     * @param list<array<string, mixed>> $pois
+     */
+    private function makeRegistryWithPois(array $pois): CulturalPoiSourceRegistry
+    {
+        $registry = $this->createStub(CulturalPoiSourceRegistry::class);
+        $registry->method('fetchAllForStages')->willReturn($pois);
+
+        return $registry;
+    }
+
     #[Test]
     public function nullStagesYieldsNoPublish(): void
     {
@@ -97,22 +107,21 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
+        $registry = $this->makeRegistryWithPois([]);
         $haversine = $this->createStub(GeoDistanceInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine);
         $handler(new CheckCulturalPois('trip-1'));
     }
 
     #[Test]
-    public function restDayStageIsSkippedAndScannerIsNeverCalled(): void
+    public function restDayStageIsSkippedAndRegistryIsNeverCalled(): void
     {
         $restDay = $this->createStage(1, true);
         $tripStateManager = $this->createTripStateManager([$restDay]);
 
-        $scanner = $this->createMock(ScannerInterface::class);
-        $scanner->expects($this->never())->method('query');
+        $registry = $this->createMock(CulturalPoiSourceRegistry::class);
+        $registry->expects($this->never())->method('fetchAllForStages');
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -121,10 +130,9 @@ final class CheckCulturalPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['type' => $type, 'payload' => $payload];
             });
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
         $haversine = $this->createStub(GeoDistanceInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -135,20 +143,12 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     }
 
     #[Test]
-    public function unknownTagsYieldNoAlert(): void
+    public function noPoisFromRegistryYieldsEmptyAlerts(): void
     {
         $stage = $this->createStage(1);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                // tourism=hotel is not a notable type
-                ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['tourism' => 'hotel', 'name' => 'Hotel des Alpes']],
-                // amenity=parking is unknown
-                ['lat' => 48.3, 'lon' => 2.3, 'tags' => ['amenity' => 'parking']],
-            ],
-        ]);
+        $registry = $this->makeRegistryWithPois([]);
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -157,59 +157,12 @@ final class CheckCulturalPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['type' => $type, 'payload' => $payload];
             });
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildBatchCulturalPoiQuery')->willReturn('query');
-
         $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inMeters')->willReturn(200.0);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturnCallback(
-            static fn (array $items): array => [0 => $items],
-        );
+        $distributor->method('distributeByGeometry')->willReturn([]);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
-        $handler(new CheckCulturalPois('trip-1'));
-
-        $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
-        $event = array_first($alertEvents);
-        self::assertNotNull($event);
-        self::assertSame([], $event['payload']['alerts']);
-    }
-
-    #[Test]
-    public function historicValueNotInNotableListIsSkipped(): void
-    {
-        $stage = $this->createStage(1);
-        $tripStateManager = $this->createTripStateManager([$stage]);
-
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                // historic=milestone is not in NOTABLE_HISTORIC_VALUES
-                ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['historic' => 'milestone', 'name' => 'Old Milestone']],
-            ],
-        ]);
-
-        $publishedEvents = [];
-        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-        $publisher->method('publish')
-            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
-                $publishedEvents[] = ['type' => $type, 'payload' => $payload];
-            });
-
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildBatchCulturalPoiQuery')->willReturn('query');
-
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inMeters')->willReturn(100.0);
-
-        $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByGeometry')->willReturnCallback(
-            static fn (array $items): array => [0 => $items],
-        );
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -224,17 +177,14 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         $stage = $this->createStage(1);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        // 4 valid cultural POIs — only the 3 closest should be kept
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                ['lat' => 48.1, 'lon' => 2.1, 'tags' => ['tourism' => 'museum', 'name' => 'Museum A']],
-                ['lat' => 48.15, 'lon' => 2.15, 'tags' => ['tourism' => 'museum', 'name' => 'Museum B']],
-                ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['tourism' => 'museum', 'name' => 'Museum C']],
-                // Museum D is the farthest — should be excluded
-                ['lat' => 48.4, 'lon' => 2.4, 'tags' => ['tourism' => 'museum', 'name' => 'Museum D']],
-            ],
-        ]);
+        $pois = [
+            ['name' => 'Museum A', 'type' => 'museum', 'lat' => 48.1, 'lon' => 2.1, 'source' => 'osm'],
+            ['name' => 'Museum B', 'type' => 'museum', 'lat' => 48.15, 'lon' => 2.15, 'source' => 'osm'],
+            ['name' => 'Museum C', 'type' => 'museum', 'lat' => 48.2, 'lon' => 2.2, 'source' => 'osm'],
+            ['name' => 'Museum D', 'type' => 'museum', 'lat' => 48.4, 'lon' => 2.4, 'source' => 'osm'],
+        ];
+
+        $registry = $this->makeRegistryWithPois($pois);
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -243,38 +193,31 @@ final class CheckCulturalPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['type' => $type, 'payload' => $payload];
             });
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildBatchCulturalPoiQuery')->willReturn('query');
-
         $haversine = $this->createStub(GeoDistanceInterface::class);
-        // Museum D is farthest from all geometry points
         $haversine->method('inMeters')->willReturnCallback(
             static function (float $lat1, float $lon1, float $lat2, float $lon2): float {
                 if (abs($lat2 - 48.4) < 0.01) {
-                    return 400.0;
+                    return 400.0; // Museum D — farthest
                 }
 
-                // Museum D — farthest
                 if (abs($lat2 - 48.2) < 0.01) {
-                    return 300.0;
+                    return 300.0; // Museum C
                 }
 
-                // Museum C
                 if (abs($lat2 - 48.15) < 0.01) {
-                    return 200.0;
-                } // Museum B
+                    return 200.0; // Museum B
+                }
 
                 return 100.0; // Museum A — closest
             },
         );
 
-        // Distributor returns all 4 POIs assigned to stage 0
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturnCallback(
             static fn (array $items): array => [0 => $items],
         );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -290,17 +233,26 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     }
 
     #[Test]
-    public function notableHistoricValueIsIncluded(): void
+    public function enrichmentFieldsFromDataTourismeAreIncludedInAlert(): void
     {
         $stage = $this->createStage(1);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['historic' => 'castle', 'name' => 'Castle Rock']],
+        $pois = [
+            [
+                'name' => 'Louvre',
+                'type' => 'museum',
+                'lat' => 48.8606,
+                'lon' => 2.3376,
+                'openingHours' => 'Mon–Sat 09:00–18:00',
+                'estimatedPrice' => 15.0,
+                'description' => 'World-famous art museum.',
+                'wikidataId' => 'Q19675',
+                'source' => 'datatourisme',
             ],
-        ]);
+        ];
+
+        $registry = $this->makeRegistryWithPois($pois);
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -309,19 +261,68 @@ final class CheckCulturalPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['type' => $type, 'payload' => $payload];
             });
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildBatchCulturalPoiQuery')->willReturn('query');
-
         $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inMeters')->willReturn(250.0);
+        $haversine->method('inMeters')->willReturn(200.0);
 
-        // Distributor returns the single POI assigned to stage 0
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturnCallback(
             static fn (array $items): array => [0 => $items],
         );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine, $distributor);
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler(new CheckCulturalPois('trip-1'));
+
+        $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
+        $event = array_first($alertEvents);
+        self::assertNotNull($event);
+        $alerts = $event['payload']['alerts'];
+
+        self::assertCount(1, $alerts);
+        self::assertSame('Mon–Sat 09:00–18:00', $alerts[0]['openingHours']);
+        self::assertSame(15.0, $alerts[0]['estimatedPrice']);
+        self::assertSame('World-famous art museum.', $alerts[0]['description']);
+        self::assertSame('Q19675', $alerts[0]['wikidataId']);
+        self::assertSame('datatourisme', $alerts[0]['source']);
+    }
+
+    #[Test]
+    public function osmPoiWithoutEnrichmentFieldsDoesNotIncludeThemInAlert(): void
+    {
+        $stage = $this->createStage(1);
+        $tripStateManager = $this->createTripStateManager([$stage]);
+
+        $pois = [
+            [
+                'name' => 'Castle Rock',
+                'type' => 'castle',
+                'lat' => 48.2,
+                'lon' => 2.2,
+                'openingHours' => null,
+                'estimatedPrice' => null,
+                'description' => null,
+                'wikidataId' => null,
+                'source' => 'osm',
+            ],
+        ];
+
+        $registry = $this->makeRegistryWithPois($pois);
+
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['type' => $type, 'payload' => $payload];
+            });
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inMeters')->willReturn(250.0);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnCallback(
+            static fn (array $items): array => [0 => $items],
+        );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
         $handler(new CheckCulturalPois('trip-1'));
 
         $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
@@ -334,5 +335,9 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         self::assertSame('Castle Rock', $alerts[0]['poiName']);
         self::assertSame('nudge', $alerts[0]['type']);
         self::assertSame(250, $alerts[0]['distanceFromRoute']);
+        self::assertArrayNotHasKey('openingHours', $alerts[0]);
+        self::assertArrayNotHasKey('estimatedPrice', $alerts[0]);
+        self::assertArrayNotHasKey('description', $alerts[0]);
+        self::assertArrayNotHasKey('wikidataId', $alerts[0]);
     }
 }

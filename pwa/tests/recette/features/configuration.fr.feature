@@ -33,7 +33,7 @@ Fonctionnalité: Configuration et paramètres
   @desktop @critique
   Scénario: Filtrage des types d'hébergement
     Quand j'ouvre le panneau de paramètres
-    Alors je vois les interrupteurs pour les types "Hôtel, Auberge, Camping, Gîte, Chambre d'hôte, Motel, Refuge, Refuge de montagne, Abri"
+    Alors je vois les interrupteurs pour les types "Hôtel, Auberge, Camping, Gîte, Chambre d'hôte, Motel, Refuge, Bivouac, Abri"
 
   @desktop @critique
   Scénario: Le dernier type d'hébergement activé ne peut pas être désactivé

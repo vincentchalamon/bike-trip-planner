@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AttributionFooter } from "@/components/attribution-footer";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -105,14 +106,19 @@ export default function LoginPage() {
           </Link>
         </div>
       </div>
-      <footer className="mt-8 text-center">
-        <Link
-          href="/faq"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          data-testid="footer-faq-link"
-        >
-          {tFooter("faq")}
-        </Link>
+      <footer className="mt-8 text-center space-y-2">
+        <div>
+          <Link
+            href="/faq"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="footer-faq-link"
+          >
+            {tFooter("faq")}
+          </Link>
+        </div>
+        <div>
+          <AttributionFooter />
+        </div>
       </footer>
     </div>
   );

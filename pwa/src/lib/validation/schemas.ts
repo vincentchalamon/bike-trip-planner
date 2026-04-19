@@ -25,6 +25,12 @@ export const AlertSchema = z.object({
   poiLat: z.number().optional(),
   poiLon: z.number().optional(),
   distanceFromRoute: z.number().optional(),
+  openingHours: z.string().optional(),
+  estimatedPrice: z.number().optional(),
+  description: z.string().optional(),
+  wikidataId: z.string().optional(),
+  imageUrl: z.string().optional(),
+  wikipediaUrl: z.string().optional(),
   // Optional contextual action
   action: AlertActionSchema.nullable().optional(),
 });
@@ -76,6 +82,24 @@ export const SupplyMarkerSchema = z.object({
   food: z.array(SupplyFoodPointSchema),
 });
 
+export const EventSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  lat: z.number(),
+  lon: z.number(),
+  startDate: z.string(),
+  endDate: z.string(),
+  url: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  priceMin: z.number().nullable().optional(),
+  distanceToEndPoint: z.number().default(0),
+  source: z.string().default("datatourisme"),
+  wikidataId: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+  wikipediaUrl: z.string().nullable().optional(),
+  openingHours: z.string().nullable().optional(),
+});
+
 export const AccommodationSchema = z.object({
   name: z.string(),
   type: z.string(),
@@ -87,6 +111,11 @@ export const AccommodationSchema = z.object({
   url: z.string().nullable().optional(),
   possibleClosed: z.boolean().default(false),
   distanceToEndPoint: z.number().default(0),
+  source: z.enum(["osm", "datatourisme"]).default("osm"),
+  description: z.string().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
+  wikipediaUrl: z.string().nullable().optional(),
+  openingHours: z.string().nullable().optional(),
 });
 
 export const StageDataSchema = z.object({
@@ -112,6 +141,7 @@ export const StageDataSchema = z.object({
     .default(DEFAULT_ACCOMMODATION_RADIUS_KM),
   isRestDay: z.boolean().default(false),
   supplyTimeline: z.array(SupplyMarkerSchema).default([]),
+  events: z.array(EventSchema).default([]),
 });
 
 export const TripStateSchema = z.object({
@@ -143,5 +173,6 @@ export type PoiData = z.infer<typeof PointOfInterestSchema>;
 export type SupplyWaterPointData = z.infer<typeof SupplyWaterPointSchema>;
 export type SupplyFoodPointData = z.infer<typeof SupplyFoodPointSchema>;
 export type SupplyMarkerData = z.infer<typeof SupplyMarkerSchema>;
+export type EventData = z.infer<typeof EventSchema>;
 export type AccommodationData = z.infer<typeof AccommodationSchema>;
 export type StageData = z.infer<typeof StageDataSchema>;

@@ -146,7 +146,7 @@ Use PostgreSQL as the storage engine with Doctrine ORM for entity mapping, but s
 - Computation status tracking (transient lifecycle: pending → running → done)
 - Generation counter (stale-message detection for Messenger workers)
 - Messenger transport (async job queue)
-- External API caches (OSM 24h, weather 3h, routing 24h)
+- External API caches (OSM 24h, weather 3h, routing 24h, DataTourisme 24h)
 
 ### Entity Design
 

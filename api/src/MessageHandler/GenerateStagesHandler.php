@@ -28,6 +28,7 @@ use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
 use App\Message\GenerateStages;
 use App\Message\ScanAccommodations;
+use App\Message\ScanEvents;
 use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
@@ -115,6 +116,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
             $this->messageBus->dispatch(new CheckCulturalPois($tripId, $generation));
             $this->messageBus->dispatch(new CheckRailwayStations($tripId, $generation));
             $this->messageBus->dispatch(new CheckBorderCrossing($tripId, $generation));
+            $this->messageBus->dispatch(new ScanEvents($tripId, $generation));
         }, $generation);
     }
 
