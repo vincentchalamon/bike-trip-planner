@@ -95,11 +95,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'Accept' => 'application/sparql-results+json',
                     ],
                 ],
-                'markets_dataset.client' => [
-                    'scope' => '^https://www\\.data\\.gouv\\.fr',
-                    'max_redirects' => 2,
-                    'timeout' => 60,
-                ],
                 'markets.client' => [
                     'scope' => '^https://www\\.data\\.gouv\\.fr',
                     'max_redirects' => 2,

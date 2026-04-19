@@ -146,13 +146,13 @@ final class ImportMarketsCommand extends Command
 
         $headers = fgetcsv($handle, 0, ';', escape: '\\');
 
-        if (false === $headers || [] === $headers) {
+        if (false === $headers) {
             fclose($handle);
 
             return [0, 0, 0];
         }
 
-        $headers = array_map(trim(...), $headers);
+        $headers = array_map(static fn (?string $h): string => trim((string) $h), $headers);
         $headerIndex = array_flip($headers);
 
         $inserted = 0;
