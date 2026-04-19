@@ -42,7 +42,12 @@ final readonly class WikidataEnricher implements WikidataEnricherInterface
      */
     private function fetchBatch(array $qIds, string $locale): array
     {
-        $values = implode(' ', array_map(static fn (string $id): string => 'wd:'.$id, $qIds));
+        $safeIds = array_values(array_filter($qIds, static fn (string $id): bool => (bool) preg_match('/^Q\d+$/', $id)));
+        if ([] === $safeIds) {
+            return [];
+        }
+
+        $values = implode(' ', array_map(static fn (string $id): string => 'wd:'.$id, $safeIds));
         $lang = strtolower(substr($locale, 0, 2));
 
         $sparql = <<<SPARQL

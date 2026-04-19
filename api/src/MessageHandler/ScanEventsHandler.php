@@ -53,12 +53,16 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         $generation = $message->generation;
 
         if (!$this->dataTourismeClient->isEnabled()) {
+            $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null, $generation);
+
             return;
         }
 
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
+            $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null, $generation);
+
             return;
         }
 
@@ -66,12 +70,14 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         $startDate = $request?->startDate;
 
         if (!$startDate instanceof \DateTimeImmutable) {
+            $this->executeWithTracking($tripId, ComputationName::EVENTS, static fn (): null => null, $generation);
+
             return;
         }
 
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
-        $this->executeWithTracking($tripId, ComputationName::EVENTS, function () use ($tripId, $stages, $startDate, $locale, $generation): void {
+        $this->executeWithTracking($tripId, ComputationName::EVENTS, function () use ($tripId, $stages, $startDate, $locale): void {
             // Collect raw events per stage first, then enrich with Wikidata in one batch
             /** @var array<int, list<Event>> $eventsByStage */
             $eventsByStage = [];
@@ -193,13 +199,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
 
         foreach ($results as $result) {
             $types = (array) ($result['@type'] ?? []);
-            $matchedType = null;
-            foreach (self::TARGETED_TYPES as $targeted) {
-                if (\in_array($targeted, $types, true)) {
-                    $matchedType = $targeted;
-                    break;
-                }
-            }
+            $matchedType = array_find(self::TARGETED_TYPES, fn ($targeted): bool => \in_array($targeted, $types, true));
 
             if (null === $matchedType) {
                 continue;
@@ -215,7 +215,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
             $startDate = $this->extractDate($result, 'startDate');
             $endDate = $this->extractDate($result, 'endDate');
 
-            if (null === $startDate || null === $endDate) {
+            if (!$startDate instanceof \DateTimeImmutable || !$endDate instanceof \DateTimeImmutable) {
                 continue;
             }
 
@@ -262,7 +262,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
 
         if (\is_array($geometry)) {
             $lat = $geometry['latitude'] ?? $geometry['lat'] ?? null;
-            if (null !== $lat) {
+            if (is_numeric($lat)) {
                 return (float) $lat;
             }
         }
@@ -279,7 +279,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
 
         if (\is_array($geometry)) {
             $lon = $geometry['longitude'] ?? $geometry['lon'] ?? null;
-            if (null !== $lon) {
+            if (is_numeric($lon)) {
                 return (float) $lon;
             }
         }
@@ -317,7 +317,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         }
 
         if (\is_array($label)) {
-            $first = array_values($label)[0] ?? null;
+            $first = array_first($label) ?? null;
 
             return \is_string($first) ? $first : null;
         }
@@ -347,7 +347,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         }
 
         if (\is_array($desc)) {
-            $first = array_values($desc)[0] ?? null;
+            $first = array_first($desc) ?? null;
 
             return \is_string($first) ? $first : null;
         }
@@ -383,7 +383,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                 }
 
                 $price = $spec['minPrice'] ?? $spec['price'] ?? null;
-                if (null !== $price) {
+                if (is_numeric($price)) {
                     return (float) $price;
                 }
             }
