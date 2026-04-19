@@ -21,6 +21,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
+          extensions: pdo_pgsql
 
       - name: Install dependencies
         run: composer install --no-dev --optimize-autoloader
@@ -36,3 +37,4 @@ jobs:
           APP_ENV: prod
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DRY_RUN: ${{ inputs.dry_run }}
+          MARKETS_DATASET_URL: ${{ vars.MARKETS_DATASET_URL }}
