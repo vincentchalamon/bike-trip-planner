@@ -49,7 +49,7 @@ readonly class CulturalPoiSourceRegistry
                     continue;
                 }
 
-                $key = $wikidataId ?? spl_object_id((object) $poi);
+                $key = $wikidataId ?? count($all);
                 $all[$key] = $poi;
             }
         }
