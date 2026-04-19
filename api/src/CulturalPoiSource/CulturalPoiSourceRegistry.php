@@ -6,7 +6,7 @@ namespace App\CulturalPoiSource;
 
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
-final readonly class CulturalPoiSourceRegistry
+readonly class CulturalPoiSourceRegistry
 {
     /** @var list<CulturalPoiSourceInterface> */
     private array $sources;
@@ -45,9 +45,11 @@ final readonly class CulturalPoiSourceRegistry
                     if ('datatourisme' === ($poi['source'] ?? null)) {
                         $all[$wikidataId] = $poi;
                     }
+
                     continue;
                 }
-                $key = null !== $wikidataId ? $wikidataId : spl_object_id((object) $poi);
+
+                $key = $wikidataId ?? spl_object_id((object) $poi);
                 $all[$key] = $poi;
             }
         }
