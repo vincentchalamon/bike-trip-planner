@@ -82,7 +82,9 @@ test.describe("trip list statuses", () => {
     await expect(analyzingBadge).toBeVisible();
   });
 
-  test("displays analyzed status badge for completed trip", async ({ page }) => {
+  test("displays analyzed status badge for completed trip", async ({
+    page,
+  }) => {
     await expect(page.getByText("Voyage Pyrénées")).toBeVisible();
     const analyzedBadge = page.getByTestId("status-analyzed").first();
     await expect(analyzedBadge).toBeVisible();

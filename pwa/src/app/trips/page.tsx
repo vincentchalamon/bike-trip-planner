@@ -160,7 +160,12 @@ export default function TripsPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <div className="flex items-center gap-2">
-          <Button asChild variant="default" size="sm" data-testid="new-trip-button">
+          <Button
+            asChild
+            variant="default"
+            size="sm"
+            data-testid="new-trip-button"
+          >
             <Link href="/trips/new">{t("newTrip")}</Link>
           </Button>
           <Button
