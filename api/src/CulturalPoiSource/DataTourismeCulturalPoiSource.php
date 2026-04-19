@@ -99,13 +99,15 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
             return [0.0, 0.0, 0.0, 0.0];
         }
 
-        $degreeOffset = $radiusMeters / 111_000.0;
+        $avgLat = (min($allLats) + max($allLats)) / 2.0;
+        $latOffset = $radiusMeters / 111_000.0;
+        $lonOffset = $radiusMeters / (111_000.0 * cos(deg2rad($avgLat)));
 
         return [
-            min($allLats) - $degreeOffset,
-            min($allLons) - $degreeOffset,
-            max($allLats) + $degreeOffset,
-            max($allLons) + $degreeOffset,
+            min($allLats) - $latOffset,
+            min($allLons) - $lonOffset,
+            max($allLats) + $latOffset,
+            max($allLons) + $lonOffset,
         ];
     }
 
@@ -241,7 +243,7 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
             }
 
             $dayStr = \is_array($days) ? implode(', ', array_map([$this, 'formatDay'], $days)) : ($days ?? '');
-            $parts[] = trim(\sprintf('%s %s–%s', $dayStr, $opens, $closes));
+            $parts[] = trim(\sprintf('%s %s\u{2013}%s', $dayStr, $opens, $closes));
         }
 
         return [] === $parts ? null : implode(' | ', $parts);

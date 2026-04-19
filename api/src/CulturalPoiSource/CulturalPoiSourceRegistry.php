@@ -22,7 +22,9 @@ final readonly class CulturalPoiSourceRegistry
     }
 
     /**
-     * Fetches POIs from all enabled sources and merges the results.
+     * Fetches POIs from all enabled sources, merges and deduplicates by wikidataId.
+     * When both OSM and DataTourisme provide a POI with the same wikidataId,
+     * the DataTourisme entry is preferred.
      *
      * @param list<list<array{lat: float, lon: float}>> $stageGeometries
      *
@@ -38,10 +40,18 @@ final readonly class CulturalPoiSourceRegistry
             }
 
             foreach ($source->fetchForStages($stageGeometries, $radiusMeters) as $poi) {
-                $all[] = $poi;
+                $wikidataId = $poi['wikidataId'] ?? null;
+                if (null !== $wikidataId && isset($all[$wikidataId])) {
+                    if ('datatourisme' === ($poi['source'] ?? null)) {
+                        $all[$wikidataId] = $poi;
+                    }
+                    continue;
+                }
+                $key = null !== $wikidataId ? $wikidataId : spl_object_id((object) $poi);
+                $all[$key] = $poi;
             }
         }
 
-        return $all;
+        return array_values($all);
     }
 }
