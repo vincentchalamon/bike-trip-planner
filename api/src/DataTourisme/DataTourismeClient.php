@@ -42,6 +42,10 @@ final readonly class DataTourismeClient implements DataTourismeClientInterface
      */
     public function request(string $path, array $query = [], ?int $ttlSeconds = null): array
     {
+        if (!$this->isEnabled()) {
+            return ['results' => []];
+        }
+
         $cacheKey = $this->cacheKey($path, $query);
         $ttl = $ttlSeconds ?? self::DEFAULT_TTL;
 

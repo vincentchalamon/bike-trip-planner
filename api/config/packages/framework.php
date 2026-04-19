@@ -78,6 +78,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     ],
                 ],
                 'datatourisme.client' => [
+                    'base_uri' => 'https://api.datatourisme.fr',
                     'scope' => '^https://api\\.datatourisme\\.fr',
                     'max_redirects' => 2,
                     'timeout' => 10,
