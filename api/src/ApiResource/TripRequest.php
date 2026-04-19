@@ -87,18 +87,18 @@ final class TripRequest
     #[Assert\Range(min: 5, max: 50)]
     public float $averageSpeed = 15.0;
 
-    /** @var list<string> Single source of truth for all supported OSM tourism types. */
-    public const array ALL_ACCOMMODATION_TYPES = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel'];
+    /** @var list<string> Single source of truth for all supported OSM accommodation types (tourism= and logical types). */
+    public const array ALL_ACCOMMODATION_TYPES = ['camp_site', 'hostel', 'alpine_hut', 'chalet', 'guest_house', 'motel', 'hotel', 'wilderness_hut', 'shelter'];
 
     /**
      * Enabled accommodation types for Overpass filtering.
-     * All 7 OSM tourism types are enabled by default.
+     * All 9 accommodation types are enabled by default.
      * At least one type must remain enabled.
      *
      * @var list<string>
      */
     #[ORM\Column(type: 'text[]')]
-    #[ApiProperty(description: 'Enabled OSM tourism types for accommodation search (default: all 7 types)')]
+    #[ApiProperty(description: 'Enabled OSM accommodation types for search (default: all 9 types)')]
     #[Assert\Count(min: 1, minMessage: 'At least one accommodation type must be enabled.')]
     #[Assert\All([
         new Assert\Choice(choices: self::ALL_ACCOMMODATION_TYPES),

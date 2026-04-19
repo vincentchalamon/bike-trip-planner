@@ -61,9 +61,7 @@ test.describe("Events panel", () => {
 
     const stageCard = mockedPage.getByTestId("stage-card-1");
     await expect(stageCard.getByTestId("events-panel")).toBeVisible();
-    await expect(
-      stageCard.getByTestId("events-panel-toggle"),
-    ).toBeVisible();
+    await expect(stageCard.getByTestId("events-panel-toggle")).toBeVisible();
     await expect(stageCard.getByTestId("events-panel-toggle")).toContainText(
       "Événements (2)",
     );
@@ -183,14 +181,14 @@ test.describe("Events panel", () => {
 
     // stage 1 has its own events
     await stageCard1.getByTestId("events-panel-toggle").click();
-    await expect(
-      stageCard1.getByTestId("events-panel-content"),
-    ).toContainText("Festival de Jazz de Vals");
+    await expect(stageCard1.getByTestId("events-panel-content")).toContainText(
+      "Festival de Jazz de Vals",
+    );
 
     // stage 2 has its own events
     await stageCard2.getByTestId("events-panel-toggle").click();
-    await expect(
-      stageCard2.getByTestId("events-panel-content"),
-    ).toContainText("Festival de Jazz de Vals");
+    await expect(stageCard2.getByTestId("events-panel-content")).toContainText(
+      "Festival de Jazz de Vals",
+    );
   });
 });

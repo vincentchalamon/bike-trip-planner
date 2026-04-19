@@ -322,8 +322,20 @@ export function AccommodationItem({
         )}
       </div>
 
+      {/* Wikidata thumbnail */}
+      {accommodation.imageUrl && (
+        <div className="mt-2">
+          <img
+            src={accommodation.imageUrl}
+            alt={accommodation.name}
+            loading="lazy"
+            className="rounded aspect-[3/2] object-cover w-full max-w-[180px]"
+          />
+        </div>
+      )}
+
       {/* Type icon + label + price + distance to end point */}
-      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
         <div className="flex items-center gap-1.5">
           <TypeIcon className="h-3.5 w-3.5" />
           <span>{typeLabel}</span>
@@ -340,7 +352,29 @@ export function AccommodationItem({
             <span>{distLabel}</span>
           </div>
         )}
+        {accommodation.source && accommodation.source !== "osm" && (
+          <span className="inline-flex items-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70 bg-muted rounded px-1.5 py-0.5">
+            {accommodation.source === "datatourisme"
+              ? "DataTourisme"
+              : accommodation.source}
+          </span>
+        )}
       </div>
+
+      {/* Wikipedia link */}
+      {accommodation.wikipediaUrl && (
+        <div className="mt-1">
+          <a
+            href={accommodation.wikipediaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-primary flex items-center gap-0.5 hover:underline"
+          >
+            <ExternalLink className="h-3 w-3" />
+            Voir sur Wikipedia
+          </a>
+        </div>
+      )}
     </div>
   );
 }

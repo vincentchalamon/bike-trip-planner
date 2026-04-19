@@ -129,6 +129,23 @@ final class OsmOverpassQueryBuilderTest extends TestCase
         $this->assertStringContainsString('guest_house', $query);
         $this->assertStringContainsString('chalet', $query);
         $this->assertStringContainsString('alpine_hut', $query);
+        $this->assertStringContainsString('wilderness_hut', $query);
+        $this->assertStringContainsString('"amenity"="shelter"', $query);
+        $this->assertStringContainsString('basic_hut', $query);
+        $this->assertStringContainsString('weather_shelter', $query);
+        $this->assertStringContainsString('lean_to', $query);
+    }
+
+    #[Test]
+    public function buildAccommodationQueryWithShelterOnlyEmitsAmenityFilter(): void
+    {
+        $points = [new Coordinate(45.0, 5.0)];
+
+        $query = $this->builder->buildAccommodationQuery($points, 5000, ['shelter']);
+
+        $this->assertStringContainsString('"amenity"="shelter"', $query);
+        $this->assertStringContainsString('"shelter_type"~"^(basic_hut|weather_shelter|lean_to)$"', $query);
+        $this->assertStringNotContainsString('"tourism"', $query);
     }
 
     #[Test]
@@ -145,6 +162,7 @@ final class OsmOverpassQueryBuilderTest extends TestCase
         $this->assertStringNotContainsString('guest_house', $query);
         $this->assertStringNotContainsString('chalet', $query);
         $this->assertStringNotContainsString('alpine_hut', $query);
+        $this->assertStringNotContainsString('"amenity"="shelter"', $query);
     }
 
     #[Test]

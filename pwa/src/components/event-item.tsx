@@ -1,20 +1,26 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import type { EventData } from "@/lib/validation/schemas";
 
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  "schema:Festival": "Festival",
-  "schema:Exhibition": "Exposition",
-  "schema:MusicEvent": "Concert",
-  "urn:resource:FairOrShow": "Foire / Salon",
+const EVENT_TYPE_KEYS: Record<string, string> = {
+  "schema:Festival": "type_festival",
+  "schema:Exhibition": "type_exhibition",
+  "schema:MusicEvent": "type_music_event",
+  "urn:resource:FairOrShow": "type_fair_or_show",
+  market: "type_market",
 };
 
-function formatDateRange(startDate: string, endDate: string): string {
+function formatDateRange(
+  startDate: string,
+  endDate: string,
+  locale: string,
+): string {
   const start = new Date(startDate);
   const end = new Date(endDate);
 
-  const fmt = new Intl.DateTimeFormat("fr-FR", {
+  const fmt = new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
   });
@@ -30,8 +36,11 @@ interface EventItemProps {
 }
 
 export function EventItem({ event }: EventItemProps) {
-  const typeLabel = EVENT_TYPE_LABELS[event.type] ?? event.type;
-  const dateRange = formatDateRange(event.startDate, event.endDate);
+  const locale = useLocale();
+  const t = useTranslations("events");
+  const typeKey = EVENT_TYPE_KEYS[event.type];
+  const typeLabel = typeKey ? t(typeKey) : event.type;
+  const dateRange = formatDateRange(event.startDate, event.endDate, locale);
 
   return (
     <div className="py-2 first:pt-0 last:pb-0">
@@ -40,7 +49,7 @@ export function EventItem({ event }: EventItemProps) {
           <p className="text-sm font-medium leading-tight truncate">
             {event.name}
           </p>
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className="text-xs text-muted-foreground">{dateRange}</span>
             <span className="text-xs text-muted-foreground">·</span>
             <span className="text-xs text-muted-foreground">{typeLabel}</span>
@@ -48,7 +57,7 @@ export function EventItem({ event }: EventItemProps) {
               <>
                 <span className="text-xs text-muted-foreground">·</span>
                 <span className="text-xs text-muted-foreground">
-                  {`À partir de ${event.priceMin} €`}
+                  {t("from_price", { price: event.priceMin })}
                 </span>
               </>
             )}
@@ -58,19 +67,46 @@ export function EventItem({ event }: EventItemProps) {
               {event.description}
             </p>
           )}
+          {event.openingHours && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {event.openingHours}
+            </p>
+          )}
+          {event.wikipediaUrl && (
+            <a
+              href={event.wikipediaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-0.5 flex items-center gap-0.5 text-xs text-primary hover:underline"
+              aria-label={t("see_on_wikipedia_label", { name: event.name })}
+            >
+              <ExternalLink className="h-3 w-3" />
+              {t("see_on_wikipedia")}
+            </a>
+          )}
         </div>
-        {event.url && (
-          <a
-            href={event.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 flex items-center gap-1 text-xs text-primary hover:underline"
-            aria-label={`Voir le site de ${event.name}`}
-          >
-            <ExternalLink className="h-3 w-3" />
-            <span className="hidden sm:inline">Voir le site</span>
-          </a>
-        )}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {event.imageUrl && (
+            <img
+              src={event.imageUrl}
+              alt={event.name}
+              loading="lazy"
+              className="rounded aspect-[3/2] object-cover w-16"
+            />
+          )}
+          {event.url && (
+            <a
+              href={event.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs text-primary hover:underline"
+              aria-label={t("see_website_label", { name: event.name })}
+            >
+              <ExternalLink className="h-3 w-3" />
+              <span className="hidden sm:inline">{t("see_website")}</span>
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -64,6 +64,29 @@ export interface AccommodationPayload {
   isExactPrice: boolean;
   possibleClosed: boolean;
   distanceToEndPoint: number;
+  source: "osm" | "datatourisme";
+  description?: string | null;
+  imageUrl?: string | null;
+  wikipediaUrl?: string | null;
+  openingHours?: string | null;
+}
+
+export interface EventPayload {
+  name: string;
+  type: string;
+  lat: number;
+  lon: number;
+  startDate: string;
+  endDate: string;
+  url: string | null;
+  description: string | null;
+  priceMin: number | null;
+  distanceToEndPoint: number;
+  source: string;
+  wikidataId: string | null;
+  imageUrl?: string | null;
+  wikipediaUrl?: string | null;
+  openingHours?: string | null;
 }
 
 export interface EventPayload {
@@ -220,6 +243,13 @@ export type MercureEvent =
           poiLat: number;
           poiLon: number;
           distanceFromRoute: number;
+          openingHours?: string;
+          estimatedPrice?: number;
+          description?: string;
+          wikidataId?: string;
+          source?: string;
+          imageUrl?: string;
+          wikipediaUrl?: string;
         }[];
       };
     }

@@ -692,6 +692,7 @@ export function useTripPlanner() {
       isExactPrice: false,
       possibleClosed: false,
       distanceToEndPoint: 0,
+      source: "osm",
     };
     actions.addLocalAccommodation(stageIndex, newAcc);
     setNewAccKey(`${stageIndex}-${accIndex}`);
