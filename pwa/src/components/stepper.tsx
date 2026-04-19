@@ -111,9 +111,7 @@ export function Stepper() {
                     {isCompleted ? (
                       <Check className="w-4 h-4" aria-hidden="true" />
                     ) : (
-                      <span className="text-xs font-semibold">
-                        {index + 1}
-                      </span>
+                      <span className="text-xs font-semibold">{index + 1}</span>
                     )}
                   </button>
                 ) : (
@@ -136,9 +134,7 @@ export function Stepper() {
                     {isCompleted || isPast ? (
                       <Check className="w-4 h-4" aria-hidden="true" />
                     ) : (
-                      <span className="text-xs font-semibold">
-                        {index + 1}
-                      </span>
+                      <span className="text-xs font-semibold">{index + 1}</span>
                     )}
                   </div>
                 )}
