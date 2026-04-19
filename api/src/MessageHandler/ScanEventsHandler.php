@@ -14,10 +14,12 @@ use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanEvents;
+use App\Repository\MarketRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Wikidata\WikidataEnricherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
 final readonly class ScanEventsHandler extends AbstractTripMessageHandler
@@ -43,6 +45,8 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         private DataTourismeClientInterface $dataTourismeClient,
         private GeoDistanceInterface $haversine,
         private WikidataEnricherInterface $wikidataEnricher,
+        private MarketRepositoryInterface $marketRepository,
+        private TranslatorInterface $translator,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
@@ -87,7 +91,9 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                 }
 
                 $stageDate = $startDate->modify(\sprintf('+%d days', $i));
-                $eventsByStage[$i] = $this->fetchEventsForStage($stage, $stageDate);
+                $dtEvents = $this->fetchEventsForStage($stage, $stageDate);
+                $marketEvents = $this->fetchMarketsForStage($stage, $stageDate);
+                $eventsByStage[$i] = array_merge($dtEvents, $marketEvents);
             }
 
             // Wikidata enrichment: collect all Q-IDs and fetch in one batch
@@ -181,14 +187,28 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
 
         $dateStr = $stageDate->format('Y-m-d');
 
-        $response = $this->dataTourismeClient->request('/', [
-            '@type' => 'schema:Event',
-            'startDate[before]' => $dateStr,
-            'endDate[after]' => $dateStr,
-            'latitude[gte]' => $minLat,
-            'latitude[lte]' => $maxLat,
-            'longitude[gte]' => $minLon,
-            'longitude[lte]' => $maxLon,
+        $response = $this->dataTourismeClient->request('/api/v1/places', [
+            'filters[0][path]' => '@type',
+            'filters[0][operator]' => 'in',
+            'filters[0][value]' => implode(',', self::TARGETED_TYPES),
+            'filters[1][path]' => 'startDate',
+            'filters[1][operator]' => 'lte',
+            'filters[1][value]' => $dateStr,
+            'filters[2][path]' => 'endDate',
+            'filters[2][operator]' => 'gte',
+            'filters[2][value]' => $dateStr,
+            'filters[3][path]' => 'hasGeometry.latitude',
+            'filters[3][operator]' => 'gte',
+            'filters[3][value]' => $minLat,
+            'filters[4][path]' => 'hasGeometry.latitude',
+            'filters[4][operator]' => 'lte',
+            'filters[4][value]' => $maxLat,
+            'filters[5][path]' => 'hasGeometry.longitude',
+            'filters[5][operator]' => 'gte',
+            'filters[5][value]' => $minLon,
+            'filters[6][path]' => 'hasGeometry.longitude',
+            'filters[6][operator]' => 'lte',
+            'filters[6][value]' => $maxLon,
             'limit' => 100,
         ]);
 
@@ -249,6 +269,59 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         }
 
         usort($events, static fn (Event $a, Event $b): int => $a->startDate <=> $b->startDate);
+
+        return $events;
+    }
+
+    /**
+     * @return list<Event>
+     */
+    private function fetchMarketsForStage(Stage $stage, \DateTimeImmutable $stageDate): array
+    {
+        $dayOfWeek = (int) $stageDate->format('N');
+
+        $markets = $this->marketRepository->findNearEndpoint(
+            $stage->endPoint->lat,
+            $stage->endPoint->lon,
+            self::EVENT_RADIUS_METERS,
+            $dayOfWeek,
+        );
+
+        $events = [];
+
+        foreach ($markets as $market) {
+            $startTime = $market->getStartTime() ?? '00:00';
+            $endTime = $market->getEndTime() ?? '23:59';
+            $datePrefix = $stageDate->format('Y-m-d');
+
+            $startDate = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $datePrefix.' '.$startTime);
+            $endDate = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $datePrefix.' '.$endTime);
+
+            if (!$startDate instanceof \DateTimeImmutable || !$endDate instanceof \DateTimeImmutable) {
+                continue;
+            }
+
+            $distanceToEndPoint = $this->haversine->inMeters(
+                $market->getLat(),
+                $market->getLon(),
+                $stage->endPoint->lat,
+                $stage->endPoint->lon,
+            );
+
+            $description = $this->translator->trans('market.weekly_description');
+
+            $events[] = new Event(
+                name: $market->getName(),
+                type: 'market',
+                lat: $market->getLat(),
+                lon: $market->getLon(),
+                startDate: $startDate,
+                endDate: $endDate,
+                description: $description,
+                distanceToEndPoint: $distanceToEndPoint,
+                source: 'data_gouv_markets',
+            );
+        }
 
         return $events;
     }

@@ -90,7 +90,9 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
     {
         $degreeOffset = $radiusMeters / 111_000.0;
 
+        /** @var non-empty-array<int, float> $lats */
         $lats = array_map(static fn (Coordinate $c): float => $c->lat, $endPoints);
+        /** @var non-empty-array<int, float> $lons */
         $lons = array_map(static fn (Coordinate $c): float => $c->lon, $endPoints);
 
         return [
@@ -265,7 +267,7 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
         $candidates = \is_array($sameAs) ? $sameAs : (\is_string($sameAs) ? [$sameAs] : []);
 
         foreach ($candidates as $uri) {
-            if (\is_string($uri) && str_contains($uri, 'wikidata.org/entity/')) {
+            if (\is_string($uri) && str_contains($uri, 'wikidata.org/')) {
                 $parts = explode('/', $uri);
                 $id = end($parts) ?: null;
                 if (null !== $id && 1 === preg_match('/^Q\d+$/', $id)) {
