@@ -50,6 +50,7 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
                     ],
                 ],
             ]),
+            'limit' => 100,
         ]);
 
         /** @var list<array<string, mixed>> $results */
@@ -241,7 +242,7 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
             }
 
             $dayStr = \is_array($days) ? implode(', ', array_map([$this, 'formatDay'], $days)) : ($days ?? '');
-            $parts[] = trim(\sprintf('%s %s–%s', $dayStr, $opens, $closes));
+            $parts[] = trim(\sprintf('%s %s\u{2013}%s', $dayStr, $opens, $closes));
         }
 
         return [] === $parts ? null : implode(' | ', $parts);
@@ -347,8 +348,10 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
         foreach ($sameAs as $uri) {
             if (\is_string($uri) && str_contains($uri, 'wikidata.org/entity/')) {
                 $parts = explode('/', $uri);
-
-                return end($parts) ?: null;
+                $id = end($parts) ?: null;
+                if (null !== $id && 1 === preg_match('/^Q\d+$/', $id)) {
+                    return $id;
+                }
             }
         }
 

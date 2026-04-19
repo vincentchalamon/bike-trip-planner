@@ -183,6 +183,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
             'latitude[lte]' => $maxLat,
             'longitude[gte]' => $minLon,
             'longitude[lte]' => $maxLon,
+            'limit' => 100,
         ]);
 
         /** @var list<array<string, mixed>> $results */
@@ -422,8 +423,10 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
     {
         if (str_contains($uri, 'wikidata.org/entity/')) {
             $parts = explode('/', $uri);
-
-            return end($parts) ?: null;
+            $id = end($parts) ?: null;
+            if (null !== $id && 1 === preg_match('/^Q\d+$/', $id)) {
+                return $id;
+            }
         }
 
         return null;
