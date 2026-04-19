@@ -21,6 +21,7 @@ import { MapPanel } from "@/components/Map";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { Button } from "@/components/ui/button";
 import { UndoRedoButtons } from "@/components/undo-redo-buttons";
+import { Stepper } from "@/components/stepper";
 import { RecentTrips } from "@/components/recent-trips";
 import { SavedTripsSection } from "@/components/saved-trips-section";
 import { OfflineBanner } from "@/components/offline-banner";
@@ -100,6 +101,8 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const setFocusedMapStageIndex = useUiStore((s) => s.setFocusedMapStageIndex);
   const viewMode = useUiStore((s) => s.viewMode);
   const setViewMode = useUiStore((s) => s.setViewMode);
+  const goToStep = useUiStore((s) => s.goToStep);
+  const completeStep = useUiStore((s) => s.completeStep);
   const activeStages = useMemo(
     () => stages.filter((s) => !s.isRestDay),
     [stages],
@@ -150,6 +153,30 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
     return () =>
       window.removeEventListener("__test_set_focused_map_stage", handler);
   }, [setFocusedMapStageIndex]);
+
+  // Drive stepper state transitions based on trip lifecycle:
+  // - URL submitted / GPX uploading → "analysis" (background computation)
+  // - Computation complete (trip + stages) → "my_trip"
+  // - Trip loaded but no stages (loading state) → "preview"
+  useEffect(() => {
+    if (isProcessing) {
+      // Computation is running: advance past preparation/preview into analysis
+      completeStep("preparation");
+      completeStep("preview");
+      goToStep("analysis");
+    } else if (trip && stages.length > 0) {
+      // Computation complete: all prior steps done, advance to my_trip
+      completeStep("preparation");
+      completeStep("preview");
+      completeStep("analysis");
+      goToStep("my_trip");
+    } else if (trip && stages.length === 0) {
+      // Trip identity loaded but no stages yet: preview state
+      completeStep("preparation");
+      goToStep("preview");
+    }
+    // else: no trip, not processing → stay on preparation (initial state)
+  }, [isProcessing, trip, stages.length, completeStep, goToStep]);
 
   // Mobile swipe: left → map, right → timeline (cycle: timeline ↔ map on mobile)
   const swipeHandlers = useSwipe({
@@ -318,6 +345,13 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
 
         {/* Offline status banner */}
         <OfflineBanner />
+
+        {/* Stepper — visible in all planning states (welcome, loading, trip loaded).
+            Hidden on landing page, FAQ and trips list since those pages don't
+            render TripPlanner at all. */}
+        <div className="mb-8 pb-6" data-testid="stepper-wrapper">
+          <Stepper />
+        </div>
 
         {/* === State 1: Welcome (no trip, not processing) === */}
         {isWelcome && (

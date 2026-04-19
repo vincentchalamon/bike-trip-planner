@@ -322,6 +322,14 @@
     "viewAll": "View all ({count})",
     "noDate": "No date"
   },
+  "stepper": {
+    "ariaLabel": "Process steps",
+    "preparation": "Preparation",
+    "preview": "Preview",
+    "analysis": "Analysis",
+    "myTrip": "My Trip",
+    "mobileLabel": "Step {current}/{total} — {stepName}"
+  },
   "planner": {
     "closeTrip": "Close this trip"
   },
