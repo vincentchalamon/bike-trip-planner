@@ -9,12 +9,50 @@ import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client";
 import { formatDistanceKm } from "@/lib/formatters";
 import { API_URL } from "@/lib/constants";
+import { Badge } from "@/components/ui/badge";
 import type { components } from "@/lib/api/schema";
 
-type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
+type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"] & {
+  status?: string;
+};
 type TripCollection = components["schemas"]["HydraCollectionBaseSchema"] & {
   member: TripListItem[];
 };
+
+function TripStatusBadge({ status }: { status?: string }) {
+  const t = useTranslations("tripList");
+
+  if (status === "analyzing") {
+    return (
+      <Badge
+        variant="secondary"
+        className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-700"
+        data-testid="status-analyzing"
+      >
+        {t("status_analyzing")}
+      </Badge>
+    );
+  }
+
+  if (status === "analyzed") {
+    return (
+      <Badge
+        variant="secondary"
+        className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-700"
+        data-testid="status-analyzed"
+      >
+        {t("status_analyzed")}
+      </Badge>
+    );
+  }
+
+  // draft (default)
+  return (
+    <Badge variant="outline" className="text-xs" data-testid="status-draft">
+      {t("status_draft")}
+    </Badge>
+  );
+}
 
 export function RecentTrips() {
   const t = useTranslations();
@@ -88,6 +126,7 @@ export function RecentTrips() {
                 <span className="font-medium truncate">
                   {trip.title ?? t("tripList.untitled")}
                 </span>
+                <TripStatusBadge status={trip.status} />
                 {(trip.totalDistance ?? 0) > 0 && (
                   <span className="text-sm text-muted-foreground">
                     {formatDistanceKm(trip.totalDistance ?? 0)}

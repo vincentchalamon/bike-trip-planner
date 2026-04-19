@@ -10,6 +10,7 @@ use ApiPlatform\State\Pagination\Pagination;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripListItem;
 use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -33,6 +34,7 @@ final readonly class TripCollectionProvider implements ProviderInterface
         private EntityManagerInterface $entityManager,
         private Pagination $pagination,
         private Security $security,
+        private ComputationTrackerInterface $computationTracker,
     ) {
     }
 
@@ -105,12 +107,19 @@ final readonly class TripCollectionProvider implements ProviderInterface
         /** @var list<TripRequest> $entities */
         $entities = iterator_to_array($paginator->getIterator());
 
-        $items = array_map($this->toListItem(...), $entities);
+        $items = array_map(function (TripRequest $entity): TripListItem {
+            \assert($entity->id instanceof Uuid);
+
+            return $this->toListItem($entity, $this->computationTracker->getStatuses($entity->id->toRfc4122()));
+        }, $entities);
 
         return new TripListPaginator($items, $page, $limit, $totalItems);
     }
 
-    private function toListItem(TripRequest $entity): TripListItem
+    /**
+     * @param array<string, string>|null $computationStatuses
+     */
+    private function toListItem(TripRequest $entity, ?array $computationStatuses): TripListItem
     {
         \assert($entity->id instanceof Uuid);
 
@@ -133,6 +142,39 @@ final readonly class TripCollectionProvider implements ProviderInterface
             stageCount: $stageCount,
             createdAt: $entity->createdAt,
             updatedAt: $entity->updatedAt,
+            status: $this->computeStatus($computationStatuses, $stageCount),
         );
+    }
+
+    /**
+     * Derives the trip status from the computation tracker data and stage count.
+     *
+     * - "draft"     : no computations tracked yet (new / unanalysed trip)
+     * - "analyzing" : at least one computation is still pending or running
+     * - "analyzed"  : all computations are done or failed (full results available)
+     *
+     * @param array<string, string>|null $statuses
+     */
+    private function computeStatus(?array $statuses, int $stageCount): string
+    {
+        // No computation has ever been started → draft
+        if (null === $statuses || [] === $statuses) {
+            return 'draft';
+        }
+
+        // If any computation is still pending or running → analyzing
+        foreach ($statuses as $status) {
+            if ('pending' === $status || 'running' === $status) {
+                return 'analyzing';
+            }
+        }
+
+        // All computations are done/failed but no stages persisted yet → still analyzing
+        // (stages are persisted as part of the pipeline; absence means it's not complete)
+        if (0 === $stageCount) {
+            return 'analyzing';
+        }
+
+        return 'analyzed';
     }
 }
