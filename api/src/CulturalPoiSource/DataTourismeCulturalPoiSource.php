@@ -107,13 +107,15 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
 
         /** @var non-empty-array<int, float> $allLats */
         /** @var non-empty-array<int, float> $allLons */
-        $degreeOffset = $radiusMeters / 111_000.0;
+        $avgLat = (min($allLats) + max($allLats)) / 2.0;
+        $latOffset = $radiusMeters / 111_000.0;
+        $lonOffset = $radiusMeters / (111_000.0 * max(cos(deg2rad($avgLat)), 0.001));
 
         return [
-            min($allLats) - $degreeOffset,
-            min($allLons) - $degreeOffset,
-            max($allLats) + $degreeOffset,
-            max($allLons) + $degreeOffset,
+            min($allLats) - $latOffset,
+            min($allLons) - $lonOffset,
+            max($allLats) + $latOffset,
+            max($allLons) + $lonOffset,
         ];
     }
 
