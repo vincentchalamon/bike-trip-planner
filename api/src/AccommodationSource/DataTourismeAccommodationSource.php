@@ -92,9 +92,7 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
         /** @var non-empty-array<int, float> $lons */
         $lons = array_map(static fn (Coordinate $c): float => $c->lon, $endPoints);
 
-        $midLat = ($endPoints !== [])
-            ? (array_sum(array_map(static fn (Coordinate $c): float => $c->lat, $endPoints)) / \count($endPoints))
-            : 0.0;
+        $midLat = array_sum($lats) / \count($lats);
         $latDegreeOffset = $radiusMeters / 111_000.0;
         $lonDegreeOffset = $radiusMeters / (111_000.0 * max(cos(deg2rad($midLat)), 0.001));
 
