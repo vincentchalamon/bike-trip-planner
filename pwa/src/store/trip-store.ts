@@ -10,6 +10,7 @@ import type {
   AccommodationData,
   AlertData,
   SupplyMarkerData,
+  EventData,
 } from "@/lib/validation/schemas";
 import type { AccommodationType } from "@/lib/accommodation-types";
 import { FILTERABLE_ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
@@ -56,6 +57,8 @@ interface TripState {
     stageIndex: number,
     markers: SupplyMarkerData[],
   ) => void;
+  setStageEvents: (stageIndex: number, events: EventData[]) => void;
+  clearEvents: () => void;
   updateStageAccommodations: (
     stageIndex: number,
     accs: AccommodationData[],
@@ -254,6 +257,20 @@ export const useTripStore = create<TripState>()(
         }
       }),
 
+    setStageEvents: (stageIndex, events) =>
+      set((state) => {
+        if (state.stages[stageIndex]) {
+          state.stages[stageIndex].events = events;
+        }
+      }),
+
+    clearEvents: () =>
+      set((state) => {
+        for (const stage of state.stages) {
+          stage.events = [];
+        }
+      }),
+
     updateStageAccommodations: (stageIndex, accs, searchRadiusKm) =>
       set((state) => {
         const stage = state.stages[stageIndex];
@@ -433,6 +450,7 @@ export const useTripStore = create<TripState>()(
           accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
           isRestDay: true,
           supplyTimeline: [],
+          events: [],
         };
 
         state.stages.splice(afterIndex + 1, 0, restDay);

@@ -19,6 +19,9 @@ final class OsmCulturalPoiSourceTest extends TestCase
         return new OsmCulturalPoiSource($scanner, $queryBuilder);
     }
 
+    /**
+     * @return list<list<array{lat: float, lon: float}>>
+     */
     private function stageGeometries(): array
     {
         return [

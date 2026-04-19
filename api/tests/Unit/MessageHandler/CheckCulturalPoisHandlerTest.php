@@ -16,6 +16,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
 use App\MessageHandler\CheckCulturalPoisHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Wikidata\WikidataEnricherInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -71,6 +72,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             $distributor,
             $haversine,
             $translator,
+            $this->createStub(WikidataEnricherInterface::class),
         );
     }
 
@@ -86,6 +88,9 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         return $manager;
     }
 
+    /**
+     * @param list<array<string, mixed>> $pois
+     */
     private function makeRegistryWithPois(array $pois): CulturalPoiSourceRegistry
     {
         $registry = $this->createStub(CulturalPoiSourceRegistry::class);

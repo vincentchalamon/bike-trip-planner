@@ -45,7 +45,8 @@
         "cultural_pois",
         "railway_stations",
         "health_services",
-        "border_crossing"
+        "border_crossing",
+        "events"
       ],
       "additionalProperties": false,
       "properties": {
@@ -176,6 +177,15 @@
           ]
         },
         "border_crossing": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "events": {
           "type": "string",
           "enum": [
             "pending",

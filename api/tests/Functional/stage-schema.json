@@ -8,6 +8,7 @@
     "alerts",
     "pois",
     "accommodations",
+    "events",
     "trip",
     "dayNumber",
     "distance",
@@ -53,6 +54,15 @@
       }
     },
     "accommodations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [],
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "events": {
       "type": "array",
       "items": {
         "type": "object",

@@ -45,6 +45,10 @@ final readonly class CulturalPoiAlert extends Alert
         public ?string $wikidataId = null,
         #[ApiProperty(description: 'Data source: osm or datatourisme.')]
         public ?string $source = null,
+        #[ApiProperty(description: 'Thumbnail image URL from Wikimedia Commons.')]
+        public ?string $imageUrl = null,
+        #[ApiProperty(description: 'Wikipedia article URL.')]
+        public ?string $wikipediaUrl = null,
     ) {
         parent::__construct($type, $message, $lat, $lon, $action);
     }

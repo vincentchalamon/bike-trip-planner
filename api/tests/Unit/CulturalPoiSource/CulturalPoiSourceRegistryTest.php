@@ -11,6 +11,9 @@ use PHPUnit\Framework\TestCase;
 
 final class CulturalPoiSourceRegistryTest extends TestCase
 {
+    /**
+     * @return list<list<array{lat: float, lon: float}>>
+     */
     private function stageGeometries(): array
     {
         return [

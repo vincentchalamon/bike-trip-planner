@@ -14,6 +14,7 @@ use ApiPlatform\OpenApi\Model\Operation;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Model\Event;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\WeatherForecast;
 use App\State\RestDayInsertProcessor;
@@ -155,6 +156,9 @@ final class Stage
 
     public ?Accommodation $selectedAccommodation = null;
 
+    /** @var Event[] */
+    public array $events = [];
+
     /**
      * @param list<Coordinate> $geometry
      */
@@ -186,5 +190,10 @@ final class Stage
     public function addAccommodation(Accommodation $accommodation): void
     {
         $this->accommodations[] = $accommodation;
+    }
+
+    public function addEvent(Event $event): void
+    {
+        $this->events[] = $event;
     }
 }

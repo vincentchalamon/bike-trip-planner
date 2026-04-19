@@ -79,14 +79,14 @@ When(
 Then(
   "je vois les interrupteurs pour les types {string}",
   async ({ mockedPage }, _typesStr: string) => {
-    await expect(getAccommodationSwitches(mockedPage)).toHaveCount(7);
+    await expect(getAccommodationSwitches(mockedPage)).toHaveCount(9);
   },
 );
 
 Then(
   "I see switches for types {string}",
   async ({ mockedPage }, _typesStr: string) => {
-    await expect(getAccommodationSwitches(mockedPage)).toHaveCount(7);
+    await expect(getAccommodationSwitches(mockedPage)).toHaveCount(9);
   },
 );
 

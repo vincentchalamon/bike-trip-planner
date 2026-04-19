@@ -93,6 +93,7 @@ function SharedTripLoader({ code }: { code: string }) {
           accommodationSearchRadiusKm: 5,
           isRestDay: (s.isRestDay as boolean) ?? false,
           supplyTimeline: [],
+          events: [],
         }));
 
         setStages(parsedStages);

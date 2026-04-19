@@ -24,6 +24,7 @@ import { UndoRedoButtons } from "@/components/undo-redo-buttons";
 import { RecentTrips } from "@/components/recent-trips";
 import { SavedTripsSection } from "@/components/saved-trips-section";
 import { OfflineBanner } from "@/components/offline-banner";
+import { AttributionFooter } from "@/components/attribution-footer";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useLinkParam } from "@/hooks/use-link-param";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
@@ -337,14 +338,19 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
             {actionButtons}
             <RecentTrips />
             <SavedTripsSection />
-            <footer className="mt-4 text-center">
-              <Link
-                href="/faq"
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                data-testid="footer-faq-link"
-              >
-                {t("footer.faq")}
-              </Link>
+            <footer className="mt-4 text-center space-y-2">
+              <div>
+                <Link
+                  href="/faq"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="footer-faq-link"
+                >
+                  {t("footer.faq")}
+                </Link>
+              </div>
+              <div>
+                <AttributionFooter />
+              </div>
             </footer>
           </div>
         )}

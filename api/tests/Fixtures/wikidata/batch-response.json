@@ -1,0 +1,22 @@
+{
+  "results": {
+    "bindings": [
+      {
+        "item": { "type": "uri", "value": "http://www.wikidata.org/entity/Q12345" },
+        "itemLabel": { "type": "literal", "value": "Château de Versailles" },
+        "itemDescription": { "type": "literal", "value": "Palais royal situé à Versailles, France." },
+        "image": { "type": "uri", "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Versailles_Palace.jpg" },
+        "website": { "type": "uri", "value": "https://www.chateauversailles.fr" },
+        "openingHours": { "type": "literal", "value": "Tu-Su 09:00-17:30" },
+        "article": { "type": "uri", "value": "https://fr.wikipedia.org/wiki/Château_de_Versailles" }
+      },
+      {
+        "item": { "type": "uri", "value": "http://www.wikidata.org/entity/Q67890" },
+        "itemLabel": { "type": "literal", "value": "Tour Eiffel" },
+        "itemDescription": { "type": "literal", "value": "Monument emblématique de Paris." },
+        "image": { "type": "uri", "value": "http://commons.wikimedia.org/wiki/Special:FilePath/Tour_Eiffel.jpg" },
+        "article": { "type": "uri", "value": "https://fr.wikipedia.org/wiki/Tour_Eiffel" }
+      }
+    ]
+  }
+}
