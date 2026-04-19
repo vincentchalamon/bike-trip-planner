@@ -88,23 +88,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                     if ([] !== $events) {
                         $this->publisher->publish($tripId, MercureEventType::EVENTS_FOUND, [
                             'stageIndex' => $i,
-                            'events' => array_map(static fn (Event $e): array => [
-                                'name' => $e->name,
-                                'type' => $e->type,
-                                'lat' => $e->lat,
-                                'lon' => $e->lon,
-                                'startDate' => $e->startDate->format(\DateTimeInterface::ATOM),
-                                'endDate' => $e->endDate->format(\DateTimeInterface::ATOM),
-                                'url' => $e->url,
-                                'description' => $e->description,
-                                'priceMin' => $e->priceMin,
-                                'distanceToEndPoint' => $e->distanceToEndPoint,
-                                'source' => $e->source,
-                                'wikidataId' => $e->wikidataId,
-                                'imageUrl' => $e->imageUrl,
-                                'wikipediaUrl' => $e->wikipediaUrl,
-                                'openingHours' => $e->openingHours,
-                            ], $events),
+                            'events' => array_map($this->eventToArray(...), $events),
                         ]);
 
                         foreach ($events as $event) {
@@ -178,26 +162,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
 
                 $payload = [
                     'stageIndex' => $i,
-                    'events' => array_map(
-                        static fn (Event $e): array => [
-                            'name' => $e->name,
-                            'type' => $e->type,
-                            'lat' => $e->lat,
-                            'lon' => $e->lon,
-                            'startDate' => $e->startDate->format(\DateTimeInterface::ATOM),
-                            'endDate' => $e->endDate->format(\DateTimeInterface::ATOM),
-                            'url' => $e->url,
-                            'description' => $e->description,
-                            'priceMin' => $e->priceMin,
-                            'distanceToEndPoint' => $e->distanceToEndPoint,
-                            'source' => $e->source,
-                            'wikidataId' => $e->wikidataId,
-                            'imageUrl' => $e->imageUrl,
-                            'wikipediaUrl' => $e->wikipediaUrl,
-                            'openingHours' => $e->openingHours,
-                        ],
-                        $enrichedEvents,
-                    ),
+                    'events' => array_map($this->eventToArray(...), $enrichedEvents),
                 ];
 
                 $this->publisher->publish($tripId, MercureEventType::EVENTS_FOUND, $payload);
@@ -253,7 +218,9 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         ]);
 
         /** @var list<array<string, mixed>> $results */
-        $results = \is_array($response['results'] ?? null) ? $response['results'] : [];
+        $results = \is_array($response['results'] ?? null) ? $response['results'] : (
+            \is_array($response['member'] ?? null) ? $response['member'] : []
+        );
 
         $events = [];
 
@@ -543,5 +510,29 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         }
 
         return null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function eventToArray(Event $e): array
+    {
+        return [
+            'name' => $e->name,
+            'type' => $e->type,
+            'lat' => $e->lat,
+            'lon' => $e->lon,
+            'startDate' => $e->startDate->format(\DateTimeInterface::ATOM),
+            'endDate' => $e->endDate->format(\DateTimeInterface::ATOM),
+            'url' => $e->url,
+            'description' => $e->description,
+            'priceMin' => $e->priceMin,
+            'distanceToEndPoint' => $e->distanceToEndPoint,
+            'source' => $e->source,
+            'wikidataId' => $e->wikidataId,
+            'imageUrl' => $e->imageUrl,
+            'wikipediaUrl' => $e->wikipediaUrl,
+            'openingHours' => $e->openingHours,
+        ];
     }
 }
