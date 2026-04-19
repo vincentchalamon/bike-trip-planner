@@ -30,7 +30,7 @@ jobs:
       - name: Import markets
         run: |
           ARGS=""
-          [ "$DRY_RUN" = "true" ] && ARGS="--dry-run"
+          if [ "$DRY_RUN" = "true" ]; then ARGS="--dry-run"; fi
           php bin/console app:markets:import $ARGS
         working-directory: api
         env:
