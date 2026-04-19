@@ -46,7 +46,7 @@ final readonly class DataTourismeClient implements DataTourismeClientInterface
         $ttl = $ttlSeconds ?? self::DEFAULT_TTL;
 
         try {
-            /** @var array<string, mixed> */
+            /* @var array<string, mixed> */
             return $this->cache->get($cacheKey, function (ItemInterface $item) use ($path, $query, $ttl): array {
                 $item->expiresAfter($ttl);
 
@@ -57,7 +57,7 @@ final readonly class DataTourismeClient implements DataTourismeClientInterface
 
                 $response = $this->httpClient->request('GET', $path, ['query' => $query]);
 
-                /** @var array<string, mixed> */
+                /* @var array<string, mixed> */
                 return $response->toArray();
             });
         } catch (DataTourismeRateLimitException $e) {

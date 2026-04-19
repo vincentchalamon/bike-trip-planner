@@ -58,7 +58,6 @@ interface TripState {
     markers: SupplyMarkerData[],
   ) => void;
   setStageEvents: (stageIndex: number, events: EventData[]) => void;
-  clearEvents: () => void;
   updateStageAccommodations: (
     stageIndex: number,
     accs: AccommodationData[],
@@ -261,13 +260,6 @@ export const useTripStore = create<TripState>()(
       set((state) => {
         if (state.stages[stageIndex]) {
           state.stages[stageIndex].events = events;
-        }
-      }),
-
-    clearEvents: () =>
-      set((state) => {
-        for (const stage of state.stages) {
-          stage.events = [];
         }
       }),
 

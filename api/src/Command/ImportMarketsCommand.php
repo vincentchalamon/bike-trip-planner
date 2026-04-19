@@ -45,10 +45,10 @@ final class ImportMarketsCommand extends Command
         private readonly MarketRepositoryInterface $marketRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly LoggerInterface $logger,
-        #[Autowire(service: 'http_client')]
+        #[Autowire(service: 'markets.client')]
         private readonly HttpClientInterface $httpClient,
         #[Autowire(env: 'default::MARKETS_DATASET_URL')]
-        private readonly string $datasetUrl = '',
+        private readonly ?string $datasetUrl = null,
     ) {
         parent::__construct();
     }
@@ -68,9 +68,7 @@ final class ImportMarketsCommand extends Command
         $isDryRun = (bool) $input->getOption('dry-run');
         $limit = (int) $input->getOption('limit');
 
-        $url = '' !== $this->datasetUrl
-            ? $this->datasetUrl
-            : 'https://www.data.gouv.fr/fr/datasets/r/8067f5e0-15a7-48c3-9eb9-c9df2de96a1c';
+        $url = $this->datasetUrl ?? 'https://www.data.gouv.fr/fr/datasets/r/8067f5e0-15a7-48c3-9eb9-c9df2de96a1c';
 
         $io->title('Import weekly markets from data.gouv.fr');
 
@@ -89,13 +87,9 @@ final class ImportMarketsCommand extends Command
         }
 
         try {
-            [$inserted, $updated, $skipped] = $this->processFile($tmpFile, $isDryRun, $limit, $io);
+            [$inserted, $updated, $skipped] = $this->processFile($tmpFile, $isDryRun, $limit);
         } finally {
             @unlink($tmpFile);
-        }
-
-        if (!$isDryRun) {
-            $this->entityManager->flush();
         }
 
         $io->success(\sprintf(
@@ -129,8 +123,8 @@ final class ImportMarketsCommand extends Command
             }
 
             fclose($fileHandle);
-        } catch (\Throwable $e) {
-            $this->logger->error('Failed to download markets dataset.', ['url' => $url, 'error' => $e->getMessage()]);
+        } catch (\Throwable $throwable) {
+            $this->logger->error('Failed to download markets dataset.', ['url' => $url, 'error' => $throwable->getMessage()]);
             @unlink($tmpFile);
 
             return null;
@@ -142,7 +136,7 @@ final class ImportMarketsCommand extends Command
     /**
      * @return array{int, int, int}
      */
-    private function processFile(string $filePath, bool $isDryRun, int $limit, SymfonyStyle $io): array
+    private function processFile(string $filePath, bool $isDryRun, int $limit): array
     {
         $handle = fopen($filePath, 'r');
 
@@ -150,7 +144,7 @@ final class ImportMarketsCommand extends Command
             return [0, 0, 0];
         }
 
-        $headers = fgetcsv($handle, 0, ';');
+        $headers = fgetcsv($handle, 0, ';', escape: '\\');
 
         if (false === $headers || [] === $headers) {
             fclose($handle);
@@ -158,7 +152,7 @@ final class ImportMarketsCommand extends Command
             return [0, 0, 0];
         }
 
-        $headers = array_map('trim', $headers);
+        $headers = array_map(trim(...), $headers);
         $headerIndex = array_flip($headers);
 
         $inserted = 0;
@@ -167,7 +161,68 @@ final class ImportMarketsCommand extends Command
         $processed = 0;
         $batchSize = 200;
 
-        while (false !== ($row = fgetcsv($handle, 0, ';'))) {
+        /**
+         * Each element: array{externalId: string, name: string, lat: float, lon: float,
+         *                     dayOfWeek: int, startTime: ?string, endTime: ?string,
+         *                     commune: string, department: string}.
+         *
+         * @var list<array{externalId: string, name: string, lat: float, lon: float, dayOfWeek: int, startTime: ?string, endTime: ?string, commune: string, department: string}> $pendingRows
+         */
+        $pendingRows = [];
+
+        $flushBatch = function () use (&$pendingRows, &$inserted, &$updated, $isDryRun): void {
+            if ([] === $pendingRows) {
+                return;
+            }
+
+            /** @var list<string> $batchIds */
+            $batchIds = array_column($pendingRows, 'externalId');
+            $existingMap = $this->marketRepository->findByExternalIds($batchIds);
+
+            foreach ($pendingRows as $row) {
+                $externalId = $row['externalId'];
+                $existing = $existingMap[$externalId] ?? null;
+
+                if (null !== $existing) {
+                    if (!$isDryRun) {
+                        $existing->setName($row['name']);
+                        $existing->setLat($row['lat']);
+                        $existing->setLon($row['lon']);
+                        $existing->setDayOfWeek($row['dayOfWeek']);
+                        $existing->setStartTime($row['startTime']);
+                        $existing->setEndTime($row['endTime']);
+                        $existing->setCommune($row['commune']);
+                        $existing->setDepartment($row['department']);
+                        $existing->setImportedAt(new \DateTimeImmutable());
+                    }
+
+                    ++$updated;
+                } else {
+                    if (!$isDryRun) {
+                        $market = new Market($externalId, $row['name']);
+                        $market->setLat($row['lat']);
+                        $market->setLon($row['lon']);
+                        $market->setDayOfWeek($row['dayOfWeek']);
+                        $market->setStartTime($row['startTime']);
+                        $market->setEndTime($row['endTime']);
+                        $market->setCommune($row['commune']);
+                        $market->setDepartment($row['department']);
+                        $this->marketRepository->save($market);
+                    }
+
+                    ++$inserted;
+                }
+            }
+
+            if (!$isDryRun) {
+                $this->entityManager->flush();
+                $this->entityManager->clear();
+            }
+
+            $pendingRows = [];
+        };
+
+        while (false !== ($row = fgetcsv($handle, 0, ';', escape: '\\'))) {
             if (0 < $limit && $processed >= $limit) {
                 break;
             }
@@ -175,7 +230,7 @@ final class ImportMarketsCommand extends Command
             /** @var array<string, string> $data */
             $data = [];
             foreach ($headers as $i => $header) {
-                $data[$header] = isset($row[$i]) ? trim((string) $row[$i]) : '';
+                $data[$header] = isset($row[$i]) ? trim($row[$i]) : '';
             }
 
             [$lat, $lon] = $this->extractLatLon($data, $headerIndex);
@@ -211,48 +266,26 @@ final class ImportMarketsCommand extends Command
             $startTime = $this->extractTime($data, $headerIndex, ['Heure début', 'heure_debut', 'start_time', 'ouverture']);
             $endTime = $this->extractTime($data, $headerIndex, ['Heure fin', 'heure_fin', 'end_time', 'fermeture']);
 
-            if (!$isDryRun) {
-                $existing = $this->marketRepository->findByExternalId($externalId);
-
-                if (null !== $existing) {
-                    $existing->setName($name);
-                    $existing->setLat($lat);
-                    $existing->setLon($lon);
-                    $existing->setDayOfWeek($dayOfWeek);
-                    $existing->setStartTime($startTime);
-                    $existing->setEndTime($endTime);
-                    $existing->setCommune($commune);
-                    $existing->setDepartment($department);
-                    $existing->setImportedAt(new \DateTimeImmutable());
-                    ++$updated;
-                } else {
-                    $market = new Market($externalId, $name);
-                    $market->setLat($lat);
-                    $market->setLon($lon);
-                    $market->setDayOfWeek($dayOfWeek);
-                    $market->setStartTime($startTime);
-                    $market->setEndTime($endTime);
-                    $market->setCommune($commune);
-                    $market->setDepartment($department);
-                    $this->marketRepository->save($market);
-                    ++$inserted;
-                }
-
-                if (0 === ($processed + 1) % $batchSize) {
-                    $this->entityManager->flush();
-                    $this->entityManager->clear();
-                }
-            } else {
-                $existing = $this->marketRepository->findByExternalId($externalId);
-                if (null !== $existing) {
-                    ++$updated;
-                } else {
-                    ++$inserted;
-                }
-            }
+            $pendingRows[] = [
+                'externalId' => $externalId,
+                'name' => $name,
+                'lat' => $lat,
+                'lon' => $lon,
+                'dayOfWeek' => $dayOfWeek,
+                'startTime' => $startTime,
+                'endTime' => $endTime,
+                'commune' => $commune,
+                'department' => $department,
+            ];
 
             ++$processed;
+
+            if (0 === $processed % $batchSize) {
+                $flushBatch();
+            }
         }
+
+        $flushBatch();
 
         fclose($handle);
 
@@ -273,7 +306,7 @@ final class ImportMarketsCommand extends Command
      *  - A combined "Geo Point" column with "lat,lon" or "lat lon" format
      *
      * @param array<string, string> $data
-     * @param array<string, int> $headerIndex
+     * @param array<string, int>    $headerIndex
      *
      * @return array{?float, ?float}
      */
@@ -314,8 +347,8 @@ final class ImportMarketsCommand extends Command
 
     /**
      * @param array<string, string> $data
-     * @param array<string, int> $headerIndex
-     * @param list<string> $candidates
+     * @param array<string, int>    $headerIndex
+     * @param list<string>          $candidates
      */
     private function extractScalarFloat(array $data, array $headerIndex, array $candidates): ?float
     {
@@ -341,8 +374,8 @@ final class ImportMarketsCommand extends Command
 
     /**
      * @param array<string, string> $data
-     * @param array<string, int> $headerIndex
-     * @param list<string> $candidates
+     * @param array<string, int>    $headerIndex
+     * @param list<string>          $candidates
      */
     private function extractString(array $data, array $headerIndex, array $candidates): string
     {
@@ -363,7 +396,7 @@ final class ImportMarketsCommand extends Command
 
     /**
      * @param array<string, string> $data
-     * @param array<string, int> $headerIndex
+     * @param array<string, int>    $headerIndex
      */
     private function extractDayOfWeek(array $data, array $headerIndex): ?int
     {
@@ -382,8 +415,8 @@ final class ImportMarketsCommand extends Command
 
     /**
      * @param array<string, string> $data
-     * @param array<string, int> $headerIndex
-     * @param list<string> $candidates
+     * @param array<string, int>    $headerIndex
+     * @param list<string>          $candidates
      */
     private function extractTime(array $data, array $headerIndex, array $candidates): ?string
     {

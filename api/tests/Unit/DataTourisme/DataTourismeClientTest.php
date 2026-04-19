@@ -96,9 +96,7 @@ final class DataTourismeClientTest extends TestCase
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects($this->once())
             ->method('get')
-            ->willReturnCallback(static function (string $key, callable $callback) use ($item): mixed {
-                return $callback($item);
-            });
+            ->willReturnCallback(static fn (string $key, callable $callback): mixed => $callback($item));
 
         $rateLimit = $this->createMock(RateLimit::class);
         $rateLimit->method('isAccepted')->willReturn(true);
@@ -134,9 +132,7 @@ final class DataTourismeClientTest extends TestCase
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects($this->once())
             ->method('get')
-            ->willReturnCallback(static function (string $key, callable $callback) use ($item): mixed {
-                return $callback($item);
-            });
+            ->willReturnCallback(static fn (string $key, callable $callback): mixed => $callback($item));
 
         $rateLimit = $this->createMock(RateLimit::class);
         $rateLimit->method('isAccepted')->willReturn(true);
@@ -171,9 +167,7 @@ final class DataTourismeClientTest extends TestCase
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects($this->once())
             ->method('get')
-            ->willReturnCallback(static function (string $key, callable $callback) use ($item): mixed {
-                return $callback($item);
-            });
+            ->willReturnCallback(static fn (string $key, callable $callback): mixed => $callback($item));
 
         $rateLimit = $this->createMock(RateLimit::class);
         $rateLimit->method('isAccepted')->willReturn(false);
@@ -212,9 +206,7 @@ final class DataTourismeClientTest extends TestCase
         $cache = $this->createMock(CacheInterface::class);
         $cache->expects($this->once())
             ->method('get')
-            ->willReturnCallback(static function (string $key, callable $callback) use ($item): mixed {
-                return $callback($item);
-            });
+            ->willReturnCallback(static fn (string $key, callable $callback): mixed => $callback($item));
 
         $rateLimit = $this->createMock(RateLimit::class);
         $rateLimit->method('isAccepted')->willReturn(true);

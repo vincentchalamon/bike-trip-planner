@@ -72,20 +72,52 @@ final class ScanEventsHandlerTest extends TestCase
     }
 
     #[Test]
-    public function disabledClientSkipsPublish(): void
+    public function disabledClientSkipsDataTourismeButStillPublishesMarkets(): void
     {
-        $dataTourismeClient = $this->createStub(DataTourismeClientInterface::class);
-        $dataTourismeClient->method('isEnabled')->willReturn(false);
+        // 2025-07-14 is a Monday (ISO day 1)
+        $startDate = new \DateTimeImmutable('2025-07-14');
+        $stage = $this->createStage(1);
 
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->never())->method('publish');
+        $dataTourismeClient = $this->createMock(DataTourismeClientInterface::class);
+        $dataTourismeClient->method('isEnabled')->willReturn(false);
+        $dataTourismeClient->expects($this->never())->method('request');
+
+        $market = new Market('MKT-MON-002', 'Marché Test');
+        $market->setLat(48.49);
+        $market->setLon(2.49);
+        $market->setDayOfWeek(1);
+        $market->setCommune('Paris');
+        $market->setDepartment('75');
+
+        $marketRepository = $this->createStub(MarketRepositoryInterface::class);
+        $marketRepository->method('findNearEndpoint')->willReturn([$market]);
+
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['type' => $type, 'payload' => $payload];
+            });
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getRequest')->willReturn($this->createTripRequest($startDate));
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inMeters')->willReturn(500.0);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine, $marketRepository);
         $handler(new ScanEvents('trip-1'));
+
+        $eventsPublished = array_values(array_filter(
+            $publishedEvents,
+            static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type'],
+        ));
+
+        self::assertCount(1, $eventsPublished);
+        $events = $eventsPublished[0]['payload']['events'];
+        self::assertCount(1, $events);
+        self::assertSame('data_gouv_markets', $events[0]['source']);
     }
 
     #[Test]
@@ -287,7 +319,7 @@ final class ScanEventsHandlerTest extends TestCase
             static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type'],
         );
 
-        $event = array_values($eventsPublished)[0] ?? null;
+        $event = array_first($eventsPublished) ?? null;
         self::assertNotNull($event);
         self::assertCount(0, $event['payload']['events']);
     }

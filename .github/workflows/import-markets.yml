@@ -17,7 +17,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+
+      - name: Install dependencies
+        run: composer install --no-dev --optimize-autoloader
+        working-directory: api
+
       - name: Import markets
+        run: |
+          ARGS=""
+          [ "$DRY_RUN" = "true" ] && ARGS="--dry-run"
+          php bin/console app:markets:import $ARGS
+        working-directory: api
         env:
+          APP_ENV: prod
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DRY_RUN: ${{ inputs.dry_run }}
-        run: make markets-import

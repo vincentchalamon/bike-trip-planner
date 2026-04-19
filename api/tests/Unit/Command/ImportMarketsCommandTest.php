@@ -31,13 +31,13 @@ final class ImportMarketsCommandTest extends TestCase
         CSV;
 
     /** @var MarketRepositoryInterface&MockObject */
-    private MarketRepositoryInterface $marketRepository;
+    private MockObject $marketRepository;
 
     /** @var EntityManagerInterface&MockObject */
-    private EntityManagerInterface $entityManager;
+    private MockObject $entityManager;
 
     /** @var HttpClientInterface&MockObject */
-    private HttpClientInterface $httpClient;
+    private MockObject $httpClient;
 
     #[\Override]
     protected function setUp(): void
@@ -61,8 +61,8 @@ final class ImportMarketsCommandTest extends TestCase
         $stream = $this->createMock(ResponseStreamInterface::class);
         $stream->method('current')->willReturn($chunk);
         $stream->method('valid')->willReturnOnConsecutiveCalls(true, false);
-        $stream->method('rewind')->willReturn(null);
-        $stream->method('next')->willReturn(null);
+        $stream->method('rewind');
+        $stream->method('next');
 
         $this->httpClient->method('request')->willReturn($response);
         $this->httpClient->method('stream')->willReturn($stream);
@@ -84,8 +84,8 @@ final class ImportMarketsCommandTest extends TestCase
     public function insertsNewMarketsAndSkipsMissingGeo(): void
     {
         $this->marketRepository
-            ->method('findByExternalId')
-            ->willReturn(null);
+            ->method('findByExternalIds')
+            ->willReturn([]);
 
         $this->marketRepository
             ->expects($this->exactly(4))
@@ -115,8 +115,17 @@ final class ImportMarketsCommandTest extends TestCase
         $existing->setDepartment('00');
 
         $this->marketRepository
-            ->method('findByExternalId')
-            ->willReturnCallback(static fn (string $id): ?Market => 'MKT-001' === $id ? $existing : null);
+            ->method('findByExternalIds')
+            ->willReturnCallback(static function (array $ids) use ($existing): array {
+                $map = [];
+                foreach ($ids as $id) {
+                    if ('MKT-001' === $id) {
+                        $map[$id] = $existing;
+                    }
+                }
+
+                return $map;
+            });
 
         $this->marketRepository
             ->expects($this->exactly(3))
@@ -144,8 +153,8 @@ final class ImportMarketsCommandTest extends TestCase
     public function dryRunDoesNotWriteToDatabase(): void
     {
         $this->marketRepository
-            ->method('findByExternalId')
-            ->willReturn(null);
+            ->method('findByExternalIds')
+            ->willReturn([]);
 
         $this->marketRepository
             ->expects($this->never())
@@ -168,8 +177,8 @@ final class ImportMarketsCommandTest extends TestCase
     public function limitOptionCapsProcessedRows(): void
     {
         $this->marketRepository
-            ->method('findByExternalId')
-            ->willReturn(null);
+            ->method('findByExternalIds')
+            ->willReturn([]);
 
         $this->marketRepository
             ->expects($this->exactly(2))

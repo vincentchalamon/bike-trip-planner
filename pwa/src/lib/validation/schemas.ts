@@ -83,7 +83,7 @@ export const EventSchema = z.object({
   lon: z.number(),
   startDate: z.string(),
   endDate: z.string(),
-  url: z.string().nullable().optional(),
+  url: z.string().url().nullable().optional(),
   description: z.string().nullable().optional(),
   priceMin: z.number().nullable().optional(),
   distanceToEndPoint: z.number().default(0),

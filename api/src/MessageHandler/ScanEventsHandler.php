@@ -9,7 +9,6 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\DataTourisme\DataTourismeClientInterface;
-use App\Entity\Market;
 use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
@@ -53,10 +52,6 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         $tripId = $message->tripId;
         $generation = $message->generation;
 
-        if (!$this->dataTourismeClient->isEnabled()) {
-            return;
-        }
-
         $stages = $this->tripStateManager->getStages($tripId);
 
         if (null === $stages) {
@@ -70,14 +65,16 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $this->executeWithTracking($tripId, ComputationName::EVENTS, function () use ($tripId, $stages, $startDate, $generation): void {
+        $dtEnabled = $this->dataTourismeClient->isEnabled();
+
+        $this->executeWithTracking($tripId, ComputationName::EVENTS, function () use ($tripId, $stages, $startDate, $dtEnabled): void {
             foreach ($stages as $i => $stage) {
                 if ($stage->isRestDay) {
                     continue;
                 }
 
                 $stageDate = $startDate->modify(\sprintf('+%d days', $i));
-                $events = $this->fetchEventsForStage($stage, $stageDate);
+                $events = $dtEnabled ? $this->fetchEventsForStage($stage, $stageDate) : [];
                 $events = [...$events, ...$this->fetchMarketsForStage($stage, $stageDate)];
 
                 foreach ($events as $event) {
@@ -149,13 +146,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
 
         foreach ($results as $result) {
             $types = (array) ($result['@type'] ?? []);
-            $matchedType = null;
-            foreach (self::TARGETED_TYPES as $targeted) {
-                if (\in_array($targeted, $types, true)) {
-                    $matchedType = $targeted;
-                    break;
-                }
-            }
+            $matchedType = array_find(self::TARGETED_TYPES, fn ($targeted): bool => \in_array($targeted, $types, true));
 
             if (null === $matchedType) {
                 continue;
@@ -171,7 +162,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
             $startDate = $this->extractDate($result, 'startDate');
             $endDate = $this->extractDate($result, 'endDate');
 
-            if (null === $startDate || null === $endDate) {
+            if (!$startDate instanceof \DateTimeImmutable || !$endDate instanceof \DateTimeImmutable) {
                 continue;
             }
 
@@ -324,7 +315,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         }
 
         if (\is_array($label)) {
-            $first = array_values($label)[0] ?? null;
+            $first = array_first($label) ?? null;
 
             return \is_string($first) ? $first : null;
         }
@@ -354,7 +345,7 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         }
 
         if (\is_array($desc)) {
-            $first = array_values($desc)[0] ?? null;
+            $first = array_first($desc) ?? null;
 
             return \is_string($first) ? $first : null;
         }
