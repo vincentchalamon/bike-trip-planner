@@ -87,10 +87,12 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
      */
     private function buildBbox(array $endPoints, int $radiusMeters): array
     {
+        /** @var non-empty-array<int, float> $lats */
         $lats = array_map(static fn (Coordinate $c): float => $c->lat, $endPoints);
+        /** @var non-empty-array<int, float> $lons */
         $lons = array_map(static fn (Coordinate $c): float => $c->lon, $endPoints);
 
-        $midLat = (\count($endPoints) > 0)
+        $midLat = ($endPoints !== [])
             ? (array_sum(array_map(static fn (Coordinate $c): float => $c->lat, $endPoints)) / \count($endPoints))
             : 0.0;
         $latDegreeOffset = $radiusMeters / 111_000.0;
