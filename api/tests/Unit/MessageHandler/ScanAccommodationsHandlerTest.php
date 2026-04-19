@@ -19,6 +19,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
 use App\MessageHandler\ScanAccommodationsHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Wikidata\WikidataEnricherInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -79,18 +80,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
             $seasonalityChecker,
             $translator,
             $scraperClient,
+            $this->createStub(WikidataEnricherInterface::class),
         );
-    }
-
-    /**
-     * @param array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>}>> $candidatesByStage
-     */
-    private function createRegistryWithCandidates(array $candidatesByStage): AccommodationSourceRegistry
-    {
-        $registry = $this->createStub(AccommodationSourceRegistry::class);
-        $registry->method('fetchAll')->willReturn(array_merge(...array_values($candidatesByStage)));
-
-        return $registry;
     }
 
     #[Test]

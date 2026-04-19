@@ -128,6 +128,7 @@ export function accommodationsFoundEvent(
           isExactPrice: false,
           possibleClosed: false,
           distanceToEndPoint: 1.2,
+          source: "osm",
         },
         {
           name: "Hotel du Pont",
@@ -139,6 +140,7 @@ export function accommodationsFoundEvent(
           isExactPrice: false,
           possibleClosed: false,
           distanceToEndPoint: 0.5,
+          source: "osm",
         },
       ],
     },

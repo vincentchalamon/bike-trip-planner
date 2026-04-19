@@ -47,7 +47,7 @@ final class AccommodationSourceRegistryTest extends TestCase
         $sourceA->method('isEnabled')->willReturn(true);
         $sourceA->method('fetch')->willReturn([$candidateA]);
 
-        $sourceB = $this->createStub(AccommodationSourceInterface::class);
+        $sourceB = $this->createMock(AccommodationSourceInterface::class);
         $sourceB->method('isEnabled')->willReturn(false);
         $sourceB->expects($this->never())->method('fetch');
 

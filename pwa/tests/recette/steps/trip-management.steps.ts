@@ -80,6 +80,7 @@ const SEED_TRIP_TEMPLATE = {
       accommodationSearchRadiusKm: 20,
       isRestDay: false,
       supplyTimeline: [],
+      events: [],
     },
   ],
   savedAt: new Date().toISOString(),

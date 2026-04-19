@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { CtaButton } from "@/components/cta-button";
 import { ScreenshotsSection } from "@/components/screenshots-section";
 import { EarlyAccessSection } from "@/components/early-access-section";
+import { AttributionFooter } from "@/components/attribution-footer";
 
 // ─── Section 1: Hero ─────────────────────────────────────────────────────────
 
@@ -563,8 +564,9 @@ function LandingFooter() {
           </nav>
         </div>
 
-        <div className="mt-8 pt-6 border-t text-center text-xs text-muted-foreground">
-          {t("copyright", { year })}
+        <div className="mt-8 pt-6 border-t text-center text-xs text-muted-foreground space-y-1">
+          <p>{t("copyright", { year })}</p>
+          <AttributionFooter />
         </div>
       </div>
     </footer>
