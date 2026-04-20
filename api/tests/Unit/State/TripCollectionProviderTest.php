@@ -40,9 +40,13 @@ final class TripCollectionProviderTest extends TestCase
      */
     public static function computeStatusProvider(): iterable
     {
-        yield 'null statuses → draft' => [null, 0, 'draft'];
+        yield 'null statuses with no stages → draft' => [null, 0, 'draft'];
 
-        yield 'empty statuses → draft' => [[], 0, 'draft'];
+        yield 'empty statuses with no stages → draft' => [[], 0, 'draft'];
+
+        yield 'null statuses but stages persisted → analyzed (TTL-expired fallback)' => [null, 2, 'analyzed'];
+
+        yield 'empty statuses but stages persisted → analyzed (TTL-expired fallback)' => [[], 5, 'analyzed'];
 
         yield 'any pending → analyzing' => [
             ['route' => 'pending', 'stages' => 'done'],

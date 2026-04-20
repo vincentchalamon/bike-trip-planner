@@ -162,12 +162,17 @@ final readonly class TripCollectionProvider implements ProviderInterface
      * - "analyzing" : at least one computation is still pending or running
      * - "analyzed"  : at least one computation reached `done` (results available)
      *
+     * The computation-tracking cache has a 30-minute TTL, so a fully analyzed
+     * trip eventually loses its `$statuses` map. In that case we fall back to
+     * the durable `$stageCount` (persisted in PostgreSQL) so the trip keeps
+     * reporting "analyzed" instead of reverting to "draft".
+     *
      * @param array<string, string>|null $statuses
      */
     private function computeStatus(?array $statuses, int $stageCount): string
     {
         if (null === $statuses || [] === $statuses) {
-            return 'draft';
+            return $stageCount > 0 ? 'analyzed' : 'draft';
         }
 
         $hasDone = false;
