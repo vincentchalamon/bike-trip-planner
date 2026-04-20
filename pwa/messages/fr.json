@@ -362,7 +362,7 @@
     "stageDay": "Jour {day}",
     "stageDistance": "{distance} km",
     "stageElevation": "D+ {elevation} m",
-    "stageEndPoint": "Arrivée : {lat}°N, {lon}°E",
+    "stageEndPoint": "Arrivée : {lat}°, {lon}°",
     "launchAnalysis": "Lancer l'analyse",
     "launchAnalysisAria": "Lancer l'analyse complète de l'itinéraire",
     "launchingAnalysis": "Lancement de l'analyse...",

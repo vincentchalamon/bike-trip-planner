@@ -665,9 +665,9 @@ export function useTripPlanner() {
         toast.error(t("tripPreview.analysisLaunchFailed"));
         return false;
       }
-      useUiStore.getState().setAnalysisStarted(true);
       setProcessing(true);
       setAccommodationScanning(true);
+      useUiStore.getState().setAnalysisStarted(true);
       return true;
     } catch (err) {
       if (isNetworkError(err)) {
