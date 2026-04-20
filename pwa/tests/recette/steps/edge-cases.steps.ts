@@ -1,10 +1,31 @@
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
 import {
   routeParsedEvent,
   stagesComputedEvent,
   tripCompleteEvent,
 } from "../../fixtures/mock-data";
+
+/**
+ * Expand the GPX card on the welcome screen and upload a file via the
+ * hidden `<input type="file">`. Mirrors the user click-card → drop-zone flow
+ * without relying on the native filechooser event.
+ */
+async function uploadGpxFile(
+  page: Page,
+  file: { name: string; mimeType: string; buffer: Buffer },
+): Promise<void> {
+  // The fixture auto-expands the Link card; collapse it first so the GPX
+  // card is visible again on the welcome grid.
+  const backButton = page.getByTestId("card-selection-back");
+  if (await backButton.isVisible().catch(() => false)) await backButton.click();
+  const gpxCard = page.getByTestId("card-gpx");
+  await expect(gpxCard).toBeVisible({ timeout: 5000 });
+  const expanded = await gpxCard.getAttribute("data-expanded");
+  if (expanded !== "true") await gpxCard.click();
+  const fileInput = page.getByTestId("gpx-file-input");
+  await fileInput.setInputFiles(file);
+}
 
 // ---------------------------------------------------------------------------
 // Edge cases and robustness — FR + EN
@@ -132,13 +153,7 @@ When("j'importe un fichier GPX vide", async ({ mockedPage }) => {
       }),
     });
   });
-  const gpxUpload = mockedPage.getByTestId("gpx-upload-button");
-  await expect(gpxUpload).toBeVisible({ timeout: 5000 });
-  const [fileChooser] = await Promise.all([
-    mockedPage.waitForEvent("filechooser"),
-    gpxUpload.click(),
-  ]);
-  await fileChooser.setFiles({
+  await uploadGpxFile(mockedPage, {
     name: "empty.gpx",
     mimeType: "application/gpx+xml",
     buffer: Buffer.from(
@@ -163,13 +178,7 @@ When(
         }),
       });
     });
-    const gpxUpload = mockedPage.getByTestId("gpx-upload-button");
-    await expect(gpxUpload).toBeVisible({ timeout: 5000 });
-    const [fileChooser] = await Promise.all([
-      mockedPage.waitForEvent("filechooser"),
-      gpxUpload.click(),
-    ]);
-    await fileChooser.setFiles({
+    await uploadGpxFile(mockedPage, {
       name: "single.gpx",
       mimeType: "application/gpx+xml",
       buffer: Buffer.from(
@@ -297,13 +306,7 @@ When("I import an empty GPX file", async ({ mockedPage }) => {
       }),
     });
   });
-  const gpxUpload = mockedPage.getByTestId("gpx-upload-button");
-  await expect(gpxUpload).toBeVisible({ timeout: 5000 });
-  const [fileChooser] = await Promise.all([
-    mockedPage.waitForEvent("filechooser"),
-    gpxUpload.click(),
-  ]);
-  await fileChooser.setFiles({
+  await uploadGpxFile(mockedPage, {
     name: "empty.gpx",
     mimeType: "application/gpx+xml",
     buffer: Buffer.from(
@@ -326,13 +329,7 @@ When("I import a GPX file with a single waypoint", async ({ mockedPage }) => {
       }),
     });
   });
-  const gpxUpload = mockedPage.getByTestId("gpx-upload-button");
-  await expect(gpxUpload).toBeVisible({ timeout: 5000 });
-  const [fileChooser] = await Promise.all([
-    mockedPage.waitForEvent("filechooser"),
-    gpxUpload.click(),
-  ]);
-  await fileChooser.setFiles({
+  await uploadGpxFile(mockedPage, {
     name: "single.gpx",
     mimeType: "application/gpx+xml",
     buffer: Buffer.from(

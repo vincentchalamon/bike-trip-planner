@@ -32,6 +32,9 @@ test.describe("Integration smoke test", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
+    // Expand the Link card first (Acte 1 Card Selection)
+    await page.getByTestId("card-link").click();
+
     // Submit a real Komoot tour URL
     const input = page.getByTestId("magic-link-input");
     await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");

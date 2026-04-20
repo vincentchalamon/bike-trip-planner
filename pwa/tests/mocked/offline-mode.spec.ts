@@ -109,19 +109,23 @@ test.describe("Offline mode", () => {
       await expect(input).toBeDisabled();
     });
 
-    test("GPX upload button is disabled when offline", async ({
-      mockedPage,
-    }) => {
-      await mockedPage.evaluate(() => {
+    test("GPX upload card is disabled when offline", async ({ page }) => {
+      // Use raw page + mockAllApis to avoid the base fixture auto-expanding
+      // the Link card (which would hide the GPX card).
+      await mockAllApis(page);
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
+
+      await page.evaluate(() => {
         window.dispatchEvent(new Event("offline"));
       });
 
-      await expect(mockedPage.getByTestId("offline-banner")).toBeVisible({
+      await expect(page.getByTestId("offline-banner")).toBeVisible({
         timeout: 3000,
       });
 
-      const gpxButton = mockedPage.getByTestId("gpx-upload-button");
-      await expect(gpxButton).toBeDisabled();
+      const gpxCard = page.getByTestId("card-gpx");
+      await expect(gpxCard).toHaveAttribute("data-disabled", "true");
     });
 
     test("magic-link input re-enabled when back online", async ({

@@ -36,6 +36,13 @@ export const test = base.extend<RecetteFixtures>({
     setCurrentRecettePage(page);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
+    // Auto-expand the Link card on the welcome screen — mirrors the mocked
+    // base fixture so existing steps targeting `magic-link-input` work.
+    const linkCard = page.getByTestId("card-link");
+    if (await linkCard.isVisible().catch(() => false)) {
+      const expanded = await linkCard.getAttribute("data-expanded");
+      if (expanded !== "true") await linkCard.click();
+    }
     await use(page);
     clearCurrentRecettePage();
     resetAccommodationScanRequest();
@@ -58,6 +65,11 @@ export const test = base.extend<RecetteFixtures>({
       if (!(await input.isVisible().catch(() => false))) {
         await mockedPage.goto("/");
         await mockedPage.waitForLoadState("networkidle");
+        const linkCard = mockedPage.getByTestId("card-link");
+        if (await linkCard.isVisible().catch(() => false)) {
+          const expanded = await linkCard.getAttribute("data-expanded");
+          if (expanded !== "true") await linkCard.click();
+        }
       }
       await input.fill(url ?? "https://www.komoot.com/fr-fr/tour/2795080048");
       await input.press("Enter");

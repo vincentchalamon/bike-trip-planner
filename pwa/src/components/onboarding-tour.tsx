@@ -57,8 +57,8 @@ export function OnboardingTour() {
       },
       steps: [
         {
-          // Step 1 — paste a link
-          element: "[data-testid='magic-link-input']",
+          // Step 1 — paste a link (Link card on the welcome screen)
+          element: "[data-testid='card-link']",
           popover: {
             title: t("step1Title"),
             description: t.raw("step1Description"),
@@ -67,8 +67,8 @@ export function OnboardingTour() {
           },
         },
         {
-          // Step 2 — GPX upload alternative
-          element: "[data-testid='gpx-upload-button']",
+          // Step 2 — GPX upload alternative (GPX card on the welcome screen)
+          element: "[data-testid='card-gpx']",
           popover: {
             title: t("step2Title"),
             description: t.raw("step2Description"),

@@ -543,11 +543,23 @@ Then("the magic link input field is disabled", async ({ mockedPage }) => {
 });
 
 Then("le bouton d'import GPX est désactivé", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("gpx-upload-button")).toBeDisabled();
+  // The GPX card is only visible when no card is expanded. If the Link card
+  // was auto-expanded by the fixture, collapse it back to the grid view.
+  const backButton = mockedPage.getByTestId("card-selection-back");
+  if (await backButton.isVisible().catch(() => false)) await backButton.click();
+  await expect(mockedPage.getByTestId("card-gpx")).toHaveAttribute(
+    "data-disabled",
+    "true",
+  );
 });
 
 Then("the GPX upload button is disabled", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("gpx-upload-button")).toBeDisabled();
+  const backButton = mockedPage.getByTestId("card-selection-back");
+  if (await backButton.isVisible().catch(() => false)) await backButton.click();
+  await expect(mockedPage.getByTestId("card-gpx")).toHaveAttribute(
+    "data-disabled",
+    "true",
+  );
 });
 
 Then("le champ de saisie est à nouveau actif", async ({ mockedPage }) => {

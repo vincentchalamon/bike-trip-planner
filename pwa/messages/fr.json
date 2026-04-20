@@ -333,6 +333,27 @@
     "myTrip": "Mon voyage",
     "mobileLabel": "Étape {current}/{total} — {stepName}"
   },
+  "cardSelection": {
+    "heading": "Comment souhaitez-vous commencer ?",
+    "linkTitle": "Lien",
+    "linkDescription": "Komoot, Strava, RideWithGPS",
+    "linkInputLabel": "URL de l'itinéraire",
+    "linkInputPlaceholder": "Collez votre lien Komoot, Strava ou RideWithGPS ici...",
+    "linkInvalidUrl": "Veuillez entrer une URL valide.",
+    "linkUnsupportedSource": "Source non supportée. Utilisez Komoot, Strava ou RideWithGPS.",
+    "gpxTitle": "Fichier GPX",
+    "gpxDescription": "Glissez-déposez votre fichier",
+    "gpxBrowse": "Parcourir",
+    "gpxFileSize": "{size} Mo",
+    "gpxSizeLimit": "Maximum 30 Mo",
+    "aiTitle": "Assistant IA",
+    "aiDescription": "Créez un itinéraire sur mesure",
+    "aiSoon": "Bientôt disponible",
+    "back": "Changer de méthode",
+    "ariaSelectLink": "Choisir l'entrée par lien",
+    "ariaSelectGpx": "Choisir l'entrée par fichier GPX",
+    "ariaSelectAi": "Assistant IA — bientôt disponible"
+  },
   "planner": {
     "closeTrip": "Fermer ce trip"
   },
