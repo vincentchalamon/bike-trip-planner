@@ -270,6 +270,7 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
   const handleFile = useCallback(
     async (file: File) => {
       setSelectedFile(file);
+      if (file.size > MAX_GPX_SIZE_BYTES) return;
       await onUpload(file);
     },
     [onUpload],
@@ -282,7 +283,8 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) void handleFile(file);
+      if (file && file.name.toLowerCase().endsWith(".gpx"))
+        void handleFile(file);
       if (fileInputRef.current) fileInputRef.current.value = "";
     },
     [handleFile],
@@ -480,7 +482,6 @@ function CardShell({
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : undefined}
       aria-label={interactive ? ariaLabel : undefined}
-      aria-pressed={expanded ? true : undefined}
       aria-disabled={disabled || undefined}
       onClick={interactive ? onSelect : undefined}
       onKeyDown={
