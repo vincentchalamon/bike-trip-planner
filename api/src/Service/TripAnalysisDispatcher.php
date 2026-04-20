@@ -42,6 +42,7 @@ final readonly class TripAnalysisDispatcher
      */
     public function dispatch(string $tripId, TripRequest $request, ?int $generation = null): void
     {
+        $this->messageBus->dispatch(new ScanAllOsmData($tripId, $generation));
         $this->messageBus->dispatch(new ScanPois($tripId, $generation));
         $this->messageBus->dispatch(new ScanAccommodations(
             $tripId,
