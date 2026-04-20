@@ -13,6 +13,7 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
+use App\State\AnalyzeTripProcessor;
 use App\State\TripCollectionProvider;
 use App\State\TripCreateProcessor;
 use App\State\TripDeleteProcessor;
@@ -82,6 +83,23 @@ use App\State\TripUpdateProcessor;
             input: false,
             provider: TripRequestProvider::class,
             processor: TripDuplicateProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/trips/{id}/analyze{._format}',
+            status: 202,
+            openapi: new Operation(
+                responses: [
+                    404 => new Response(description: 'Trip not found'),
+                    409 => new Response(description: 'An analysis is already in progress'),
+                    422 => new Response(description: 'Trip has no stages to analyze'),
+                ],
+                summary: 'Trigger the full enrichment pipeline (POIs, weather, terrain, …) for a trip whose stages have been pre-computed.',
+            ),
+            security: "is_granted('TRIP_EDIT', object)",
+            input: false,
+            mercure: true,
+            provider: TripRequestProvider::class,
+            processor: AnalyzeTripProcessor::class,
         ),
         new Patch(
             uriTemplate: '/trips/{id}{._format}',
