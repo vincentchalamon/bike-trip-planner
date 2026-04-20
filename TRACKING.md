@@ -425,9 +425,9 @@ Interface d'entrée de l'itinéraire (cartes Lien/GPX), écran de prévisualisat
 
 | Ordre | ID                                                                      | Titre                                                                     | Effort | PRs | Dépend de |
 |-------|-------------------------------------------------------------------------|---------------------------------------------------------------------------|--------|-----|-----------|
-| 1     | [#320](https://github.com/vincentchalamon/bike-trip-planner/issues/320) | Acte 1 — Card Selection : entrée mutuellement exclusive (Lien + GPX)      | L      |     | #317      |
-| 2     | [#321](https://github.com/vincentchalamon/bike-trip-planner/issues/321) | Acte 1.5 — Écran Aperçu : prévisualisation avant analyse                 | M      |     | #317 #320 |
-| 3     | [#322](https://github.com/vincentchalamon/bike-trip-planner/issues/322) | Endpoint `POST /trips/{id}/analyze` : découplage prévisualisation/analyse | M      |     | —         |
+| 1     | [#320](https://github.com/vincentchalamon/bike-trip-planner/issues/320) | Acte 1 — Card Selection : entrée mutuellement exclusive (Lien + GPX)      | L      | [#367](https://github.com/vincentchalamon/bike-trip-planner/pull/367) `feature/320` | #317      |
+| 2     | [#321](https://github.com/vincentchalamon/bike-trip-planner/issues/321) | Acte 1.5 — Écran Aperçu : prévisualisation avant analyse                 | M      | [#368](https://github.com/vincentchalamon/bike-trip-planner/pull/368) `feature/321` | #317 #320 |
+| 3     | [#322](https://github.com/vincentchalamon/bike-trip-planner/issues/322) | Endpoint `POST /trips/{id}/analyze` : découplage prévisualisation/analyse | M      | [#366](https://github.com/vincentchalamon/bike-trip-planner/pull/366) `feature/322` | —         |
 
 ---
 
