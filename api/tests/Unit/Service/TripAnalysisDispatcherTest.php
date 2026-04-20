@@ -68,7 +68,8 @@ final class TripAnalysisDispatcherTest extends TestCase
 
         foreach ($dispatched as $message) {
             $this->assertObjectHasProperty('tripId', $message);
-            /** @var object{tripId: string, generation: ?int} $message */
+            $this->assertObjectHasProperty('generation', $message);
+            /* @var object{tripId: string, generation: ?int} $message */
             $this->assertSame($tripId, $message->tripId);
             $this->assertSame($generation, $message->generation);
         }
@@ -94,7 +95,7 @@ final class TripAnalysisDispatcherTest extends TestCase
             });
 
         $dispatcher = new TripAnalysisDispatcher($messageBus);
-        $dispatcher->dispatch('trip-1', $request, null);
+        $dispatcher->dispatch('trip-1', $request);
 
         $this->assertInstanceOf(ScanAccommodations::class, $scanAccommodations);
         $this->assertSame(['hotel', 'hostel'], $scanAccommodations->enabledAccommodationTypes);
@@ -113,7 +114,7 @@ final class TripAnalysisDispatcherTest extends TestCase
             ->method('dispatch')
             ->willReturnCallback(static function (object $message) use (&$generations): Envelope {
                 if (property_exists($message, 'generation')) {
-                    /** @var object{generation: ?int} $message */
+                    /* @var object{generation: ?int} $message */
                     $generations[] = $message->generation;
                 }
 
@@ -121,7 +122,7 @@ final class TripAnalysisDispatcherTest extends TestCase
             });
 
         $dispatcher = new TripAnalysisDispatcher($messageBus);
-        $dispatcher->dispatch('trip-1', $request, null);
+        $dispatcher->dispatch('trip-1', $request);
 
         $this->assertNotEmpty($generations);
         foreach ($generations as $value) {

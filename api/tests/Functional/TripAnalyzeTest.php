@@ -87,6 +87,7 @@ final class TripAnalyzeTest extends ApiTestCase
                 ],
             );
         }
+
         $repo->storeStages($tripId, $stages);
 
         /** @var ComputationTrackerInterface $tracker */
