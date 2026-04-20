@@ -322,6 +322,14 @@
     "viewAll": "Voir tous ({count})",
     "noDate": "Non daté"
   },
+  "stepper": {
+    "ariaLabel": "Étapes du processus",
+    "preparation": "Préparation",
+    "preview": "Aperçu",
+    "analysis": "Analyse",
+    "myTrip": "Mon voyage",
+    "mobileLabel": "Étape {current}/{total} — {stepName}"
+  },
   "planner": {
     "closeTrip": "Fermer ce trip"
   },
