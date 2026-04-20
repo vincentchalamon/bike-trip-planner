@@ -2,6 +2,10 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { enableMapSet } from "immer";
+
+// Required for Immer to allow mutating Set/Map drafts (used by completedSteps).
+enableMapSet();
 
 export type ViewMode = "timeline" | "map" | "split";
 

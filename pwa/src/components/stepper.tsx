@@ -72,10 +72,7 @@ export function Stepper() {
       </div>
 
       {/* Desktop horizontal stepper */}
-      <ol
-        className="hidden sm:flex items-center w-full"
-        aria-label={t("ariaLabel")}
-      >
+      <ol className="hidden sm:flex items-center w-full">
         {STEPS.map((step, index) => {
           const isActive = step === currentStep;
           const isCompleted = completedSteps.has(step);

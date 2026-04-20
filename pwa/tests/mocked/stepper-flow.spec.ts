@@ -146,6 +146,34 @@ test.describe("Stepper — responsive mobile", () => {
   });
 });
 
+test.describe("Stepper — reset on clearTrip", () => {
+  test("stepper rewinds from my_trip to preparation when the trip is closed, and advances again on resubmit", async ({
+    createFullTrip,
+    submitUrl,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+    await expect(
+      mockedPage.getByTestId("stepper-step-my_trip"),
+    ).toHaveAttribute("aria-current", "step", { timeout: 5000 });
+
+    // Close the trip from the UI — same button the user would click.
+    await mockedPage.getByTestId("close-trip-button").click();
+
+    // The Act-3 lock in goToStep used to prevent any rewind here; resetStepper
+    // bypasses it, so the stepper should land back on "preparation".
+    await expect(
+      mockedPage.getByTestId("stepper-step-preparation"),
+    ).toHaveAttribute("aria-current", "step", { timeout: 5000 });
+
+    // Submitting a new URL must advance again instead of being stuck.
+    await submitUrl();
+    await expect(
+      mockedPage.getByTestId("stepper-step-analysis"),
+    ).toHaveAttribute("aria-current", "step", { timeout: 5000 });
+  });
+});
+
 test.describe("Stepper — backwards navigation", () => {
   test("completed step is clickable before reaching my_trip", async ({
     submitUrl,
