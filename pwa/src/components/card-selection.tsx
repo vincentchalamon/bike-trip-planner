@@ -163,15 +163,12 @@ function LinkCard({ expanded, disabled, onSelect, onSubmit }: LinkCardProps) {
     [onSubmit, validate],
   );
 
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setUrl(e.target.value);
-      // Clear any previous error while the user is editing. Validation runs
-      // on submit (Enter or paste of a fully-formed URL).
-      setError(null);
-    },
-    [],
-  );
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setUrl(e.target.value);
+    // Clear any previous error while the user is editing. Validation runs
+    // on submit (Enter or paste of a fully-formed URL).
+    setError(null);
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: ReactKeyboardEvent<HTMLInputElement>) => {
