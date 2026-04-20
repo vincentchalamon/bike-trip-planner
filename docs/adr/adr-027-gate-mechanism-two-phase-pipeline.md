@@ -79,7 +79,7 @@ Triggered automatically when `POST /trips` is called.
 
 | Step | Handler | Output |
 |------|---------|--------|
-| GPX fetch + parse | `FetchRouteHandler` | Raw + decimated points stored in Redis |
+| GPX fetch + parse | `FetchAndParseRouteHandler` | Raw + decimated points stored in Redis |
 | Pacing engine | `GenerateStagesHandler` | `Stage[]` persisted to PostgreSQL |
 | Preview ready | Mercure SSE | `TRIP_PREVIEW_READY` event |
 
@@ -89,18 +89,20 @@ The frontend renders the map, elevation profile, and stage statistics immediatel
 
 Triggered explicitly by `POST /trips/{id}/analyze` (new endpoint).
 
+The handlers marked *(new)* do not exist yet and are introduced as part of implementing this ADR.
+
 | Step | Handler | Output |
 |------|---------|--------|
 | OSM scan (POIs, accommodations, bike shops, cemeteries) | `ScanAllOsmDataHandler` | Redis cache |
-| Weather check | `CheckWeatherHandler` | Alert(s) |
+| Weather check | `FetchWeatherHandler` | Alert(s) |
 | Accommodation scan | `ScanAccommodationsHandler` | Alert(s) |
-| Cultural POI scan | `ScanCulturalPoisHandler` | Alert(s) |
+| Cultural POI scan | `CheckCulturalPoisHandler` | Alert(s) |
 | Event scan | `ScanEventsHandler` | Alert(s) |
-| Market scan | `ScanMarketsHandler` | Alert(s) |
-| Wikidata enrichment | `EnrichWithWikidataHandler` | Enriched POI data |
-| LLaMA inference | `RunLlamaInferenceHandler` | Narrative summary |
+| Market scan | `ScanMarketsHandler` *(new)* | Alert(s) |
+| Wikidata enrichment | `EnrichWithWikidataHandler` *(new)* | Enriched POI data |
+| LLaMA inference | `RunLlamaInferenceHandler` *(new)* | Narrative summary |
 
-All enrichment handlers run in parallel via Symfony Messenger. Each handler calls `ComputationTracker::markDone()` on completion. The tracker's gate fires `RunLlamaInferenceHandler` exactly once when every expected computation reports `done`.
+All enrichment handlers run in parallel via Symfony Messenger. Each handler calls `ComputationTracker::markDone()` on completion. The tracker's gate fires `RunLlamaInferenceHandler` exactly once when every expected computation reports `done`; atomicity of that "exactly once" is provided by the Symfony Lock primitive described in the idempotency note below, not by the PSR-6 cache itself.
 
 ### Gate Mechanism — `ComputationTracker`
 
@@ -119,21 +121,31 @@ POST /trips/{id}/analyze
   │     Persists the expected set under cache key `trip.{tripId}.computation_status` (TTL 1800s)
   │
   ├─► Dispatch ScanAllOsmDataHandler (async)
-  ├─► Dispatch CheckWeatherHandler   (async)
+  ├─► Dispatch FetchWeatherHandler   (async)
   ├─► Dispatch ScanAccommodationsHandler (async)
   ├─► ... (all enrichment handlers)
   │
   └─► Each handler on completion:
         ComputationTracker::markDone(tripId, ComputationName::X)
-          │  Updates the cached status map atomically
+          │  Updates the cached status map (PSR-6 read-modify-write, not atomic)
           │
           ├─ if ComputationTracker::isAllComplete(tripId):
-          │     → Dispatch RunLlamaInferenceHandler (exactly once — see idempotency note below)
+          │     → Acquire Symfony Lock(`trip.{tripId}.llama`, TTL 3600s)
+          │         ├─ acquired → Dispatch RunLlamaInferenceHandler (exactly once)
+          │         └─ refused  → another handler already dispatched, skip
           │
           └─ Publish computation_step_completed event via Mercure
 ```
 
-**Idempotency of the LLaMA trigger.** Because `isAllComplete()` may return `true` to several concurrent handlers racing on the last computation, the dispatch site must protect against double-firing. A dedicated marker computation (`ComputationName::LLAMA_DISPATCHED`) is reserved: the first handler that observes `isAllComplete()` calls `markRunning(LLAMA_DISPATCHED)` and reads the status back; only the caller that observes the transition actually dispatches `RunLlamaInferenceHandler`. This reuses the existing atomic cache item update path and avoids adding a bespoke Redis `SET NX` alongside the PSR-6 abstraction.
+**Idempotency of the LLaMA trigger.** `isAllComplete()` can return `true` to several concurrent handlers racing on the last computation, and `ComputationTracker::updateStatus()` is a non-atomic PSR-6 read-modify-write, so neither the tracker nor an in-band marker computation is sufficient to guarantee "exactly once" dispatch.
+
+The dispatch site therefore uses a dedicated Symfony `LockFactory` (backed by the Redis store, i.e. `Symfony\Component\Lock\Store\RedisStore`) to wrap the `RunLlamaInferenceHandler` dispatch:
+
+- key: `trip.{tripId}.llama` (one lock per trip analysis)
+- TTL: 3600s, generous enough to cover the full LLaMA inference
+- acquisition mode: non-blocking (`acquire(false)`); the second and subsequent racers observe refusal and exit silently.
+
+This is the only concurrency primitive outside the PSR-6 cache path, and it is confined to this single dispatch point. Integration with `ComputationTracker` remains unchanged: `ComputationName` gains the Phase 2 values, but no atomic marker entry is needed because the lock — not the cache — provides the exactly-once guarantee.
 
 ### Mercure Events
 
@@ -169,7 +181,7 @@ The frontend introduces a two-step flow:
 
 - **Sub-2s route preview** — The map and elevation profile are visible before any enrichment begins. Users can immediately identify wrong tracks and abort before expensive API calls.
 - **User agency** — The "Launch full analysis" button is a deliberate checkpoint. Users on mobile or slow connections can choose to defer analysis.
-- **Deterministic LLaMA trigger** — The `LLAMA_DISPATCHED` marker computation ensures LLaMA inference runs exactly once per analysis, regardless of handler concurrency or retry behaviour, without leaving the PSR-6 cache abstraction.
+- **Deterministic LLaMA trigger** — The Redis-backed Symfony Lock on `trip.{tripId}.llama` ensures LLaMA inference runs exactly once per analysis, regardless of handler concurrency or retry behaviour.
 - **Worker isolation** — Phase 1 workers (fast, CPU-bound) and Phase 2 workers (slow, I/O-bound) can be scaled independently via Symfony Messenger worker configuration.
 - **Structured event taxonomy** — `computation_step_completed` + `TRIP_READY` give the frontend precise progress data without polling.
 
@@ -177,8 +189,9 @@ The frontend introduces a two-step flow:
 
 - **New API endpoint** — `POST /trips/{id}/analyze` must be added to the OpenAPI spec and the TypeScript client regenerated (`make typegen`).
 - **Two-step UX** — The user must click an extra button to trigger the full analysis. Acceptable as an intentional design choice; can be made automatic via a feature flag if UX testing shows friction.
-- **Additional cache entry** — Each active trip during Phase 2 consumes a single status map at `trip.{tripId}.computation_status` (TTL 1800s). Entries expire automatically; no manual cleanup required.
+- **Additional cache and lock entries** — Each active trip during Phase 2 consumes a single status map at `trip.{tripId}.computation_status` (TTL 1800s) plus, briefly, one Symfony Lock key `trip.{tripId}.llama` (TTL 3600s). Both expire automatically; no manual cleanup required.
 - **`ComputationTracker` becomes a coordination point** — All Phase 2 handlers must call `markDone()` with the matching `ComputationName`. Forgetting to add a new handler to the initial expected set will prevent LLaMA from ever firing. This must be enforced by a test that cross-checks the registered handlers against the `ComputationName` enum.
+- **Second concurrency primitive** — The Symfony Lock introduces a second coordination mechanism alongside the PSR-6 cache. It is intentionally confined to the single `RunLlamaInferenceHandler` dispatch point; any future "fan-in → trigger once" case should reuse the same primitive rather than re-opening this question.
 
 ### Neutral
 
@@ -195,4 +208,5 @@ The frontend introduces a two-step flow:
 - [ADR-022: Persistent Storage Strategy](adr-022-persistent-storage-strategy.md)
 - [Symfony Messenger — Async Transport](https://symfony.com/doc/current/messenger.html)
 - [Symfony Cache — PSR-6 Contracts](https://symfony.com/doc/current/components/cache.html)
+- [Symfony Lock — Redis Store](https://symfony.com/doc/current/components/lock.html#stores)
 - [Mercure Protocol](https://mercure.rocks/spec)
