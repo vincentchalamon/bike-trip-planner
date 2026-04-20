@@ -2,8 +2,29 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { enableMapSet } from "immer";
+
+// Required for Immer to allow mutating Set/Map drafts (used by completedSteps).
+enableMapSet();
 
 export type ViewMode = "timeline" | "map" | "split";
+
+/**
+ * The 4 sequential steps of the trip planning workflow.
+ *
+ * - `preparation` — user inputs a route URL or uploads a GPX file
+ * - `preview`     — the route has been parsed and stages are displayed
+ * - `analysis`    — backend async computation is running (system step, never clickable)
+ * - `my_trip`     — computation complete; the user explores their trip
+ */
+export type StepId = "preparation" | "preview" | "analysis" | "my_trip";
+
+export const STEPS: StepId[] = [
+  "preparation",
+  "preview",
+  "analysis",
+  "my_trip",
+];
 
 interface UiState {
   isProcessing: boolean;
@@ -28,6 +49,13 @@ interface UiState {
   viewMode: ViewMode;
   /** Section to scroll to when ConfigPanel opens (e.g. from TripSummary chips). */
   configPanelFocusSection: "dates" | "pacing" | null;
+  /**
+   * Current step in the 4-step trip planning workflow.
+   * Guards prevent navigating to "analysis" or backwards from "my_trip".
+   */
+  currentStep: StepId;
+  /** Set of steps the user has already completed (enables backwards navigation). */
+  completedSteps: Set<StepId>;
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -44,6 +72,19 @@ interface UiState {
   setViewMode: (mode: ViewMode) => void;
   setConfigPanelFocusSection: (section: "dates" | "pacing" | null) => void;
   openConfigPanelAt: (section: "dates" | "pacing") => void;
+  /**
+   * Navigate to a specific step.
+   * Guards:
+   * - Forward navigation (including programmatic advance to "analysis") is always allowed.
+   * - "analysis" cannot be navigated back to (system-only, forward-only).
+   * - Backwards navigation from "my_trip" is blocked (Act 3 lock).
+   * - Backwards navigation to other steps requires the step to be completed.
+   */
+  goToStep: (step: StepId) => void;
+  /** Mark a step as completed (enabling backwards navigation to it). */
+  completeStep: (step: StepId) => void;
+  /** Reset the stepper to "preparation" and clear completed steps (called on `clearTrip`). */
+  resetStepper: () => void;
 }
 
 /**
@@ -61,6 +102,8 @@ interface UiState {
  * - `focusedMapStageIndex` — which active-stage index is currently zoomed on
  *   the map; `null` means global view (all stages visible)
  * - `viewMode` — current layout mode: "timeline", "map", or "split"
+ * - `currentStep` — active step in the 4-step workflow (preparation → preview → analysis → my_trip)
+ * - `completedSteps` — set of already-visited steps (enables backwards navigation)
  *
  * This store is intentionally separate from {@link useTripStore} to avoid
  * unnecessary re-renders of trip-dependent components when only UI flags change.
@@ -85,6 +128,8 @@ export const useUiStore = create<UiState>()(
     // on first render via a useEffect that detects the viewport width.
     viewMode: "split",
     configPanelFocusSection: null,
+    currentStep: "preparation",
+    completedSteps: new Set<StepId>(),
 
     setProcessing: (value) =>
       set((state) => {
@@ -150,6 +195,35 @@ export const useUiStore = create<UiState>()(
       set((state) => {
         state.configPanelFocusSection = section;
         state.isConfigPanelOpen = true;
+      }),
+
+    goToStep: (step) =>
+      set((state) => {
+        // Once at "my_trip", no navigation is possible (Act 3 lock)
+        if (state.currentStep === "my_trip") return;
+        const currentIdx = STEPS.indexOf(state.currentStep);
+        const targetIdx = STEPS.indexOf(step);
+        // Forward navigation: always allowed (system can advance to "analysis")
+        if (targetIdx > currentIdx) {
+          state.currentStep = step;
+          return;
+        }
+        // Backwards navigation: "analysis" is a system step and can never be
+        // navigated back to; other completed steps allow backwards navigation.
+        if (step !== "analysis" && state.completedSteps.has(step)) {
+          state.currentStep = step;
+        }
+      }),
+
+    completeStep: (step) =>
+      set((state) => {
+        state.completedSteps.add(step);
+      }),
+
+    resetStepper: () =>
+      set((state) => {
+        state.currentStep = "preparation";
+        state.completedSteps = new Set<StepId>();
       }),
   })),
 );
