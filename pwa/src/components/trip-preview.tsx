@@ -119,7 +119,10 @@ export function TripPreview({
           onTitleChange={onTitleChange}
           showTitleSuggestion={showTitleSuggestion}
         />
-        <p className="mt-2 text-sm text-muted-foreground" id="trip-preview-heading">
+        <p
+          className="mt-2 text-sm text-muted-foreground"
+          id="trip-preview-heading"
+        >
           {t("subtitle")}
         </p>
       </div>
@@ -181,10 +184,7 @@ export function TripPreview({
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {activeStages.map((stage, i) => (
             <li key={`preview-stage-${i}`}>
-              <Card
-                className="h-full"
-                data-testid={`trip-preview-stage-${i}`}
-              >
+              <Card className="h-full" data-testid={`trip-preview-stage-${i}`}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">

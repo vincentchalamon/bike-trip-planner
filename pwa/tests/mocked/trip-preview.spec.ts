@@ -15,7 +15,9 @@ import { routeParsedEvent, stagesComputedEvent } from "../fixtures/mock-data";
  */
 async function enterPreviewState(
   submitUrl: () => Promise<void>,
-  injectEvent: (event: import("../../src/lib/mercure/types").MercureEvent) => Promise<void>,
+  injectEvent: (
+    event: import("../../src/lib/mercure/types").MercureEvent,
+  ) => Promise<void>,
   mockedPage: import("@playwright/test").Page,
 ): Promise<void> {
   await submitUrl();
@@ -96,14 +98,10 @@ test.describe("Trip preview — actions", () => {
     });
 
     await enterPreviewState(submitUrl, injectEvent, mockedPage);
-    await mockedPage
-      .getByTestId("trip-preview-launch-analysis")
-      .click();
+    await mockedPage.getByTestId("trip-preview-launch-analysis").click();
 
     // Request was issued
-    await expect
-      .poll(() => analyzeRequested, { timeout: 5000 })
-      .toBe(true);
+    await expect.poll(() => analyzeRequested, { timeout: 5000 }).toBe(true);
 
     // Preview disappears and stepper advances to "analysis"
     await expect(mockedPage.getByTestId("trip-preview")).toBeHidden({
@@ -121,9 +119,7 @@ test.describe("Trip preview — actions", () => {
   }) => {
     await enterPreviewState(submitUrl, injectEvent, mockedPage);
 
-    await mockedPage
-      .getByTestId("trip-preview-modify-parameters")
-      .click();
+    await mockedPage.getByTestId("trip-preview-modify-parameters").click();
 
     // ConfigPanel is a dialog — its title appears when the panel slides in.
     await expect(
@@ -168,9 +164,7 @@ test.describe("Trip preview — actions", () => {
     });
 
     await enterPreviewState(submitUrl, injectEvent, mockedPage);
-    await mockedPage
-      .getByTestId("trip-preview-launch-analysis")
-      .click();
+    await mockedPage.getByTestId("trip-preview-launch-analysis").click();
 
     // An error toast surfaces and the user stays on the preview screen
     await expect(

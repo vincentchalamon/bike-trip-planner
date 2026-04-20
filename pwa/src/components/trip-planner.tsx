@@ -294,10 +294,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const isWelcome = !trip && !isProcessing;
   const isLoading = !trip && isProcessing;
   const isPreview =
-    !!trip &&
-    !isProcessing &&
-    activeStages.length > 0 &&
-    !hasAnalysisStarted;
+    !!trip && !isProcessing && activeStages.length > 0 && !hasAnalysisStarted;
   const clearTripAndReset = useCallback(() => {
     clearTrip();
     useUiStore.getState().setProcessing(false);
