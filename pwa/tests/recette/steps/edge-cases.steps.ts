@@ -415,7 +415,13 @@ Then("un message d'erreur est affiché", async ({ mockedPage }) => {
 });
 
 Then("l'application reste utilisable", async ({ mockedPage }) => {
-  // Verify the magic link input is still functional
+  // After an error the welcome screen remounts and the card selection
+  // collapses, so re-expand the Link card before asserting the URL input
+  // is usable again.
+  const linkCard = mockedPage.getByTestId("card-link");
+  await expect(linkCard).toBeVisible({ timeout: 5000 });
+  const expanded = await linkCard.getAttribute("data-expanded");
+  if (expanded !== "true") await linkCard.click();
   const input = mockedPage.getByTestId("magic-link-input");
   await expect(input).toBeVisible({ timeout: 5000 });
   await expect(input).toBeEnabled();
@@ -524,6 +530,12 @@ Then("a comprehensible error message is displayed", async ({ mockedPage }) => {
 });
 
 Then("the application remains usable", async ({ mockedPage }) => {
+  // See French counterpart above — the welcome screen remounts after an
+  // error, so re-expand the Link card before asserting the URL input.
+  const linkCard = mockedPage.getByTestId("card-link");
+  await expect(linkCard).toBeVisible({ timeout: 5000 });
+  const expanded = await linkCard.getAttribute("data-expanded");
+  if (expanded !== "true") await linkCard.click();
   const input = mockedPage.getByTestId("magic-link-input");
   await expect(input).toBeVisible({ timeout: 5000 });
   await expect(input).toBeEnabled();

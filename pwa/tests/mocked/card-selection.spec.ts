@@ -114,24 +114,34 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     await page.waitForURL(/\/trips\//, { timeout: 5000 });
   });
 
-  test("GPX upload via file picker shows filename and size feedback", async ({
+  test("oversized GPX file blocks upload and shows error alert", async ({
     page,
   }) => {
     await page.getByTestId("card-gpx").click();
 
-    const fileInput = page.getByTestId("gpx-file-input");
-    await fileInput.setInputFiles({
-      name: "my-route.gpx",
-      mimeType: "application/gpx+xml",
-      buffer: Buffer.from(
-        '<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="44.7" lon="4.5"><ele>280</ele></trkpt></trkseg></trk></gpx>',
-      ),
+    // Track whether POST /trips is called — it must NOT be for an oversized file
+    let uploadCalled = false;
+    await page.route("**/trips", (route, request) => {
+      if (request.method() === "POST") uploadCalled = true;
+      return route.fallback();
     });
 
-    // File feedback panel shows filename + size (in MB)
+    const fileInput = page.getByTestId("gpx-file-input");
+    // 31 MB buffer — exceeds the 30 MB frontend guard
+    const oversizedBuffer = Buffer.alloc(31 * 1024 * 1024, 0x20);
+    await fileInput.setInputFiles({
+      name: "huge-route.gpx",
+      mimeType: "application/gpx+xml",
+      buffer: oversizedBuffer,
+    });
+
+    // File feedback still shows (user sees what they attempted to upload)
     await expect(page.getByTestId("card-gpx-file-name")).toContainText(
-      "my-route.gpx",
+      "huge-route.gpx",
     );
-    await expect(page.getByTestId("card-gpx-file-size")).toContainText("Mo");
+    // Size-limit error alert is displayed
+    await expect(page.getByRole("alert")).toBeVisible();
+    // And the upload endpoint was never hit
+    expect(uploadCalled).toBe(false);
   });
 });
