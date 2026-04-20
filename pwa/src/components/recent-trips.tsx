@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client";
 import { formatDistanceKm } from "@/lib/formatters";
 import { API_URL } from "@/lib/constants";
+import { TripStatusBadge } from "@/components/trip-status-badge";
 import type { components } from "@/lib/api/schema";
 
 type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
@@ -88,6 +89,7 @@ export function RecentTrips() {
                 <span className="font-medium truncate">
                   {trip.title ?? t("tripList.untitled")}
                 </span>
+                <TripStatusBadge status={trip.status} className="text-xs" />
                 {(trip.totalDistance ?? 0) > 0 && (
                   <span className="text-sm text-muted-foreground">
                     {formatDistanceKm(trip.totalDistance ?? 0)}

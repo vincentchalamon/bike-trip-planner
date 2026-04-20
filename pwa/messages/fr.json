@@ -311,7 +311,10 @@
     "page": "Page {current} sur {total}",
     "retry": "Réessayer",
     "untitled": "Voyage sans titre",
-    "close": "Retour à l'accueil"
+    "close": "Retour à l'accueil",
+    "status_draft": "Brouillon",
+    "status_analyzing": "En cours d'analyse",
+    "status_analyzed": "Analysé"
   },
   "noDates": {
     "banner": "Dates non renseignées — Affichage depuis aujourd'hui",

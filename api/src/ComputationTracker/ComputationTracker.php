@@ -76,6 +76,38 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
         return $value;
     }
 
+    public function getStatusesBatch(array $tripIds): array
+    {
+        if ([] === $tripIds) {
+            return [];
+        }
+
+        $keysByTripId = [];
+        foreach ($tripIds as $tripId) {
+            $keysByTripId[$tripId] = $this->statusKey($tripId);
+        }
+
+        $itemsByKey = [];
+        foreach ($this->tripStateCache->getItems(array_values($keysByTripId)) as $key => $item) {
+            $itemsByKey[$key] = $item;
+        }
+
+        $result = [];
+        foreach ($keysByTripId as $tripId => $key) {
+            $item = $itemsByKey[$key] ?? null;
+            if (null === $item || !$item->isHit()) {
+                $result[$tripId] = null;
+                continue;
+            }
+
+            /** @var array<string, string>|null $value */
+            $value = $item->get();
+            $result[$tripId] = $value;
+        }
+
+        return $result;
+    }
+
     private function updateStatus(string $tripId, ComputationName $computation, string $status): void
     {
         $statuses = $this->getStatuses($tripId) ?? [];

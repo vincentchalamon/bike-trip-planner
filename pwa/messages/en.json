@@ -311,7 +311,10 @@
     "page": "Page {current} of {total}",
     "retry": "Try again",
     "untitled": "Untitled trip",
-    "close": "Back to home"
+    "close": "Back to home",
+    "status_draft": "Draft",
+    "status_analyzing": "Analyzing...",
+    "status_analyzed": "Analyzed"
   },
   "noDates": {
     "banner": "Dates not set — Displaying from today",

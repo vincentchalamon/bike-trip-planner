@@ -10,6 +10,7 @@ use ApiPlatform\State\Pagination\Pagination;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripListItem;
 use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -33,6 +34,7 @@ final readonly class TripCollectionProvider implements ProviderInterface
         private EntityManagerInterface $entityManager,
         private Pagination $pagination,
         private Security $security,
+        private ComputationTrackerInterface $computationTracker,
     ) {
     }
 
@@ -105,12 +107,27 @@ final readonly class TripCollectionProvider implements ProviderInterface
         /** @var list<TripRequest> $entities */
         $entities = iterator_to_array($paginator->getIterator());
 
-        $items = array_map($this->toListItem(...), $entities);
+        $tripIds = array_map(static function (TripRequest $entity): string {
+            \assert($entity->id instanceof Uuid);
+
+            return $entity->id->toRfc4122();
+        }, $entities);
+
+        $statusesByTripId = $this->computationTracker->getStatusesBatch($tripIds);
+
+        $items = array_map(function (TripRequest $entity) use ($statusesByTripId): TripListItem {
+            \assert($entity->id instanceof Uuid);
+
+            return $this->toListItem($entity, $statusesByTripId[$entity->id->toRfc4122()] ?? null);
+        }, $entities);
 
         return new TripListPaginator($items, $page, $limit, $totalItems);
     }
 
-    private function toListItem(TripRequest $entity): TripListItem
+    /**
+     * @param array<string, string>|null $computationStatuses
+     */
+    private function toListItem(TripRequest $entity, ?array $computationStatuses): TripListItem
     {
         \assert($entity->id instanceof Uuid);
 
@@ -133,6 +150,49 @@ final readonly class TripCollectionProvider implements ProviderInterface
             stageCount: $stageCount,
             createdAt: $entity->createdAt,
             updatedAt: $entity->updatedAt,
+            status: $this->computeStatus($computationStatuses, $stageCount),
         );
+    }
+
+    /**
+     * Derives the trip status from the computation tracker data and stage count.
+     *
+     * - "draft"     : no computations tracked yet, or every tracked computation
+     *                failed without ever producing a `done` state
+     * - "analyzing" : at least one computation is still pending or running
+     * - "analyzed"  : at least one computation reached `done` (results available)
+     *
+     * The computation-tracking cache has a 30-minute TTL, so a fully analyzed
+     * trip eventually loses its `$statuses` map. In that case we fall back to
+     * the durable `$stageCount` (persisted in PostgreSQL) so the trip keeps
+     * reporting "analyzed" instead of reverting to "draft".
+     *
+     * @param array<string, string>|null $statuses
+     */
+    private function computeStatus(?array $statuses, int $stageCount): string
+    {
+        if (null === $statuses || [] === $statuses) {
+            return $stageCount > 0 ? 'analyzed' : 'draft';
+        }
+
+        $hasDone = false;
+        foreach ($statuses as $status) {
+            if ('pending' === $status || 'running' === $status) {
+                return 'analyzing';
+            }
+
+            if ('done' === $status) {
+                $hasDone = true;
+            }
+        }
+
+        // Terminal state: if nothing ever succeeded (all failed) and no stages
+        // were persisted, the analysis effectively did not happen → draft,
+        // so the user can retry without the list being stuck on "analyzed".
+        if (!$hasDone && 0 === $stageCount) {
+            return 'draft';
+        }
+
+        return 'analyzed';
     }
 }

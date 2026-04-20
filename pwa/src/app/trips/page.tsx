@@ -19,6 +19,7 @@ import {
 import { apiFetch } from "@/lib/api/client";
 import { formatDistanceKm } from "@/lib/formatters";
 import { API_URL } from "@/lib/constants";
+import { TripStatusBadge } from "@/components/trip-status-badge";
 import type { components } from "@/lib/api/schema";
 
 type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
@@ -121,17 +122,27 @@ export default function TripsPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <Button
-          asChild
-          variant="ghost"
-          size="icon"
-          title={t("close")}
-          aria-label={t("close")}
-        >
-          <Link href="/">
-            <X className="h-4 w-4" />
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            asChild
+            variant="default"
+            size="sm"
+            data-testid="new-trip-button"
+          >
+            <Link href="/trips/new">{t("newTrip")}</Link>
+          </Button>
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            title={t("close")}
+            aria-label={t("close")}
+          >
+            <Link href="/">
+              <X className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -237,11 +248,13 @@ export default function TripsPage() {
                     type="button"
                     className="flex-1 text-left min-w-0 cursor-pointer"
                     onClick={() => router.push(`/trips/${trip.id ?? ""}`)}
+                    data-testid={`trip-item-${trip.id ?? ""}`}
                   >
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span className="font-semibold truncate">
                         {trip.title ?? t("untitled")}
                       </span>
+                      <TripStatusBadge status={trip.status} />
                       {(trip.stageCount ?? 0) > 0 && (
                         <span className="text-sm text-muted-foreground">
                           {t("stages", { count: trip.stageCount ?? 0 })}

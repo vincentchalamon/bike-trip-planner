@@ -28,4 +28,16 @@ interface ComputationTrackerInterface
 
     /** @return array<string, string>|null */
     public function getStatuses(string $tripId): ?array;
+
+    /**
+     * Batch-fetches the status maps of several trips in a single cache round-trip.
+     *
+     * Returns an array keyed by `$tripId`. Trips with no tracked computations
+     * are mapped to `null`, matching the shape of {@see getStatuses()}.
+     *
+     * @param list<string> $tripIds
+     *
+     * @return array<string, array<string, string>|null>
+     */
+    public function getStatusesBatch(array $tripIds): array;
 }
