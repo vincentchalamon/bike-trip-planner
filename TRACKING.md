@@ -506,7 +506,38 @@ Assistant conversationnel via bulle flottante, LLaMA 3B pour interpréter les in
 
 ---
 
-## Sprint 29 — Recette complète & Audit
+## Sprint 29 — Analytics d'usage & conformité RGPD
+
+Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes, profil trips, santé backend, valeur features, rétention/UX), avec prérequis RGPD (privacy policy, mentions légales, anonymisation user). Implémentation **native** (Doctrine + Messenger + PostgreSQL partitionné), **aucun outil tiers**. Voir issue [#370](https://github.com/vincentchalamon/bike-trip-planner/issues/370) (épic).
+
+| Ordre | ID                                                                      | Titre                                                                        | Effort | PRs | Dépend de |
+|-------|-------------------------------------------------------------------------|------------------------------------------------------------------------------|--------|-----|-----------|
+| 1     | TBD                                                                     | Page `/privacy` + mentions légales `/legal`                                  | M      |     | —         |
+| 2     | TBD                                                                     | Endpoint anonymisation/suppression user (soft-delete + purge des events)     | M      |     | —         |
+| 3     | TBD                                                                     | Entité `UsageEvent` partitionnée mensuellement + migration + rate limiter    | M      |     | —         |
+| 4     | TBD                                                                     | Endpoint `POST /events` + `RecordUsageEventsMessage` + handler DBAL batch    | M      |     | #3 (TBD)  |
+| 5     | TBD                                                                     | Hook PWA `useUsageTracker()` + batch via `navigator.sendBeacon`              | S      |     | #4 (TBD)  |
+| 6     | TBD                                                                     | Instrumentation sources & plateformes (section 1 de #370)                    | S      |     | #5 (TBD)  |
+| 7     | TBD                                                                     | Instrumentation profil trips, santé backend, valeur features, rétention/UX   | L      |     | #6 (TBD)  |
+| 8     | TBD                                                                     | Vue matérialisée `usage_daily_summary` + cron de refresh quotidien           | S      |     | #3 (TBD)  |
+
+### Recette Sprint 29
+
+- **Checklist manuelle :**
+  - [ ] Page `/privacy` accessible et complète (base légale, conservation 13 mois, droits utilisateurs)
+  - [ ] Mentions légales `/legal` accessibles
+  - [ ] Suppression de compte → events associés purgés (vérifier via requête DB)
+  - [ ] Table `usage_event` partitionnée par mois (vérifier `\d+ usage_event` en psql)
+  - [ ] Script cron de purge `DROP PARTITION` à 13 mois fonctionnel
+  - [ ] Endpoint `POST /events` : latence < 5 ms, réponse `202` immédiate (pas d'INSERT synchrone)
+  - [ ] Batch client `sendBeacon` : 1 requête par session (vérifier DevTools)
+  - [ ] Saturation Messenger → drop silencieux, aucune requête métier impactée
+  - [ ] Vue matérialisée `usage_daily_summary` rafraîchie par cron quotidien
+  - [ ] Aucun log d'IP, User-Agent brut ou coordonnées GPS précises dans `usage_event` (grep payload)
+
+---
+
+## Sprint 30 — Recette complète & Audit
 
 Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 28) et audit complet : performance, sécurité, accessibilité, SEO, qualité de code, couverture de tests. Deux phases : **audit** (cartographier les problèmes) puis **corrections** (fixer par lots thématiques).
 
@@ -566,7 +597,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 28
 | 35    | Fix : performance et polish (P3)                           | M      |
 | 36    | Re-test : golden path A final après corrections            | M      |
 
-### Recette Sprint 29 — Golden Path A (Komoot)
+### Recette Sprint 30 — Golden Path A (Komoot)
 
 - **Checklist :**
   - [ ] Connexion via magic link (email → Mailcatcher → clic → connecté)
@@ -584,7 +615,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 28
   - [ ] Dupliquer le trip → modifier le duplicata → l'original est inchangé
   - [ ] Se déconnecter → se reconnecter → le trip est toujours là
 
-### Recette Sprint 29 — Cas limites
+### Recette Sprint 30 — Cas limites
 
 - **Inputs invalides :**
   - [ ] GPX malformé (XML invalide) → message d'erreur clair
@@ -609,7 +640,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 28
   - [ ] 0 hébergement trouvé → message informatif
   - [ ] Undo jusqu'au début → bouton disabled, pas de crash
 
-### Recette Sprint 29 — Audit visuel multi-device
+### Recette Sprint 30 — Audit visuel multi-device
 
 | Device | Navigateur | Thème | Langue | OK ? |
 |---|---|---|---|---|
@@ -629,7 +660,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 28
   - [ ] Switch de vue (timeline/map/split) fonctionnel
   - [ ] Pas de flash blanc au chargement en dark mode
 
-### Recette Sprint 29 — Audits automatisés
+### Recette Sprint 30 — Audits automatisés
 
 - **Seuils :**
   - [ ] `make qa` : 0 erreur
@@ -645,11 +676,13 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 28
   - [ ] `make i18n-check` : 0 clé manquante
   - [ ] Headers sécurité présents : CSP, HSTS, X-Content-Type-Options, X-Frame-Options
   - [ ] Aucune stack trace exposée en `APP_ENV=prod`
+  - [ ] Audit privacy : page `/privacy` complète, durée de conservation 13 mois respectée, purge `DROP PARTITION` vérifiée
+  - [ ] Audit anonymisation : suppression user → purge des events associés, vérification via requête DB
   - [ ] Tous les bugs trouvés reportés en issues GitHub avec labels (`bug`, `ux`, `perf`, `security`, `a11y`)
 
 ---
 
-## Sprint 30 — Garmin Connect
+## Sprint 31 — Garmin Connect
 
 Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase 2). Voir [ADR-018](docs/adr/adr-018-garmin-export-and-device-sync-strategy.md). Test local via ngrok pour le callback OAuth.
 
@@ -659,7 +692,7 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 |-------|-----------------------------------------------------------------------|----------------|--------|-----|-----------------------------------------------------------------------|
 | 1     | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Garmin Connect | L      | 3   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) |
 
-### Recette Sprint 30
+### Recette Sprint 31
 
 - **Tests E2E :** `tests/recette/sprint-30.spec.ts`
 - **Checklist manuelle :**
@@ -670,7 +703,7 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 
 ---
 
-## Sprint 31 — Déploiement
+## Sprint 32 — Déploiement
 
 Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructure-strategy.md). Issues GitHub à créer au moment venu.
 
@@ -685,7 +718,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 7     | Migration données + smoke test production          | M      |
 | 8     | [#312](https://github.com/vincentchalamon/bike-trip-planner/issues/312) Feature-deploy : preview par PR (Étapes 1-7) | L |
 
-### Recette Sprint 31
+### Recette Sprint 32
 
 - **Checklist manuelle :**
   - [ ] Application accessible via URL publique
@@ -742,7 +775,8 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 26        | LLaMA 8B : analyse 2 passes    | 4       | ~5           |
 | 27        | Frontend IA : résumés hybrides | 4       | ~5           |
 | 28        | Bulle IA (LLaMA 3B) dialogue   | 3       | ~4           |
-| 29        | Recette complète & Audit       | 36      | ~12          |
-| 30        | Garmin Connect                 | 1       | 3            |
-| 31        | Déploiement                    | 8       | ~8           |
-| **Total** |                                | **157** | **~168**     |
+| 29        | Analytics d'usage & RGPD       | 8       | ~8           |
+| 30        | Recette complète & Audit       | 36      | ~12          |
+| 31        | Garmin Connect                 | 1       | 3            |
+| 32        | Déploiement                    | 8       | ~8           |
+| **Total** |                                | **165** | **~176**     |
