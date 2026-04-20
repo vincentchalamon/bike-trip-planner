@@ -182,9 +182,7 @@ final class TripAnalyzeTest extends ApiTestCase
             ScanEvents::class,
         ];
 
-        foreach ($expected as $message) {
-            $this->assertContains($message, $dispatched, \sprintf('%s should have been dispatched.', $message));
-        }
+        $this->assertSame($expected, $dispatched, 'Exactly one message per enrichment step must be dispatched, in order.');
     }
 
     #[Test]
