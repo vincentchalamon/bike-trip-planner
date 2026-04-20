@@ -413,9 +413,9 @@ Composant Stepper navigation 4 actes, liste des voyages avec statuts, ADR-026 (p
 
 | Ordre | ID                                                                      | Titre                                                                          | Effort | PRs | Dépend de |
 |-------|-------------------------------------------------------------------------|--------------------------------------------------------------------------------|--------|-----|-----------|
-| 1     | [#319](https://github.com/vincentchalamon/bike-trip-planner/issues/319) | ADR-026 : gate mechanism et pipeline 2 phases (prévisualisation → analyse)     | S      |     | —         |
-| 2     | [#317](https://github.com/vincentchalamon/bike-trip-planner/issues/317) | Composant Stepper : navigation 4 étapes (Préparation → Aperçu → Analyse → MV) | M      |     | —         |
-| 3     | [#318](https://github.com/vincentchalamon/bike-trip-planner/issues/318) | Liste des voyages avec statuts + header "Mes voyages"                          | M      |     | —         |
+| 1     | [#319](https://github.com/vincentchalamon/bike-trip-planner/issues/319) | ADR-026 : gate mechanism et pipeline 2 phases (prévisualisation → analyse)     | S      | [#362](https://github.com/vincentchalamon/bike-trip-planner/pull/362) `feature/319` | —         |
+| 2     | [#317](https://github.com/vincentchalamon/bike-trip-planner/issues/317) | Composant Stepper : navigation 4 étapes (Préparation → Aperçu → Analyse → MV) | M      | [#363](https://github.com/vincentchalamon/bike-trip-planner/pull/363) `feature/317` | —         |
+| 3     | [#318](https://github.com/vincentchalamon/bike-trip-planner/issues/318) | Liste des voyages avec statuts + header "Mes voyages"                          | M      | [#364](https://github.com/vincentchalamon/bike-trip-planner/pull/364) `feature/318` | —         |
 
 ---
 
