@@ -400,6 +400,12 @@ function dispatchEvent(event: MercureEvent): void {
       store.setComputationStatus(event.data.computationStatus);
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
+      // Phase 2 completion implies the analysis was running; mark it
+      // explicitly so the UI leaves the Acte 1.5 preview and renders the
+      // full trip view. This also covers legacy flows (tests, one-shot
+      // backends) where `trip_complete` is fired before #322's split
+      // lands and `POST /trips/{id}/analyze` ever gets called.
+      useUiStore.getState().setAnalysisStarted(true);
 
       // Persist the completed trip to IndexedDB for offline consultation
       if (store.trip) {

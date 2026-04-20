@@ -56,6 +56,13 @@ interface UiState {
   currentStep: StepId;
   /** Set of steps the user has already completed (enables backwards navigation). */
   completedSteps: Set<StepId>;
+  /**
+   * Whether the user has explicitly launched the Phase 2 analysis via
+   * `POST /trips/{id}/analyze` (Acte 2). Until this is `true`, the UI stays
+   * on the "preview" screen (Acte 1.5) where the user can inspect the raw
+   * route and tweak parameters before committing to the full enrichment.
+   */
+  hasAnalysisStarted: boolean;
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -85,6 +92,9 @@ interface UiState {
   completeStep: (step: StepId) => void;
   /** Reset the stepper to "preparation" and clear completed steps (called on `clearTrip`). */
   resetStepper: () => void;
+  /** Flip {@link hasAnalysisStarted}. Called by the preview screen when the user
+   * confirms they want to launch the full enrichment pipeline. */
+  setAnalysisStarted: (value: boolean) => void;
 }
 
 /**
@@ -130,6 +140,7 @@ export const useUiStore = create<UiState>()(
     configPanelFocusSection: null,
     currentStep: "preparation",
     completedSteps: new Set<StepId>(),
+    hasAnalysisStarted: false,
 
     setProcessing: (value) =>
       set((state) => {
@@ -224,6 +235,12 @@ export const useUiStore = create<UiState>()(
       set((state) => {
         state.currentStep = "preparation";
         state.completedSteps = new Set<StepId>();
+        state.hasAnalysisStarted = false;
+      }),
+
+    setAnalysisStarted: (value) =>
+      set((state) => {
+        state.hasAnalysisStarted = value;
       }),
   })),
 );

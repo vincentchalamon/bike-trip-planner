@@ -354,6 +354,25 @@
   "planner": {
     "closeTrip": "Close this trip"
   },
+  "tripPreview": {
+    "title": "Your route preview",
+    "subtitle": "Check the track, the stages and the settings before launching the full analysis.",
+    "stagesHeading": "Stage breakdown",
+    "stagesCount": "{count, plural, =0 {# stage} one {# stage} other {# stages}}",
+    "stageDay": "Day {day}",
+    "stageDistance": "{distance} km",
+    "stageElevation": "Elev+ {elevation} m",
+    "stageEndPoint": "Arrival: {lat}°N, {lon}°E",
+    "launchAnalysis": "Launch analysis",
+    "launchAnalysisAria": "Launch the full route analysis",
+    "launchingAnalysis": "Launching analysis...",
+    "modifyParameters": "Modify parameters",
+    "modifyParametersAria": "Open the configuration panel to modify parameters",
+    "changeRoute": "Change route",
+    "changeRouteAria": "Return to the preparation screen to change the route",
+    "analysisLaunched": "Analysis launched",
+    "analysisLaunchFailed": "Failed to launch analysis. Please retry."
+  },
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",

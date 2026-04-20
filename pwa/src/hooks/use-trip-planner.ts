@@ -20,6 +20,7 @@ import {
   scanAccommodations,
   addPoiWaypointToRoute,
   duplicateTrip,
+  launchTripAnalysis,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
 import {
@@ -649,6 +650,35 @@ export function useTripPlanner() {
     }
   }
 
+  /**
+   * Fire the Phase 2 analysis pipeline for the currently-loaded trip and
+   * flip the UI store flag so the preview screen makes way for the full
+   * trip view. Errors surface as toasts but the user stays on the preview
+   * screen so they can retry.
+   */
+  async function handleLaunchAnalysis(): Promise<boolean> {
+    if (!tripId) return false;
+
+    try {
+      const ok = await launchTripAnalysis(tripId);
+      if (!ok) {
+        toast.error(t("tripPreview.analysisLaunchFailed"));
+        return false;
+      }
+      useUiStore.getState().setAnalysisStarted(true);
+      setProcessing(true);
+      setAccommodationScanning(true);
+      return true;
+    } catch (err) {
+      if (isNetworkError(err)) {
+        toast.error(t("errors.networkError"));
+      } else {
+        toast.error(t("tripPreview.analysisLaunchFailed"));
+      }
+      return false;
+    }
+  }
+
   async function handleDuplicateTrip(): Promise<string | null> {
     if (!tripId || !trip) return null;
 
@@ -836,6 +866,7 @@ export function useTripPlanner() {
     handleInsertRestDay,
     handleAddPoiWaypoint,
     handleDuplicateTrip,
+    handleLaunchAnalysis,
     handleShareTrip,
     isShareModalOpen,
     setShareModalOpen,

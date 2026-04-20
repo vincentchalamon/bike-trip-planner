@@ -8,6 +8,7 @@ import { Settings, HelpCircle, Loader2, X, Share2, Map } from "lucide-react";
 import { CardSelection } from "@/components/card-selection";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
 import { TripLockedBanner } from "@/components/trip-locked-banner";
+import { TripPreview } from "@/components/trip-preview";
 import { TripSummary } from "@/components/trip-summary";
 import { TripHeader } from "@/components/trip-header";
 import { TripDownloads } from "@/components/trip-downloads";
@@ -85,6 +86,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
     handleInsertRestDay,
     handleAddPoiWaypoint,
     handleDuplicateTrip,
+    handleLaunchAnalysis,
     handleShareTrip,
     isShareModalOpen,
     setShareModalOpen,
@@ -103,6 +105,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const goToStep = useUiStore((s) => s.goToStep);
   const completeStep = useUiStore((s) => s.completeStep);
   const resetStepper = useUiStore((s) => s.resetStepper);
+  const hasAnalysisStarted = useUiStore((s) => s.hasAnalysisStarted);
   const activeStages = useMemo(
     () => stages.filter((s) => !s.isRestDay),
     [stages],
@@ -155,23 +158,28 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   }, [setFocusedMapStageIndex]);
 
   // Drive stepper state transitions based on trip lifecycle:
-  // - URL submitted / GPX uploading → "analysis" (background computation)
-  // - Computation complete (trip + stages) → "my_trip"
-  // - Trip loaded but no stages (loading state) → "preview"
+  // - Processing (URL submit / GPX upload) → "analysis"
+  // - Stages computed, processing settled, analysis not launched → "preview"
+  // - Stages computed, analysis complete → "my_trip"
   useEffect(() => {
     if (isProcessing) {
-      // Computation is running: advance past preparation/preview into analysis
+      // Computation in flight: advance past preparation/preview into analysis.
       completeStep("preparation");
       completeStep("preview");
       goToStep("analysis");
-    } else if (trip && stages.length > 0) {
-      // Computation complete: all prior steps done, advance to my_trip
+    } else if (trip && stages.length > 0 && !hasAnalysisStarted) {
+      // Phase 1 complete: pacing engine produced stages. Park on "preview"
+      // and wait for the user to explicitly click "Lancer l'analyse".
+      completeStep("preparation");
+      goToStep("preview");
+    } else if (trip && stages.length > 0 && hasAnalysisStarted) {
+      // Phase 2 complete: every prior step done, advance to my_trip.
       completeStep("preparation");
       completeStep("preview");
       completeStep("analysis");
       goToStep("my_trip");
     } else if (trip && stages.length === 0) {
-      // Trip identity loaded but no stages yet: preview state
+      // Trip identity loaded but no stages yet: preview state (loading).
       completeStep("preparation");
       goToStep("preview");
     } else {
@@ -179,7 +187,15 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
       // past the "my_trip" lock and back to "preparation".
       resetStepper();
     }
-  }, [isProcessing, trip, stages.length, completeStep, goToStep, resetStepper]);
+  }, [
+    isProcessing,
+    trip,
+    stages.length,
+    hasAnalysisStarted,
+    completeStep,
+    goToStep,
+    resetStepper,
+  ]);
 
   // Mobile swipe: left → map, right → timeline (cycle: timeline ↔ map on mobile)
   const swipeHandlers = useSwipe({
@@ -268,9 +284,26 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
     return () => observer.disconnect();
   }, [hasMap, viewMode]);
 
-  // Derive the 3 UI states
+  // Derive the UI states (welcome / loading / preview / full trip view).
+  // The preview screen (Acte 1.5) sits between Phase 1 (pacing engine) and
+  // Phase 2 (enrichment) — it is active once the backend has produced
+  // stages AND the initial processing has settled AND the user has not yet
+  // clicked "Lancer l'analyse". The `trip_complete` event flips
+  // `hasAnalysisStarted` to `true`, which keeps the legacy single-phase
+  // flow (used in most mocked tests) rendering the full trip view.
   const isWelcome = !trip && !isProcessing;
   const isLoading = !trip && isProcessing;
+  const isPreview =
+    !!trip &&
+    !isProcessing &&
+    activeStages.length > 0 &&
+    !hasAnalysisStarted;
+  const clearTripAndReset = useCallback(() => {
+    clearTrip();
+    useUiStore.getState().setProcessing(false);
+    useUiStore.getState().setAccommodationScanning(false);
+    useUiStore.getState().setAnalysisStarted(false);
+  }, [clearTrip]);
 
   const tNav = useTranslations("navigation");
 
@@ -392,8 +425,58 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
           </div>
         )}
 
-        {/* === State 3: Trip loaded === */}
-        {trip && (
+        {/* === State 3a: Preview (Acte 1.5 — stages computed, analysis
+             not yet launched). Inserts a user-controlled gate between
+             Phase 1 (pacing engine) and Phase 2 (enrichment pipeline). */}
+        {isPreview && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-4 md:right-6 h-8 w-8 z-10 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                if (onClose) {
+                  onClose();
+                } else {
+                  clearTripAndReset();
+                  router.push("/");
+                }
+              }}
+              title={t("planner.closeTrip")}
+              aria-label={t("planner.closeTrip")}
+              data-testid="close-trip-button-preview"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+
+            <TripPreview
+              title={trip?.title ?? ""}
+              totalDistance={totalDistance}
+              totalElevation={totalElevation}
+              totalElevationLoss={totalElevationLoss}
+              stages={stages}
+              startDate={startDate}
+              endDate={endDate}
+              weather={firstWeather}
+              isWeatherLoading={isWeatherLoading}
+              fatigueFactor={fatigueFactor}
+              elevationPenalty={elevationPenalty}
+              maxDistancePerDay={maxDistancePerDay}
+              averageSpeed={averageSpeed}
+              onLaunchAnalysis={handleLaunchAnalysis}
+              onChangeRoute={() => {
+                clearTripAndReset();
+                router.push("/");
+              }}
+              onTitleChange={handleTitleChange}
+              showTitleSuggestion={totalDistance !== null}
+            />
+          </>
+        )}
+
+        {/* === State 3b: Trip loaded — full view (shown once the user
+             has launched the Phase 2 analysis via the preview CTA). === */}
+        {trip && !isPreview && (
           <>
             {/* Close button — top-right corner */}
             <Button
@@ -404,9 +487,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
                 if (onClose) {
                   onClose();
                 } else {
-                  clearTrip();
-                  useUiStore.getState().setProcessing(false);
-                  useUiStore.getState().setAccommodationScanning(false);
+                  clearTripAndReset();
                   router.push("/");
                 }
               }}
