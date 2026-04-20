@@ -25,6 +25,18 @@ async function clickSettingsCloseButton(page: Page): Promise<void> {
 }
 
 /**
+ * Re-expand the Link card if the welcome screen is rendered. No-op when
+ * the page is on another route (e.g. `/trips/...`) or the card is already
+ * expanded.
+ */
+async function expandLinkCardIfOnWelcome(page: Page): Promise<void> {
+  const linkCard = page.getByTestId("card-link");
+  if (!(await linkCard.isVisible().catch(() => false))) return;
+  const expanded = await linkCard.getAttribute("data-expanded");
+  if (expanded !== "true") await linkCard.click();
+}
+
+/**
  * Navigate to the welcome screen and re-expand the Link card so the
  * magic-link-input is visible. Mirrors the auto-expand behaviour of the
  * `mockedPage` fixture for steps that re-navigate after the fixture.
@@ -32,10 +44,7 @@ async function clickSettingsCloseButton(page: Page): Promise<void> {
 async function gotoWelcomeWithLinkCardExpanded(page: Page): Promise<void> {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  const linkCard = page.getByTestId("card-link");
-  if (!(await linkCard.isVisible().catch(() => false))) return;
-  const expanded = await linkCard.getAttribute("data-expanded");
-  if (expanded !== "true") await linkCard.click();
+  await expandLinkCardIfOnWelcome(page);
 }
 
 // ---------------------------------------------------------------------------
@@ -66,10 +75,12 @@ Given("I am not logged in", async ({ page }) => {
 
 When("je navigue vers {string}", async ({ page }, path: string) => {
   await page.goto(path);
+  await expandLinkCardIfOnWelcome(page);
 });
 
 When("I navigate to {string}", async ({ page }, path: string) => {
   await page.goto(path);
+  await expandLinkCardIfOnWelcome(page);
 });
 
 When("je recharge la page", async ({ page }) => {

@@ -161,12 +161,23 @@ When("I try to access my trips", async ({ page }) => {
 
 // --- Additional missing steps ---
 
-When("je navigue vers la page d'accueil", async ({ page }) => {
+async function gotoHomeWithLinkCardExpanded(
+  page: import("@playwright/test").Page,
+): Promise<void> {
   await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  const linkCard = page.getByTestId("card-link");
+  if (!(await linkCard.isVisible().catch(() => false))) return;
+  const expanded = await linkCard.getAttribute("data-expanded");
+  if (expanded !== "true") await linkCard.click();
+}
+
+When("je navigue vers la page d'accueil", async ({ page }) => {
+  await gotoHomeWithLinkCardExpanded(page);
 });
 
 When("I navigate to the home page", async ({ page }) => {
-  await page.goto("/");
+  await gotoHomeWithLinkCardExpanded(page);
 });
 
 When("je clique sur le bouton de déconnexion", async ({ $test }) => {
@@ -243,13 +254,11 @@ Then("no PHP stack trace is shown to the user", async ({ mockedPage }) => {
 });
 
 When("je charge la page d'accueil", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await gotoHomeWithLinkCardExpanded(page);
 });
 
 When("I load the home page", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await gotoHomeWithLinkCardExpanded(page);
 });
 
 Then(
