@@ -79,6 +79,8 @@ interface UiState {
   goToStep: (step: StepId) => void;
   /** Mark a step as completed (enabling backwards navigation to it). */
   completeStep: (step: StepId) => void;
+  /** Reset the stepper to "preparation" and clear completed steps (called on `clearTrip`). */
+  resetStepper: () => void;
 }
 
 /**
@@ -212,6 +214,12 @@ export const useUiStore = create<UiState>()(
     completeStep: (step) =>
       set((state) => {
         state.completedSteps.add(step);
+      }),
+
+    resetStepper: () =>
+      set((state) => {
+        state.currentStep = "preparation";
+        state.completedSteps = new Set<StepId>();
       }),
   })),
 );

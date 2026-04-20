@@ -103,6 +103,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const setViewMode = useUiStore((s) => s.setViewMode);
   const goToStep = useUiStore((s) => s.goToStep);
   const completeStep = useUiStore((s) => s.completeStep);
+  const resetStepper = useUiStore((s) => s.resetStepper);
   const activeStages = useMemo(
     () => stages.filter((s) => !s.isRestDay),
     [stages],
@@ -174,9 +175,12 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
       // Trip identity loaded but no stages yet: preview state
       completeStep("preparation");
       goToStep("preview");
+    } else {
+      // No trip, not processing: trip was cleared (or initial mount) — rewind
+      // past the "my_trip" lock and back to "preparation".
+      resetStepper();
     }
-    // else: no trip, not processing → stay on preparation (initial state)
-  }, [isProcessing, trip, stages.length, completeStep, goToStep]);
+  }, [isProcessing, trip, stages.length, completeStep, goToStep, resetStepper]);
 
   // Mobile swipe: left → map, right → timeline (cycle: timeline ↔ map on mobile)
   const swipeHandlers = useSwipe({

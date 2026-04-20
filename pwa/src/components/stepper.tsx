@@ -116,7 +116,6 @@ export function Stepper() {
                   </button>
                 ) : (
                   <div
-                    role="listitem"
                     aria-current={isActive ? "step" : undefined}
                     aria-label={stepLabels[step]}
                     data-testid={`stepper-step-${step}`}
