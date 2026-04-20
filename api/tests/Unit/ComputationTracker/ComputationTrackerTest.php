@@ -203,4 +203,40 @@ final class ComputationTrackerTest extends TestCase
         $this->assertNotNull($statuses2);
         $this->assertSame('pending', $statuses2['route']);
     }
+
+    #[Test]
+    public function getStatusesBatchReturnsEmptyArrayForEmptyInput(): void
+    {
+        $this->assertSame([], $this->tracker->getStatusesBatch([]));
+    }
+
+    #[Test]
+    public function getStatusesBatchReturnsNullForUntrackedTrips(): void
+    {
+        $result = $this->tracker->getStatusesBatch(['untracked-1', 'untracked-2']);
+
+        $this->assertArrayHasKey('untracked-1', $result);
+        $this->assertArrayHasKey('untracked-2', $result);
+        $this->assertNull($result['untracked-1']);
+        $this->assertNull($result['untracked-2']);
+    }
+
+    #[Test]
+    public function getStatusesBatchReturnsMapsForTrackedTrips(): void
+    {
+        $this->tracker->initializeComputations('trip-1', [ComputationName::ROUTE]);
+        $this->tracker->initializeComputations('trip-2', [ComputationName::STAGES]);
+        $this->tracker->markDone('trip-1', ComputationName::ROUTE);
+        $this->tracker->markRunning('trip-2', ComputationName::STAGES);
+
+        $result = $this->tracker->getStatusesBatch(['trip-1', 'trip-2', 'untracked']);
+
+        $this->assertNotNull($result['trip-1']);
+        $this->assertSame('done', $result['trip-1']['route']);
+
+        $this->assertNotNull($result['trip-2']);
+        $this->assertSame('running', $result['trip-2']['stages']);
+
+        $this->assertNull($result['untracked']);
+    }
 }
