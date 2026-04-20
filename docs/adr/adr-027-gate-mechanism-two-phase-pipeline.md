@@ -30,7 +30,7 @@ A further constraint comes from the planned LLaMA 8B integration: the LLM must r
 
 ### Option A: Single-Phase Pipeline (Current)
 
-Keep the existing model: import triggers all computations atomically. The frontend waits for a single `TRIP_READY` event.
+Keep the existing model: import triggers all computations atomically. The frontend waits for a single `trip_ready` event.
 
 **Pros:**
 
@@ -81,9 +81,9 @@ Triggered automatically when `POST /trips` is called.
 |------|---------|--------|
 | GPX fetch + parse | `FetchAndParseRouteHandler` | Raw + decimated points stored in Redis |
 | Pacing engine | `GenerateStagesHandler` | `Stage[]` persisted to PostgreSQL |
-| Preview ready | Mercure SSE | `TRIP_PREVIEW_READY` event |
+| Preview ready | Mercure SSE | `trip_preview_ready` event |
 
-The frontend renders the map, elevation profile, and stage statistics immediately upon receiving `TRIP_PREVIEW_READY`. The user can inspect the route and decide whether to proceed.
+The frontend renders the map, elevation profile, and stage statistics immediately upon receiving `trip_preview_ready`. The user can inspect the route and decide whether to proceed.
 
 ### Phase 2 — Analysis (Acte 2)
 
@@ -120,6 +120,7 @@ The existing `ComputationTracker` (backed by the PSR-6 `cache.trip_state` pool, 
 - `initializeComputations(string $tripId, array $computations): void` — seeds every expected `ComputationName` with status `pending` under cache key `trip.{tripId}.computation_status`.
 - `markRunning()` / `markDone()` / `markFailed()` / `resetComputation()` — lifecycle status transitions (PSR-6 read-modify-write; not atomically safe under concurrent writes — see idempotency note below).
 - `isAllComplete(string $tripId): bool` — true when every tracked computation is in `done` or `failed`.
+- `getStatuses(string $tripId): ?array` — returns the full status map (`ComputationName::value → status string`); returns `null` when no initialization entry exists in cache.
 
 For Phase 2 the contract is unchanged; only the expected set and the post-completion hook differ:
 
@@ -160,10 +161,10 @@ This is the only concurrency primitive outside the PSR-6 cache path, and it is c
 
 | Event type | Phase | Payload | Frontend effect |
 |---|---|---|---|
-| `TRIP_PREVIEW_READY` | 1 | `{tripId, stages[]}` | Render map + elevation profile |
+| `trip_preview_ready` | 1 | `{tripId, stages[]}` | Render map + elevation profile |
 | `computation_step_completed` | 2 | `{tripId, step, progress: {done, total}}` | Update progress stepper |
-| `TRIP_READY` | 2 | `{tripId, summary}` | Render full analysis + LLaMA narrative |
-| `TRIP_ERROR` | 1 or 2 | `{tripId, step, error}` | Display inline error, allow retry |
+| `trip_ready` | 2 | `{tripId, summary}` | Render full analysis + LLaMA narrative |
+| `trip_error` | 1 or 2 | `{tripId, step, error}` | Display inline error, allow retry |
 
 ### API Surface
 
@@ -173,14 +174,14 @@ This is the only concurrency primitive outside the PSR-6 cache path, and it is c
 | `GET` | `/trips/{id}` | Fetch persisted trip (stages, status) |
 | `POST` | `/trips/{id}/analyze` | Trigger Phase 2; returns `202 Accepted` immediately |
 
-The `POST /trips/{id}/analyze` endpoint is idempotent: if Phase 2 is already running or completed for the given `tripId`, it returns `409 Conflict` with a `Retry-After` header or a status field indicating the current phase.
+The `POST /trips/{id}/analyze` endpoint is idempotent: if Phase 2 is already running or completed for the given `tripId`, it returns `409 Conflict` with a JSON body `{"status": "running" | "complete", "tripId": "..."}`. Progress is tracked by the frontend via the Mercure SSE stream, not by polling, so no `Retry-After` header is emitted.
 
 ### Frontend Stepper
 
 The frontend introduces a two-step flow:
 
-1. **Step 1 — Preview:** Route is displayed immediately after `TRIP_PREVIEW_READY`. A "Launch full analysis" button is shown.
-2. **Step 2 — Analysis:** After the user clicks the button, `POST /trips/{id}/analyze` is called. A progress stepper tracks each `computation_step_completed` event. The full report is revealed on `TRIP_READY`.
+1. **Step 1 — Preview:** Route is displayed immediately after `trip_preview_ready`. A "Launch full analysis" button is shown.
+2. **Step 2 — Analysis:** After the user clicks the button, `POST /trips/{id}/analyze` is called. A progress stepper tracks each `computation_step_completed` event. The full report is revealed on `trip_ready`.
 
 ---
 
@@ -192,7 +193,7 @@ The frontend introduces a two-step flow:
 - **User agency** — The "Launch full analysis" button is a deliberate checkpoint. Users on mobile or slow connections can choose to defer analysis.
 - **Deterministic LLaMA trigger** — The Redis-backed Symfony Lock on `trip.{tripId}.llama` ensures LLaMA inference runs exactly once per analysis, regardless of handler concurrency or retry behaviour.
 - **Worker isolation** — Phase 1 workers (fast, CPU-bound) and Phase 2 workers (slow, I/O-bound) can be scaled independently via Symfony Messenger worker configuration.
-- **Structured event taxonomy** — `computation_step_completed` + `TRIP_READY` give the frontend precise progress data without polling.
+- **Structured event taxonomy** — `computation_step_completed` + `trip_ready` give the frontend precise progress data without polling.
 
 ### Negative
 
@@ -205,7 +206,7 @@ The frontend introduces a two-step flow:
 ### Neutral
 
 - Phase 1 is unaffected by this change: `POST /trips` and the pacing engine continue to work as before.
-- The existing `ComputationTracker` public API and cache-key schema are reused as-is; only the `ComputationName` enum gains the new Phase 2 entries.
+- The existing `ComputationTracker` public API and cache-key schema are reused as-is; `ComputationName` gains the Phase 2 entries. `ComputationName::pipeline()` (which today returns every case except `ROUTE_SEGMENT`) is split into `phase1Pipeline()` (returning the Phase 1 names — `ROUTE`, `STAGES`) and `phase2Pipeline()` (returning every enrichment name including the new Phase 2 values `MARKETS`, `WIKIDATA`, `LLAMA`), so that each endpoint initialises only its own expected set and Phase 1's `isAllComplete()` check does not block on computations that will never dispatch until Phase 2.
 - Handlers that are not part of the enrichment phase (e.g., `GenerateStagesHandler`) are not registered in the expected set and do not call `markDone()`.
 
 ---
