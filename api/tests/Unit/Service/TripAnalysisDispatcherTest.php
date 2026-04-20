@@ -83,7 +83,7 @@ final class TripAnalysisDispatcherTest extends TestCase
 
         $scanAccommodations = null;
 
-        $messageBus = $this->createMock(MessageBusInterface::class);
+        $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus
             ->method('dispatch')
             ->willReturnCallback(static function (object $message) use (&$scanAccommodations): Envelope {
@@ -109,7 +109,7 @@ final class TripAnalysisDispatcherTest extends TestCase
 
         $generations = [];
 
-        $messageBus = $this->createMock(MessageBusInterface::class);
+        $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus
             ->method('dispatch')
             ->willReturnCallback(static function (object $message) use (&$generations): Envelope {
