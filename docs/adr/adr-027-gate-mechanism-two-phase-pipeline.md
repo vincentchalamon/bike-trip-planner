@@ -1,9 +1,9 @@
-# ADR-026: Gate Mechanism and Two-Phase Pipeline (Preview → Analysis)
+# ADR-027: Gate Mechanism and Two-Phase Pipeline (Preview → Analysis)
 
 - **Status:** Accepted
 - **Date:** 2026-04-19
 - **Depends on:** ADR-001 (Global Architecture), ADR-005 (External API caching), ADR-022 (Persistent Storage)
-- **Supersedes:** ADR-001 §1.2 (single-phase synchronous computation model)
+- **Supersedes:** ADR-001 (single-phase synchronous computation model described in the Backend Implementation section)
 
 ## Context and Problem Statement
 
@@ -33,10 +33,12 @@ A further constraint comes from the planned LLaMA 8B integration: the LLM must r
 Keep the existing model: import triggers all computations atomically. The frontend waits for a single `TRIP_READY` event.
 
 **Pros:**
+
 - No additional API surface.
 - Simple mental model.
 
 **Cons:**
+
 - No early preview; user waits 10–30s before seeing anything.
 - No user checkpoint before expensive enrichments.
 - No natural trigger point for LLaMA (all enrichments share the same flat event bus).
@@ -49,10 +51,12 @@ Keep the existing model: import triggers all computations atomically. The fronte
 Split into Phase 1 (import + pacing) and Phase 2 (all enrichments + LLaMA), triggered automatically one after the other without user intervention.
 
 **Pros:**
+
 - Delivers an early preview.
 - Simpler than a gate mechanism.
 
 **Cons:**
+
 - Phase 2 starts automatically, so the user still cannot validate the route before enrichments begin.
 - LLaMA is still triggered without a reliable completion signal for all enrichments (same race condition as today).
 - Removes user agency.
@@ -96,17 +100,23 @@ Triggered explicitly by `POST /trips/{id}/analyze` (new endpoint).
 | Wikidata enrichment | `EnrichWithWikidataHandler` | Enriched POI data |
 | LLaMA inference | `RunLlamaInferenceHandler` | Narrative summary |
 
-All enrichment handlers run in parallel via Symfony Messenger. Each handler calls `ComputationTracker::markStepCompleted()` on completion. The tracker's gate fires `RunLlamaInferenceHandler` exactly once when all expected handlers are done.
+All enrichment handlers run in parallel via Symfony Messenger. Each handler calls `ComputationTracker::markDone()` on completion. The tracker's gate fires `RunLlamaInferenceHandler` exactly once when every expected computation reports `done`.
 
 ### Gate Mechanism — `ComputationTracker`
 
-The `ComputationTracker` (backed by Redis) coordinates Phase 2 completion:
+The existing `ComputationTracker` (backed by the PSR-6 `cache.trip_state` pool, itself wired on Redis) already coordinates completion. Its current public surface is:
+
+- `initializeComputations(string $tripId, array $computations): void` — seeds every expected `ComputationName` with status `pending` under cache key `trip.{tripId}.computation_status`.
+- `markRunning()` / `markDone()` / `markFailed()` / `resetComputation()` — atomic status transitions.
+- `isAllComplete(string $tripId): bool` — true when every tracked computation is in `done` or `failed`.
+
+For Phase 2 the contract is unchanged; only the expected set and the post-completion hook differ:
 
 ```text
 POST /trips/{id}/analyze
   │
-  ├─► ComputationTracker::initializePhase2(tripId, expectedSteps: [...handlers])
-  │     Stores the set of expected step IDs in Redis (SADD computation:{tripId}:expected)
+  ├─► ComputationTracker::initializeComputations(tripId, [...Phase2 ComputationNames])
+  │     Persists the expected set under cache key `trip.{tripId}.computation_status` (TTL 1800s)
   │
   ├─► Dispatch ScanAllOsmDataHandler (async)
   ├─► Dispatch CheckWeatherHandler   (async)
@@ -114,24 +124,16 @@ POST /trips/{id}/analyze
   ├─► ... (all enrichment handlers)
   │
   └─► Each handler on completion:
-        ComputationTracker::markStepCompleted(tripId, stepId)
-          │  SREM computation:{tripId}:remaining
+        ComputationTracker::markDone(tripId, ComputationName::X)
+          │  Updates the cached status map atomically
           │
-          ├─ if areAllEnrichmentsCompleted():
-          │     SCARD computation:{tripId}:remaining == 0
-          │     → Dispatch RunLlamaInferenceHandler (exactly once, via Redis SET NX lock)
+          ├─ if ComputationTracker::isAllComplete(tripId):
+          │     → Dispatch RunLlamaInferenceHandler (exactly once — see idempotency note below)
           │
           └─ Publish computation_step_completed event via Mercure
 ```
 
-**`areAllEnrichmentsCompleted()` logic:**
-
-```text
-SCARD computation:{tripId}:remaining == 0
-AND SET NX computation:{tripId}:llama_triggered 1 EX 3600  ← atomic, prevents double-dispatch
-```
-
-The `SET NX` lock ensures idempotency: even if two handlers complete simultaneously and both observe `SCARD == 0`, only one will acquire the lock and dispatch the LLaMA message.
+**Idempotency of the LLaMA trigger.** Because `isAllComplete()` may return `true` to several concurrent handlers racing on the last computation, the dispatch site must protect against double-firing. A dedicated marker computation (`ComputationName::LLAMA_DISPATCHED`) is reserved: the first handler that observes `isAllComplete()` calls `markRunning(LLAMA_DISPATCHED)` and reads the status back; only the caller that observes the transition actually dispatches `RunLlamaInferenceHandler`. This reuses the existing atomic cache item update path and avoids adding a bespoke Redis `SET NX` alongside the PSR-6 abstraction.
 
 ### Mercure Events
 
@@ -167,7 +169,7 @@ The frontend introduces a two-step flow:
 
 - **Sub-2s route preview** — The map and elevation profile are visible before any enrichment begins. Users can immediately identify wrong tracks and abort before expensive API calls.
 - **User agency** — The "Launch full analysis" button is a deliberate checkpoint. Users on mobile or slow connections can choose to defer analysis.
-- **Deterministic LLaMA trigger** — The `SET NX` gate ensures LLaMA inference runs exactly once per analysis, regardless of handler concurrency or retry behaviour.
+- **Deterministic LLaMA trigger** — The `LLAMA_DISPATCHED` marker computation ensures LLaMA inference runs exactly once per analysis, regardless of handler concurrency or retry behaviour, without leaving the PSR-6 cache abstraction.
 - **Worker isolation** — Phase 1 workers (fast, CPU-bound) and Phase 2 workers (slow, I/O-bound) can be scaled independently via Symfony Messenger worker configuration.
 - **Structured event taxonomy** — `computation_step_completed` + `TRIP_READY` give the frontend precise progress data without polling.
 
@@ -175,14 +177,14 @@ The frontend introduces a two-step flow:
 
 - **New API endpoint** — `POST /trips/{id}/analyze` must be added to the OpenAPI spec and the TypeScript client regenerated (`make typegen`).
 - **Two-step UX** — The user must click an extra button to trigger the full analysis. Acceptable as an intentional design choice; can be made automatic via a feature flag if UX testing shows friction.
-- **Additional Redis keys** — Each active trip during Phase 2 consumes three Redis keys (`expected`, `remaining`, `llama_triggered`). Keys expire automatically (TTL 1 hour); no manual cleanup required.
-- **`ComputationTracker` becomes a coordination point** — All Phase 2 handlers must call `markStepCompleted()`. Forgetting to add a new handler to the tracker's expected set will prevent LLaMA from ever firing. This must be enforced by a test that cross-checks the registered handlers against the expected-steps list.
+- **Additional cache entry** — Each active trip during Phase 2 consumes a single status map at `trip.{tripId}.computation_status` (TTL 1800s). Entries expire automatically; no manual cleanup required.
+- **`ComputationTracker` becomes a coordination point** — All Phase 2 handlers must call `markDone()` with the matching `ComputationName`. Forgetting to add a new handler to the initial expected set will prevent LLaMA from ever firing. This must be enforced by a test that cross-checks the registered handlers against the `ComputationName` enum.
 
 ### Neutral
 
 - Phase 1 is unaffected by this change: `POST /trips` and the pacing engine continue to work as before.
-- The existing `ComputationTracker` Redis schema is extended, not replaced.
-- Handlers that are not part of the enrichment phase (e.g., `GenerateStagesHandler`) are not registered in the gate and do not call `markStepCompleted()`.
+- The existing `ComputationTracker` public API and cache-key schema are reused as-is; only the `ComputationName` enum gains the new Phase 2 entries.
+- Handlers that are not part of the enrichment phase (e.g., `GenerateStagesHandler`) are not registered in the expected set and do not call `markDone()`.
 
 ---
 
@@ -192,5 +194,5 @@ The frontend introduces a two-step flow:
 - [ADR-005: Orchestration, Optimization, and Caching of External APIs](adr-005-orchestration-optimization-and-caching-of-external-apis.md)
 - [ADR-022: Persistent Storage Strategy](adr-022-persistent-storage-strategy.md)
 - [Symfony Messenger — Async Transport](https://symfony.com/doc/current/messenger.html)
-- [Redis SET NX — Atomic lock pattern](https://redis.io/commands/set/)
+- [Symfony Cache — PSR-6 Contracts](https://symfony.com/doc/current/components/cache.html)
 - [Mercure Protocol](https://mercure.rocks/spec)
