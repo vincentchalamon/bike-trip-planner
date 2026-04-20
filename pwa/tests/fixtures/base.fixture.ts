@@ -21,9 +21,17 @@ export async function expandLinkCard(page: Page): Promise<void> {
 /**
  * Expand the GPX card on the welcome screen so the drop zone and
  * file input become visible. No-op if already expanded or absent.
+ * If the Link card is currently expanded (mutually exclusive), collapse
+ * it first via the back button so the GPX card re-appears.
  */
 export async function expandGpxCard(page: Page): Promise<void> {
   const gpxCard = page.getByTestId("card-gpx");
+  if (!(await gpxCard.isVisible().catch(() => false))) {
+    const back = page.getByTestId("card-selection-back");
+    if (await back.isVisible().catch(() => false)) {
+      await back.click();
+    }
+  }
   if (!(await gpxCard.isVisible().catch(() => false))) return;
   const expanded = await gpxCard.getAttribute("data-expanded");
   if (expanded !== "true") await gpxCard.click();
