@@ -139,8 +139,8 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     await expect(page.getByTestId("card-gpx-file-name")).toContainText(
       "huge-route.gpx",
     );
-    // Size-limit error alert is displayed
-    await expect(page.getByRole("alert")).toBeVisible();
+    // Size-limit error alert is displayed inside the GPX card
+    await expect(page.getByTestId("card-gpx").getByRole("alert")).toBeVisible();
     // And the upload endpoint was never hit
     expect(uploadCalled).toBe(false);
   });

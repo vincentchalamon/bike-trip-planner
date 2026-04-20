@@ -76,6 +76,11 @@ export const test = base.extend<
   submitUrl: async ({ mockedPage, injectEvent }, use) => {
     await use(async (url?: string) => {
       const input = mockedPage.getByTestId("magic-link-input");
+      // If the input is not visible (e.g. after clearTrip returned us to the
+      // welcome screen with the Link card collapsed), re-expand the card.
+      if (!(await input.isVisible().catch(() => false))) {
+        await expandLinkCard(mockedPage);
+      }
       await input.fill(url ?? "https://www.komoot.com/fr-fr/tour/2795080048");
       await input.press("Enter");
       // After magic link submission the app navigates to /trips/{id}; wait for that URL

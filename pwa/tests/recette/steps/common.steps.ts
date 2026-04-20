@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
 import {
   routeParsedEvent,
@@ -14,18 +14,28 @@ import { trackTripGpxDownload } from "../support/export-download-tracker";
 
 const SETTINGS_DIALOG_NAME = /Paramètres|Settings/i;
 
-async function clickSettingsOpenButton(
-  page: import("@playwright/test").Page,
-): Promise<void> {
+async function clickSettingsOpenButton(page: Page): Promise<void> {
   await page.getByTestId("config-open-button").click();
 }
 
-async function clickSettingsCloseButton(
-  page: import("@playwright/test").Page,
-): Promise<void> {
+async function clickSettingsCloseButton(page: Page): Promise<void> {
   const dialog = page.getByRole("dialog", { name: SETTINGS_DIALOG_NAME });
   await expect(dialog).toBeVisible({ timeout: 5000 });
   await dialog.locator("button").first().click();
+}
+
+/**
+ * Navigate to the welcome screen and re-expand the Link card so the
+ * magic-link-input is visible. Mirrors the auto-expand behaviour of the
+ * `mockedPage` fixture for steps that re-navigate after the fixture.
+ */
+async function gotoWelcomeWithLinkCardExpanded(page: Page): Promise<void> {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  const linkCard = page.getByTestId("card-link");
+  if (!(await linkCard.isVisible().catch(() => false))) return;
+  const expanded = await linkCard.getAttribute("data-expanded");
+  if (expanded !== "true") await linkCard.click();
 }
 
 // ---------------------------------------------------------------------------
@@ -33,13 +43,11 @@ async function clickSettingsCloseButton(
 // ---------------------------------------------------------------------------
 
 Given("je suis sur la page d'accueil", async ({ mockedPage }) => {
-  await mockedPage.goto("/");
-  await mockedPage.waitForLoadState("networkidle");
+  await gotoWelcomeWithLinkCardExpanded(mockedPage);
 });
 
 Given("I am on the home page", async ({ mockedPage }) => {
-  await mockedPage.goto("/");
-  await mockedPage.waitForLoadState("networkidle");
+  await gotoWelcomeWithLinkCardExpanded(mockedPage);
 });
 
 Given("je ne suis pas connecté", async ({ page }) => {
@@ -460,15 +468,15 @@ Then("I no longer see the error message", async ({ mockedPage }) => {
 Given(
   "j'utilise l'application sur un appareil mobile",
   async ({ mockedPage }) => {
-    // Handled by viewport in project config
-    await mockedPage.goto("/");
-    await mockedPage.waitForLoadState("networkidle");
+    // Viewport handled by Playwright project config; re-expand the Link card
+    // after the navigation so the URL input stays accessible for subsequent
+    // steps (e.g. the offline-disabled input assertions).
+    await gotoWelcomeWithLinkCardExpanded(mockedPage);
   },
 );
 
 Given("I am using the app on a mobile device", async ({ mockedPage }) => {
-  await mockedPage.goto("/");
-  await mockedPage.waitForLoadState("networkidle");
+  await gotoWelcomeWithLinkCardExpanded(mockedPage);
 });
 
 When("la connexion internet est perdue", async ({ mockedPage }) => {
