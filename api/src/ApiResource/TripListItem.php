@@ -29,7 +29,10 @@ final readonly class TripListItem
         public int $stageCount,
         public \DateTimeImmutable $createdAt,
         public \DateTimeImmutable $updatedAt,
-        #[ApiProperty(description: 'Computed trip status: draft | analyzing | analyzed')]
+        #[ApiProperty(
+            description: 'Computed trip status: draft | analyzing | analyzed',
+            schema: ['type' => 'string', 'enum' => ['draft', 'analyzing', 'analyzed']],
+        )]
         public string $status = 'draft',
     ) {
     }

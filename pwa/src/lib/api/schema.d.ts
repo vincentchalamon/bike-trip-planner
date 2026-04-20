@@ -963,8 +963,8 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
-            /** @description Computed trip status: draft | analyzing | analyzed */
-            status?: string;
+            /** @enum {string} */
+            status?: "draft" | "analyzing" | "analyzed";
         };
         "Trip.TripRequest": {
             sourceUrl: string | null;

@@ -107,10 +107,18 @@ final readonly class TripCollectionProvider implements ProviderInterface
         /** @var list<TripRequest> $entities */
         $entities = iterator_to_array($paginator->getIterator());
 
-        $items = array_map(function (TripRequest $entity): TripListItem {
+        $tripIds = array_map(static function (TripRequest $entity): string {
             \assert($entity->id instanceof Uuid);
 
-            return $this->toListItem($entity, $this->computationTracker->getStatuses($entity->id->toRfc4122()));
+            return $entity->id->toRfc4122();
+        }, $entities);
+
+        $statusesByTripId = $this->computationTracker->getStatusesBatch($tripIds);
+
+        $items = array_map(function (TripRequest $entity) use ($statusesByTripId): TripListItem {
+            \assert($entity->id instanceof Uuid);
+
+            return $this->toListItem($entity, $statusesByTripId[$entity->id->toRfc4122()] ?? null);
         }, $entities);
 
         return new TripListPaginator($items, $page, $limit, $totalItems);
@@ -149,30 +157,35 @@ final readonly class TripCollectionProvider implements ProviderInterface
     /**
      * Derives the trip status from the computation tracker data and stage count.
      *
-     * - "draft"     : no computations tracked yet (new / unanalysed trip)
+     * - "draft"     : no computations tracked yet, or every tracked computation
+     *                failed without ever producing a `done` state
      * - "analyzing" : at least one computation is still pending or running
-     * - "analyzed"  : all computations are done or failed (full results available)
+     * - "analyzed"  : at least one computation reached `done` (results available)
      *
      * @param array<string, string>|null $statuses
      */
     private function computeStatus(?array $statuses, int $stageCount): string
     {
-        // No computation has ever been started → draft
         if (null === $statuses || [] === $statuses) {
             return 'draft';
         }
 
-        // If any computation is still pending or running → analyzing
+        $hasDone = false;
         foreach ($statuses as $status) {
             if ('pending' === $status || 'running' === $status) {
                 return 'analyzing';
             }
+
+            if ('done' === $status) {
+                $hasDone = true;
+            }
         }
 
-        // All computations are done/failed but no stages persisted yet → still analyzing
-        // (stages are persisted as part of the pipeline; absence means it's not complete)
-        if (0 === $stageCount) {
-            return 'analyzing';
+        // Terminal state: if nothing ever succeeded (all failed) and no stages
+        // were persisted, the analysis effectively did not happen → draft,
+        // so the user can retry without the list being stuck on "analyzed".
+        if (!$hasDone && 0 === $stageCount) {
+            return 'draft';
         }
 
         return 'analyzed';

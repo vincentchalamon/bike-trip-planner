@@ -19,50 +19,13 @@ import {
 import { apiFetch } from "@/lib/api/client";
 import { formatDistanceKm } from "@/lib/formatters";
 import { API_URL } from "@/lib/constants";
-import { Badge } from "@/components/ui/badge";
+import { TripStatusBadge } from "@/components/trip-status-badge";
 import type { components } from "@/lib/api/schema";
 
-type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"] & {
-  status?: string;
-};
+type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
 type TripCollection = components["schemas"]["HydraCollectionBaseSchema"] & {
   member: TripListItem[];
 };
-
-function TripStatusBadge({ status }: { status?: string }) {
-  const t = useTranslations("tripList");
-
-  if (status === "analyzing") {
-    return (
-      <Badge
-        variant="secondary"
-        className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-700"
-        data-testid="status-analyzing"
-      >
-        {t("status_analyzing")}
-      </Badge>
-    );
-  }
-
-  if (status === "analyzed") {
-    return (
-      <Badge
-        variant="secondary"
-        className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-700"
-        data-testid="status-analyzed"
-      >
-        {t("status_analyzed")}
-      </Badge>
-    );
-  }
-
-  // draft (default)
-  return (
-    <Badge variant="outline" data-testid="status-draft">
-      {t("status_draft")}
-    </Badge>
-  );
-}
 
 const ITEMS_PER_PAGE = 10;
 
