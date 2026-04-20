@@ -157,6 +157,29 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
       window.removeEventListener("__test_set_focused_map_stage", handler);
   }, [setFocusedMapStageIndex]);
 
+  // E2E test hook: let Playwright simulate the Phase 1 → Phase 2 gate by
+  // forcing processing/analysisStarted flags. Needed because the prod build
+  // does not expose `window.__zustand_ui_store` (guarded by NODE_ENV).
+  useEffect(() => {
+    const onProcessing = (e: Event) => {
+      useUiStore.getState().setProcessing(!!(e as CustomEvent<boolean>).detail);
+    };
+    const onAnalysisStarted = (e: Event) => {
+      useUiStore
+        .getState()
+        .setAnalysisStarted(!!(e as CustomEvent<boolean>).detail);
+    };
+    window.addEventListener("__test_set_processing", onProcessing);
+    window.addEventListener("__test_set_analysis_started", onAnalysisStarted);
+    return () => {
+      window.removeEventListener("__test_set_processing", onProcessing);
+      window.removeEventListener(
+        "__test_set_analysis_started",
+        onAnalysisStarted,
+      );
+    };
+  }, []);
+
   // Drive stepper state transitions based on trip lifecycle:
   // - Processing (URL submit / GPX upload) → "analysis"
   // - Stages computed, processing settled, analysis not launched → "preview"

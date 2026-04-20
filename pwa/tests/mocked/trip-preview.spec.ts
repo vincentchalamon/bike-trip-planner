@@ -8,10 +8,11 @@ import { routeParsedEvent, stagesComputedEvent } from "../fixtures/mock-data";
  * completes the frontend sits on the preview screen; the user then clicks
  * "Lancer l'analyse" to trigger Phase 2 (`POST /trips/{id}/analyze`).
  *
- * In tests we simulate Phase 1 completion by injecting `route_parsed` +
- * `stages_computed` SSE events and then flipping `isProcessing` off via the
- * dev-only `window.__zustand_ui_store` handle — this is the same mechanism
- * other mocked specs use to probe gated UI states.
+ * Phase 1 completion is simulated with `route_parsed` + `stages_computed`
+ * SSE events; the processing/analysisStarted flags are flipped via the
+ * `__test_set_processing` / `__test_set_analysis_started` CustomEvents
+ * wired into TripPlanner (these work in prod builds where the dev-only
+ * `window.__zustand_ui_store` handle is stripped by NODE_ENV).
  */
 async function enterPreviewState(
   submitUrl: () => Promise<void>,
@@ -26,18 +27,12 @@ async function enterPreviewState(
   // Simulate the Phase 1 → Phase 2 gate: computation has settled but the
   // user has not yet launched the analysis.
   await mockedPage.evaluate(() => {
-    const uiStore = (
-      window as Window & {
-        __zustand_ui_store?: {
-          getState: () => {
-            setProcessing: (v: boolean) => void;
-            setAnalysisStarted: (v: boolean) => void;
-          };
-        };
-      }
-    ).__zustand_ui_store;
-    uiStore?.getState().setProcessing(false);
-    uiStore?.getState().setAnalysisStarted(false);
+    window.dispatchEvent(
+      new CustomEvent("__test_set_processing", { detail: false }),
+    );
+    window.dispatchEvent(
+      new CustomEvent("__test_set_analysis_started", { detail: false }),
+    );
   });
   await expect(mockedPage.getByTestId("trip-preview")).toBeVisible({
     timeout: 5000,
