@@ -19,6 +19,7 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\GenerateStages;
 use App\MessageHandler\GenerateStagesHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripAnalysisDispatcher;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -48,7 +49,7 @@ final class GenerateStagesHandlerTest extends TestCase
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
             $pacingEngine,
-            $messageBus,
+            new TripAnalysisDispatcher($messageBus),
         );
     }
 
@@ -120,7 +121,7 @@ final class GenerateStagesHandlerTest extends TestCase
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
             $pacingEngine,
-            $messageBus,
+            new TripAnalysisDispatcher($messageBus),
         );
 
         $handler(new GenerateStages('trip-1'));
@@ -187,7 +188,7 @@ final class GenerateStagesHandlerTest extends TestCase
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
             $pacingEngine,
-            $messageBus,
+            new TripAnalysisDispatcher($messageBus),
         );
 
         $handler(new GenerateStages('trip-1'));

@@ -17,23 +17,11 @@ use App\Enum\ComputationName;
 use App\Enum\SourceType;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
-use App\Message\AnalyzeTerrain;
-use App\Message\CheckBikeShops;
-use App\Message\CheckBorderCrossing;
-use App\Message\CheckCalendar;
-use App\Message\CheckCulturalPois;
-use App\Message\CheckHealthServices;
-use App\Message\CheckRailwayStations;
-use App\Message\CheckWaterPoints;
-use App\Message\FetchWeather;
 use App\Message\GenerateStages;
-use App\Message\ScanAccommodations;
-use App\Message\ScanEvents;
-use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripAnalysisDispatcher;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
@@ -48,7 +36,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         private ElevationCalculatorInterface $elevationCalculator,
         private RouteSimplifierInterface $routeSimplifier,
         private PacingEngineInterface $pacingEngine,
-        private MessageBusInterface $messageBus,
+        private TripAnalysisDispatcher $analysisDispatcher,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
     }
@@ -105,18 +93,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
                 ),
             ]);
 
-            $this->messageBus->dispatch(new ScanPois($tripId, $generation));
-            $this->messageBus->dispatch(new ScanAccommodations($tripId, enabledAccommodationTypes: $request->enabledAccommodationTypes, generation: $generation));
-            $this->messageBus->dispatch(new AnalyzeTerrain($tripId, $generation));
-            $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
-            $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
-            $this->messageBus->dispatch(new CheckBikeShops($tripId, $generation));
-            $this->messageBus->dispatch(new CheckWaterPoints($tripId, $generation));
-            $this->messageBus->dispatch(new CheckHealthServices($tripId, $generation));
-            $this->messageBus->dispatch(new CheckCulturalPois($tripId, $generation));
-            $this->messageBus->dispatch(new CheckRailwayStations($tripId, $generation));
-            $this->messageBus->dispatch(new CheckBorderCrossing($tripId, $generation));
-            $this->messageBus->dispatch(new ScanEvents($tripId, $generation));
+            $this->analysisDispatcher->dispatch($tripId, $request, $generation);
         }, $generation);
     }
 
