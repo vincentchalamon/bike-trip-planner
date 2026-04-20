@@ -94,9 +94,18 @@ The handlers marked *(new)* do not exist yet and are introduced as part of imple
 | Step | Handler | Output |
 |------|---------|--------|
 | OSM scan (POIs, accommodations, bike shops, cemeteries) | `ScanAllOsmDataHandler` | Redis cache |
+| POI scan | `ScanPoisHandler` | Alert(s) |
 | Weather check | `FetchWeatherHandler` | Alert(s) |
 | Accommodation scan | `ScanAccommodationsHandler` | Alert(s) |
+| Terrain analysis | `AnalyzeTerrainHandler` | Alert(s) |
+| Wind analysis | `AnalyzeWindHandler` | Alert(s) |
+| Bike shop check | `CheckBikeShopsHandler` | Alert(s) |
+| Water point check | `CheckWaterPointsHandler` | Alert(s) |
 | Cultural POI scan | `CheckCulturalPoisHandler` | Alert(s) |
+| Railway station check | `CheckRailwayStationsHandler` | Alert(s) |
+| Health service check | `CheckHealthServicesHandler` | Alert(s) |
+| Border crossing check | `CheckBorderCrossingHandler` | Alert(s) |
+| Calendar check | `CheckCalendarHandler` | Alert(s) |
 | Event scan | `ScanEventsHandler` | Alert(s) |
 | Market scan | `ScanMarketsHandler` *(new)* | Alert(s) |
 | Wikidata enrichment | `EnrichWithWikidataHandler` *(new)* | Enriched POI data |
@@ -109,7 +118,7 @@ All enrichment handlers run in parallel via Symfony Messenger. Each handler call
 The existing `ComputationTracker` (backed by the PSR-6 `cache.trip_state` pool, itself wired on Redis) already coordinates completion. Its current public surface is:
 
 - `initializeComputations(string $tripId, array $computations): void` — seeds every expected `ComputationName` with status `pending` under cache key `trip.{tripId}.computation_status`.
-- `markRunning()` / `markDone()` / `markFailed()` / `resetComputation()` — atomic status transitions.
+- `markRunning()` / `markDone()` / `markFailed()` / `resetComputation()` — lifecycle status transitions (PSR-6 read-modify-write; not atomically safe under concurrent writes — see idempotency note below).
 - `isAllComplete(string $tripId): bool` — true when every tracked computation is in `done` or `failed`.
 
 For Phase 2 the contract is unchanged; only the expected set and the post-completion hook differ:
@@ -190,7 +199,7 @@ The frontend introduces a two-step flow:
 - **New API endpoint** — `POST /trips/{id}/analyze` must be added to the OpenAPI spec and the TypeScript client regenerated (`make typegen`).
 - **Two-step UX** — The user must click an extra button to trigger the full analysis. Acceptable as an intentional design choice; can be made automatic via a feature flag if UX testing shows friction.
 - **Additional cache and lock entries** — Each active trip during Phase 2 consumes a single status map at `trip.{tripId}.computation_status` (TTL 1800s) plus, briefly, one Symfony Lock key `trip.{tripId}.llama` (TTL 3600s). Both expire automatically; no manual cleanup required.
-- **`ComputationTracker` becomes a coordination point** — All Phase 2 handlers must call `markDone()` with the matching `ComputationName`. Forgetting to add a new handler to the initial expected set will prevent LLaMA from ever firing. This must be enforced by a test that cross-checks the registered handlers against the `ComputationName` enum.
+- **`ComputationTracker` becomes a coordination point** — All Phase 2 handlers must call `markDone()` with the matching `ComputationName`. The real risk is a `ComputationName` passed to `initializeComputations()` whose handler is never dispatched (e.g. conditionally skipped): it stays `pending` indefinitely and blocks `isAllComplete()` forever. Conversely, a handler not listed in the initial expected set self-registers its status key via `markRunning()`, which also blocks the gate until it completes — so a missing-from-init-but-dispatched handler does *not* cause a premature LLaMA dispatch, it just delays it. Both invariants must be enforced by a test that cross-checks the dispatched handlers against `initializeComputations()`.
 - **Second concurrency primitive** — The Symfony Lock introduces a second coordination mechanism alongside the PSR-6 cache. It is intentionally confined to the single `RunLlamaInferenceHandler` dispatch point; any future "fan-in → trigger once" case should reuse the same primitive rather than re-opening this question.
 
 ### Neutral
