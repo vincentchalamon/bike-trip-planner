@@ -694,7 +694,7 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 
 ### Recette Sprint 31
 
-- **Tests E2E :** `tests/recette/sprint-30.spec.ts`
+  - **Tests E2E :** `tests/recette/sprint-31.spec.ts`
 - **Checklist manuelle :**
   - [ ] Export FIT téléchargeable par étape
   - [ ] Flux OAuth Garmin Connect complet (via ngrok)
