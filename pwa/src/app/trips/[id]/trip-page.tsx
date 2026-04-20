@@ -142,6 +142,9 @@ function TripLoader({ tripId }: { tripId: string }) {
             sourceType: "persisted",
             title: data.title ?? null,
           });
+          // A persisted trip with stages has already gone through Phase 2,
+          // so bypass the Acte 1.5 preview gate and render the full view.
+          useUiStore.getState().setAnalysisStarted(true);
         }
 
         setIsLoaded(true);

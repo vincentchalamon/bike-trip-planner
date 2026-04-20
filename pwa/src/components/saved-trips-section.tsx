@@ -7,6 +7,7 @@ import "dayjs/locale/fr";
 import { WifiOff } from "lucide-react";
 import { useOfflineStore } from "@/store/offline-store";
 import { useTripStore } from "@/store/trip-store";
+import { useUiStore } from "@/store/ui-store";
 
 export function SavedTripsSection() {
   const t = useTranslations();
@@ -15,6 +16,7 @@ export function SavedTripsSection() {
   const loadSavedTrips = useOfflineStore((s) => s.loadSavedTrips);
   const isOnline = useOfflineStore((s) => s.isOnline);
   const loadFromSavedTrip = useTripStore((s) => s.loadFromSavedTrip);
+  const setAnalysisStarted = useUiStore((s) => s.setAnalysisStarted);
 
   useEffect(() => {
     void loadSavedTrips();
@@ -41,7 +43,12 @@ export function SavedTripsSection() {
               <button
                 type="button"
                 className="w-full text-left rounded-lg border bg-card px-4 py-3 shadow-sm hover:bg-accent/50 transition-colors cursor-pointer"
-                onClick={() => loadFromSavedTrip(trip)}
+                onClick={() => {
+                  loadFromSavedTrip(trip);
+                  // Saved trips are always fully analysed (persisted on
+                  // trip_complete), so bypass the Acte 1.5 preview gate.
+                  setAnalysisStarted(true);
+                }}
                 data-testid={`saved-trip-card-${trip.id}`}
               >
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
