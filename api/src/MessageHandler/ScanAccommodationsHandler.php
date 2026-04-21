@@ -52,7 +52,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         private HttpClientInterface $scraperClient,
         private WikidataEnricherInterface $wikidataEnricher,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
     }
 
     public function __invoke(ScanAccommodations $message): void

@@ -33,7 +33,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
     }
 
     public function __invoke(RecalculateStages $message): void
@@ -63,7 +63,18 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
             $affectedIndices = array_keys($stages);
         }
 
-        // Publish updated stages so the frontend refreshes immediately
+        // Mode 2 — inline modification (Act 3): emit one `stage_updated` event per
+        // affected stage so the frontend mutates the corresponding slice of its
+        // store without rebuilding the whole trip. Also publish the legacy
+        // `STAGES_COMPUTED` event so consumers still relying on the wholesale
+        // payload (progress bar, undo, offline snapshot) keep working until the
+        // downstream refactor (#323 / #325) removes it.
+        foreach ($affectedIndices as $idx) {
+            if (isset($stages[$idx])) {
+                $this->publisher->publishStageUpdated($tripId, $stages[$idx]);
+            }
+        }
+
         $this->publisher->publish($tripId, MercureEventType::STAGES_COMPUTED, [
             'stages' => array_map(
                 static fn (Stage $s): array => [

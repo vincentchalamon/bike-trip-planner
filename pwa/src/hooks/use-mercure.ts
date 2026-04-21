@@ -2,7 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { MercureClient } from "@/lib/mercure/client";
-import type { MercureEvent } from "@/lib/mercure/types";
+import type {
+  EnrichedStagePayload,
+  MercureEvent,
+} from "@/lib/mercure/types";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useOfflineStore } from "@/store/offline-store";
@@ -10,6 +13,7 @@ import type { SavedTrip } from "@/store/offline-store";
 import { reverseGeocode } from "@/lib/geocode/client";
 import { toast } from "sonner";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
+import type { StageData } from "@/lib/validation/schemas";
 
 const MERCURE_URL =
   process.env.NEXT_PUBLIC_MERCURE_URL ??
@@ -27,14 +31,17 @@ const MERCURE_URL =
  *
  * Event types handled:
  * - `route_parsed` — initial route metadata (distance, elevation, source)
- * - `stages_computed` — stage geometry and pacing (partial or full)
+ * - `stages_computed` — stage geometry and pacing (partial or full, legacy)
  * - `weather_fetched` — per-stage weather forecasts
  * - `pois_scanned` — points of interest with optional alerts
  * - `accommodations_found` — accommodation options per stage
  * - `events_found` — DataTourisme dated events per stage
  * - `supply_timeline` — clustered supply markers per stage (water + food POIs)
  * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` / `water_point_alerts` / `railway_station_alerts` / `health_service_alerts` / `border_crossing_alerts` — alert categories
- * - `trip_complete` — final computation status, stops processing spinner
+ * - `computation_step_completed` — Mode 1 progress tick (drives progress bar)
+ * - `trip_ready` — Mode 1 atomic enriched payload (final analysis swap)
+ * - `stage_updated` — Mode 2 per-stage update (inline modifications)
+ * - `trip_complete` — final computation status, stops processing spinner (legacy)
  * - `validation_error` / `computation_error` — error toasts and recovery
  */
 function dispatchEvent(event: MercureEvent): void {
@@ -435,6 +442,83 @@ function dispatchEvent(event: MercureEvent): void {
       }
       break;
 
+    case "computation_step_completed":
+      // Mode 1 — progress tick only. Drive the progress bar and do not
+      // mutate stage data (the final payload lands via `trip_ready`).
+      useUiStore.getState().setAnalysisProgress({
+        step: event.data.step,
+        category: event.data.category,
+        completed: event.data.completed,
+        total: event.data.total,
+      });
+      break;
+
+    case "trip_ready": {
+      // Mode 1 — atomic swap of the whole trip. We intentionally replace the
+      // stage array in a single mutation (instead of the legacy 10+ partial
+      // events) to avoid the cumulative layout shift observed in Acte 2.
+      const incomingStages = event.data.stages.map(enrichedPayloadToStageData);
+      store.applyTripReady(incomingStages);
+      store.setComputationStatus(event.data.computationStatus);
+      useUiStore.getState().setAnalysisProgress(null);
+      useUiStore.getState().setAnalysisStarted(true);
+      useUiStore.getState().setProcessing(false);
+      useUiStore.getState().setAccommodationScanning(false);
+
+      // Re-read the store to capture the freshly applied stages.
+      const snapshotStore = useTripStore.getState();
+
+      // Resolve labels for any stage that still lacks them.
+      const needsLabels = snapshotStore.stages
+        .map((s, i) => ({ s, i }))
+        .filter(({ s }) => s.startLabel === null || s.endLabel === null);
+      if (needsLabels.length > 0) {
+        resolveStageLabels(
+          needsLabels.map(({ s }) => s),
+          needsLabels.map(({ i }) => i),
+        );
+      }
+
+      // Persist completed trip to IndexedDB for offline consultation.
+      if (snapshotStore.trip) {
+        const snapshot: SavedTrip = {
+          id: snapshotStore.trip.id,
+          title: snapshotStore.trip.title,
+          sourceUrl: snapshotStore.trip.sourceUrl,
+          totalDistance: snapshotStore.totalDistance,
+          totalElevation: snapshotStore.totalElevation,
+          totalElevationLoss: snapshotStore.totalElevationLoss,
+          sourceType: snapshotStore.sourceType,
+          startDate: snapshotStore.startDate,
+          endDate: snapshotStore.endDate,
+          fatigueFactor: snapshotStore.fatigueFactor,
+          elevationPenalty: snapshotStore.elevationPenalty,
+          maxDistancePerDay: snapshotStore.maxDistancePerDay,
+          averageSpeed: snapshotStore.averageSpeed,
+          ebikeMode: snapshotStore.ebikeMode,
+          departureHour: snapshotStore.departureHour,
+          enabledAccommodationTypes: snapshotStore.enabledAccommodationTypes,
+          stages: snapshotStore.stages,
+          savedAt: new Date().toISOString(),
+        };
+        void useOfflineStore.getState().saveTrip(snapshot);
+      }
+      break;
+    }
+
+    case "stage_updated": {
+      // Mode 2 — per-stage update. Replace the single slice; preserved
+      // fields (labels, search radius) are handled by the store.
+      const incoming = enrichedPayloadToStageData(event.data.stage);
+      store.applyStageUpdate(event.data.stageIndex, incoming);
+      // Labels may have been wiped if endpoints moved — refresh if needed.
+      const updated = useTripStore.getState().stages[event.data.stageIndex];
+      if (updated && (updated.startLabel === null || updated.endLabel === null)) {
+        resolveStageLabels([updated], [event.data.stageIndex]);
+      }
+      break;
+    }
+
     case "validation_error":
       toast.error(event.data.message);
       useUiStore.getState().setProcessing(false);
@@ -449,6 +533,36 @@ function dispatchEvent(event: MercureEvent): void {
       }
       break;
   }
+}
+
+/**
+ * Converts an enriched stage wire payload (from `trip_ready` / `stage_updated`)
+ * into a {@link StageData} usable by the Zustand store. Supplies defaults for
+ * the client-only fields that the backend intentionally does not serialize
+ * (reverse-geocoded labels, accommodation search radius).
+ */
+function enrichedPayloadToStageData(payload: EnrichedStagePayload): StageData {
+  return {
+    dayNumber: payload.dayNumber,
+    distance: payload.distance,
+    elevation: payload.elevation,
+    elevationLoss: payload.elevationLoss,
+    startPoint: payload.startPoint,
+    endPoint: payload.endPoint,
+    geometry: payload.geometry,
+    label: payload.label,
+    startLabel: null,
+    endLabel: null,
+    weather: payload.weather,
+    alerts: payload.alerts,
+    pois: payload.pois,
+    accommodations: payload.accommodations,
+    selectedAccommodation: payload.selectedAccommodation,
+    accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
+    isRestDay: payload.isRestDay ?? false,
+    supplyTimeline: [],
+    events: payload.events,
+  };
 }
 
 async function resolveStageLabels(

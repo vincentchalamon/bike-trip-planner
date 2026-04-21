@@ -56,7 +56,7 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
         private TranslatorInterface $translator,
         private WikidataEnricherInterface $wikidataEnricher,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
     }
 
     public function __invoke(CheckCulturalPois $message): void

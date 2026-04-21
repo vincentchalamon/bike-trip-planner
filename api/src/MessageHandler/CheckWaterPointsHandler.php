@@ -40,7 +40,7 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
     }
 
     public function __invoke(CheckWaterPoints $message): void
