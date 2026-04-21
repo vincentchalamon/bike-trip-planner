@@ -346,6 +346,7 @@
     "gpxBrowse": "Browse",
     "gpxFileSize": "{size} MB",
     "gpxSizeLimit": "Max 30 MB",
+    "gpxFileTooLarge": "File too large (max 30 MB).",
     "aiTitle": "AI Assistant",
     "aiDescription": "Build a custom route",
     "aiSoon": "Coming soon",

@@ -346,6 +346,7 @@
     "gpxBrowse": "Parcourir",
     "gpxFileSize": "{size} Mo",
     "gpxSizeLimit": "Maximum 30 Mo",
+    "gpxFileTooLarge": "Fichier trop volumineux (max 30 Mo).",
     "aiTitle": "Assistant IA",
     "aiDescription": "Créez un itinéraire sur mesure",
     "aiSoon": "Bientôt disponible",

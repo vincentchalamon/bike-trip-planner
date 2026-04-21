@@ -4,6 +4,7 @@ import { mockAllApis } from "../../fixtures/api-mocks";
 import { injectSseEvent, injectSseSequence } from "../../fixtures/sse-helpers";
 import { fullTripEventSequence } from "../../fixtures/mock-data";
 import type { MercureEvent } from "../../../src/lib/mercure/types";
+import { expandLinkCard } from "../../fixtures/base.fixture";
 import {
   clearCurrentRecettePage,
   setCurrentRecettePage,
@@ -38,11 +39,7 @@ export const test = base.extend<RecetteFixtures>({
     await page.waitForLoadState("networkidle");
     // Auto-expand the Link card on the welcome screen — mirrors the mocked
     // base fixture so existing steps targeting `magic-link-input` work.
-    const linkCard = page.getByTestId("card-link");
-    if (await linkCard.isVisible().catch(() => false)) {
-      const expanded = await linkCard.getAttribute("data-expanded");
-      if (expanded !== "true") await linkCard.click();
-    }
+    await expandLinkCard(page);
     await use(page);
     clearCurrentRecettePage();
     resetAccommodationScanRequest();
@@ -65,11 +62,7 @@ export const test = base.extend<RecetteFixtures>({
       if (!(await input.isVisible().catch(() => false))) {
         await mockedPage.goto("/");
         await mockedPage.waitForLoadState("networkidle");
-        const linkCard = mockedPage.getByTestId("card-link");
-        if (await linkCard.isVisible().catch(() => false)) {
-          const expanded = await linkCard.getAttribute("data-expanded");
-          if (expanded !== "true") await linkCard.click();
-        }
+        await expandLinkCard(mockedPage);
       }
       await input.fill(url ?? "https://www.komoot.com/fr-fr/tour/2795080048");
       await input.press("Enter");

@@ -302,6 +302,7 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
 
   const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
     setIsDragOver(false);
   }, []);
 
@@ -424,7 +425,7 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
 
           {selectedFile && selectedFile.size > MAX_GPX_SIZE_BYTES && (
             <p className="text-sm text-destructive" role="alert">
-              {t("gpxSizeLimit")}
+              {t("gpxFileTooLarge")}
             </p>
           )}
         </div>
