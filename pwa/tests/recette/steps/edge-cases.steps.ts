@@ -5,6 +5,7 @@ import {
   stagesComputedEvent,
   tripCompleteEvent,
 } from "../../fixtures/mock-data";
+import { expandGpxCard, expandLinkCard } from "../../fixtures/base.fixture";
 
 /**
  * Expand the GPX card on the welcome screen and upload a file via the
@@ -15,14 +16,9 @@ async function uploadGpxFile(
   page: Page,
   file: { name: string; mimeType: string; buffer: Buffer },
 ): Promise<void> {
-  // The fixture auto-expands the Link card; collapse it first so the GPX
-  // card is visible again on the welcome grid.
-  const backButton = page.getByTestId("card-selection-back");
-  if (await backButton.isVisible().catch(() => false)) await backButton.click();
+  await expandGpxCard(page);
   const gpxCard = page.getByTestId("card-gpx");
   await expect(gpxCard).toBeVisible({ timeout: 5000 });
-  const expanded = await gpxCard.getAttribute("data-expanded");
-  if (expanded !== "true") await gpxCard.click();
   const fileInput = page.getByTestId("gpx-file-input");
   await fileInput.setInputFiles(file);
 }
@@ -415,13 +411,9 @@ Then("un message d'erreur est affiché", async ({ mockedPage }) => {
 });
 
 Then("l'application reste utilisable", async ({ mockedPage }) => {
-  // After an error the welcome screen remounts and the card selection
-  // collapses, so re-expand the Link card before asserting the URL input
-  // is usable again.
   const linkCard = mockedPage.getByTestId("card-link");
   await expect(linkCard).toBeVisible({ timeout: 5000 });
-  const expanded = await linkCard.getAttribute("data-expanded");
-  if (expanded !== "true") await linkCard.click();
+  await expandLinkCard(mockedPage);
   const input = mockedPage.getByTestId("magic-link-input");
   await expect(input).toBeVisible({ timeout: 5000 });
   await expect(input).toBeEnabled();
@@ -530,12 +522,9 @@ Then("a comprehensible error message is displayed", async ({ mockedPage }) => {
 });
 
 Then("the application remains usable", async ({ mockedPage }) => {
-  // See French counterpart above — the welcome screen remounts after an
-  // error, so re-expand the Link card before asserting the URL input.
   const linkCard = mockedPage.getByTestId("card-link");
   await expect(linkCard).toBeVisible({ timeout: 5000 });
-  const expanded = await linkCard.getAttribute("data-expanded");
-  if (expanded !== "true") await linkCard.click();
+  await expandLinkCard(mockedPage);
   const input = mockedPage.getByTestId("magic-link-input");
   await expect(input).toBeVisible({ timeout: 5000 });
   await expect(input).toBeEnabled();

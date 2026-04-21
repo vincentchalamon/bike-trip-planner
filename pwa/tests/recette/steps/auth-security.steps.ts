@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
 import { FAKE_JWT_TOKEN, mockAllApis } from "../../fixtures/api-mocks";
+import { expandLinkCard } from "../../fixtures/base.fixture";
 
 // ---------------------------------------------------------------------------
 // Auth & Security — FR + EN
@@ -166,10 +167,7 @@ async function gotoHomeWithLinkCardExpanded(
 ): Promise<void> {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  const linkCard = page.getByTestId("card-link");
-  if (!(await linkCard.isVisible().catch(() => false))) return;
-  const expanded = await linkCard.getAttribute("data-expanded");
-  if (expanded !== "true") await linkCard.click();
+  await expandLinkCard(page);
 }
 
 When("je navigue vers la page d'accueil", async ({ page }) => {
