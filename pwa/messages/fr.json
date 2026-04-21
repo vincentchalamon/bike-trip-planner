@@ -354,6 +354,25 @@
   "planner": {
     "closeTrip": "Fermer ce trip"
   },
+  "tripPreview": {
+    "title": "Aperçu de votre itinéraire",
+    "subtitle": "Vérifiez le tracé, les étapes et les paramètres avant de lancer l'analyse complète.",
+    "stagesHeading": "Découpage en étapes",
+    "stagesCount": "{count, plural, =0 {# étape} one {# étape} other {# étapes}}",
+    "stageDay": "Jour {day}",
+    "stageDistance": "{distance} km",
+    "stageElevation": "D+ {elevation} m",
+    "stageEndPoint": "Arrivée : {lat}°, {lon}°",
+    "launchAnalysis": "Lancer l'analyse",
+    "launchAnalysisAria": "Lancer l'analyse complète de l'itinéraire",
+    "launchingAnalysis": "Lancement de l'analyse...",
+    "modifyParameters": "Modifier les paramètres",
+    "modifyParametersAria": "Ouvrir le panneau de configuration pour modifier les paramètres",
+    "changeRoute": "Changer d'itinéraire",
+    "changeRouteAria": "Retourner à l'écran de préparation pour changer d'itinéraire",
+    "analysisLaunched": "Analyse lancée",
+    "analysisLaunchFailed": "Impossible de lancer l'analyse. Réessayez."
+  },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",

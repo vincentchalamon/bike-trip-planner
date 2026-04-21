@@ -398,6 +398,14 @@ function dispatchEvent(event: MercureEvent): void {
 
     case "trip_complete":
       store.setComputationStatus(event.data.computationStatus);
+      // Phase 2 completion implies the analysis was running; mark it
+      // explicitly BEFORE flipping isProcessing/accommodationScanning so
+      // any intermediate render observes { hasAnalysisStarted: true } and
+      // skips the "park on preview" branch of the stepper. Also covers
+      // legacy flows (tests, one-shot backends) where `trip_complete`
+      // fires before #322's split lands and `POST /trips/{id}/analyze`
+      // ever gets called.
+      useUiStore.getState().setAnalysisStarted(true);
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
 

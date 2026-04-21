@@ -333,6 +333,29 @@ export async function uploadGpxFile(
 }
 
 /**
+ * Trigger the full Phase 2 enrichment pipeline (POIs, weather, terrain, …)
+ * for a trip whose stages have been pre-computed during Phase 1.
+ *
+ * Returns `true` on HTTP 2xx; `false` otherwise.
+ *
+ * Note: until the OpenAPI schema is regenerated (after #322 lands on main),
+ * the `/trips/{id}/analyze` route is not yet exposed via `apiClient.POST`,
+ * so this function talks to the server through the lower-level {@link apiFetch}.
+ * Once the typegen catches up, this can be swapped for
+ * `apiClient.POST("/trips/{id}/analyze", { params: { path: { id } } })`.
+ */
+export async function launchTripAnalysis(tripId: string): Promise<boolean> {
+  const res = await apiFetch(`${API_URL}/trips/${tripId}/analyze`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/ld+json",
+      Accept: "application/ld+json",
+    },
+  });
+  return res.ok;
+}
+
+/**
  * Duplicate an existing trip (deep-clone with all stages and settings).
  * Returns the new trip id on success, null on failure.
  */
