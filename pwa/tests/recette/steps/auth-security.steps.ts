@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
 import { FAKE_JWT_TOKEN, mockAllApis } from "../../fixtures/api-mocks";
+import { expandLinkCard } from "../../fixtures/base.fixture";
 
 // ---------------------------------------------------------------------------
 // Auth & Security — FR + EN
@@ -161,12 +162,20 @@ When("I try to access my trips", async ({ page }) => {
 
 // --- Additional missing steps ---
 
-When("je navigue vers la page d'accueil", async ({ page }) => {
+async function gotoHomeWithLinkCardExpanded(
+  page: import("@playwright/test").Page,
+): Promise<void> {
   await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await expandLinkCard(page);
+}
+
+When("je navigue vers la page d'accueil", async ({ page }) => {
+  await gotoHomeWithLinkCardExpanded(page);
 });
 
 When("I navigate to the home page", async ({ page }) => {
-  await page.goto("/");
+  await gotoHomeWithLinkCardExpanded(page);
 });
 
 When("je clique sur le bouton de déconnexion", async ({ $test }) => {
@@ -243,13 +252,11 @@ Then("no PHP stack trace is shown to the user", async ({ mockedPage }) => {
 });
 
 When("je charge la page d'accueil", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await gotoHomeWithLinkCardExpanded(page);
 });
 
 When("I load the home page", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForLoadState("networkidle");
+  await gotoHomeWithLinkCardExpanded(page);
 });
 
 Then(

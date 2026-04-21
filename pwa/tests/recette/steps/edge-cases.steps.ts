@@ -1,10 +1,27 @@
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
 import {
   routeParsedEvent,
   stagesComputedEvent,
   tripCompleteEvent,
 } from "../../fixtures/mock-data";
+import { expandGpxCard, expandLinkCard } from "../../fixtures/base.fixture";
+
+/**
+ * Expand the GPX card on the welcome screen and upload a file via the
+ * hidden `<input type="file">`. Mirrors the user click-card → drop-zone flow
+ * without relying on the native filechooser event.
+ */
+async function uploadGpxFile(
+  page: Page,
+  file: { name: string; mimeType: string; buffer: Buffer },
+): Promise<void> {
+  await expandGpxCard(page);
+  const gpxCard = page.getByTestId("card-gpx");
+  await expect(gpxCard).toBeVisible({ timeout: 5000 });
+  const fileInput = page.getByTestId("gpx-file-input");
+  await fileInput.setInputFiles(file);
+}
 
 // ---------------------------------------------------------------------------
 // Edge cases and robustness — FR + EN
@@ -132,13 +149,7 @@ When("j'importe un fichier GPX vide", async ({ mockedPage }) => {
       }),
     });
   });
-  const gpxUpload = mockedPage.getByTestId("gpx-upload-button");
-  await expect(gpxUpload).toBeVisible({ timeout: 5000 });
-  const [fileChooser] = await Promise.all([
-    mockedPage.waitForEvent("filechooser"),
-    gpxUpload.click(),
-  ]);
-  await fileChooser.setFiles({
+  await uploadGpxFile(mockedPage, {
     name: "empty.gpx",
     mimeType: "application/gpx+xml",
     buffer: Buffer.from(
@@ -163,13 +174,7 @@ When(
         }),
       });
     });
-    const gpxUpload = mockedPage.getByTestId("gpx-upload-button");
-    await expect(gpxUpload).toBeVisible({ timeout: 5000 });
-    const [fileChooser] = await Promise.all([
-      mockedPage.waitForEvent("filechooser"),
-      gpxUpload.click(),
-    ]);
-    await fileChooser.setFiles({
+    await uploadGpxFile(mockedPage, {
       name: "single.gpx",
       mimeType: "application/gpx+xml",
       buffer: Buffer.from(
@@ -297,13 +302,7 @@ When("I import an empty GPX file", async ({ mockedPage }) => {
       }),
     });
   });
-  const gpxUpload = mockedPage.getByTestId("gpx-upload-button");
-  await expect(gpxUpload).toBeVisible({ timeout: 5000 });
-  const [fileChooser] = await Promise.all([
-    mockedPage.waitForEvent("filechooser"),
-    gpxUpload.click(),
-  ]);
-  await fileChooser.setFiles({
+  await uploadGpxFile(mockedPage, {
     name: "empty.gpx",
     mimeType: "application/gpx+xml",
     buffer: Buffer.from(
@@ -326,13 +325,7 @@ When("I import a GPX file with a single waypoint", async ({ mockedPage }) => {
       }),
     });
   });
-  const gpxUpload = mockedPage.getByTestId("gpx-upload-button");
-  await expect(gpxUpload).toBeVisible({ timeout: 5000 });
-  const [fileChooser] = await Promise.all([
-    mockedPage.waitForEvent("filechooser"),
-    gpxUpload.click(),
-  ]);
-  await fileChooser.setFiles({
+  await uploadGpxFile(mockedPage, {
     name: "single.gpx",
     mimeType: "application/gpx+xml",
     buffer: Buffer.from(
@@ -418,7 +411,9 @@ Then("un message d'erreur est affiché", async ({ mockedPage }) => {
 });
 
 Then("l'application reste utilisable", async ({ mockedPage }) => {
-  // Verify the magic link input is still functional
+  const linkCard = mockedPage.getByTestId("card-link");
+  await expect(linkCard).toBeVisible({ timeout: 5000 });
+  await expandLinkCard(mockedPage);
   const input = mockedPage.getByTestId("magic-link-input");
   await expect(input).toBeVisible({ timeout: 5000 });
   await expect(input).toBeEnabled();
@@ -527,6 +522,9 @@ Then("a comprehensible error message is displayed", async ({ mockedPage }) => {
 });
 
 Then("the application remains usable", async ({ mockedPage }) => {
+  const linkCard = mockedPage.getByTestId("card-link");
+  await expect(linkCard).toBeVisible({ timeout: 5000 });
+  await expandLinkCard(mockedPage);
   const input = mockedPage.getByTestId("magic-link-input");
   await expect(input).toBeVisible({ timeout: 5000 });
   await expect(input).toBeEnabled();

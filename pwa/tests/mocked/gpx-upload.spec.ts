@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/base.fixture";
+import { test, expect, expandGpxCard } from "../fixtures/base.fixture";
 import {
   routeParsedEvent,
   stagesComputedEvent,
@@ -35,6 +35,8 @@ test.describe("GPX upload flow", () => {
     mockedPage,
     injectSequence,
   }) => {
+    // Switch to the GPX card so the hidden file input is present
+    await expandGpxCard(mockedPage);
     // Upload a GPX file
     const fileInput = mockedPage.getByTestId("gpx-file-input");
     await fileInput.setInputFiles(GPX_FIXTURE);
@@ -84,6 +86,7 @@ test.describe("GPX upload flow", () => {
       });
     });
 
+    await expandGpxCard(mockedPage);
     const fileInput = mockedPage.getByTestId("gpx-file-input");
     await fileInput.setInputFiles(GPX_FIXTURE);
 
@@ -187,6 +190,7 @@ test.describe("GPX upload flow", () => {
       });
     });
 
+    await expandGpxCard(mockedPage);
     const fileInput = mockedPage.getByTestId("gpx-file-input");
     await fileInput.setInputFiles(GPX_FIXTURE);
 
@@ -211,6 +215,7 @@ test.describe("GPX upload flow", () => {
       });
     });
 
+    await expandGpxCard(mockedPage);
     const fileInput = mockedPage.getByTestId("gpx-file-input");
     await fileInput.setInputFiles(GPX_FIXTURE);
 

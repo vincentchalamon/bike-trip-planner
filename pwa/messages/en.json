@@ -4,11 +4,6 @@
     "description": "Plan your bikepacking trips with ease",
     "skipToTimeline": "Skip to timeline"
   },
-  "magicLink": {
-    "placeholder": "Enter your Komoot, Strava or RideWithGPS link here...",
-    "ariaLabel": "Route URL (Komoot, Strava, RideWithGPS)",
-    "invalidUrl": "Please enter a valid URL."
-  },
   "gpxUpload": {
     "ariaLabel": "Upload GPX file",
     "dropZone": "Drop your GPX file here"
@@ -332,6 +327,29 @@
     "analysis": "Analysis",
     "myTrip": "My Trip",
     "mobileLabel": "Step {current}/{total} — {stepName}"
+  },
+  "cardSelection": {
+    "heading": "How would you like to start?",
+    "linkTitle": "Link",
+    "linkDescription": "Komoot, Strava, RideWithGPS",
+    "linkInputLabel": "Route URL",
+    "linkInputPlaceholder": "Enter your Komoot, Strava or RideWithGPS link here...",
+    "linkInvalidUrl": "Please enter a valid URL.",
+    "linkUnsupportedSource": "Unsupported source. Use Komoot, Strava or RideWithGPS.",
+    "gpxTitle": "GPX file",
+    "gpxDescription": "Drag & drop your file",
+    "gpxBrowse": "Browse",
+    "gpxFileSize": "{size} MB",
+    "gpxSizeLimit": "Max 30 MB",
+    "gpxFileTooLarge": "File too large (max 30 MB).",
+    "gpxInvalidType": "Only .gpx files are accepted.",
+    "aiTitle": "AI Assistant",
+    "aiDescription": "Build a custom route",
+    "aiSoon": "Coming soon",
+    "back": "Change method",
+    "ariaSelectLink": "Choose link input",
+    "ariaSelectGpx": "Choose GPX file input",
+    "ariaSelectAi": "AI Assistant — coming soon"
   },
   "planner": {
     "closeTrip": "Close this trip"

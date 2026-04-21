@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/base.fixture";
+import { test, expect, expandLinkCard } from "../fixtures/base.fixture";
 import {
   routeParsedEvent,
   stagesComputedEvent,
@@ -174,6 +174,7 @@ test.describe("Trip creation flow", () => {
     await mockedPage.goto("/?link=not-a-valid-url");
     // Invalid URL is silently ignored — no trip created
     await expect(mockedPage).toHaveURL("/");
+    await expandLinkCard(mockedPage);
     await expect(mockedPage.getByTestId("magic-link-input")).toBeVisible();
     await expect(
       mockedPage

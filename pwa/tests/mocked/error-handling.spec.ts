@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/base.fixture";
+import { test, expect, expandLinkCard } from "../fixtures/base.fixture";
 import {
   routeParsedEvent,
   stagesComputedEvent,
@@ -20,6 +20,7 @@ test.describe("Error handling", () => {
     });
     await page.goto("/");
     await page.waitForLoadState("networkidle");
+    await expandLinkCard(page);
     const input = page.getByTestId("magic-link-input");
     await input.fill("https://www.komoot.com/fr-fr/tour/12345");
     await input.press("Enter");
@@ -69,6 +70,7 @@ test.describe("Error handling", () => {
     await page.route("**/.well-known/mercure*", (route) => route.abort());
     await page.goto("/");
     await page.waitForLoadState("networkidle");
+    await expandLinkCard(page);
     const input = page.getByTestId("magic-link-input");
     await input.fill("https://www.komoot.com/fr-fr/tour/12345");
     await input.press("Enter");

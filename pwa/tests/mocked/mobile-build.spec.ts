@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures/base.fixture";
+import { test, expect, expandLinkCard } from "../fixtures/base.fixture";
 
 /**
  * Tests for the Capacitor / mobile-build configuration (issue #69).
@@ -61,6 +61,7 @@ test.describe("Mobile build config", () => {
     await mockAllApis(page);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
+    await expandLinkCard(page);
 
     const input = page.getByTestId("magic-link-input");
     await expect(input).toHaveAttribute(

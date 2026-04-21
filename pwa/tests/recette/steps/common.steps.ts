@@ -1,5 +1,6 @@
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
+import { expandLinkCard } from "../../fixtures/base.fixture";
 import {
   routeParsedEvent,
   stagesComputedEvent,
@@ -14,18 +15,25 @@ import { trackTripGpxDownload } from "../support/export-download-tracker";
 
 const SETTINGS_DIALOG_NAME = /Paramètres|Settings/i;
 
-async function clickSettingsOpenButton(
-  page: import("@playwright/test").Page,
-): Promise<void> {
+async function clickSettingsOpenButton(page: Page): Promise<void> {
   await page.getByTestId("config-open-button").click();
 }
 
-async function clickSettingsCloseButton(
-  page: import("@playwright/test").Page,
-): Promise<void> {
+async function clickSettingsCloseButton(page: Page): Promise<void> {
   const dialog = page.getByRole("dialog", { name: SETTINGS_DIALOG_NAME });
   await expect(dialog).toBeVisible({ timeout: 5000 });
   await dialog.locator("button").first().click();
+}
+
+/**
+ * Navigate to the welcome screen and re-expand the Link card so the
+ * magic-link-input is visible. Mirrors the auto-expand behaviour of the
+ * `mockedPage` fixture for steps that re-navigate after the fixture.
+ */
+async function gotoWelcomeWithLinkCardExpanded(page: Page): Promise<void> {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await expandLinkCard(page);
 }
 
 // ---------------------------------------------------------------------------
@@ -33,13 +41,11 @@ async function clickSettingsCloseButton(
 // ---------------------------------------------------------------------------
 
 Given("je suis sur la page d'accueil", async ({ mockedPage }) => {
-  await mockedPage.goto("/");
-  await mockedPage.waitForLoadState("networkidle");
+  await gotoWelcomeWithLinkCardExpanded(mockedPage);
 });
 
 Given("I am on the home page", async ({ mockedPage }) => {
-  await mockedPage.goto("/");
-  await mockedPage.waitForLoadState("networkidle");
+  await gotoWelcomeWithLinkCardExpanded(mockedPage);
 });
 
 Given("je ne suis pas connecté", async ({ page }) => {
@@ -58,10 +64,12 @@ Given("I am not logged in", async ({ page }) => {
 
 When("je navigue vers {string}", async ({ page }, path: string) => {
   await page.goto(path);
+  await expandLinkCard(page);
 });
 
 When("I navigate to {string}", async ({ page }, path: string) => {
   await page.goto(path);
+  await expandLinkCard(page);
 });
 
 When("je recharge la page", async ({ page }) => {
@@ -460,15 +468,15 @@ Then("I no longer see the error message", async ({ mockedPage }) => {
 Given(
   "j'utilise l'application sur un appareil mobile",
   async ({ mockedPage }) => {
-    // Handled by viewport in project config
-    await mockedPage.goto("/");
-    await mockedPage.waitForLoadState("networkidle");
+    // Viewport handled by Playwright project config; re-expand the Link card
+    // after the navigation so the URL input stays accessible for subsequent
+    // steps (e.g. the offline-disabled input assertions).
+    await gotoWelcomeWithLinkCardExpanded(mockedPage);
   },
 );
 
 Given("I am using the app on a mobile device", async ({ mockedPage }) => {
-  await mockedPage.goto("/");
-  await mockedPage.waitForLoadState("networkidle");
+  await gotoWelcomeWithLinkCardExpanded(mockedPage);
 });
 
 When("la connexion internet est perdue", async ({ mockedPage }) => {
@@ -543,11 +551,23 @@ Then("the magic link input field is disabled", async ({ mockedPage }) => {
 });
 
 Then("le bouton d'import GPX est désactivé", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("gpx-upload-button")).toBeDisabled();
+  // The GPX card is only visible when no card is expanded. If the Link card
+  // was auto-expanded by the fixture, collapse it back to the grid view.
+  const backButton = mockedPage.getByTestId("card-selection-back");
+  if (await backButton.isVisible().catch(() => false)) await backButton.click();
+  await expect(mockedPage.getByTestId("card-gpx")).toHaveAttribute(
+    "data-disabled",
+    "true",
+  );
 });
 
 Then("the GPX upload button is disabled", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("gpx-upload-button")).toBeDisabled();
+  const backButton = mockedPage.getByTestId("card-selection-back");
+  if (await backButton.isVisible().catch(() => false)) await backButton.click();
+  await expect(mockedPage.getByTestId("card-gpx")).toHaveAttribute(
+    "data-disabled",
+    "true",
+  );
 });
 
 Then("le champ de saisie est à nouveau actif", async ({ mockedPage }) => {

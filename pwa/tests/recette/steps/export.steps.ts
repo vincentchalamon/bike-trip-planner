@@ -15,6 +15,7 @@ import {
   trackStageGpxDownload,
 } from "../support/export-download-tracker";
 import { getCurrentRecettePage } from "../support/current-recette-page";
+import { expandLinkCard } from "../../fixtures/base.fixture";
 
 // ---------------------------------------------------------------------------
 // Export GPX and FIT — FR + EN
@@ -26,6 +27,7 @@ async function submitDefaultTripUrl(): Promise<void> {
   if (!(await input.isVisible().catch(() => false))) {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
+    await expandLinkCard(page);
   }
   await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
   await input.press("Enter");

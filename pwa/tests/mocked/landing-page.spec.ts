@@ -111,7 +111,7 @@ test.describe("Landing page", () => {
       await page.goto("/trips/new");
       await page.waitForLoadState("networkidle");
       // Authenticated users on /trips/new should see the trip planner
-      await expect(page.getByTestId("magic-link-input")).toBeVisible({
+      await expect(page.getByTestId("card-selection")).toBeVisible({
         timeout: 5000,
       });
     });
@@ -164,7 +164,7 @@ test.describe("Landing page", () => {
       // navigate to. This confirms the CtaButton's isAuthenticated → /trips/new
       // branch is the correct target.
       await expect(page.getByTestId("landing-page")).not.toBeVisible();
-      await expect(page.getByTestId("magic-link-input")).toBeVisible({
+      await expect(page.getByTestId("card-selection")).toBeVisible({
         timeout: 5000,
       });
     });

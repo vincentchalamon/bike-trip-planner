@@ -5,8 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Settings, HelpCircle, Loader2, X, Share2, Map } from "lucide-react";
-import { MagicLinkInput } from "@/components/magic-link-input";
-import { GpxUploadButton } from "@/components/gpx-upload-button";
+import { CardSelection } from "@/components/card-selection";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
 import { TripLockedBanner } from "@/components/trip-locked-banner";
 import { TripSummary } from "@/components/trip-summary";
@@ -360,19 +359,11 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
         {/* === State 1: Welcome (no trip, not processing) === */}
         {isWelcome && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
-            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2 w-full max-w-2xl">
-              <div className="flex-1 min-w-0">
-                <MagicLinkInput
-                  onSubmit={handleMagicLink}
-                  isProcessing={false}
-                  disabled={!isOnline}
-                />
-              </div>
-              <GpxUploadButton
-                onUpload={handleGpxUpload}
-                disabled={!isOnline}
-              />
-            </div>
+            <CardSelection
+              onSubmitUrl={handleMagicLink}
+              onUploadFile={handleGpxUpload}
+              disabled={!isOnline}
+            />
             {actionButtons}
             <RecentTrips />
             <SavedTripsSection />
