@@ -119,10 +119,13 @@ export function TripPreview({
           onTitleChange={onTitleChange}
           showTitleSuggestion={showTitleSuggestion}
         />
-        <p
-          className="mt-2 text-sm text-muted-foreground"
+        <h2
           id="trip-preview-heading"
+          className="text-lg font-semibold"
         >
+          {t("title")}
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
           {t("subtitle")}
         </p>
       </div>

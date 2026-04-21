@@ -169,4 +169,21 @@ test.describe("Trip preview — actions", () => {
     ).toBeVisible({ timeout: 5000 });
     await expect(mockedPage.getByTestId("trip-preview")).toBeVisible();
   });
+
+  test("close button resets the trip and returns to Acte 1", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await enterPreviewState(submitUrl, injectEvent, mockedPage);
+
+    await mockedPage.getByTestId("close-trip-button-preview").click();
+
+    await expect(mockedPage.getByTestId("card-selection")).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(
+      mockedPage.getByTestId("stepper-step-preparation"),
+    ).toHaveAttribute("aria-current", "step", { timeout: 5000 });
+  });
 });
