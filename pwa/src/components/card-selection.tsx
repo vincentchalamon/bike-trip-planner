@@ -434,11 +434,12 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
               {t("gpxFileTooLarge")}
             </p>
           )}
-          {selectedFile && !selectedFile.name.toLowerCase().endsWith(".gpx") && (
-            <p className="text-sm text-destructive" role="alert">
-              {t("gpxInvalidType")}
-            </p>
-          )}
+          {selectedFile &&
+            !selectedFile.name.toLowerCase().endsWith(".gpx") && (
+              <p className="text-sm text-destructive" role="alert">
+                {t("gpxInvalidType")}
+              </p>
+            )}
         </div>
       )}
     </CardShell>
