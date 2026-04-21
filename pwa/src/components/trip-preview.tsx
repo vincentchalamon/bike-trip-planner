@@ -165,12 +165,12 @@ export function TripPreview({
         data-testid="trip-preview-stages"
       >
         <div className="flex items-baseline justify-between">
-          <h2
+          <h3
             id="trip-preview-stages-heading"
             className="text-lg font-semibold"
           >
             {t("stagesHeading")}
-          </h2>
+          </h3>
           <span
             className="text-sm text-muted-foreground"
             data-testid="trip-preview-stages-count"
