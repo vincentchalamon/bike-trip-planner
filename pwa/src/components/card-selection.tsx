@@ -283,8 +283,11 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file && file.name.toLowerCase().endsWith(".gpx"))
+      if (file && !file.name.toLowerCase().endsWith(".gpx")) {
+        setSelectedFile(file);
+      } else if (file) {
         void handleFile(file);
+      }
       if (fileInputRef.current) fileInputRef.current.value = "";
     },
     [handleFile],
@@ -313,7 +316,10 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
       if (disabled) return;
       const file = e.dataTransfer?.files[0];
       if (!file) return;
-      if (!file.name.toLowerCase().endsWith(".gpx")) return;
+      if (!file.name.toLowerCase().endsWith(".gpx")) {
+        setSelectedFile(file);
+        return;
+      }
       void handleFile(file);
     },
     [disabled, handleFile],
@@ -426,6 +432,11 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
           {selectedFile && selectedFile.size > MAX_GPX_SIZE_BYTES && (
             <p className="text-sm text-destructive" role="alert">
               {t("gpxFileTooLarge")}
+            </p>
+          )}
+          {selectedFile && !selectedFile.name.toLowerCase().endsWith(".gpx") && (
+            <p className="text-sm text-destructive" role="alert">
+              {t("gpxInvalidType")}
             </p>
           )}
         </div>

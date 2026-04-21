@@ -4,11 +4,6 @@
     "description": "Plan your bikepacking trips with ease",
     "skipToTimeline": "Skip to timeline"
   },
-  "magicLink": {
-    "placeholder": "Enter your Komoot, Strava or RideWithGPS link here...",
-    "ariaLabel": "Route URL (Komoot, Strava, RideWithGPS)",
-    "invalidUrl": "Please enter a valid URL."
-  },
   "gpxUpload": {
     "ariaLabel": "Upload GPX file",
     "dropZone": "Drop your GPX file here"
@@ -347,6 +342,7 @@
     "gpxFileSize": "{size} MB",
     "gpxSizeLimit": "Max 30 MB",
     "gpxFileTooLarge": "File too large (max 30 MB).",
+    "gpxInvalidType": "Only .gpx files are accepted.",
     "aiTitle": "AI Assistant",
     "aiDescription": "Build a custom route",
     "aiSoon": "Coming soon",

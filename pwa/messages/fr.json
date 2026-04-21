@@ -4,11 +4,6 @@
     "description": "Planifiez vos voyages bikepacking facilement",
     "skipToTimeline": "Aller à la timeline"
   },
-  "magicLink": {
-    "placeholder": "Collez votre lien Komoot, Strava ou RideWithGPS ici...",
-    "ariaLabel": "URL de route (Komoot, Strava, RideWithGPS)",
-    "invalidUrl": "Veuillez entrer une URL valide."
-  },
   "gpxUpload": {
     "ariaLabel": "Importer un fichier GPX",
     "dropZone": "Déposez votre fichier GPX ici"
@@ -347,6 +342,7 @@
     "gpxFileSize": "{size} Mo",
     "gpxSizeLimit": "Maximum 30 Mo",
     "gpxFileTooLarge": "Fichier trop volumineux (max 30 Mo).",
+    "gpxInvalidType": "Seuls les fichiers .gpx sont acceptés.",
     "aiTitle": "Assistant IA",
     "aiDescription": "Créez un itinéraire sur mesure",
     "aiSoon": "Bientôt disponible",
