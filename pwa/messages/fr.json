@@ -328,6 +328,38 @@
     "myTrip": "Mon voyage",
     "mobileLabel": "Étape {current}/{total} — {stepName}"
   },
+  "processingProgress": {
+    "subtitle": "Analyse en cours… cela peut prendre quelques minutes.",
+    "progressLabel": "Progression globale",
+    "progressPercent": "{percent}%",
+    "failureMessage": "Échec : {message}",
+    "categories": {
+      "terrain_security": {
+        "label": "Terrain & Sécurité",
+        "description": "Surface, trafic, pentes, continuité"
+      },
+      "supply": {
+        "label": "Ravitaillement",
+        "description": "Points d'eau, commerces"
+      },
+      "accommodations": {
+        "label": "Hébergements",
+        "description": "Campings, gîtes, hôtels"
+      },
+      "weather": {
+        "label": "Météo & Conditions",
+        "description": "Prévisions, vent, coucher de soleil"
+      },
+      "services": {
+        "label": "Services",
+        "description": "Magasins vélo, réparateurs"
+      },
+      "ai": {
+        "label": "Analyse IA",
+        "description": "Synthèse narrative du voyage"
+      }
+    }
+  },
   "cardSelection": {
     "heading": "Comment souhaitez-vous commencer ?",
     "linkTitle": "Lien",

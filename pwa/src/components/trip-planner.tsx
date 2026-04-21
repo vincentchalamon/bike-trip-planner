@@ -9,6 +9,7 @@ import { CardSelection } from "@/components/card-selection";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
 import { TripLockedBanner } from "@/components/trip-locked-banner";
 import { TripPreview } from "@/components/trip-preview";
+import { ProcessingProgress } from "@/components/processing-progress";
 import { TripSummary } from "@/components/trip-summary";
 import { TripHeader } from "@/components/trip-header";
 import { TripDownloads } from "@/components/trip-downloads";
@@ -318,6 +319,12 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const isLoading = !trip && isProcessing;
   const isPreview =
     !!trip && !isProcessing && activeStages.length > 0 && !hasAnalysisStarted;
+  // Acte 2 — narrative progress screen. Active once the user has explicitly
+  // launched the Phase 2 enrichment (`hasAnalysisStarted`) and the backend
+  // is still crunching (`isProcessing`). `trip_ready` flips both flags and
+  // transitions us out into Acte 3.
+  const isAnalysing =
+    !!trip && isProcessing && hasAnalysisStarted && activeStages.length > 0;
   const clearTripAndReset = useCallback(() => {
     clearTrip();
     useUiStore.getState().setProcessing(false);
@@ -494,9 +501,39 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
           </>
         )}
 
+        {/* === State 3a-bis: Acte 2 — narrative progress screen
+             (processing + analysis launched, before trip_ready). === */}
+        {isAnalysing && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-4 md:right-6 h-8 w-8 z-10 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                if (onClose) {
+                  onClose();
+                } else {
+                  clearTripAndReset();
+                  router.push("/");
+                }
+              }}
+              title={t("planner.closeTrip")}
+              aria-label={t("planner.closeTrip")}
+              data-testid="close-trip-button-analysing"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+
+            <ProcessingProgress
+              title={trip?.title ?? ""}
+              onTitleChange={handleTitleChange}
+            />
+          </>
+        )}
+
         {/* === State 3b: Trip loaded — full view (shown once the user
              has launched the Phase 2 analysis via the preview CTA). === */}
-        {trip && !isPreview && (
+        {trip && !isPreview && !isAnalysing && (
           <>
             {/* Close button — top-right corner */}
             <Button

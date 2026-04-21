@@ -448,6 +448,9 @@ function dispatchEvent(event: MercureEvent): void {
         completed: event.data.completed,
         total: event.data.total,
       });
+      // Record the step as completed so the Acte 2 narrative screen can
+      // aggregate per-category status (see ProcessingProgress).
+      useUiStore.getState().recordAnalysisStep(event.data.step);
       break;
 
     case "trip_ready": {
@@ -527,6 +530,11 @@ function dispatchEvent(event: MercureEvent): void {
 
     case "computation_error":
       toast.error(`Computation failed: ${event.data.message}`);
+      // Surface the failure on the Acte 2 narrative screen so the user
+      // sees which step went wrong.
+      useUiStore
+        .getState()
+        .failAnalysisStep(event.data.computation, event.data.message);
       if (!event.data.retryable) {
         useUiStore.getState().setProcessing(false);
         useUiStore.getState().setAccommodationScanning(false);

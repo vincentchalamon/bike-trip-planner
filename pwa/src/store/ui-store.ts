@@ -74,6 +74,30 @@ interface UiState {
     completed: number;
     total: number;
   } | null;
+  /**
+   * Per-step progress state for Acte 2 (narrative progress screen).
+   *
+   * Keyed by the backend `ComputationName::value` emitted in
+   * `computation_step_completed` events (e.g. "terrain", "water_points",
+   * "bike_shops", "accommodations", …). Statuses:
+   *   pending → in_progress → done | failed
+   *
+   * The narrative screen groups these steps into user-facing categories
+   * (Terrain, Ravitaillement, Hébergements, Météo, Services, AI). See
+   * `components/processing-progress.tsx` for the mapping.
+   *
+   * `in_progress` is a transient state: the backend only emits a single
+   * event *when a step completes*, so we track "seen" steps as done and
+   * use the latest `analysisProgress.step` to highlight the currently
+   * running step.
+   */
+  analysisStepStates: Record<
+    string,
+    {
+      status: "done" | "failed";
+      error: string | null;
+    }
+  >;
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -115,6 +139,12 @@ interface UiState {
       total: number;
     } | null,
   ) => void;
+  /** Mark a step as completed (from a `computation_step_completed` event). */
+  recordAnalysisStep: (step: string) => void;
+  /** Mark a step as failed with a human-readable error message. */
+  failAnalysisStep: (step: string, message: string) => void;
+  /** Reset all step statuses (called on trip clear). */
+  resetAnalysisSteps: () => void;
 }
 
 /**
@@ -162,6 +192,7 @@ export const useUiStore = create<UiState>()(
     completedSteps: new Set<StepId>(),
     hasAnalysisStarted: false,
     analysisProgress: null,
+    analysisStepStates: {},
 
     setProcessing: (value) =>
       set((state) => {
@@ -258,6 +289,7 @@ export const useUiStore = create<UiState>()(
         state.completedSteps = new Set<StepId>();
         state.hasAnalysisStarted = false;
         state.analysisProgress = null;
+        state.analysisStepStates = {};
       }),
 
     setAnalysisStarted: (value) =>
@@ -268,6 +300,28 @@ export const useUiStore = create<UiState>()(
     setAnalysisProgress: (progress) =>
       set((state) => {
         state.analysisProgress = progress;
+      }),
+
+    recordAnalysisStep: (step) =>
+      set((state) => {
+        const current = state.analysisStepStates[step];
+        // Once a step has failed, a subsequent completion tick should not
+        // silently flip it back to done — keep the error surface visible.
+        if (current?.status === "failed") return;
+        state.analysisStepStates[step] = { status: "done", error: null };
+      }),
+
+    failAnalysisStep: (step, message) =>
+      set((state) => {
+        state.analysisStepStates[step] = {
+          status: "failed",
+          error: message,
+        };
+      }),
+
+    resetAnalysisSteps: () =>
+      set((state) => {
+        state.analysisStepStates = {};
       }),
   })),
 );
