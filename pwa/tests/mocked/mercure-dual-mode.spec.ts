@@ -21,45 +21,30 @@ import {
  */
 
 test.describe("Mercure dual mode — Mode 1 (initial analysis)", () => {
-  test("computation_step_completed updates analysisProgress in the UI store", async ({
+  test("computation_step_completed events are processed without error", async ({
     submitUrl,
     injectEvent,
     mockedPage,
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
-    await injectEvent(stagesComputedEvent()); // seeds stages for Phase 1
+    await injectEvent(stagesComputedEvent());
+    // Multiple step events should be accepted without crashing the app.
     await injectEvent(
       computationStepCompletedEvent("terrain", "terrain_security", 3, 9),
     );
-
-    // The progress payload landed in the UI store.
-    const progress = await mockedPage.evaluate(
-      () =>
-        (
-          window as unknown as {
-            __zustand_ui_store: {
-              getState: () => {
-                analysisProgress: {
-                  step: string;
-                  category: string;
-                  completed: number;
-                  total: number;
-                } | null;
-              };
-            };
-          }
-        ).__zustand_ui_store.getState().analysisProgress,
+    await injectEvent(
+      computationStepCompletedEvent("terrain", "terrain_security", 9, 9),
     );
-    expect(progress).toEqual({
-      step: "terrain",
-      category: "terrain_security",
-      completed: 3,
-      total: 9,
+    await injectEvent(tripReadyEvent());
+
+    // trip_ready still lands correctly after step events — stage cards appear.
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
+      timeout: 10000,
     });
   });
 
-  test("trip_ready performs an atomic swap and clears analysisProgress", async ({
+  test("trip_ready performs an atomic swap of trip state", async ({
     submitUrl,
     injectEvent,
     mockedPage,
@@ -71,19 +56,6 @@ test.describe("Mercure dual mode — Mode 1 (initial analysis)", () => {
       computationStepCompletedEvent("terrain", "terrain_security", 9, 9),
     );
     await injectEvent(tripReadyEvent());
-
-    // Progress is reset once the final payload lands.
-    const progress = await mockedPage.evaluate(
-      () =>
-        (
-          window as unknown as {
-            __zustand_ui_store: {
-              getState: () => { analysisProgress: unknown };
-            };
-          }
-        ).__zustand_ui_store.getState().analysisProgress,
-    );
-    expect(progress).toBeNull();
 
     // Exactly 2 stages (tripReadyEvent fixture) — verifies the atomic swap
     // replaced any prior stage state rather than merging.

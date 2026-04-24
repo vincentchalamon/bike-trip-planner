@@ -22,7 +22,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
     {
         $update = new Update(
             topics: [\sprintf('/trips/%s', $tripId)],
-            data: json_encode(['type' => $type->value, 'data' => $data], \JSON_THROW_ON_ERROR),
+            data: json_encode(['type' => $type->value, 'data' => $data], \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION),
             private: true,
         );
 
