@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { StageLocations } from "@/components/stage-locations";
 import { StageMetadata } from "@/components/stage-metadata";
-import { AlertList } from "@/components/alert-list";
+import { StageAlerts } from "@/components/stage-alerts";
 import { AccommodationPanel } from "@/components/accommodation-panel";
 import { EventsPanel } from "@/components/events-panel";
 import { StageDownloads } from "@/components/stage-downloads";
@@ -189,7 +189,7 @@ export function StageCard({
         {/* Alerts */}
         {stage.alerts.length > 0 && (
           <div className="mt-3">
-            <AlertList
+            <StageAlerts
               alerts={stage.alerts}
               onAddPoiWaypoint={onAddPoiWaypoint}
             />

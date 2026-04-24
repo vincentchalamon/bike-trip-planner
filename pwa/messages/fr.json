@@ -244,6 +244,11 @@
     "navigateToCrossing": "Aller au passage frontière",
     "free": "Entrée gratuite"
   },
+  "stageAlerts": {
+    "title": "{count, plural, one {# alerte} other {# alertes}}",
+    "showMore": "Voir {count} {count, plural, one {autre alerte} other {autres alertes}}",
+    "showLess": "Voir moins d'alertes"
+  },
   "onboarding": {
     "nextBtn": "Suivant",
     "prevBtn": "Précédent",
