@@ -410,6 +410,7 @@ function dispatchEvent(event: MercureEvent): void {
       // fires before #322's split lands and `POST /trips/{id}/analyze`
       // ever gets called.
       useUiStore.getState().setAnalysisStarted(true);
+      useUiStore.getState().setAnalysisPhaseActive(false);
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
 
@@ -462,6 +463,7 @@ function dispatchEvent(event: MercureEvent): void {
       store.setComputationStatus(event.data.computationStatus);
       useUiStore.getState().setAnalysisProgress(null);
       useUiStore.getState().setAnalysisStarted(true);
+      useUiStore.getState().setAnalysisPhaseActive(false);
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
 
