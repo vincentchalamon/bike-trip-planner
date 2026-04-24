@@ -165,25 +165,6 @@ function tripReadyWithThreeAlertsEvent(): MercureEvent {
   };
 }
 
-/**
- * Drive the app into Acte 3 via the analysis-started gate → trip_ready flow.
- */
-async function enterActe3ViaAnalysis(
-  submitUrl: () => Promise<void>,
-  injectEvent: (event: MercureEvent) => Promise<void>,
-  tripReadyFn: () => MercureEvent,
-): Promise<void> {
-  await submitUrl();
-  await injectEvent(routeParsedEvent());
-  await injectEvent(stagesComputedEvent());
-  // Simulate user clicking "Lancer l'analyse"
-  await injectEvent({
-    type: "trip_complete" as const,
-    data: { computationStatus: { route: "done", stages: "done" } },
-  });
-  await injectEvent(tripReadyFn());
-}
-
 // ---------------------------------------------------------------------------
 // Severity sorting
 // ---------------------------------------------------------------------------

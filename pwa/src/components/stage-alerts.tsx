@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AlertList } from "@/components/alert-list";
@@ -40,7 +40,7 @@ export function StageAlerts({ alerts, onAddPoiWaypoint }: StageAlertsProps) {
 
   if (alerts.length === 0) return null;
 
-  const sorted = sortBySeverity(alerts);
+  const sorted = useMemo(() => sortBySeverity(alerts), [alerts]);
   const visible = showAll ? sorted : sorted.slice(0, INITIAL_VISIBLE_COUNT);
   const hiddenCount = sorted.length - INITIAL_VISIBLE_COUNT;
 

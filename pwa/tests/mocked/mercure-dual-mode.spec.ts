@@ -42,6 +42,9 @@ test.describe("Mercure dual mode — Mode 1 (initial analysis)", () => {
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
       timeout: 10000,
     });
+
+    // analysisProgress is cleared on trip_ready — progress screen must be gone.
+    await expect(mockedPage.getByTestId("processing-progress")).toBeHidden();
   });
 
   test("trip_ready performs an atomic swap of trip state", async ({
