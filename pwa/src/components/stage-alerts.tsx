@@ -35,10 +35,7 @@ export function StageAlerts({ alerts, onAddPoiWaypoint }: StageAlertsProps) {
   const [expanded, setExpanded] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
-  const toggleExpanded = useCallback(
-    () => setExpanded((prev) => !prev),
-    [],
-  );
+  const toggleExpanded = useCallback(() => setExpanded((prev) => !prev), []);
   const toggleShowAll = useCallback(() => setShowAll((prev) => !prev), []);
 
   if (alerts.length === 0) return null;
@@ -61,9 +58,15 @@ export function StageAlerts({ alerts, onAddPoiWaypoint }: StageAlertsProps) {
           {t("title", { count: alerts.length })}
         </span>
         {expanded ? (
-          <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <ChevronUp
+            className="h-4 w-4 shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          />
         ) : (
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <ChevronDown
+            className="h-4 w-4 shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          />
         )}
       </button>
 
@@ -81,9 +84,7 @@ export function StageAlerts({ alerts, onAddPoiWaypoint }: StageAlertsProps) {
               onClick={toggleShowAll}
               data-testid="stage-alerts-show-more"
             >
-              {showAll
-                ? t("showLess")
-                : t("showMore", { count: hiddenCount })}
+              {showAll ? t("showLess") : t("showMore", { count: hiddenCount })}
             </Button>
           )}
         </div>

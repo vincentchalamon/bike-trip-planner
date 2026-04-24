@@ -42,11 +42,15 @@ function tripReadyWithManyAlertsEvent(): MercureEvent {
             {
               type: "nudge",
               message: "Nudge alert A",
+              lat: null,
+              lon: null,
               action: { kind: "dismiss", label: "OK", payload: {} },
             },
             {
               type: "warning",
               message: "Warning alert B",
+              lat: 44.6,
+              lon: 4.5,
               action: {
                 kind: "navigate",
                 label: "Zoom to location",
@@ -56,6 +60,8 @@ function tripReadyWithManyAlertsEvent(): MercureEvent {
             {
               type: "critical",
               message: "Critical alert C",
+              lat: null,
+              lon: null,
               action: {
                 kind: "auto_fix",
                 label: "Split stage",
@@ -65,19 +71,27 @@ function tripReadyWithManyAlertsEvent(): MercureEvent {
             {
               type: "warning",
               message: "Warning alert D",
+              lat: null,
+              lon: null,
               action: { kind: "detour", label: "Take detour", payload: {} },
             },
             {
               type: "nudge",
               message: "Nudge alert E",
+              lat: null,
+              lon: null,
             },
             {
               type: "critical",
               message: "Critical alert F",
+              lat: null,
+              lon: null,
             },
             {
               type: "warning",
               message: "Warning alert G",
+              lat: null,
+              lon: null,
             },
           ],
           pois: [],
@@ -119,11 +133,23 @@ function tripReadyWithThreeAlertsEvent(): MercureEvent {
           isRestDay: false,
           weather: null,
           alerts: [
-            { type: "critical", message: "Critical alert 1" },
-            { type: "warning", message: "Warning alert 2" },
+            {
+              type: "critical",
+              message: "Critical alert 1",
+              lat: null,
+              lon: null,
+            },
+            {
+              type: "warning",
+              message: "Warning alert 2",
+              lat: null,
+              lon: null,
+            },
             {
               type: "nudge",
               message: "Nudge alert 3",
+              lat: null,
+              lon: null,
               action: { kind: "dismiss", label: "Got it", payload: {} },
             },
           ],
@@ -181,7 +207,9 @@ test.describe("StageAlerts — severity sorting", () => {
     });
 
     // The first badge rendered inside the list should belong to the critical group.
-    const badges = stageCard.locator('[data-testid="stage-alerts-body"] .rounded-md');
+    const badges = stageCard.locator(
+      '[data-testid="stage-alerts-body"] .rounded-md',
+    );
     const firstBadgeText = await badges.first().textContent();
     // Critical alert C comes before Warning / Nudge
     expect(firstBadgeText).toContain("Critical alert C");
@@ -201,9 +229,9 @@ test.describe("StageAlerts — severity sorting", () => {
 
     const stageCard = mockedPage.getByTestId("stage-card-1");
     // 7 alerts total
-    await expect(
-      stageCard.getByTestId("stage-alerts-count"),
-    ).toContainText("7");
+    await expect(stageCard.getByTestId("stage-alerts-count")).toContainText(
+      "7",
+    );
   });
 });
 
@@ -230,12 +258,10 @@ test.describe("StageAlerts — pagination", () => {
     });
 
     // The "show more" button should be present (7 alerts − 3 visible = 4 hidden)
-    await expect(
-      stageCard.getByTestId("stage-alerts-show-more"),
-    ).toBeVisible();
-    await expect(
-      stageCard.getByTestId("stage-alerts-show-more"),
-    ).toContainText("4");
+    await expect(stageCard.getByTestId("stage-alerts-show-more")).toBeVisible();
+    await expect(stageCard.getByTestId("stage-alerts-show-more")).toContainText(
+      "4",
+    );
   });
 
   test("reveals all alerts after clicking 'Show more'", async ({
@@ -313,9 +339,10 @@ test.describe("StageAlerts — collapse/expand", () => {
     await expect(stageCard.getByTestId("stage-alerts-body")).toBeVisible({
       timeout: 5000,
     });
-    await expect(
-      stageCard.getByTestId("stage-alerts-toggle"),
-    ).toHaveAttribute("aria-expanded", "true");
+    await expect(stageCard.getByTestId("stage-alerts-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
   });
 
   test("clicking the toggle hides the alert body", async ({
@@ -338,12 +365,11 @@ test.describe("StageAlerts — collapse/expand", () => {
     // Collapse
     await stageCard.getByTestId("stage-alerts-toggle").click();
 
-    await expect(
-      stageCard.getByTestId("stage-alerts-body"),
-    ).not.toBeVisible();
-    await expect(
-      stageCard.getByTestId("stage-alerts-toggle"),
-    ).toHaveAttribute("aria-expanded", "false");
+    await expect(stageCard.getByTestId("stage-alerts-body")).not.toBeVisible();
+    await expect(stageCard.getByTestId("stage-alerts-toggle")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
   });
 
   test("clicking the toggle again re-expands the section", async ({
@@ -400,9 +426,7 @@ test.describe("StageAlerts — alert actions", () => {
     await stageCard.getByText("OK").first().click();
 
     // Dismissed alert should show reduced opacity marker
-    await expect(
-      stageCard.getByTestId("alert-dismissed"),
-    ).toBeVisible();
+    await expect(stageCard.getByTestId("alert-dismissed")).toBeVisible();
   });
 
   test("navigate action button is enabled and visible", async ({
