@@ -38,11 +38,11 @@ export function StageAlerts({ alerts, onAddPoiWaypoint }: StageAlertsProps) {
   const toggleExpanded = useCallback(() => setExpanded((prev) => !prev), []);
   const toggleShowAll = useCallback(() => setShowAll((prev) => !prev), []);
 
-  if (alerts.length === 0) return null;
-
   const sorted = useMemo(() => sortBySeverity(alerts), [alerts]);
   const visible = showAll ? sorted : sorted.slice(0, INITIAL_VISIBLE_COUNT);
   const hiddenCount = sorted.length - INITIAL_VISIBLE_COUNT;
+
+  if (alerts.length === 0) return null;
 
   return (
     <div data-testid="stage-alerts">
