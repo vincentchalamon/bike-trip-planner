@@ -52,11 +52,15 @@ test.describe("ProcessingProgress — display", () => {
     await expect(
       mockedPage.getByTestId("processing-category-terrain_security"),
     ).toBeVisible();
-    await expect(mockedPage.getByTestId("processing-category-supply")).toBeVisible();
+    await expect(
+      mockedPage.getByTestId("processing-category-supply"),
+    ).toBeVisible();
     await expect(
       mockedPage.getByTestId("processing-category-accommodations"),
     ).toBeVisible();
-    await expect(mockedPage.getByTestId("processing-category-weather")).toBeVisible();
+    await expect(
+      mockedPage.getByTestId("processing-category-weather"),
+    ).toBeVisible();
     await expect(
       mockedPage.getByTestId("processing-category-services"),
     ).toBeVisible();
@@ -68,9 +72,7 @@ test.describe("ProcessingProgress — display", () => {
     mockedPage,
   }) => {
     await enterAnalysingState(submitUrl, injectEvent, mockedPage);
-    await expect(
-      mockedPage.getByTestId("processing-category-ai"),
-    ).toBeHidden();
+    await expect(mockedPage.getByTestId("processing-category-ai")).toBeHidden();
   });
 
   test("AI category becomes visible when an ai_* step is reported", async ({
@@ -80,7 +82,9 @@ test.describe("ProcessingProgress — display", () => {
   }) => {
     await enterAnalysingState(submitUrl, injectEvent, mockedPage);
     // The AI category is hidden until at least one ai_* step fires.
-    await injectEvent(computationStepCompletedEvent("ai_stage", "route", 1, 16));
+    await injectEvent(
+      computationStepCompletedEvent("ai_stage", "route", 1, 16),
+    );
     await expect(
       mockedPage.getByTestId("processing-category-ai"),
     ).toBeVisible();
