@@ -177,7 +177,7 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| ✅ | Carte Leaflet interactive | Tuiles OSM, zoom, pan, markers. Sprint 7 #30 |
+| ✅ | Carte MapLibre GL interactive | Tuiles OSM, zoom, pan, markers. Sprint 7 #30 |
 | ✅ | Tracé coloré par jour | Polylines distinctes par étape |
 | ✅ | Markers numérotés fin d'étape | Pastilles colorées |
 | ✅ | Markers d'hébergements | 9 types distincts |
