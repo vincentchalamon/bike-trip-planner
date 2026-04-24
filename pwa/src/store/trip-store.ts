@@ -521,6 +521,10 @@ export const useTripStore = create<TripState>()(
               ? (prev.accommodationSearchRadiusKm ??
                 DEFAULT_ACCOMMODATION_RADIUS_KM)
               : DEFAULT_ACCOMMODATION_RADIUS_KM,
+            // supply_timeline events always precede trip_ready (terminal
+            // event), so the timeline already set in the store is current
+            // — preserve it rather than blanking it.
+            supplyTimeline: prev?.supplyTimeline ?? [],
           };
         });
       }),
@@ -549,6 +553,9 @@ export const useTripStore = create<TripState>()(
             ? (prev.accommodationSearchRadiusKm ??
               DEFAULT_ACCOMMODATION_RADIUS_KM)
             : DEFAULT_ACCOMMODATION_RADIUS_KM,
+          // Keep current supply timeline until the re-dispatched ScanPois
+          // handler delivers fresh data via a supply_timeline event.
+          supplyTimeline: prev.supplyTimeline,
         };
       }),
 

@@ -12,11 +12,6 @@ final readonly class RecalculateStages
      * @param bool      $skipGeographicScans   Skip ALL geographic scans (POIs, accommodations, bike shops, terrain).
      *                                         Takes precedence over $skipAccommodationScan: when true,
      *                                         $skipAccommodationScan is irrelevant.
-     * @param bool      $skipAiAnalysis        When true, cascading messages dispatched by the handler inherit
-     *                                         `skipAiAnalysis = true` so the LLaMA 8B overview pass is not
-     *                                         re-triggered by an inline modification (Mode 2). Defaults to true
-     *                                         for all recomputations since Mode 2 already issues STAGE_UPDATED
-     *                                         events instead of the full TRIP_READY cycle.
      */
     public function __construct(
         public string $tripId,
@@ -24,7 +19,6 @@ final readonly class RecalculateStages
         public bool $skipAccommodationScan = false,
         public bool $skipGeographicScans = false,
         public ?int $generation = null,
-        public bool $skipAiAnalysis = true,
     ) {
     }
 }
