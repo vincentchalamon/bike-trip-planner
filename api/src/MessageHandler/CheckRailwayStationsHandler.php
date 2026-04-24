@@ -45,7 +45,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
     }
 
     public function __invoke(CheckRailwayStations $message): void

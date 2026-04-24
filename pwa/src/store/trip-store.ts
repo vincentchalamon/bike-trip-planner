@@ -116,6 +116,22 @@ interface TripState {
       coordinates: { lat: number; lon: number; ele: number }[];
     },
   ) => void;
+  /**
+   * Mode 1 — Atomic replacement of the stage array when `trip_ready` arrives.
+   *
+   * Preserves fields that the backend never ships in the enriched payload
+   * (reverse-geocoded labels, accommodation search radius, locally-managed
+   * accommodation selections). Accommodations whose endpoints match are kept
+   * as-is so selection state is not lost across re-analyses.
+   */
+  applyTripReady: (stages: StageData[]) => void;
+  /**
+   * Mode 2 — Per-stage replacement when `stage_updated` arrives.
+   *
+   * Same preservation semantics as {@link applyTripReady} but for a single
+   * slice. No-op if the index is out of bounds (stale message).
+   */
+  applyStageUpdate: (stageIndex: number, stage: StageData) => void;
   clearTrip: () => void;
   /** Hydrate the trip store from a {@link SavedTrip} snapshot (offline consultation). */
   loadFromSavedTrip: (trip: SavedTrip) => void;
@@ -472,6 +488,75 @@ export const useTripStore = create<TripState>()(
         stage.distance = data.distance / 1000; // metres → km
         stage.elevation = data.elevationGain;
         stage.geometry = data.coordinates;
+      }),
+
+    applyTripReady: (stages) =>
+      set((state) => {
+        const existing = state.stages;
+        state.stages = stages.map((incoming, i) => {
+          const prev = existing[i];
+          const endMatch =
+            prev &&
+            prev.endPoint.lat === incoming.endPoint.lat &&
+            prev.endPoint.lon === incoming.endPoint.lon;
+          const startMatch =
+            prev &&
+            prev.startPoint.lat === incoming.startPoint.lat &&
+            prev.startPoint.lon === incoming.startPoint.lon;
+
+          return {
+            ...incoming,
+            // Preserve client-only reverse-geocoded labels when endpoints
+            // have not moved so we don't drop them on re-analysis.
+            startLabel: startMatch
+              ? (prev.startLabel ?? incoming.startLabel)
+              : incoming.startLabel,
+            endLabel: endMatch
+              ? (prev.endLabel ?? incoming.endLabel)
+              : incoming.endLabel,
+            // Accommodation search radius is a UI-only knob that never
+            // ships with the enriched payload — keep the user's setting
+            // when the stage endpoint is stable.
+            accommodationSearchRadiusKm: endMatch
+              ? (prev.accommodationSearchRadiusKm ??
+                DEFAULT_ACCOMMODATION_RADIUS_KM)
+              : DEFAULT_ACCOMMODATION_RADIUS_KM,
+            // supply_timeline events always precede trip_ready (terminal
+            // event), so the timeline already set in the store is current
+            // — preserve it rather than blanking it.
+            supplyTimeline: prev?.supplyTimeline ?? [],
+          };
+        });
+      }),
+
+    applyStageUpdate: (stageIndex, stage) =>
+      set((state) => {
+        const prev = state.stages[stageIndex];
+        if (!prev) return;
+
+        const endMatch =
+          prev.endPoint.lat === stage.endPoint.lat &&
+          prev.endPoint.lon === stage.endPoint.lon;
+        const startMatch =
+          prev.startPoint.lat === stage.startPoint.lat &&
+          prev.startPoint.lon === stage.startPoint.lon;
+
+        state.stages[stageIndex] = {
+          ...stage,
+          startLabel: startMatch
+            ? (prev.startLabel ?? stage.startLabel)
+            : stage.startLabel,
+          endLabel: endMatch
+            ? (prev.endLabel ?? stage.endLabel)
+            : stage.endLabel,
+          accommodationSearchRadiusKm: endMatch
+            ? (prev.accommodationSearchRadiusKm ??
+              DEFAULT_ACCOMMODATION_RADIUS_KM)
+            : DEFAULT_ACCOMMODATION_RADIUS_KM,
+          // Keep current supply timeline until the re-dispatched ScanPois
+          // handler delivers fresh data via a supply_timeline event.
+          supplyTimeline: prev.supplyTimeline,
+        };
       }),
 
     loadFromSavedTrip: (trip) => {

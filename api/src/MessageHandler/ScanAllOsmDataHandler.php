@@ -29,7 +29,7 @@ final readonly class ScanAllOsmDataHandler extends AbstractTripMessageHandler
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
     }
 
     public function __invoke(ScanAllOsmData $message): void

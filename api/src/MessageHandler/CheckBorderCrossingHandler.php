@@ -41,7 +41,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
         private QueryBuilderInterface $queryBuilder,
         private TranslatorInterface $translator,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
     }
 
     public function __invoke(CheckBorderCrossing $message): void

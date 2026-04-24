@@ -37,4 +37,24 @@ enum ComputationName: string
             static fn (self $c): bool => self::ROUTE_SEGMENT !== $c,
         ));
     }
+
+    /**
+     * Returns the user-facing progress category this computation belongs to.
+     *
+     * The category groups several individual computations under the same progress
+     * label displayed to the user during Act 2 (e.g. "terrain_security" covers
+     * terrain analysis, bike shops, water points, etc.).
+     */
+    public function category(): string
+    {
+        return match ($this) {
+            self::ROUTE, self::STAGES, self::ROUTE_SEGMENT => 'route',
+            self::OSM_SCAN, self::POIS => 'points_of_interest',
+            self::ACCOMMODATIONS => 'accommodations',
+            self::TERRAIN, self::BIKE_SHOPS, self::WATER_POINTS,
+            self::HEALTH_SERVICES, self::RAILWAY_STATIONS, self::BORDER_CROSSING => 'terrain_security',
+            self::WEATHER, self::WIND => 'weather',
+            self::CALENDAR, self::EVENTS, self::CULTURAL_POIS => 'context',
+        };
+    }
 }

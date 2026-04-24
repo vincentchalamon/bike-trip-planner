@@ -43,7 +43,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
     }
 
     public function __invoke(CheckHealthServices $message): void

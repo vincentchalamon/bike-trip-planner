@@ -16,6 +16,20 @@ export interface StagePayload {
   isRestDay?: boolean;
 }
 
+/**
+ * Fully enriched stage payload carried by Mode 1 `trip_ready` and Mode 2
+ * `stage_updated` events. Mirrors {@link StagePayloadMapper::toPayload} on
+ * the backend — keep both in sync.
+ */
+export interface EnrichedStagePayload extends StagePayload {
+  weather: WeatherPayload["weather"];
+  alerts: AlertPayload[];
+  pois: PoiPayload[];
+  accommodations: AccommodationPayload[];
+  selectedAccommodation: AccommodationPayload | null;
+  events: EventPayload[];
+}
+
 export interface WeatherPayload {
   dayNumber: number;
   weather: {
@@ -65,6 +79,7 @@ export interface AccommodationPayload {
   possibleClosed: boolean;
   distanceToEndPoint: number;
   source: "osm" | "datatourisme";
+  url?: string | null;
   description?: string | null;
   imageUrl?: string | null;
   wikipediaUrl?: string | null;
@@ -292,4 +307,39 @@ export type MercureEvent =
   | {
       type: "trip_complete";
       data: { computationStatus: Record<string, string> };
+    }
+  | {
+      // Mode 1 — Initial analysis progress tick emitted after each computation step.
+      // Drives the progress bar without mutating stage data (UI-only payload).
+      type: "computation_step_completed";
+      data: {
+        step: string;
+        category:
+          | "route"
+          | "points_of_interest"
+          | "accommodations"
+          | "terrain_security"
+          | "weather"
+          | "context";
+        completed: number;
+        total: number;
+      };
+    }
+  | {
+      // Mode 1 — Final event of the initial analysis. Carries the full enriched
+      // trip payload so the frontend can swap the whole state atomically,
+      // avoiding the progressive layout-shift seen with the legacy event stream.
+      type: "trip_ready";
+      data: {
+        stages: EnrichedStagePayload[];
+        computationStatus: Record<string, string>;
+        aiOverview?: string | null;
+      };
+    }
+  | {
+      // Mode 2 — Per-stage update emitted after an inline modification
+      // (Act 3). The frontend mutates the single slice identified by
+      // `stageIndex` without rebuilding the whole trip.
+      type: "stage_updated";
+      data: { stageIndex: number; stage: EnrichedStagePayload };
     };

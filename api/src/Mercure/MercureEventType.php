@@ -26,4 +26,26 @@ enum MercureEventType: string
     case VALIDATION_ERROR = 'validation_error';
     case COMPUTATION_ERROR = 'computation_error';
     case TRIP_COMPLETE = 'trip_complete';
+    /**
+     * Progress-only event published by every handler when it finishes.
+     *
+     * Used during Act 2 (initial analysis) to drive a narrative progress bar
+     * without leaking business payloads — only `{ step, category, completed, total }`.
+     */
+    case COMPUTATION_STEP_COMPLETED = 'computation_step_completed';
+    /**
+     * Single terminal event published once when the full analysis pipeline has settled.
+     *
+     * Carries the fully enriched trip payload (stages, weather, alerts, accommodations,
+     * events, supply timeline, AI analysis) so the frontend can swap the trip state
+     * atomically and avoid layout shift.
+     */
+    case TRIP_READY = 'trip_ready';
+    /**
+     * Per-stage update event published during Act 3 (inline modifications).
+     *
+     * Only the updated stage is sent so the frontend mutates a single slice
+     * of the store instead of replacing the whole trip.
+     */
+    case STAGE_UPDATED = 'stage_updated';
 }

@@ -38,7 +38,7 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
         private RouteSimplifierInterface $routeSimplifier,
         private MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
     }
 
     public function __invoke(FetchAndParseRoute $message): void

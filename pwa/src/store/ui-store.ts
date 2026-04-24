@@ -63,6 +63,17 @@ interface UiState {
    * route and tweak parameters before committing to the full enrichment.
    */
   hasAnalysisStarted: boolean;
+  /**
+   * Latest snapshot from the `computation_step_completed` Mercure event.
+   * Drives the progress bar during Phase 2. `null` when no analysis is in
+   * flight (initial state, or after `trip_ready` lands).
+   */
+  analysisProgress: {
+    step: string;
+    category: string;
+    completed: number;
+    total: number;
+  } | null;
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -95,6 +106,15 @@ interface UiState {
   /** Flip {@link hasAnalysisStarted}. Called by the preview screen when the user
    * confirms they want to launch the full enrichment pipeline. */
   setAnalysisStarted: (value: boolean) => void;
+  /** Store a `computation_step_completed` snapshot (Mode 1 progress tick). */
+  setAnalysisProgress: (
+    progress: {
+      step: string;
+      category: string;
+      completed: number;
+      total: number;
+    } | null,
+  ) => void;
 }
 
 /**
@@ -141,6 +161,7 @@ export const useUiStore = create<UiState>()(
     currentStep: "preparation",
     completedSteps: new Set<StepId>(),
     hasAnalysisStarted: false,
+    analysisProgress: null,
 
     setProcessing: (value) =>
       set((state) => {
@@ -236,11 +257,17 @@ export const useUiStore = create<UiState>()(
         state.currentStep = "preparation";
         state.completedSteps = new Set<StepId>();
         state.hasAnalysisStarted = false;
+        state.analysisProgress = null;
       }),
 
     setAnalysisStarted: (value) =>
       set((state) => {
         state.hasAnalysisStarted = value;
+      }),
+
+    setAnalysisProgress: (progress) =>
+      set((state) => {
+        state.analysisProgress = progress;
       }),
   })),
 );

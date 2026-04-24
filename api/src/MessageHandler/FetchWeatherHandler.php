@@ -38,7 +38,7 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         private MessageBusInterface $messageBus,
         private RelativeWindCalculator $relativeWindCalculator = new RelativeWindCalculator(),
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
     }
 
     public function __invoke(FetchWeather $message): void

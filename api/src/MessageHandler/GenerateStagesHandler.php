@@ -38,7 +38,7 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         private PacingEngineInterface $pacingEngine,
         private TripAnalysisDispatcher $analysisDispatcher,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
     }
 
     public function __invoke(GenerateStages $message): void

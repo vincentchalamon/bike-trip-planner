@@ -38,7 +38,7 @@ final readonly class AnalyzeWindHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private TranslatorInterface $translator,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
     }
 
     public function __invoke(AnalyzeWind $message): void

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Mercure;
 
+use App\ApiResource\Stage;
+use App\Enum\ComputationName;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -11,6 +13,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
 {
     public function __construct(
         private HubInterface $hub,
+        private StagePayloadMapper $stagePayloadMapper,
     ) {
     }
 
@@ -19,7 +22,7 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
     {
         $update = new Update(
             topics: [\sprintf('/trips/%s', $tripId)],
-            data: json_encode(['type' => $type->value, 'data' => $data], \JSON_THROW_ON_ERROR),
+            data: json_encode(['type' => $type->value, 'data' => $data], \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION),
             private: true,
         );
 
@@ -48,6 +51,46 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
     {
         $this->publish($tripId, MercureEventType::TRIP_COMPLETE, [
             'computationStatus' => $computationStatus,
+        ]);
+    }
+
+    public function publishComputationStepCompleted(
+        string $tripId,
+        ComputationName $step,
+        int $completed,
+        int $total,
+    ): void {
+        $this->publish($tripId, MercureEventType::COMPUTATION_STEP_COMPLETED, [
+            'step' => $step->value,
+            'category' => $step->category(),
+            'completed' => $completed,
+            'total' => $total,
+        ]);
+    }
+
+    /**
+     * @param list<Stage>                                                $stages
+     * @param array{status: array<string, string>, aiOverview?: ?string} $summary
+     */
+    public function publishTripReady(string $tripId, array $stages, array $summary): void
+    {
+        $data = [
+            'stages' => $this->stagePayloadMapper->toPayloadList($stages),
+            'computationStatus' => $summary['status'] ?? [],
+        ];
+
+        if (\array_key_exists('aiOverview', $summary)) {
+            $data['aiOverview'] = $summary['aiOverview'];
+        }
+
+        $this->publish($tripId, MercureEventType::TRIP_READY, $data);
+    }
+
+    public function publishStageUpdated(string $tripId, Stage $stage): void
+    {
+        $this->publish($tripId, MercureEventType::STAGE_UPDATED, [
+            'stageIndex' => $stage->dayNumber - 1,
+            'stage' => $this->stagePayloadMapper->toPayload($stage),
         ]);
     }
 }

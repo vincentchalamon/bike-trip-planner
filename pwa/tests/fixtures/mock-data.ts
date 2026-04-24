@@ -461,3 +461,119 @@ export function fullTripEventSequence(): MercureEvent[] {
     tripCompleteEvent(),
   ];
 }
+
+export function computationStepCompletedEvent(
+  step: string,
+  category:
+    | "route"
+    | "points_of_interest"
+    | "accommodations"
+    | "terrain_security"
+    | "weather"
+    | "context",
+  completed: number,
+  total: number,
+): MercureEvent {
+  return {
+    type: "computation_step_completed",
+    data: { step, category, completed, total },
+  };
+}
+
+export function tripReadyEvent(): MercureEvent {
+  return {
+    type: "trip_ready",
+    data: {
+      stages: [
+        {
+          dayNumber: 1,
+          distance: 72.5,
+          elevation: 1180,
+          elevationLoss: 920,
+          startPoint: { lat: 44.735, lon: 4.598, ele: 280 },
+          endPoint: { lat: 44.532, lon: 4.392, ele: 540 },
+          geometry: [
+            { lat: 44.735, lon: 4.598, ele: 280 },
+            { lat: 44.532, lon: 4.392, ele: 540 },
+          ],
+          label: null,
+          isRestDay: false,
+          weather: {
+            icon: "02d",
+            description: "Partly cloudy",
+            tempMin: 14,
+            tempMax: 26,
+            windSpeed: 12,
+            windDirection: "NO",
+            precipitationProbability: 10,
+            humidity: 65,
+            comfortIndex: 78,
+            relativeWindDirection: "crosswind",
+          },
+          alerts: [],
+          pois: [],
+          accommodations: [],
+          selectedAccommodation: null,
+          events: [],
+        },
+        {
+          dayNumber: 2,
+          distance: 63.2,
+          elevation: 870,
+          elevationLoss: 1050,
+          startPoint: { lat: 44.532, lon: 4.392, ele: 540 },
+          endPoint: { lat: 44.295, lon: 4.087, ele: 360 },
+          geometry: [
+            { lat: 44.532, lon: 4.392, ele: 540 },
+            { lat: 44.295, lon: 4.087, ele: 360 },
+          ],
+          label: null,
+          isRestDay: false,
+          weather: null,
+          alerts: [],
+          pois: [],
+          accommodations: [],
+          selectedAccommodation: null,
+          events: [],
+        },
+      ],
+      computationStatus: {
+        route: "done",
+        stages: "done",
+        weather: "done",
+        terrain: "done",
+        accommodations: "done",
+      },
+      aiOverview: null,
+    },
+  };
+}
+
+export function stageUpdatedEvent(stageIndex: number): MercureEvent {
+  return {
+    type: "stage_updated",
+    data: {
+      stageIndex,
+      stage: {
+        dayNumber: stageIndex + 1,
+        distance: 55.0,
+        elevation: 720,
+        elevationLoss: 640,
+        startPoint: { lat: 44.735, lon: 4.598, ele: 280 },
+        endPoint: { lat: 44.5, lon: 4.4, ele: 500 },
+        geometry: [
+          { lat: 44.735, lon: 4.598, ele: 280 },
+          { lat: 44.5, lon: 4.4, ele: 500 },
+        ],
+        label: null,
+        isRestDay: false,
+        weather: null,
+        alerts: [],
+        pois: [],
+        accommodations: [],
+        selectedAccommodation: null,
+        events: [],
+      },
+    },
+  };
+}
