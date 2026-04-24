@@ -437,9 +437,9 @@ Interface d'entrée de l'itinéraire (cartes Lien/GPX), écran de prévisualisat
 
 | Ordre | ID                                                                      | Titre                                                                           | Effort | PRs | Dépend de |
 |-------|-------------------------------------------------------------------------|---------------------------------------------------------------------------------|--------|-----|-----------|
-| 1     | [#324](https://github.com/vincentchalamon/bike-trip-planner/issues/324) | Events Mercure dual mode : computation_step_completed + TRIP_READY + STAGE_UPDATED | L   |     | #322      |
-| 2     | [#323](https://github.com/vincentchalamon/bike-trip-planner/issues/323) | Acte 2 — ProcessingProgress : écran de progression narrative par catégorie      | L      |     | #317 #324 |
-| 3     | [#325](https://github.com/vincentchalamon/bike-trip-planner/issues/325) | Acte 3 — Refonte résultats : alertes repliables + affichage structuré           | L      |     | #323 #324 |
+| 1     | [#324](https://github.com/vincentchalamon/bike-trip-planner/issues/324) | Events Mercure dual mode : computation_step_completed + TRIP_READY + STAGE_UPDATED | L   | [#376](https://github.com/vincentchalamon/bike-trip-planner/pull/376) `feature/324` | #322      |
+| 2     | [#323](https://github.com/vincentchalamon/bike-trip-planner/issues/323) | Acte 2 — ProcessingProgress : écran de progression narrative par catégorie      | L      | [#377](https://github.com/vincentchalamon/bike-trip-planner/pull/377) `feature/323` | #317 #324 |
+| 3     | [#325](https://github.com/vincentchalamon/bike-trip-planner/issues/325) | Acte 3 — Refonte résultats : alertes repliables + affichage structuré           | L      | [#378](https://github.com/vincentchalamon/bike-trip-planner/pull/378) `feature/325` | #323 #324 |
 
 ---
 
