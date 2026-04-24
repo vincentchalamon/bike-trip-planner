@@ -2,10 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { MercureClient } from "@/lib/mercure/client";
-import type {
-  EnrichedStagePayload,
-  MercureEvent,
-} from "@/lib/mercure/types";
+import type { EnrichedStagePayload, MercureEvent } from "@/lib/mercure/types";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useOfflineStore } from "@/store/offline-store";
@@ -513,7 +510,10 @@ function dispatchEvent(event: MercureEvent): void {
       store.applyStageUpdate(event.data.stageIndex, incoming);
       // Labels may have been wiped if endpoints moved — refresh if needed.
       const updated = useTripStore.getState().stages[event.data.stageIndex];
-      if (updated && (updated.startLabel === null || updated.endLabel === null)) {
+      if (
+        updated &&
+        (updated.startLabel === null || updated.endLabel === null)
+      ) {
         resolveStageLabels([updated], [event.data.stageIndex]);
       }
       break;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mercure;
 
+use App\ApiResource\Model\AlertAction;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
@@ -38,27 +39,27 @@ final readonly class StagePayloadMapper
             'label' => $stage->label,
             'isRestDay' => $stage->isRestDay,
             'geometry' => array_map(
-                fn (Coordinate $c): array => $this->coordinateToPayload($c),
+                $this->coordinateToPayload(...),
                 $stage->geometry,
             ),
             'weather' => $stage->weather instanceof WeatherForecast ? $this->weatherToPayload($stage->weather) : null,
             'alerts' => array_map(
-                fn (Alert $a): array => $this->alertToPayload($a),
+                $this->alertToPayload(...),
                 $stage->alerts,
             ),
             'pois' => array_map(
-                fn (PointOfInterest $p): array => $this->poiToPayload($p),
+                $this->poiToPayload(...),
                 $stage->pois,
             ),
             'accommodations' => array_map(
-                fn (Accommodation $a): array => $this->accommodationToPayload($a),
+                $this->accommodationToPayload(...),
                 $stage->accommodations,
             ),
             'selectedAccommodation' => $stage->selectedAccommodation instanceof Accommodation
                 ? $this->accommodationToPayload($stage->selectedAccommodation)
                 : null,
             'events' => array_map(
-                fn (Event $e): array => $this->eventToPayload($e),
+                $this->eventToPayload(...),
                 $stage->events,
             ),
         ];
@@ -73,7 +74,7 @@ final readonly class StagePayloadMapper
      */
     public function toPayloadList(array $stages): array
     {
-        return array_map(fn (Stage $s): array => $this->toPayload($s), $stages);
+        return array_map($this->toPayload(...), $stages);
     }
 
     /** @return array{lat: float, lon: float, ele: float} */
@@ -92,7 +93,7 @@ final readonly class StagePayloadMapper
             'lon' => $alert->lon,
         ];
 
-        if (null !== $alert->action) {
+        if ($alert->action instanceof AlertAction) {
             $payload['action'] = [
                 'kind' => $alert->action->kind->value,
                 'label' => $alert->action->label,

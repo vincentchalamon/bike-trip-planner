@@ -46,8 +46,8 @@ interface TripUpdatePublisherInterface
     /**
      * Publishes the single terminal event of Mode 1 with the fully enriched trip payload.
      *
-     * @param list<Stage>                                                  $stages
-     * @param array{status: array<string, string>, aiOverview?: ?string}   $summary additional aggregate metadata
+     * @param list<Stage>                                                $stages
+     * @param array{status: array<string, string>, aiOverview?: ?string} $summary additional aggregate metadata
      */
     public function publishTripReady(string $tripId, array $stages, array $summary): void;
 

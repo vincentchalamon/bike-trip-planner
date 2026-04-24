@@ -66,9 +66,7 @@ test.describe("Mercure dual mode — Mode 1 (initial analysis)", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
-    await injectEvent(
-      computationStepCompletedEvent("route", "route", 1, 9),
-    );
+    await injectEvent(computationStepCompletedEvent("route", "route", 1, 9));
     await injectEvent(
       computationStepCompletedEvent("terrain", "terrain_security", 9, 9),
     );
