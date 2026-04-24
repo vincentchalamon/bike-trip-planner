@@ -358,6 +358,12 @@
         "label": "AI Analysis",
         "description": "Narrative trip summary"
       }
+    },
+    "statusLabels": {
+      "done": "done",
+      "inProgress": "in progress",
+      "failed": "failed",
+      "pending": "pending"
     }
   },
   "cardSelection": {

@@ -276,11 +276,12 @@ export function ProcessingProgress({
 }
 
 function StatusIndicator({ status }: { status: AggregatedStatus }) {
+  const t = useTranslations("processingProgress");
   switch (status) {
     case "done":
       return (
         <span
-          aria-label="done"
+          aria-label={t("statusLabels.done")}
           data-testid="status-done"
           className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white"
         >
@@ -290,7 +291,7 @@ function StatusIndicator({ status }: { status: AggregatedStatus }) {
     case "in_progress":
       return (
         <span
-          aria-label="in progress"
+          aria-label={t("statusLabels.inProgress")}
           data-testid="status-in-progress"
           className="inline-flex h-5 w-5 items-center justify-center text-brand"
         >
@@ -300,7 +301,7 @@ function StatusIndicator({ status }: { status: AggregatedStatus }) {
     case "failed":
       return (
         <span
-          aria-label="failed"
+          aria-label={t("statusLabels.failed")}
           data-testid="status-failed"
           className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive/10 text-destructive"
         >
@@ -311,7 +312,7 @@ function StatusIndicator({ status }: { status: AggregatedStatus }) {
     default:
       return (
         <span
-          aria-label="pending"
+          aria-label={t("statusLabels.pending")}
           data-testid="status-pending"
           className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-muted-foreground/30 text-muted-foreground/50"
         >

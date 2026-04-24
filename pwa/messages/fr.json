@@ -358,6 +358,12 @@
         "label": "Analyse IA",
         "description": "Synthèse narrative du voyage"
       }
+    },
+    "statusLabels": {
+      "done": "terminé",
+      "inProgress": "en cours",
+      "failed": "échec",
+      "pending": "en attente"
     }
   },
   "cardSelection": {

@@ -143,8 +143,6 @@ interface UiState {
   recordAnalysisStep: (step: string) => void;
   /** Mark a step as failed with a human-readable error message. */
   failAnalysisStep: (step: string, message: string) => void;
-  /** Reset all step statuses (called on trip clear). */
-  resetAnalysisSteps: () => void;
 }
 
 /**
@@ -319,10 +317,6 @@ export const useUiStore = create<UiState>()(
         };
       }),
 
-    resetAnalysisSteps: () =>
-      set((state) => {
-        state.analysisStepStates = {};
-      }),
   })),
 );
 
