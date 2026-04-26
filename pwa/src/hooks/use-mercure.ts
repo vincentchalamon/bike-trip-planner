@@ -540,6 +540,7 @@ function dispatchEvent(event: MercureEvent): void {
       if (!event.data.retryable) {
         useUiStore.getState().setProcessing(false);
         useUiStore.getState().setAccommodationScanning(false);
+        useUiStore.getState().setAnalysisPhaseActive(false);
       }
       break;
   }
