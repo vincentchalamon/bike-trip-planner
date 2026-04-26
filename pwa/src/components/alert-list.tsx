@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { AlertBadge } from "@/components/alert-badge";
 import type { AlertData } from "@/lib/validation/schemas";
 import { Button } from "@/components/ui/button";
+import { sortBySeverity } from "@/lib/alert-utils";
 import {
   MapPin,
   Wrench,
@@ -10,8 +11,6 @@ import {
   Check,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-
-const severityOrder = { critical: 0, warning: 1, nudge: 2 } as const;
 
 const actionIcons = {
   auto_fix: Wrench,
@@ -43,9 +42,7 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
 
   if (alerts.length === 0) return null;
 
-  const sorted = [...alerts].sort(
-    (a, b) => (severityOrder[a.type] ?? 2) - (severityOrder[b.type] ?? 2),
-  );
+  const sorted = sortBySeverity(alerts);
 
   return (
     <div className="flex flex-col gap-2">

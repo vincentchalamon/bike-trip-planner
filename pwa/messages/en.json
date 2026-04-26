@@ -244,6 +244,11 @@
     "navigateToCrossing": "Navigate to crossing",
     "free": "Free admission"
   },
+  "stageAlerts": {
+    "title": "{count, plural, one {# alert} other {# alerts}}",
+    "showMore": "Show {count} more {count, plural, one {alert} other {alerts}}",
+    "showLess": "Show fewer alerts"
+  },
   "onboarding": {
     "nextBtn": "Next",
     "prevBtn": "Back",
