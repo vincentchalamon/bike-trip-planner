@@ -9,6 +9,7 @@ import { CardSelection } from "@/components/card-selection";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
 import { TripLockedBanner } from "@/components/trip-locked-banner";
 import { TripPreview } from "@/components/trip-preview";
+import { ProcessingProgress } from "@/components/processing-progress";
 import { TripSummary } from "@/components/trip-summary";
 import { TripHeader } from "@/components/trip-header";
 import { TripDownloads } from "@/components/trip-downloads";
@@ -106,6 +107,7 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const completeStep = useUiStore((s) => s.completeStep);
   const resetStepper = useUiStore((s) => s.resetStepper);
   const hasAnalysisStarted = useUiStore((s) => s.hasAnalysisStarted);
+  const isAnalysisPhaseActive = useUiStore((s) => s.isAnalysisPhaseActive);
   const activeStages = useMemo(
     () => stages.filter((s) => !s.isRestDay),
     [stages],
@@ -165,9 +167,9 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
       useUiStore.getState().setProcessing(!!(e as CustomEvent<boolean>).detail);
     };
     const onAnalysisStarted = (e: Event) => {
-      useUiStore
-        .getState()
-        .setAnalysisStarted(!!(e as CustomEvent<boolean>).detail);
+      const value = !!(e as CustomEvent<boolean>).detail;
+      useUiStore.getState().setAnalysisStarted(value);
+      useUiStore.getState().setAnalysisPhaseActive(value);
     };
     window.addEventListener("__test_set_processing", onProcessing);
     window.addEventListener("__test_set_analysis_started", onAnalysisStarted);
@@ -318,11 +320,18 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
   const isLoading = !trip && isProcessing;
   const isPreview =
     !!trip && !isProcessing && activeStages.length > 0 && !hasAnalysisStarted;
+  // Acte 2 — narrative progress screen. Active only while the Acte 2 pipeline
+  // is in flight (`isAnalysisPhaseActive`). Uses a dedicated flag rather than
+  // `hasAnalysisStarted` so that Acte 3 inline-edit backend calls (PATCH
+  // distance, pacing, etc.) don't re-trigger the progress screen.
+  const isAnalysing =
+    !!trip && isProcessing && isAnalysisPhaseActive && activeStages.length > 0;
   const clearTripAndReset = useCallback(() => {
     clearTrip();
     useUiStore.getState().setProcessing(false);
     useUiStore.getState().setAccommodationScanning(false);
     useUiStore.getState().setAnalysisStarted(false);
+    useUiStore.getState().setAnalysisPhaseActive(false);
   }, [clearTrip]);
 
   const tNav = useTranslations("navigation");
@@ -494,9 +503,39 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
           </>
         )}
 
+        {/* === State 3a-bis: Acte 2 — narrative progress screen
+             (processing + analysis launched, before trip_ready). === */}
+        {isAnalysing && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-4 md:right-6 h-8 w-8 z-10 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                if (onClose) {
+                  onClose();
+                } else {
+                  clearTripAndReset();
+                  router.push("/");
+                }
+              }}
+              title={t("planner.closeTrip")}
+              aria-label={t("planner.closeTrip")}
+              data-testid="close-trip-button-analysing"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+
+            <ProcessingProgress
+              title={trip?.title ?? ""}
+              onTitleChange={handleTitleChange}
+            />
+          </>
+        )}
+
         {/* === State 3b: Trip loaded — full view (shown once the user
              has launched the Phase 2 analysis via the preview CTA). === */}
-        {trip && !isPreview && (
+        {trip && !isPreview && !isAnalysing && (
           <>
             {/* Close button — top-right corner */}
             <Button

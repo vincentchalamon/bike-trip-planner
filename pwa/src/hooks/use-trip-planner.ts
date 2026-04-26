@@ -668,6 +668,7 @@ export function useTripPlanner() {
       setProcessing(true);
       setAccommodationScanning(true);
       useUiStore.getState().setAnalysisStarted(true);
+      useUiStore.getState().setAnalysisPhaseActive(true);
       return true;
     } catch (err) {
       if (isNetworkError(err)) {

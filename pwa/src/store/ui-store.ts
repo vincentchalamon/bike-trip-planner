@@ -61,8 +61,18 @@ interface UiState {
    * `POST /trips/{id}/analyze` (Acte 2). Until this is `true`, the UI stays
    * on the "preview" screen (Acte 1.5) where the user can inspect the raw
    * route and tweak parameters before committing to the full enrichment.
+   * Stays `true` for the lifetime of the trip so Acte 3 inline edits don't
+   * revert to the preview screen.
    */
   hasAnalysisStarted: boolean;
+  /**
+   * Whether the Acte 2 enrichment pipeline is currently running. `true` from
+   * the moment the user clicks "Lancer l'analyse" until `trip_ready` (or
+   * `trip_complete`) arrives. Distinct from {@link hasAnalysisStarted} which
+   * stays `true` permanently — this flag gates the `ProcessingProgress` screen
+   * so that Acte 3 inline-edit backend calls don't re-trigger it.
+   */
+  isAnalysisPhaseActive: boolean;
   /**
    * Latest snapshot from the `computation_step_completed` Mercure event.
    * Drives the progress bar during Phase 2. `null` when no analysis is in
@@ -74,6 +84,30 @@ interface UiState {
     completed: number;
     total: number;
   } | null;
+  /**
+   * Per-step progress state for Acte 2 (narrative progress screen).
+   *
+   * Keyed by the backend `ComputationName::value` emitted in
+   * `computation_step_completed` events (e.g. "terrain", "water_points",
+   * "bike_shops", "accommodations", …). Statuses:
+   *   pending → in_progress → done | failed
+   *
+   * The narrative screen groups these steps into user-facing categories
+   * (Terrain, Ravitaillement, Hébergements, Météo, Services, AI). See
+   * `components/processing-progress.tsx` for the mapping.
+   *
+   * `in_progress` is a transient state: the backend only emits a single
+   * event *when a step completes*, so we track "seen" steps as done and
+   * use the latest `analysisProgress.step` to highlight the currently
+   * running step.
+   */
+  analysisStepStates: Record<
+    string,
+    {
+      status: "done" | "failed";
+      error: string | null;
+    }
+  >;
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -106,6 +140,9 @@ interface UiState {
   /** Flip {@link hasAnalysisStarted}. Called by the preview screen when the user
    * confirms they want to launch the full enrichment pipeline. */
   setAnalysisStarted: (value: boolean) => void;
+  /** Flip {@link isAnalysisPhaseActive}. Set `true` when Acte 2 starts, `false`
+   * when `trip_ready` / `trip_complete` lands. */
+  setAnalysisPhaseActive: (value: boolean) => void;
   /** Store a `computation_step_completed` snapshot (Mode 1 progress tick). */
   setAnalysisProgress: (
     progress: {
@@ -115,6 +152,10 @@ interface UiState {
       total: number;
     } | null,
   ) => void;
+  /** Mark a step as completed (from a `computation_step_completed` event). */
+  recordAnalysisStep: (step: string) => void;
+  /** Mark a step as failed with a human-readable error message. */
+  failAnalysisStep: (step: string, message: string) => void;
 }
 
 /**
@@ -161,7 +202,9 @@ export const useUiStore = create<UiState>()(
     currentStep: "preparation",
     completedSteps: new Set<StepId>(),
     hasAnalysisStarted: false,
+    isAnalysisPhaseActive: false,
     analysisProgress: null,
+    analysisStepStates: {},
 
     setProcessing: (value) =>
       set((state) => {
@@ -257,7 +300,9 @@ export const useUiStore = create<UiState>()(
         state.currentStep = "preparation";
         state.completedSteps = new Set<StepId>();
         state.hasAnalysisStarted = false;
+        state.isAnalysisPhaseActive = false;
         state.analysisProgress = null;
+        state.analysisStepStates = {};
       }),
 
     setAnalysisStarted: (value) =>
@@ -265,10 +310,29 @@ export const useUiStore = create<UiState>()(
         state.hasAnalysisStarted = value;
       }),
 
+    setAnalysisPhaseActive: (value) =>
+      set((state) => {
+        state.isAnalysisPhaseActive = value;
+      }),
+
     setAnalysisProgress: (progress) =>
       set((state) => {
         state.analysisProgress = progress;
       }),
+
+    recordAnalysisStep: (step) =>
+      set((state) => {
+        state.analysisStepStates[step] = { status: "done", error: null };
+      }),
+
+    failAnalysisStep: (step, message) =>
+      set((state) => {
+        state.analysisStepStates[step] = {
+          status: "failed",
+          error: message,
+        };
+      }),
+
   })),
 );
 

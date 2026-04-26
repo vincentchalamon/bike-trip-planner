@@ -328,6 +328,44 @@
     "myTrip": "My Trip",
     "mobileLabel": "Step {current}/{total} — {stepName}"
   },
+  "processingProgress": {
+    "subtitle": "Analysis in progress… this may take a few minutes.",
+    "progressLabel": "Overall progress",
+    "progressPercent": "{percent}%",
+    "failureMessage": "Failed: {message}",
+    "categories": {
+      "terrain_security": {
+        "label": "Terrain & Safety",
+        "description": "Surface, traffic, slopes, continuity"
+      },
+      "supply": {
+        "label": "Supply",
+        "description": "Water points, shops"
+      },
+      "accommodations": {
+        "label": "Accommodations",
+        "description": "Campings, lodges, hotels"
+      },
+      "weather": {
+        "label": "Weather & Conditions",
+        "description": "Forecasts, wind, sunset"
+      },
+      "services": {
+        "label": "Services",
+        "description": "Bike shops, repair"
+      },
+      "ai": {
+        "label": "AI Analysis",
+        "description": "Narrative trip summary"
+      }
+    },
+    "statusLabels": {
+      "done": "done",
+      "inProgress": "in progress",
+      "failed": "failed",
+      "pending": "pending"
+    }
+  },
   "cardSelection": {
     "heading": "How would you like to start?",
     "linkTitle": "Link",
