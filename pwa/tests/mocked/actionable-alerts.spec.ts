@@ -471,6 +471,9 @@ test.describe("StageAlerts — alert actions", () => {
       timeout: 5000,
     });
 
+    // "Warning alert D" (detour) is 4th after severity sort — expand pagination first
+    await stageCard.getByTestId("stage-alerts-show-more").click();
+
     // "Take detour" is the detour action on "Warning alert D"
     await expect(stageCard.getByText("Take detour")).toBeVisible();
     await expect(stageCard.getByText("Take detour")).toBeDisabled();
