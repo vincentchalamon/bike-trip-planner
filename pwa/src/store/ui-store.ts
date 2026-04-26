@@ -322,10 +322,6 @@ export const useUiStore = create<UiState>()(
 
     recordAnalysisStep: (step) =>
       set((state) => {
-        const current = state.analysisStepStates[step];
-        // Once a step has failed, a subsequent completion tick should not
-        // silently flip it back to done — keep the error surface visible.
-        if (current?.status === "failed") return;
         state.analysisStepStates[step] = { status: "done", error: null };
       }),
 
