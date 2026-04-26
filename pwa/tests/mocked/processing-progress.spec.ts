@@ -200,4 +200,24 @@ test.describe("ProcessingProgress — transition to Acte 3", () => {
       timeout: 5000,
     });
   });
+
+  test("does not re-appear during Acte 3 inline-edit processing", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await enterAnalysingState(submitUrl, injectEvent, mockedPage);
+    await injectEvent(tripReadyEvent());
+    await expect(mockedPage.getByTestId("processing-progress")).toBeHidden({
+      timeout: 5000,
+    });
+    // Simulate a background PATCH (e.g. pacing update) re-setting isProcessing=true.
+    // isAnalysisPhaseActive is now false, so the screen must not re-appear.
+    await mockedPage.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("__test_set_processing", { detail: true }),
+      );
+    });
+    await expect(mockedPage.getByTestId("processing-progress")).toBeHidden();
+  });
 });
