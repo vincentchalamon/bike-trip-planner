@@ -187,13 +187,14 @@ test.describe("StageAlerts — severity sorting", () => {
       timeout: 5000,
     });
 
-    // The first badge rendered inside the list should belong to the critical group.
-    const badges = stageCard.locator(
-      '[data-testid="stage-alerts-body"] .rounded-md',
-    );
-    const firstBadgeText = await badges.first().textContent();
-    // Critical alert C comes before Warning / Nudge
-    expect(firstBadgeText).toContain("Critical alert C");
+    // After sorting: criticals fill the first visible slots (only 3 shown by default).
+    // Both criticals should be visible; nudges should be hidden behind "Show more".
+    const alertsBody = stageCard.getByTestId("stage-alerts-body");
+    await expect(alertsBody.getByText("Critical alert C")).toBeVisible();
+    await expect(alertsBody.getByText("Critical alert F")).toBeVisible();
+    // Nudge alerts sit below the fold — not visible until "Show more" is clicked.
+    await expect(alertsBody.getByText("Nudge alert A")).not.toBeVisible();
+    await expect(alertsBody.getByText("Nudge alert E")).not.toBeVisible();
   });
 
   test("shows correct total count in the section header", async ({

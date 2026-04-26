@@ -5,17 +5,10 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AlertList } from "@/components/alert-list";
 import { Button } from "@/components/ui/button";
+import { sortBySeverity } from "@/lib/alert-utils";
 import type { AlertData } from "@/lib/validation/schemas";
 
 const INITIAL_VISIBLE_COUNT = 3;
-
-const severityOrder = { critical: 0, warning: 1, nudge: 2 } as const;
-
-function sortBySeverity(alerts: AlertData[]): AlertData[] {
-  return [...alerts].sort(
-    (a, b) => (severityOrder[a.type] ?? 2) - (severityOrder[b.type] ?? 2),
-  );
-}
 
 interface StageAlertsProps {
   alerts: AlertData[];
