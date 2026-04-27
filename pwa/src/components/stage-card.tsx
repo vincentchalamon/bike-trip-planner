@@ -14,6 +14,7 @@ import { EventsPanel } from "@/components/events-panel";
 import { StageDownloads } from "@/components/stage-downloads";
 import { StageDistanceEditor } from "@/components/stage-distance-editor";
 import { DifficultyGauge } from "@/components/difficulty-gauge";
+import { DiffHighlight } from "@/components/diff-highlight";
 import { SupplyTimeline } from "@/components/SupplyTimeline/SupplyTimeline";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 import { useTripStore } from "@/store/trip-store";
@@ -152,19 +153,29 @@ export function StageCard({
             />
           ) : (
             <>
-              <StageMetadata
-                distance={stage.distance}
-                elevation={stage.elevation}
-                elevationLoss={stage.elevationLoss ?? 0}
-                weather={stage.weather}
-                isProcessing={isProcessing}
-                departureHour={stage.isRestDay ? undefined : departureHour}
-                averageSpeedKmh={stage.isRestDay ? undefined : averageSpeed}
-                endPointLat={stage.isRestDay ? undefined : stage.endPoint.lat}
-                endPointLon={stage.isRestDay ? undefined : stage.endPoint.lon}
-                startDate={stage.isRestDay ? undefined : startDate}
-                stageIndex={stage.isRestDay ? undefined : stageIndex}
-              />
+              <DiffHighlight
+                stageIndex={stageIndex}
+                field="distance"
+                changeLabel={t("diffDistanceChanged")}
+              >
+                <StageMetadata
+                  distance={stage.distance}
+                  elevation={stage.elevation}
+                  elevationLoss={stage.elevationLoss ?? 0}
+                  weather={stage.weather}
+                  isProcessing={isProcessing}
+                  departureHour={stage.isRestDay ? undefined : departureHour}
+                  averageSpeedKmh={stage.isRestDay ? undefined : averageSpeed}
+                  endPointLat={
+                    stage.isRestDay ? undefined : stage.endPoint.lat
+                  }
+                  endPointLon={
+                    stage.isRestDay ? undefined : stage.endPoint.lon
+                  }
+                  startDate={stage.isRestDay ? undefined : startDate}
+                  stageIndex={stage.isRestDay ? undefined : stageIndex}
+                />
+              </DiffHighlight>
               {stage.distance !== null && (
                 <DifficultyGauge
                   difficulty={difficulty}
@@ -189,10 +200,16 @@ export function StageCard({
         {/* Alerts */}
         {stage.alerts.length > 0 && (
           <div className="mt-3">
-            <StageAlerts
-              alerts={stage.alerts}
-              onAddPoiWaypoint={onAddPoiWaypoint}
-            />
+            <DiffHighlight
+              stageIndex={stageIndex}
+              field="alerts_added"
+              changeLabel={t("diffAlertsAdded")}
+            >
+              <StageAlerts
+                alerts={stage.alerts}
+                onAddPoiWaypoint={onAddPoiWaypoint}
+              />
+            </DiffHighlight>
           </div>
         )}
         {isProcessing && stage.alerts.length === 0 && (

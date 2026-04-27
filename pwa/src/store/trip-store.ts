@@ -52,6 +52,13 @@ interface TripState {
    * triggered and each index is removed when its `stage_updated` event lands.
    */
   recomputingStages: Set<number>;
+  /**
+   * Map of stage index → set of changed field names, populated after a
+   * `stage_updated` event lands. Each entry expires after ~3 seconds via a
+   * client-side timer. Used by `DiffHighlight` to transiently highlight the
+   * fields that changed during an inline recomputation.
+   */
+  stageDiffs: Map<number, Set<string>>;
 
   setTrip: (trip: TripIdentity) => void;
   updateRouteData: (data: {
@@ -155,6 +162,16 @@ interface TripState {
   finishStageRecomputation: (index: number) => void;
   /** Clear all recomputing stages — safety net for lost `stage_updated` events. */
   clearRecomputingStages: () => void;
+  /**
+   * Record which fields changed for a stage after a `stage_updated` event.
+   * Replaces any previously recorded diff for the same index.
+   */
+  setStageDiff: (stageIndex: number, changedFields: Set<string>) => void;
+  /**
+   * Clear the diff highlight for a stage (called by the auto-expiry timer
+   * in `use-mercure.ts` after ~3 seconds).
+   */
+  clearStageDiff: (stageIndex: number) => void;
   clearTrip: () => void;
   /** Hydrate the trip store from a {@link SavedTrip} snapshot (offline consultation). */
   loadFromSavedTrip: (trip: SavedTrip) => void;
@@ -181,6 +198,7 @@ const initialState = {
   stages: [],
   computationStatus: {},
   recomputingStages: new Set<number>(),
+  stageDiffs: new Map<number, Set<string>>(),
 };
 
 /**
@@ -598,6 +616,16 @@ export const useTripStore = create<TripState>()(
     clearRecomputingStages: () =>
       set((state) => {
         state.recomputingStages.clear();
+      }),
+
+    setStageDiff: (stageIndex, changedFields) =>
+      set((state) => {
+        state.stageDiffs.set(stageIndex, changedFields);
+      }),
+
+    clearStageDiff: (stageIndex) =>
+      set((state) => {
+        state.stageDiffs.delete(stageIndex);
       }),
 
     loadFromSavedTrip: (trip) => {

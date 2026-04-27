@@ -140,6 +140,27 @@
   }
 }
 
+/**
+ * Transient highlight for diff fields after an inline recomputation.
+ * Starts with a yellow background and fades to transparent over 3 s,
+ * matching the store expiry timer in use-mercure.ts.
+ */
+@keyframes diff-highlight {
+  0% {
+    background-color: oklch(0.97 0.12 95);
+  }
+  30% {
+    background-color: oklch(0.97 0.12 95);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.diff-highlight {
+  animation: diff-highlight 3s ease-out forwards;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

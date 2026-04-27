@@ -515,7 +515,23 @@ function dispatchEvent(event: MercureEvent): void {
       // Mode 2 — per-stage update. Replace the single slice; preserved
       // fields (labels, search radius) are handled by the store.
       const incoming = enrichedPayloadToStageData(event.data.stage);
+
+      // Capture previous state before applying the update to compute the diff.
+      const prevStage = store.stages[event.data.stageIndex];
       store.applyStageUpdate(event.data.stageIndex, incoming);
+
+      // Compute the set of changed fields for transient diff highlighting.
+      if (prevStage) {
+        const changed = computeStageDiff(prevStage, incoming);
+        if (changed.size > 0) {
+          store.setStageDiff(event.data.stageIndex, changed);
+          // Auto-clear after 3 seconds so the highlight fades out naturally.
+          setTimeout(() => {
+            useTripStore.getState().clearStageDiff(event.data.stageIndex);
+          }, 3000);
+        }
+      }
+
       // Remove this stage from the recomputing set — the shimmer skeleton
       // can now be replaced by the real card.
       store.finishStageRecomputation(event.data.stageIndex);
@@ -552,6 +568,48 @@ function dispatchEvent(event: MercureEvent): void {
       }
       break;
   }
+}
+
+/**
+ * Compares a previous and incoming stage snapshot and returns the set of
+ * logical field names that have changed. Used to populate `stageDiffs` in
+ * the store so that `DiffHighlight` can transiently highlight each changed
+ * piece of data.
+ *
+ * Compared fields: `distance`, `elevation`, `alerts`, `selectedAccommodation`,
+ * `arrivalTime` (derived from distance + speed, approximated by distance).
+ */
+function computeStageDiff(
+  prev: StageData,
+  next: StageData,
+): Set<string> {
+  const changed = new Set<string>();
+
+  if (prev.distance !== next.distance) changed.add("distance");
+  if (
+    prev.elevation !== next.elevation ||
+    prev.elevationLoss !== next.elevationLoss
+  ) {
+    changed.add("elevation");
+  }
+
+  // Alert changes: detect new alerts (added) and removed ones
+  const prevMessages = new Set(prev.alerts.map((a) => `${a.type}:${a.message}`));
+  const nextMessages = new Set(next.alerts.map((a) => `${a.type}:${a.message}`));
+  const hasNewAlerts = [...nextMessages].some((m) => !prevMessages.has(m));
+  const hasRemovedAlerts = [...prevMessages].some((m) => !nextMessages.has(m));
+  if (hasNewAlerts) changed.add("alerts_added");
+  if (hasRemovedAlerts) changed.add("alerts_removed");
+
+  // Accommodation change: compare selected accommodation identity
+  const prevAccName = prev.selectedAccommodation?.name ?? null;
+  const nextAccName = next.selectedAccommodation?.name ?? null;
+  if (prevAccName !== nextAccName) changed.add("selectedAccommodation");
+
+  // Arrival time is derived from distance; flag it when distance changes.
+  if (prev.distance !== next.distance) changed.add("arrivalTime");
+
+  return changed;
 }
 
 /**
