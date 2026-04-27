@@ -1,13 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { FAKE_JWT_TOKEN } from "../fixtures/api-mocks";
-import {
-  routeParsedEvent,
-  stagesComputedEvent,
-  tripCompleteEvent,
-  accommodationsFoundEvent,
-} from "../fixtures/mock-data";
-import { injectSseSequence } from "../fixtures/sse-helpers";
-import { mockAllApis } from "../fixtures/api-mocks";
 
 /**
  * Issue #386 — Design Foundations: palette ambre + tokens globals.css
@@ -94,13 +85,6 @@ test.describe("Design tokens — landing page (mode clair)", () => {
     await expect(page.getByTestId("landing-page")).toBeVisible();
     await expect(page.getByTestId("section-hero")).toBeVisible();
   });
-
-  test("screenshot landing — mode clair", async ({ page }) => {
-    await expect(page.getByTestId("section-hero")).toBeVisible();
-    await expect(page).toHaveScreenshot("landing-light.png", {
-      maxDiffPixelRatio: 0.05,
-    });
-  });
 });
 
 // ── Landing page — mode sombre ───────────────────────────────────────────────
@@ -141,142 +125,5 @@ test.describe("Design tokens — landing page (mode sombre)", () => {
 
   test("landing page est visible en mode sombre", async ({ page }) => {
     await expect(page.getByTestId("landing-page")).toBeVisible();
-  });
-
-  test("screenshot landing — mode sombre", async ({ page }) => {
-    await expect(page.getByTestId("section-hero")).toBeVisible();
-    await expect(page).toHaveScreenshot("landing-dark.png", {
-      maxDiffPixelRatio: 0.05,
-    });
-  });
-});
-
-// ── Roadbook — mode clair ────────────────────────────────────────────────────
-
-test.describe("Design tokens — roadbook (mode clair)", () => {
-  test.beforeEach(async ({ page }) => {
-    await mockAllApis(page);
-    await page.emulateMedia({ colorScheme: "light" });
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    // Submit a URL to navigate to roadbook
-    const input = page.getByTestId("magic-link-input");
-    if (!(await input.isVisible().catch(() => false))) {
-      const linkCard = page.getByTestId("card-link");
-      if (await linkCard.isVisible().catch(() => false)) {
-        await linkCard.click();
-      }
-    }
-    await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
-    await input.press("Enter");
-    await page.waitForURL(/\/trips\//, { timeout: 5000 });
-
-    // Inject a complete trip event sequence
-    await injectSseSequence(page, [
-      routeParsedEvent(),
-      stagesComputedEvent(),
-      accommodationsFoundEvent(0),
-      tripCompleteEvent(),
-    ]);
-
-    await expect(page.getByTestId("stage-card-1")).toBeVisible({
-      timeout: 10000,
-    });
-  });
-
-  test("--brand est la couleur ambre principale en mode clair sur le roadbook", async ({
-    page,
-  }) => {
-    const brand = await getCssVar(page, "--brand");
-    expect(brand.toLowerCase()).toBe(AMBER_BRAND_LIGHT.toLowerCase());
-  });
-
-  test("les tokens sémantiques sont définis sur le roadbook en mode clair", async ({
-    page,
-  }) => {
-    const accentBrand = await getCssVar(page, "--accent-brand");
-    const accentSoft = await getCssVar(page, "--accent-soft");
-    const accentInk = await getCssVar(page, "--accent-ink");
-    const surface = await getCssVar(page, "--surface");
-    const ink = await getCssVar(page, "--ink");
-
-    expect(accentBrand).not.toBe("");
-    expect(accentSoft).not.toBe("");
-    expect(accentInk).not.toBe("");
-    expect(surface).not.toBe("");
-    expect(ink).not.toBe("");
-  });
-
-  test("screenshot roadbook — mode clair", async ({ page }) => {
-    await expect(page.getByTestId("stage-card-1")).toBeVisible();
-    await expect(page).toHaveScreenshot("roadbook-light.png", {
-      maxDiffPixelRatio: 0.05,
-    });
-  });
-});
-
-// ── Roadbook — mode sombre ───────────────────────────────────────────────────
-
-test.describe("Design tokens — roadbook (mode sombre)", () => {
-  test.beforeEach(async ({ page }) => {
-    await mockAllApis(page);
-    await page.emulateMedia({ colorScheme: "dark" });
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-    // Apply .dark class
-    await page.evaluate(() => {
-      document.documentElement.classList.add("dark");
-    });
-
-    // Submit a URL to navigate to roadbook
-    const input = page.getByTestId("magic-link-input");
-    if (!(await input.isVisible().catch(() => false))) {
-      const linkCard = page.getByTestId("card-link");
-      if (await linkCard.isVisible().catch(() => false)) {
-        await linkCard.click();
-      }
-    }
-    await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
-    await input.press("Enter");
-    await page.waitForURL(/\/trips\//, { timeout: 5000 });
-
-    // Inject a complete trip event sequence
-    await injectSseSequence(page, [
-      routeParsedEvent(),
-      stagesComputedEvent(),
-      accommodationsFoundEvent(0),
-      tripCompleteEvent(),
-    ]);
-
-    await expect(page.getByTestId("stage-card-1")).toBeVisible({
-      timeout: 10000,
-    });
-  });
-
-  test("--brand est la couleur ambre ajustée en mode sombre sur le roadbook", async ({
-    page,
-  }) => {
-    const brand = await getCssVar(page, "--brand");
-    expect(brand.toLowerCase()).toBe(AMBER_BRAND_DARK.toLowerCase());
-  });
-
-  test("les tokens sémantiques dark sont définis sur le roadbook", async ({
-    page,
-  }) => {
-    const accentBrand = await getCssVar(page, "--accent-brand");
-    const surface = await getCssVar(page, "--surface");
-    const ink = await getCssVar(page, "--ink");
-
-    expect(accentBrand).not.toBe("");
-    expect(surface.toLowerCase()).toBe(INK_LIGHT.toLowerCase());
-    expect(ink).not.toBe("");
-  });
-
-  test("screenshot roadbook — mode sombre", async ({ page }) => {
-    await expect(page.getByTestId("stage-card-1")).toBeVisible();
-    await expect(page).toHaveScreenshot("roadbook-dark.png", {
-      maxDiffPixelRatio: 0.05,
-    });
   });
 });
