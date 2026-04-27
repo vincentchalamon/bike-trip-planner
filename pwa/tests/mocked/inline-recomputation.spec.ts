@@ -110,8 +110,10 @@ test.describe("Inline recomputation — skeleton", () => {
       timeout: 3000,
     });
 
-    // Inject stage_updated for index 0 to resolve the recomputation
+    // Inject stage_updated for both affected stages: selecting an accommodation
+    // on stage 0 also triggers recomputation of stage 1 (its start shifts).
     await injectEvent(stageUpdatedEvent(0));
+    await injectEvent(stageUpdatedEvent(1));
 
     // The real stage card should be back
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
