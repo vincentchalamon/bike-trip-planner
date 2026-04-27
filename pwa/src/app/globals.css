@@ -50,85 +50,203 @@
   --color-brand-hover: var(--brand-hover);
   --color-muted-icon: var(--muted-icon);
   --color-diff-highlight: var(--diff-highlight);
+  /* ── Semantic design tokens (sprint 25+) ────────────────────────────── */
+  --color-accent-brand: var(--accent-brand);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LIGHT MODE — warm paper / ink charcoal / amber accent
+ * ═══════════════════════════════════════════════════════════════════════════ */
 :root {
   --radius: 0.625rem;
-  --brand: #3aa5b9;
-  --brand-light: #ebf5f6;
-  --brand-hover: #2e8a9a;
+
+  /* ── Brand (amber) ────────────────────────────────────────────────────── */
+  /* --brand is the Tailwind alias used by every existing component          */
+  --brand: #c2671e;
+  /* Soft amber for hovers, backgrounds, shimmer tints                       */
+  --brand-light: #fdf0e6;
+  /* Slightly darker amber for hover states (≥ 3:1 contrast on brand-light)  */
+  --brand-hover: #a8561a;
   --muted-icon: #9da5a7;
-  --diff-highlight: oklch(0.97 0.12 95);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
+  --diff-highlight: oklch(0.97 0.12 60);
+
+  /* ── Semantic tokens ──────────────────────────────────────────────────── */
+  /* accent-brand = amber principal (#c2671e)                                */
+  --accent-brand: #c2671e;
+  /* accent-soft = warm sand for diff/highlight backgrounds                  */
+  --accent-soft: #fdf0e6;
+  /* accent-ink = deep brown, AA contrast on surface (#faf7f0)               */
+  --accent-ink: #6b2d00;
+  /* surface = warm paper (replaces pure white)                              */
+  --surface: #faf7f0;
+  /* ink = ink charcoal (replaces pure black)                                */
+  --ink: #1a1814;
+
+  /* ── shadcn/ui base tokens ────────────────────────────────────────────── */
+  --background: #faf7f0;
+  --foreground: #1a1814;
+  --card: #faf7f0;
+  --card-foreground: #1a1814;
+  --popover: #faf7f0;
+  --popover-foreground: #1a1814;
+  --primary: #1a1814;
+  --primary-foreground: #faf7f0;
+  --secondary: oklch(0.965 0.012 60);
+  --secondary-foreground: #1a1814;
+  --muted: oklch(0.965 0.012 60);
+  --muted-foreground: oklch(0.5 0.04 60);
+  --accent: oklch(0.965 0.012 60);
+  --accent-foreground: #1a1814;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
+  --border: oklch(0.91 0.02 60);
+  --input: oklch(0.91 0.02 60);
+  --ring: oklch(0.65 0.1 60);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --sidebar: oklch(0.975 0.01 60);
+  --sidebar-foreground: #1a1814;
+  --sidebar-primary: #1a1814;
+  --sidebar-primary-foreground: #faf7f0;
+  --sidebar-accent: oklch(0.965 0.012 60);
+  --sidebar-accent-foreground: #1a1814;
+  --sidebar-border: oklch(0.91 0.02 60);
+  --sidebar-ring: oklch(0.65 0.1 60);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * DARK MODE — deep charcoal / warm amber accent
+ * ═══════════════════════════════════════════════════════════════════════════ */
 .dark {
-  --brand: #3aa5b9;
-  --brand-light: #1a3a40;
-  --brand-hover: #4bbdd1;
+  /* ── Brand (amber, brightened for dark backgrounds) ──────────────────── */
+  --brand: #e08040;
+  --brand-light: #2e1a08;
+  --brand-hover: #f09050;
   --muted-icon: #6b7275;
-  --diff-highlight: oklch(0.35 0.08 95);
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
+  --diff-highlight: oklch(0.32 0.08 60);
+
+  /* ── Semantic tokens ──────────────────────────────────────────────────── */
+  --accent-brand: #e08040;
+  --accent-soft: #2e1a08;
+  --accent-ink: #ffd4a8;
+  --surface: #1a1814;
+  --ink: #f5f0e8;
+
+  /* ── shadcn/ui base tokens ────────────────────────────────────────────── */
+  --background: #1a1814;
+  --foreground: #f5f0e8;
+  --card: oklch(0.19 0.015 60);
+  --card-foreground: #f5f0e8;
+  --popover: oklch(0.19 0.015 60);
+  --popover-foreground: #f5f0e8;
+  --primary: #f5f0e8;
+  --primary-foreground: #1a1814;
+  --secondary: oklch(0.26 0.02 60);
+  --secondary-foreground: #f5f0e8;
+  --muted: oklch(0.26 0.02 60);
+  --muted-foreground: oklch(0.68 0.04 60);
+  --accent: oklch(0.26 0.02 60);
+  --accent-foreground: #f5f0e8;
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
+  --ring: oklch(0.55 0.1 60);
+  --chart-1: oklch(0.75 0.18 60);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
+  --sidebar: oklch(0.19 0.015 60);
+  --sidebar-foreground: #f5f0e8;
+  --sidebar-primary: oklch(0.75 0.18 60);
+  --sidebar-primary-foreground: #f5f0e8;
+  --sidebar-accent: oklch(0.26 0.02 60);
+  --sidebar-accent-foreground: #f5f0e8;
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --sidebar-ring: oklch(0.55 0.1 60);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * THEME VARIANTS — data-theme attribute swap
+ * Usage: <html data-theme="forest"> / <html data-theme="indigo"> etc.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Forest variant — earthy green accent */
+:root[data-theme="forest"] {
+  --brand: #3a7c47;
+  --brand-light: #eaf4ec;
+  --brand-hover: #2e6338;
+  --accent-brand: #3a7c47;
+  --accent-soft: #eaf4ec;
+  --accent-ink: #1a3d22;
+  --diff-highlight: oklch(0.97 0.1 145);
+  --ring: oklch(0.55 0.12 145);
+}
+
+.dark[data-theme="forest"],
+[data-theme="forest"] .dark,
+:root[data-theme="forest"] .dark {
+  --brand: #5aad6a;
+  --brand-light: #0d2e14;
+  --brand-hover: #72c47e;
+  --accent-brand: #5aad6a;
+  --accent-soft: #0d2e14;
+  --accent-ink: #b8f0c0;
+  --diff-highlight: oklch(0.32 0.1 145);
+}
+
+/* Indigo variant — cool blue-purple accent */
+:root[data-theme="indigo"] {
+  --brand: #4a5eb8;
+  --brand-light: #edf0fb;
+  --brand-hover: #3a4ea8;
+  --accent-brand: #4a5eb8;
+  --accent-soft: #edf0fb;
+  --accent-ink: #1e2860;
+  --diff-highlight: oklch(0.97 0.1 270);
+  --ring: oklch(0.55 0.15 270);
+}
+
+.dark[data-theme="indigo"],
+[data-theme="indigo"] .dark,
+:root[data-theme="indigo"] .dark {
+  --brand: #7a8ee0;
+  --brand-light: #131828;
+  --brand-hover: #9aacf0;
+  --accent-brand: #7a8ee0;
+  --accent-soft: #131828;
+  --accent-ink: #c8d4ff;
+  --diff-highlight: oklch(0.32 0.1 270);
+}
+
+/* Brick variant — warm red-terracotta accent */
+:root[data-theme="brick"] {
+  --brand: #b84040;
+  --brand-light: #faeaea;
+  --brand-hover: #9a3030;
+  --accent-brand: #b84040;
+  --accent-soft: #faeaea;
+  --accent-ink: #5a1010;
+  --diff-highlight: oklch(0.97 0.1 20);
+  --ring: oklch(0.55 0.18 20);
+}
+
+.dark[data-theme="brick"],
+[data-theme="brick"] .dark,
+:root[data-theme="brick"] .dark {
+  --brand: #e07070;
+  --brand-light: #2a0a0a;
+  --brand-hover: #f09090;
+  --accent-brand: #e07070;
+  --accent-soft: #2a0a0a;
+  --accent-ink: #ffc8c8;
+  --diff-highlight: oklch(0.32 0.1 20);
 }
 
 @keyframes indeterminate {
