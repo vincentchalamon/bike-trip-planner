@@ -53,8 +53,11 @@ test.describe("Accommodation selection", () => {
     });
     await selectButtons.first().click();
 
-    // Skeleton shows while stage recomputes — resolve it
+    // Wait for skeleton to appear (PATCH has returned and startStageRecomputation fired)
+    await expect(stageCard).toBeHidden({ timeout: 3000 });
+    // Resolve both affected stages (accommodation change recomputes stage 0 and 1)
     await injectEvent(stageUpdatedEventWithSelectedAccommodation(0));
+    await injectEvent(stageUpdatedEvent(1));
 
     // The accommodation should now be marked as selected
     await expect(stageCard).toContainText("Sélectionné");
@@ -94,8 +97,11 @@ test.describe("Accommodation selection", () => {
     });
     await selectButtons.first().click();
 
-    // Skeleton shows while stage recomputes — resolve it
+    // Wait for skeleton to appear (PATCH has returned and startStageRecomputation fired)
+    await expect(stageCard).toBeHidden({ timeout: 3000 });
+    // Resolve both affected stages (accommodation change recomputes stage 0 and 1)
     await injectEvent(stageUpdatedEventWithSelectedAccommodation(0));
+    await injectEvent(stageUpdatedEvent(1));
 
     // Only the selected accommodation should remain (Hotel du Pont; Camping removed)
     await expect(stageCard).toContainText("Hotel du Pont");
@@ -122,16 +128,22 @@ test.describe("Accommodation selection", () => {
       name: "Sélectionner cet hébergement",
     });
     await selectButtons.first().click();
-    // Skeleton shows while stage recomputes — resolve it with selected accommodation
+    // Wait for skeleton to appear (PATCH has returned and startStageRecomputation fired)
+    await expect(stageCard).toBeHidden({ timeout: 3000 });
+    // Resolve both affected stages (accommodation change recomputes stage 0 and 1)
     await injectEvent(stageUpdatedEventWithSelectedAccommodation(0));
+    await injectEvent(stageUpdatedEvent(1));
     await expect(stageCard).toContainText("Sélectionné");
 
     // Deselect
     await stageCard
       .getByRole("button", { name: "Désélectionner l'hébergement" })
       .click();
-    // Skeleton shows again during deselect recomputation — resolve it
+    // Wait for skeleton to appear before injecting the resolve event
+    await expect(stageCard).toBeHidden({ timeout: 3000 });
+    // Skeleton shows again during deselect recomputation — resolve both stages
     await injectEvent(stageUpdatedEvent(0));
+    await injectEvent(stageUpdatedEvent(1));
 
     // "Sélectionné" badge should be gone
     await expect(stageCard).not.toContainText("Sélectionné");
