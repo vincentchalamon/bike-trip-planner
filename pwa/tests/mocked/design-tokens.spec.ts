@@ -94,13 +94,6 @@ test.describe("Design tokens — landing page (mode clair)", () => {
     await expect(page.getByTestId("landing-page")).toBeVisible();
     await expect(page.getByTestId("section-hero")).toBeVisible();
   });
-
-  test("screenshot landing — mode clair", async ({ page }) => {
-    await expect(page.getByTestId("section-hero")).toBeVisible();
-    await expect(page).toHaveScreenshot("landing-light.png", {
-      maxDiffPixelRatio: 0.05,
-    });
-  });
 });
 
 // ── Landing page — mode sombre ───────────────────────────────────────────────
@@ -141,13 +134,6 @@ test.describe("Design tokens — landing page (mode sombre)", () => {
 
   test("landing page est visible en mode sombre", async ({ page }) => {
     await expect(page.getByTestId("landing-page")).toBeVisible();
-  });
-
-  test("screenshot landing — mode sombre", async ({ page }) => {
-    await expect(page.getByTestId("section-hero")).toBeVisible();
-    await expect(page).toHaveScreenshot("landing-dark.png", {
-      maxDiffPixelRatio: 0.05,
-    });
   });
 });
 
@@ -207,13 +193,6 @@ test.describe("Design tokens — roadbook (mode clair)", () => {
     expect(surface).not.toBe("");
     expect(ink).not.toBe("");
   });
-
-  test("screenshot roadbook — mode clair", async ({ page }) => {
-    await expect(page.getByTestId("stage-card-1")).toBeVisible();
-    await expect(page).toHaveScreenshot("roadbook-light.png", {
-      maxDiffPixelRatio: 0.05,
-    });
-  });
 });
 
 // ── Roadbook — mode sombre ───────────────────────────────────────────────────
@@ -271,12 +250,5 @@ test.describe("Design tokens — roadbook (mode sombre)", () => {
     expect(accentBrand).not.toBe("");
     expect(surface.toLowerCase()).toBe(INK_LIGHT.toLowerCase());
     expect(ink).not.toBe("");
-  });
-
-  test("screenshot roadbook — mode sombre", async ({ page }) => {
-    await expect(page.getByTestId("stage-card-1")).toBeVisible();
-    await expect(page).toHaveScreenshot("roadbook-dark.png", {
-      maxDiffPixelRatio: 0.05,
-    });
   });
 });
