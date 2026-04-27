@@ -247,6 +247,23 @@
     "navigateToCrossing": "Navigate to crossing",
     "free": "Free admission"
   },
+  "mapLegend": {
+    "title": "Marker legend",
+    "open": "Legend",
+    "close": "Close legend",
+    "accommodation": "Accommodation (hotel, campsite, hut…)",
+    "water": "Water points",
+    "supply": "Supplies (grocery, supermarket)",
+    "bikeWorkshop": "Bike workshops",
+    "railwayStation": "Railway stations",
+    "health": "Pharmacy / hospital",
+    "borderCrossing": "Border crossings",
+    "riverCrossing": "River crossing without bridge",
+    "earlyDeparture": "Pre-dawn departure",
+    "culturalPoi": "Cultural POI (museum, monument)",
+    "event": "Dated events (festival, market)",
+    "userWaypoint": "User waypoints"
+  },
   "stageAlerts": {
     "title": "{count, plural, one {# alert} other {# alerts}}",
     "showMore": "Show {count} more {count, plural, one {alert} other {alerts}}",

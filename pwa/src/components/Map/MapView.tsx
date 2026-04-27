@@ -10,6 +10,9 @@ import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import type { StageData } from "@/lib/validation/schemas";
 import { getStageColor } from "./stage-colors";
+import { createCategoryMarkerElement } from "./icons/markerDom";
+import { resolveCategory, type MarkerCategory } from "./icons";
+import { MapLegend } from "@/components/map-legend";
 
 const LIGHT_TILES =
   "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
@@ -87,23 +90,35 @@ function createMarkerElement(className: string, label: string): HTMLElement {
   return el;
 }
 
-function getAccommodationCategory(
-  type: string,
-): "building" | "camping" | "hut" | "other" {
+/**
+ * Background colour applied behind the unified accommodation icon — kept
+ * granular per sub-type so users still get a quick visual cue at a glance.
+ */
+function getAccommodationBackground(type: string): string {
   switch (type) {
     case "hotel":
     case "hostel":
     case "guest_house":
     case "motel":
     case "chalet":
-      return "building";
+      return "#7c3aed"; // violet — buildings
     case "camp_site":
-      return "camping";
+      return "#059669"; // emerald — camping
     case "alpine_hut":
-      return "hut";
+    case "wilderness_hut":
+    case "shelter":
+      return "#b45309"; // amber-700 — huts
     default:
-      return "other";
+      return "#6b7280"; // slate — fallback
   }
+}
+
+/**
+ * Marker category mapped to the alert source for {@link MarkerIcon} lookup.
+ * Falls back to user-waypoint when nothing matches.
+ */
+function resolveAlertCategory(source: string | undefined): MarkerCategory {
+  return resolveCategory(source ?? "") ?? "user-waypoint";
 }
 
 function addAccommodationLinkLayer(map: maplibregl.Map): void {
@@ -347,11 +362,14 @@ export const MapView = memo(function MapView({
 
       if (stage.selectedAccommodation) {
         // Only show the selected accommodation for this stage
-        const cat = getAccommodationCategory(stage.selectedAccommodation.type);
-        const el = createMarkerElement(
-          `map-marker map-marker--acc map-marker--acc-${cat} map-marker--acc-selected`,
-          stage.selectedAccommodation.name,
-        );
+        const el = createCategoryMarkerElement("accommodation", {
+          label: stage.selectedAccommodation.name,
+          background: getAccommodationBackground(
+            stage.selectedAccommodation.type,
+          ),
+          size: 28,
+          extraClass: "map-marker--acc map-marker--acc-selected",
+        });
         markersRef.current.push(
           new maplibregl.Marker({ element: el })
             .setLngLat([
@@ -363,12 +381,13 @@ export const MapView = memo(function MapView({
       } else {
         // Show all accommodations for this stage
         stage.accommodations.forEach((acc, accIdx) => {
-          const cat = getAccommodationCategory(acc.type);
           const key = `${stageIdx}-${accIdx}`;
-          const el = createMarkerElement(
-            `map-marker map-marker--acc map-marker--acc-${cat}`,
-            acc.name,
-          );
+          const el = createCategoryMarkerElement("accommodation", {
+            label: acc.name,
+            background: getAccommodationBackground(acc.type),
+            size: 24,
+            extraClass: "map-marker--acc",
+          });
           accMarkerElementsRef.current.set(key, el);
 
           // Bidirectional hover: map marker → store
@@ -391,7 +410,10 @@ export const MapView = memo(function MapView({
       }
     });
 
-    // Alert markers (one per stage, with coords)
+    // Alert markers (one per stage, with coords). The icon comes from the
+    // unified registry, picked from `alert.source` (e.g. "railway_station",
+    // "border_crossing", "cultural_poi"…). Falls back to a generic warning
+    // disc when no category can be resolved.
     activeStages.forEach((stage) => {
       const alert = stage.alerts.find(
         (a) =>
@@ -401,10 +423,25 @@ export const MapView = memo(function MapView({
       );
       if (!alert || alert.lat == null || alert.lon == null) return;
 
-      const alertEl = createMarkerElement(
-        `map-marker map-marker--alert map-marker--alert-${alert.type}`,
-        alert.message,
-      );
+      const category = resolveAlertCategory(alert.source);
+      const background = alert.type === "critical" ? "#dc2626" : "#d97706";
+      const isEnrichedPoi =
+        alert.source === "cultural_poi" &&
+        Boolean(
+          alert.description ?? alert.openingHours ?? alert.estimatedPrice,
+        );
+
+      const alertEl = createCategoryMarkerElement(category, {
+        label: alert.message,
+        background,
+        size: 24,
+        extraClass: `map-marker--alert map-marker--alert-${alert.type}${
+          isEnrichedPoi ? " map-marker--cultural-enriched" : ""
+        }`,
+      });
+      // The disc keeps relative positioning so the optional ::after dot
+      // (cultural-poi enrichment indicator) anchors correctly.
+      alertEl.style.position = "relative";
       markersRef.current.push(
         new maplibregl.Marker({ element: alertEl })
           .setLngLat([alert.lon, alert.lat])
@@ -537,6 +574,8 @@ export const MapView = memo(function MapView({
           {t("resetView")}
         </button>
       )}
+
+      <MapLegend />
     </div>
   );
 });
