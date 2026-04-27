@@ -332,7 +332,6 @@ export const useUiStore = create<UiState>()(
           error: message,
         };
       }),
-
   })),
 );
 

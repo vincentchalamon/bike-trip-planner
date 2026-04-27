@@ -202,9 +202,9 @@ test.describe("Inline recomputation — progress bar", () => {
     await injectEvent(stageUpdatedEvent(1));
 
     // Bar should disappear once recomputingStages is empty
-    await expect(
-      mockedPage.getByTestId("inline-recomputation-bar"),
-    ).toBeHidden({ timeout: 3000 });
+    await expect(mockedPage.getByTestId("inline-recomputation-bar")).toBeHidden(
+      { timeout: 3000 },
+    );
   });
 
   test("progress bar is not visible outside Acte 3 (no trip loaded)", async ({
