@@ -841,4 +841,4 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 33        | Recette complète & Audit                 | 36      | ~12          |
 | 34        | Garmin Connect                           | 1       | 3            |
 | 35        | Déploiement (incl. Ollama prod)          | 8       | ~8           |
-| **Total** |                                          | **183** | **~195**     |
+| **Total** |                                          | **185** | **~195**     |
