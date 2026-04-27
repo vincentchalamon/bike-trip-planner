@@ -447,11 +447,11 @@ Interface d'entrée de l'itinéraire (cartes Lien/GPX), écran de prévisualisat
 
 Shimmer/skeleton sur les étapes en recalcul, batch mode (ModificationQueue), diff post-recalcul.
 
-| Ordre | ID                                                                      | Titre                                                                     | Effort | PRs | Dépend de |
-|-------|-------------------------------------------------------------------------|---------------------------------------------------------------------------|--------|-----|-----------|
-| 1     | [#326](https://github.com/vincentchalamon/bike-trip-planner/issues/326) | Recomputation inline : shimmer/skeleton + barre de progression discrète   | L      |     | #324 #325 |
-| 2     | [#327](https://github.com/vincentchalamon/bike-trip-planner/issues/327) | Batch mode : ModificationQueue (accumulation + recalcul unique)           | L      |     | #326      |
-| 3     | [#328](https://github.com/vincentchalamon/bike-trip-planner/issues/328) | Diff post-recalcul : surbrillance des changements après recomputation     | M      |     | #326      |
+| Ordre | ID                                                                      | Titre                                                                     | Effort | PRs                                                                                | Dépend de |
+|-------|-------------------------------------------------------------------------|---------------------------------------------------------------------------|--------|------------------------------------------------------------------------------------|-----------|
+| 1     | [#326](https://github.com/vincentchalamon/bike-trip-planner/issues/326) | Recomputation inline : shimmer/skeleton + barre de progression discrète   | L      | [#380](https://github.com/vincentchalamon/bike-trip-planner/pull/380) `feature/326` | #324 #325 |
+| 2     | [#327](https://github.com/vincentchalamon/bike-trip-planner/issues/327) | Batch mode : ModificationQueue (accumulation + recalcul unique)           | L      | [#382](https://github.com/vincentchalamon/bike-trip-planner/pull/382) `feature/327` | #326      |
+| 3     | [#328](https://github.com/vincentchalamon/bike-trip-planner/issues/328) | Diff post-recalcul : surbrillance des changements après recomputation     | M      | [#381](https://github.com/vincentchalamon/bike-trip-planner/pull/381) `feature/328` | #326      |
 
 ---
 
