@@ -60,11 +60,7 @@ export function DiffHighlight({
     >
       {children}
       {isChanged && changeLabel && (
-        <span
-          className="sr-only"
-          aria-live="polite"
-          aria-atomic="true"
-        >
+        <span className="sr-only" aria-live="polite" aria-atomic="true">
           {changeLabel}
         </span>
       )}

@@ -579,10 +579,7 @@ function dispatchEvent(event: MercureEvent): void {
  * Compared fields: `distance`, `elevation`, `alerts`, `selectedAccommodation`,
  * `arrivalTime` (derived from distance + speed, approximated by distance).
  */
-function computeStageDiff(
-  prev: StageData,
-  next: StageData,
-): Set<string> {
+function computeStageDiff(prev: StageData, next: StageData): Set<string> {
   const changed = new Set<string>();
 
   if (prev.distance !== next.distance) changed.add("distance");
@@ -594,8 +591,12 @@ function computeStageDiff(
   }
 
   // Alert changes: detect new alerts (added) and removed ones
-  const prevMessages = new Set(prev.alerts.map((a) => `${a.type}:${a.message}`));
-  const nextMessages = new Set(next.alerts.map((a) => `${a.type}:${a.message}`));
+  const prevMessages = new Set(
+    prev.alerts.map((a) => `${a.type}:${a.message}`),
+  );
+  const nextMessages = new Set(
+    next.alerts.map((a) => `${a.type}:${a.message}`),
+  );
   const hasNewAlerts = [...nextMessages].some((m) => !prevMessages.has(m));
   const hasRemovedAlerts = [...prevMessages].some((m) => !nextMessages.has(m));
   if (hasNewAlerts) changed.add("alerts_added");

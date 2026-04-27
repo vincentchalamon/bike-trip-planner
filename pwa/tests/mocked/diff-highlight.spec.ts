@@ -122,9 +122,9 @@ test.describe("Diff highlight after inline recomputation", () => {
     });
 
     // Distance diff highlight should be present
-    await expect(
-      mockedPage.getByTestId("diff-highlight-distance"),
-    ).toBeVisible({ timeout: 1000 });
+    await expect(mockedPage.getByTestId("diff-highlight-distance")).toBeVisible(
+      { timeout: 1000 },
+    );
   });
 
   test("diff highlight disappears after ~3s", async ({
@@ -161,9 +161,9 @@ test.describe("Diff highlight after inline recomputation", () => {
     });
 
     // Highlight should be visible immediately after the update
-    await expect(
-      mockedPage.getByTestId("diff-highlight-distance"),
-    ).toBeVisible({ timeout: 1000 });
+    await expect(mockedPage.getByTestId("diff-highlight-distance")).toBeVisible(
+      { timeout: 1000 },
+    );
 
     // After ~3.5 seconds the store timer should have fired and removed the
     // highlight (data-testid is only set when isChanged is true).

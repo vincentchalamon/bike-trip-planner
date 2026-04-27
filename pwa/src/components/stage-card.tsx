@@ -166,12 +166,8 @@ export function StageCard({
                   isProcessing={isProcessing}
                   departureHour={stage.isRestDay ? undefined : departureHour}
                   averageSpeedKmh={stage.isRestDay ? undefined : averageSpeed}
-                  endPointLat={
-                    stage.isRestDay ? undefined : stage.endPoint.lat
-                  }
-                  endPointLon={
-                    stage.isRestDay ? undefined : stage.endPoint.lon
-                  }
+                  endPointLat={stage.isRestDay ? undefined : stage.endPoint.lat}
+                  endPointLon={stage.isRestDay ? undefined : stage.endPoint.lon}
                   startDate={stage.isRestDay ? undefined : startDate}
                   stageIndex={stage.isRestDay ? undefined : stageIndex}
                 />
