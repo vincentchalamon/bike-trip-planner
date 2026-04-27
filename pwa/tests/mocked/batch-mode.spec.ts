@@ -305,6 +305,48 @@ test.describe("ModificationQueue — apply all", () => {
       timeout: 3000,
     });
   });
+
+  test("distance modification shows shimmer on all subsequent stages", async ({
+    createFullTrip,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await mockedPage.route("**/trips/*/recompute", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      return route.fulfill({
+        status: 202,
+        contentType: "application/ld+json",
+        body: JSON.stringify({ "@type": "Trip", id: "test-trip-abc-123" }),
+      });
+    });
+
+    await createFullTrip();
+
+    // Queue a distance modification on stage 0 — backend will recompute all subsequent stages
+    await queueModification(mockedPage, {
+      stageIndex: 0,
+      type: "distance",
+      label: "Distance étape 1",
+    });
+
+    await mockedPage.getByTestId("modification-queue-apply").click();
+
+    // All stages from stageIndex=0 onwards (stages 0, 1, 2) must show shimmer
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeHidden({
+      timeout: 5000,
+    });
+    await expect(mockedPage.getByTestId("stage-card-2")).toBeHidden();
+    await expect(mockedPage.getByTestId("stage-card-3")).toBeHidden();
+
+    // Resolve all three stages via SSE
+    await injectEvent(stageUpdatedEvent(0));
+    await injectEvent(stageUpdatedEvent(1));
+    await injectEvent(stageUpdatedEvent(2));
+
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
+      timeout: 3000,
+    });
+  });
 });
 
 test.describe("ModificationQueue — cancel", () => {

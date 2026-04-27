@@ -21,6 +21,10 @@ final class TripModification
          * Null for trip-level modifications (dates, pacing settings, etc.).
          */
         #[Assert\PositiveOrZero]
+        #[Assert\When(
+            expression: "this.type in ['accommodation', 'distance']",
+            constraints: [new Assert\NotNull(message: 'stageIndex is required for accommodation and distance modifications.')],
+        )]
         public ?int $stageIndex = null,
 
         /**
