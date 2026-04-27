@@ -9,9 +9,6 @@ use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
 use App\Message\CheckCalendar;
 use App\Message\CheckCulturalPois;
-use App\Message\CheckHealthServices;
-use App\Message\CheckRailwayStations;
-use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
@@ -161,7 +158,7 @@ final class ComputationDependencyResolverTest extends TestCase
         $this->assertContains(ScanEvents::class, $classes);
 
         // Exactly one RecalculateStages message (deduplicated)
-        $this->assertSame(1, \count(array_filter($messages, static fn (object $m): bool => $m instanceof RecalculateStages)));
+        $this->assertCount(1, array_filter($messages, static fn (object $m): bool => $m instanceof RecalculateStages));
     }
 
     #[Test]
@@ -172,7 +169,7 @@ final class ComputationDependencyResolverTest extends TestCase
 
         foreach ($messages as $message) {
             if (property_exists($message, 'generation')) {
-                /** @var object{generation: ?int} $message */
+                /* @var object{generation: ?int} $message */
                 $this->assertSame(7, $message->generation, \sprintf('Expected generation 7 for %s', $message::class));
             }
         }
@@ -200,7 +197,7 @@ final class ComputationDependencyResolverTest extends TestCase
     /**
      * @template T of object
      *
-     * @param list<object>   $messages
+     * @param list<object>    $messages
      * @param class-string<T> $class
      */
     private function firstOf(array $messages, string $class): ?object
