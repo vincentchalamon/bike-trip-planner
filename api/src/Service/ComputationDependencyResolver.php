@@ -30,7 +30,7 @@ use App\Message\ScanPois;
  * - 'distance':      RecalculateStages (affected + subsequent), ScanPois, ScanAccommodations,
  *                    AnalyzeTerrain, CheckBikeShops, CheckWaterPoints, CheckHealthServices,
  *                    CheckRailwayStations, FetchWeather (when dates set), CheckCalendar (when dates set)
- * - 'dates':         FetchWeather, CheckCalendar, ScanEvents
+ * - 'dates':         FetchWeather, CheckCalendar, ScanEvents, CheckCulturalPois
  * - 'pacing':        RecalculateStages (all stages)
  */
 final readonly class ComputationDependencyResolver
