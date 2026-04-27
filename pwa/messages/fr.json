@@ -623,6 +623,26 @@
   "navigation": {
     "myTrips": "Mes voyages"
   },
+  "errorPages": {
+    "notFound": {
+      "title": "Hors-piste",
+      "subtitle": "Cette page n'existe pas ou a été déplacée.",
+      "illustrationAlt": "Cycliste perdu en montagne",
+      "backHome": "Retour à l'accueil"
+    },
+    "error": {
+      "title": "Un caillou dans le dérailleur",
+      "subtitle": "Une erreur inattendue est survenue. Vous pouvez réessayer ou revenir à l'accueil.",
+      "retry": "Réessayer",
+      "backHome": "Retour à l'accueil"
+    },
+    "globalError": {
+      "title": "Un caillou dans le dérailleur",
+      "subtitle": "Une erreur critique est survenue. Vous pouvez recharger la page.",
+      "requestIdLabel": "Identifiant pour le support :",
+      "reload": "Recharger la page"
+    }
+  },
   "faq": {
     "title": "Foire aux questions",
     "description": "Tout ce que vous devez savoir sur Bike Trip Planner.",
