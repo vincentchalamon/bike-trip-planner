@@ -513,6 +513,9 @@ function dispatchEvent(event: MercureEvent): void {
       // fields (labels, search radius) are handled by the store.
       const incoming = enrichedPayloadToStageData(event.data.stage);
       store.applyStageUpdate(event.data.stageIndex, incoming);
+      // Remove this stage from the recomputing set — the shimmer skeleton
+      // can now be replaced by the real card.
+      store.finishStageRecomputation(event.data.stageIndex);
       // Labels may have been wiped if endpoints moved — refresh if needed.
       const updated = useTripStore.getState().stages[event.data.stageIndex];
       if (

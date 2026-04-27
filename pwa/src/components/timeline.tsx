@@ -5,11 +5,13 @@ import { useTranslations } from "next-intl";
 import { NoDatesBanner } from "@/components/no-dates-banner";
 import { TimelineMarker } from "@/components/timeline-marker";
 import { StageCard } from "@/components/stage-card";
+import { StageSkeleton } from "@/components/stage-skeleton";
 import { AddStageButton } from "@/components/add-stage-button";
 import { AddRestDayButton } from "@/components/add-rest-day-button";
 import { RestDayCard } from "@/components/rest-day-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUiStore } from "@/store/ui-store";
+import { useTripStore } from "@/store/trip-store";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 
 interface TimelineProps {
@@ -87,6 +89,7 @@ export function Timeline({
   const MIN_KM = 5;
   const tTimeline = useTranslations("timeline");
   const setActiveDayNumber = useUiStore((s) => s.setActiveDayNumber);
+  const recomputingStages = useTripStore((s) => s.recomputingStages);
 
   const canInsertStage = useCallback(
     (afterIndex: number): boolean => {
@@ -239,6 +242,8 @@ export function Timeline({
                         canDelete={!readOnly && stages.length > 2}
                         onDelete={() => onDeleteStage(originalIndex)}
                       />
+                    ) : recomputingStages.has(originalIndex) ? (
+                      <StageSkeleton />
                     ) : (
                       <StageCard
                         stage={stage}

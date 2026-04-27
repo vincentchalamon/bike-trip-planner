@@ -42,6 +42,7 @@
     "downloadFit": "Download FIT stage {dayNumber}",
     "downloadFailed": "Download failed. Please try again.",
     "loadingAlerts": "Analyzing stage...",
+    "recomputing": "Updating...",
     "editDistance": "Edit distance",
     "distanceLabel": "Distance (km)",
     "saveDistance": "Save",

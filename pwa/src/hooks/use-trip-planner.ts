@@ -115,6 +115,7 @@ export function useTripPlanner() {
       updateStageAlerts: s.updateStageAlerts,
       setIsLocked: s.setIsLocked,
       setDepartureHour: s.setDepartureHour,
+      startStageRecomputation: s.startStageRecomputation,
     })),
   );
 
@@ -428,6 +429,8 @@ export function useTripPlanner() {
         useTripTemporalStore.getState()._push(snapshot);
         setProcessing(true);
         setAccommodationScanning(true);
+        // Mark this stage as recomputing so the shimmer skeleton appears.
+        actions.startStageRecomputation([index]);
       }
     } catch {
       toast.error(t("errors.failedUpdateLocation"));
@@ -782,6 +785,11 @@ export function useTripPlanner() {
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
+        // Mark affected stages as recomputing: the selected stage and the
+        // next one (its startPoint may have shifted to the accommodation).
+        const affectedIndices = [stageIndex];
+        if (nextStageIndex !== null) affectedIndices.push(nextStageIndex);
+        actions.startStageRecomputation(affectedIndices);
       }
     } catch {
       toast.error(t("errors.failedSelectAccommodation"));
@@ -815,6 +823,14 @@ export function useTripPlanner() {
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
+        // Mark affected stages as recomputing: the deselected stage and the
+        // next one (its startPoint reverts to original after deselection).
+        const affectedIndices: number[] = [stageIndex];
+        const nextIdx = stageIndex + 1;
+        if (nextIdx < useTripStore.getState().stages.length) {
+          affectedIndices.push(nextIdx);
+        }
+        actions.startStageRecomputation(affectedIndices);
       }
     } catch {
       toast.error(t("errors.failedDeselectAccommodation"));
