@@ -18,6 +18,7 @@ final class TripBatchRecomputeRequest
      * @param list<TripModification> $modifications
      */
     public function __construct(
+        #[Assert\Valid]
         #[Assert\NotBlank]
         #[Assert\Count(min: 1)]
         public array $modifications = [],

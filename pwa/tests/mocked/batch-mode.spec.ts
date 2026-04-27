@@ -202,7 +202,9 @@ test.describe("ModificationQueue — apply all", () => {
     await mockedPage.getByTestId("modification-queue-apply").click();
 
     // The "Applying…" state should be visible while the request is in-flight
-    await expect(mockedPage.getByTestId("modification-queue-apply")).toContainText(/appli/i, {
+    await expect(
+      mockedPage.getByTestId("modification-queue-apply"),
+    ).toContainText(/appli/i, {
       timeout: 3000,
     });
 
@@ -250,11 +252,10 @@ test.describe("ModificationQueue — apply all", () => {
 
     await mockedPage.getByTestId("modification-queue-apply").click();
 
-    // Wait for the request to be captured
-    await mockedPage.waitForTimeout(500);
-
     // Exactly one recompute request was sent (batch mode)
-    expect(recomputeRequests).toHaveLength(1);
+    await expect
+      .poll(() => recomputeRequests.length, { timeout: 3_000 })
+      .toBe(1);
 
     // The body should contain all 3 modifications
     const body = recomputeRequests[0] as {
@@ -288,9 +289,9 @@ test.describe("ModificationQueue — apply all", () => {
     await mockedPage.getByTestId("modification-queue-apply").click();
 
     // Shimmer should appear for the affected stage
-    await expect(
-      mockedPage.getByTestId("stage-skeleton").first(),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(mockedPage.getByTestId("stage-skeleton").first()).toBeVisible({
+      timeout: 5000,
+    });
 
     // Original stage card should be hidden
     await expect(mockedPage.getByTestId("stage-card-1")).toBeHidden();

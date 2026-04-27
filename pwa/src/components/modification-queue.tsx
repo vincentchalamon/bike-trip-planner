@@ -73,7 +73,10 @@ export function ModificationQueue({
         {/* Header */}
         <div className="flex items-center gap-2">
           <ClipboardList className="h-4 w-4 text-brand flex-shrink-0" />
-          <span className="font-semibold text-sm" data-testid="modification-queue-count">
+          <span
+            className="font-semibold text-sm"
+            data-testid="modification-queue-count"
+          >
             {t("title", { count: pendingModifications.length })}
           </span>
         </div>

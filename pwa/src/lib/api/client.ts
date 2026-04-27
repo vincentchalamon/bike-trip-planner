@@ -343,11 +343,7 @@ export async function uploadGpxFile(
  */
 export async function applyBatchRecompute(
   tripId: string,
-  modifications: Array<{
-    stageIndex: number | null;
-    type: "accommodation" | "distance" | "dates" | "pacing";
-    label: string;
-  }>,
+  modifications: import("@/lib/api/schema").components["schemas"]["TripModification"][],
 ): Promise<boolean> {
   const res = await apiFetch(
     `${API_URL}/trips/${encodeURIComponent(tripId)}/recompute`,

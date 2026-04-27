@@ -52,7 +52,11 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
         }
 
         $stages = $this->tripStateManager->getStages($tripId);
-        if (null === $stages || [] === $stages) {
+        if (null === $stages) {
+            throw new NotFoundHttpException('Trip not found.');
+        }
+
+        if ([] === $stages) {
             throw new UnprocessableEntityHttpException('Trip has no stages to recompute.');
         }
 
