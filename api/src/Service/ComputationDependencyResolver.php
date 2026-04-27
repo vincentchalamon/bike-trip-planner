@@ -38,7 +38,6 @@ final readonly class ComputationDependencyResolver
     /**
      * @param list<TripModification> $modifications
      * @param list<int>              $allStageIndices
-     * @param bool                   $hasDates
      * @param list<string>           $enabledAccommodationTypes
      *
      * @return list<object> Messenger messages to dispatch
@@ -74,8 +73,10 @@ final readonly class ComputationDependencyResolver
                         if (isset($allStageIndices[$modification->stageIndex + 1])) {
                             $recalcIndices[] = $modification->stageIndex + 1;
                         }
+
                         $accommodationScanIndices[] = $modification->stageIndex;
                     }
+
                     break;
 
                 case 'distance':
@@ -90,6 +91,7 @@ final readonly class ComputationDependencyResolver
                             $accommodationScanIndices[] = $idx;
                         }
                     }
+
                     $needsPois = true;
                     $needsTerrain = true;
                     $needsBikeShops = true;
@@ -100,6 +102,7 @@ final readonly class ComputationDependencyResolver
                         $needsWeather = true;
                         $needsCalendar = true;
                     }
+
                     break;
 
                 case 'dates':
@@ -116,6 +119,7 @@ final readonly class ComputationDependencyResolver
                         $needsWeather = true;
                         $needsCalendar = true;
                     }
+
                     break;
             }
         }
@@ -149,30 +153,39 @@ final readonly class ComputationDependencyResolver
         if ($needsPois) {
             $messages[] = new ScanPois($tripId, $generation);
         }
+
         if ($needsTerrain) {
             $messages[] = new AnalyzeTerrain($tripId, $generation);
         }
+
         if ($needsBikeShops) {
             $messages[] = new CheckBikeShops($tripId, $generation);
         }
+
         if ($needsWaterPoints) {
             $messages[] = new CheckWaterPoints($tripId, $generation);
         }
+
         if ($needsHealthServices) {
             $messages[] = new CheckHealthServices($tripId, $generation);
         }
+
         if ($needsRailwayStations) {
             $messages[] = new CheckRailwayStations($tripId, $generation);
         }
+
         if ($needsWeather) {
             $messages[] = new FetchWeather($tripId, $generation);
         }
+
         if ($needsCalendar) {
             $messages[] = new CheckCalendar($tripId, $generation);
         }
+
         if ($needsEvents) {
             $messages[] = new ScanEvents($tripId, $generation);
         }
+
         if ($needsCulturalPois) {
             $messages[] = new CheckCulturalPois($tripId, $generation);
         }
