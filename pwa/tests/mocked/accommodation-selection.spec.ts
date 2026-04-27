@@ -4,6 +4,8 @@ import {
   stagesComputedEvent,
   accommodationsFoundEvent,
   tripCompleteEvent,
+  stageUpdatedEvent,
+  stageUpdatedEventWithSelectedAccommodation,
 } from "../fixtures/mock-data";
 
 test.describe("Accommodation selection", () => {
@@ -31,6 +33,7 @@ test.describe("Accommodation selection", () => {
 
   test("selecting an accommodation marks it as selected", async ({
     submitUrl,
+    injectEvent,
     injectSequence,
     mockedPage,
   }) => {
@@ -50,6 +53,9 @@ test.describe("Accommodation selection", () => {
     });
     await selectButtons.first().click();
 
+    // Skeleton shows while stage recomputes — resolve it
+    await injectEvent(stageUpdatedEventWithSelectedAccommodation(0));
+
     // The accommodation should now be marked as selected
     await expect(stageCard).toContainText("Sélectionné");
 
@@ -67,6 +73,7 @@ test.describe("Accommodation selection", () => {
 
   test("selecting an accommodation keeps only that accommodation", async ({
     submitUrl,
+    injectEvent,
     injectSequence,
     mockedPage,
   }) => {
@@ -87,6 +94,9 @@ test.describe("Accommodation selection", () => {
     });
     await selectButtons.first().click();
 
+    // Skeleton shows while stage recomputes — resolve it
+    await injectEvent(stageUpdatedEventWithSelectedAccommodation(0));
+
     // Only the selected accommodation should remain (Hotel du Pont; Camping removed)
     await expect(stageCard).toContainText("Hotel du Pont");
     await expect(stageCard).not.toContainText("Camping Les Oliviers");
@@ -94,6 +104,7 @@ test.describe("Accommodation selection", () => {
 
   test("deselecting an accommodation restores deselect state", async ({
     submitUrl,
+    injectEvent,
     injectSequence,
     mockedPage,
   }) => {
@@ -111,12 +122,16 @@ test.describe("Accommodation selection", () => {
       name: "Sélectionner cet hébergement",
     });
     await selectButtons.first().click();
+    // Skeleton shows while stage recomputes — resolve it with selected accommodation
+    await injectEvent(stageUpdatedEventWithSelectedAccommodation(0));
     await expect(stageCard).toContainText("Sélectionné");
 
     // Deselect
     await stageCard
       .getByRole("button", { name: "Désélectionner l'hébergement" })
       .click();
+    // Skeleton shows again during deselect recomputation — resolve it
+    await injectEvent(stageUpdatedEvent(0));
 
     // "Sélectionné" badge should be gone
     await expect(stageCard).not.toContainText("Sélectionné");

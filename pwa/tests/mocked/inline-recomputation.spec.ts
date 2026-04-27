@@ -18,6 +18,37 @@ import {
  */
 
 test.describe("Inline recomputation — skeleton", () => {
+  test("shimmer skeleton appears after a distance change", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      accommodationsFoundEvent(0),
+      tripCompleteEvent(),
+    ]);
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Trigger distance change
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await stageCard
+      .getByRole("button", { name: "Modifier la distance" })
+      .click();
+    const input = stageCard.getByRole("spinbutton", { name: "Distance (km)" });
+    await input.fill("80");
+    await input.press("Enter");
+
+    // Skeleton should appear immediately after the PATCH succeeds
+    await expect(mockedPage.getByTestId("stage-skeleton").first()).toBeVisible({
+      timeout: 3000,
+    });
+  });
+
   test("shimmer skeleton replaces stage card while stage_updated is pending", async ({
     submitUrl,
     injectEvent,

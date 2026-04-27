@@ -153,6 +153,8 @@ interface TripState {
    * lands for that index). When the set becomes empty the progress bar hides.
    */
   finishStageRecomputation: (index: number) => void;
+  /** Clear all recomputing stages — safety net for lost `stage_updated` events. */
+  clearRecomputingStages: () => void;
   clearTrip: () => void;
   /** Hydrate the trip store from a {@link SavedTrip} snapshot (offline consultation). */
   loadFromSavedTrip: (trip: SavedTrip) => void;
@@ -591,6 +593,11 @@ export const useTripStore = create<TripState>()(
     finishStageRecomputation: (index) =>
       set((state) => {
         state.recomputingStages.delete(index);
+      }),
+
+    clearRecomputingStages: () =>
+      set((state) => {
+        state.recomputingStages.clear();
       }),
 
     loadFromSavedTrip: (trip) => {

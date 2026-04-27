@@ -396,6 +396,7 @@ function dispatchEvent(event: MercureEvent): void {
         coordinates: event.data.coordinates,
       });
       store.updateStageAlerts(event.data.stageIndex, [], "cultural_poi");
+      store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       break;
     }
@@ -411,6 +412,7 @@ function dispatchEvent(event: MercureEvent): void {
       // ever gets called.
       useUiStore.getState().setAnalysisStarted(true);
       useUiStore.getState().setAnalysisPhaseActive(false);
+      store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
 
@@ -464,6 +466,7 @@ function dispatchEvent(event: MercureEvent): void {
       useUiStore.getState().setAnalysisProgress(null);
       useUiStore.getState().setAnalysisStarted(true);
       useUiStore.getState().setAnalysisPhaseActive(false);
+      store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
 
@@ -529,6 +532,7 @@ function dispatchEvent(event: MercureEvent): void {
 
     case "validation_error":
       toast.error(event.data.message);
+      store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
       break;
@@ -541,6 +545,7 @@ function dispatchEvent(event: MercureEvent): void {
         .getState()
         .failAnalysisStep(event.data.computation, event.data.message);
       if (!event.data.retryable) {
+        store.clearRecomputingStages();
         useUiStore.getState().setProcessing(false);
         useUiStore.getState().setAccommodationScanning(false);
         useUiStore.getState().setAnalysisPhaseActive(false);
