@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { UndoRedoButtons } from "@/components/undo-redo-buttons";
 import { Stepper } from "@/components/stepper";
 import { InlineRecomputationBar } from "@/components/inline-recomputation-bar";
+import { ModificationQueue } from "@/components/modification-queue";
 import { RecentTrips } from "@/components/recent-trips";
 import { SavedTripsSection } from "@/components/saved-trips-section";
 import { OfflineBanner } from "@/components/offline-banner";
@@ -93,6 +94,10 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
     isShareModalOpen,
     setShareModalOpen,
     clearNewAccKey,
+    pendingModifications,
+    isBatchApplying,
+    handleApplyBatch,
+    handleCancelBatch,
   } = useTripPlanner();
 
   // Auto-submit when ?link= query param is present
@@ -181,6 +186,25 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
         onAnalysisStarted,
       );
     };
+  }, []);
+
+  // E2E test hook: allow Playwright to enqueue modifications directly without
+  // going through real UI interactions (accommodation click, distance edit, etc.).
+  // This keeps batch-mode tests lean and deterministic.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const mod = (
+        e as CustomEvent<{
+          stageIndex: number | null;
+          type: "accommodation" | "distance" | "dates" | "pacing";
+          label: string;
+        }>
+      ).detail;
+      useTripStore.getState().queueModification(mod);
+    };
+    window.addEventListener("__test_queue_modification", handler);
+    return () =>
+      window.removeEventListener("__test_queue_modification", handler);
   }, []);
 
   // Drive stepper state transitions based on trip lifecycle:
@@ -540,6 +564,15 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
           <>
             {/* Inline recomputation progress bar — thin bar at top of page */}
             <InlineRecomputationBar />
+
+            {/* Batch modification queue — floating panel at bottom of page */}
+            {pendingModifications.length > 0 && (
+              <ModificationQueue
+                onApply={handleApplyBatch}
+                onCancel={handleCancelBatch}
+                isApplying={isBatchApplying}
+              />
+            )}
 
             {/* Close button — top-right corner */}
             <Button

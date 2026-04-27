@@ -13,6 +13,22 @@ import type {
   SupplyMarkerData,
   EventData,
 } from "@/lib/validation/schemas";
+
+/**
+ * A single user modification accumulated in the batch queue before being applied
+ * in one recompute pass via `POST /trips/{id}/recompute`.
+ */
+export interface Modification {
+  /** Zero-based stage index. Null for trip-level changes (dates, pacing). */
+  stageIndex: number | null;
+  /**
+   * Modification type — maps directly to the backend TripModification.type:
+   * 'accommodation' | 'distance' | 'dates' | 'pacing'
+   */
+  type: "accommodation" | "distance" | "dates" | "pacing";
+  /** Human-readable description shown in the ModificationQueue panel. */
+  label: string;
+}
 import type { AccommodationType } from "@/lib/accommodation-types";
 import { FILTERABLE_ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
 import { createTemporalStore } from "@/store/temporal-middleware";
@@ -59,6 +75,13 @@ interface TripState {
    * fields that changed during an inline recomputation.
    */
   stageDiffs: Map<number, Set<string>>;
+
+  /**
+   * Accumulated modifications that have not yet been sent to the backend.
+   * The user can accumulate N changes then click "Apply all" to send a single
+   * `POST /trips/{id}/recompute` instead of N sequential recomputations.
+   */
+  pendingModifications: Modification[];
 
   setTrip: (trip: TripIdentity) => void;
   updateRouteData: (data: {
@@ -172,6 +195,24 @@ interface TripState {
    * in `use-mercure.ts` after ~3 seconds).
    */
   clearStageDiff: (stageIndex: number) => void;
+
+  /**
+   * Enqueue a modification in the pending batch. Duplicate entries (same type
+   * + stageIndex) are replaced rather than appended.
+   */
+  queueModification: (modification: Modification) => void;
+
+  /**
+   * Remove all pending modifications, restoring the UI to its pre-queue state.
+   * Does NOT trigger a backend call — the caller is responsible for any rollback.
+   */
+  cancelAllModifications: () => void;
+
+  /**
+   * Internal: clears the pending modifications list after a successful batch apply.
+   * Called by the hook after the backend responds with 2xx.
+   */
+  clearPendingModifications: () => void;
   clearTrip: () => void;
   /** Hydrate the trip store from a {@link SavedTrip} snapshot (offline consultation). */
   loadFromSavedTrip: (trip: SavedTrip) => void;
@@ -199,6 +240,7 @@ const initialState = {
   computationStatus: {},
   recomputingStages: new Set<number>(),
   stageDiffs: new Map<number, Set<string>>(),
+  pendingModifications: [] as Modification[],
 };
 
 /**
@@ -626,6 +668,31 @@ export const useTripStore = create<TripState>()(
     clearStageDiff: (stageIndex) =>
       set((state) => {
         state.stageDiffs.delete(stageIndex);
+      }),
+
+    queueModification: (modification) =>
+      set((state) => {
+        // Replace duplicate: same type + stageIndex (null considered equal to null)
+        const existingIndex = state.pendingModifications.findIndex(
+          (m) =>
+            m.type === modification.type &&
+            m.stageIndex === modification.stageIndex,
+        );
+        if (existingIndex !== -1) {
+          state.pendingModifications[existingIndex] = modification;
+        } else {
+          state.pendingModifications.push(modification);
+        }
+      }),
+
+    cancelAllModifications: () =>
+      set((state) => {
+        state.pendingModifications = [];
+      }),
+
+    clearPendingModifications: () =>
+      set((state) => {
+        state.pendingModifications = [];
       }),
 
     loadFromSavedTrip: (trip) => {

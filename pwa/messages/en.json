@@ -661,6 +661,16 @@
     "see_website": "Visit website",
     "see_website_label": "Visit {name}'s website"
   },
+  "modificationQueue": {
+    "panelLabel": "Pending modifications",
+    "title": "{count, plural, one {1 pending modification} other {# pending modifications}}",
+    "estimatedTimeSeconds": "Estimated time: ~{seconds} s",
+    "estimatedTimeMinute": "Estimated time: ~1 min",
+    "applyAll": "Apply all",
+    "cancel": "Cancel",
+    "applying": "Applying…",
+    "failedApply": "Failed to apply modifications. Please try again."
+  },
   "footer": {
     "faq": "FAQ"
   },

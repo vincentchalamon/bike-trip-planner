@@ -333,6 +333,37 @@ export async function uploadGpxFile(
 }
 
 /**
+ * Apply a batch of pending modifications in a single recompute pass.
+ *
+ * Sends `POST /trips/{id}/recompute` with all queued modifications so the backend
+ * dispatches only the minimal set of handlers required — avoiding N sequential
+ * recomputations for N changes.
+ *
+ * Returns `true` on HTTP 2xx; `false` otherwise.
+ */
+export async function applyBatchRecompute(
+  tripId: string,
+  modifications: Array<{
+    stageIndex: number | null;
+    type: "accommodation" | "distance" | "dates" | "pacing";
+    label: string;
+  }>,
+): Promise<boolean> {
+  const res = await apiFetch(
+    `${API_URL}/trips/${encodeURIComponent(tripId)}/recompute`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/ld+json",
+        Accept: "application/ld+json",
+      },
+      body: JSON.stringify({ modifications }),
+    },
+  );
+  return res.ok;
+}
+
+/**
  * Trigger the full Phase 2 enrichment pipeline (POIs, weather, terrain, …)
  * for a trip whose stages have been pre-computed during Phase 1.
  *
