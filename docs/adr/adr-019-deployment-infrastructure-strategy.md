@@ -28,9 +28,10 @@ Le projet est aujourd'hui exclusivement développé en local via Docker Compose.
 | PostgreSQL | Persistance (planifié) | ~200 MB |
 | Valhalla (ADR-017) | Routing engine | ~1-2 GB |
 | Overpass (ADR-017) | POI discovery | ~2-3 GB |
-| **Total** | | **~6-9 GB RAM** |
+| **Ollama (ADR-027)** | **Inférence LLaMA 8B + 3B** | **~6-8 GB** |
+| **Total** | | **~12-17 GB RAM** |
 
-Stockage disque : ~6 GB (PBF Geofabrik + tiles Valhalla + base Overpass).
+Stockage disque : ~6 GB (PBF Geofabrik + tiles Valhalla + base Overpass) + ~10 GB (modèles Ollama llama3.1:8b + llama3.2:3b).
 
 ### Contraintes
 
@@ -273,10 +274,11 @@ C'est la seule infrastructure gratuite offrant suffisamment de ressources (24 GB
                         │  Workers (×5)            ~1500 MB    │
                         │  Valhalla                ~1500 MB    │
                         │  Overpass                ~2500 MB    │
+                        │  Ollama (LLaMA 8B+3B)    ~7000 MB    │
                         │  ─────────────────────────────────   │
-                        │  Total                   ~7.5 GB     │
+                        │  Total                  ~14.5 GB     │
                         │  Disponible              24.0 GB     │
-                        │  Marge                   ~16.5 GB    │
+                        │  Marge                    ~9.5 GB    │
                         └─────────────────────────────────────┘
 ```
 
@@ -304,6 +306,7 @@ C'est la seule infrastructure gratuite offrant suffisamment de ressources (24 GB
 - **Fiabilité Oracle** : Oracle peut réclamer les instances inactives. Le free tier peut évoluer sans préavis
 - **Pas de sous-domaine natif** : nécessite un domaine externe (achat ou FreeDNS)
 - **Authentification obligatoire** : le déploiement public impose d'implémenter une couche d'authentification complète (inscription, connexion, sessions, isolation des données) avant la mise en ligne — effort significatif non encore planifié
+- **Ollama = dépendance dure** : l'inférence LLaMA est non-skippable (cf. ADR-027 et issue #375 arbitrage v2 « IA toujours active »). Ollama doit être opérationnel avec les deux modèles (`llama3.1:8b`, `llama3.2:3b`) chargés avant que l'application soit considérée disponible. La marge RAM restante (~9.5 GB) reste confortable sur une VM 24 GB. Le healthcheck Coolify doit inclure un ping Ollama (`GET /api/health`) en plus des healthchecks applicatifs existants.
 
 ### Neutral
 

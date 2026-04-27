@@ -157,6 +157,12 @@ The dispatch site therefore uses a dedicated Symfony `LockFactory` (backed by th
 
 This is the only concurrency primitive outside the PSR-6 cache path, and it is confined to this single dispatch point. Integration with `ComputationTracker` remains unchanged: `ComputationName` gains the Phase 2 values, but no atomic marker entry is needed because the lock — not the cache — provides the exactly-once guarantee.
 
+### Ollama as a Hard Dependency
+
+LLaMA inference (`RunLlamaInferenceHandler`) is a **non-skippable step** of Phase 2. There is no fallback path: if Ollama is unavailable or returns an error, Phase 2 fails and `trip_ready` is not emitted (instead `trip_error` is published via Mercure). Ollama must be running and healthy for the analysis pipeline to complete.
+
+This decision was solidified as part of issue [#375](https://github.com/vincentchalamon/bike-trip-planner/issues/375) (design v2 arbitrage: "IA toujours active"). Issues #304 (graceful fallback), #307 (stale AI banner), and #308 (frontend LLaMA fallback) were closed accordingly. Deployment configurations (see ADR-019) must include Ollama with a healthcheck gate before the application is considered operational.
+
 ### Mercure Events
 
 | Event type | Phase | Payload | Frontend effect |
