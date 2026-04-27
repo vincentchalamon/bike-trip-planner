@@ -136,6 +136,18 @@ final class ComputationDependencyResolverTest extends TestCase
     }
 
     #[Test]
+    public function pacingModificationWithDatesTriggersWeatherAndCalendar(): void
+    {
+        $modification = new TripModification(stageIndex: null, type: 'pacing', label: 'Pacing');
+        $messages = $this->resolver->resolve('trip-1', [$modification], [0, 1, 2], true, [], generation: null);
+
+        $classes = $this->classesOf($messages);
+        $this->assertContains(RecalculateStages::class, $classes);
+        $this->assertContains(FetchWeather::class, $classes);
+        $this->assertContains(CheckCalendar::class, $classes);
+    }
+
+    #[Test]
     public function batchFusesDependenciesAcrossModifications(): void
     {
         $modifications = [
