@@ -16,6 +16,8 @@ const MERCURE_URL =
   process.env.NEXT_PUBLIC_MERCURE_URL ??
   "https://localhost/.well-known/mercure";
 
+const stageDiffTimers = new Map<number, ReturnType<typeof setTimeout>>();
+
 /**
  * Dispatches a Mercure SSE event to the appropriate Zustand store action.
  *
@@ -515,7 +517,26 @@ function dispatchEvent(event: MercureEvent): void {
       // Mode 2 — per-stage update. Replace the single slice; preserved
       // fields (labels, search radius) are handled by the store.
       const incoming = enrichedPayloadToStageData(event.data.stage);
+
+      // Capture previous state before applying the update to compute the diff.
+      const prevStage = store.stages[event.data.stageIndex];
       store.applyStageUpdate(event.data.stageIndex, incoming);
+
+      // Compute the set of changed fields for transient diff highlighting.
+      if (prevStage) {
+        const changed = computeStageDiff(prevStage, incoming);
+        if (changed.size > 0) {
+          const existingTimer = stageDiffTimers.get(event.data.stageIndex);
+          if (existingTimer !== undefined) clearTimeout(existingTimer);
+          store.setStageDiff(event.data.stageIndex, changed);
+          const timer = setTimeout(() => {
+            useTripStore.getState().clearStageDiff(event.data.stageIndex);
+            stageDiffTimers.delete(event.data.stageIndex);
+          }, 3000);
+          stageDiffTimers.set(event.data.stageIndex, timer);
+        }
+      }
+
       // Remove this stage from the recomputing set — the shimmer skeleton
       // can now be replaced by the real card.
       store.finishStageRecomputation(event.data.stageIndex);
@@ -552,6 +573,32 @@ function dispatchEvent(event: MercureEvent): void {
       }
       break;
   }
+}
+
+/**
+ * Compares a previous and incoming stage snapshot and returns the set of
+ * logical field names that have changed. Used to populate `stageDiffs` in
+ * the store so that `DiffHighlight` can transiently highlight each changed
+ * piece of data.
+ *
+ * Compared fields: `distance`, `alerts_added`.
+ */
+function computeStageDiff(prev: StageData, next: StageData): Set<string> {
+  const changed = new Set<string>();
+
+  if (prev.distance !== next.distance) changed.add("distance");
+
+  // Alert changes: detect newly added alerts only
+  const prevMessages = new Set(
+    prev.alerts.map((a) => `${a.type}:${a.message}`),
+  );
+  const nextMessages = new Set(
+    next.alerts.map((a) => `${a.type}:${a.message}`),
+  );
+  const hasNewAlerts = [...nextMessages].some((m) => !prevMessages.has(m));
+  if (hasNewAlerts) changed.add("alerts_added");
+
+  return changed;
 }
 
 /**

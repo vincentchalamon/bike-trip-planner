@@ -49,6 +49,7 @@
   --color-brand-light: var(--brand-light);
   --color-brand-hover: var(--brand-hover);
   --color-muted-icon: var(--muted-icon);
+  --color-diff-highlight: var(--diff-highlight);
 }
 
 :root {
@@ -57,6 +58,7 @@
   --brand-light: #ebf5f6;
   --brand-hover: #2e8a9a;
   --muted-icon: #9da5a7;
+  --diff-highlight: oklch(0.97 0.12 95);
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
@@ -95,6 +97,7 @@
   --brand-light: #1a3a40;
   --brand-hover: #4bbdd1;
   --muted-icon: #6b7275;
+  --diff-highlight: oklch(0.35 0.08 95);
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
@@ -138,6 +141,27 @@
   100% {
     transform: translateX(100%) scaleX(0.3);
   }
+}
+
+/**
+ * Transient highlight for diff fields after an inline recomputation.
+ * Starts with a yellow background and fades to transparent over 3 s,
+ * matching the store expiry timer in use-mercure.ts.
+ */
+@keyframes diff-highlight {
+  0% {
+    background-color: var(--color-diff-highlight);
+  }
+  30% {
+    background-color: var(--color-diff-highlight);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.diff-highlight {
+  animation: diff-highlight 3s ease-out forwards;
 }
 
 @layer base {

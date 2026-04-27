@@ -48,6 +48,8 @@
     "saveDistance": "Enregistrer",
     "travelTime": "Départ ~{departure} → Arrivée ~{arrival}",
     "travelTimeTooltip": "Estimation basée sur la vitesse moyenne et le dénivelé (règle de Naismith adaptée au vélo)",
+    "diffDistanceChanged": "Distance modifiée",
+    "diffAlertsAdded": "Nouvelles alertes ajoutées",
     "sunriseSunsetTooltip": "Heures de lever et coucher du soleil au point d'arrivée de l'étape (UTC)"
   },
   "stageLocations": {
