@@ -9,8 +9,7 @@ interface DiffHighlightProps {
    * Logical field name to watch. When this field appears in the stage's
    * `stageDiffs` set, the children receive a transient highlight animation.
    *
-   * Valid values: `"distance"`, `"elevation"`, `"arrivalTime"`,
-   * `"alerts_added"`, `"alerts_removed"`, `"selectedAccommodation"`.
+   * Valid values: `"distance"`, `"alerts_added"`.
    */
   field: string;
   /** Content to wrap. Receives the highlight class when the field changed. */
@@ -59,9 +58,9 @@ export function DiffHighlight({
       data-testid={isChanged ? `diff-highlight-${field}` : undefined}
     >
       {children}
-      {isChanged && changeLabel && (
+      {changeLabel && (
         <span className="sr-only" aria-live="polite" aria-atomic="true">
-          {changeLabel}
+          {isChanged ? changeLabel : ""}
         </span>
       )}
     </span>

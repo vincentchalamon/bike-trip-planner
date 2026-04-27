@@ -16,6 +16,8 @@ const MERCURE_URL =
   process.env.NEXT_PUBLIC_MERCURE_URL ??
   "https://localhost/.well-known/mercure";
 
+const stageDiffTimers = new Map<number, ReturnType<typeof setTimeout>>();
+
 /**
  * Dispatches a Mercure SSE event to the appropriate Zustand store action.
  *
@@ -524,11 +526,14 @@ function dispatchEvent(event: MercureEvent): void {
       if (prevStage) {
         const changed = computeStageDiff(prevStage, incoming);
         if (changed.size > 0) {
+          const existingTimer = stageDiffTimers.get(event.data.stageIndex);
+          if (existingTimer !== undefined) clearTimeout(existingTimer);
           store.setStageDiff(event.data.stageIndex, changed);
-          // Auto-clear after 3 seconds so the highlight fades out naturally.
-          setTimeout(() => {
+          const timer = setTimeout(() => {
             useTripStore.getState().clearStageDiff(event.data.stageIndex);
+            stageDiffTimers.delete(event.data.stageIndex);
           }, 3000);
+          stageDiffTimers.set(event.data.stageIndex, timer);
         }
       }
 
@@ -576,21 +581,14 @@ function dispatchEvent(event: MercureEvent): void {
  * the store so that `DiffHighlight` can transiently highlight each changed
  * piece of data.
  *
- * Compared fields: `distance`, `elevation`, `alerts`, `selectedAccommodation`,
- * `arrivalTime` (derived from distance + speed, approximated by distance).
+ * Compared fields: `distance`, `alerts_added`.
  */
 function computeStageDiff(prev: StageData, next: StageData): Set<string> {
   const changed = new Set<string>();
 
   if (prev.distance !== next.distance) changed.add("distance");
-  if (
-    prev.elevation !== next.elevation ||
-    prev.elevationLoss !== next.elevationLoss
-  ) {
-    changed.add("elevation");
-  }
 
-  // Alert changes: detect new alerts (added) and removed ones
+  // Alert changes: detect newly added alerts only
   const prevMessages = new Set(
     prev.alerts.map((a) => `${a.type}:${a.message}`),
   );
@@ -598,17 +596,7 @@ function computeStageDiff(prev: StageData, next: StageData): Set<string> {
     next.alerts.map((a) => `${a.type}:${a.message}`),
   );
   const hasNewAlerts = [...nextMessages].some((m) => !prevMessages.has(m));
-  const hasRemovedAlerts = [...prevMessages].some((m) => !nextMessages.has(m));
   if (hasNewAlerts) changed.add("alerts_added");
-  if (hasRemovedAlerts) changed.add("alerts_removed");
-
-  // Accommodation change: compare selected accommodation identity
-  const prevAccName = prev.selectedAccommodation?.name ?? null;
-  const nextAccName = next.selectedAccommodation?.name ?? null;
-  if (prevAccName !== nextAccName) changed.add("selectedAccommodation");
-
-  // Arrival time is derived from distance; flag it when distance changes.
-  if (prev.distance !== next.distance) changed.add("arrivalTime");
 
   return changed;
 }
