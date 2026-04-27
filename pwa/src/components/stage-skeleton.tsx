@@ -14,7 +14,7 @@ export function StageSkeleton() {
 
   return (
     <Card
-      className="border-border shadow-sm rounded-xl w-full relative"
+      className="border-border shadow-sm rounded-xl w-full md:max-w-[80%] relative"
       data-testid="stage-skeleton"
       aria-busy="true"
       aria-label={t("recomputing")}
