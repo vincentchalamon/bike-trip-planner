@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { enableMapSet } from "immer";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 import type {
   StageData,
@@ -16,6 +17,9 @@ import type { AccommodationType } from "@/lib/accommodation-types";
 import { FILTERABLE_ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
 import { createTemporalStore } from "@/store/temporal-middleware";
 import type { SavedTrip } from "@/store/offline-store";
+
+// Required for Immer to allow mutating Set/Map drafts (used by recomputingStages).
+enableMapSet();
 
 interface TripIdentity {
   id: string;
@@ -41,6 +45,13 @@ interface TripState {
   enabledAccommodationTypes: AccommodationType[];
   stages: StageData[];
   computationStatus: Record<string, string>;
+  /**
+   * Set of stage indices currently being recomputed inline (Acte 3).
+   * While an index is in this set, the corresponding stage card is replaced
+   * by a shimmer skeleton. The set is populated when a recomputation is
+   * triggered and each index is removed when its `stage_updated` event lands.
+   */
+  recomputingStages: Set<number>;
 
   setTrip: (trip: TripIdentity) => void;
   updateRouteData: (data: {
@@ -132,6 +143,18 @@ interface TripState {
    * slice. No-op if the index is out of bounds (stale message).
    */
   applyStageUpdate: (stageIndex: number, stage: StageData) => void;
+  /**
+   * Mark a set of stage indices as "recomputing" — their cards show a shimmer
+   * skeleton until the corresponding `stage_updated` events arrive.
+   */
+  startStageRecomputation: (indices: number[]) => void;
+  /**
+   * Remove a stage index from the recomputing set (called when `stage_updated`
+   * lands for that index). When the set becomes empty the progress bar hides.
+   */
+  finishStageRecomputation: (index: number) => void;
+  /** Clear all recomputing stages — safety net for lost `stage_updated` events. */
+  clearRecomputingStages: () => void;
   clearTrip: () => void;
   /** Hydrate the trip store from a {@link SavedTrip} snapshot (offline consultation). */
   loadFromSavedTrip: (trip: SavedTrip) => void;
@@ -157,6 +180,7 @@ const initialState = {
   ] as AccommodationType[],
   stages: [],
   computationStatus: {},
+  recomputingStages: new Set<number>(),
 };
 
 /**
@@ -557,6 +581,23 @@ export const useTripStore = create<TripState>()(
           // handler delivers fresh data via a supply_timeline event.
           supplyTimeline: prev.supplyTimeline,
         };
+      }),
+
+    startStageRecomputation: (indices) =>
+      set((state) => {
+        for (const index of indices) {
+          state.recomputingStages.add(index);
+        }
+      }),
+
+    finishStageRecomputation: (index) =>
+      set((state) => {
+        state.recomputingStages.delete(index);
+      }),
+
+    clearRecomputingStages: () =>
+      set((state) => {
+        state.recomputingStages.clear();
       }),
 
     loadFromSavedTrip: (trip) => {

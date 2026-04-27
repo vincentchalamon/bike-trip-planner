@@ -577,3 +577,46 @@ export function stageUpdatedEvent(stageIndex: number): MercureEvent {
     },
   };
 }
+
+export function stageUpdatedEventWithSelectedAccommodation(
+  stageIndex: number,
+): MercureEvent {
+  const hotelDuPont = {
+    name: "Hotel du Pont",
+    type: "hotel",
+    lat: 44.51,
+    lon: 4.39,
+    estimatedPriceMin: 65,
+    estimatedPriceMax: 85,
+    isExactPrice: false,
+    possibleClosed: false,
+    distanceToEndPoint: 0.5,
+    source: "osm" as const,
+  };
+  return {
+    type: "stage_updated",
+    data: {
+      stageIndex,
+      stage: {
+        dayNumber: stageIndex + 1,
+        distance: 55.0,
+        elevation: 720,
+        elevationLoss: 640,
+        startPoint: { lat: 44.735, lon: 4.598, ele: 280 },
+        endPoint: { lat: hotelDuPont.lat, lon: hotelDuPont.lon, ele: 0 },
+        geometry: [
+          { lat: 44.735, lon: 4.598, ele: 280 },
+          { lat: hotelDuPont.lat, lon: hotelDuPont.lon, ele: 0 },
+        ],
+        label: null,
+        isRestDay: false,
+        weather: null,
+        alerts: [],
+        pois: [],
+        accommodations: [hotelDuPont],
+        selectedAccommodation: hotelDuPont,
+        events: [],
+      },
+    },
+  };
+}

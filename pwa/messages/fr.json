@@ -42,6 +42,7 @@
     "downloadFit": "Télécharger le FIT étape {dayNumber}",
     "downloadFailed": "Le téléchargement a échoué. Veuillez réessayer.",
     "loadingAlerts": "Analyse de l'étape...",
+    "recomputing": "Mise à jour en cours...",
     "editDistance": "Modifier la distance",
     "distanceLabel": "Distance (km)",
     "saveDistance": "Enregistrer",

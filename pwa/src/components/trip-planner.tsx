@@ -23,6 +23,7 @@ import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { Button } from "@/components/ui/button";
 import { UndoRedoButtons } from "@/components/undo-redo-buttons";
 import { Stepper } from "@/components/stepper";
+import { InlineRecomputationBar } from "@/components/inline-recomputation-bar";
 import { RecentTrips } from "@/components/recent-trips";
 import { SavedTripsSection } from "@/components/saved-trips-section";
 import { OfflineBanner } from "@/components/offline-banner";
@@ -537,6 +538,9 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
              has launched the Phase 2 analysis via the preview CTA). === */}
         {trip && !isPreview && !isAnalysing && (
           <>
+            {/* Inline recomputation progress bar — thin bar at top of page */}
+            <InlineRecomputationBar />
+
             {/* Close button — top-right corner */}
             <Button
               variant="ghost"

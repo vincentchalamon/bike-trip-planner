@@ -396,6 +396,7 @@ function dispatchEvent(event: MercureEvent): void {
         coordinates: event.data.coordinates,
       });
       store.updateStageAlerts(event.data.stageIndex, [], "cultural_poi");
+      store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       break;
     }
@@ -411,6 +412,7 @@ function dispatchEvent(event: MercureEvent): void {
       // ever gets called.
       useUiStore.getState().setAnalysisStarted(true);
       useUiStore.getState().setAnalysisPhaseActive(false);
+      store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
 
@@ -464,6 +466,7 @@ function dispatchEvent(event: MercureEvent): void {
       useUiStore.getState().setAnalysisProgress(null);
       useUiStore.getState().setAnalysisStarted(true);
       useUiStore.getState().setAnalysisPhaseActive(false);
+      store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
 
@@ -513,6 +516,9 @@ function dispatchEvent(event: MercureEvent): void {
       // fields (labels, search radius) are handled by the store.
       const incoming = enrichedPayloadToStageData(event.data.stage);
       store.applyStageUpdate(event.data.stageIndex, incoming);
+      // Remove this stage from the recomputing set — the shimmer skeleton
+      // can now be replaced by the real card.
+      store.finishStageRecomputation(event.data.stageIndex);
       // Labels may have been wiped if endpoints moved — refresh if needed.
       const updated = useTripStore.getState().stages[event.data.stageIndex];
       if (
@@ -526,6 +532,7 @@ function dispatchEvent(event: MercureEvent): void {
 
     case "validation_error":
       toast.error(event.data.message);
+      store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
       break;
@@ -538,6 +545,7 @@ function dispatchEvent(event: MercureEvent): void {
         .getState()
         .failAnalysisStep(event.data.computation, event.data.message);
       if (!event.data.retryable) {
+        store.clearRecomputingStages();
         useUiStore.getState().setProcessing(false);
         useUiStore.getState().setAccommodationScanning(false);
         useUiStore.getState().setAnalysisPhaseActive(false);

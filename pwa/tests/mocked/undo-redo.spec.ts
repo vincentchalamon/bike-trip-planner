@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/base.fixture";
+import { stageUpdatedEvent } from "../fixtures/mock-data";
 
 test.describe("Undo/Redo", () => {
   test("undo and redo buttons are disabled on fresh page load", async ({
@@ -58,6 +59,7 @@ test.describe("Undo/Redo", () => {
 
   test("Ctrl+Z is suppressed when an input is focused", async ({
     createFullTrip,
+    injectEvent,
     mockedPage,
   }) => {
     await createFullTrip();
@@ -74,6 +76,10 @@ test.describe("Undo/Redo", () => {
     await expect(mockedPage.getByTestId("undo-button")).toBeEnabled({
       timeout: 5000,
     });
+    // The distance change puts stage 0 in recomputing state (skeleton visible).
+    // Resolve it so the real card is accessible again.
+    await injectEvent(stageUpdatedEvent(0));
+    await expect(stageCard).toBeVisible({ timeout: 3000 });
     // Open the distance editor again — input is auto-focused
     await stageCard
       .getByRole("button", { name: "Modifier la distance" })
