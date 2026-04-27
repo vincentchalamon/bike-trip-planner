@@ -690,6 +690,8 @@ export const useTripStore = create<TripState>()(
         state.pendingModifications = [];
       }),
 
+    // Intentionally identical to cancelAllModifications; kept separate so
+    // post-apply cleanup can diverge from user-initiated cancel in the future.
     clearPendingModifications: () =>
       set((state) => {
         state.pendingModifications = [];

@@ -859,10 +859,18 @@ export function useTripPlanner() {
         const affectedIndices = new Set<number>();
         for (const mod of pendingModifications) {
           if (mod.stageIndex !== null) {
-            affectedIndices.add(mod.stageIndex);
-            const nextIdx = mod.stageIndex + 1;
-            if (nextIdx < stages.length) {
-              affectedIndices.add(nextIdx);
+            if (mod.type === "distance") {
+              // Distance recomputes the modified stage and every subsequent one
+              // (mirrors ComputationDependencyResolver.resolve on the backend).
+              for (let i = mod.stageIndex; i < stages.length; i++) {
+                affectedIndices.add(i);
+              }
+            } else {
+              affectedIndices.add(mod.stageIndex);
+              const nextIdx = mod.stageIndex + 1;
+              if (nextIdx < stages.length) {
+                affectedIndices.add(nextIdx);
+              }
             }
           } else {
             // Trip-level modifications (dates, pacing) affect all stages

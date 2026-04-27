@@ -343,20 +343,13 @@ export async function uploadGpxFile(
  */
 export async function applyBatchRecompute(
   tripId: string,
-  modifications: import("@/lib/api/schema").components["schemas"]["TripModification"][],
+  modifications: components["schemas"]["TripModification"][],
 ): Promise<boolean> {
-  const res = await apiFetch(
-    `${API_URL}/trips/${encodeURIComponent(tripId)}/recompute`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/ld+json",
-        Accept: "application/ld+json",
-      },
-      body: JSON.stringify({ modifications }),
-    },
-  );
-  return res.ok;
+  const { response } = await apiClient.POST("/trips/{id}/recompute", {
+    params: { path: { id: tripId } },
+    body: { modifications },
+  });
+  return response.ok;
 }
 
 /**
