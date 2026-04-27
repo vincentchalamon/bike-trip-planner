@@ -21,6 +21,7 @@ import {
   addPoiWaypointToRoute,
   duplicateTrip,
   launchTripAnalysis,
+  applyBatchRecompute,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
 import {
@@ -116,8 +117,14 @@ export function useTripPlanner() {
       setIsLocked: s.setIsLocked,
       setDepartureHour: s.setDepartureHour,
       startStageRecomputation: s.startStageRecomputation,
+      queueModification: s.queueModification,
+      cancelAllModifications: s.cancelAllModifications,
+      clearPendingModifications: s.clearPendingModifications,
     })),
   );
+
+  const pendingModifications = useTripStore((s) => s.pendingModifications);
+  const [isBatchApplying, setIsBatchApplying] = useState(false);
 
   // UI store
   const isProcessing = useUiStore((s) => s.isProcessing);
@@ -838,6 +845,57 @@ export function useTripPlanner() {
     }
   }
 
+  async function handleApplyBatch() {
+    if (!tripId || pendingModifications.length === 0) return;
+
+    setIsBatchApplying(true);
+    try {
+      const ok = await applyBatchRecompute(tripId, pendingModifications);
+      if (ok) {
+        actions.clearPendingModifications();
+        setProcessing(true);
+        setAccommodationScanning(true);
+        // Mark all stages affected by pending modifications as recomputing
+        const affectedIndices = new Set<number>();
+        for (const mod of pendingModifications) {
+          if (mod.stageIndex !== null) {
+            if (mod.type === "distance") {
+              // Distance recomputes the modified stage and every subsequent one
+              // (mirrors ComputationDependencyResolver.resolve on the backend).
+              for (let i = mod.stageIndex; i < stages.length; i++) {
+                affectedIndices.add(i);
+              }
+            } else {
+              affectedIndices.add(mod.stageIndex);
+              const nextIdx = mod.stageIndex + 1;
+              if (nextIdx < stages.length) {
+                affectedIndices.add(nextIdx);
+              }
+            }
+          } else {
+            // Trip-level modifications (dates, pacing) affect all stages
+            for (let i = 0; i < stages.length; i++) {
+              affectedIndices.add(i);
+            }
+          }
+        }
+        if (affectedIndices.size > 0) {
+          actions.startStageRecomputation(Array.from(affectedIndices));
+        }
+      } else {
+        toast.error(t("modificationQueue.failedApply"));
+      }
+    } catch {
+      toast.error(t("modificationQueue.failedApply"));
+    } finally {
+      setIsBatchApplying(false);
+    }
+  }
+
+  function handleCancelBatch() {
+    actions.cancelAllModifications();
+  }
+
   const firstStage = stages[0];
   const firstWeather = firstStage?.weather ?? null;
   const isWeatherLoading = isProcessing && stages.length > 0 && !firstWeather;
@@ -888,5 +946,10 @@ export function useTripPlanner() {
     isShareModalOpen,
     setShareModalOpen,
     clearNewAccKey: () => setNewAccKey(null),
+    pendingModifications,
+    isBatchApplying,
+    handleApplyBatch,
+    handleCancelBatch,
+    queueModification: actions.queueModification,
   };
 }

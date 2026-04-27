@@ -364,6 +364,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{id}/recompute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply a batch of pending modifications in a single recompute pass, dispatching only the minimal set of handlers needed.
+         * @description Creates a Trip resource.
+         */
+        post: operations["api_trips_idrecompute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{id}/detail": {
         parameters: {
             query?: never;
@@ -970,6 +990,9 @@ export interface components {
             elevationLoss?: number;
             isRestDay?: boolean;
         };
+        "Trip.TripBatchRecomputeRequest": {
+            modifications: components["schemas"]["TripModification"][];
+        };
         "Trip.TripListItem.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
             title?: string | null;
@@ -1191,6 +1214,17 @@ export interface components {
                     distanceToEndPoint?: number;
                 } | null;
             }[];
+        };
+        TripModification: {
+            /** @description Zero-based index of the affected stage. */
+            stageIndex?: number | null;
+            /**
+             * @description Type of modification — determines which handlers are re-dispatched.
+             * @enum {string}
+             */
+            type: "accommodation" | "distance" | "dates" | "pacing";
+            /** @description Human-readable description for display in the frontend queue panel. */
+            label?: string | null;
         };
         TripShare: {
             /** Format: uuid */
@@ -2638,6 +2672,74 @@ export interface operations {
                 content?: never;
             };
             /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_trips_idrecompute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Trip identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description The new Trip resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["Trip.TripBatchRecomputeRequest"];
+            };
+        };
+        responses: {
+            /** @description Trip resource created */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Trip.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Trip not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip has no stages to recompute */
             422: {
                 headers: {
                     [name: string]: unknown;

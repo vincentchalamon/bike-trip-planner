@@ -14,6 +14,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\OpenApi\Model\Operation;
 use App\State\AnalyzeTripProcessor;
+use App\State\TripBatchRecomputeProcessor;
 use App\State\TripCollectionProvider;
 use App\State\TripCreateProcessor;
 use App\State\TripDeleteProcessor;
@@ -100,6 +101,22 @@ use App\State\TripUpdateProcessor;
             mercure: true,
             provider: TripRequestProvider::class,
             processor: AnalyzeTripProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/trips/{id}/recompute{._format}',
+            status: 202,
+            openapi: new Operation(
+                responses: [
+                    404 => new Response(description: 'Trip not found'),
+                    422 => new Response(description: 'Trip has no stages to recompute'),
+                ],
+                summary: 'Apply a batch of pending modifications in a single recompute pass, dispatching only the minimal set of handlers needed.',
+            ),
+            security: "is_granted('TRIP_EDIT', object)",
+            input: TripBatchRecomputeRequest::class,
+            mercure: true,
+            provider: TripRequestProvider::class,
+            processor: TripBatchRecomputeProcessor::class,
         ),
         new Patch(
             uriTemplate: '/trips/{id}{._format}',

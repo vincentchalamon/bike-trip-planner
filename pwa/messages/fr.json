@@ -661,6 +661,16 @@
     "see_website": "Voir le site",
     "see_website_label": "Voir le site de {name}"
   },
+  "modificationQueue": {
+    "panelLabel": "Modifications en attente",
+    "title": "{count, plural, one {1 modification en attente} other {# modifications en attente}}",
+    "estimatedTimeSeconds": "Temps estimé : ~{seconds} s",
+    "estimatedTimeMinute": "Temps estimé : ~1 min",
+    "applyAll": "Appliquer tout",
+    "cancel": "Annuler",
+    "applying": "Application…",
+    "failedApply": "Impossible d'appliquer les modifications. Veuillez réessayer."
+  },
   "footer": {
     "faq": "FAQ"
   },
