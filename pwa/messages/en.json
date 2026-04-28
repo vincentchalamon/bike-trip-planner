@@ -268,9 +268,14 @@
     "userWaypoint": "User waypoints"
   },
   "stageAlerts": {
-    "title": "{count, plural, one {# alert} other {# alerts}}",
-    "showMore": "Show {count} more {count, plural, one {alert} other {alerts}}",
-    "showLess": "Show fewer alerts"
+    "title": "{count, plural, one {# alert} other {# alerts}}"
+  },
+  "alertGroup": {
+    "title": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "nudge": "Info"
+    }
   },
   "onboarding": {
     "nextBtn": "Next",

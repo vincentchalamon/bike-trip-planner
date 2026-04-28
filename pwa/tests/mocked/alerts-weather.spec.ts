@@ -20,11 +20,21 @@ test.describe("Alerts and weather", () => {
       terrainAlertsEvent(),
       tripCompleteEvent(),
     ]);
-    // Stage 1 (index 0) has a warning
+
+    // Stage 1 (index 0) has a warning — expand the warning group
+    await mockedPage
+      .getByTestId("stage-card-1")
+      .getByTestId("alert-group-toggle-warning")
+      .click();
     await expect(mockedPage.getByTestId("stage-card-1")).toContainText(
       "Route non goudronnee sur 3km",
     );
-    // Stage 2 (index 1) has a nudge
+
+    // Stage 2 (index 1) has a nudge — expand the nudge group
+    await mockedPage
+      .getByTestId("stage-card-2")
+      .getByTestId("alert-group-toggle-nudge")
+      .click();
     await expect(mockedPage.getByTestId("stage-card-2")).toContainText(
       "Passage en altitude (820m)",
     );
@@ -112,6 +122,12 @@ test.describe("Alerts and weather", () => {
       terrainAlertsEvent(),
       tripCompleteEvent(),
     ]);
+
+    // The terrain alert is a warning — expand the warning group to see it
+    await mockedPage
+      .getByTestId("stage-card-1")
+      .getByTestId("alert-group-toggle-warning")
+      .click();
     await expect(mockedPage.getByTestId("stage-card-1")).toContainText(
       "Route non goudronnee sur 3km",
     );

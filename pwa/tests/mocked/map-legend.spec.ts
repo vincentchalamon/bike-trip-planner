@@ -109,6 +109,12 @@ test.describe("Map legend — unified pictogram registry (issue #390)", () => {
       },
     ]);
 
+    // The railway-station alert is a warning — expand the warning group first
+    await mockedPage
+      .getByTestId("stage-card-1")
+      .getByTestId("alert-group-toggle-warning")
+      .click();
+
     // The stage-card-1 should show the alert text
     await expect(mockedPage.getByTestId("stage-card-1")).toContainText(
       "Gare SNCF à proximité",
