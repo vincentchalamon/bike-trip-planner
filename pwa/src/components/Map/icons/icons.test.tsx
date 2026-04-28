@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { MarkerIcon, MARKER_CATEGORIES } from "./index";
+import { MarkerIcon, MARKER_CATEGORIES, resolveCategory } from "./index";
 import { ICON_SHAPES } from "./markerDom";
 import type { MarkerCategory } from "./index";
 
@@ -24,4 +24,15 @@ describe("ICON_SHAPES / JSX component path drift", () => {
       assertPaths(markup, category);
     },
   );
+});
+
+describe("resolveCategory — backend source identifiers", () => {
+  it.each([
+    ["water_point", "water"],
+    ["cultural_poi", "cultural-poi"],
+    ["railway_station", "railway-station"],
+    ["border_crossing", "border-crossing"],
+  ] as const)("resolveCategory('%s') === '%s'", (source, expected) => {
+    expect(resolveCategory(source)).toBe(expected);
+  });
 });
