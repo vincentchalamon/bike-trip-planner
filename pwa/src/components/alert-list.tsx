@@ -56,7 +56,7 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
         const category = resolveCategory(alert.source);
         const CategoryIcon = category ? MarkerIcon[category] : null;
         const isEnrichedCulturalPoi =
-          isCulturalPoiAlert(alert) &&
+          category === "cultural-poi" &&
           Boolean(
             alert.description ?? alert.openingHours ?? alert.estimatedPrice,
           );
