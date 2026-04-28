@@ -76,9 +76,7 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                   )}
                   aria-hidden
                   data-testid={`alert-category-icon-${category}`}
-                  data-enriched={
-                    isEnrichedCulturalPoi ? "true" : undefined
-                  }
+                  data-enriched={isEnrichedCulturalPoi ? "true" : undefined}
                 >
                   {isEnrichedCulturalPoi ? (
                     <CulturalPoiEnrichedIcon size={20} />

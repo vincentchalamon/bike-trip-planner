@@ -59,11 +59,7 @@ export default function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button
-            onClick={reset}
-            size="lg"
-            data-testid="error-retry-button"
-          >
+          <Button onClick={reset} size="lg" data-testid="error-retry-button">
             {t("retry")}
           </Button>
           <Button asChild variant="outline" size="lg">
