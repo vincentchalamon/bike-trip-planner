@@ -2,50 +2,81 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Check, Loader2, AlertTriangle } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  AlertTriangle,
+  Mountain,
+  MapPin,
+  Tent,
+  CloudSun,
+  CalendarDays,
+  Shield,
+  Sparkles,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/ui-store";
 import { TripHeader } from "@/components/trip-header";
 
-type CategoryKey =
+/**
+ * Narrative acts displayed during step 3 "Analyse" of the wizard. Each act
+ * groups one or more backend `ComputationName` values: when every backing
+ * step has been seen in a `computation_step_completed` event the act flips
+ * to "done"; otherwise the currently-running step (if it belongs to the act)
+ * marks it as "in progress".
+ *
+ * The keys double as translation slugs under
+ * `processingProgress.categories.<key>` (legacy keys are preserved to keep
+ * the existing translations / tests working) and as `data-testid` suffixes.
+ */
+type ActKey =
   | "terrain_security"
   | "supply"
   | "accommodations"
   | "weather"
   | "services"
+  | "context"
   | "ai";
 
-interface CategoryDefinition {
-  /** Translation key under `processingProgress.categories`. */
-  translationKey: CategoryKey;
-  icon: string;
+interface ActDefinition {
+  /** Translation slug under `processingProgress.categories.<key>`. */
+  translationKey: ActKey;
+  /** Lucide icon — keeps the visual identity consistent with the rest of the app. */
+  icon: LucideIcon;
   /**
-   * Backend `ComputationName::value` identifiers that drive this narrative
-   * category. A category is "done" once every listed step has been seen
-   * in a `computation_step_completed` event. See issue #323 for the
-   * handler → category mapping and `ComputationName` on the backend.
+   * Backend `ComputationName::value` identifiers that drive this act. An act
+   * is "done" once every listed step has been seen in a
+   * `computation_step_completed` event.
    */
   steps: string[];
   /**
-   * When true, the category is hidden from the UI until at least one of
-   * its steps has been reported. Used for the optional AI category: when
-   * Ollama is disabled no `ai_*` events arrive, and the row stays hidden.
+   * Optional acts are hidden until at least one of their steps has been
+   * reported (e.g. AI when Ollama is disabled).
    */
   optional?: boolean;
 }
 
 /**
- * Narrative categories displayed to the user during Acte 2. Each row is
- * backed by one or more backend computation steps. Order matches the
- * visual order on screen (per issue #323).
+ * Seven narrative acts mapped onto the backend `ComputationName` enum:
+ *   1. Analyse du terrain & sécurité — `osm_scan`, `terrain`
+ *   2. Points d'intérêt & ravitaillement — `pois`, `water_points`, `cultural_pois`
+ *   3. Hébergements — `accommodations`
+ *   4. Météo & conditions — `weather`, `wind`
+ *   5. Services & secours — `bike_shops`, `health_services`,
+ *      `railway_stations`, `border_crossing`
+ *   6. Contexte local — `calendar`, `events`
+ *   7. Synthèse IA (optional) — `ai_stage`, `ai_overview`
+ *
+ * Order matches the visual order on screen and the importance ranking from
+ * #391: terrain & security comes first, AI comes last.
  */
-const CATEGORIES: { key: CategoryKey; def: CategoryDefinition }[] = [
+const ACTS: { key: ActKey; def: ActDefinition }[] = [
   {
     key: "terrain_security",
     def: {
       translationKey: "terrain_security",
-      icon: "🛣️",
-      // ScanAllOsmData (osm_scan) + AnalyzeTerrain (terrain)
+      icon: Mountain,
       steps: ["osm_scan", "terrain"],
     },
   },
@@ -53,17 +84,15 @@ const CATEGORIES: { key: CategoryKey; def: CategoryDefinition }[] = [
     key: "supply",
     def: {
       translationKey: "supply",
-      icon: "💧",
-      // CheckWaterPoints (water_points) + ScanPois (pois)
-      steps: ["water_points", "pois"],
+      icon: MapPin,
+      steps: ["pois", "water_points", "cultural_pois"],
     },
   },
   {
     key: "accommodations",
     def: {
       translationKey: "accommodations",
-      icon: "🏕️",
-      // ScanAccommodations
+      icon: Tent,
       steps: ["accommodations"],
     },
   },
@@ -71,26 +100,36 @@ const CATEGORIES: { key: CategoryKey; def: CategoryDefinition }[] = [
     key: "weather",
     def: {
       translationKey: "weather",
-      icon: "🌤️",
-      // FetchWeather + AnalyzeWind + CheckCalendar
-      steps: ["weather", "wind", "calendar"],
+      icon: CloudSun,
+      steps: ["weather", "wind"],
     },
   },
   {
     key: "services",
     def: {
       translationKey: "services",
-      icon: "🔧",
-      // CheckBikeShops
-      steps: ["bike_shops"],
+      icon: Shield,
+      steps: [
+        "bike_shops",
+        "health_services",
+        "railway_stations",
+        "border_crossing",
+      ],
+    },
+  },
+  {
+    key: "context",
+    def: {
+      translationKey: "context",
+      icon: CalendarDays,
+      steps: ["calendar", "events"],
     },
   },
   {
     key: "ai",
     def: {
       translationKey: "ai",
-      icon: "🤖",
-      // AnalyzeStageWithLlm + AnalyzeTripOverviewWithLlm (Ollama-only)
+      icon: Sparkles,
       steps: ["ai_stage", "ai_overview"],
       optional: true,
     },
@@ -105,24 +144,27 @@ interface ProcessingProgressProps {
 }
 
 /**
- * Acte 2 — narrative progress screen.
+ * Step 3 "Analyse" — narrative SSE display.
  *
- * Shown during Phase 2 (initial enrichment). Displays a checklist of
- * user-facing categories (terrain, supply, accommodations, weather,
- * services, optional AI) each backed by one or more Messenger handlers
- * on the backend. Rows transition through
+ * Renders 5-8 acts (see {@link ACTS}), each backed by one or more backend
+ * `ComputationName` values (issue #391). Acts transition through
  *   pending ○ → in progress (spinner) → done ✓ | failed ⚠
  * as `computation_step_completed` (and `computation_error`) Mercure events
  * arrive. A global percentage bar sits at the bottom.
  *
+ * Each act exposes a **dynamic sub-description** computed from the latest
+ * SSE payload (e.g. "Interrogation d'OpenStreetMap…" while
+ * `osm_scan` runs, then "Terrain analysé" once both `osm_scan` and `terrain`
+ * are done).
+ *
  * Rules:
- * - The only interactive affordance is the trip title. Every other action
- *   is intentionally omitted to keep the user focused while the backend
- *   is crunching through the pipeline (issue #323).
- * - The optional AI row is only rendered once at least one `ai_*` step
- *   has been seen — so when Ollama is disabled, the row stays hidden.
+ * - The only interactive affordance is the trip title. Every other action is
+ *   intentionally omitted to keep the user focused while the backend is
+ *   crunching through the pipeline.
+ * - The optional AI act stays hidden until at least one `ai_*` step has been
+ *   seen — so when Ollama is disabled, the row never appears.
  * - `trip_ready` flips `isProcessing` to `false`, which is the trigger
- *   for the parent component to fade this screen out toward Acte 3.
+ *   for the parent component to advance to step 4.
  */
 export function ProcessingProgress({
   title,
@@ -133,15 +175,16 @@ export function ProcessingProgress({
   const stepStates = useUiStore((s) => s.analysisStepStates);
   const currentStep = analysisProgress?.step ?? null;
 
-  const rows = useMemo(
+  const acts = useMemo(
     () =>
-      CATEGORIES.map(({ key, def }) => {
+      ACTS.map(({ key, def }) => {
         const statuses = def.steps.map(
           (step) => stepStates[step]?.status ?? "pending",
         );
         const errors = def.steps
           .map((step) => stepStates[step]?.error)
           .filter((e): e is string => !!e);
+        const doneCount = statuses.filter((s) => s === "done").length;
 
         let status: AggregatedStatus;
         if (statuses.includes("failed")) {
@@ -152,8 +195,6 @@ export function ProcessingProgress({
           statuses.some((s) => s === "done") ||
           (currentStep !== null && def.steps.includes(currentStep))
         ) {
-          // Either we already collected some results for this category or
-          // the in-flight step belongs to it — highlight it as in progress.
           status = "in_progress";
         } else {
           status = "pending";
@@ -164,7 +205,15 @@ export function ProcessingProgress({
           statuses.every((s) => s === "pending") &&
           !(currentStep !== null && def.steps.includes(currentStep));
 
-        return { key, def, status, error: errors[0] ?? null, hidden };
+        return {
+          key,
+          def,
+          status,
+          error: errors[0] ?? null,
+          doneCount,
+          totalCount: def.steps.length,
+          hidden,
+        };
       }),
     [stepStates, currentStep],
   );
@@ -189,61 +238,89 @@ export function ProcessingProgress({
       aria-live="polite"
       aria-busy="true"
     >
-      <div className="w-full max-w-2xl space-y-6">
+      <div className="w-full max-w-3xl space-y-6">
         {/* Editable title — the only affordance the user retains during
-            the system step (see issue #323). */}
+            step 3 (per #391). */}
         <div className="text-center">
           <TripHeader title={title} onTitleChange={onTitleChange} />
           <p className="mt-2 text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
 
-        {/* Category checklist (boxed, per the design spec) */}
+        {/* Narrative acts (boxed, per the design spec) */}
         <div
           className="rounded-xl border bg-card p-4 md:p-6 shadow-sm"
           data-testid="processing-progress-box"
         >
           <ul className="space-y-3">
-            {rows.map(({ key, def, status, error, hidden }) => {
-              if (hidden) return null;
-              return (
-                <li
-                  key={key}
-                  data-testid={`processing-category-${key}`}
-                  data-status={status}
-                  className={cn(
-                    "flex items-start gap-3 rounded-lg px-3 py-2 transition-colors",
-                    status === "in_progress" && "bg-brand/5",
-                    status === "failed" && "bg-destructive/5",
-                  )}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="text-2xl leading-none shrink-0"
-                  >
-                    {def.icon}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-sm md:text-base">
-                        {t(`categories.${def.translationKey}.label`)}
-                      </span>
-                      <StatusIndicator status={status} />
-                    </div>
-                    <p className="text-xs md:text-sm text-muted-foreground">
-                      {t(`categories.${def.translationKey}.description`)}
-                    </p>
-                    {status === "failed" && error && (
-                      <p
-                        className="mt-1 text-xs text-destructive"
-                        data-testid={`processing-category-${key}-error`}
-                      >
-                        {t("failureMessage", { message: error })}
-                      </p>
+            {acts.map(
+              ({
+                key,
+                def,
+                status,
+                error,
+                doneCount,
+                totalCount,
+                hidden,
+              }) => {
+                if (hidden) return null;
+                const Icon = def.icon;
+                return (
+                  <li
+                    key={key}
+                    data-testid={`processing-category-${key}`}
+                    data-status={status}
+                    className={cn(
+                      "flex items-start gap-3 rounded-lg px-3 py-3 transition-colors",
+                      status === "in_progress" && "bg-brand/5",
+                      status === "failed" && "bg-destructive/5",
                     )}
-                  </div>
-                </li>
-              );
-            })}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "flex items-center justify-center w-10 h-10 rounded-full shrink-0",
+                        status === "done"
+                          ? "bg-brand/10 text-brand"
+                          : status === "in_progress"
+                            ? "bg-brand/15 text-brand"
+                            : status === "failed"
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-muted text-muted-foreground/60",
+                      )}
+                    >
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-sm md:text-base">
+                          {t(`categories.${def.translationKey}.label`)}
+                        </span>
+                        <StatusIndicator status={status} />
+                      </div>
+                      <p
+                        className="text-xs md:text-sm text-muted-foreground"
+                        data-testid={`processing-category-${key}-description`}
+                      >
+                        <ActDescription
+                          actKey={def.translationKey}
+                          status={status}
+                          doneCount={doneCount}
+                          totalCount={totalCount}
+                        />
+                      </p>
+                      {status === "failed" && error && (
+                        <p
+                          className="mt-1 text-xs text-destructive"
+                          data-testid={`processing-category-${key}-error`}
+                        >
+                          {t("failureMessage", { message: error })}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                );
+              },
+            )}
           </ul>
 
           {/* Global progress bar */}
@@ -272,6 +349,46 @@ export function ProcessingProgress({
         </div>
       </div>
     </section>
+  );
+}
+
+interface ActDescriptionProps {
+  actKey: ActKey;
+  status: AggregatedStatus;
+  doneCount: number;
+  totalCount: number;
+}
+
+/**
+ * Resolve the user-facing sub-description for an act, depending on its
+ * lifecycle state. Each state maps to a distinct translation key under
+ * `processingProgress.categories.<key>` so the UI text can be tuned per
+ * locale without touching this component:
+ *
+ *   - `pending`     → `description` (default static)
+ *   - `in_progress` → `running`     (e.g. "Interrogation d'OpenStreetMap…")
+ *   - `done`        → `done`        (e.g. "Terrain analysé")
+ *   - `failed`      → `failed`      (short "ne pas pu" message)
+ *
+ * `done`/`total` counts are passed as ICU variables so translations can use
+ * them when relevant (e.g. "{done} / {total} services analysés").
+ */
+function ActDescription({
+  actKey,
+  status,
+  doneCount,
+  totalCount,
+}: ActDescriptionProps) {
+  const t = useTranslations("processingProgress.categories");
+  const variants: Record<AggregatedStatus, string> = {
+    pending: "description",
+    in_progress: "running",
+    done: "done",
+    failed: "failed",
+  };
+  const variant = variants[status];
+  return (
+    <>{t(`${actKey}.${variant}`, { done: doneCount, total: totalCount })}</>
   );
 }
 
