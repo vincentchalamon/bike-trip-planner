@@ -84,4 +84,48 @@ test.describe("Map legend — unified pictogram registry (issue #390)", () => {
     await mockedPage.keyboard.press("Escape");
     await expect(mockedPage.getByTestId("map-legend")).not.toBeVisible();
   });
+
+  test("alert with source renders category icon in list and map marker", async ({
+    injectSequence,
+    mockedPage,
+  }) => {
+    // Inject a terrain_alerts event with source "railway_station" on stage 0
+    await injectSequence([
+      {
+        type: "terrain_alerts",
+        data: {
+          alertsByStage: {
+            "0": [
+              {
+                type: "warning",
+                message: "Gare SNCF à proximité",
+                source: "railway_station",
+                lat: 44.735,
+                lon: 4.598,
+              },
+            ],
+          },
+        },
+      },
+    ]);
+
+    // The stage-card-1 should show the alert text
+    await expect(mockedPage.getByTestId("stage-card-1")).toContainText(
+      "Gare SNCF à proximité",
+    );
+
+    // The category icon for railway-station should appear in the alert list
+    await expect(
+      mockedPage.getByTestId("alert-category-icon-railway-station"),
+    ).toBeVisible();
+
+    // The map should render a marker with data-category="railway-station"
+    await expect
+      .poll(() =>
+        mockedPage
+          .locator('.map-marker--icon[data-category="railway-station"]')
+          .count(),
+      )
+      .toBeGreaterThanOrEqual(1);
+  });
 });

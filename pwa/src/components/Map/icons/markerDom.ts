@@ -27,7 +27,7 @@ interface SvgShape {
  * but as a serialisable structure so we can render them into the DOM
  * via `createElementNS` only.
  */
-const ICON_SHAPES: Record<MarkerCategory, SvgShape[]> = {
+export const ICON_SHAPES: Record<MarkerCategory, SvgShape[]> = {
   accommodation: [
     { tag: "path", attrs: { d: "M3 19V8l9-5 9 5v11" } },
     { tag: "path", attrs: { d: "M3 13h18" } },

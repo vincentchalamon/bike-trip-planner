@@ -426,7 +426,7 @@ export const MapView = memo(function MapView({
       const category = resolveAlertCategory(alert.source);
       const background = alert.type === "critical" ? "#dc2626" : "#d97706";
       const isEnrichedPoi =
-        alert.source === "cultural_poi" &&
+        category === "cultural-poi" &&
         Boolean(
           alert.description ?? alert.openingHours ?? alert.estimatedPrice,
         );
