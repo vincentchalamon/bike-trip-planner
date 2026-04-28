@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -45,7 +52,17 @@ import {
 export function TripPlanner({
   onClose,
   hideStepper = false,
-}: { onClose?: () => void; hideStepper?: boolean } = {}) {
+  previewSlot,
+}: {
+  onClose?: () => void;
+  hideStepper?: boolean;
+  /**
+   * Optional content rendered inside the Acte 1.5 preview screen, between
+   * the per-stage breakdown and the action bar. Used by the `/trips/new`
+   * wizard (issue #393) to inject the single-shot AI refinement card.
+   */
+  previewSlot?: ReactNode;
+} = {}) {
   const t = useTranslations();
   const router = useRouter();
   const clearTrip = useTripStore((s) => s.clearTrip);
@@ -531,6 +548,7 @@ export function TripPlanner({
               }}
               onTitleChange={handleTitleChange}
               showTitleSuggestion={totalDistance !== null}
+              aiRefinementSlot={previewSlot}
             />
           </>
         )}

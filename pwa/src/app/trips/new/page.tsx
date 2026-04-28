@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { AiRefinementCard } from "@/components/ai-refinement-card";
 import { HydrationBoundary } from "@/components/hydration-boundary";
 import { TripPlanner } from "@/components/trip-planner";
 import { TripPlannerErrorBoundary } from "@/components/trip-planner-error-boundary";
@@ -145,7 +146,14 @@ function WizardContent() {
       </div>
 
       <div id="wizard-content">
-        <TripPlanner hideStepper />
+        {/* Step 2 ("Aperçu") embeds the single-shot AI refinement card
+            (issue #393). The slot is forwarded to {@link TripPreview} so the
+            card sits between the stages list and the launch CTA. The card is
+            rendered unconditionally — TripPlanner only mounts the preview
+            UI when the wizard is on step 2, so the slot is naturally scoped.
+            TODO(#309): wire the `onApply` handler to the chat-IA endpoint
+            (sprint 31) once it ships. */}
+        <TripPlanner hideStepper previewSlot={<AiRefinementCard />} />
       </div>
     </div>
   );
