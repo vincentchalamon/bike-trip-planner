@@ -57,6 +57,7 @@ export interface AlertPayload {
   message: string;
   lat: number | null;
   lon: number | null;
+  source?: string;
   action?: AlertActionPayload | null;
 }
 

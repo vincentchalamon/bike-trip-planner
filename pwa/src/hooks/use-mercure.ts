@@ -277,6 +277,7 @@ function dispatchEvent(event: MercureEvent): void {
             message: a.message,
             lat: null,
             lon: null,
+            source: "water_point",
           })),
           "water_point",
         );
@@ -319,6 +320,7 @@ function dispatchEvent(event: MercureEvent): void {
             message: a.message,
             lat: a.lat,
             lon: a.lon,
+            source: "cultural_poi",
             poiName: a.poiName,
             poiType: a.poiType,
             poiLat: a.poiLat,
@@ -346,6 +348,7 @@ function dispatchEvent(event: MercureEvent): void {
             message: a.message,
             lat: a.actionLat ?? null,
             lon: a.actionLon ?? null,
+            source: "railway_station",
             ...(a.action === "navigate" &&
             a.actionLat != null &&
             a.actionLon != null
@@ -379,6 +382,7 @@ function dispatchEvent(event: MercureEvent): void {
             message: a.message,
             lat: a.lat,
             lon: a.lon,
+            source: "border_crossing",
             action: {
               kind: "navigate" as const,
               label: "Navigate to crossing",

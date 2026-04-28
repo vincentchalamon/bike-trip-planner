@@ -3,14 +3,16 @@ import { AlertBadge } from "@/components/alert-badge";
 import type { AlertData } from "@/lib/validation/schemas";
 import { Button } from "@/components/ui/button";
 import { sortBySeverity } from "@/lib/alert-utils";
-import {
-  MapPin,
-  Wrench,
-  Map as MapIcon,
-  Navigation,
-  Check,
-} from "lucide-react";
+import { Wrench, Map as MapIcon, Navigation, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
+import {
+  MarkerIcon,
+  MARKER_CATEGORY_COLOR,
+  resolveCategory,
+  UserWaypointIcon,
+  CulturalPoiEnrichedIcon,
+} from "@/components/Map/icons";
+import { cn } from "@/lib/utils";
 
 const actionIcons = {
   auto_fix: Wrench,
@@ -51,6 +53,13 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
         const isDismissed = dismissedKeys.has(alertKey);
         const action = alert.action;
         const ActionIcon = action ? actionIcons[action.kind] : null;
+        const category = resolveCategory(alert.source);
+        const CategoryIcon = category ? MarkerIcon[category] : null;
+        const isEnrichedCulturalPoi =
+          category === "cultural-poi" &&
+          Boolean(
+            alert.description ?? alert.openingHours ?? alert.estimatedPrice,
+          );
 
         return (
           <div
@@ -58,7 +67,28 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
             className={isDismissed ? "opacity-50" : undefined}
             data-testid={isDismissed ? "alert-dismissed" : undefined}
           >
-            <AlertBadge type={alert.type} message={alert.message} />
+            <div className="flex items-center gap-2">
+              {CategoryIcon && (
+                <span
+                  className={cn(
+                    "shrink-0",
+                    category ? MARKER_CATEGORY_COLOR[category] : undefined,
+                  )}
+                  aria-hidden
+                  data-testid={`alert-category-icon-${category}`}
+                  data-enriched={
+                    isEnrichedCulturalPoi ? "true" : undefined
+                  }
+                >
+                  {isEnrichedCulturalPoi ? (
+                    <CulturalPoiEnrichedIcon size={20} />
+                  ) : (
+                    <CategoryIcon size={20} />
+                  )}
+                </span>
+              )}
+              <AlertBadge type={alert.type} message={alert.message} />
+            </div>
             {isCulturalPoiAlert(alert) && (
               <div className="mt-1 ml-1 flex flex-col gap-0.5">
                 {alert.description && (
@@ -108,7 +138,7 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                 onClick={() => onAddPoiWaypoint(alert.poiLat!, alert.poiLon!)}
                 data-testid="add-poi-to-itinerary"
               >
-                <MapPin className="h-3 w-3 mr-1" />
+                <UserWaypointIcon size={12} className="mr-1" />
                 {t("addToItinerary")}
               </Button>
             )}

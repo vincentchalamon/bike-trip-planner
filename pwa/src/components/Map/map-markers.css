@@ -10,6 +10,40 @@
   cursor: pointer;
 }
 
+/* Generic icon-bearing marker (issue #390 — unified registry).
+   Background colour, size and icon colour are set inline by
+   `createCategoryMarkerElement`; this rule only handles layout. */
+.map-marker--icon {
+  border: 2px solid white;
+}
+
+.map-marker--icon svg {
+  display: block;
+}
+
+.map-marker--cultural-enriched {
+  position: relative;
+}
+
+.map-marker--cultural-enriched::after {
+  content: "i";
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 12px;
+  height: 12px;
+  background: var(--brand, #c2671e);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-sans, sans-serif);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid white;
+}
+
 .map-marker--start {
   width: 28px;
   height: 28px;
@@ -45,49 +79,13 @@
   border-radius: 1px;
 }
 
-/* Accommodation markers — categorized by type */
+/* Accommodation markers — categorised via the unified icon registry.
+   Background colour and size are applied inline by `createCategoryMarkerElement`. */
 .map-marker--acc {
-  width: 24px;
-  height: 24px;
-  font-size: 13px;
-  border-radius: 50%;
-  border: 2px solid white;
   cursor: pointer;
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
-}
-
-.map-marker--acc-building {
-  background-color: #7c3aed;
-}
-
-.map-marker--acc-camping {
-  background-color: #059669;
-}
-
-.map-marker--acc-hut {
-  background-color: #b45309;
-}
-
-.map-marker--acc-other {
-  background-color: #6b7280;
-}
-
-.map-marker--acc-building::after {
-  content: "🏠";
-}
-
-.map-marker--acc-camping::after {
-  content: "⛺";
-}
-
-.map-marker--acc-hut::after {
-  content: "🏔️";
-}
-
-.map-marker--acc-other::after {
-  content: "📍";
 }
 
 .map-marker--acc-highlighted {
@@ -106,27 +104,10 @@
     0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* Alert markers — colour comes from inline style; severity class kept
+   for E2E hooks and future overrides. */
 .map-marker--alert {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-}
-
-.map-marker--alert-critical {
-  background-color: #dc2626;
-}
-
-.map-marker--alert-warning {
-  background-color: #d97706;
-}
-
-.map-marker--alert::after {
-  content: "!";
-  display: block;
-  color: white;
-  font-weight: 700;
-  font-size: 11px;
-  line-height: 1;
+  /* Layout handled by .map-marker--icon */
 }
 
 .map-marker--hover-cursor {

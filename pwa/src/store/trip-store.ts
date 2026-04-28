@@ -311,6 +311,8 @@ export function getUndoableSlice(state: {
  * {@link useTripTemporalStore} exposes `undo()`, `redo()`, `canUndo`, and
  * `canRedo`.
  */
+type StageAlert = AlertData & { _group?: string };
+
 export const useTripStore = create<TripState>()(
   immer((set) => ({
     ...initialState,
@@ -378,10 +380,13 @@ export const useTripStore = create<TripState>()(
     updateStageAlerts: (stageIndex, alerts, source) =>
       set((state) => {
         if (state.stages[stageIndex]) {
-          const taggedAlerts = alerts.map((a) => ({ ...a, source }));
-          const kept = state.stages[stageIndex].alerts.filter(
-            (a) => a.source !== source,
-          );
+          const taggedAlerts: StageAlert[] = alerts.map((a) => ({
+            ...a,
+            _group: source,
+          }));
+          const kept = (
+            state.stages[stageIndex].alerts as StageAlert[]
+          ).filter((a) => a._group !== source);
           state.stages[stageIndex].alerts = [...kept, ...taggedAlerts];
         }
       }),

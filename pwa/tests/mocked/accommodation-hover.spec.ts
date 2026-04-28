@@ -72,7 +72,7 @@ test.describe("Accommodation hover — map markers", () => {
     );
   });
 
-  test("accommodation markers use correct category classes", async ({
+  test("accommodation markers use the unified category icon", async ({
     submitUrl,
     injectSequence,
     mockedPage,
@@ -88,10 +88,19 @@ test.describe("Accommodation hover — map markers", () => {
     // Wait for markers
     await expect(mockedPage.locator(".map-marker--acc")).toHaveCount(2);
 
-    // Hotel du Pont → building, Camping Les Oliviers → camping
-    await expect(mockedPage.locator(".map-marker--acc-building")).toHaveCount(
-      1,
+    // Both accommodations share the unified accommodation category — the
+    // accent colour is applied inline via `background-color`.
+    const accommodationMarkers = mockedPage.locator(
+      '.map-marker--icon[data-category="accommodation"]',
     );
-    await expect(mockedPage.locator(".map-marker--acc-camping")).toHaveCount(1);
+    await expect(accommodationMarkers).toHaveCount(2);
+
+    // Hotel du Pont (building) → violet, Camping Les Oliviers (camping) → emerald.
+    // We sample the inline styles to confirm the per-subtype background.
+    const colours = await accommodationMarkers.evaluateAll((nodes) =>
+      nodes.map((n) => (n as HTMLElement).style.backgroundColor),
+    );
+    expect(colours).toContain("rgb(124, 58, 237)"); // #7c3aed building
+    expect(colours).toContain("rgb(5, 150, 105)"); // #059669 camping
   });
 });

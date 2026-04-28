@@ -247,6 +247,23 @@
     "navigateToCrossing": "Aller au passage frontière",
     "free": "Entrée gratuite"
   },
+  "mapLegend": {
+    "title": "Légende des pictogrammes",
+    "open": "Légende",
+    "close": "Fermer la légende",
+    "accommodation": "Hébergements (hôtel, camping, refuge…)",
+    "water": "Points d'eau",
+    "supply": "Ravitaillement (épicerie, supermarché)",
+    "bikeWorkshop": "Ateliers vélo",
+    "railwayStation": "Gares SNCF",
+    "health": "Pharmacies / hôpitaux",
+    "borderCrossing": "Passages frontières",
+    "riverCrossing": "Traversée d'un cours d'eau sans pont",
+    "earlyDeparture": "Départ avant l'aube",
+    "culturalPoi": "POI culturels (musée, monument)",
+    "event": "Événements datés (festival, marché)",
+    "userWaypoint": "Waypoints utilisateur"
+  },
   "stageAlerts": {
     "title": "{count, plural, one {# alerte} other {# alertes}}",
     "showMore": "Voir {count} {count, plural, one {autre alerte} other {autres alertes}}",
