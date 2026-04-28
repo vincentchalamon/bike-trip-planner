@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { DEFAULT_LOCALE } from "@/i18n/locale";
@@ -10,14 +10,19 @@ import { Toaster } from "@/components/ui/sonner";
 import { OnboardingTour } from "@/components/onboarding-tour";
 import { AuthGuard } from "@/components/auth-guard";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const fraunces = Fraunces({
   subsets: ["latin"],
+  variable: "--font-fraunces",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const interTight = Inter_Tight({
   subsets: ["latin"],
+  variable: "--font-inter-tight",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -53,10 +58,12 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-x-hidden`}
-      >
+    <html
+      lang={locale}
+      suppressHydrationWarning
+      className={`${fraunces.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
+    >
+      <body className="antialiased overflow-x-hidden">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider
             attribute="class"
