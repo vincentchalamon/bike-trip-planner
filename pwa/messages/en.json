@@ -623,6 +623,26 @@
   "navigation": {
     "myTrips": "My trips"
   },
+  "errorPages": {
+    "notFound": {
+      "title": "Off the trail",
+      "subtitle": "This page does not exist or has been moved.",
+      "illustrationAlt": "Lost cyclist in the mountains",
+      "backHome": "Back to home"
+    },
+    "error": {
+      "title": "A pebble in the derailleur",
+      "subtitle": "An unexpected error occurred. You can try again or return home.",
+      "retry": "Try again",
+      "backHome": "Back to home"
+    },
+    "globalError": {
+      "title": "A pebble in the derailleur",
+      "subtitle": "A critical error occurred. You can reload the page.",
+      "requestIdLabel": "Support reference:",
+      "reload": "Reload page"
+    }
+  },
   "faq": {
     "title": "Frequently Asked Questions",
     "description": "Everything you need to know about Bike Trip Planner.",
