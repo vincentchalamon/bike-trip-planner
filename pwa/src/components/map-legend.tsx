@@ -136,7 +136,7 @@ export function MapLegend({ inline = false, className }: MapLegendProps) {
       {open && (
         <div
           id="map-legend-popover"
-          role="dialog"
+          role="region"
           aria-label={t("title")}
           className="mt-2 w-72 rounded-xl border border-border bg-[var(--surface)] p-3 text-[var(--ink)] shadow-lg"
           data-testid="map-legend"
