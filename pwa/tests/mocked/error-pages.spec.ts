@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { FAKE_JWT_TOKEN } from "../fixtures/api-mocks";
 
 /**
  * Error pages restyle (issue #389) — verify the 404 page renders with the new
@@ -13,10 +14,15 @@ test.describe("404 / not-found page", () => {
   test("renders the redesigned 'Hors-piste' page on unknown URL", async ({
     page,
   }) => {
-    // Mock auth as 401 so the home page CTA does not depend on a session.
+    // AuthGuard redirects non-public paths to /login when unauthenticated, so
+    // we must mock auth as authenticated to let the 404 page render.
     await page.route("**/auth/refresh", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
-      return route.fulfill({ status: 401, body: "" });
+      return route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+      });
     });
 
     const response = await page.goto("/this-route-does-not-exist-389");
@@ -54,7 +60,11 @@ test.describe("404 / not-found page", () => {
   test("uses the warm paper surface token as background", async ({ page }) => {
     await page.route("**/auth/refresh", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
-      return route.fulfill({ status: 401, body: "" });
+      return route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+      });
     });
 
     await page.goto("/another-missing-route-389");
