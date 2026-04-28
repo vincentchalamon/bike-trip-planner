@@ -33,8 +33,6 @@ export const AlertSchema = z.object({
   wikipediaUrl: z.string().url().optional().catch(undefined),
   // Optional contextual action
   action: AlertActionSchema.nullable().optional(),
-  // Internal deduplication tag — set by the store, never from the wire format
-  _group: z.string().optional(),
 });
 
 export const WeatherForecastSchema = z.object({
