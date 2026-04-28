@@ -65,6 +65,25 @@
 :root {
   --radius: 0.625rem;
 
+  /* ── Sprint 25 design scales (spacing + shadows) ────────────────────── */
+  /* Defined as plain CSS variables (not @theme) to avoid generating       */
+  /* Tailwind utility classes that would conflict with transition-all and */
+  /* trigger Playwright stability timeouts. Reference via var() in CSS or */
+  /* style props.                                                         */
+  --spacing-xs: 6px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-base: 16px;
+  --spacing-lg: 22px;
+  --spacing-xl: 28px;
+  --spacing-2xl: 36px;
+  --spacing-3xl: 48px;
+  --spacing-4xl: 64px;
+
+  --shadow-soft: 0 1px 3px rgb(0 0 0 / 0.08);
+  --shadow-medium: 0 4px 12px rgb(0 0 0 / 0.12);
+  --shadow-strong: 0 8px 24px rgb(0 0 0 / 0.16);
+
   /* ── Brand (amber) ────────────────────────────────────────────────────── */
   /* --brand is the Tailwind alias used by every existing component          */
   --brand: #c2671e;
