@@ -26,8 +26,8 @@ export default async function NotFound() {
       illustrationAlt: t("illustrationAlt"),
       backHome: t("backHome"),
     };
-  } catch {
-    // Static export prerendering: next-intl server context is unavailable.
+  } catch (e) {
+    console.error("[not-found] getTranslations failed, falling back to default copy:", e);
     copy = FALLBACK_COPY;
   }
 
@@ -67,14 +67,12 @@ export default async function NotFound() {
         <div className="space-y-3">
           <h1
             className="font-serif text-4xl md:text-5xl font-semibold tracking-tight"
-            style={{ fontFamily: "var(--font-serif)" }}
             data-testid="not-found-title"
           >
             {copy.title}
           </h1>
           <p
             className="font-sans text-base md:text-lg text-[var(--color-ink)]/70"
-            style={{ fontFamily: "var(--font-sans)" }}
             data-testid="not-found-subtitle"
           >
             {copy.subtitle}

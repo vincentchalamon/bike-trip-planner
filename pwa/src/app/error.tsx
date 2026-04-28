@@ -46,14 +46,12 @@ export default function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
         <div className="space-y-3">
           <h1
             className="font-serif text-3xl md:text-4xl font-semibold tracking-tight"
-            style={{ fontFamily: "var(--font-serif)" }}
             data-testid="error-title"
           >
             {t("title")}
           </h1>
           <p
             className="font-sans text-base md:text-lg text-[var(--color-ink)]/70"
-            style={{ fontFamily: "var(--font-sans)" }}
             data-testid="error-subtitle"
           >
             {t("subtitle")}

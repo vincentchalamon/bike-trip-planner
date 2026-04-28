@@ -173,6 +173,13 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             onMouseLeave={(e) => {
               e.currentTarget.style.filter = "brightness(1)";
             }}
+            onFocus={(e) => {
+              e.currentTarget.style.outline = "3px solid var(--accent-brand)";
+              e.currentTarget.style.outlineOffset = "3px";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.outline = "none";
+            }}
           >
             {reloadLabel}
           </button>
