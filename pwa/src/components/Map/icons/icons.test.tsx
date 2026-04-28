@@ -26,13 +26,78 @@ describe("ICON_SHAPES / JSX component path drift", () => {
   );
 });
 
-describe("resolveCategory — backend source identifiers", () => {
+describe("resolveCategory — full identifier mapping", () => {
   it.each([
+    // Accommodation subtypes
+    ["hotel", "accommodation"],
+    ["alpine_hut", "accommodation"],
+    ["camp_site", "accommodation"],
+    ["shelter", "accommodation"],
+    // Water
+    ["water", "water"],
+    ["drinking_water", "water"],
     ["water_point", "water"],
-    ["cultural_poi", "cultural-poi"],
+    // Supply
+    ["supply", "supply"],
+    ["supermarket", "supply"],
+    ["convenience", "supply"],
+    ["food", "supply"],
+    // Bike workshop
+    ["bicycle_repair", "bike-workshop"],
+    ["bicycle", "bike-workshop"],
+    ["compressed_air", "bike-workshop"],
+    // Railway station
+    ["railway", "railway-station"],
     ["railway_station", "railway-station"],
+    ["train_station", "railway-station"],
+    // Health
+    ["pharmacy", "health"],
+    ["hospital", "health"],
+    ["clinic", "health"],
+    // Border crossing
+    ["border", "border-crossing"],
     ["border_crossing", "border-crossing"],
+    ["country_border", "border-crossing"],
+    // River crossing
+    ["river_crossing", "river-crossing"],
+    ["ford", "river-crossing"],
+    ["water_crossing", "river-crossing"],
+    // Early departure
+    ["early_departure", "early-departure"],
+    ["sunset_alert", "early-departure"],
+    ["wakeup", "early-departure"],
+    // Cultural POI
+    ["cultural_poi", "cultural-poi"],
+    ["datatourisme", "cultural-poi"],
+    ["wikidata", "cultural-poi"],
+    ["monument", "cultural-poi"],
+    ["museum", "cultural-poi"],
+    // Event
+    ["event", "event"],
+    ["festival", "event"],
+    ["market", "event"],
+    ["public_holiday", "event"],
+    // User waypoint
+    ["waypoint", "user-waypoint"],
+    ["user_waypoint", "user-waypoint"],
+    ["user", "user-waypoint"],
   ] as const)("resolveCategory('%s') === '%s'", (source, expected) => {
     expect(resolveCategory(source)).toBe(expected);
+  });
+
+  it("returns null for empty / null / undefined input", () => {
+    expect(resolveCategory("")).toBeNull();
+    expect(resolveCategory(null)).toBeNull();
+    expect(resolveCategory(undefined)).toBeNull();
+  });
+
+  it("returns null for unknown identifiers", () => {
+    expect(resolveCategory("foobar")).toBeNull();
+    expect(resolveCategory("not_a_category")).toBeNull();
+  });
+
+  it("is case-insensitive", () => {
+    expect(resolveCategory("HOTEL")).toBe("accommodation");
+    expect(resolveCategory("Cultural_POI")).toBe("cultural-poi");
   });
 });

@@ -12,8 +12,8 @@ import type { MarkerCategory } from "./index";
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 interface SvgShape {
-  /** Element name (`path`, `rect`, `circle`…). */
-  tag: keyof SVGElementTagNameMap | string;
+  /** Element name — narrowed to the SVG primitives actually used. */
+  tag: "path" | "rect" | "circle";
   /** Attributes — values are stringified before being set. */
   attrs: Record<string, string | number>;
   /** Optional text content (only used for `<text>` nodes). */
