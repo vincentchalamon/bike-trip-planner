@@ -158,6 +158,7 @@ test.describe("Design tokens — variante forest", () => {
       document.documentElement.classList.add("dark");
     });
     const ring = await getCssVar(page, "--ring");
-    expect(ring).toContain("145");
+    // Chromium may serialize oklch(0.55 0.12 145) as lab(...) — check hue 145 or negative Lab a*
+    expect(ring).toMatch(/145|-3[0-9]/);
   });
 });
