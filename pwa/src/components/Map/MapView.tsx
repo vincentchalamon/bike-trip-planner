@@ -439,9 +439,6 @@ export const MapView = memo(function MapView({
           isEnrichedPoi ? " map-marker--cultural-enriched" : ""
         }`,
       });
-      // The disc keeps relative positioning so the optional ::after dot
-      // (cultural-poi enrichment indicator) anchors correctly.
-      alertEl.style.position = "relative";
       markersRef.current.push(
         new maplibregl.Marker({ element: alertEl })
           .setLngLat([alert.lon, alert.lat])

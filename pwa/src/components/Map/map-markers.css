@@ -21,6 +21,10 @@
   display: block;
 }
 
+.map-marker--cultural-enriched {
+  position: relative;
+}
+
 .map-marker--cultural-enriched::after {
   content: "i";
   position: absolute;
