@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { Link2, FileUp, Sparkles, ArrowLeft, Upload } from "lucide-react";
+import { AiChatCard, type AiChatMessage } from "@/components/ai-chat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,15 +19,23 @@ import { isSupportedSourceUrl, isValidUrl } from "@/lib/validation/url";
 /**
  * Input mode selected by the user.
  *
- * - `null`: no selection yet, both cards displayed side-by-side
+ * - `null`: no selection yet, all three cards displayed side-by-side
  * - `link`: Komoot/Strava/RideWithGPS URL input
  * - `gpx`: GPX file drag & drop + file picker
+ * - `ai`: free-form chat with the AI assistant (UI shell only — see #392)
  */
-export type InputMode = "link" | "gpx" | null;
+export type InputMode = "link" | "gpx" | "ai" | null;
 
 interface CardSelectionProps {
   onSubmitUrl: (url: string) => Promise<void> | void;
   onUploadFile: (file: File) => Promise<void> | void;
+  /**
+   * Optional callback fired when the AI chat conversation is submitted via the
+   * "Valider et continuer" button. Until the backend AI endpoint ships
+   * (sprint 31, #309) the parent typically leaves this `undefined` and lets
+   * the chat card dispatch its own `ai-chat-submit` DOM event.
+   */
+  onSubmitAiConversation?: (messages: ReadonlyArray<AiChatMessage>) => void;
   disabled?: boolean;
 }
 
@@ -36,13 +45,15 @@ const MAX_GPX_SIZE_BYTES = 30 * 1024 * 1024;
 /**
  * Mutually-exclusive card selection for Act 1 "Préparation".
  *
- * Shows two active cards (Lien + GPX) and a placeholder for the upcoming
- * "Assistant IA" card. Selecting a card expands it and collapses the other,
- * revealing the appropriate input (URL field or drop zone).
+ * Shows three active cards (Lien + GPX + Assistant IA). Selecting a card
+ * expands it and collapses the others, revealing the appropriate input
+ * (URL field, drop zone or chat composer). The AI assistant ships as a UI
+ * shell only — its backend wiring lands in sprint 31 (see #309).
  */
 export function CardSelection({
   onSubmitUrl,
   onUploadFile,
+  onSubmitAiConversation,
   disabled = false,
 }: CardSelectionProps) {
   const t = useTranslations("cardSelection");
@@ -99,8 +110,16 @@ export function CardSelection({
           />
         )}
 
-        {/* Card: AI Assistant (coming soon placeholder) */}
-        {selected === null && <AiCard />}
+        {/* Card: AI Assistant — multi-turn chat shell (#392). Backend wiring
+            lands in sprint 31 (see #309). */}
+        {(selected === null || selected === "ai") && (
+          <AiCard
+            expanded={selected === "ai"}
+            disabled={disabled}
+            onSelect={() => handleSelect("ai")}
+            onSubmitConversation={onSubmitAiConversation}
+          />
+        )}
       </div>
 
       {selected !== null && (
@@ -446,20 +465,39 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
   );
 }
 
-function AiCard() {
+interface AiCardProps {
+  expanded: boolean;
+  disabled: boolean;
+  onSelect: () => void;
+  onSubmitConversation?: (messages: ReadonlyArray<AiChatMessage>) => void;
+}
+
+function AiCard({
+  expanded,
+  disabled,
+  onSelect,
+  onSubmitConversation,
+}: AiCardProps) {
   const t = useTranslations("cardSelection");
+
   return (
     <CardShell
       testId="card-ai"
       ariaLabel={t("ariaSelectAi")}
-      expanded={false}
-      disabled
-      onSelect={() => {}}
+      expanded={expanded}
+      disabled={disabled}
+      onSelect={onSelect}
       icon={<Sparkles className="h-6 w-6" aria-hidden="true" />}
       title={t("aiTitle")}
       description={t("aiDescription")}
-      badge={t("aiSoon")}
-    />
+    >
+      {expanded && (
+        <AiChatCard
+          onSubmitConversation={onSubmitConversation}
+          disabled={disabled}
+        />
+      )}
+    </CardShell>
   );
 }
 
