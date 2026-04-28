@@ -16,10 +16,6 @@ interface SvgShape {
   tag: "path" | "rect" | "circle";
   /** Attributes — values are stringified before being set. */
   attrs: Record<string, string | number>;
-  /** Optional text content (only used for `<text>` nodes). */
-  text?: string;
-  /** Optional child shapes. */
-  children?: SvgShape[];
 }
 
 /**
@@ -159,12 +155,6 @@ function appendShapes(parent: SVGElement, shapes: readonly SvgShape[]): void {
     const el = document.createElementNS(SVG_NS, shape.tag);
     for (const [key, value] of Object.entries(shape.attrs)) {
       el.setAttribute(key, String(value));
-    }
-    if (shape.text) {
-      el.textContent = shape.text;
-    }
-    if (shape.children) {
-      appendShapes(el as SVGElement, shape.children);
     }
     parent.appendChild(el);
   }

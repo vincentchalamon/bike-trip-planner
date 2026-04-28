@@ -4,24 +4,26 @@ import { MarkerIcon, MARKER_CATEGORIES, resolveCategory } from "./index";
 import { ICON_SHAPES } from "./markerDom";
 import type { MarkerCategory } from "./index";
 
-describe("ICON_SHAPES / JSX component path drift", () => {
-  function assertPaths(
-    markup: string,
-    key: MarkerCategory,
-  ): void {
+describe("ICON_SHAPES / JSX component shape drift", () => {
+  function assertShapes(markup: string, key: MarkerCategory): void {
     for (const shape of ICON_SHAPES[key]) {
       if (shape.tag === "path" && typeof shape.attrs.d === "string") {
         expect(markup).toContain(`d="${shape.attrs.d}"`);
+      } else if (shape.tag === "rect" || shape.tag === "circle") {
+        // Assert each numeric attribute renders identically in the JSX SVG.
+        for (const [attr, value] of Object.entries(shape.attrs)) {
+          expect(markup).toContain(`${attr}="${value}"`);
+        }
       }
     }
   }
 
   it.each([...MARKER_CATEGORIES] as MarkerCategory[])(
-    "%s: ICON_SHAPES paths match JSX component",
+    "%s: ICON_SHAPES shapes match JSX component",
     (category) => {
       const Icon = MarkerIcon[category];
       const markup = renderToStaticMarkup(<Icon />);
-      assertPaths(markup, category);
+      assertShapes(markup, category);
     },
   );
 });

@@ -125,8 +125,8 @@ export function RailwayStationIcon(props: MarkerIconProps) {
       <path d="M5 12h14" />
       <path d="M9 17l-2 4" />
       <path d="M15 17l2 4" />
-      <circle cx="9" cy="14.5" r=".75" fill="currentColor" stroke="none" />
-      <circle cx="15" cy="14.5" r=".75" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="14.5" r="0.75" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="14.5" r="0.75" fill="currentColor" stroke="none" />
     </svg>
   );
 }
