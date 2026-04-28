@@ -133,18 +133,17 @@ export function MapLegend({ inline = false, className }: MapLegendProps) {
         {open ? t("close") : t("open")}
       </button>
 
-      {open && (
-        <div
-          id="map-legend-popover"
-          role="region"
-          aria-label={t("title")}
-          className="mt-2 w-72 rounded-xl border border-border bg-[var(--surface)] p-3 text-[var(--ink)] shadow-lg"
-          data-testid="map-legend"
-        >
-          <h3 className="mb-3 font-sans text-sm font-semibold">{t("title")}</h3>
-          {list}
-        </div>
-      )}
+      <div
+        id="map-legend-popover"
+        role="region"
+        aria-label={t("title")}
+        hidden={!open}
+        className="mt-2 w-72 rounded-xl border border-border bg-[var(--surface)] p-3 text-[var(--ink)] shadow-lg"
+        data-testid="map-legend"
+      >
+        <h3 className="mb-3 font-sans text-sm font-semibold">{t("title")}</h3>
+        {list}
+      </div>
     </div>
   );
 }
