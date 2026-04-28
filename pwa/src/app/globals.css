@@ -59,7 +59,17 @@
   --color-ink: var(--ink);
 }
 
-@theme inline {
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LIGHT MODE — warm paper / ink charcoal / amber accent
+ * ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --radius: 0.625rem;
+
+  /* ── Sprint 25 design scales (spacing + shadows) ────────────────────── */
+  /* Defined as plain CSS variables (not @theme) to avoid generating       */
+  /* Tailwind utility classes that would conflict with transition-all and */
+  /* trigger Playwright stability timeouts. Reference via var() in CSS or */
+  /* style props.                                                         */
   --spacing-xs: 6px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
@@ -73,13 +83,6 @@
   --shadow-soft: 0 1px 3px rgb(0 0 0 / 0.08);
   --shadow-medium: 0 4px 12px rgb(0 0 0 / 0.12);
   --shadow-strong: 0 8px 24px rgb(0 0 0 / 0.16);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
- * LIGHT MODE — warm paper / ink charcoal / amber accent
- * ═══════════════════════════════════════════════════════════════════════════ */
-:root {
-  --radius: 0.625rem;
 
   /* ── Brand (amber) ────────────────────────────────────────────────────── */
   /* --brand is the Tailwind alias used by every existing component          */
