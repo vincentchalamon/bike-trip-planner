@@ -127,3 +127,38 @@ test.describe("Design tokens — landing page (mode sombre)", () => {
     await expect(page.getByTestId("landing-page")).toBeVisible();
   });
 });
+
+// ── data-theme forest variant ────────────────────────────────────────────────
+
+const FOREST_BRAND_LIGHT = "#3a7c47";
+
+test.describe("Design tokens — variante forest", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/auth/refresh", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      return route.fulfill({ status: 401, body: "" });
+    });
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("data-theme", "forest");
+    });
+  });
+
+  test("--brand est vert en variante forest (mode clair)", async ({ page }) => {
+    const brand = await getCssVar(page, "--brand");
+    expect(brand.toLowerCase()).toBe(FOREST_BRAND_LIGHT.toLowerCase());
+  });
+
+  test("--ring est à la teinte verte en variante forest (mode sombre)", async ({
+    page,
+  }) => {
+    await page.evaluate(() => {
+      document.documentElement.classList.add("dark");
+    });
+    const ring = await getCssVar(page, "--ring");
+    // Chromium may serialize oklch(0.55 0.12 145) as lab(...) — check hue 145 or negative Lab a*
+    expect(ring).toMatch(/145|-3[0-9]/);
+  });
+});

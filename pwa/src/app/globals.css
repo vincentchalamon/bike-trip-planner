@@ -7,8 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-fraunces);
+  --font-sans: var(--font-inter-tight);
+  --font-mono: var(--font-jetbrains-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -199,6 +200,7 @@
   --accent-soft: #0d2e14;
   --accent-ink: #b8f0c0;
   --diff-highlight: oklch(0.32 0.1 145);
+  --ring: oklch(0.55 0.12 145);
 }
 
 /* Indigo variant — cool blue-purple accent */
@@ -223,6 +225,7 @@
   --accent-soft: #131828;
   --accent-ink: #c8d4ff;
   --diff-highlight: oklch(0.32 0.1 270);
+  --ring: oklch(0.55 0.15 270);
 }
 
 /* Brick variant — warm red-terracotta accent */
@@ -247,6 +250,7 @@
   --accent-soft: #2a0a0a;
   --accent-ink: #ffc8c8;
   --diff-highlight: oklch(0.32 0.1 20);
+  --ring: oklch(0.55 0.18 20);
 }
 
 @keyframes indeterminate {
@@ -300,7 +304,7 @@
   color: var(--popover-foreground);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   box-shadow:
     0 10px 25px -5px oklch(0 0 0 / 20%),
     0 4px 10px -2px oklch(0 0 0 / 10%);
