@@ -199,6 +199,7 @@
   --accent-soft: #0d2e14;
   --accent-ink: #b8f0c0;
   --diff-highlight: oklch(0.32 0.1 145);
+  --ring: oklch(0.55 0.12 145);
 }
 
 /* Indigo variant — cool blue-purple accent */
@@ -223,6 +224,7 @@
   --accent-soft: #131828;
   --accent-ink: #c8d4ff;
   --diff-highlight: oklch(0.32 0.1 270);
+  --ring: oklch(0.55 0.15 270);
 }
 
 /* Brick variant — warm red-terracotta accent */
@@ -247,6 +249,7 @@
   --accent-soft: #2a0a0a;
   --accent-ink: #ffc8c8;
   --diff-highlight: oklch(0.32 0.1 20);
+  --ring: oklch(0.55 0.18 20);
 }
 
 @keyframes indeterminate {
