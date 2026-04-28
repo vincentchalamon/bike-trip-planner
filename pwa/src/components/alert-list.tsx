@@ -11,7 +11,6 @@ import {
   resolveCategory,
   UserWaypointIcon,
   CulturalPoiEnrichedIcon,
-  CulturalPoiIcon,
 } from "@/components/Map/icons";
 import { cn } from "@/lib/utils";
 
@@ -83,8 +82,6 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
                 >
                   {isEnrichedCulturalPoi ? (
                     <CulturalPoiEnrichedIcon size={20} />
-                  ) : category === "cultural-poi" ? (
-                    <CulturalPoiIcon size={20} />
                   ) : (
                     <CategoryIcon size={20} />
                   )}
