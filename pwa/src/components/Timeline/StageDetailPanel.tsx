@@ -130,7 +130,9 @@ export function StageDetailPanel({
       data-stage-index={safeIndex}
       className="flex flex-col gap-4"
     >
-      {!startDate && onOpenConfig && <NoDatesBanner onOpenConfig={onOpenConfig} />}
+      {!startDate && onOpenConfig && (
+        <NoDatesBanner onOpenConfig={onOpenConfig} />
+      )}
 
       {/* Day heading — anchor preserved so StageProgressBar segments remain
           clickable / scroll-to-able from the sticky header. */}
@@ -210,24 +212,28 @@ export function StageDetailPanel({
 
       {/* Footer actions — insert a new stage / rest day right after this one.
           Hidden in read-only mode and on the very last stage (no "next day"). */}
-      {!readOnly && safeIndex < stages.length - 1 && (onAddStage || onInsertRestDay) && (
-        <div className="flex flex-wrap gap-2">
-          {onInsertRestDay && !stage.isRestDay && !stages[safeIndex + 1]?.isRestDay && (
-            <AddRestDayButton
-              afterIndex={safeIndex}
-              dayNumber={stage.dayNumber}
-              onClick={() => onInsertRestDay(safeIndex)}
-            />
-          )}
-          {onAddStage && (
-            <AddStageButton
-              afterIndex={safeIndex}
-              onClick={() => onAddStage(safeIndex)}
-              disabled={!canInsertStage(safeIndex)}
-            />
-          )}
-        </div>
-      )}
+      {!readOnly &&
+        safeIndex < stages.length - 1 &&
+        (onAddStage || onInsertRestDay) && (
+          <div className="flex flex-wrap gap-2">
+            {onInsertRestDay &&
+              !stage.isRestDay &&
+              !stages[safeIndex + 1]?.isRestDay && (
+                <AddRestDayButton
+                  afterIndex={safeIndex}
+                  dayNumber={stage.dayNumber}
+                  onClick={() => onInsertRestDay(safeIndex)}
+                />
+              )}
+            {onAddStage && (
+              <AddStageButton
+                afterIndex={safeIndex}
+                onClick={() => onAddStage(safeIndex)}
+                disabled={!canInsertStage(safeIndex)}
+              />
+            )}
+          </div>
+        )}
     </section>
   );
 }

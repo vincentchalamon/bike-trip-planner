@@ -404,9 +404,9 @@ export const useTripStore = create<TripState>()(
             ...a,
             _group: source,
           }));
-          const kept = (
-            state.stages[stageIndex].alerts as StageAlert[]
-          ).filter((a) => a._group !== source);
+          const kept = (state.stages[stageIndex].alerts as StageAlert[]).filter(
+            (a) => a._group !== source,
+          );
           state.stages[stageIndex].alerts = [...kept, ...taggedAlerts];
         }
       }),
