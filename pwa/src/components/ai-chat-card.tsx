@@ -106,16 +106,12 @@ export function AiChatCard({
   const stubReply = t("stubReply");
 
   const transcript: ReadonlyArray<AiChatMessage> = useMemo(() => {
-    if (messages.length === 0) {
-      return [
-        {
-          id: "greeting",
-          role: "assistant",
-          content: stubGreeting,
-        },
-      ];
-    }
-    return [greeting, ...messages];
+    const greeting: AiChatMessage = {
+      id: "greeting",
+      role: "assistant",
+      content: stubGreeting,
+    };
+    return messages.length === 0 ? [greeting] : [greeting, ...messages];
   }, [messages, stubGreeting]);
 
   // Auto-scroll the history to the latest turn whenever a message is appended.
