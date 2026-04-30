@@ -242,7 +242,12 @@
     "endMarker": "Point d'arrivée",
     "resetView": "Vue globale",
     "elevationProfile": "Profil altimétrique",
-    "elevationProfileAriaLabel": "Profil altimétrique interactif du voyage"
+    "elevationProfileAriaLabel": "Profil altimétrique interactif du voyage",
+    "tileLayer": {
+      "groupLabel": "Type de fond de carte",
+      "map": "Carte",
+      "satellite": "Satellite"
+    }
   },
   "alertList": {
     "addToItinerary": "Ajouter à l'itinéraire",

@@ -13,11 +13,62 @@ import { getStageColor } from "./stage-colors";
 import { createCategoryMarkerElement } from "./icons/markerDom";
 import { resolveCategory, type MarkerCategory } from "./icons";
 import { MapLegend } from "@/components/map-legend";
+import { TileLayerControl } from "./tile-layer-control";
+import { useTileMode, type TileMode } from "@/hooks/use-tile-mode";
 
 const LIGHT_TILES =
   "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const DARK_TILES =
   "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
+/**
+ * Esri WorldImagery is freely usable for non-commercial maps as long as the
+ * attribution is shown — see https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9
+ */
+const ESRI_WORLD_IMAGERY_TILES =
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+// Carto's positron / dark-matter style.json already declares the OSM
+// attribution, so we only need to inject Esri's notice when satellite mode is
+// active (see `buildSatelliteStyle`).
+const ESRI_ATTRIBUTION =
+  'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener noreferrer">Esri</a> &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
+
+/**
+ * Builds the inline maplibre style used in satellite mode. Switching styles
+ * (rather than swapping a TileLayer like in Leaflet) is the canonical way to
+ * change basemaps in maplibre-gl; the route / marker layers are re-added on
+ * the `style.load` event below.
+ */
+function buildSatelliteStyle(): maplibregl.StyleSpecification {
+  return {
+    version: 8,
+    sources: {
+      "esri-world-imagery": {
+        type: "raster",
+        tiles: [ESRI_WORLD_IMAGERY_TILES],
+        tileSize: 256,
+        attribution: ESRI_ATTRIBUTION,
+        maxzoom: 19,
+      },
+    },
+    layers: [
+      {
+        id: "esri-world-imagery",
+        type: "raster",
+        source: "esri-world-imagery",
+      },
+    ],
+  };
+}
+
+/** Resolves the maplibre style spec for a given mode + theme. */
+function resolveStyle(
+  mode: TileMode,
+  isDark: boolean,
+): string | maplibregl.StyleSpecification {
+  if (mode === "satellite") return buildSatelliteStyle();
+  return isDark ? DARK_TILES : LIGHT_TILES;
+}
 
 const emptySubscribe = () => () => {};
 const getTrue = () => true;
@@ -172,11 +223,18 @@ export const MapView = memo(function MapView({
   const mounted = useSyncExternalStore(emptySubscribe, getTrue, getFalse);
 
   const isDark = mounted && resolvedTheme === "dark";
-  const tileStyle = isDark ? DARK_TILES : LIGHT_TILES;
+  const { tileMode, setTileMode } = useTileMode();
+  const tileStyle = useMemo(
+    () => resolveStyle(tileMode, isDark),
+    [tileMode, isDark],
+  );
+  // Cache key so we can skip redundant setStyle() calls without comparing the
+  // full style object identity (it changes on every render in satellite mode).
+  const tileStyleKey = `${tileMode}:${isDark ? "dark" : "light"}`;
   // Track the last applied tile style to skip redundant setStyle() calls.
   // Without this, the effect also fires when mapReady flips to true, which
   // resets the style and briefly removes route sources/layers.
-  const appliedTileStyleRef = useRef(tileStyle);
+  const appliedTileStyleKeyRef = useRef(tileStyleKey);
 
   const activeStages = useMemo(
     () => stages.filter((s) => !s.isRestDay),
@@ -287,13 +345,14 @@ export const MapView = memo(function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update tile style on theme change — but NOT on the initial mapReady flip.
-  // The map is already initialised with the correct style; calling setStyle()
-  // again at that point wipes sources/layers until "style.load" re-adds them.
+  // Update tile style on theme / tile-mode change — but NOT on the initial
+  // mapReady flip. The map is already initialised with the correct style;
+  // calling setStyle() again at that point wipes sources/layers until
+  // "style.load" re-adds them.
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
-    if (tileStyle === appliedTileStyleRef.current) return;
-    appliedTileStyleRef.current = tileStyle;
+    if (tileStyleKey === appliedTileStyleKeyRef.current) return;
+    appliedTileStyleKeyRef.current = tileStyleKey;
     mapRef.current.setStyle(tileStyle);
     mapRef.current.once("style.load", () => {
       if (!mapRef.current) return;
@@ -306,7 +365,7 @@ export const MapView = memo(function MapView({
         addAccommodationLinkLayer(mapRef.current);
       }
     });
-  }, [tileStyle, mapReady, addSourceAndLayers]);
+  }, [tileStyle, tileStyleKey, mapReady, addSourceAndLayers]);
 
   // Update route data when stages change
   useEffect(() => {
@@ -560,11 +619,17 @@ export const MapView = memo(function MapView({
         aria-label={t("ariaLabel")}
       />
 
+      <TileLayerControl
+        value={tileMode}
+        onChange={setTileMode}
+        className="absolute top-3 left-3 z-10"
+      />
+
       {focusedStageIndex !== null && (
         <button
           type="button"
           onClick={onResetView}
-          className="absolute top-3 left-3 z-10 bg-background/90 backdrop-blur-sm border border-border text-foreground text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm hover:bg-accent transition-colors cursor-pointer"
+          className="absolute top-14 left-3 z-10 bg-background/90 backdrop-blur-sm border border-border text-foreground text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm hover:bg-accent transition-colors cursor-pointer"
           aria-label={t("resetView")}
           data-testid="map-reset-view"
         >
