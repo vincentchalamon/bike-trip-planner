@@ -753,6 +753,7 @@ export const useTripStore = create<TripState>()(
         state.departureHour = trip.departureHour;
         state.enabledAccommodationTypes = trip.enabledAccommodationTypes;
         state.stages = trip.stages;
+        state.selectedStageIndex = 0;
         state.isLocked = true;
         state.totalDistance = trip.totalDistance ?? 0;
         state.totalElevation = trip.totalElevation ?? 0;
