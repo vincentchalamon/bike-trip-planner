@@ -87,7 +87,6 @@ export function TileLayerControl({
             type="button"
             role="radio"
             aria-checked={isActive}
-            aria-pressed={isActive}
             data-tile-mode={mode}
             data-testid={`tile-layer-${mode}`}
             tabIndex={isActive ? 0 : -1}

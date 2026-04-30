@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 /**
  * Available basemap tile modes for the trip map.
@@ -17,45 +17,40 @@ function isTileMode(value: unknown): value is TileMode {
   return value === "map" || value === "satellite";
 }
 
+function readStoredMode(): TileMode {
+  if (typeof window === "undefined") return DEFAULT_TILE_MODE;
+  try {
+    const stored = localStorage.getItem(TILE_MODE_STORAGE_KEY);
+    return isTileMode(stored) ? stored : DEFAULT_TILE_MODE;
+  } catch {
+    return DEFAULT_TILE_MODE;
+  }
+}
+
 /**
  * Reads / persists the user's preferred basemap mode in `localStorage`.
  *
- * The value stays `null` during SSR and the very first client render so we
- * never trigger a hydration mismatch. Once resolved on the client, callers
- * receive the persisted choice (or `DEFAULT_TILE_MODE` on first visit).
+ * Uses a lazy `useState` initializer so the persisted value is read once on
+ * the first client render without triggering an extra re-render.
+ * SSR: `typeof window === 'undefined'` guard returns the default, avoiding
+ * hydration mismatches.
  */
 export function useTileMode(): {
   tileMode: TileMode;
   setTileMode: (mode: TileMode) => void;
   ready: boolean;
 } {
-  // Always start from the default during SSR and the very first client render
-  // so React hydration sees identical markup. The persisted value is applied
-  // in the effect below; the map's setStyle effect picks up the change.
-  const [tileMode, setTileModeState] = useState<TileMode>(DEFAULT_TILE_MODE);
-  const [ready, setReady] = useState(false);
+  const [tileMode, setTileModeState] = useState<TileMode>(readStoredMode);
 
-  useEffect(() => {
+  const setTileMode = useCallback((newMode: TileMode) => {
+    setTileModeState(newMode);
     try {
-      const stored = localStorage.getItem(TILE_MODE_STORAGE_KEY);
-      if (isTileMode(stored)) {
-        setTileModeState(stored);
-      }
-    } catch {
-      // localStorage may be unavailable (e.g. strict privacy mode) — fall back
-      // to the default and skip persistence.
-    }
-    setReady(true);
-  }, []);
-
-  const setTileMode = useCallback((mode: TileMode) => {
-    setTileModeState(mode);
-    try {
-      localStorage.setItem(TILE_MODE_STORAGE_KEY, mode);
+      localStorage.setItem(TILE_MODE_STORAGE_KEY, newMode);
     } catch {
       // Ignore write failures — the in-memory state still updates.
     }
   }, []);
 
-  return { tileMode, setTileMode, ready };
+  // `ready` is always true on the client since we initialize synchronously.
+  return { tileMode, setTileMode, ready: true };
 }
