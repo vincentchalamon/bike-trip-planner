@@ -21,7 +21,8 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
 
   // lang hardcoded: GlobalError replaces the root layout so next-intl context is unavailable
   const title = "Un caillou dans le dérailleur";
-  const subtitle = "Une erreur critique est survenue. Vous pouvez recharger la page.";
+  const subtitle =
+    "Une erreur critique est survenue. Vous pouvez recharger la page.";
   const requestIdLabel = "Identifiant pour le support :";
   const reloadLabel = "Recharger la page";
 
@@ -105,7 +106,9 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             </svg>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
             <h1
               data-testid="global-error-title"
               style={{
