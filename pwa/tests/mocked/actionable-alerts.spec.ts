@@ -1,11 +1,14 @@
 /**
- * Issue #325 — Acte 3 : collapsible stage alerts with severity sorting and pagination.
+ * Issues #325 (Acte 3) and #397 — collapsible stage alerts grouped by
+ * severity with contextual action buttons.
  *
  * Tests:
- * - Alerts are sorted by severity (critical → warning → nudge).
- * - First 3 alerts shown, "Show N more" reveals the rest.
- * - Section collapses and expands via the header toggle.
- * - Individual alert actions (auto_fix, navigate, dismiss) work as expected.
+ * - Alerts are grouped by severity: critical → warning → nudge.
+ * - Critical group is expanded by default; warning and nudge are collapsed.
+ * - Each severity group toggles independently via its chevron.
+ * - The whole section can still be collapsed via the parent toggle.
+ * - Individual alert actions (auto_fix, navigate, dismiss, detour) work
+ *   as expected.
  * - Transition from Acte 2 ProcessingProgress (trip_ready) to Acte 3.
  */
 
@@ -38,7 +41,7 @@ function tripReadyWithManyAlertsEvent(): MercureEvent {
           isRestDay: false,
           weather: null,
           alerts: [
-            // nudge first in list — should appear last after sorting
+            // nudge first in list — should appear in the nudge group regardless
             {
               type: "nudge",
               message: "Nudge alert A",
@@ -112,7 +115,7 @@ function tripReadyWithManyAlertsEvent(): MercureEvent {
   };
 }
 
-/** A trip_ready event with exactly 3 alerts on stage 0 (no "Show more" needed). */
+/** A trip_ready event with exactly 3 alerts on stage 0 (one per severity). */
 function tripReadyWithThreeAlertsEvent(): MercureEvent {
   return {
     type: "trip_ready",
@@ -166,11 +169,11 @@ function tripReadyWithThreeAlertsEvent(): MercureEvent {
 }
 
 // ---------------------------------------------------------------------------
-// Severity sorting
+// Severity grouping
 // ---------------------------------------------------------------------------
 
-test.describe("StageAlerts — severity sorting", () => {
-  test("alerts are displayed in severity order: critical → warning → nudge", async ({
+test.describe("StageAlerts — severity grouping", () => {
+  test("alerts are split into critical / warning / nudge groups", async ({
     submitUrl,
     injectSequence,
     mockedPage,
@@ -187,14 +190,90 @@ test.describe("StageAlerts — severity sorting", () => {
       timeout: 5000,
     });
 
-    // After sorting: criticals fill the first visible slots (only 3 shown by default).
-    // Both criticals should be visible; nudges should be hidden behind "Show more".
-    const alertsBody = stageCard.getByTestId("stage-alerts-body");
-    await expect(alertsBody.getByText("Critical alert C")).toBeVisible();
-    await expect(alertsBody.getByText("Critical alert F")).toBeVisible();
-    // Nudge alerts sit below the fold — not visible until "Show more" is clicked.
-    await expect(alertsBody.getByText("Nudge alert A")).not.toBeVisible();
-    await expect(alertsBody.getByText("Nudge alert E")).not.toBeVisible();
+    // All three groups should be present
+    await expect(stageCard.getByTestId("alert-group-critical")).toBeVisible();
+    await expect(stageCard.getByTestId("alert-group-warning")).toBeVisible();
+    await expect(stageCard.getByTestId("alert-group-nudge")).toBeVisible();
+
+    // Counts: 2 critical, 3 warning, 2 nudge
+    await expect(
+      stageCard.getByTestId("alert-group-count-critical"),
+    ).toContainText("2");
+    await expect(
+      stageCard.getByTestId("alert-group-count-warning"),
+    ).toContainText("3");
+    await expect(
+      stageCard.getByTestId("alert-group-count-nudge"),
+    ).toContainText("2");
+  });
+
+  test("critical group is expanded by default; warning and nudge are collapsed", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      tripReadyWithManyAlertsEvent(),
+    ]);
+
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard.getByTestId("stage-alerts")).toBeVisible({
+      timeout: 5000,
+    });
+
+    // Critical alerts visible, warning and nudge alerts hidden
+    await expect(stageCard.getByText("Critical alert C")).toBeVisible();
+    await expect(stageCard.getByText("Critical alert F")).toBeVisible();
+    await expect(stageCard.getByText("Warning alert B")).not.toBeVisible();
+    await expect(stageCard.getByText("Warning alert D")).not.toBeVisible();
+    await expect(stageCard.getByText("Nudge alert A")).not.toBeVisible();
+    await expect(stageCard.getByText("Nudge alert E")).not.toBeVisible();
+
+    // aria-expanded reflects the default state
+    await expect(
+      stageCard.getByTestId("alert-group-toggle-critical"),
+    ).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      stageCard.getByTestId("alert-group-toggle-warning"),
+    ).toHaveAttribute("aria-expanded", "false");
+    await expect(
+      stageCard.getByTestId("alert-group-toggle-nudge"),
+    ).toHaveAttribute("aria-expanded", "false");
+  });
+
+  test("clicking a severity chevron expands its group", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      tripReadyWithManyAlertsEvent(),
+    ]);
+
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard.getByTestId("stage-alerts")).toBeVisible({
+      timeout: 5000,
+    });
+
+    // Expand the warning group
+    await stageCard.getByTestId("alert-group-toggle-warning").click();
+    await expect(stageCard.getByText("Warning alert B")).toBeVisible();
+    await expect(
+      stageCard.getByTestId("alert-group-toggle-warning"),
+    ).toHaveAttribute("aria-expanded", "true");
+
+    // Expand the nudge group
+    await stageCard.getByTestId("alert-group-toggle-nudge").click();
+    await expect(stageCard.getByText("Nudge alert A")).toBeVisible();
+    await expect(
+      stageCard.getByTestId("alert-group-toggle-nudge"),
+    ).toHaveAttribute("aria-expanded", "true");
   });
 
   test("shows correct total count in the section header", async ({
@@ -215,69 +294,8 @@ test.describe("StageAlerts — severity sorting", () => {
       "7",
     );
   });
-});
 
-// ---------------------------------------------------------------------------
-// Pagination — "Show N more" / "Show less"
-// ---------------------------------------------------------------------------
-
-test.describe("StageAlerts — pagination", () => {
-  test("shows only the first 3 alerts by default when there are more than 3", async ({
-    submitUrl,
-    injectSequence,
-    mockedPage,
-  }) => {
-    await submitUrl();
-    await injectSequence([
-      routeParsedEvent(),
-      stagesComputedEvent(),
-      tripReadyWithManyAlertsEvent(),
-    ]);
-
-    const stageCard = mockedPage.getByTestId("stage-card-1");
-    await expect(stageCard.getByTestId("stage-alerts")).toBeVisible({
-      timeout: 5000,
-    });
-
-    // The "show more" button should be present (7 alerts − 3 visible = 4 hidden)
-    await expect(stageCard.getByTestId("stage-alerts-show-more")).toBeVisible();
-    await expect(stageCard.getByTestId("stage-alerts-show-more")).toContainText(
-      "4",
-    );
-  });
-
-  test("reveals all alerts after clicking 'Show more'", async ({
-    submitUrl,
-    injectSequence,
-    mockedPage,
-  }) => {
-    await submitUrl();
-    await injectSequence([
-      routeParsedEvent(),
-      stagesComputedEvent(),
-      tripReadyWithManyAlertsEvent(),
-    ]);
-
-    const stageCard = mockedPage.getByTestId("stage-card-1");
-    await expect(stageCard.getByTestId("stage-alerts")).toBeVisible({
-      timeout: 5000,
-    });
-
-    // Click "Show more"
-    await stageCard.getByTestId("stage-alerts-show-more").click();
-
-    // All 7 alerts should be visible now — the "Nudge alert A" message (which was
-    // below the initial 3) should now be present in the DOM.
-    await expect(stageCard).toContainText("Nudge alert A");
-    await expect(stageCard).toContainText("Nudge alert E");
-
-    // The toggle label should change to "Show less"
-    await expect(
-      stageCard.getByTestId("stage-alerts-show-more"),
-    ).not.toContainText("4");
-  });
-
-  test("does not show 'Show more' when alerts count is at most 3", async ({
+  test("severity groups are not rendered when their bucket is empty", async ({
     submitUrl,
     injectSequence,
     mockedPage,
@@ -294,17 +312,18 @@ test.describe("StageAlerts — pagination", () => {
       timeout: 5000,
     });
 
-    await expect(
-      stageCard.getByTestId("stage-alerts-show-more"),
-    ).not.toBeVisible();
+    // All three buckets have alerts here, so all three groups are present
+    await expect(stageCard.getByTestId("alert-group-critical")).toBeVisible();
+    await expect(stageCard.getByTestId("alert-group-warning")).toBeVisible();
+    await expect(stageCard.getByTestId("alert-group-nudge")).toBeVisible();
   });
 });
 
 // ---------------------------------------------------------------------------
-// Collapse / expand
+// Section collapse / expand
 // ---------------------------------------------------------------------------
 
-test.describe("StageAlerts — collapse/expand", () => {
+test.describe("StageAlerts — section collapse/expand", () => {
   test("section is expanded by default", async ({
     submitUrl,
     injectSequence,
@@ -380,7 +399,7 @@ test.describe("StageAlerts — collapse/expand", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Alert actions (auto_fix, navigate, dismiss) — inherited from AlertList
+// Alert actions (auto_fix, navigate, dismiss, detour)
 // ---------------------------------------------------------------------------
 
 test.describe("StageAlerts — alert actions", () => {
@@ -401,8 +420,8 @@ test.describe("StageAlerts — alert actions", () => {
       timeout: 5000,
     });
 
-    // "OK" is the dismiss action on "Nudge alert A" — expand all first
-    await stageCard.getByTestId("stage-alerts-show-more").click();
+    // "OK" is the dismiss action on "Nudge alert A" — open the nudge group first
+    await stageCard.getByTestId("alert-group-toggle-nudge").click();
 
     // Click the dismiss button on "Nudge alert A"
     await stageCard.getByText("OK").first().click();
@@ -428,7 +447,9 @@ test.describe("StageAlerts — alert actions", () => {
       timeout: 5000,
     });
 
-    // "Zoom to location" is the navigate action on "Warning alert B"
+    // "Zoom to location" is the navigate action on "Warning alert B" —
+    // expand the warning group first.
+    await stageCard.getByTestId("alert-group-toggle-warning").click();
     await expect(stageCard.getByText("Zoom to location")).toBeVisible();
     await expect(stageCard.getByText("Zoom to location")).not.toBeDisabled();
   });
@@ -450,7 +471,8 @@ test.describe("StageAlerts — alert actions", () => {
       timeout: 5000,
     });
 
-    // "Split stage" is the auto_fix action on "Critical alert C"
+    // "Split stage" is the auto_fix action on "Critical alert C" — critical
+    // group is expanded by default, so the button is immediately visible.
     await expect(stageCard.getByText("Split stage")).toBeVisible();
     await expect(stageCard.getByText("Split stage")).toBeDisabled();
   });
@@ -472,10 +494,9 @@ test.describe("StageAlerts — alert actions", () => {
       timeout: 5000,
     });
 
-    // "Warning alert D" (detour) is 4th after severity sort — expand pagination first
-    await stageCard.getByTestId("stage-alerts-show-more").click();
+    // "Warning alert D" carries the detour action — expand the warning group
+    await stageCard.getByTestId("alert-group-toggle-warning").click();
 
-    // "Take detour" is the detour action on "Warning alert D"
     await expect(stageCard.getByText("Take detour")).toBeVisible();
     await expect(stageCard.getByText("Take detour")).toBeDisabled();
   });
