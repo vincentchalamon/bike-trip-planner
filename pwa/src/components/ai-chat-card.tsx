@@ -115,7 +115,7 @@ export function AiChatCard({
         },
       ];
     }
-    return messages;
+    return [greeting, ...messages];
   }, [messages, stubGreeting]);
 
   // Auto-scroll the history to the latest turn whenever a message is appended.
@@ -242,7 +242,6 @@ export function AiChatCard({
               "disabled:cursor-not-allowed disabled:opacity-60",
             )}
             data-testid="ai-chat-textarea"
-            aria-label={t("inputLabel")}
           />
           <Button
             type="button"
