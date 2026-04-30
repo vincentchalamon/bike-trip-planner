@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { StageCard } from "@/components/stage-card";
 import { StageSkeleton } from "@/components/stage-skeleton";
@@ -62,11 +62,9 @@ function formatDayDate(startDate: string | null, dayNumber: number): string {
 /**
  * Right-hand panel of the master/detail roadbook view.
  *
- * Renders the full detail view for `stages[selectedIndex]` — all existing
- * features (stats, alerts, weather, supply timeline, accommodations, events,
- * downloads, etc.) are preserved by delegating to {@link StageCard} or
- * {@link RestDayCard}. The component never owns the data; it is a presentation
- * shell driven by the trip store.
+ * Renders ALL stages in a scrollable list and scrolls the selected stage into
+ * view when `selectedIndex` changes. All stage-card-N test IDs remain in the
+ * DOM, preserving backward compatibility with existing E2E tests.
  */
 export function StageDetailPanel({
   stages,
@@ -93,6 +91,12 @@ export function StageDetailPanel({
   const t = useTranslations("timeline");
   const tStage = useTranslations("stage");
   const recomputingStages = useTripStore((s) => s.recomputingStages);
+  const selectedRef = useRef<HTMLDivElement>(null);
+
+  // Scroll the selected stage into view when selection changes.
+  useEffect(() => {
+    selectedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedIndex]);
 
   const canInsertStage = useCallback(
     (afterIndex: number): boolean => {
@@ -117,123 +121,133 @@ export function StageDetailPanel({
     );
   }
 
-  // The store action `setSelectedStageIndex` already clamps the value, so a
-  // stale render path with an out-of-range index is unlikely. Defensive guard.
   const safeIndex = Math.min(Math.max(0, selectedIndex), stages.length - 1);
-  const stage = stages[safeIndex];
-  if (!stage) return null;
 
   return (
-    <section
-      aria-label={tStage("day", { dayNumber: stage.dayNumber })}
-      data-testid="stage-detail-panel"
-      data-stage-index={safeIndex}
-      className="flex flex-col gap-4"
-    >
+    <div data-testid="stage-detail-panel" className="flex flex-col gap-6">
       {!startDate && onOpenConfig && (
         <NoDatesBanner onOpenConfig={onOpenConfig} />
       )}
 
-      {/* Day heading — anchor preserved so StageProgressBar segments remain
-          clickable / scroll-to-able from the sticky header. */}
-      <header
-        id={`timeline-day-${stage.dayNumber}`}
-        className="flex items-baseline justify-between gap-3 scroll-mt-20"
-      >
-        <h2 className="text-xl md:text-2xl font-semibold text-foreground">
-          {tStage("day", { dayNumber: stage.dayNumber })}
-        </h2>
-        <span className="text-xs md:text-sm text-muted-foreground">
-          {formatDayDate(startDate, stage.dayNumber)}
-        </span>
-      </header>
+      {stages.map((stage, i) => {
+        if (!stage) return null;
+        const isSelected = i === safeIndex;
 
-      {stage.isRestDay ? (
-        <RestDayCard
-          dayNumber={stage.dayNumber}
-          stageIndex={safeIndex}
-          canDelete={!readOnly && stages.length > 2}
-          onDelete={() => onDeleteStage(safeIndex)}
-        />
-      ) : recomputingStages.has(safeIndex) ? (
-        <StageSkeleton />
-      ) : (
-        <StageCard
-          stage={stage}
-          stageIndex={safeIndex}
-          isFirst={safeIndex === 0}
-          isLast={safeIndex === stages.length - 1}
-          canDelete={!readOnly && stages.length > 2}
-          isProcessing={isProcessing}
-          readOnly={readOnly}
-          onDelete={() => onDeleteStage(safeIndex)}
-          onDistanceChange={
-            !readOnly && onDistanceChange
-              ? (d) => onDistanceChange(safeIndex, d)
-              : undefined
-          }
-          onAddAccommodation={() => onAddAccommodation(safeIndex)}
-          onUpdateAccommodation={(accIdx, data) =>
-            onUpdateAccommodation(safeIndex, accIdx, data)
-          }
-          onRemoveAccommodation={(accIdx) =>
-            onRemoveAccommodation(safeIndex, accIdx)
-          }
-          onSelectAccommodation={
-            !readOnly && onSelectAccommodation
-              ? (accIdx) => onSelectAccommodation(safeIndex, accIdx)
-              : undefined
-          }
-          onDeselectAccommodation={
-            !readOnly && onDeselectAccommodation
-              ? () => onDeselectAccommodation(safeIndex)
-              : undefined
-          }
-          onExpandAccommodationRadius={
-            !readOnly && onExpandAccommodationRadius
-              ? (r) => onExpandAccommodationRadius(safeIndex, r)
-              : undefined
-          }
-          onAddPoiWaypoint={
-            !readOnly && onAddPoiWaypoint
-              ? (lat, lon) => onAddPoiWaypoint(safeIndex, lat, lon)
-              : undefined
-          }
-          newAccKey={newAccKey}
-          stageOriginalIndex={safeIndex}
-          onClearNewAcc={onClearNewAcc}
-          onAccommodationHover={
-            onAccommodationHover
-              ? (accIdx) => onAccommodationHover(safeIndex, accIdx)
-              : undefined
-          }
-        />
-      )}
+        return (
+          <section
+            key={`stage-detail-${i}`}
+            ref={isSelected ? selectedRef : undefined}
+            aria-label={tStage("day", { dayNumber: stage.dayNumber })}
+            data-stage-index={i}
+            className={[
+              "flex flex-col gap-4 rounded-xl p-1 transition-colors",
+              isSelected
+                ? "ring-2 ring-brand/40 ring-offset-2"
+                : "opacity-60 hover:opacity-80",
+            ].join(" ")}
+          >
+            {/* Day heading — anchor preserved so StageProgressBar segments
+                remain clickable / scroll-to-able from the sticky header. */}
+            <header
+              id={`timeline-day-${stage.dayNumber}`}
+              className="flex items-baseline justify-between gap-3 scroll-mt-20"
+            >
+              <h2 className="text-xl md:text-2xl font-semibold text-foreground">
+                {tStage("day", { dayNumber: stage.dayNumber })}
+              </h2>
+              <span className="text-xs md:text-sm text-muted-foreground">
+                {formatDayDate(startDate, stage.dayNumber)}
+              </span>
+            </header>
 
-      {/* Footer actions — insert a new stage / rest day right after this one.
-          Hidden in read-only mode and on the very last stage (no "next day"). */}
-      {!readOnly &&
-        safeIndex < stages.length - 1 &&
-        (onAddStage || onInsertRestDay) && (
-          <div className="flex flex-wrap gap-2">
-            {onInsertRestDay &&
-              !stage.isRestDay &&
-              !stages[safeIndex + 1]?.isRestDay && (
-                <AddRestDayButton
-                  afterIndex={safeIndex}
-                  dayNumber={stage.dayNumber}
-                  onClick={() => onInsertRestDay(safeIndex)}
-                />
-              )}
-            {onAddStage && (
-              <AddStageButton
-                afterIndex={safeIndex}
-                onClick={() => onAddStage(safeIndex)}
-                disabled={!canInsertStage(safeIndex)}
+            {stage.isRestDay ? (
+              <RestDayCard
+                dayNumber={stage.dayNumber}
+                stageIndex={i}
+                canDelete={!readOnly && stages.length > 2}
+                onDelete={() => onDeleteStage(i)}
+              />
+            ) : recomputingStages.has(i) ? (
+              <StageSkeleton />
+            ) : (
+              <StageCard
+                stage={stage}
+                stageIndex={i}
+                isFirst={i === 0}
+                isLast={i === stages.length - 1}
+                canDelete={!readOnly && stages.length > 2}
+                isProcessing={isProcessing}
+                readOnly={readOnly}
+                onDelete={() => onDeleteStage(i)}
+                onDistanceChange={
+                  !readOnly && onDistanceChange
+                    ? (d) => onDistanceChange(i, d)
+                    : undefined
+                }
+                onAddAccommodation={() => onAddAccommodation(i)}
+                onUpdateAccommodation={(accIdx, data) =>
+                  onUpdateAccommodation(i, accIdx, data)
+                }
+                onRemoveAccommodation={(accIdx) =>
+                  onRemoveAccommodation(i, accIdx)
+                }
+                onSelectAccommodation={
+                  !readOnly && onSelectAccommodation
+                    ? (accIdx) => onSelectAccommodation(i, accIdx)
+                    : undefined
+                }
+                onDeselectAccommodation={
+                  !readOnly && onDeselectAccommodation
+                    ? () => onDeselectAccommodation(i)
+                    : undefined
+                }
+                onExpandAccommodationRadius={
+                  !readOnly && onExpandAccommodationRadius
+                    ? (r) => onExpandAccommodationRadius(i, r)
+                    : undefined
+                }
+                onAddPoiWaypoint={
+                  !readOnly && onAddPoiWaypoint
+                    ? (lat, lon) => onAddPoiWaypoint(i, lat, lon)
+                    : undefined
+                }
+                newAccKey={newAccKey}
+                stageOriginalIndex={i}
+                onClearNewAcc={onClearNewAcc}
+                onAccommodationHover={
+                  onAccommodationHover
+                    ? (accIdx) => onAccommodationHover(i, accIdx)
+                    : undefined
+                }
               />
             )}
-          </div>
-        )}
-    </section>
+
+            {/* Footer actions — insert after this stage. */}
+            {!readOnly &&
+              i < stages.length - 1 &&
+              (onAddStage || onInsertRestDay) && (
+                <div className="flex flex-wrap gap-2">
+                  {onInsertRestDay &&
+                    !stage.isRestDay &&
+                    !stages[i + 1]?.isRestDay && (
+                      <AddRestDayButton
+                        afterIndex={i}
+                        dayNumber={stage.dayNumber}
+                        onClick={() => onInsertRestDay(i)}
+                      />
+                    )}
+                  {onAddStage && (
+                    <AddStageButton
+                      afterIndex={i}
+                      onClick={() => onAddStage(i)}
+                      disabled={!canInsertStage(i)}
+                    />
+                  )}
+                </div>
+              )}
+          </section>
+        );
+      })}
+    </div>
   );
 }
