@@ -45,7 +45,9 @@ function alertKey(alert: AlertData, index: number): string {
  * Group alerts by severity while preserving the order they were received in.
  * Empty buckets are kept so callers can decide whether to render them.
  */
-function groupBySeverity(alerts: AlertData[]): Record<AlertSeverity, AlertData[]> {
+function groupBySeverity(
+  alerts: AlertData[],
+): Record<AlertSeverity, AlertData[]> {
   const groups: Record<AlertSeverity, AlertData[]> = {
     critical: [],
     warning: [],
@@ -124,11 +126,7 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
         if (bucket.length === 0) return null;
 
         return (
-          <AlertGroup
-            key={severity}
-            severity={severity}
-            count={bucket.length}
-          >
+          <AlertGroup key={severity} severity={severity} count={bucket.length}>
             {bucket.map((alert, index) => {
               const key = alertKey(alert, index);
               const isDismissed = dismissedKeys.has(key);
@@ -138,12 +136,16 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
               const isEnrichedCulturalPoi =
                 category === "cultural-poi" &&
                 Boolean(
-                  alert.description ?? alert.openingHours ?? alert.estimatedPrice,
+                  alert.description ??
+                  alert.openingHours ??
+                  alert.estimatedPrice,
                 );
 
               // Some action kinds are not wired yet; surface them as disabled.
               const isActionDisabled = Boolean(
-                action && action.kind !== "dismiss" && action.kind !== "navigate",
+                action &&
+                action.kind !== "dismiss" &&
+                action.kind !== "navigate",
               );
 
               return (
