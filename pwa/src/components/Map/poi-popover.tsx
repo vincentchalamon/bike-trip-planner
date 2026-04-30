@@ -39,13 +39,13 @@ export interface PoiPopoverProps {
  * exposed by the backend OSM POI payload (issue #348 follow-up).
  */
 export function isEnrichedPoi(alert: AlertData): boolean {
-  return Boolean(
-    alert.description ??
-    alert.openingHours ??
-    alert.estimatedPrice ??
-    alert.imageUrl ??
-    alert.wikidataId ??
-    alert.wikipediaUrl,
+  return (
+    alert.description != null ||
+    alert.openingHours != null ||
+    alert.estimatedPrice != null ||
+    alert.imageUrl != null ||
+    alert.wikidataId != null ||
+    alert.wikipediaUrl != null
   );
 }
 
@@ -181,7 +181,7 @@ export function PoiPopover({ alert, onClose }: PoiPopoverProps) {
           </p>
         )}
 
-        {enriched && alert.wikipediaUrl && (
+        {enriched && alert.wikipediaUrl?.startsWith("https://") && (
           <a
             href={alert.wikipediaUrl}
             target="_blank"

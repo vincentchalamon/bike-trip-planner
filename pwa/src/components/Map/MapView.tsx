@@ -489,8 +489,8 @@ export const MapView = memo(function MapView({
       container = document.createElement("div");
       container.dataset.testid = "poi-popover-portal";
       poiPopupContainerRef.current = container;
-      setPoiPopupContainer(container);
     }
+    setPoiPopupContainer(container);
 
     if (!poiPopupRef.current) {
       const popup = new maplibregl.Popup({
