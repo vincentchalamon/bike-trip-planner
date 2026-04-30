@@ -83,6 +83,13 @@ interface TripState {
    */
   pendingModifications: Modification[];
 
+  /**
+   * Index of the stage currently displayed in the master/detail roadbook view
+   * (sidebar timeline drives the right-hand detail panel). Defaults to 0 and
+   * is automatically clamped when stages are mutated (delete, reorder, reset).
+   */
+  selectedStageIndex: number;
+
   setTrip: (trip: TripIdentity) => void;
   updateRouteData: (data: {
     totalDistance: number;
@@ -213,6 +220,14 @@ interface TripState {
    * Called by the hook after the backend responds with 2xx.
    */
   clearPendingModifications: () => void;
+
+  /**
+   * Master/detail: select which stage is rendered in the right-hand detail panel.
+   * The index is clamped to `[0, stages.length - 1]` (or 0 when there are no
+   * stages). Out-of-range values are silently coerced.
+   */
+  setSelectedStageIndex: (index: number) => void;
+
   clearTrip: () => void;
   /** Hydrate the trip store from a {@link SavedTrip} snapshot (offline consultation). */
   loadFromSavedTrip: (trip: SavedTrip) => void;
@@ -241,6 +256,7 @@ const initialState = {
   recomputingStages: new Set<number>(),
   stageDiffs: new Map<number, Set<string>>(),
   pendingModifications: [] as Modification[],
+  selectedStageIndex: 0,
 };
 
 /**
@@ -336,6 +352,10 @@ export const useTripStore = create<TripState>()(
     setStages: (stages) =>
       set((state) => {
         state.stages = stages;
+        const max = Math.max(0, stages.length - 1);
+        if (state.selectedStageIndex > max) {
+          state.selectedStageIndex = max;
+        }
       }),
 
     updateStageWeather: (dayNumber, weather) =>
@@ -384,9 +404,9 @@ export const useTripStore = create<TripState>()(
             ...a,
             _group: source,
           }));
-          const kept = (
-            state.stages[stageIndex].alerts as StageAlert[]
-          ).filter((a) => a._group !== source);
+          const kept = (state.stages[stageIndex].alerts as StageAlert[]).filter(
+            (a) => a._group !== source,
+          );
           state.stages[stageIndex].alerts = [...kept, ...taggedAlerts];
         }
       }),
@@ -517,6 +537,10 @@ export const useTripStore = create<TripState>()(
         state.stages.forEach((s, i) => {
           s.dayNumber = i + 1;
         });
+        const max = Math.max(0, state.stages.length - 1);
+        if (state.selectedStageIndex > max) {
+          state.selectedStageIndex = max;
+        }
       });
     },
 
@@ -700,6 +724,15 @@ export const useTripStore = create<TripState>()(
     clearPendingModifications: () =>
       set((state) => {
         state.pendingModifications = [];
+      }),
+
+    setSelectedStageIndex: (index) =>
+      set((state) => {
+        const max = Math.max(0, state.stages.length - 1);
+        const safe = Number.isFinite(index)
+          ? Math.min(Math.max(0, Math.floor(index)), max)
+          : 0;
+        state.selectedStageIndex = safe;
       }),
 
     loadFromSavedTrip: (trip) => {

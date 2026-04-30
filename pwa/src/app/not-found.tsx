@@ -27,7 +27,10 @@ export default async function NotFound() {
       backHome: t("backHome"),
     };
   } catch (e) {
-    console.error("[not-found] getTranslations failed, falling back to default copy:", e);
+    console.error(
+      "[not-found] getTranslations failed, falling back to default copy:",
+      e,
+    );
     copy = FALLBACK_COPY;
   }
 

@@ -14,7 +14,7 @@ import { TripSummary } from "@/components/trip-summary";
 import { TripHeader } from "@/components/trip-header";
 import { TripDownloads } from "@/components/trip-downloads";
 import { StageProgressBar } from "@/components/stage-progress-bar";
-import { Timeline } from "@/components/timeline";
+import { RoadbookMasterDetail } from "@/components/Timeline";
 import { ConfigPanel } from "@/components/config-panel";
 import { KeyboardHelpModal } from "@/components/keyboard-help-modal";
 import { ShareModal } from "@/components/share-modal";
@@ -681,7 +681,9 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
                 {...(hasMap ? swipeHandlers : {})}
                 data-testid="split-view-container"
               >
-                {/* Timeline — hidden in "map" mode (only when a map is available) */}
+                {/* Master/detail roadbook — sidebar timeline (left) +
+                    selected-stage detail panel (right). Hidden in "map" mode
+                    when a map is available. */}
                 {(!hasMap ||
                   viewMode === "timeline" ||
                   viewMode === "split") && (
@@ -693,13 +695,14 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
                         : "w-full"
                     }
                   >
-                    <Timeline
+                    <RoadbookMasterDetail
                       stages={stages}
                       startDate={startDate}
                       isProcessing={isProcessing}
                       readOnly={isLocked || !isOnline}
                       onDeleteStage={handleDeleteStage}
                       onAddStage={handleAddStage}
+                      onInsertRestDay={handleInsertRestDay}
                       onDistanceChange={handleDistanceChange}
                       onAddAccommodation={handleAddAccommodation}
                       onUpdateAccommodation={updateLocalAccommodation}
@@ -709,7 +712,6 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
                       onExpandAccommodationRadius={
                         handleExpandAccommodationRadius
                       }
-                      onInsertRestDay={handleInsertRestDay}
                       onAddPoiWaypoint={handleAddPoiWaypoint}
                       onAccommodationHover={handleAccommodationHover}
                       newAccKey={newAccKey}

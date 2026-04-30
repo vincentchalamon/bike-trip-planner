@@ -63,7 +63,10 @@
   },
   "timeline": {
     "loadingStages": "Chargement des étapes",
-    "tripStages": "Étapes du voyage"
+    "tripStages": "Étapes du voyage",
+    "cumulativeDistance": "{km} km cumulés",
+    "sidebarLabel": "Sommaire des étapes",
+    "noStageSelected": "Sélectionnez une étape"
   },
   "calendar": {
     "previousMonth": "Mois précédent",
