@@ -17,19 +17,25 @@ const SEGMENT_COLORS: Record<Difficulty, string> = {
 
 const TRACK_COLOR = "bg-muted";
 
+/** Distance cap (km) above which the physical score saturates at 100. */
+const PHYSICAL_SCORE_CAP_KM = 140;
+
+/** Elevation gain cap (m) above which the elevation score saturates at 100. */
+const ELEVATION_SCORE_CAP_M = 2500;
+
 /** Coarse 0-100 scoring helpers — kept in lockstep with `getDifficulty`. */
 function scorePhysical(distanceKm: number): number {
   // 0 km → 0, 60 km → 33, 100 km → 67, 140+ km → 100
   if (distanceKm <= 0) return 0;
-  if (distanceKm >= 140) return 100;
-  return Math.round((distanceKm / 140) * 100);
+  if (distanceKm >= PHYSICAL_SCORE_CAP_KM) return 100;
+  return Math.round((distanceKm / PHYSICAL_SCORE_CAP_KM) * 100);
 }
 
 function scoreElevation(elevationM: number): number {
   // 0 m → 0, 800 m → 33, 1500 m → 67, 2500+ m → 100
   if (elevationM <= 0) return 0;
-  if (elevationM >= 2500) return 100;
-  return Math.round((elevationM / 2500) * 100);
+  if (elevationM >= ELEVATION_SCORE_CAP_M) return 100;
+  return Math.round((elevationM / ELEVATION_SCORE_CAP_M) * 100);
 }
 
 /**

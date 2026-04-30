@@ -276,7 +276,7 @@ export function StageStatsRow({
   );
 }
 
-function formatDuration(hours: number): string {
+export function formatDuration(hours: number): string {
   const total = Math.max(0, hours);
   const h = Math.floor(total);
   const m = Math.round((total - h) * 60);
