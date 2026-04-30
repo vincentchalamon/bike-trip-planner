@@ -214,7 +214,35 @@
     "comfortIndex": "Confort",
     "relativeWind_headwind": "Vent de face",
     "relativeWind_tailwind": "Vent arrière",
-    "relativeWind_crosswind": "Vent de côté"
+    "relativeWind_crosswind": "Vent de côté",
+    "cardAriaLabel": "Météo de l'étape",
+    "sunriseShort": "lever",
+    "sunsetShort": "coucher",
+    "sunriseSunsetTooltip": "Heures de lever et coucher du soleil au point d'arrivée de l'étape (UTC)"
+  },
+  "stageStats": {
+    "distance": "Distance",
+    "elevation": "Dénivelé",
+    "duration": "Durée",
+    "durationUnavailable": "—",
+    "budget": "Budget",
+    "budgetHint": "{meals, plural, one {# repas} other {# repas}} + hébergement"
+  },
+  "stageAiSummary": {
+    "ariaLabel": "Résumé de l'étape généré par IA",
+    "label": "Résumé IA",
+    "showMore": "Lire la suite",
+    "showLess": "Réduire"
+  },
+  "difficultyComposed": {
+    "ariaLabel": "Difficulté de l'étape",
+    "title": "Difficulté",
+    "physical": "Physique",
+    "technical": "Technique",
+    "elevation": "Dénivelé",
+    "physicalDetail": "{distance} km parcourus",
+    "technicalDetail": "{ratio} m de D+ par km — proxy de pente moyenne",
+    "elevationDetail": "{elevation} m de dénivelé positif"
   },
   "textExport": {
     "button": "Exporter",
