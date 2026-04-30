@@ -129,7 +129,9 @@ export function AiRefinementCard({
         <textarea
           id={textareaId}
           value={suggestion}
-          onChange={(e) => setSuggestion(e.target.value.slice(0, MAX_SUGGESTION_LENGTH))}
+          onChange={(e) =>
+            setSuggestion(e.target.value.slice(0, MAX_SUGGESTION_LENGTH))
+          }
           rows={3}
           maxLength={MAX_SUGGESTION_LENGTH}
           placeholder={t("placeholder")}
@@ -175,7 +177,10 @@ export function AiRefinementCard({
             >
               {isApplying ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  <Loader2
+                    className="h-4 w-4 animate-spin"
+                    aria-hidden="true"
+                  />
                   {t("applying")}
                 </>
               ) : (
