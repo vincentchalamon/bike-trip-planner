@@ -67,8 +67,6 @@ function WizardContent() {
         const ui = useUiStore.getState();
         ui.setProcessing(false);
         ui.setAccommodationScanning(false);
-        ui.setAnalysisStarted(false);
-        ui.setAnalysisPhaseActive(false);
         ui.resetStepper();
         return;
       }
@@ -167,6 +165,3 @@ export default function NewTripPage() {
     </HydrationBoundary>
   );
 }
-
-// Re-export the wizard step constants for tests / external consumers.
-export { WIZARD_STEPS };
