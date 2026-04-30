@@ -42,7 +42,10 @@ import {
   mealsForStage,
 } from "@/lib/budget-constants";
 
-export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
+export function TripPlanner({
+  onClose,
+  hideStepper = false,
+}: { onClose?: () => void; hideStepper?: boolean } = {}) {
   const t = useTranslations();
   const router = useRouter();
   const clearTrip = useTripStore((s) => s.clearTrip);
@@ -438,10 +441,14 @@ export function TripPlanner({ onClose }: { onClose?: () => void } = {}) {
 
         {/* Stepper — visible in all planning states (welcome, loading, trip loaded).
             Hidden on landing page, FAQ and trips list since those pages don't
-            render TripPlanner at all. */}
-        <div className="mb-8 pb-6" data-testid="stepper-wrapper">
-          <Stepper />
-        </div>
+            render TripPlanner at all. The wizard at `/trips/new` renders its
+            own {@link WizardStepper} synced with the URL and passes
+            `hideStepper` to suppress this internal one. */}
+        {!hideStepper && (
+          <div className="mb-8 pb-6" data-testid="stepper-wrapper">
+            <Stepper />
+          </div>
+        )}
 
         {/* === State 1: Welcome (no trip, not processing) === */}
         {isWelcome && (
