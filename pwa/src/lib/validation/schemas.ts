@@ -148,6 +148,7 @@ export const StageDataSchema = z.object({
    * clamped behind a "show more" toggle in the UI; short ones render in full.
    * Schema is forward-compatible: backend may emit this field when available
    * without breaking existing clients.
+   * TODO(#395): wire via typegen once backend StageResponse DTO ships aiSummary
    */
   aiSummary: z.string().nullable().optional(),
 });
