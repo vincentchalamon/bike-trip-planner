@@ -7,7 +7,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Bike, Mountain, Wrench } from "lucide-react";
-import { getDifficulty, type Difficulty } from "@/lib/constants";
+import {
+  DIFFICULTY_THRESHOLDS,
+  getDifficulty,
+  type Difficulty,
+} from "@/lib/constants";
 
 const SEGMENT_COLORS: Record<Difficulty, string> = {
   easy: "bg-emerald-500",
@@ -18,10 +22,17 @@ const SEGMENT_COLORS: Record<Difficulty, string> = {
 const TRACK_COLOR = "bg-muted";
 
 /** Distance cap (km) above which the physical score saturates at 100. */
-const PHYSICAL_SCORE_CAP_KM = 140;
+const PHYSICAL_SCORE_CAP_KM = Math.round(
+  DIFFICULTY_THRESHOLDS.medium.maxDistance * 1.4,
+); // 140
 
 /** Elevation gain cap (m) above which the elevation score saturates at 100. */
-const ELEVATION_SCORE_CAP_M = 2500;
+const ELEVATION_SCORE_CAP_M = Math.round(
+  DIFFICULTY_THRESHOLDS.medium.maxElevation * 1.67,
+); // ~2500
+
+/** Climbing ratio (m/km) above which the technical score saturates at 100. */
+const TECHNICAL_SCORE_CAP_M_PER_KM = 60;
 
 /** Coarse 0-100 scoring helpers — kept in lockstep with `getDifficulty`. */
 function scorePhysical(distanceKm: number): number {
@@ -45,8 +56,8 @@ function scoreElevation(elevationM: number): number {
 function scoreTechnical(distanceKm: number, elevationM: number): number {
   if (distanceKm <= 0) return 0;
   const ratio = elevationM / distanceKm;
-  if (ratio >= 60) return 100;
-  return Math.round((ratio / 60) * 100);
+  if (ratio >= TECHNICAL_SCORE_CAP_M_PER_KM) return 100;
+  return Math.round((ratio / TECHNICAL_SCORE_CAP_M_PER_KM) * 100);
 }
 
 function scoreToDifficulty(score: number): Difficulty {
