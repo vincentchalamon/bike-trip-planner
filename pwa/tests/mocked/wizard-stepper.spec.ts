@@ -225,7 +225,9 @@ test.describe("WizardStepper — URL forward-jump blocked", () => {
 
     // The URL should be rewritten to step=1 (preparation) since the wizard
     // cannot forward-jump to a step the user hasn't reached yet.
-    await expect(page).toHaveURL(/step=1/, { timeout: 5000 });
+    // waitForURL is more reliable than expect(page).toHaveURL() here because
+    // the redirect is driven by a React useEffect (async after hydration).
+    await page.waitForURL(/step=1/, { timeout: 5000 });
 
     // Preparation step should be the active one
     await expect(page.getByTestId("wizard-stepper")).toHaveAttribute(
@@ -242,7 +244,7 @@ test.describe("WizardStepper — URL forward-jump blocked", () => {
     await page.waitForLoadState("networkidle");
 
     // Forward jump to analysis (system step) is also blocked
-    await expect(page).toHaveURL(/step=1/, { timeout: 5000 });
+    await page.waitForURL(/step=1/, { timeout: 5000 });
     await expect(page.getByTestId("wizard-stepper")).toHaveAttribute(
       "data-current-step",
       "preparation",
@@ -257,7 +259,7 @@ test.describe("WizardStepper — URL forward-jump blocked", () => {
     await page.waitForLoadState("networkidle");
 
     // Forward jump to preview is blocked (user hasn't submitted a route yet)
-    await expect(page).toHaveURL(/step=1/, { timeout: 5000 });
+    await page.waitForURL(/step=1/, { timeout: 5000 });
     await expect(page.getByTestId("wizard-stepper")).toHaveAttribute(
       "data-current-step",
       "preparation",
