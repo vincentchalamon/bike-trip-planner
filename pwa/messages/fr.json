@@ -247,6 +247,14 @@
     "navigateToCrossing": "Aller au passage frontière",
     "free": "Entrée gratuite"
   },
+  "poiPopover": {
+    "close": "Fermer",
+    "navigate": "Naviguer",
+    "navigateAriaLabel": "Naviguer vers {name}",
+    "wikipedia": "Voir sur Wikipedia",
+    "free": "Entrée gratuite",
+    "price": "À partir de {value} €"
+  },
   "mapLegend": {
     "title": "Légende des pictogrammes",
     "open": "Légende",

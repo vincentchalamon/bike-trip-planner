@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useMemo, useState, memo } from "react";
+import { createPortal } from "react-dom";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "next-themes";
@@ -8,10 +9,12 @@ import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
-import type { StageData } from "@/lib/validation/schemas";
+import type { AlertData, StageData } from "@/lib/validation/schemas";
 import { getStageColor } from "./stage-colors";
 import { createCategoryMarkerElement } from "./icons/markerDom";
 import { resolveCategory, type MarkerCategory } from "./icons";
+import { createCulturalPoiMarkerElement } from "./poi-marker";
+import { PoiPopover, isEnrichedPoi } from "./poi-popover";
 import { MapLegend } from "@/components/map-legend";
 
 const LIGHT_TILES =
@@ -162,7 +165,12 @@ export const MapView = memo(function MapView({
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const hoverMarkerRef = useRef<maplibregl.Marker | null>(null);
   const accMarkerElementsRef = useRef<Map<string, HTMLElement>>(new Map());
+  const poiPopupRef = useRef<maplibregl.Popup | null>(null);
+  const poiPopupContainerRef = useRef<HTMLDivElement | null>(null);
+  const [poiPopupContainer, setPoiPopupContainer] =
+    useState<HTMLDivElement | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [selectedPoi, setSelectedPoi] = useState<AlertData | null>(null);
 
   const storeStages = useTripStore((s) => s.stages);
   const stages = externalStages ?? storeStages;
@@ -324,6 +332,10 @@ export const MapView = memo(function MapView({
     if (!mapRef.current || !mapReady) return;
     const map = mapRef.current;
 
+    // Close any open POI popover — its underlying alert reference will be
+    // stale once the new markers are mounted.
+    setSelectedPoi(null);
+
     for (const marker of markersRef.current) marker.remove();
     markersRef.current = [];
 
@@ -412,8 +424,9 @@ export const MapView = memo(function MapView({
 
     // Alert markers (one per stage, with coords). The icon comes from the
     // unified registry, picked from `alert.source` (e.g. "railway_station",
-    // "border_crossing", "cultural_poi"…). Falls back to a generic warning
-    // disc when no category can be resolved.
+    // "border_crossing", "cultural_poi"…). Cultural POI markers use the
+    // dedicated `createCulturalPoiMarkerElement` helper which adds a
+    // pulsating halo and opens the rich popover on click (issue #398).
     activeStages.forEach((stage) => {
       const alert = stage.alerts.find(
         (a) =>
@@ -425,20 +438,24 @@ export const MapView = memo(function MapView({
 
       const category = resolveAlertCategory(alert.source);
       const background = alert.type === "critical" ? "#dc2626" : "#d97706";
-      const isEnrichedPoi =
-        category === "cultural-poi" &&
-        Boolean(
-          alert.description ?? alert.openingHours ?? alert.estimatedPrice,
-        );
 
-      const alertEl = createCategoryMarkerElement(category, {
-        label: alert.message,
-        background,
-        size: 24,
-        extraClass: `map-marker--alert map-marker--alert-${alert.type}${
-          isEnrichedPoi ? " map-marker--cultural-enriched" : ""
-        }`,
-      });
+      let alertEl: HTMLElement;
+      if (category === "cultural-poi") {
+        alertEl = createCulturalPoiMarkerElement({
+          label: alert.message,
+          background,
+          size: 24,
+          enriched: isEnrichedPoi(alert),
+          onClick: () => setSelectedPoi(alert),
+        });
+      } else {
+        alertEl = createCategoryMarkerElement(category, {
+          label: alert.message,
+          background,
+          size: 24,
+          extraClass: `map-marker--alert map-marker--alert-${alert.type}`,
+        });
+      }
       markersRef.current.push(
         new maplibregl.Marker({ element: alertEl })
           .setLngLat([alert.lon, alert.lat])
@@ -446,6 +463,62 @@ export const MapView = memo(function MapView({
       );
     });
   }, [activeStages, mapReady, t]);
+
+  // Cultural POI popover — anchor a managed maplibre Popup at the selected
+  // POI coords and portal the React tree into its DOM container. The popup
+  // is created once and reused, so we keep state cleanly separated from
+  // maplibre's imperative API. Closing the popup (× or click-outside-by-X)
+  // resets `selectedPoi`, unmounting the React subtree.
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) return;
+    const map = mapRef.current;
+
+    if (selectedPoi == null) {
+      poiPopupRef.current?.remove();
+      poiPopupRef.current = null;
+      setPoiPopupContainer(null);
+      return;
+    }
+
+    const lat = selectedPoi.poiLat ?? selectedPoi.lat;
+    const lon = selectedPoi.poiLon ?? selectedPoi.lon;
+    if (lat == null || lon == null) return;
+
+    let container = poiPopupContainerRef.current;
+    if (!container) {
+      container = document.createElement("div");
+      container.dataset.testid = "poi-popover-portal";
+      poiPopupContainerRef.current = container;
+      setPoiPopupContainer(container);
+    }
+
+    if (!poiPopupRef.current) {
+      const popup = new maplibregl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        closeOnMove: false,
+        maxWidth: "none",
+        offset: 18,
+        className: "poi-popover-popup",
+      });
+      popup.on("close", () => {
+        setSelectedPoi(null);
+      });
+      popup.setDOMContent(container);
+      poiPopupRef.current = popup;
+    }
+
+    poiPopupRef.current.setLngLat([lon, lat]).addTo(map);
+  }, [selectedPoi, mapReady]);
+
+  // Cleanup popup on unmount
+  useEffect(() => {
+    return () => {
+      poiPopupRef.current?.remove();
+      poiPopupRef.current = null;
+      poiPopupContainerRef.current = null;
+    };
+  }, []);
 
   // Zoom to focused stage or global view
   useEffect(() => {
@@ -573,6 +646,16 @@ export const MapView = memo(function MapView({
       )}
 
       <MapLegend />
+
+      {selectedPoi &&
+        poiPopupContainer &&
+        createPortal(
+          <PoiPopover
+            alert={selectedPoi}
+            onClose={() => setSelectedPoi(null)}
+          />,
+          poiPopupContainer,
+        )}
     </div>
   );
 });
