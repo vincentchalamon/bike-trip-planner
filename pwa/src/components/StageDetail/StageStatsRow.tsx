@@ -26,7 +26,14 @@ interface StatCellProps {
   testId?: string;
 }
 
-function StatCell({ label, icon, value, hint, trailing, testId }: StatCellProps) {
+function StatCell({
+  label,
+  icon,
+  value,
+  hint,
+  trailing,
+  testId,
+}: StatCellProps) {
   return (
     <div
       className="flex flex-col gap-1 rounded-lg border border-border/60 bg-card/40 p-3"
@@ -179,9 +186,7 @@ export function StageStatsRow({
               />
             ) : distance !== null ? (
               <span>
-                {Number.isInteger(distance)
-                  ? distance
-                  : distance.toFixed(1)}
+                {Number.isInteger(distance) ? distance : distance.toFixed(1)}
                 <span className="ml-1 text-sm font-normal text-muted-foreground">
                   km
                 </span>
@@ -265,9 +270,7 @@ export function StageStatsRow({
             </span>
           )
         }
-        hint={
-          <span>{t("budgetHint", { meals })}</span>
-        }
+        hint={<span>{t("budgetHint", { meals })}</span>}
       />
     </div>
   );

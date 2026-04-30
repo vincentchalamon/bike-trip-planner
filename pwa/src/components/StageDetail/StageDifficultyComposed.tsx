@@ -182,9 +182,7 @@ export function StageDifficultyComposed({
           difficulty={scoreToDifficulty(technicalScore)}
           detail={t("technicalDetail", {
             ratio:
-              distance > 0
-                ? Math.round((elevation / distance) * 10) / 10
-                : 0,
+              distance > 0 ? Math.round((elevation / distance) * 10) / 10 : 0,
           })}
           testId="stage-difficulty-technical"
         />

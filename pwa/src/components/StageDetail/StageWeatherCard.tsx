@@ -158,7 +158,9 @@ export function StageWeatherCard({
             <span className="tabular-nums">
               {formatSunTime(sunTimes.sunrise)}
             </span>
-            <span className="text-muted-foreground/70">{t("sunriseShort")}</span>
+            <span className="text-muted-foreground/70">
+              {t("sunriseShort")}
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-muted-foreground/70">{t("sunsetShort")}</span>
