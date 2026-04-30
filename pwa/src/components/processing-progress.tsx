@@ -253,15 +253,7 @@ export function ProcessingProgress({
         >
           <ul className="space-y-3">
             {acts.map(
-              ({
-                key,
-                def,
-                status,
-                error,
-                doneCount,
-                totalCount,
-                hidden,
-              }) => {
+              ({ key, def, status, error, doneCount, totalCount, hidden }) => {
                 if (hidden) return null;
                 const Icon = def.icon;
                 return (
