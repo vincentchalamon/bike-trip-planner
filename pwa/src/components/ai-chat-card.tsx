@@ -286,10 +286,7 @@ function ChatBubble({ message }: ChatBubbleProps) {
     <div
       data-testid="ai-chat-message"
       data-role={message.role}
-      className={cn(
-        "flex w-full",
-        isUser ? "justify-end" : "justify-start",
-      )}
+      className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}
     >
       <div
         className={cn(
