@@ -17,7 +17,7 @@ const MODES: TileMode[] = ["map", "satellite"];
 /**
  * Pill-style toggle that lets the user switch the trip map between an OSM
  * basemap and an Esri WorldImagery satellite layer. The selected pill carries
- * `aria-pressed=true` for screen readers; arrow keys / Home / End move the
+ * `aria-checked={true}` for screen readers; arrow keys / Home / End move the
  * focus between the pills (radiogroup-like behaviour) for keyboard users.
  *
  * The control is purely presentational — persistence (localStorage) and the
