@@ -36,7 +36,8 @@ test.describe("Travel time estimation", () => {
       "Estimation basée sur la vitesse moyenne et le dénivelé (règle de Naismith adaptée au vélo)",
     );
     await expect(travelTimeText).toBeVisible();
-    await expect(stageCard).toContainText("Arrivée ~16h33");
+    // New layout: departure → arrival shown as hint under the duration cell
+    await expect(stageCard).toContainText("→ 16h33");
   });
 
   test("departure time shows 8h00 by default", async ({
@@ -51,8 +52,8 @@ test.describe("Travel time estimation", () => {
     const stageCard = mockedPage.getByTestId("stage-card-1");
     await expect(stageCard).toBeVisible();
 
-    // Default departure is 8h → "Départ ~8h00"
-    await expect(stageCard).toContainText("Départ ~8h00");
+    // Default departure is 8h — new layout shows "8h00 → HHhMM" as hint
+    await expect(stageCard).toContainText("8h00 →");
   });
 
   test("departure hour slider is visible in config panel", async ({
@@ -91,9 +92,9 @@ test.describe("Travel time estimation", () => {
       .getByRole("button", { name: "Fermer les paramètres" })
       .click();
 
-    // Stage card should now show departure at 6h00
+    // Stage card should now show departure at 6h00 — new layout: "6h00 → HHhMM"
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    await expect(stageCard).toContainText("Départ ~6h00");
+    await expect(stageCard).toContainText("6h00 →");
   });
 
   test("rest day card does not show travel time", async ({

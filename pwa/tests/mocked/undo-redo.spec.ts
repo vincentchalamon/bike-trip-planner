@@ -16,10 +16,12 @@ test.describe("Undo/Redo", () => {
   }) => {
     await createFullTrip();
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    // Open distance editor
-    await stageCard
-      .getByRole("button", { name: "Modifier la distance" })
-      .click();
+    // Scroll pencil button into view to avoid fixed header interception
+    const pencilBtn1 = stageCard.getByRole("button", {
+      name: "Modifier la distance",
+    });
+    await pencilBtn1.scrollIntoViewIfNeeded();
+    await pencilBtn1.click();
     const distanceInput = stageCard.getByRole("spinbutton", {
       name: "Distance (km)",
     });
@@ -39,10 +41,12 @@ test.describe("Undo/Redo", () => {
   }) => {
     await createFullTrip();
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    // Trigger an undo point
-    await stageCard
-      .getByRole("button", { name: "Modifier la distance" })
-      .click();
+    // Scroll pencil button into view to avoid fixed header interception
+    const pencilBtn2 = stageCard.getByRole("button", {
+      name: "Modifier la distance",
+    });
+    await pencilBtn2.scrollIntoViewIfNeeded();
+    await pencilBtn2.click();
     const distanceInput = stageCard.getByRole("spinbutton", {
       name: "Distance (km)",
     });
@@ -64,10 +68,12 @@ test.describe("Undo/Redo", () => {
   }) => {
     await createFullTrip();
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    // Trigger an undo point
-    await stageCard
-      .getByRole("button", { name: "Modifier la distance" })
-      .click();
+    // Scroll pencil button into view to avoid fixed header interception
+    const pencilBtn3a = stageCard.getByRole("button", {
+      name: "Modifier la distance",
+    });
+    await pencilBtn3a.scrollIntoViewIfNeeded();
+    await pencilBtn3a.click();
     const distanceInput = stageCard.getByRole("spinbutton", {
       name: "Distance (km)",
     });
@@ -81,9 +87,11 @@ test.describe("Undo/Redo", () => {
     await injectEvent(stageUpdatedEvent(0));
     await expect(stageCard).toBeVisible({ timeout: 3000 });
     // Open the distance editor again — input is auto-focused
-    await stageCard
-      .getByRole("button", { name: "Modifier la distance" })
-      .click();
+    const pencilBtn3b = stageCard.getByRole("button", {
+      name: "Modifier la distance",
+    });
+    await pencilBtn3b.scrollIntoViewIfNeeded();
+    await pencilBtn3b.click();
     await expect(
       stageCard.getByRole("spinbutton", { name: "Distance (km)" }),
     ).toBeFocused();
@@ -99,10 +107,12 @@ test.describe("Undo/Redo", () => {
   }) => {
     await createFullTrip();
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    // Trigger an undo point
-    await stageCard
-      .getByRole("button", { name: "Modifier la distance" })
-      .click();
+    // Scroll pencil button into view to avoid fixed header interception
+    const pencilBtn4 = stageCard.getByRole("button", {
+      name: "Modifier la distance",
+    });
+    await pencilBtn4.scrollIntoViewIfNeeded();
+    await pencilBtn4.click();
     const distanceInput = stageCard.getByRole("spinbutton", {
       name: "Distance (km)",
     });

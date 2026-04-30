@@ -36,9 +36,12 @@ test.describe("Inline recomputation — skeleton", () => {
 
     // Trigger distance change
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    await stageCard
-      .getByRole("button", { name: "Modifier la distance" })
-      .click();
+    // Scroll pencil button into view to avoid fixed header interception
+    const pencilBtn = stageCard.getByRole("button", {
+      name: "Modifier la distance",
+    });
+    await pencilBtn.scrollIntoViewIfNeeded();
+    await pencilBtn.click();
     const input = stageCard.getByRole("spinbutton", { name: "Distance (km)" });
     await input.fill("80");
     await input.press("Enter");

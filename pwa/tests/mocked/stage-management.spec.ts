@@ -86,10 +86,12 @@ test.describe("Stage management", () => {
   }) => {
     await createFullTrip();
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    // Click pencil (edit distance button)
-    await stageCard
-      .getByRole("button", { name: "Modifier la distance" })
-      .click();
+    // Scroll pencil button into view to avoid fixed header interception
+    const pencilBtn = stageCard.getByRole("button", {
+      name: "Modifier la distance",
+    });
+    await pencilBtn.scrollIntoViewIfNeeded();
+    await pencilBtn.click();
     // Distance input should appear
     const distanceInput = stageCard.getByRole("spinbutton", {
       name: "Distance (km)",
