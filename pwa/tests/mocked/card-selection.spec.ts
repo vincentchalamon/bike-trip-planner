@@ -10,7 +10,7 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     await page.waitForLoadState("networkidle");
   });
 
-  test("shows both active cards and the AI placeholder by default", async ({
+  test("shows the three source-selection cards by default", async ({
     page,
   }) => {
     await expect(page.getByTestId("card-selection")).toBeVisible();
@@ -21,15 +21,70 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     // No input fields are rendered while no card is selected
     await expect(page.getByTestId("magic-link-input")).toBeHidden();
     await expect(page.getByTestId("card-gpx-dropzone")).toBeHidden();
+    await expect(page.getByTestId("ai-chat-card")).toBeHidden();
   });
 
-  test("AI card is rendered but not clickable (coming soon)", async ({
+  test("selecting AI card reveals the chat shell and hides the others", async ({
     page,
   }) => {
-    const aiCard = page.getByTestId("card-ai");
-    await expect(aiCard).toHaveAttribute("data-disabled", "true");
-    // The "Coming soon" badge is visible
-    await expect(aiCard).toContainText("Bientôt disponible");
+    await page.getByTestId("card-ai").click();
+
+    await expect(page.getByTestId("card-ai")).toHaveAttribute(
+      "data-expanded",
+      "true",
+    );
+    await expect(page.getByTestId("ai-chat-card")).toBeVisible();
+    await expect(page.getByTestId("ai-chat-textarea")).toBeVisible();
+    await expect(page.getByTestId("ai-chat-history")).toBeVisible();
+
+    await expect(page.getByTestId("card-link")).toBeHidden();
+    await expect(page.getByTestId("card-gpx")).toBeHidden();
+  });
+
+  test("AI chat appends user / assistant turns and submits the conversation", async ({
+    page,
+  }) => {
+    await page.getByTestId("card-ai").click();
+
+    // The "Valider et continuer" button is disabled while the conversation is empty
+    const submit = page.getByTestId("ai-chat-submit");
+    await expect(submit).toBeDisabled();
+
+    // Capture the submit event so we can assert on the dispatched transcript
+    await page.evaluate(() => {
+      (window as unknown as { __aiChatSubmits: unknown[] }).__aiChatSubmits =
+        [];
+      document.addEventListener("ai-chat-submit", (event) => {
+        (window as unknown as { __aiChatSubmits: unknown[] }).__aiChatSubmits.push(
+          (event as CustomEvent).detail,
+        );
+      });
+    });
+
+    const textarea = page.getByTestId("ai-chat-textarea");
+    await textarea.fill("Tour de Corse en 10 jours en septembre");
+    await textarea.press("Enter");
+
+    // Two new bubbles appended (user + assistant stub)
+    const userMessages = page.locator('[data-testid="ai-chat-message"][data-role="user"]');
+    const assistantMessages = page.locator(
+      '[data-testid="ai-chat-message"][data-role="assistant"]',
+    );
+    await expect(userMessages).toHaveCount(1);
+    // The greeting + the stub reply
+    await expect(assistantMessages).toHaveCount(2);
+    await expect(userMessages.first()).toContainText("Tour de Corse");
+
+    await expect(submit).toBeEnabled();
+    await submit.click();
+
+    const submits = await page.evaluate(
+      () =>
+        (window as unknown as { __aiChatSubmits: { messages: unknown[] }[] })
+          .__aiChatSubmits,
+    );
+    expect(submits.length).toBe(1);
+    expect(submits[0]?.messages.length).toBe(2);
   });
 
   test("selecting Link card reveals URL input and hides GPX card", async ({

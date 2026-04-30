@@ -433,11 +433,21 @@
     "gpxInvalidType": "Only .gpx files are accepted.",
     "aiTitle": "AI Assistant",
     "aiDescription": "Build a custom route",
-    "aiSoon": "Coming soon",
     "back": "Change method",
     "ariaSelectLink": "Choose link input",
     "ariaSelectGpx": "Choose GPX file input",
-    "ariaSelectAi": "AI Assistant — coming soon"
+    "ariaSelectAi": "Chat with the AI assistant"
+  },
+  "aiChat": {
+    "subtitle": "Describe your project — the assistant will draft an itinerary.",
+    "historyAriaLabel": "Conversation with the AI assistant",
+    "stubGreeting": "Hi! Tell me about the adventure you have in mind (region, duration, dates, fitness level...) and I'll draft a custom itinerary for you.",
+    "stubReply": "Got it! Once the assistant is connected, I'll suggest a detailed itinerary with stages tailored to your request.",
+    "inputLabel": "Your request",
+    "inputPlaceholder": "E.g. \"I want to ride around Corsica for 10 days in September\"",
+    "inputHint": "Enter to send · Shift + Enter for a new line",
+    "sendAriaLabel": "Send message",
+    "submitLabel": "Validate and continue"
   },
   "planner": {
     "closeTrip": "Close this trip"
