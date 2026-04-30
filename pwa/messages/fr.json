@@ -461,6 +461,20 @@
     "analysisLaunched": "Analyse lancée",
     "analysisLaunchFailed": "Impossible de lancer l'analyse. Réessayez."
   },
+  "aiRefinement": {
+    "title": "Affiner avec l'assistant IA",
+    "helper": "Décrivez en une phrase la modification souhaitée — par exemple « Ajoute une étape à Ajaccio » ou « Évite les routes principales le jour 3 ».",
+    "textareaLabel": "Suggestion de modification du tracé ou des étapes",
+    "placeholder": "Ex : Ajoute une étape à Ajaccio puis remonte vers Calvi par la côte ouest…",
+    "charactersRemaining": "{remaining, plural, =0 {0 caractère restant} one {# caractère restant} other {# caractères restants}}",
+    "clear": "Effacer",
+    "clearAria": "Effacer la suggestion saisie",
+    "apply": "Appliquer",
+    "applyAria": "Appliquer la suggestion et régénérer les étapes",
+    "applying": "Application…",
+    "unavailable": "Assistant IA bientôt disponible.",
+    "applyFailed": "Impossible d'appliquer la suggestion. Réessayez."
+  },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",
