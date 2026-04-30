@@ -40,7 +40,9 @@ export function StageProgressBar() {
   const t = useTranslations("progressBar");
 
   const stages = useTripStore((s) => s.stages);
+  const setSelectedStageIndex = useTripStore((s) => s.setSelectedStageIndex);
   const activeDayNumber = useUiStore((s) => s.activeDayNumber);
+  const setActiveDayNumber = useUiStore((s) => s.setActiveDayNumber);
 
   const dayDistances = useMemo(() => buildDayDistances(stages), [stages]);
   const restDayNumbers = useMemo(() => buildRestDayNumbers(stages), [stages]);
@@ -70,12 +72,18 @@ export function StageProgressBar() {
     return [...dayNumbers.map((_, i) => (i / n) * 100), 100];
   }, [dayNumbers]);
 
-  const handleSegmentClick = useCallback((dayNumber: number) => {
-    const target = document.getElementById(`timeline-day-${dayNumber}`);
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, []);
+  const handleSegmentClick = useCallback(
+    (dayNumber: number) => {
+      setActiveDayNumber(dayNumber);
+      const stageIndex = stages.findIndex((s) => s.dayNumber === dayNumber);
+      if (stageIndex >= 0) setSelectedStageIndex(stageIndex);
+      const target = document.getElementById(`timeline-day-${dayNumber}`);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    },
+    [stages, setActiveDayNumber, setSelectedStageIndex],
+  );
 
   if (dayNumbers.length === 0 || totalDistance === 0) {
     return null;
