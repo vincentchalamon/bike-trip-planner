@@ -84,7 +84,7 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
           .__aiChatSubmits,
     );
     expect(submits.length).toBe(1);
-    expect(submits[0].messages.length).toBe(2);
+    expect(submits[0]?.messages.length).toBe(2);
   });
 
   test("selecting Link card reveals URL input and hides GPX card", async ({
