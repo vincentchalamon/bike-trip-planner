@@ -246,8 +246,6 @@
   },
   "alertList": {
     "addToItinerary": "Ajouter à l'itinéraire",
-    "navigateToStation": "Aller à la gare",
-    "navigateToCrossing": "Aller au passage frontière",
     "free": "Entrée gratuite"
   },
   "mapLegend": {

@@ -246,8 +246,6 @@
   },
   "alertList": {
     "addToItinerary": "Add to itinerary",
-    "navigateToStation": "Navigate to station",
-    "navigateToCrossing": "Navigate to crossing",
     "free": "Free admission"
   },
   "mapLegend": {

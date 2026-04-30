@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, type ReactNode } from "react";
+import { useState, useCallback, useId, type ReactNode } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -45,12 +45,13 @@ export function AlertGroup({
   const t = useTranslations("alertGroup");
   const expandedByDefault = defaultExpanded ?? severity === "critical";
   const [expanded, setExpanded] = useState(expandedByDefault);
+  const uid = useId();
 
   const toggle = useCallback(() => setExpanded((prev) => !prev), []);
 
   if (count === 0) return null;
 
-  const bodyId = `alert-group-body-${severity}`;
+  const bodyId = `alert-group-body-${uid}`;
   const ChevronIcon = expanded ? ChevronDown : ChevronRight;
 
   return (
