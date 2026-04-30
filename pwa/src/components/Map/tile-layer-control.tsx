@@ -69,7 +69,7 @@ export function TileLayerControl({
 
   return (
     <div
-      role="group"
+      role="radiogroup"
       aria-label={t("groupLabel")}
       onKeyDown={handleKeyDown}
       className={[

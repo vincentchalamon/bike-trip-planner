@@ -38,7 +38,6 @@ function readStoredMode(): TileMode {
 export function useTileMode(): {
   tileMode: TileMode;
   setTileMode: (mode: TileMode) => void;
-  ready: boolean;
 } {
   const [tileMode, setTileModeState] = useState<TileMode>(readStoredMode);
 
@@ -51,6 +50,5 @@ export function useTileMode(): {
     }
   }, []);
 
-  // `ready` is always true on the client since we initialize synchronously.
-  return { tileMode, setTileMode, ready: true };
+  return { tileMode, setTileMode };
 }
