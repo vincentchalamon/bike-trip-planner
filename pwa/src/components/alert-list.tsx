@@ -36,9 +36,19 @@ function isCulturalPoiAlert(alert: AlertData): boolean {
   );
 }
 
-/** Stable identifier for an alert within the current render. */
+/**
+ * Stable identifier for an alert across renders. Uses the geographic
+ * coordinate as discriminator when available so dismissals survive SSE
+ * updates that change the number of alerts in a severity bucket (which
+ * would otherwise shift indices and resurface dismissed entries).
+ * Falls back to the index for coordinate-less alerts.
+ */
 function alertKey(alert: AlertData, index: number): string {
-  return `${alert.type}-${alert.source ?? ""}-${index}-${alert.message}`;
+  const disambiguator =
+    alert.lat != null && alert.lon != null
+      ? `${alert.lat},${alert.lon}`
+      : String(index);
+  return `${alert.type}-${alert.source ?? ""}-${alert.message}-${disambiguator}`;
 }
 
 /**
