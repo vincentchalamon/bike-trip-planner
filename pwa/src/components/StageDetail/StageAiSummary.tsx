@@ -29,7 +29,18 @@ export function StageAiSummary({
 }: StageAiSummaryProps) {
   const t = useTranslations("stageAiSummary");
   const isLong = summary.length > longThreshold;
+  // Re-sync expanded state when the summary length crosses the threshold
+  // (e.g. SSE delivers a long summary after mount with an initial empty/short
+  // string). Without this, the toggle would render "Show less" even though
+  // the text is fully visible. Using the official React "adjusting state on
+  // prop change" pattern (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  // avoids cascading effect renders.
   const [expanded, setExpanded] = useState(!isLong);
+  const [prevIsLong, setPrevIsLong] = useState(isLong);
+  if (prevIsLong !== isLong) {
+    setPrevIsLong(isLong);
+    setExpanded(!isLong);
+  }
   const toggle = useCallback(() => setExpanded((prev) => !prev), []);
 
   return (

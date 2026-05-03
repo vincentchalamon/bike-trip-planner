@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useCallback, type ReactNode } from "react";
+import { useState, useCallback, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
 interface CollapsibleSectionProps {
@@ -26,8 +26,10 @@ interface CollapsibleSectionProps {
  * - Single chevron that rotates 180° when expanded (design-system standard).
  * - Body is unmounted when collapsed — keeps the DOM small and avoids hidden
  *   focusable nodes interfering with keyboard navigation.
- * - Uses the standard `aria-expanded` / `aria-controls` pattern so screen
- *   readers announce the open/close state.
+ * - Uses the standard `aria-expanded` pattern so screen readers announce the
+ *   open/close state. `aria-controls` is intentionally omitted because the
+ *   body element is unmounted while collapsed (an `aria-controls` reference to
+ *   a non-existent id is invalid ARIA).
  */
 export function CollapsibleSection({
   title,
@@ -39,7 +41,6 @@ export function CollapsibleSection({
   ariaLabel,
 }: CollapsibleSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
-  const contentId = useId();
   const toggle = useCallback(() => setOpen((prev) => !prev), []);
 
   return (
@@ -49,7 +50,6 @@ export function CollapsibleSection({
         className="flex w-full items-center justify-between gap-2 py-1 text-sm font-medium text-foreground hover:text-foreground/80 transition-colors cursor-pointer"
         onClick={toggle}
         aria-expanded={open}
-        aria-controls={contentId}
         aria-label={ariaLabel}
         data-testid={testId ? `${testId}-toggle` : undefined}
       >
@@ -66,7 +66,6 @@ export function CollapsibleSection({
       </button>
       {open && (
         <div
-          id={contentId}
           className="mt-2"
           data-testid={testId ? `${testId}-body` : undefined}
         >
