@@ -120,9 +120,7 @@ test.describe("WizardStepper — 'analysis' is never a button", () => {
   }) => {
     const analysisEl = wizardPage.getByTestId("wizard-stepper-step-analysis");
     await expect(analysisEl).toBeVisible();
-    const tagName = await analysisEl.evaluate((el) =>
-      el.tagName.toLowerCase(),
-    );
+    const tagName = await analysisEl.evaluate((el) => el.tagName.toLowerCase());
     expect(tagName).toBe("div");
   });
 
@@ -134,9 +132,7 @@ test.describe("WizardStepper — 'analysis' is never a button", () => {
     // analysis is now the active step — it must never become a button
     const analysisEl = wizardPage.getByTestId("wizard-stepper-step-analysis");
     await expect(analysisEl).toHaveAttribute("aria-current", "step");
-    const tagName = await analysisEl.evaluate((el) =>
-      el.tagName.toLowerCase(),
-    );
+    const tagName = await analysisEl.evaluate((el) => el.tagName.toLowerCase());
     expect(tagName).toBe("div");
   });
 });
@@ -300,9 +296,7 @@ test.describe("WizardStepper — back navigation clears the trip", () => {
     await simulateProcessing();
 
     // Navigate back to preparation via the stepper button
-    await wizardPage
-      .getByTestId("wizard-stepper-step-preparation")
-      .click();
+    await wizardPage.getByTestId("wizard-stepper-step-preparation").click();
 
     // The card selection should be visible again (trip was cleared)
     await expect(wizardPage.getByTestId("wizard-stepper")).toHaveAttribute(

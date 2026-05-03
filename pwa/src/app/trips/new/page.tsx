@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { HydrationBoundary } from "@/components/hydration-boundary";
@@ -55,6 +55,15 @@ function WizardContent() {
 
   const clearTrip = useTripStore((s) => s.clearTrip);
 
+  // Mirror `currentStep` into a ref so the URL→store effect can read the
+  // latest value without re-running every time the store advances. This
+  // prevents a race where `setProcessing(true)` synchronously moves the
+  // store to "analysis" while the URL is still `?step=1` (router.replace is
+  // async): the effect would otherwise observe the stale URL and call
+  // `navigateToStep("preparation")`, wiping the trip and looping.
+  const currentStepRef = useRef<WizardStepId>(currentStep as WizardStepId);
+  currentStepRef.current = currentStep as WizardStepId;
+
   // Resolve a backwards navigation request (from the stepper or the URL):
   // when going back to "preparation" we must also clear the trip data, or
   // the lifecycle effect in {@link TripPlanner} would immediately re-advance
@@ -81,16 +90,19 @@ function WizardContent() {
   // "Lancer l'analyse"). We rely on the store's own guards (see `goToStep`).
   useEffect(() => {
     if (requestedStep === null) return;
-    if (requestedStep === currentStep) return;
+    // Read the latest store step from a ref so this effect only re-runs when
+    // the URL changes — not when the store advances asynchronously.
+    const current = currentStepRef.current;
+    if (requestedStep === current) return;
     // The "analysis" step is system-driven and never reachable via URL.
     if (requestedStep === "analysis") return;
     // Forward navigation via URL is also blocked: the user must reach forward
     // steps via in-app actions (submitting a URL, clicking "Lancer l'analyse").
     const requestedIdx = WIZARD_STEPS.indexOf(requestedStep);
-    const currentIdx = WIZARD_STEPS.indexOf(currentStep);
+    const currentIdx = WIZARD_STEPS.indexOf(current);
     if (requestedIdx > currentIdx) return;
     navigateToStep(requestedStep);
-  }, [requestedStep, currentStep, navigateToStep]);
+  }, [requestedStep, navigateToStep]);
 
   // Store → URL: keep `?step=` in sync whenever the store advances. Use
   // `replace` so the back button doesn't pile up history entries for each
