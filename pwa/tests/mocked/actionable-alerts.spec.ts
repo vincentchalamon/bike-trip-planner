@@ -295,7 +295,7 @@ test.describe("StageAlerts — severity grouping", () => {
     );
   });
 
-  test("severity groups are not rendered when their bucket is empty", async ({
+  test("severity groups are rendered for non-empty buckets", async ({
     submitUrl,
     injectSequence,
     mockedPage,
@@ -316,6 +316,73 @@ test.describe("StageAlerts — severity grouping", () => {
     await expect(stageCard.getByTestId("alert-group-critical")).toBeVisible();
     await expect(stageCard.getByTestId("alert-group-warning")).toBeVisible();
     await expect(stageCard.getByTestId("alert-group-nudge")).toBeVisible();
+  });
+
+  test("severity group with empty bucket is not rendered", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    // Custom fixture: only critical and warning alerts — no nudge bucket.
+    // This exercises the `if (count === 0) return null` guard in AlertGroup.
+    const tripReadyWithoutNudgeEvent: MercureEvent = {
+      type: "trip_ready",
+      data: {
+        stages: [
+          {
+            dayNumber: 1,
+            distance: 72.5,
+            elevation: 1180,
+            elevationLoss: 920,
+            startPoint: { lat: 44.735, lon: 4.598, ele: 280 },
+            endPoint: { lat: 44.532, lon: 4.392, ele: 540 },
+            geometry: [
+              { lat: 44.735, lon: 4.598, ele: 280 },
+              { lat: 44.532, lon: 4.392, ele: 540 },
+            ],
+            label: null,
+            isRestDay: false,
+            weather: null,
+            alerts: [
+              {
+                type: "critical",
+                message: "Critical only 1",
+                lat: null,
+                lon: null,
+              },
+              {
+                type: "warning",
+                message: "Warning only 2",
+                lat: null,
+                lon: null,
+              },
+            ],
+            pois: [],
+            accommodations: [],
+            selectedAccommodation: null,
+            events: [],
+          },
+        ],
+        computationStatus: { route: "done", stages: "done" },
+        aiOverview: null,
+      },
+    };
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      tripReadyWithoutNudgeEvent,
+    ]);
+
+    const stageCard = mockedPage.getByTestId("stage-card-1");
+    await expect(stageCard.getByTestId("stage-alerts")).toBeVisible({
+      timeout: 5000,
+    });
+
+    // Critical and warning groups present; nudge group must be absent from DOM.
+    await expect(stageCard.getByTestId("alert-group-critical")).toBeVisible();
+    await expect(stageCard.getByTestId("alert-group-warning")).toBeVisible();
+    await expect(stageCard.getByTestId("alert-group-nudge")).toHaveCount(0);
   });
 });
 
