@@ -34,9 +34,14 @@ function StatCell({
   trailing,
   testId,
 }: StatCellProps) {
+  // `relative` establishes a stacking context so a `trailing` slot
+  // (e.g. the inline pencil edit button on the distance cell) sits above
+  // sibling stat cells. Without it, Playwright's hit-test lands on
+  // neighbouring cards (`stat-duration`, `stat-elevation`, …) when the
+  // viewport places the button near a card edge, causing 30s click timeouts.
   return (
     <div
-      className="flex flex-col gap-1 rounded-lg border border-border/60 bg-card/40 p-3"
+      className="relative flex flex-col gap-1 rounded-lg border border-border/60 bg-card/40 p-3"
       data-testid={testId}
     >
       <div className="flex items-center justify-between gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -46,7 +51,7 @@ function StatCell({
           </span>
           <span className="truncate">{label}</span>
         </span>
-        {trailing}
+        {trailing && <span className="relative z-10">{trailing}</span>}
       </div>
       <div className="text-base md:text-lg font-semibold text-foreground tabular-nums">
         {value}

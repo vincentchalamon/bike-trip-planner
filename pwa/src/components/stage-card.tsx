@@ -106,7 +106,12 @@ export function StageCard({
 
   return (
     <Card
-      className="border-border shadow-sm rounded-xl w-full md:max-w-[80%] relative"
+      // `scroll-mt-24` reserves space for the sticky `fixed top-0 z-20`
+      // header so any `scrollIntoView()` (Playwright auto-scroll, in-app
+      // navigation) lands the card *below* the progress bar rather than
+      // underneath it. Without this offset, hit-tests on inline controls
+      // (e.g. the distance pencil button) fall on the sticky header.
+      className="border-border shadow-sm rounded-xl w-full md:max-w-[80%] relative scroll-mt-24"
       data-testid={`stage-card-${stage.dayNumber}`}
     >
       <CardContent className="p-4 md:p-6 space-y-4">

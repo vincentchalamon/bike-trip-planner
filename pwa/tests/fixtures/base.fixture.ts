@@ -25,9 +25,7 @@ export { expect };
  * (and well above any future bottom toolbar), making clicks reliable without
  * resorting to `{ force: true }`.
  */
-export async function scrollLocatorIntoCenter(
-  locator: Locator,
-): Promise<void> {
+export async function scrollLocatorIntoCenter(locator: Locator): Promise<void> {
   await locator.evaluate((el) => {
     el.scrollIntoView({ block: "center", inline: "nearest" });
   });
