@@ -272,6 +272,24 @@ test.describe("Tile layer control", () => {
     );
   });
 
+  test("clicking Satellite writes preference to localStorage", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await createTripWithGeometry(submitUrl, injectEvent);
+    await expect(mockedPage.getByTestId("tile-layer-control")).toBeVisible({
+      timeout: 5000,
+    });
+
+    await mockedPage.getByTestId("tile-layer-satellite").click();
+
+    const stored = await mockedPage.evaluate(() =>
+      localStorage.getItem("bike-trip-planner:map.tileMode"),
+    );
+    expect(stored).toBe("satellite");
+  });
+
   test("ArrowRight from Map moves focus and selection to Satellite", async ({
     submitUrl,
     injectEvent,
