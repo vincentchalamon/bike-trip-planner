@@ -1,10 +1,37 @@
-import { test as base, expect, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type Page,
+  type Locator,
+} from "@playwright/test";
 import { mockAllApis, type MockApiOptions } from "./api-mocks";
 import { injectSseEvent, injectSseSequence } from "./sse-helpers";
 import { fullTripEventSequence } from "./mock-data";
 import type { MercureEvent } from "../../src/lib/mercure/types";
 
 export { expect };
+
+/**
+ * Scroll a locator to the vertical center of the viewport.
+ *
+ * Playwright's built-in `scrollIntoViewIfNeeded()` aligns the element to the
+ * nearest edge, which on the trip planner places the target right under the
+ * sticky `fixed top-0 z-20` header (the one that holds the progress bar and
+ * view-mode toggle once the user scrolls past the sentinel). When that
+ * happens, subsequent `click()` calls are intercepted by the header and time
+ * out after 30s of retries.
+ *
+ * Centering the element in the viewport puts it well below the sticky header
+ * (and well above any future bottom toolbar), making clicks reliable without
+ * resorting to `{ force: true }`.
+ */
+export async function scrollLocatorIntoCenter(
+  locator: Locator,
+): Promise<void> {
+  await locator.evaluate((el) => {
+    el.scrollIntoView({ block: "center", inline: "nearest" });
+  });
+}
 
 /**
  * Expand the Link card on the welcome screen so the `magic-link-input`

@@ -1,4 +1,8 @@
-import { test, expect } from "../fixtures/base.fixture";
+import {
+  test,
+  expect,
+  scrollLocatorIntoCenter,
+} from "../fixtures/base.fixture";
 import { stageUpdatedEvent } from "../fixtures/mock-data";
 
 test.describe("Undo/Redo", () => {
@@ -16,11 +20,12 @@ test.describe("Undo/Redo", () => {
   }) => {
     await createFullTrip();
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    // Scroll pencil button into view to avoid fixed header interception
+    // Center pencil button in viewport so the sticky `fixed top-0 z-20`
+    // header doesn't intercept the click.
     const pencilBtn1 = stageCard.getByRole("button", {
       name: "Modifier la distance",
     });
-    await pencilBtn1.scrollIntoViewIfNeeded();
+    await scrollLocatorIntoCenter(pencilBtn1);
     await pencilBtn1.click();
     const distanceInput = stageCard.getByRole("spinbutton", {
       name: "Distance (km)",
@@ -41,11 +46,12 @@ test.describe("Undo/Redo", () => {
   }) => {
     await createFullTrip();
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    // Scroll pencil button into view to avoid fixed header interception
+    // Center pencil button in viewport so the sticky `fixed top-0 z-20`
+    // header doesn't intercept the click.
     const pencilBtn2 = stageCard.getByRole("button", {
       name: "Modifier la distance",
     });
-    await pencilBtn2.scrollIntoViewIfNeeded();
+    await scrollLocatorIntoCenter(pencilBtn2);
     await pencilBtn2.click();
     const distanceInput = stageCard.getByRole("spinbutton", {
       name: "Distance (km)",
@@ -68,11 +74,12 @@ test.describe("Undo/Redo", () => {
   }) => {
     await createFullTrip();
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    // Scroll pencil button into view to avoid fixed header interception
+    // Center pencil button in viewport so the sticky `fixed top-0 z-20`
+    // header doesn't intercept the click.
     const pencilBtn3a = stageCard.getByRole("button", {
       name: "Modifier la distance",
     });
-    await pencilBtn3a.scrollIntoViewIfNeeded();
+    await scrollLocatorIntoCenter(pencilBtn3a);
     await pencilBtn3a.click();
     const distanceInput = stageCard.getByRole("spinbutton", {
       name: "Distance (km)",
@@ -90,7 +97,7 @@ test.describe("Undo/Redo", () => {
     const pencilBtn3b = stageCard.getByRole("button", {
       name: "Modifier la distance",
     });
-    await pencilBtn3b.scrollIntoViewIfNeeded();
+    await scrollLocatorIntoCenter(pencilBtn3b);
     await pencilBtn3b.click();
     await expect(
       stageCard.getByRole("spinbutton", { name: "Distance (km)" }),
@@ -107,11 +114,12 @@ test.describe("Undo/Redo", () => {
   }) => {
     await createFullTrip();
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    // Scroll pencil button into view to avoid fixed header interception
+    // Center pencil button in viewport so the sticky `fixed top-0 z-20`
+    // header doesn't intercept the click.
     const pencilBtn4 = stageCard.getByRole("button", {
       name: "Modifier la distance",
     });
-    await pencilBtn4.scrollIntoViewIfNeeded();
+    await scrollLocatorIntoCenter(pencilBtn4);
     await pencilBtn4.click();
     const distanceInput = stageCard.getByRole("spinbutton", {
       name: "Distance (km)",
