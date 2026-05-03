@@ -140,7 +140,7 @@ export function StageDetailPanel({
             aria-label={tStage("day", { dayNumber: stage.dayNumber })}
             data-stage-index={i}
             className={[
-              "flex flex-col gap-4 rounded-xl p-1 transition-colors",
+              "flex flex-col gap-4 rounded-xl p-1 transition-colors scroll-mt-20",
               isSelected
                 ? "ring-2 ring-brand/40 ring-offset-2"
                 : "opacity-60 hover:opacity-80",
