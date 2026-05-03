@@ -199,14 +199,15 @@ test.describe("Tile layer control", () => {
       timeout: 5000,
     });
 
-    await mockedPage.getByRole("radio", { name: /satellite/i }).click();
+    await mockedPage.getByTestId("tile-layer-satellite").click();
 
     await expect(
-      mockedPage.getByRole("radio", { name: /satellite/i }),
+      mockedPage.getByTestId("tile-layer-satellite"),
     ).toHaveAttribute("aria-checked", "true");
-    await expect(
-      mockedPage.getByRole("radio", { name: /^map$/i }),
-    ).toHaveAttribute("aria-checked", "false");
+    await expect(mockedPage.getByTestId("tile-layer-map")).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
   });
 
   test("clicking Map restores it as the active pill", async ({
@@ -220,18 +221,19 @@ test.describe("Tile layer control", () => {
     });
 
     // Switch to satellite first
-    await mockedPage.getByRole("radio", { name: /satellite/i }).click();
+    await mockedPage.getByTestId("tile-layer-satellite").click();
     await expect(
-      mockedPage.getByRole("radio", { name: /satellite/i }),
+      mockedPage.getByTestId("tile-layer-satellite"),
     ).toHaveAttribute("aria-checked", "true");
 
     // Switch back to map
-    await mockedPage.getByRole("radio", { name: /^map$/i }).click();
+    await mockedPage.getByTestId("tile-layer-map").click();
+    await expect(mockedPage.getByTestId("tile-layer-map")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
     await expect(
-      mockedPage.getByRole("radio", { name: /^map$/i }),
-    ).toHaveAttribute("aria-checked", "true");
-    await expect(
-      mockedPage.getByRole("radio", { name: /satellite/i }),
+      mockedPage.getByTestId("tile-layer-satellite"),
     ).toHaveAttribute("aria-checked", "false");
   });
 
@@ -252,14 +254,22 @@ test.describe("Tile layer control", () => {
     await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
     await input.press("Enter");
     await page.waitForURL(/\/trips\//, { timeout: 5000 });
+    // Wait for the trip detail page to be loaded (matches submitUrl fixture)
+    // before injecting SSE so the listener is attached on the new page.
+    await expect(
+      page
+        .getByTestId("trip-title-skeleton")
+        .or(page.getByTestId("trip-title")),
+    ).toBeVisible({ timeout: 5000 });
     await injectSseEvent(page, stagesWithGeometryEvent());
 
     await expect(page.getByTestId("tile-layer-control")).toBeVisible({
       timeout: 5000,
     });
-    await expect(
-      page.getByRole("radio", { name: /satellite/i }),
-    ).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByTestId("tile-layer-satellite")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
   });
 
   test("ArrowRight from Map moves focus and selection to Satellite", async ({
@@ -273,17 +283,18 @@ test.describe("Tile layer control", () => {
     });
 
     // Focus the Map pill (it is the initially active pill)
-    await mockedPage.getByRole("radio", { name: /^map$/i }).focus();
+    await mockedPage.getByTestId("tile-layer-map").focus();
 
     // Press ArrowRight on the radiogroup container
     await mockedPage.keyboard.press("ArrowRight");
 
     await expect(
-      mockedPage.getByRole("radio", { name: /satellite/i }),
+      mockedPage.getByTestId("tile-layer-satellite"),
     ).toHaveAttribute("aria-checked", "true");
-    await expect(
-      mockedPage.getByRole("radio", { name: /^map$/i }),
-    ).toHaveAttribute("aria-checked", "false");
+    await expect(mockedPage.getByTestId("tile-layer-map")).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
   });
 });
 
