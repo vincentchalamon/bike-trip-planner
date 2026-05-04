@@ -242,7 +242,12 @@
     "endMarker": "End point",
     "resetView": "Global view",
     "elevationProfile": "Elevation profile",
-    "elevationProfileAriaLabel": "Interactive elevation profile for the trip"
+    "elevationProfileAriaLabel": "Interactive elevation profile for the trip",
+    "tileLayer": {
+      "groupLabel": "Basemap type",
+      "map": "Map",
+      "satellite": "Satellite"
+    }
   },
   "alertList": {
     "addToItinerary": "Add to itinerary",

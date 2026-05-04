@@ -1,4 +1,6 @@
-import { test, expect } from "../fixtures/base.fixture";
+import { test, expect, expandLinkCard } from "../fixtures/base.fixture";
+import { mockAllApis } from "../fixtures/api-mocks";
+import { injectSseEvent } from "../fixtures/sse-helpers";
 import type { MercureEvent } from "../../src/lib/mercure/types";
 import { culturalPoiAlertsEvent } from "../fixtures/mock-data";
 
@@ -173,6 +175,145 @@ test.describe("Elevation profile", () => {
     await expect(svg.getByTestId("elevation-crosshair")).toBeAttached();
     // HTML tooltip div — rendered outside the SVG, scoped to the profile container
     await expect(profile.getByTestId("elevation-tooltip-bg")).toBeVisible();
+  });
+});
+
+test.describe("Tile layer control", () => {
+  test("tile-layer-control is visible after stages are loaded", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await createTripWithGeometry(submitUrl, injectEvent);
+    await expect(mockedPage.getByTestId("tile-layer-control")).toBeVisible({
+      timeout: 5000,
+    });
+  });
+
+  test("clicking Satellite sets it as the active pill", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await createTripWithGeometry(submitUrl, injectEvent);
+    await expect(mockedPage.getByTestId("tile-layer-control")).toBeVisible({
+      timeout: 5000,
+    });
+
+    await mockedPage.getByTestId("tile-layer-satellite").click();
+
+    await expect(
+      mockedPage.getByTestId("tile-layer-satellite"),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(mockedPage.getByTestId("tile-layer-map")).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+  });
+
+  test("clicking Map restores it as the active pill", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await createTripWithGeometry(submitUrl, injectEvent);
+    await expect(mockedPage.getByTestId("tile-layer-control")).toBeVisible({
+      timeout: 5000,
+    });
+
+    // Switch to satellite first
+    await mockedPage.getByTestId("tile-layer-satellite").click();
+    await expect(
+      mockedPage.getByTestId("tile-layer-satellite"),
+    ).toHaveAttribute("aria-checked", "true");
+
+    // Switch back to map
+    await mockedPage.getByTestId("tile-layer-map").click();
+    await expect(mockedPage.getByTestId("tile-layer-map")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await expect(
+      mockedPage.getByTestId("tile-layer-satellite"),
+    ).toHaveAttribute("aria-checked", "false");
+  });
+
+  test("satellite pill is pre-selected when localStorage preference is satellite", async ({
+    page,
+  }) => {
+    // addInitScript must be called before goto() — use page directly (no mockedPage fixture).
+    await mockAllApis(page);
+    await page.addInitScript(() => {
+      localStorage.setItem("bike-trip-planner:map.tileMode", "satellite");
+    });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await expandLinkCard(page);
+
+    // Submit a URL and inject geometry stages
+    const input = page.getByTestId("magic-link-input");
+    await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
+    await input.press("Enter");
+    await page.waitForURL(/\/trips\//, { timeout: 5000 });
+    // Wait for the trip detail page to be loaded (matches submitUrl fixture)
+    // before injecting SSE so the listener is attached on the new page.
+    await expect(
+      page
+        .getByTestId("trip-title-skeleton")
+        .or(page.getByTestId("trip-title")),
+    ).toBeVisible({ timeout: 5000 });
+    await injectSseEvent(page, stagesWithGeometryEvent());
+
+    await expect(page.getByTestId("tile-layer-control")).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(page.getByTestId("tile-layer-satellite")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  test("clicking Satellite writes preference to localStorage", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await createTripWithGeometry(submitUrl, injectEvent);
+    await expect(mockedPage.getByTestId("tile-layer-control")).toBeVisible({
+      timeout: 5000,
+    });
+
+    await mockedPage.getByTestId("tile-layer-satellite").click();
+
+    const stored = await mockedPage.evaluate(() =>
+      localStorage.getItem("bike-trip-planner:map.tileMode"),
+    );
+    expect(stored).toBe("satellite");
+  });
+
+  test("ArrowRight from Map moves focus and selection to Satellite", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await createTripWithGeometry(submitUrl, injectEvent);
+    await expect(mockedPage.getByTestId("tile-layer-control")).toBeVisible({
+      timeout: 5000,
+    });
+
+    // Focus the Map pill (it is the initially active pill)
+    await mockedPage.getByTestId("tile-layer-map").focus();
+
+    // Press ArrowRight on the radiogroup container
+    await mockedPage.keyboard.press("ArrowRight");
+
+    await expect(
+      mockedPage.getByTestId("tile-layer-satellite"),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(mockedPage.getByTestId("tile-layer-map")).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
   });
 });
 
