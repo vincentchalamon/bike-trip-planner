@@ -63,7 +63,10 @@
   },
   "timeline": {
     "loadingStages": "Chargement des étapes",
-    "tripStages": "Étapes du voyage"
+    "tripStages": "Étapes du voyage",
+    "cumulativeDistance": "{km} km cumulés",
+    "sidebarLabel": "Sommaire des étapes",
+    "noStageSelected": "Sélectionnez une étape"
   },
   "calendar": {
     "previousMonth": "Mois précédent",
@@ -246,6 +249,14 @@
     "navigateToStation": "Aller à la gare",
     "navigateToCrossing": "Aller au passage frontière",
     "free": "Entrée gratuite"
+  },
+  "poiPopover": {
+    "close": "Fermer",
+    "navigate": "Naviguer",
+    "navigateAriaLabel": "Naviguer vers {name}",
+    "wikipedia": "Voir sur Wikipedia",
+    "free": "Entrée gratuite",
+    "price": "À partir de {value} €"
   },
   "mapLegend": {
     "title": "Légende des pictogrammes",
