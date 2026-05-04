@@ -73,9 +73,7 @@ function parseTimeInterval(raw: string): { start: number; end: number } | null {
   if (!match) return null;
   const [, sh, sm, eh, em] = match;
   const start = Number(sh) * 60 + Number(sm);
-  let end = Number(eh) * 60 + Number(em);
-  // 24:00 represents end-of-day - keep it numerically as 1440.
-  if (end === 0 && raw.includes("24:00")) end = 1440;
+  const end = Number(eh) * 60 + Number(em);
   if (Number.isNaN(start) || Number.isNaN(end)) return null;
   return { start, end };
 }

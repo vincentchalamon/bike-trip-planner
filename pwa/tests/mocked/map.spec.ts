@@ -261,7 +261,10 @@ test.describe("Cultural POI popover", () => {
     const popover = mockedPage.getByTestId("poi-popover");
     await expect(popover).toBeVisible();
 
-    await popover.getByTestId("poi-popover-close").click();
+    const closeButton = popover.getByTestId("poi-popover-close");
+    await expect(closeButton).toBeVisible();
+    await expect(closeButton).toBeEnabled();
+    await closeButton.click();
     await expect(mockedPage.getByTestId("poi-popover")).toHaveCount(0);
   });
 
