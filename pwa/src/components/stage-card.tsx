@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -205,6 +205,18 @@ export function StageCard({
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             <span>{t("loadingAlerts")}</span>
+          </div>
+        )}
+        {!hasAlerts && !isProcessing && !stage.isRestDay && (
+          <div
+            className="flex items-center gap-2 text-xs text-muted-foreground"
+            data-testid="stage-no-alerts"
+          >
+            <CheckCircle2
+              className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0"
+              aria-hidden="true"
+            />
+            <span>{t("noAlerts")}</span>
           </div>
         )}
 

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { BedDouble } from "lucide-react";
+import { TimelineSidebarSkeleton } from "@/components/timeline-sidebar-skeleton";
 import { cn } from "@/lib/utils";
 import type { StageData } from "@/lib/validation/schemas";
 
@@ -51,19 +52,7 @@ export function TimelineSidebar({
 
   if (stages.length === 0) {
     if (!isProcessing) return null;
-    return (
-      <nav
-        aria-label={t("loadingStages")}
-        className="relative flex flex-col gap-3 py-2"
-      >
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="flex items-center gap-3 animate-pulse">
-            <div className="w-3 h-3 rounded-full bg-brand/40 shrink-0" />
-            <div className="h-3 w-32 rounded bg-muted" />
-          </div>
-        ))}
-      </nav>
-    );
+    return <TimelineSidebarSkeleton />;
   }
 
   return (

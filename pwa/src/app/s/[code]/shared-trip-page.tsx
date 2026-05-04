@@ -2,11 +2,10 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, Info, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Info, Loader2 } from "lucide-react";
+import { TripNotFound } from "@/components/trip-not-found";
 import { Timeline } from "@/components/timeline";
 import { TripSummary } from "@/components/trip-summary";
 import { TripDownloads } from "@/components/trip-downloads";
@@ -165,16 +164,8 @@ function SharedTripLoader({ code }: { code: string }) {
 
   if (loadError) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <p className="text-destructive" data-testid="share-error">
-          {t("error")}
-        </p>
-        <Button asChild variant="outline">
-          <Link href="/">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {t("backToHome")}
-          </Link>
-        </Button>
+      <div data-testid="share-error">
+        <TripNotFound variant="share" />
       </div>
     );
   }
