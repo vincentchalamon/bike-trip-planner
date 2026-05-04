@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Loader2 } from "lucide-react";
 import { API_URL } from "@/lib/constants";
 
 /**
@@ -43,8 +44,23 @@ export default function VerifyPage() {
   }, [searchParams]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="text-muted-foreground text-sm">{t("verifying")}</div>
+    <div
+      className="flex min-h-screen flex-col items-center justify-center"
+      style={{
+        backgroundColor: "var(--surface)",
+        padding: "var(--spacing-lg)",
+        gap: "var(--spacing-md)",
+      }}
+      role="status"
+      aria-live="polite"
+      data-testid="access-request-verifying"
+    >
+      <Loader2
+        className="size-8 animate-spin"
+        style={{ color: "var(--accent-brand)" }}
+        aria-hidden
+      />
+      <p className="text-muted-foreground text-sm">{t("verifying")}</p>
     </div>
   );
 }
