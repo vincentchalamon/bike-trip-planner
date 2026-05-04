@@ -264,11 +264,11 @@ test.describe("Cultural POI popover", () => {
     const closeButton = popover.getByTestId("poi-popover-close");
     await expect(closeButton).toBeVisible();
     await expect(closeButton).toBeEnabled();
-    // The popover is anchored to a pulsating marker, so MapLibre continually
-    // re-positions it. Force the click to bypass Playwright's stability check —
-    // we already asserted visibility/enabled above, the close behaviour is what
-    // we care about here.
-    await closeButton.click({ force: true });
+    // The popover is anchored to a pulsating marker inside an animating map view,
+    // making the close button position never fully stable. Dispatch the click
+    // directly via the DOM API to bypass Playwright's geometric hit-testing —
+    // the React onClick handler still fires and dismisses the popover.
+    await closeButton.evaluate((btn: HTMLElement) => btn.click());
     await expect(mockedPage.getByTestId("poi-popover")).toHaveCount(0);
   });
 
