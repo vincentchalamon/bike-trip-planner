@@ -36,7 +36,10 @@ final readonly class RideWithGpsRouteFetcher implements RouteFetcherInterface
 
     public function fetch(string $url): RouteFetchResult
     {
-        preg_match(self::PATTERN, $url, $matches);
+        if (!preg_match(self::PATTERN, $url, $matches)) {
+            throw new \InvalidArgumentException(\sprintf('Invalid RideWithGPS route URL: %s', $url));
+        }
+
         $routeId = $matches[1];
 
         $cacheKey = 'route_fetch.ridewithgps_route.'.$routeId;

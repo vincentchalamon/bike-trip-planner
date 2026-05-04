@@ -160,9 +160,12 @@ final class CheckBikeShopsHandlerTest extends TestCase
                     $payload = $action['payload'];
                     \assert(\is_array($payload));
 
+                    $message = $alerts[0]['message'];
+                    \assert(\is_string($message));
+
                     return 6 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && str_contains((string) $alerts[0]['message'], 'no repair')
+                        && str_contains($message, 'no repair')
                         && 'navigate' === $action['kind']
                         && 48.5 === $payload['lat']
                         && 2.5 === $payload['lon'];

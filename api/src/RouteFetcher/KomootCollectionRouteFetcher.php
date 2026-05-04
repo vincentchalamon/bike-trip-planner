@@ -30,7 +30,10 @@ final readonly class KomootCollectionRouteFetcher implements RouteFetcherInterfa
 
     public function fetch(string $url): RouteFetchResult
     {
-        preg_match(self::PATTERN, $url, $matches);
+        if (!preg_match(self::PATTERN, $url, $matches)) {
+            throw new \InvalidArgumentException(\sprintf('Invalid Komoot collection URL: %s', $url));
+        }
+
         $collectionId = $matches[1];
 
         $cacheKey = 'route_fetch.komoot_collection.'.$collectionId;

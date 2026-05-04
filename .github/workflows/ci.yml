@@ -320,7 +320,7 @@ jobs:
           docker run --network host
           -w /app -v ./pwa:/app
           --rm --ipc=host
-          mcr.microsoft.com/playwright:v1.58.2-noble
+          mcr.microsoft.com/playwright:v1.59.1-noble
           /bin/sh -c 'npm ci; npx playwright test'
       - uses: actions/upload-artifact@v7
         if: failure()
@@ -376,14 +376,14 @@ jobs:
           docker run --network host
           -w /app -v ./pwa:/app
           --rm --ipc=host
-          mcr.microsoft.com/playwright:v1.58.2-noble
+          mcr.microsoft.com/playwright:v1.59.1-noble
           /bin/sh -c 'npm ci; npx bddgen --config playwright.bdd.config.ts'
       - name: Run BDD recette scenarios
         run: >-
           docker run --network host
           -w /app -v ./pwa:/app
           --rm --ipc=host
-          mcr.microsoft.com/playwright:v1.58.2-noble
+          mcr.microsoft.com/playwright:v1.59.1-noble
           /bin/sh -c 'npx playwright test --config playwright.bdd.config.ts'
       - uses: actions/upload-artifact@v7
         if: always()

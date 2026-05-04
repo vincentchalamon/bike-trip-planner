@@ -30,7 +30,10 @@ final readonly class KomootTourRouteFetcher implements RouteFetcherInterface
 
     public function fetch(string $url): RouteFetchResult
     {
-        preg_match(self::PATTERN, $url, $matches);
+        if (!preg_match(self::PATTERN, $url, $matches)) {
+            throw new \InvalidArgumentException(\sprintf('Invalid Komoot tour URL: %s', $url));
+        }
+
         $tourId = $matches[1];
 
         $cacheKey = 'route_fetch.komoot_tour.'.$tourId;
