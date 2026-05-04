@@ -42,7 +42,7 @@ interface OpeningStatus {
   label: string;
 }
 
-const HOURS_24_7 = new Set(["24/7", "24/7 ", "Mo-Su 00:00-24:00"]);
+const HOURS_24_7 = new Set(["24/7", "Mo-Su 00:00-24:00"]);
 
 const TIME_INTERVAL_RE = /^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/;
 const TIME_TOKEN_RE = /\d{1,2}:\d{2}/;
