@@ -2,6 +2,7 @@ import { test, expect, expandLinkCard } from "../fixtures/base.fixture";
 import { mockAllApis } from "../fixtures/api-mocks";
 import { injectSseEvent } from "../fixtures/sse-helpers";
 import type { MercureEvent } from "../../src/lib/mercure/types";
+import { culturalPoiAlertsEvent } from "../fixtures/mock-data";
 
 /**
  * Stages with geometry — required for the map to render routes and elevation profile.
@@ -313,6 +314,129 @@ test.describe("Tile layer control", () => {
       "aria-checked",
       "false",
     );
+  });
+});
+
+/**
+ * Enriched cultural POI event — carries the optional Wikidata / DataTourisme
+ * fields recognised by `isEnrichedPoi`, so the popover renders variant A
+ * (image, description, opening hours, price, Wikipedia link).
+ *
+ * Coordinates align with the first stage geometry above so the marker is
+ * inside the rendered map viewport.
+ */
+function enrichedCulturalPoiAlertsEvent(): MercureEvent {
+  return {
+    type: "cultural_poi_alerts",
+    data: {
+      alerts: [
+        {
+          stageIndex: 0,
+          dayNumber: 1,
+          type: "nudge",
+          message: "Cultural POI nearby: Château de Ventadour",
+          lat: 44.71,
+          lon: 4.57,
+          poiName: "Château de Ventadour",
+          poiType: "castle",
+          poiLat: 44.71,
+          poiLon: 4.57,
+          distanceFromRoute: 320,
+          description:
+            "Forteresse médiévale du XIIe siècle perchée sur un éperon rocheux dominant la vallée de l'Ardèche.",
+          openingHours: "24/7",
+          estimatedPrice: 5,
+          imageUrl: "https://example.com/ventadour.jpg",
+          wikidataId: "Q3577836",
+          wikipediaUrl:
+            "https://fr.wikipedia.org/wiki/Ch%C3%A2teau_de_Ventadour",
+        },
+      ],
+    },
+  };
+}
+
+test.describe("Cultural POI popover", () => {
+  test("clicking an enriched POI marker opens the popover (variant A)", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      stagesWithGeometryEvent(),
+      enrichedCulturalPoiAlertsEvent(),
+    ]);
+
+    const marker = mockedPage.getByTestId("cultural-poi-marker").first();
+    await expect(marker).toBeVisible({ timeout: 5000 });
+    await marker.click();
+
+    const popover = mockedPage.getByTestId("poi-popover");
+    await expect(popover).toBeVisible();
+    await expect(popover).toHaveAttribute("data-variant", "enriched");
+
+    // Variant A — enrichment fields rendered.
+    await expect(popover.getByTestId("poi-popover-title")).toHaveText(
+      "Château de Ventadour",
+    );
+    await expect(popover.getByTestId("poi-popover-description")).toBeVisible();
+    await expect(popover.getByTestId("poi-popover-image")).toBeVisible();
+    await expect(popover.getByTestId("poi-popover-wikipedia")).toBeVisible();
+  });
+
+  test("close button dismisses the popover", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      stagesWithGeometryEvent(),
+      enrichedCulturalPoiAlertsEvent(),
+    ]);
+
+    const marker = mockedPage.getByTestId("cultural-poi-marker").first();
+    await marker.click();
+
+    const popover = mockedPage.getByTestId("poi-popover");
+    await expect(popover).toBeVisible();
+
+    const closeButton = popover.getByTestId("poi-popover-close");
+    await expect(closeButton).toBeVisible();
+    await expect(closeButton).toBeEnabled();
+    // The popover is anchored to a pulsating marker inside an animating map view,
+    // making the close button position never fully stable. Dispatch the click
+    // directly via the DOM API to bypass Playwright's geometric hit-testing —
+    // the React onClick handler still fires and dismisses the popover.
+    await closeButton.evaluate((btn: HTMLElement) => btn.click());
+    await expect(mockedPage.getByTestId("poi-popover")).toHaveCount(0);
+  });
+
+  test("non-enriched POI marker opens the minimal variant (variant B)", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    // `culturalPoiAlertsEvent` carries no enrichment fields → minimal variant.
+    await injectSequence([stagesWithGeometryEvent(), culturalPoiAlertsEvent()]);
+
+    const marker = mockedPage.getByTestId("cultural-poi-marker").first();
+    await expect(marker).toBeVisible({ timeout: 5000 });
+    await marker.click();
+
+    const popover = mockedPage.getByTestId("poi-popover");
+    await expect(popover).toBeVisible();
+    await expect(popover).toHaveAttribute("data-variant", "minimal");
+
+    // Variant B — enrichment fields absent.
+    await expect(popover.getByTestId("poi-popover-title")).toHaveText(
+      "Château de Ventadour",
+    );
+    await expect(popover.getByTestId("poi-popover-description")).toHaveCount(0);
+    await expect(popover.getByTestId("poi-popover-image")).toHaveCount(0);
+    await expect(popover.getByTestId("poi-popover-wikipedia")).toHaveCount(0);
   });
 });
 
