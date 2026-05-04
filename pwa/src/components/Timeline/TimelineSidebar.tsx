@@ -144,11 +144,9 @@ export function TimelineSidebar({
                         : "text-muted-foreground",
                     )}
                   >
-                    {stage.isRestDay
-                      ? tRest("label")
-                      : t("cumulativeDistance", {
-                          km: Math.round(cumulative),
-                        })}
+                    {t("cumulativeDistance", {
+                      km: Math.round(cumulative),
+                    })}
                   </span>
                 </span>
               </button>

@@ -48,7 +48,7 @@ interface StageDetailPanelProps {
 }
 
 function formatDayDate(startDate: string | null, dayNumber: number): string {
-  const base = startDate ? new Date(startDate) : new Date();
+  const base = startDate ? new Date(`${startDate}T00:00:00`) : new Date();
   const date = new Date(base);
   date.setDate(date.getDate() + dayNumber - 1);
   return date.toLocaleDateString(undefined, {
@@ -140,7 +140,7 @@ export function StageDetailPanel({
             aria-label={tStage("day", { dayNumber: stage.dayNumber })}
             data-stage-index={i}
             className={[
-              "flex flex-col gap-4 rounded-xl p-1 transition-colors",
+              "flex flex-col gap-4 rounded-xl p-1 transition-colors scroll-mt-20",
               isSelected
                 ? "ring-2 ring-brand/40 ring-offset-2"
                 : "opacity-60 hover:opacity-80",

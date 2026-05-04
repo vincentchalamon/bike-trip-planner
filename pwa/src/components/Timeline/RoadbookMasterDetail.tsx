@@ -49,8 +49,7 @@ interface RoadbookMasterDetailProps {
  * the trip store (`selectedStageIndex`) so it survives navigation between
  * view modes (split, timeline-only) without losing context.
  *
- * Mobile fallback: sidebar collapses above the detail panel and stages are
- * rendered as a horizontally-scrollable list of pills (single-column layout).
+ * Mobile fallback: sidebar stacks vertically above the detail panel (single-column layout).
  */
 export function RoadbookMasterDetail(props: RoadbookMasterDetailProps) {
   const {

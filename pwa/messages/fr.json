@@ -391,28 +391,53 @@
     "failureMessage": "Échec : {message}",
     "categories": {
       "terrain_security": {
-        "label": "Terrain & Sécurité",
-        "description": "Surface, trafic, pentes, continuité"
+        "label": "Analyse du terrain",
+        "description": "Surface, trafic, pentes, continuité",
+        "running": "Interrogation d'OpenStreetMap…",
+        "done": "Terrain analysé",
+        "failed": "Analyse du terrain indisponible"
       },
       "supply": {
-        "label": "Ravitaillement",
-        "description": "Points d'eau, commerces"
+        "label": "Points d'intérêt",
+        "description": "Points d'eau, commerces, sites culturels",
+        "running": "Recherche des points d'intérêt…",
+        "done": "Points d'intérêt collectés",
+        "failed": "Recherche des POI indisponible"
       },
       "accommodations": {
         "label": "Hébergements",
-        "description": "Campings, gîtes, hôtels"
+        "description": "Campings, gîtes, hôtels",
+        "running": "Identification des hébergements…",
+        "done": "Hébergements identifiés",
+        "failed": "Recherche d'hébergements indisponible"
       },
       "weather": {
-        "label": "Météo & Conditions",
-        "description": "Prévisions, vent, coucher de soleil"
+        "label": "Météo",
+        "description": "Prévisions, vent, conditions",
+        "running": "Récupération des prévisions météo…",
+        "done": "Prévisions récupérées",
+        "failed": "Météo indisponible"
       },
       "services": {
-        "label": "Services",
-        "description": "Magasins vélo, réparateurs"
+        "label": "Sécurité & services",
+        "description": "Magasins vélo, secours, gares, frontières",
+        "running": "Recensement des services le long du tracé…",
+        "done": "Services recensés",
+        "failed": "Services indisponibles"
+      },
+      "context": {
+        "label": "Événements locaux",
+        "description": "Calendrier, fêtes, jours fériés",
+        "running": "Recherche d'événements locaux…",
+        "done": "Événements locaux récupérés",
+        "failed": "Événements locaux indisponibles"
       },
       "ai": {
-        "label": "Analyse IA",
-        "description": "Synthèse narrative du voyage"
+        "label": "Synthèse IA",
+        "description": "Synthèse narrative du voyage",
+        "running": "Rédaction de la synthèse…",
+        "done": "Synthèse rédigée",
+        "failed": "Synthèse IA indisponible"
       }
     },
     "statusLabels": {

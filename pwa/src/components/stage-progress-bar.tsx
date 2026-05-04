@@ -77,10 +77,6 @@ export function StageProgressBar() {
       setActiveDayNumber(dayNumber);
       const stageIndex = stages.findIndex((s) => s.dayNumber === dayNumber);
       if (stageIndex >= 0) setSelectedStageIndex(stageIndex);
-      const target = document.getElementById(`timeline-day-${dayNumber}`);
-      if (target) {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
     },
     [stages, setActiveDayNumber, setSelectedStageIndex],
   );
