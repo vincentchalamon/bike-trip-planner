@@ -238,7 +238,7 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
             $opens = $spec['schema:opens'] ?? null;
             $closes = $spec['schema:closes'] ?? null;
 
-            if (null === $opens || null === $closes) {
+            if (!\is_string($opens) || !\is_string($closes)) {
                 continue;
             }
 

@@ -42,6 +42,8 @@ final class FitNormalizerTest extends TestCase
         $result = $normalizer->normalize($stage, 'fit');
 
         self::assertIsArray($result);
+        \assert(\is_array($result['points']) && \is_array($result['points'][0]));
+        \assert(\is_array($result['waypoints']) && \is_array($result['waypoints'][0]) && \is_array($result['waypoints'][1]));
         self::assertSame('Stage 1', $result['courseName']);
 
         // Points

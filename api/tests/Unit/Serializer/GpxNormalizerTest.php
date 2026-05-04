@@ -42,6 +42,8 @@ final class GpxNormalizerTest extends TestCase
         $result = $normalizer->normalize($stage, 'gpx');
 
         self::assertIsArray($result);
+        \assert(\is_array($result['points']) && \is_array($result['points'][0]));
+        \assert(\is_array($result['waypoints']) && \is_array($result['waypoints'][0]) && \is_array($result['waypoints'][1]));
         self::assertSame('Stage 1', $result['trackName']);
 
         // Points
@@ -76,7 +78,9 @@ final class GpxNormalizerTest extends TestCase
         $normalizer = new GpxNormalizer();
         $result = $normalizer->normalize($stage, 'gpx');
 
+        self::assertIsArray($result);
         self::assertSame([], $result['waypoints']);
+        \assert(\is_array($result['points']));
         self::assertCount(2, $result['points']);
     }
 
@@ -96,6 +100,7 @@ final class GpxNormalizerTest extends TestCase
         $normalizer = new GpxNormalizer();
         $result = $normalizer->normalize($stage, 'gpx');
 
+        self::assertIsArray($result);
         self::assertSame('Lille → Arras', $result['trackName']);
     }
 
