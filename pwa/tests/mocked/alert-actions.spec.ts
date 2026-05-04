@@ -21,8 +21,12 @@ test.describe("Alert actions", () => {
       tripCompleteEvent(),
     ]);
 
-    // Stage 1 has two alerts with actions
+    // Stage 1 has two alerts with actions: warning + nudge — both groups
+    // start collapsed, so we expand them first.
     const stage1 = mockedPage.getByTestId("stage-card-1");
+    await stage1.getByTestId("alert-group-toggle-warning").click();
+    await stage1.getByTestId("alert-group-toggle-nudge").click();
+
     await expect(stage1).toContainText("Steep gradient detected (12%)");
     await expect(stage1).toContainText("Minor road surface issue");
 
@@ -52,6 +56,9 @@ test.describe("Alert actions", () => {
 
     const stage1 = mockedPage.getByTestId("stage-card-1");
 
+    // Expand the nudge group containing "Minor road surface issue"
+    await stage1.getByTestId("alert-group-toggle-nudge").click();
+
     // Click the dismiss button ("Got it")
     await stage1.getByText("Got it").click();
 
@@ -76,7 +83,8 @@ test.describe("Alert actions", () => {
       tripCompleteEvent(),
     ]);
 
-    // Stage 2 has a critical alert with auto_fix action
+    // Stage 2 has a critical alert with auto_fix action — critical group is
+    // expanded by default, so no extra click is needed.
     const stage2 = mockedPage.getByTestId("stage-card-2");
     await expect(stage2).toContainText("E-bike range exceeded");
     await expect(stage2.getByText("Split stage")).toBeVisible();
@@ -114,7 +122,10 @@ test.describe("Alert actions", () => {
       tripCompleteEvent(),
     ]);
 
+    // Stage 3 has a warning with detour action — expand the warning group
     const stage3 = mockedPage.getByTestId("stage-card-3");
+    await stage3.getByTestId("alert-group-toggle-warning").click();
+
     await expect(stage3).toContainText("Difficult terrain ahead");
     await expect(stage3.getByText("Take detour")).toBeVisible();
     await expect(stage3.getByText("Take detour")).toBeDisabled();

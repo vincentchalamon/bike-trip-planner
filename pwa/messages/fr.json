@@ -246,8 +246,6 @@
   },
   "alertList": {
     "addToItinerary": "Ajouter à l'itinéraire",
-    "navigateToStation": "Aller à la gare",
-    "navigateToCrossing": "Aller au passage frontière",
     "free": "Entrée gratuite"
   },
   "poiPopover": {
@@ -276,9 +274,14 @@
     "userWaypoint": "Waypoints utilisateur"
   },
   "stageAlerts": {
-    "title": "{count, plural, one {# alerte} other {# alertes}}",
-    "showMore": "Voir {count} {count, plural, one {autre alerte} other {autres alertes}}",
-    "showLess": "Voir moins d'alertes"
+    "title": "{count, plural, one {# alerte} other {# alertes}}"
+  },
+  "alertGroup": {
+    "title": {
+      "critical": "Critique",
+      "warning": "Avertissement",
+      "nudge": "Info"
+    }
   },
   "onboarding": {
     "nextBtn": "Suivant",

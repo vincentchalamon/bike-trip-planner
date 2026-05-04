@@ -1,14 +1,10 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AlertList } from "@/components/alert-list";
-import { Button } from "@/components/ui/button";
-import { sortBySeverity } from "@/lib/alert-utils";
 import type { AlertData } from "@/lib/validation/schemas";
-
-const INITIAL_VISIBLE_COUNT = 3;
 
 interface StageAlertsProps {
   alerts: AlertData[];
@@ -16,24 +12,16 @@ interface StageAlertsProps {
 }
 
 /**
- * Collapsible, severity-sorted, paginated alert section for a stage.
- *
- * - Sorted by severity: critical → warning → nudge.
- * - First 3 alerts visible by default; a "Show N more" button reveals the rest.
- * - The entire section is collapsible via a header toggle (▼/▲).
- * - Starts expanded (no AI summary at this stage to justify collapsing).
+ * Section wrapper for the per-stage alerts. The section itself is collapsible
+ * (`stage-alerts-toggle`); inside, alerts are rendered by `AlertList`, which
+ * groups them by severity (Critical expanded by default; Warning + Nudge
+ * collapsed) — see #397.
  */
 export function StageAlerts({ alerts, onAddPoiWaypoint }: StageAlertsProps) {
   const t = useTranslations("stageAlerts");
   const [expanded, setExpanded] = useState(true);
-  const [showAll, setShowAll] = useState(false);
 
   const toggleExpanded = useCallback(() => setExpanded((prev) => !prev), []);
-  const toggleShowAll = useCallback(() => setShowAll((prev) => !prev), []);
-
-  const sorted = useMemo(() => sortBySeverity(alerts), [alerts]);
-  const visible = showAll ? sorted : sorted.slice(0, INITIAL_VISIBLE_COUNT);
-  const hiddenCount = sorted.length - INITIAL_VISIBLE_COUNT;
 
   if (alerts.length === 0) return null;
 
@@ -63,23 +51,10 @@ export function StageAlerts({ alerts, onAddPoiWaypoint }: StageAlertsProps) {
         )}
       </button>
 
-      {/* Collapsible body */}
+      {/* Collapsible body — alerts are grouped by severity inside */}
       {expanded && (
-        <div className="mt-2 space-y-1" data-testid="stage-alerts-body">
-          <AlertList alerts={visible} onAddPoiWaypoint={onAddPoiWaypoint} />
-
-          {/* "Show N more" / "Show less" pagination */}
-          {hiddenCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-1 h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-              onClick={toggleShowAll}
-              data-testid="stage-alerts-show-more"
-            >
-              {showAll ? t("showLess") : t("showMore", { count: hiddenCount })}
-            </Button>
-          )}
+        <div className="mt-2" data-testid="stage-alerts-body">
+          <AlertList alerts={alerts} onAddPoiWaypoint={onAddPoiWaypoint} />
         </div>
       )}
     </div>

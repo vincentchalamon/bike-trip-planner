@@ -22,6 +22,12 @@ test.describe("Cultural POI suggestions", () => {
       tripCompleteEvent(),
     ]);
 
+    // Cultural POI alerts are nudges — the nudge group is collapsed by default.
+    await mockedPage
+      .getByTestId("stage-card-1")
+      .getByTestId("alert-group-toggle-nudge")
+      .click();
+
     await expect(mockedPage.getByTestId("stage-card-1")).toContainText(
       "Château de Ventadour",
     );
@@ -39,6 +45,12 @@ test.describe("Cultural POI suggestions", () => {
       culturalPoiAlertsEvent(),
       tripCompleteEvent(),
     ]);
+
+    // Cultural POI alerts are nudges — expand the nudge group first.
+    await mockedPage
+      .getByTestId("stage-card-1")
+      .getByTestId("alert-group-toggle-nudge")
+      .click();
 
     const addButton = mockedPage
       .getByTestId("stage-card-1")
@@ -59,6 +71,12 @@ test.describe("Cultural POI suggestions", () => {
       culturalPoiAlertsEvent(),
       tripCompleteEvent(),
     ]);
+
+    // Cultural POI alerts are nudges — expand the nudge group first.
+    await mockedPage
+      .getByTestId("stage-card-1")
+      .getByTestId("alert-group-toggle-nudge")
+      .click();
 
     // Click the add-to-itinerary button
     const addButton = mockedPage
