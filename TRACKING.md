@@ -552,37 +552,36 @@ Assistant conversationnel via bulle flottante, LLaMA 3B pour interpréter les in
 
 ## Sprint 32 — Analytics d'usage & conformité RGPD + parcours compte
 
-Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes, profil trips, santé backend, valeur features, rétention/UX), avec prérequis RGPD (privacy policy, mentions légales, anonymisation user). Implémentation **native** (Doctrine + Messenger + PostgreSQL partitionné), **aucun outil tiers**. Voir issue [#370](https://github.com/vincentchalamon/bike-trip-planner/issues/370) (épic). **Sprint élargi** avec 3 issues compte/top bar/cookies (cf. issue #375 §13, §14, §15).
+Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes, profil trips, valeur features, rétention/UX) via **Plausible Analytics** (privacy-first, RGPD-compatible, sans cookie ni empreinte navigateur), avec prérequis RGPD (privacy policy, mentions légales, anonymisation user). **Décision arbitrage v3 #375** : abandon de l'implémentation native (UsageEvent partitionnée + endpoint `/events` + vue matérialisée) au profit de Plausible — simplification majeure du sprint. Voir issue [#370](https://github.com/vincentchalamon/bike-trip-planner/issues/370) (épic). **Sprint élargi** avec 3 issues compte/top bar/cookies (cf. issue #375 §13, §14, §15).
 
 | Ordre | ID                                                                      | Titre                                                                                                            | Effort | PRs | Dépend de |
 |-------|-------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|--------|-----|-----------|
-| 1     | TBD                                                                     | Page `/privacy` + mentions légales `/legal` (sommaire sticky, footer global)                                     | M      |     | sprint 25 |
-| 2     | TBD                                                                     | Endpoint anonymisation/suppression user (soft-delete + purge des events)                                         | M      |     | —         |
-| 3     | TBD                                                                     | Entité `UsageEvent` partitionnée mensuellement + migration + rate limiter                                        | M      |     | —         |
-| 4     | TBD                                                                     | Endpoint `POST /events` + `RecordUsageEventsMessage` + handler DBAL batch                                        | M      |     | #3 (TBD)  |
-| 5     | TBD                                                                     | Hook PWA `useUsageTracker()` + batch via `navigator.sendBeacon`                                                  | S      |     | #4 (TBD)  |
-| 6     | TBD                                                                     | Instrumentation sources & plateformes (section 1 de #370)                                                        | S      |     | #5 (TBD)  |
-| 7     | TBD                                                                     | Instrumentation profil trips, santé backend, valeur features, rétention/UX                                       | L      |     | #6 (TBD)  |
-| 8     | TBD                                                                     | Vue matérialisée `usage_daily_summary` + cron de refresh quotidien                                               | S      |     | #3 (TBD)  |
-| 9     | [#383](https://github.com/vincentchalamon/bike-trip-planner/issues/383) | Page `/account/settings` (Mon compte / Préférences / RGPD download / Zone de danger / Déconnexion)               | L      |     | TBD item 1 |
-| 10    | [#384](https://github.com/vincentchalamon/bike-trip-planner/issues/384) | Refonte top bar desktop (logo + tabs + undo/redo + Partager + ? aide unifiée + pills FR\|EN + thème + profil)    | L      |     | #383       |
-| 11    | [#385](https://github.com/vincentchalamon/bike-trip-planner/issues/385) | Bannière cookies bas d'écran + modale granularité (Tout accepter / refuser / Personnaliser) + dismiss persistant | M      |     | TBD item 1 |
+| 1     | TBD                                                                     | Page `/privacy` + mentions légales `/legal` (sommaire sticky, footer global, mention Plausible)                  | M      |     | sprint 25 |
+| 2     | TBD                                                                     | Endpoint anonymisation/suppression user (soft-delete trips + préférences ; events Plausible non liés à l'user)   | M      |     | —         |
+| 3     | TBD                                                                     | ADR-029 mise à jour : décision Plausible (cloud vs auto-hébergé, justification RGPD, custom events)              | S      |     | —         |
+| 4     | TBD                                                                     | Setup Plausible (compte cloud OU déploiement auto-hébergé Docker) + configuration domaine + DNS                  | M      |     | #3 (TBD)  |
+| 5     | TBD                                                                     | Intégration script Plausible dans `<head>` Next.js (data-domain, chargement conditionnel après consentement)     | S      |     | #4 (TBD)  |
+| 6     | TBD                                                                     | Custom events Plausible — sources & plateformes (`import_komoot`, `import_strava`, `import_rwgps`, `import_gpx`) | S      |     | #5 (TBD)  |
+| 7     | TBD                                                                     | Custom events Plausible — valeur features & rétention/UX (`trip_created`, `trip_shared`, `accommodation_selected`, `alert_action_clicked`, `ai_chat_opened`…) | M      |     | #6 (TBD)  |
+| 8     | [#383](https://github.com/vincentchalamon/bike-trip-planner/issues/383) | Page `/account/settings` (Mon compte / Préférences / RGPD download / Zone de danger / Déconnexion)               | L      |     | TBD item 1 |
+| 9     | [#384](https://github.com/vincentchalamon/bike-trip-planner/issues/384) | Refonte top bar desktop (logo + tabs + undo/redo + Partager + ? aide unifiée + pills FR\|EN + thème + profil)    | L      |     | #383       |
+| 10    | [#385](https://github.com/vincentchalamon/bike-trip-planner/issues/385) | Bannière cookies bas d'écran + modale granularité (Tout accepter / refuser / Personnaliser) — gating Plausible    | M      |     | TBD item 1, #5 (TBD) |
 
 ### Recette Sprint 32
 
 - **Checklist manuelle :**
-  - [ ] Page `/privacy` accessible et complète (base légale, conservation 13 mois, droits utilisateurs)
+  - [ ] Page `/privacy` accessible et complète (base légale, conservation, droits utilisateurs, mention Plausible)
   - [ ] Mentions légales `/legal` accessibles
   - [ ] Page `/account/settings` accessible via le bouton profil de la top bar
   - [ ] Bannière cookies bas d'écran fonctionnelle (Tout accepter / refuser / Personnaliser)
-  - [ ] Suppression de compte → events associés purgés (vérifier via requête DB)
-  - [ ] Table `usage_event` partitionnée par mois (vérifier `\d+ usage_event` en psql)
-  - [ ] Script cron de purge `DROP PARTITION` à 13 mois fonctionnel
-  - [ ] Endpoint `POST /events` : latence < 5 ms, réponse `202` immédiate (pas d'INSERT synchrone)
-  - [ ] Batch client `sendBeacon` : 1 requête par session (vérifier DevTools)
-  - [ ] Saturation Messenger → drop silencieux, aucune requête métier impactée
-  - [ ] Vue matérialisée `usage_daily_summary` rafraîchie par cron quotidien
-  - [ ] Aucun log d'IP, User-Agent brut ou coordonnées GPS précises dans `usage_event` (grep payload)
+  - [ ] **« Tout refuser »** → script Plausible **non chargé** (vérifier DevTools `Network` : aucune requête vers `plausible.io` / domaine auto-hébergé)
+  - [ ] **« Tout accepter »** → script Plausible chargé, page view trackée dans le dashboard Plausible
+  - [ ] Custom events visibles dans le dashboard Plausible (sources d'import, trip_created, trip_shared, etc.)
+  - [ ] Aucun cookie posé par Plausible (vérifier `document.cookie`)
+  - [ ] Aucune IP, User-Agent brut ou coordonnées GPS dans les events Plausible (Plausible anonymise nativement)
+  - [ ] Suppression de compte → trips et préférences purgés ; events Plausible historiques restent (anonymes par construction)
+  - [ ] Dismiss persistant de la bannière cookies (stocké localement, pas re-affiché à la session suivante)
+  - [ ] Documentation Plausible dans `/privacy` mentionne : cloud/auto-hébergé, finalités, rétention, droits
 
 ---
 
@@ -725,8 +724,8 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 31
   - [ ] `make i18n-check` : 0 clé manquante
   - [ ] Headers sécurité présents : CSP, HSTS, X-Content-Type-Options, X-Frame-Options
   - [ ] Aucune stack trace exposée en `APP_ENV=prod`
-  - [ ] Audit privacy : page `/privacy` complète, durée de conservation 13 mois respectée, purge `DROP PARTITION` vérifiée
-  - [ ] Audit anonymisation : suppression user → purge des events associés, vérification via requête DB
+  - [ ] Audit privacy : page `/privacy` complète, mention Plausible (cloud / auto-hébergé), gating consentement effectif
+  - [ ] Audit anonymisation : suppression user → trips et préférences purgés (vérifier via requête DB) ; events Plausible anonymes par construction (pas de lien à l'user)
   - [ ] Tous les bugs trouvés reportés en issues GitHub avec labels (`bug`, `ux`, `perf`, `security`, `a11y`)
 
 ---
@@ -837,8 +836,8 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 29        | LLaMA 8B : analyse 2 passes              | 3       | ~4           |
 | 30        | Frontend IA : résumés hybrides           | 2       | ~3           |
 | 31        | Bulle IA (LLaMA 3B) dialogue             | 3       | ~4           |
-| 32        | Analytics d'usage & RGPD + parcours compte | 11    | ~11          |
+| 32        | Analytics Plausible + RGPD + parcours compte | 10    | ~10          |
 | 33        | Recette complète & Audit                 | 36      | ~12          |
 | 34        | Garmin Connect                           | 1       | 3            |
 | 35        | Déploiement (incl. Ollama prod)          | 8       | ~8           |
-| **Total** |                                          | **185** | **~195**     |
+| **Total** |                                          | **184** | **~194**     |

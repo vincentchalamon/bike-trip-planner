@@ -64,6 +64,9 @@ test.describe("ProcessingProgress — display", () => {
     await expect(
       mockedPage.getByTestId("processing-category-services"),
     ).toBeVisible();
+    await expect(
+      mockedPage.getByTestId("processing-category-context"),
+    ).toBeVisible();
   });
 
   test("AI category is hidden when Ollama is disabled (no ai_* events)", async ({
@@ -138,6 +141,112 @@ test.describe("ProcessingProgress — category progression", () => {
     await expect(
       mockedPage.getByTestId("processing-category-accommodations"),
     ).toHaveAttribute("data-status", "done");
+  });
+
+  test("marks context as done once calendar and events both complete", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await enterAnalysingState(submitUrl, injectEvent, mockedPage);
+    await injectEvent(
+      computationStepCompletedEvent("calendar", "context", 1, 16),
+    );
+    await injectEvent(
+      computationStepCompletedEvent("events", "context", 2, 16),
+    );
+    await expect(
+      mockedPage.getByTestId("processing-category-context"),
+    ).toHaveAttribute("data-status", "done");
+  });
+});
+
+test.describe("ProcessingProgress — ActDescription sub-descriptions", () => {
+  test("shows static description while act is pending", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await enterAnalysingState(submitUrl, injectEvent, mockedPage);
+    // No step events for terrain_security yet — the act stays pending and
+    // displays its default static description from
+    // `processingProgress.categories.terrain_security.description`.
+    await expect(
+      mockedPage.getByTestId("processing-category-terrain_security"),
+    ).toHaveAttribute("data-status", "pending");
+    await expect(
+      mockedPage.getByTestId(
+        "processing-category-terrain_security-description",
+      ),
+    ).toHaveText("Surface, trafic, pentes, continuité");
+  });
+
+  test("shows running text while act is in_progress", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await enterAnalysingState(submitUrl, injectEvent, mockedPage);
+    // Reporting `osm_scan` as the current step (without completing `terrain`)
+    // flips terrain_security to in_progress and surfaces the `running` copy.
+    await injectEvent(
+      computationStepCompletedEvent("osm_scan", "terrain_security", 1, 16),
+    );
+    await expect(
+      mockedPage.getByTestId("processing-category-terrain_security"),
+    ).toHaveAttribute("data-status", "in_progress");
+    await expect(
+      mockedPage.getByTestId(
+        "processing-category-terrain_security-description",
+      ),
+    ).toHaveText("Interrogation d'OpenStreetMap…");
+  });
+
+  test("shows done text once all act steps complete", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await enterAnalysingState(submitUrl, injectEvent, mockedPage);
+    // Both backing steps completed → terrain_security is done.
+    await injectEvent(
+      computationStepCompletedEvent("osm_scan", "terrain_security", 1, 16),
+    );
+    await injectEvent(
+      computationStepCompletedEvent("terrain", "terrain_security", 2, 16),
+    );
+    await expect(
+      mockedPage.getByTestId("processing-category-terrain_security"),
+    ).toHaveAttribute("data-status", "done");
+    await expect(
+      mockedPage.getByTestId(
+        "processing-category-terrain_security-description",
+      ),
+    ).toHaveText("Terrain analysé");
+  });
+
+  test("shows failed text on computation_error", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await enterAnalysingState(submitUrl, injectEvent, mockedPage);
+    await injectEvent({
+      type: "computation_error",
+      data: {
+        computation: "osm_scan",
+        message: "Overpass timed out",
+        retryable: true,
+      },
+    });
+    await expect(
+      mockedPage.getByTestId("processing-category-terrain_security"),
+    ).toHaveAttribute("data-status", "failed");
+    await expect(
+      mockedPage.getByTestId(
+        "processing-category-terrain_security-description",
+      ),
+    ).toHaveText("Analyse du terrain indisponible");
   });
 });
 

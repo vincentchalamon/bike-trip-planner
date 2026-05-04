@@ -366,28 +366,53 @@
     "failureMessage": "Failed: {message}",
     "categories": {
       "terrain_security": {
-        "label": "Terrain & Safety",
-        "description": "Surface, traffic, slopes, continuity"
+        "label": "Terrain analysis",
+        "description": "Surface, traffic, slopes, continuity",
+        "running": "Querying OpenStreetMap…",
+        "done": "Terrain analysed",
+        "failed": "Terrain analysis unavailable"
       },
       "supply": {
-        "label": "Supply",
-        "description": "Water points, shops"
+        "label": "Points of interest",
+        "description": "Water points, shops, cultural sites",
+        "running": "Looking up points of interest…",
+        "done": "Points of interest collected",
+        "failed": "POI lookup unavailable"
       },
       "accommodations": {
         "label": "Accommodations",
-        "description": "Campings, lodges, hotels"
+        "description": "Campings, lodges, hotels",
+        "running": "Identifying accommodations…",
+        "done": "Accommodations identified",
+        "failed": "Accommodation lookup unavailable"
       },
       "weather": {
-        "label": "Weather & Conditions",
-        "description": "Forecasts, wind, sunset"
+        "label": "Weather",
+        "description": "Forecasts, wind, conditions",
+        "running": "Fetching weather forecasts…",
+        "done": "Forecasts ready",
+        "failed": "Weather unavailable"
       },
       "services": {
-        "label": "Services",
-        "description": "Bike shops, repair"
+        "label": "Safety & services",
+        "description": "Bike shops, rescue, stations, borders",
+        "running": "Mapping services along the route…",
+        "done": "Services mapped",
+        "failed": "Services unavailable"
+      },
+      "context": {
+        "label": "Local events",
+        "description": "Calendar, festivals, holidays",
+        "running": "Looking up local events…",
+        "done": "Local events ready",
+        "failed": "Local events unavailable"
       },
       "ai": {
-        "label": "AI Analysis",
-        "description": "Narrative trip summary"
+        "label": "AI summary",
+        "description": "Narrative trip summary",
+        "running": "Drafting the summary…",
+        "done": "Summary drafted",
+        "failed": "AI summary unavailable"
       }
     },
     "statusLabels": {
