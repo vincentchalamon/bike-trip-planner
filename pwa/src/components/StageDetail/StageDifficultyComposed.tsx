@@ -35,14 +35,14 @@ const ELEVATION_SCORE_CAP_M = Math.round(
 const TECHNICAL_SCORE_CAP_M_PER_KM = 60;
 
 /** Coarse 0-100 scoring helpers — kept in lockstep with `getDifficulty`. */
-function scorePhysical(distanceKm: number): number {
+export function scorePhysical(distanceKm: number): number {
   // 0 km → 0, 60 km → 33, 100 km → 67, 140+ km → 100
   if (distanceKm <= 0) return 0;
   if (distanceKm >= PHYSICAL_SCORE_CAP_KM) return 100;
   return Math.round((distanceKm / PHYSICAL_SCORE_CAP_KM) * 100);
 }
 
-function scoreElevation(elevationM: number): number {
+export function scoreElevation(elevationM: number): number {
   // 0 m → 0, 800 m → 33, 1500 m → 67, 2500+ m → 100
   if (elevationM <= 0) return 0;
   if (elevationM >= ELEVATION_SCORE_CAP_M) return 100;
@@ -53,14 +53,14 @@ function scoreElevation(elevationM: number): number {
  * Technical score based on the elevation/distance ratio (gradient proxy).
  * 30 m/km is roughly hilly, 60+ m/km is mountainous.
  */
-function scoreTechnical(distanceKm: number, elevationM: number): number {
+export function scoreTechnical(distanceKm: number, elevationM: number): number {
   if (distanceKm <= 0) return 0;
   const ratio = elevationM / distanceKm;
   if (ratio >= TECHNICAL_SCORE_CAP_M_PER_KM) return 100;
   return Math.round((ratio / TECHNICAL_SCORE_CAP_M_PER_KM) * 100);
 }
 
-function scoreToDifficulty(score: number): Difficulty {
+export function scoreToDifficulty(score: number): Difficulty {
   if (score < 34) return "easy";
   if (score < 67) return "medium";
   return "hard";
