@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
@@ -45,6 +45,12 @@ interface TripPreviewProps {
   onTitleChange: (title: string) => void;
   /** When true, the trip header shows the feminist-name suggestion banner. */
   showTitleSuggestion?: boolean;
+  /**
+   * Optional slot rendered between the per-stage list and the action bar.
+   * Used by the `/trips/new` wizard (issue #393) to inject the single-shot
+   * AI refinement card on Step 2.
+   */
+  aiRefinementSlot?: ReactNode;
 }
 
 /**
@@ -82,6 +88,7 @@ export function TripPreview({
   onChangeRoute,
   onTitleChange,
   showTitleSuggestion,
+  aiRefinementSlot,
 }: TripPreviewProps) {
   const t = useTranslations("tripPreview");
   const locale = useLocale();
@@ -228,6 +235,11 @@ export function TripPreview({
           ))}
         </ul>
       </section>
+
+      {/* Optional refinement slot — wizard-only (issue #393). Lets the user
+          ask the IA assistant for a structural change ("add a stop at X")
+          before committing to the full Phase 2 analysis. */}
+      {aiRefinementSlot}
 
       {/* Action bar — order matches the issue body:
           1. Launch analysis (primary), 2. Modify parameters, 3. Change route. */}

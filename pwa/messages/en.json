@@ -518,6 +518,20 @@
     "analysisLaunched": "Analysis launched",
     "analysisLaunchFailed": "Failed to launch analysis. Please retry."
   },
+  "aiRefinement": {
+    "title": "Refine with the AI assistant",
+    "helper": "Describe the change you want in one sentence — for example \"Add a stop in Ajaccio\" or \"Avoid main roads on day 3\".",
+    "textareaLabel": "Suggestion to modify the route or the stages",
+    "placeholder": "E.g. Add a stop in Ajaccio then head north to Calvi along the west coast…",
+    "charactersRemaining": "{remaining, plural, =0 {0 characters left} one {# character left} other {# characters left}}",
+    "clear": "Clear",
+    "clearAria": "Clear the suggestion text",
+    "apply": "Apply",
+    "applyAria": "Apply the suggestion and regenerate the stages",
+    "applying": "Applying…",
+    "unavailable": "AI assistant coming soon.",
+    "applyFailed": "Failed to apply the suggestion. Please retry."
+  },
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",
