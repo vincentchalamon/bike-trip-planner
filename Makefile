@@ -96,7 +96,7 @@ test-e2e: ## Run Playwright End-to-End tests
 		-w /app -v $(CURDIR)/pwa:/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
-		mcr.microsoft.com/playwright:v1.58.2-noble \
+		mcr.microsoft.com/playwright:v1.59.1-noble \
 		/bin/sh -c 'npm install; npx playwright test $(ARGS)'
 
 playwright: test-e2e ## Alias for "test-e2e"
@@ -106,7 +106,7 @@ test-recette: ## Run Playwright BDD recette scenarios (Gherkin)
 		-w /app -v $(CURDIR)/pwa:/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
-		mcr.microsoft.com/playwright:v1.58.2-noble \
+		mcr.microsoft.com/playwright:v1.59.1-noble \
 		/bin/sh -c 'npm ci; npx bddgen --config playwright.bdd.config.ts; npx playwright test --config playwright.bdd.config.ts $(ARGS)'
 
 coverage: ## Run PHPUnit with coverage (HTML report)
