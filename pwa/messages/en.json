@@ -606,60 +606,81 @@
       "badge": "Early Access — Limited spots",
       "title": "Your co-pilot for every kilometre",
       "subtitle": "Plan your cycling trip with complete peace of mind. Route analysis, terrain alerts, weather, accommodation and resupply — all in one place.",
-      "ctaPrimary": "Create an itinerary",
-      "ctaDemo": "Watch a demo"
+      "ctaPrimary": "Create a trip",
+      "ctaDemo": "See how it works"
     },
     "howItWorks": {
       "title": "How it works",
-      "step1Title": "Import your route",
-      "step1Description": "Paste a Komoot, Strava, RideWithGPS link or upload a GPX file.",
-      "step2Title": "Preview your trip",
-      "step2Description": "Map and timeline display your automatically computed stages.",
-      "step3Title": "We analyse everything",
-      "step3Description": "Our engine detects terrain alerts, weather, accommodation and resupply points.",
-      "step4Title": "Set off with confidence",
-      "step4Description": "Download your optimised GPX/FIT and depart with peace of mind."
+      "subtitle": "Four steps to turn a route into a ride-ready adventure.",
+      "step1Title": "Import",
+      "step1Description": "Paste a Komoot, Strava or RideWithGPS link, upload a GPX, or have AI generate a route for you.",
+      "step2Title": "Analyse",
+      "step2Description": "Our engine splits the route into daily stages and surfaces alerts, weather and key points.",
+      "step3Title": "Plan",
+      "step3Description": "Refine stages, add accommodation, tweak pacing — everything is editable.",
+      "step4Title": "Go",
+      "step4Description": "Download an optimised GPX/FIT and ride with confidence, even offline."
     },
     "features": {
-      "title": "Features",
+      "title": "Everything you need, in a single app",
+      "subtitle": "Nine modules built for long-distance cyclists — pick the ones you need.",
       "terrain": {
-        "title": "Terrain & Safety",
-        "description": "Alerts for border crossings, train stations, nearby emergency services."
-      },
-      "supply": {
-        "title": "Resupply",
-        "description": "Water points, grocery shops, restaurants detected along your route."
-      },
-      "ai": {
-        "title": "AI Assistant",
-        "description": "Generate or optimise your itinerary with artificial intelligence. Import from a conversation, route variant suggestions."
-      },
-      "accommodation": {
-        "title": "Accommodation",
-        "description": "Campsites, gîtes, hotels suggested at each stage with estimated budget."
+        "title": "Terrain & elevation",
+        "description": "Accurate elevation profile, climb detection, surface and difficult-section flagging along your route."
       },
       "weather": {
         "title": "Weather",
-        "description": "7-day weather forecasts for each stage of your trip."
+        "description": "7-day forecasts per stage, with wind and precipitation alerts."
+      },
+      "supply": {
+        "title": "Resupply",
+        "description": "Water points, grocery shops and restaurants detected close to your route."
+      },
+      "ai": {
+        "title": "AI assistant",
+        "description": "Generate or optimise your itinerary with AI. Import from a ChatGPT conversation, get route variants, and contextual analysis per stage."
+      },
+      "accommodation": {
+        "title": "Accommodation",
+        "description": "Campsites, gîtes and hotels suggested at each stage end, with estimated budget and booking links."
       },
       "services": {
-        "title": "Services",
-        "description": "Pharmacies, doctors, bike repair shops flagged in case of emergency."
+        "title": "Services & health",
+        "description": "Pharmacies, doctors and bike repair shops flagged along your route."
+      },
+      "safety": {
+        "title": "Safety",
+        "description": "Border crossings, fallback train stations and emergency services nearby."
+      },
+      "poi": {
+        "title": "Points of interest",
+        "description": "Heritage, festivals and notable natural sites along your route."
+      },
+      "export": {
+        "title": "GPX / FIT export",
+        "description": "Download every stage as GPX or FIT for Garmin, Wahoo and any cycle computer."
       }
     },
     "sources": {
-      "title": "Supported sources"
+      "title": "Supported sources",
+      "subtitle": "Import your route from your favourite platform — or have AI generate one.",
+      "komootType": "Tour or collection",
+      "stravaType": "Public route",
+      "rwgpsType": "Public route",
+      "gpxType": ".gpx file",
+      "aiType": "Assisted generation"
     },
     "availability": {
       "title": "Available everywhere",
-      "responsive": "Responsive site",
-      "responsiveDescription": "Optimised for all screen sizes, from smartphone to widescreen.",
-      "pwa": "Installable PWA",
+      "subtitle": "On the web, in your pocket, and even offline.",
+      "webTitle": "Web",
+      "webDescription": "Optimised for every screen, from smartphone to desktop.",
+      "pwaTitle": "PWA",
       "pwaDescription": "Install the app on your device like a native application.",
-      "android": "Android app",
+      "androidTitle": "Android",
       "androidDescription": "Native Android version for an optimal mobile experience.",
-      "offline": "Offline mode",
-      "offlineDescription": "Browse your trips without a connection during your journey."
+      "offlineTitle": "Offline",
+      "offlineDescription": "Browse your trips without a connection while on the road."
     },
     "screenshots": {
       "title": "App preview",
@@ -698,9 +719,10 @@
     "footer": {
       "tagline": "The open-source co-pilot for your cycling adventures.",
       "links": "Links",
-      "createTrip": "Create an itinerary",
       "login": "Sign in",
+      "faq": "FAQ",
       "legal": "Legal notice",
+      "privacy": "Privacy",
       "github": "GitHub (open-source)",
       "copyright": "© {year} Bike Trip Planner. Open-source project."
     }
