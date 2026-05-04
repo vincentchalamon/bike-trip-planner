@@ -191,9 +191,9 @@ function TripMiniMap({ path }: { path: string }) {
 
 function PolylineEndpoints({ path }: { path: string }) {
   const points = useMemo(() => parsePathPoints(path), [path]);
-  if (points.length < 2) return null;
   const first = points[0];
   const last = points[points.length - 1];
+  if (!first || !last) return null;
   return (
     <>
       <circle cx={first.x} cy={first.y} r="2.5" className="fill-emerald-500" />
