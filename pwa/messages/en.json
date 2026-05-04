@@ -381,7 +381,22 @@
     "close": "Back to home",
     "status_draft": "Draft",
     "status_analyzing": "Analyzing...",
-    "status_analyzed": "Analyzed"
+    "status_analyzed": "Analyzed",
+    "totalDistance": "Total distance",
+    "stageCount": "Stage count",
+    "openTrip": "Open trip \"{title}\"",
+    "emptyState": {
+      "createFirstTitle": "Create your first trip",
+      "createFirstDescription": "Import a GPX track, a Komoot, Strava or RideWithGPS route — and let yourself be guided onto the road.",
+      "newTrip": "Create a trip",
+      "noResultsTitle": "No trip matches your search",
+      "activeFilters": "Active filters:",
+      "filterTitle": "title \"{value}\"",
+      "filterDates": "dates {value}",
+      "filterFrom": "from {value}",
+      "filterUntil": "until {value}",
+      "resetFilters": "Reset filters"
+    }
   },
   "noDates": {
     "banner": "Dates not set — Displaying from today",

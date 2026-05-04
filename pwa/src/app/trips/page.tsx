@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Trash2, ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
+import dayjs from "dayjs";
+import "dayjs/locale/fr";
+import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +18,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api/client";
-import { formatDistanceKm } from "@/lib/formatters";
 import { API_URL } from "@/lib/constants";
-import { TripStatusBadge } from "@/components/trip-status-badge";
+import { TripCard } from "@/components/trip-card";
+import { TripsEmptyState } from "@/components/trips-empty-state";
 import type { components } from "@/lib/api/schema";
 
 type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
@@ -27,11 +28,12 @@ type TripCollection = components["schemas"]["HydraCollectionBaseSchema"] & {
   member: TripListItem[];
 };
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 12;
 
 export default function TripsPage() {
   const t = useTranslations("tripList");
-  const router = useRouter();
+  const tFilters = useTranslations("tripList.emptyState");
+  const locale = useLocale();
 
   const [trips, setTrips] = useState<TripListItem[]>([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -54,6 +56,18 @@ export default function TripsPage() {
     }, 350);
     return () => clearTimeout(timer);
   }, [titleFilter]);
+
+  const hasActiveFilters = Boolean(
+    debouncedTitle || startDateFilter || endDateFilter,
+  );
+
+  const resetFilters = useCallback(() => {
+    setTitleFilter("");
+    setDebouncedTitle("");
+    setStartDateFilter("");
+    setEndDateFilter("");
+    setPage(1);
+  }, []);
 
   const fetchTrips = useCallback(async () => {
     setIsLoading(true);
@@ -117,11 +131,40 @@ export default function TripsPage() {
 
   const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
 
+  // Human-readable summary of active filters (used in no-results empty state).
+  const activeFiltersLabel = useMemo(() => {
+    if (!hasActiveFilters) return undefined;
+    const fragments: string[] = [];
+    if (debouncedTitle) {
+      fragments.push(tFilters("filterTitle", { value: debouncedTitle }));
+    }
+    if (startDateFilter || endDateFilter) {
+      const fmt = (d: string) => dayjs(d).locale(locale).format("D MMM YYYY");
+      const range =
+        startDateFilter && endDateFilter
+          ? `${fmt(startDateFilter)} — ${fmt(endDateFilter)}`
+          : startDateFilter
+            ? tFilters("filterFrom", { value: fmt(startDateFilter) })
+            : tFilters("filterUntil", { value: fmt(endDateFilter) });
+      fragments.push(tFilters("filterDates", { value: range }));
+    }
+    return fragments.join(" · ");
+  }, [
+    hasActiveFilters,
+    debouncedTitle,
+    startDateFilter,
+    endDateFilter,
+    locale,
+    tFilters,
+  ]);
+
   return (
     <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <h1 className="font-serif text-3xl md:text-4xl font-semibold tracking-tight">
+          {t("title")}
+        </h1>
         <div className="flex items-center gap-2">
           <Button
             asChild
@@ -185,17 +228,11 @@ export default function TripsPage() {
             aria-label={t("filterUntil")}
           />
         </div>
-        {(titleFilter || startDateFilter || endDateFilter) && (
+        {hasActiveFilters && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              setTitleFilter("");
-              setDebouncedTitle("");
-              setStartDateFilter("");
-              setEndDateFilter("");
-              setPage(1);
-            }}
+            onClick={resetFilters}
             data-testid="clear-filters-button"
           >
             <X className="h-4 w-4 mr-1" />
@@ -226,77 +263,29 @@ export default function TripsPage() {
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty states (mutually exclusive: filters active vs no trips at all) */}
       {!isLoading && !loadError && trips.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground">
-          <p>{t("noTrips")}</p>
-        </div>
+        <TripsEmptyState
+          variant={hasActiveFilters ? "no-results" : "empty"}
+          activeFiltersLabel={activeFiltersLabel}
+          onResetFilters={hasActiveFilters ? resetFilters : undefined}
+        />
       )}
 
-      {/* Trip list */}
+      {/* Trip grid */}
       {!isLoading && !loadError && trips.length > 0 && (
         <>
-          <p className="text-sm text-muted-foreground mb-3" aria-live="polite">
+          <p className="text-sm text-muted-foreground mb-4" aria-live="polite">
             {t("totalItems", { count: totalItems })}
           </p>
-          <ul className="space-y-3" role="list">
+          <ul
+            className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6"
+            role="list"
+            data-testid="trips-grid"
+          >
             {trips.map((trip) => (
               <li key={trip.id}>
-                <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-4 shadow-sm hover:bg-accent/50 transition-colors">
-                  {/* Clickable trip info */}
-                  <button
-                    type="button"
-                    className="flex-1 text-left min-w-0 cursor-pointer"
-                    onClick={() => router.push(`/trips/${trip.id ?? ""}`)}
-                    data-testid={`trip-item-${trip.id ?? ""}`}
-                  >
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span className="font-semibold truncate">
-                        {trip.title ?? t("untitled")}
-                      </span>
-                      <TripStatusBadge status={trip.status} />
-                      {(trip.stageCount ?? 0) > 0 && (
-                        <span className="text-sm text-muted-foreground">
-                          {t("stages", { count: trip.stageCount ?? 0 })}
-                        </span>
-                      )}
-                      {(trip.totalDistance ?? 0) > 0 && (
-                        <span className="text-sm text-muted-foreground">
-                          {formatDistanceKm(trip.totalDistance ?? 0)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-1 text-sm text-muted-foreground">
-                      {trip.startDate || trip.endDate ? (
-                        <span>
-                          {trip.startDate
-                            ? new Date(trip.startDate).toLocaleDateString()
-                            : "?"}
-                          {" — "}
-                          {trip.endDate
-                            ? new Date(trip.endDate).toLocaleDateString()
-                            : "?"}
-                        </span>
-                      ) : (
-                        <span>{t("noDates")}</span>
-                      )}
-                    </div>
-                  </button>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setDeleteTarget(trip)}
-                      title={t("deleteTrip")}
-                      aria-label={t("deleteTrip")}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                <TripCard trip={trip} onDelete={setDeleteTarget} />
               </li>
             ))}
           </ul>

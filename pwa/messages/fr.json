@@ -381,7 +381,22 @@
     "close": "Retour à l'accueil",
     "status_draft": "Brouillon",
     "status_analyzing": "En cours d'analyse",
-    "status_analyzed": "Analysé"
+    "status_analyzed": "Analysé",
+    "totalDistance": "Distance totale",
+    "stageCount": "Nombre d'étapes",
+    "openTrip": "Ouvrir le voyage « {title} »",
+    "emptyState": {
+      "createFirstTitle": "Crée ton premier voyage",
+      "createFirstDescription": "Importe une trace GPX, un itinéraire Komoot, Strava ou RideWithGPS — et laisse-toi guider sur les routes.",
+      "newTrip": "Créer un voyage",
+      "noResultsTitle": "Aucun voyage ne correspond à votre recherche",
+      "activeFilters": "Filtres actifs :",
+      "filterTitle": "titre « {value} »",
+      "filterDates": "dates {value}",
+      "filterFrom": "à partir du {value}",
+      "filterUntil": "jusqu'au {value}",
+      "resetFilters": "Réinitialiser les filtres"
+    }
   },
   "noDates": {
     "banner": "Dates non renseignées — Affichage depuis aujourd'hui",
