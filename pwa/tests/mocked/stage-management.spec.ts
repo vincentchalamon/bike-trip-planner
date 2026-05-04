@@ -1,4 +1,8 @@
-import { test, expect } from "../fixtures/base.fixture";
+import {
+  test,
+  expect,
+  scrollLocatorIntoCenter,
+} from "../fixtures/base.fixture";
 import {
   routeParsedEvent,
   stagesComputedEvent,
@@ -86,10 +90,13 @@ test.describe("Stage management", () => {
   }) => {
     await createFullTrip();
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    // Click pencil (edit distance button)
-    await stageCard
-      .getByRole("button", { name: "Modifier la distance" })
-      .click();
+    // Center pencil button in viewport so the sticky `fixed top-0 z-20`
+    // header doesn't intercept the click.
+    const pencilBtn = stageCard.getByRole("button", {
+      name: "Modifier la distance",
+    });
+    await scrollLocatorIntoCenter(pencilBtn);
+    await pencilBtn.click();
     // Distance input should appear
     const distanceInput = stageCard.getByRole("spinbutton", {
       name: "Distance (km)",

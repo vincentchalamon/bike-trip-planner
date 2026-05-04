@@ -1,4 +1,8 @@
-import { test, expect } from "../fixtures/base.fixture";
+import {
+  test,
+  expect,
+  scrollLocatorIntoCenter,
+} from "../fixtures/base.fixture";
 import {
   routeParsedEvent,
   stagesComputedEvent,
@@ -36,9 +40,14 @@ test.describe("Inline recomputation — skeleton", () => {
 
     // Trigger distance change
     const stageCard = mockedPage.getByTestId("stage-card-1");
-    await stageCard
-      .getByRole("button", { name: "Modifier la distance" })
-      .click();
+    // Center pencil button in viewport so the sticky `fixed top-0 z-20`
+    // header doesn't intercept the click (default scrollIntoViewIfNeeded
+    // aligns to the nearest edge, leaving the button under the header).
+    const pencilBtn = stageCard.getByRole("button", {
+      name: "Modifier la distance",
+    });
+    await scrollLocatorIntoCenter(pencilBtn);
+    await pencilBtn.click();
     const input = stageCard.getByRole("spinbutton", { name: "Distance (km)" });
     await input.fill("80");
     await input.press("Enter");

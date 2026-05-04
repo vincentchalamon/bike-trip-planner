@@ -214,7 +214,35 @@
     "comfortIndex": "Comfort",
     "relativeWind_headwind": "Headwind",
     "relativeWind_tailwind": "Tailwind",
-    "relativeWind_crosswind": "Crosswind"
+    "relativeWind_crosswind": "Crosswind",
+    "cardAriaLabel": "Stage weather",
+    "sunriseShort": "sunrise",
+    "sunsetShort": "sunset",
+    "sunriseSunsetTooltip": "Sunrise and sunset times at stage end point (UTC)"
+  },
+  "stageStats": {
+    "distance": "Distance",
+    "elevation": "Elevation",
+    "duration": "Duration",
+    "durationUnavailable": "—",
+    "budget": "Budget",
+    "budgetHint": "{meals, plural, one {# meal} other {# meals}} + lodging"
+  },
+  "stageAiSummary": {
+    "ariaLabel": "AI-generated stage summary",
+    "label": "AI summary",
+    "showMore": "Read more",
+    "showLess": "Show less"
+  },
+  "difficultyComposed": {
+    "ariaLabel": "Stage difficulty",
+    "title": "Difficulty",
+    "physical": "Physical",
+    "technical": "Technical",
+    "elevation": "Elevation",
+    "physicalDetail": "{distance} km covered",
+    "technicalDetail": "{ratio} m of climbing per km — average slope proxy",
+    "elevationDetail": "{elevation} m of total ascent"
   },
   "textExport": {
     "button": "Export",

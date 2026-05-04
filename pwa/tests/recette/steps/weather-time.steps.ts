@@ -261,7 +261,8 @@ Then(
   async ({ mockedPage }) => {
     for (let i = 1; i <= 3; i++) {
       const card = mockedPage.getByTestId(`stage-card-${i}`);
-      await expect(card).toContainText(/Arrivée ~\d+h\d{2}/, {
+      // New layout: departure → arrival shown as "HHhMM → HHhMM" hint under the duration cell
+      await expect(card).toContainText(/→ \d+h\d{2}/, {
         timeout: 10000,
       });
     }
@@ -367,7 +368,8 @@ Then(
   async ({ mockedPage }) => {
     for (let i = 1; i <= 3; i++) {
       const card = mockedPage.getByTestId(`stage-card-${i}`);
-      await expect(card).toContainText(/~\d+h\d{2}/, { timeout: 10000 });
+      // New layout: departure → arrival shown as "HHhMM → HHhMM" hint under the duration cell
+      await expect(card).toContainText(/→ \d+h\d{2}/, { timeout: 10000 });
     }
   },
 );

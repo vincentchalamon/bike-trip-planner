@@ -142,6 +142,15 @@ export const StageDataSchema = z.object({
   isRestDay: z.boolean().default(false),
   supplyTimeline: z.array(SupplyMarkerSchema).default([]),
   events: z.array(EventSchema).default([]),
+  /**
+   * Optional AI-generated narrative summary for the stage. Surfaced at the top
+   * of the right-hand detail panel (sprint 26 — issue #395). Long summaries are
+   * clamped behind a "show more" toggle in the UI; short ones render in full.
+   * Schema is forward-compatible: backend may emit this field when available
+   * without breaking existing clients.
+   * TODO(#395): wire via typegen once backend StageResponse DTO ships aiSummary
+   */
+  aiSummary: z.string().nullable().optional(),
 });
 
 export const TripStateSchema = z.object({

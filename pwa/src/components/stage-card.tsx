@@ -1,24 +1,25 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { X, Pencil, Loader2 } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { StageLocations } from "@/components/stage-locations";
-import { StageMetadata } from "@/components/stage-metadata";
 import { StageAlerts } from "@/components/stage-alerts";
 import { AccommodationPanel } from "@/components/accommodation-panel";
 import { EventsPanel } from "@/components/events-panel";
 import { StageDownloads } from "@/components/stage-downloads";
-import { StageDistanceEditor } from "@/components/stage-distance-editor";
-import { DifficultyGauge } from "@/components/difficulty-gauge";
 import { DiffHighlight } from "@/components/diff-highlight";
 import { SupplyTimeline } from "@/components/SupplyTimeline/SupplyTimeline";
+import {
+  StageAiSummary,
+  StageStatsRow,
+  StageDifficultyComposed,
+  StageWeatherCard,
+} from "@/components/StageDetail";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 import { useTripStore } from "@/store/trip-store";
-import { getDifficulty } from "@/lib/constants";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 
 function formatCoords(point: { lat: number; lon: number }): string {
@@ -54,6 +55,24 @@ interface StageCardProps {
   onAccommodationHover?: (accIndex: number | null) => void;
 }
 
+/**
+ * Right-hand stage detail card.
+ *
+ * Block order (sprint 26 — issue #395):
+ *   1. Locations (departure → arrival)
+ *   2. AI summary (Fraunces italic, sparkle, collapsible if long)
+ *   3. Stats 4-col (distance editable / D+ / duration / budget)
+ *   4. Composed difficulty gauge (physical / technical / elevation)
+ *   5. Enriched weather card (forecast + sunrise/sunset)
+ *   6. Alerts — collapsible by severity
+ *   7. Events — collapsible
+ *   8. Accommodations (inline with selector)
+ *   9. Supply timeline
+ *
+ * Functionality of each block is preserved end-to-end; this component only
+ * orchestrates the new ordering and wires the inline distance editor through
+ * the stats row.
+ */
 export function StageCard({
   stage,
   stageIndex,
@@ -81,15 +100,21 @@ export function StageCard({
   const departureHour = useTripStore((s) => s.departureHour);
   const averageSpeed = useTripStore((s) => s.averageSpeed);
   const startDate = useTripStore((s) => s.startDate);
-  const [editingDistance, setEditingDistance] = useState(false);
-  const difficulty = getDifficulty(stage.distance, stage.elevation);
+
+  const aiSummary = stage.aiSummary?.trim();
+  const hasAlerts = stage.alerts.length > 0;
 
   return (
     <Card
-      className="border-border shadow-sm rounded-xl w-full md:max-w-[80%] relative"
+      // `scroll-mt-24` reserves space for the sticky `fixed top-0 z-20`
+      // header so any `scrollIntoView()` (Playwright auto-scroll, in-app
+      // navigation) lands the card *below* the progress bar rather than
+      // underneath it. Without this offset, hit-tests on inline controls
+      // (e.g. the distance pencil button) fall on the sticky header.
+      className="border-border shadow-sm rounded-xl w-full md:max-w-[80%] relative scroll-mt-24"
       data-testid={`stage-card-${stage.dayNumber}`}
     >
-      <CardContent className="p-4 md:p-6">
+      <CardContent className="p-4 md:p-6 space-y-4">
         {/* Close button — hidden in read-only mode */}
         {!readOnly && (
           <Button
@@ -110,7 +135,7 @@ export function StageCard({
           </Button>
         )}
 
-        {/* Action buttons */}
+        {/* Action buttons (downloads) */}
         <div
           className={`absolute top-3 flex gap-0.5 ${readOnly ? "right-3" : "right-10"}`}
         >
@@ -119,111 +144,79 @@ export function StageCard({
             stageIndex={stageIndex}
             dayNumber={stage.dayNumber}
           />
-          {!readOnly && onDistanceChange && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-muted-icon cursor-pointer"
-              onClick={() => setEditingDistance(true)}
-              aria-label={t("editDistance")}
-              title={t("editDistance")}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-          )}
         </div>
 
-        {/* Locations */}
+        {/* 1. Locations */}
         <StageLocations
           stageIndex={stageIndex}
           startLabel={stage.startLabel || formatCoords(stage.startPoint)}
           endLabel={stage.endLabel || formatCoords(stage.endPoint)}
         />
 
-        {/* Metadata + difficulty + edit distance */}
-        <div className="mt-3 flex items-center gap-3 flex-wrap">
-          {editingDistance ? (
-            <StageDistanceEditor
-              initialDistance={stage.distance}
-              onCommit={(km) => {
-                onDistanceChange?.(km);
-                setEditingDistance(false);
-              }}
-              onCancel={() => setEditingDistance(false)}
-            />
-          ) : (
-            <>
-              <DiffHighlight
-                stageIndex={stageIndex}
-                field="distance"
-                changeLabel={t("diffDistanceChanged")}
-              >
-                <StageMetadata
-                  distance={stage.distance}
-                  elevation={stage.elevation}
-                  elevationLoss={stage.elevationLoss ?? 0}
-                  weather={stage.weather}
-                  isProcessing={isProcessing}
-                  departureHour={stage.isRestDay ? undefined : departureHour}
-                  averageSpeedKmh={stage.isRestDay ? undefined : averageSpeed}
-                  endPointLat={stage.isRestDay ? undefined : stage.endPoint.lat}
-                  endPointLon={stage.isRestDay ? undefined : stage.endPoint.lon}
-                  startDate={stage.isRestDay ? undefined : startDate}
-                  stageIndex={stage.isRestDay ? undefined : stageIndex}
-                />
-              </DiffHighlight>
-              {stage.distance !== null && (
-                <DifficultyGauge
-                  difficulty={difficulty}
-                  distance={stage.distance}
-                  elevation={stage.elevation ?? 0}
-                />
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Supply timeline */}
-        {stage.supplyTimeline && stage.supplyTimeline.length > 0 && (
-          <div className="mt-4">
-            <SupplyTimeline
-              markers={stage.supplyTimeline}
-              stageDistance={stage.distance}
-            />
-          </div>
+        {/* 2. AI summary — only when the backend provided one */}
+        {aiSummary && aiSummary.length > 0 && (
+          <StageAiSummary summary={aiSummary} />
         )}
 
-        {/* Alerts */}
-        {stage.alerts.length > 0 && (
-          <div className="mt-3">
-            <DiffHighlight
-              stageIndex={stageIndex}
-              field="alerts_added"
-              changeLabel={t("diffAlertsAdded")}
-            >
-              <StageAlerts
-                alerts={stage.alerts}
-                onAddPoiWaypoint={onAddPoiWaypoint}
-              />
-            </DiffHighlight>
-          </div>
+        {/* 3. Stats 4-col — distance (editable), D+, duration, budget */}
+        <StageStatsRow
+          stage={stage}
+          stageIndex={stageIndex}
+          isFirst={isFirst}
+          isLast={isLast}
+          isProcessing={isProcessing}
+          readOnly={readOnly}
+          onDistanceChange={onDistanceChange}
+          departureHour={stage.isRestDay ? undefined : departureHour}
+          averageSpeedKmh={stage.isRestDay ? undefined : averageSpeed}
+        />
+
+        {/* 4. Composed difficulty gauge */}
+        {stage.distance !== null && (
+          <StageDifficultyComposed
+            distance={stage.distance}
+            elevation={stage.elevation ?? 0}
+          />
         )}
-        {isProcessing && stage.alerts.length === 0 && (
-          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+
+        {/* 5. Enriched weather card */}
+        <StageWeatherCard
+          weather={stage.weather}
+          startDate={startDate}
+          stageIndex={stageIndex}
+          endPointLat={stage.isRestDay ? undefined : stage.endPoint.lat}
+          endPointLon={stage.isRestDay ? undefined : stage.endPoint.lon}
+        />
+
+        {/* 6. Alerts — collapsible by severity (already implemented) */}
+        {hasAlerts && (
+          <DiffHighlight
+            stageIndex={stageIndex}
+            field="alerts_added"
+            changeLabel={t("diffAlertsAdded")}
+          >
+            <StageAlerts
+              alerts={stage.alerts}
+              onAddPoiWaypoint={onAddPoiWaypoint}
+            />
+          </DiffHighlight>
+        )}
+        {!hasAlerts && isProcessing && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             <span>{t("loadingAlerts")}</span>
           </div>
         )}
 
-        {/* Events */}
+        {/* 7. Events — collapsible (already implemented in EventsPanel) */}
         {(stage.events?.length ?? 0) > 0 && (
           <EventsPanel events={stage.events ?? []} />
         )}
 
-        {/* Accommodations */}
+        {/* 8. Accommodations — inline with selector */}
         {!isLast && (
           <>
-            <Separator className="mt-4 mb-4" />
+            <Separator />
             <AccommodationPanel
               accommodations={stage.accommodations}
               selectedAccommodation={stage.selectedAccommodation}
@@ -244,6 +237,14 @@ export function StageCard({
               readOnly={readOnly}
             />
           </>
+        )}
+
+        {/* 9. Supply timeline */}
+        {stage.supplyTimeline && stage.supplyTimeline.length > 0 && (
+          <SupplyTimeline
+            markers={stage.supplyTimeline}
+            stageDistance={stage.distance}
+          />
         )}
       </CardContent>
     </Card>
