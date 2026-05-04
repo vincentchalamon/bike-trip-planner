@@ -135,7 +135,7 @@ export function AiRefinementCard({
           rows={3}
           maxLength={MAX_SUGGESTION_LENGTH}
           placeholder={t("placeholder")}
-          aria-describedby={helperId}
+          aria-describedby={`${helperId} ${helperId}-counter`}
           disabled={disabled || isApplying}
           data-testid="ai-refinement-textarea"
           className={cn(
@@ -150,7 +150,7 @@ export function AiRefinementCard({
           <span
             className="text-xs text-muted-foreground tabular-nums"
             data-testid="ai-refinement-counter"
-            aria-live="polite"
+            id={`${helperId}-counter`}
           >
             {t("charactersRemaining", { remaining })}
           </span>
