@@ -191,3 +191,11 @@
 .poi-popover-popup .maplibregl-popup-tip {
   border-top-color: var(--popover, #ffffff);
 }
+
+/* Lift the POI popover above the trip planner's overlay chrome (close-trip
+   button at z-10, sticky header at z-20). Without this, popups anchored
+   near the top of the map can sit behind the close button and intercept
+   pointer events on the popover's own close affordance. */
+.poi-popover-popup {
+  z-index: 30;
+}
