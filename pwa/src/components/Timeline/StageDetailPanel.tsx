@@ -48,7 +48,7 @@ interface StageDetailPanelProps {
 }
 
 function formatDayDate(startDate: string | null, dayNumber: number): string {
-  const base = startDate ? new Date(startDate) : new Date();
+  const base = startDate ? new Date(`${startDate}T00:00:00`) : new Date();
   const date = new Date(base);
   date.setDate(date.getDate() + dayNumber - 1);
   return date.toLocaleDateString(undefined, {
