@@ -63,7 +63,10 @@
   },
   "timeline": {
     "loadingStages": "Loading stages",
-    "tripStages": "Trip stages"
+    "tripStages": "Trip stages",
+    "cumulativeDistance": "{km} km total",
+    "sidebarLabel": "Stage summary",
+    "noStageSelected": "Select a stage"
   },
   "calendar": {
     "previousMonth": "Previous month",
@@ -246,6 +249,14 @@
     "navigateToStation": "Navigate to station",
     "navigateToCrossing": "Navigate to crossing",
     "free": "Free admission"
+  },
+  "poiPopover": {
+    "close": "Close",
+    "navigate": "Navigate",
+    "navigateAriaLabel": "Navigate to {name}",
+    "wikipedia": "View on Wikipedia",
+    "free": "Free admission",
+    "price": "From {value} €"
   },
   "mapLegend": {
     "title": "Marker legend",

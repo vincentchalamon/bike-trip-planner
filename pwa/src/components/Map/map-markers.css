@@ -42,6 +42,57 @@
   align-items: center;
   justify-content: center;
   border: 1.5px solid white;
+  z-index: 2;
+}
+
+/* Cultural POI markers — pulsating halo to invite the click.
+   The halo is rendered as a positioned `<span class="map-marker__pulse">`
+   inserted by `createCulturalPoiMarkerElement`, so the SVG icon stays on top.
+   Only cultural POI markers carry the `--cultural-poi` class, keeping the
+   animation scoped to that single category. */
+.map-marker--cultural-poi {
+  position: relative;
+}
+
+.map-marker--cultural-poi .map-marker__pulse {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: var(--brand, #c2671e);
+  opacity: 0.45;
+  z-index: 0;
+  pointer-events: none;
+  animation: map-marker-pulse 2s ease-out infinite;
+}
+
+.map-marker--cultural-poi > svg {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes map-marker-pulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* Disable the pulsation for users who prefer reduced motion — keep the
+   marker visible but static so the page stays accessible. */
+@media (prefers-reduced-motion: reduce) {
+  .map-marker--cultural-poi .map-marker__pulse {
+    animation: none;
+    opacity: 0.25;
+    transform: scale(1);
+  }
 }
 
 .map-marker--start {
@@ -126,4 +177,25 @@
   border: 2px solid #1d4ed8;
   border-radius: 50%;
   box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.3);
+}
+
+/* Cultural POI popover — neutralise maplibre's default white box and let
+   the React component own all its styling (border, radius, shadow). */
+.poi-popover-popup .maplibregl-popup-content {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.poi-popover-popup .maplibregl-popup-tip {
+  border-top-color: var(--popover, #ffffff);
+}
+
+/* Lift the POI popover above the trip planner's overlay chrome (close-trip
+   button at z-10, sticky header at z-20). Without this, popups anchored
+   near the top of the map can sit behind the close button and intercept
+   pointer events on the popover's own close affordance. */
+.poi-popover-popup {
+  z-index: 30;
 }
