@@ -116,4 +116,15 @@ describe("formatOpeningHoursStatus — English", () => {
     expect(status.isOpen).toBe(false);
     expect(status.label).toBe("Closed, opens tomorrow at 9 AM");
   });
+
+  it("reports closed with N-days wording when reopening is further away", () => {
+    // Saturday 2026-05-02 10:00 — Mo-Fr schedule reopens on Monday (2 days away)
+    const status = formatOpeningHoursStatus(
+      "Mo-Fr 09:00-18:00",
+      "en",
+      new Date(2026, 4, 2, 10, 0),
+    );
+    expect(status.isOpen).toBe(false);
+    expect(status.label).toBe("Closed, opens in 2 days at 9 AM");
+  });
 });

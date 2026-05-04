@@ -91,6 +91,9 @@ export function PoiPopover({ alert, onClose }: PoiPopoverProps) {
       aria-labelledby="poi-popover-title"
       data-testid="poi-popover"
       data-variant={enriched ? "enriched" : "minimal"}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
       className={cn(
         "relative w-72 max-w-[18rem] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg",
         "animate-in fade-in-0 zoom-in-95",
@@ -106,7 +109,7 @@ export function PoiPopover({ alert, onClose }: PoiPopoverProps) {
         <X className="h-3.5 w-3.5" aria-hidden />
       </button>
 
-      {enriched && alert.imageUrl && (
+      {enriched && alert.imageUrl?.startsWith("https://") && (
         <div className="aspect-[5/3] w-full bg-muted">
           {/* eslint-disable-next-line @next/next/no-img-element -- external Wikimedia thumbnails are not resolvable by next/image */}
           <img
