@@ -444,11 +444,21 @@
     "gpxInvalidType": "Seuls les fichiers .gpx sont acceptés.",
     "aiTitle": "Assistant IA",
     "aiDescription": "Créez un itinéraire sur mesure",
-    "aiSoon": "Bientôt disponible",
     "back": "Changer de méthode",
     "ariaSelectLink": "Choisir l'entrée par lien",
     "ariaSelectGpx": "Choisir l'entrée par fichier GPX",
-    "ariaSelectAi": "Assistant IA — bientôt disponible"
+    "ariaSelectAi": "Discuter avec l'assistant IA"
+  },
+  "aiChat": {
+    "subtitle": "Décrivez votre projet, l'assistant proposera un itinéraire.",
+    "historyAriaLabel": "Conversation avec l'assistant IA",
+    "stubGreeting": "Bonjour ! Décrivez l'aventure que vous imaginez (région, durée, période, niveau...) et je vous proposerai un itinéraire sur mesure.",
+    "stubReply": "C'est noté ! Une fois la connexion à l'assistant activée, je vous proposerai un itinéraire détaillé avec des étapes adaptées.",
+    "inputLabel": "Votre demande",
+    "inputPlaceholder": "Ex : « Je veux faire le tour de Corse en 10 jours en septembre »",
+    "inputHint": "Entrée pour envoyer · Maj + Entrée pour un retour à la ligne",
+    "sendAriaLabel": "Envoyer le message",
+    "submitLabel": "Valider et continuer"
   },
   "planner": {
     "closeTrip": "Fermer ce trip"
