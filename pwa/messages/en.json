@@ -63,7 +63,10 @@
   },
   "timeline": {
     "loadingStages": "Loading stages",
-    "tripStages": "Trip stages"
+    "tripStages": "Trip stages",
+    "cumulativeDistance": "{km} km total",
+    "sidebarLabel": "Stage summary",
+    "noStageSelected": "Select a stage"
   },
   "calendar": {
     "previousMonth": "Previous month",
