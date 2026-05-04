@@ -427,10 +427,14 @@ export const MapView = memo(function MapView({
     // "border_crossing", "cultural_poi"…). Cultural POI markers use the
     // dedicated `createCulturalPoiMarkerElement` helper which adds a
     // pulsating halo and opens the rich popover on click (issue #398).
+    // `nudge` alerts are normally informational (no marker), but cultural
+    // POIs are an exception — they carry coordinates and a rich popover.
     activeStages.forEach((stage) => {
       const alert = stage.alerts.find(
         (a) =>
-          (a.type === "critical" || a.type === "warning") &&
+          (a.type === "critical" ||
+            a.type === "warning" ||
+            (a.type === "nudge" && a.source === "cultural_poi")) &&
           a.lat != null &&
           a.lon != null,
       );

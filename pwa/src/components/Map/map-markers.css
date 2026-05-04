@@ -1,48 +1,48 @@
 /* Map marker styles — used by MapView.tsx (DOM markers, no innerHTML) */
 
 .map-marker {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    border: 2.5px solid white;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-    cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2.5px solid white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
 }
 
 /* Generic icon-bearing marker (issue #390 — unified registry).
    Background colour, size and icon colour are set inline by
    `createCategoryMarkerElement`; this rule only handles layout. */
 .map-marker--icon {
-    border: 2px solid white;
+  border: 2px solid white;
 }
 
 .map-marker--icon svg {
-    display: block;
+  display: block;
 }
 
 .map-marker--cultural-enriched {
-    position: relative;
+  position: relative;
 }
 
 .map-marker--cultural-enriched::after {
-    content: "i";
-    position: absolute;
-    bottom: -3px;
-    right: -3px;
-    width: 12px;
-    height: 12px;
-    background: var(--brand, #c2671e);
-    color: white;
-    font-size: 9px;
-    font-weight: 700;
-    font-family: var(--font-sans, sans-serif);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1.5px solid white;
-    z-index: 2;
+  content: "i";
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 12px;
+  height: 12px;
+  background: var(--brand, #c2671e);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-sans, sans-serif);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid white;
+  z-index: 2;
 }
 
 /* Cultural POI markers — pulsating halo to invite the click.
@@ -51,143 +51,143 @@
    Only cultural POI markers carry the `--cultural-poi` class, keeping the
    animation scoped to that single category. */
 .map-marker--cultural-poi {
-    position: relative;
+  position: relative;
 }
 
 .map-marker--cultural-poi .map-marker__pulse {
-    position: absolute;
-    inset: -6px;
-    border-radius: 50%;
-    background: var(--brand, #c2671e);
-    opacity: 0.45;
-    z-index: 0;
-    pointer-events: none;
-    animation: map-marker-pulse 2s ease-out infinite;
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: var(--brand, #c2671e);
+  opacity: 0.45;
+  z-index: 0;
+  pointer-events: none;
+  animation: map-marker-pulse 2s ease-out infinite;
 }
 
 .map-marker--cultural-poi > svg {
-    position: relative;
-    z-index: 1;
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes map-marker-pulse {
-    0% {
-        transform: scale(0.85);
-        opacity: 0.55;
-    }
-    70% {
-        transform: scale(1.6);
-        opacity: 0;
-    }
-    100% {
-        transform: scale(1.6);
-        opacity: 0;
-    }
+  0% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
 }
 
 /* Disable the pulsation for users who prefer reduced motion — keep the
    marker visible but static so the page stays accessible. */
 @media (prefers-reduced-motion: reduce) {
-    .map-marker--cultural-poi .map-marker__pulse {
-        animation: none;
-        opacity: 0.25;
-        transform: scale(1);
-    }
+  .map-marker--cultural-poi .map-marker__pulse {
+    animation: none;
+    opacity: 0.25;
+    transform: scale(1);
+  }
 }
 
 .map-marker--start {
-    width: 28px;
-    height: 28px;
-    background-color: #16a34a;
-    color: white;
-    border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  background-color: #16a34a;
+  color: white;
+  border-radius: 50%;
 }
 
 .map-marker--start::after {
-    content: "";
-    display: block;
-    width: 0;
-    height: 0;
-    border-left: 7px solid transparent;
-    border-right: 7px solid transparent;
-    border-bottom: 11px solid white;
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 11px solid white;
 }
 
 .map-marker--end {
-    width: 28px;
-    height: 28px;
-    background-color: #dc2626;
-    color: white;
-    border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  background-color: #dc2626;
+  color: white;
+  border-radius: 50%;
 }
 
 .map-marker--end::after {
-    content: "";
-    display: block;
-    width: 10px;
-    height: 10px;
-    background: white;
-    border-radius: 1px;
+  content: "";
+  display: block;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 1px;
 }
 
 /* Accommodation markers — categorised via the unified icon registry.
    Background colour and size are applied inline by `createCategoryMarkerElement`. */
 .map-marker--acc {
-    cursor: pointer;
-    transition:
-        transform 0.15s ease,
-        box-shadow 0.15s ease;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .map-marker--acc-highlighted {
-    transform: scale(1.8);
-    z-index: 10;
-    box-shadow:
-        0 0 0 4px rgba(59, 130, 246, 0.8),
-        0 0 12px 2px rgba(59, 130, 246, 0.4),
-        0 2px 8px rgba(0, 0, 0, 0.3);
+  transform: scale(1.8);
+  z-index: 10;
+  box-shadow:
+    0 0 0 4px rgba(59, 130, 246, 0.8),
+    0 0 12px 2px rgba(59, 130, 246, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .map-marker--acc-selected {
-    transform: scale(1.3);
-    box-shadow:
-        0 0 0 3px rgba(34, 197, 94, 0.6),
-        0 2px 8px rgba(0, 0, 0, 0.3);
+  transform: scale(1.3);
+  box-shadow:
+    0 0 0 3px rgba(34, 197, 94, 0.6),
+    0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Alert markers — colour comes from inline style; severity class kept
    for E2E hooks and future overrides. */
 .map-marker--alert {
-    /* Layout handled by .map-marker--icon */
+  /* Layout handled by .map-marker--icon */
 }
 
 .map-marker--hover-cursor {
-    width: 16px;
-    height: 16px;
-    background-color: transparent;
-    border: none;
-    box-shadow: none;
-    pointer-events: none;
+  width: 16px;
+  height: 16px;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  pointer-events: none;
 }
 
 .map-hover-dot {
-    width: 10px;
-    height: 10px;
-    background-color: white;
-    border: 2px solid #1d4ed8;
-    border-radius: 50%;
-    box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.3);
+  width: 10px;
+  height: 10px;
+  background-color: white;
+  border: 2px solid #1d4ed8;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.3);
 }
 
 /* Cultural POI popover — neutralise maplibre's default white box and let
    the React component own all its styling (border, radius, shadow). */
 .poi-popover-popup .maplibregl-popup-content {
-    padding: 0;
-    background: transparent;
-    box-shadow: none;
-    border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .poi-popover-popup .maplibregl-popup-tip {
-    border-top-color: var(--popover, #ffffff);
+  border-top-color: var(--popover, #ffffff);
 }

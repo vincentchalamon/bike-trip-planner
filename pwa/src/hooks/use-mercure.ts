@@ -326,6 +326,14 @@ function dispatchEvent(event: MercureEvent): void {
             poiLat: a.poiLat,
             poiLon: a.poiLon,
             distanceFromRoute: a.distanceFromRoute,
+            // Enrichment fields (Wikidata / DataTourisme) — forwarded so the
+            // map popover can render variant A (issue #398).
+            description: a.description,
+            openingHours: a.openingHours,
+            estimatedPrice: a.estimatedPrice,
+            imageUrl: a.imageUrl,
+            wikidataId: a.wikidataId,
+            wikipediaUrl: a.wikipediaUrl,
           })),
           "cultural_poi",
         );
