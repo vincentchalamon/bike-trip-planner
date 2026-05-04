@@ -250,6 +250,14 @@
     "navigateToCrossing": "Navigate to crossing",
     "free": "Free admission"
   },
+  "poiPopover": {
+    "close": "Close",
+    "navigate": "Navigate",
+    "navigateAriaLabel": "Navigate to {name}",
+    "wikipedia": "View on Wikipedia",
+    "free": "Free admission",
+    "price": "From {value} €"
+  },
   "mapLegend": {
     "title": "Marker legend",
     "open": "Legend",
