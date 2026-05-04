@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Sunrise, Sunset, Droplets, Wind, Gauge } from "lucide-react";
+import { Sunrise, Sunset, Droplets, Wind, Gauge, Moon, Sun } from "lucide-react";
 import { weatherIconMap, DefaultWeatherIcon } from "@/lib/weather-icons";
 import {
   computeSunTimes,
@@ -14,6 +14,41 @@ function getComfortColor(index: number): string {
   if (index >= 70) return "text-emerald-500";
   if (index >= 40) return "text-amber-500";
   return "text-red-500";
+}
+
+/**
+ * Returns whether the sun is currently up at the stage's reference point, or
+ * `null` when the comparison is not meaningful (the stage is not today, or
+ * sunrise/sunset are unavailable for the location/date — polar day/night).
+ *
+ * `sunrise` / `sunset` are decimal UTC hours — same convention as
+ * `computeSunTimes`. `now` defaults to the current wall clock; injecting it is
+ * useful in unit tests.
+ */
+export function isSunUp(
+  stageDate: Date | null,
+  sunrise: number | null,
+  sunset: number | null,
+  now: Date = new Date(),
+): boolean | null {
+  if (!stageDate || sunrise === null || sunset === null) return null;
+  // Only show a "live" indicator when the stage date is today (UTC) — the
+  // ride is happening now, not in the future or past.
+  const today = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+  const stageDay = new Date(
+    Date.UTC(
+      stageDate.getUTCFullYear(),
+      stageDate.getUTCMonth(),
+      stageDate.getUTCDate(),
+    ),
+  );
+  if (today.getTime() !== stageDay.getTime()) return null;
+
+  const nowDecimal =
+    now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+  return nowDecimal >= sunrise && nowDecimal < sunset;
 }
 
 interface StageWeatherCardProps {
@@ -50,17 +85,22 @@ export function StageWeatherCard({
 }: StageWeatherCardProps) {
   const t = useTranslations("weather");
 
-  const sunTimes =
+  const stageDate =
     endPointLat !== undefined && endPointLon !== undefined
-      ? (() => {
-          const stageDate = computeStageDate(startDate ?? null, stageIndex);
-          if (!stageDate) return null;
-          return computeSunTimes(stageDate, endPointLat, endPointLon);
-        })()
+      ? computeStageDate(startDate ?? null, stageIndex)
+      : null;
+  const sunTimes =
+    stageDate && endPointLat !== undefined && endPointLon !== undefined
+      ? computeSunTimes(stageDate, endPointLat, endPointLon)
       : null;
 
   const showSunTimes =
     sunTimes && sunTimes.sunrise !== null && sunTimes.sunset !== null;
+
+  // `null` when the stage isn't today — only render the live badge then.
+  const sunIsUp = sunTimes
+    ? isSunUp(stageDate, sunTimes.sunrise, sunTimes.sunset)
+    : null;
 
   if (!weather && !showSunTimes) {
     return null;
@@ -149,7 +189,7 @@ export function StageWeatherCard({
 
       {showSunTimes && (
         <div
-          className={`flex items-center justify-between gap-3 text-xs text-muted-foreground${weather ? " mt-3 border-t border-border/60 pt-2" : ""}`}
+          className={`flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground${weather ? " mt-3 border-t border-border/60 pt-2" : ""}`}
           data-testid="stage-weather-sun-times"
           title={t("sunriseSunsetTooltip")}
         >
@@ -162,6 +202,26 @@ export function StageWeatherCard({
               {t("sunriseShort")}
             </span>
           </div>
+
+          {sunIsUp !== null && (
+            <span
+              data-testid="stage-weather-sun-state"
+              data-state={sunIsUp ? "day" : "night"}
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                sunIsUp
+                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                  : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+              }`}
+            >
+              {sunIsUp ? (
+                <Sun className="h-3 w-3" aria-hidden="true" />
+              ) : (
+                <Moon className="h-3 w-3" aria-hidden="true" />
+              )}
+              {sunIsUp ? t("sunStateDay") : t("sunStateNight")}
+            </span>
+          )}
+
           <div className="flex items-center gap-1.5">
             <span className="text-muted-foreground/70">{t("sunsetShort")}</span>
             <span className="tabular-nums">
