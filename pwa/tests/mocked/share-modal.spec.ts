@@ -295,6 +295,31 @@ test.describe("Share modal", () => {
     expect(download.suggestedFilename()).toContain("infographic.png");
   });
 
+  test("download square PNG triggers a 1080×1080 file download", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+    browserName,
+  }) => {
+    test.skip(
+      browserName !== "chromium",
+      "canvas.toDataURL() download only fires reliably in Chromium",
+    );
+    await openShareModal({ submitUrl, injectSequence, mockedPage });
+
+    // Block OSM tile requests so the test doesn't depend on the network.
+    // The renderer falls back to its solid-colour map background.
+    await mockedPage.route("https://tile.openstreetmap.org/**", (route) =>
+      route.abort(),
+    );
+
+    const downloadPromise = mockedPage.waitForEvent("download");
+    await mockedPage.getByTestId("share-download-square-png-button").click();
+    const download = await downloadPromise;
+
+    expect(download.suggestedFilename()).toContain("infographic-square.png");
+  });
+
   test("copy text copies trip summary to clipboard", async ({
     submitUrl,
     injectSequence,
