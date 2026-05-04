@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { AiRefinementCard } from "./ai-refinement-card";
@@ -19,6 +19,10 @@ vi.mock("sonner", () => ({
 }));
 
 describe("AiRefinementCard", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders the card with textarea and disabled action buttons by default", () => {
     render(<AiRefinementCard />);
 
