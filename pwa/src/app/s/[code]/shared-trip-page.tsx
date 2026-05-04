@@ -4,17 +4,19 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import { Suspense } from "react";
-import { Info, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { TripNotFound } from "@/components/trip-not-found";
-import { Timeline } from "@/components/timeline";
+import { RoadbookMasterDetail } from "@/components/Timeline";
 import { TripSummary } from "@/components/trip-summary";
-import { TripDownloads } from "@/components/trip-downloads";
 import { MapPanel } from "@/components/Map/MapPanel";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { HydrationBoundary } from "@/components/hydration-boundary";
+import { SharedTopBar } from "@/components/shared-top-bar";
+import { SharedViewBanner } from "@/components/shared-view-banner";
 import { fetchSharedTrip } from "@/lib/api/client";
 import { ShareProvider } from "@/lib/share-context";
 import { useUiStore } from "@/store/ui-store";
+import { useTripStore } from "@/store/trip-store";
 import {
   MEAL_COST_MIN,
   MEAL_COST_MAX,
@@ -22,9 +24,13 @@ import {
 } from "@/lib/budget-constants";
 import type { StageData } from "@/lib/validation/schemas";
 
+const noop = () => {};
+
 function SharedTripLoader({ code }: { code: string }) {
   const t = useTranslations("sharePage");
   const viewMode = useUiStore((s) => s.viewMode);
+  const setStagesInStore = useTripStore((s) => s.setStages);
+  const clearTrip = useTripStore((s) => s.clearTrip);
   const [loadError, setLoadError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [title, setTitle] = useState<string | null>(null);
@@ -96,6 +102,11 @@ function SharedTripLoader({ code }: { code: string }) {
         }));
 
         setStages(parsedStages);
+        // Hydrate the trip store so that <RoadbookMasterDetail /> (which
+        // reads `selectedStageIndex` from the store) works correctly. The
+        // store stays local — no `setTrip()` call means no API/PATCH calls
+        // can be issued from this read-only view.
+        setStagesInStore(parsedStages);
 
         const activeStages = parsedStages.filter((s) => !s.isRestDay);
         setTotalDistance(activeStages.reduce((sum, s) => sum + s.distance, 0));
@@ -123,8 +134,11 @@ function SharedTripLoader({ code }: { code: string }) {
 
     return () => {
       cancelled = true;
+      // Reset the trip store so leaving the shared page does not leak
+      // stages into a fresh planner session.
+      clearTrip();
     };
-  }, [code]);
+  }, [code, setStagesInStore, clearTrip]);
 
   const estimatedBudget = useMemo(() => {
     const nonRestStages = stages.filter((s) => !s.isRestDay);
@@ -172,12 +186,15 @@ function SharedTripLoader({ code }: { code: string }) {
 
   if (!isLoaded) {
     return (
-      <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
-        <div className="flex items-center justify-center min-h-[60vh] gap-3 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>{t("loading")}</span>
-        </div>
-      </main>
+      <>
+        <SharedTopBar />
+        <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
+          <div className="flex items-center justify-center min-h-[60vh] gap-3 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>{t("loading")}</span>
+          </div>
+        </main>
+      </>
     );
   }
 
@@ -186,95 +203,102 @@ function SharedTripLoader({ code }: { code: string }) {
 
   return (
     <ShareProvider value={{ shortCode: code, title: title ?? "" }}>
-      <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 space-y-6">
-        {/* Read-only banner */}
-        <div
-          data-testid="read-only-banner"
-          className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
-        >
-          <Info className="h-4 w-4 shrink-0" />
-          {t("readOnlyBanner")}
-        </div>
+      <SharedTopBar tripTitle={title ?? undefined} />
 
-        {/* Title + downloads */}
-        <div className="flex items-center gap-3">
+      <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-6 md:py-8">
+        <div className="space-y-6">
+          {/* Permanent read-only banner — sits under the top bar. */}
+          <SharedViewBanner />
+
+          {/* Trip title (hero) — separate from the compact title in the top
+              bar so the page still has a clear heading hierarchy. */}
           {title && (
-            <h1 className="text-2xl font-bold tracking-tight flex-1">
-              {title}
-            </h1>
-          )}
-          <TripDownloads tripId={undefined} tripTitle={title ?? ""} />
-        </div>
-
-        {/* Summary */}
-        <TripSummary
-          totalDistance={totalDistance}
-          totalElevation={totalElevation}
-          totalElevationLoss={totalElevationLoss}
-          weather={stages[0]?.weather ?? null}
-          isWeatherLoading={false}
-          isProcessing={false}
-          estimatedBudgetMin={estimatedBudget.min}
-          estimatedBudgetMax={estimatedBudget.max}
-          startDate={startDate}
-          endDate={endDate}
-          fatigueFactor={pacingConfig?.fatigueFactor ?? 0.9}
-          elevationPenalty={pacingConfig?.elevationPenalty ?? 50}
-          maxDistancePerDay={pacingConfig?.maxDistancePerDay ?? 80}
-          averageSpeed={pacingConfig?.averageSpeed ?? 15}
-        />
-
-        {/* View mode toggle */}
-        <div className="flex justify-end">
-          <ViewModeToggle />
-        </div>
-
-        {/* Timeline + Map */}
-        <div className="flex gap-8 relative">
-          {showTimeline && (
-            <div
-              className={
-                viewMode === "split"
-                  ? "flex-1 min-w-0"
-                  : "w-full max-w-[900px] mx-auto"
-              }
-            >
-              {stages.length > 0 ? (
-                <Timeline
-                  stages={stages}
-                  startDate={startDate}
-                  isProcessing={false}
-                  readOnly
-                  onDeleteStage={() => {}}
-                  onAddStage={() => {}}
-                  onAddAccommodation={() => {}}
-                  onUpdateAccommodation={() => {}}
-                  onRemoveAccommodation={() => {}}
-                />
-              ) : (
-                <p className="text-center text-muted-foreground">
-                  {t("noStages")}
-                </p>
-              )}
-            </div>
+            <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
           )}
 
-          {showMap && (
-            <div
-              className={
-                viewMode === "split"
-                  ? "hidden lg:block lg:w-[520px] lg:sticky lg:top-4 lg:h-[calc(100vh-6rem)]"
-                  : "w-full h-[calc(100vh-12rem)]"
-              }
-            >
-              <MapPanel
-                focusedStageIndex={focusedStageIndex}
-                onStageClick={handleStageClick}
-                onResetView={handleResetView}
-                stages={stages}
-              />
-            </div>
-          )}
+          {/* Summary */}
+          <TripSummary
+            totalDistance={totalDistance}
+            totalElevation={totalElevation}
+            totalElevationLoss={totalElevationLoss}
+            weather={stages[0]?.weather ?? null}
+            isWeatherLoading={false}
+            isProcessing={false}
+            estimatedBudgetMin={estimatedBudget.min}
+            estimatedBudgetMax={estimatedBudget.max}
+            startDate={startDate}
+            endDate={endDate}
+            fatigueFactor={pacingConfig?.fatigueFactor ?? 0.9}
+            elevationPenalty={pacingConfig?.elevationPenalty ?? 50}
+            maxDistancePerDay={pacingConfig?.maxDistancePerDay ?? 80}
+            averageSpeed={pacingConfig?.averageSpeed ?? 15}
+          />
+
+          {/* View mode toggle */}
+          <div className="flex justify-end">
+            <ViewModeToggle />
+          </div>
+
+          {/* Master/detail roadbook + map (read-only). The configuration
+              panel, undo/redo, and "+" insertion controls are intentionally
+              omitted in the shared view. */}
+          <div
+            className={[
+              "flex gap-8",
+              viewMode === "split" ? "lg:flex-row flex-col" : "",
+            ].join(" ")}
+            data-testid="split-view-container"
+          >
+            {showTimeline && (
+              <div
+                className={
+                  viewMode === "split" ? "lg:flex-1 lg:min-w-0" : "w-full"
+                }
+              >
+                {stages.length > 0 ? (
+                  <RoadbookMasterDetail
+                    stages={stages}
+                    startDate={startDate}
+                    isProcessing={false}
+                    readOnly
+                    onDeleteStage={noop}
+                    onAddAccommodation={noop}
+                    onUpdateAccommodation={noop}
+                    onRemoveAccommodation={noop}
+                  />
+                ) : (
+                  <p className="text-center text-muted-foreground">
+                    {t("noStages")}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {showMap && (
+              <div
+                className={
+                  viewMode === "split"
+                    ? "lg:w-[520px] lg:shrink-0"
+                    : "w-full h-[calc(100vh-12rem)]"
+                }
+              >
+                <div
+                  className={
+                    viewMode === "split"
+                      ? "lg:sticky lg:top-20 lg:h-[calc(100dvh-6rem)]"
+                      : "w-full h-full"
+                  }
+                >
+                  <MapPanel
+                    focusedStageIndex={focusedStageIndex}
+                    onStageClick={handleStageClick}
+                    onResetView={handleResetView}
+                    stages={stages}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </ShareProvider>

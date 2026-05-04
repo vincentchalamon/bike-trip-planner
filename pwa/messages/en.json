@@ -680,8 +680,12 @@
     "loading": "Loading shared trip...",
     "error": "This share link is invalid or has been revoked.",
     "backToHome": "Back to home",
-    "readOnlyBanner": "You are viewing a read-only shared trip.",
+    "readOnlyBanner": "Shared view — read only",
     "noStages": "This trip has no stages yet."
+  },
+  "sharedTopBar": {
+    "brand": "Bike Trip Planner",
+    "brandHome": "Bike Trip Planner — home"
   },
   "landing": {
     "hero": {
