@@ -55,9 +55,9 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
       (window as unknown as { __aiChatSubmits: unknown[] }).__aiChatSubmits =
         [];
       document.addEventListener("ai-chat-submit", (event) => {
-        (window as unknown as { __aiChatSubmits: unknown[] }).__aiChatSubmits.push(
-          (event as CustomEvent).detail,
-        );
+        (
+          window as unknown as { __aiChatSubmits: unknown[] }
+        ).__aiChatSubmits.push((event as CustomEvent).detail);
       });
     });
 
@@ -66,7 +66,9 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     await textarea.press("Enter");
 
     // Two new bubbles appended (user + assistant stub)
-    const userMessages = page.locator('[data-testid="ai-chat-message"][data-role="user"]');
+    const userMessages = page.locator(
+      '[data-testid="ai-chat-message"][data-role="user"]',
+    );
     const assistantMessages = page.locator(
       '[data-testid="ai-chat-message"][data-role="assistant"]',
     );
