@@ -75,6 +75,10 @@ describe("scoreTechnical", () => {
     expect(scoreTechnical(100, 0)).toBe(0);
   });
 
+  it("returns 0 for negative elevation (net-descent stage)", () => {
+    expect(scoreTechnical(100, -500)).toBe(0);
+  });
+
   it("returns 50 for a 30 m/km ratio (half of the 60 m/km cap)", () => {
     expect(scoreTechnical(100, 3000)).toBe(50);
   });

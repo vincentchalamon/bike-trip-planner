@@ -55,6 +55,7 @@ export function scoreElevation(elevationM: number): number {
  */
 export function scoreTechnical(distanceKm: number, elevationM: number): number {
   if (distanceKm <= 0) return 0;
+  if (elevationM <= 0) return 0;
   const ratio = elevationM / distanceKm;
   if (ratio >= TECHNICAL_SCORE_CAP_M_PER_KM) return 100;
   return Math.round((ratio / TECHNICAL_SCORE_CAP_M_PER_KM) * 100);
