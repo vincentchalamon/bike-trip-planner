@@ -149,7 +149,7 @@ export function StageWeatherCard({
 
       {showSunTimes && (
         <div
-          className="mt-3 flex items-center justify-between gap-3 border-t border-border/60 pt-2 text-xs text-muted-foreground"
+          className={`flex items-center justify-between gap-3 text-xs text-muted-foreground${weather ? " mt-3 border-t border-border/60 pt-2" : ""}`}
           data-testid="stage-weather-sun-times"
           title={t("sunriseSunsetTooltip")}
         >
