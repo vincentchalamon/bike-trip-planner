@@ -160,14 +160,15 @@ describe("infographic-square", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("preserves the last wrapped title line when the title exceeds maxLines at a word boundary", async () => {
+  it("appends an ellipsis to the last wrapped title line when overflow words are dropped", async () => {
     // Stub measureText so each word is ~500px wide. At the title maxWidth
     // of 968 (1080 − 2 × 56 padding), one word fits per line but two
     // words (1000px) do not. With a 3-word title and maxLines=2, the
     // wrap loop pushes "W1", then pushes "W2" to hit the maxLines budget
-    // with `current = ""` and `i = 2`. Without the `&& current` guard,
-    // the truncate branch overwrites lines[1] with words.slice(2) → "W3",
-    // silently dropping "W2".
+    // with `current = ""` and `i = 2`. The else branch must append the
+    // remaining word "W3" onto the last line "W2" and truncate, producing
+    // a line that starts with "W2" and ends with "…" so the user sees
+    // that the title was clipped.
     const measureText = (t: string) => ({
       width: t.split(" ").filter(Boolean).length * 500,
     });
@@ -189,10 +190,16 @@ describe("infographic-square", () => {
     const fillTextCalls = ctx.fillText.mock.calls.map(
       (call) => call[0] as string,
     );
-    // The second wrapped title line must survive: "W2" should be drawn.
-    expect(fillTextCalls).toContain("W2");
-    // And the regression: line 2 must not have been overwritten with "W3".
+    // The second wrapped title line must start with "W2" and end with an
+    // ellipsis to signal that overflow words ("W3") were dropped.
+    const truncatedLine = fillTextCalls.find(
+      (text) => text.startsWith("W2") && text.endsWith("…"),
+    );
+    expect(truncatedLine).toBeDefined();
+    // And the regression: line 2 must not have been overwritten with "W3"
+    // (silent drop of "W2") or left as a plain "W2" without the ellipsis.
     expect(fillTextCalls).not.toContain("W3");
+    expect(fillTextCalls).not.toContain("W2");
   });
 
   it("renderSquareInfographic truncates long stage lists", async () => {

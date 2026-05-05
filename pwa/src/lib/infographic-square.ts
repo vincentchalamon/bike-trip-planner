@@ -558,11 +558,15 @@ function wrapText(
   }
   if (lines.length < maxLines && current) {
     lines.push(current);
-  } else if (i < words.length && current) {
-    // We hit the maxLines budget mid-word; pack the remainder onto the
-    // last line, truncated with an ellipsis if needed.
-    const remaining = [current, ...words.slice(i)].join(" ");
-    lines[lines.length - 1] = truncateText(ctx, remaining, maxWidth);
+  } else if (i < words.length) {
+    // maxLines budget was exhausted by a boundary push (current is "").
+    // Append the overflow words onto the last line and truncate.
+    const lastLine = lines[lines.length - 1]!;
+    lines[lines.length - 1] = truncateText(
+      ctx,
+      `${lastLine} ${words.slice(i).join(" ")}`,
+      maxWidth,
+    );
   }
   return lines;
 }
