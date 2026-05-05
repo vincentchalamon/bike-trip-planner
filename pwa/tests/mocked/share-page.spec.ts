@@ -73,6 +73,16 @@ test.describe("/s/[code] page", () => {
       page.getByRole("heading", { name: "Tour de Bretagne" }),
     ).toBeVisible({ timeout: 10000 });
 
+    // Shared top bar with trip title and GPX download
+    const topBar = page.getByTestId("shared-top-bar");
+    await expect(topBar).toBeVisible();
+    const topBarTitle = page.getByTestId("shared-top-bar-title");
+    await expect(topBarTitle).toBeVisible();
+    await expect(topBarTitle).toHaveText("Tour de Bretagne");
+    await expect(
+      topBar.getByRole("button", { name: "Télécharger le GPX complet" }),
+    ).toBeVisible();
+
     // Trip summary stats
     await expect(page.getByTestId("total-distance")).toBeVisible();
 
