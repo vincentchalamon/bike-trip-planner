@@ -27,6 +27,9 @@ export interface SquareInfographicLabels {
   /** Already-localised line displayed when more than {@link MAX_STAGE_LIST}
    * stages exist (e.g. "+ 2 more stages"). The renderer prints it verbatim. */
   more: string;
+  /** Localised prefix for the per-stage day label (e.g. "J" in French → "J1",
+   * "D" in English → "D1"). Concatenated with the stage's day number. */
+  dayPrefix: string;
   poweredBy: string;
 }
 
@@ -249,7 +252,7 @@ function drawStageRow(
   ctx.fill();
 
   // Label
-  const dayLabel = `J${stage.dayNumber}`;
+  const dayLabel = `${labels.dayPrefix}${stage.dayNumber}`;
   const labelText = stage.label?.trim() || labels.restDay;
   const fullLabel = `${dayLabel} · ${labelText}`;
   // Right-side metrics first, to know how much space remains

@@ -584,6 +584,7 @@
     "squareStatDays": "Jours",
     "squareStagesHeading": "Étapes",
     "squareMoreStages": "+ {count, plural, one {# étape supplémentaire} other {# étapes supplémentaires}}",
+    "squareDayPrefix": "J",
     "textTitle": "Texte formaté",
     "copyText": "Copier le texte",
     "textCopiedBtn": "Copié !",

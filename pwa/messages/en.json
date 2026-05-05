@@ -584,6 +584,7 @@
     "squareStatDays": "Days",
     "squareStagesHeading": "Stages",
     "squareMoreStages": "+ {count, plural, one {# more stage} other {# more stages}}",
+    "squareDayPrefix": "D",
     "textTitle": "Formatted text",
     "copyText": "Copy text",
     "textCopiedBtn": "Copied!",

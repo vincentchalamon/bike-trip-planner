@@ -250,6 +250,7 @@ export function ShareModal({
           stagesHeading: t("squareStagesHeading"),
           restDay: "—",
           more: t("squareMoreStages", { count: extra }),
+          dayPrefix: t("squareDayPrefix"),
           poweredBy: t("poweredBy"),
         },
       },

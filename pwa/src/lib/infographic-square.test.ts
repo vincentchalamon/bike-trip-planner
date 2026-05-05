@@ -15,6 +15,7 @@ const labels: SquareInfographicData["labels"] = {
   stagesHeading: "Stages",
   restDay: "—",
   more: "+ 0 more stages",
+  dayPrefix: "D",
   poweredBy: "Bike Trip Planner",
 };
 
