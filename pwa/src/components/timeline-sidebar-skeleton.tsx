@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 /**
  * Loading skeleton for {@link TimelineSidebar} (sprint 27, #402).
@@ -25,7 +26,7 @@ export function TimelineSidebarSkeleton({
       aria-label={t("loadingStages")}
       aria-busy="true"
       data-testid="timeline-sidebar-skeleton"
-      className={["relative", className ?? ""].join(" ")}
+      className={cn("relative", className)}
     >
       {/* Vertical connecting line — same offset as TimelineSidebar */}
       <div
