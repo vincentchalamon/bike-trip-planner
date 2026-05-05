@@ -73,6 +73,16 @@ test.describe("/s/[code] page", () => {
       page.getByRole("heading", { name: "Tour de Bretagne" }),
     ).toBeVisible({ timeout: 10000 });
 
+    // Shared top bar with trip title and GPX download
+    const topBar = page.getByTestId("shared-top-bar");
+    await expect(topBar).toBeVisible();
+    const topBarTitle = page.getByTestId("shared-top-bar-title");
+    await expect(topBarTitle).toBeVisible();
+    await expect(topBarTitle).toHaveText("Tour de Bretagne");
+    await expect(
+      topBar.getByRole("button", { name: "Télécharger le GPX complet" }),
+    ).toBeVisible();
+
     // Trip summary stats
     await expect(page.getByTestId("total-distance")).toBeVisible();
 
@@ -96,6 +106,9 @@ test.describe("/s/[code] page", () => {
     await expect(page.getByTestId("share-error")).toBeVisible({
       timeout: 10000,
     });
+
+    // Top bar stays mounted in the error branch so the user has a home link
+    await expect(page.getByTestId("shared-top-bar")).toBeVisible();
 
     // Back to home link
     await expect(page.getByRole("link").first()).toBeVisible();
