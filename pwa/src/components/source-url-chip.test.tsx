@@ -14,11 +14,20 @@ describe("detectSourceProvider", () => {
     ["https://www.komoot.com/collection/12345", "komoot"],
     ["https://www.komoot.com/en-us/collection/678", "komoot"],
     ["https://www.strava.com/routes/9876", "strava"],
-    ["https://strava.com/routes/9876", "strava"],
     ["https://ridewithgps.com/routes/42", "ridewithgps"],
-    ["https://www.ridewithgps.com/routes/42", "ridewithgps"],
   ])("detects %s as %s", (url, expected) => {
     expect(detectSourceProvider(url)).toBe(expected);
+  });
+
+  it.each([
+    // Backend RouteFetcherRegistry requires strict host (no http://, www only
+    // for komoot/strava). Permissive client-side regexes would create
+    // false-positive chips.
+    ["https://strava.com/routes/9876"],
+    ["https://www.ridewithgps.com/routes/42"],
+    ["http://www.komoot.com/tour/12345"],
+  ])("treats %s as unsupported (mirrors backend strictness)", (url) => {
+    expect(detectSourceProvider(url)).toBe("unsupported");
   });
 
   it("returns 'unsupported' for valid URLs that don't match any provider", () => {

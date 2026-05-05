@@ -23,10 +23,10 @@ const PROVIDER_PATTERNS: Record<
   readonly RegExp[]
 > = {
   komoot: [
-    /^https?:\/\/(www\.)?komoot\.com\/([a-z]{2}-[a-z]{2}\/)?(tour|collection)\/\d+/i,
+    /^https:\/\/www\.komoot\.com\/([a-z]{2}-[a-z]{2}\/)?(tour|collection)\/\d+/i,
   ],
-  strava: [/^https?:\/\/(www\.)?strava\.com\/routes\/\d+/i],
-  ridewithgps: [/^https?:\/\/(www\.)?ridewithgps\.com\/routes\/\d+/i],
+  strava: [/^https:\/\/www\.strava\.com\/routes\/\d+/i],
+  ridewithgps: [/^https:\/\/ridewithgps\.com\/routes\/\d+/i],
 };
 
 /**
