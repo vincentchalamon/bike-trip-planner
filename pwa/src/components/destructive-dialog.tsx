@@ -133,8 +133,8 @@ export function DestructiveDialog({
               disabled={isLoading}
               className={cn(
                 keywordSatisfied
-                  ? "ring-1 ring-destructive/30"
-                  : "ring-2 ring-destructive/20",
+                  ? "ring-1 ring-green-500/60 dark:ring-green-400/50"
+                  : "ring-2 ring-destructive/40",
               )}
               data-testid={`${testId}-keyword-input`}
               aria-invalid={

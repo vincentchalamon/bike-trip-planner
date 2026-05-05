@@ -38,7 +38,7 @@ interface GpxDropZoneCardProps {
   /** External state if the parent wants to drive uploading/error UI. */
   state?: GpxDropZoneState;
   disabled?: boolean;
-  /** Called with a valid GPX File once the user picks or drops one. */
+  /** Called with the selected or dropped file. Caller is responsible for type and size validation. */
   onFileSelected: (file: File) => void;
   /** Maximum file size in bytes — used only for the visual hint text. */
   maxBytes?: number;
