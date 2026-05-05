@@ -8,8 +8,10 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { useTranslations } from "next-intl";
-import { Link2, FileUp, Sparkles, ArrowLeft, Upload } from "lucide-react";
+import { Link2, FileUp, Sparkles, ArrowLeft } from "lucide-react";
 import { AiChatCard, type AiChatMessage } from "@/components/ai-chat-card";
+import { GpxDropZoneCard } from "@/components/gpx-drop-zone-card";
+import { SourceUrlChip } from "@/components/source-url-chip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -261,6 +263,7 @@ function LinkCard({ expanded, disabled, onSelect, onSubmit }: LinkCardProps) {
               {error}
             </p>
           )}
+          {!error && url.trim().length > 0 && <SourceUrlChip value={url} />}
         </div>
       )}
     </CardShell>
@@ -276,12 +279,17 @@ interface GpxCardProps {
 
 function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
   const t = useTranslations("cardSelection");
-  const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dropZoneState, setDropZoneState] = useState<
+    | { status: "idle" }
+    | { status: "uploading"; fileName: string; progress?: number | null }
+    | { status: "error"; message: string }
+  >({ status: "idle" });
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  // Auto-focus the drop zone when the card expands
+  // Auto-focus the drop zone when the card expands so keyboard users
+  // don't have to tab again to reach it. Mirrors the LinkCard's
+  // auto-focus on its URL input.
   useEffect(() => {
     if (expanded) dropZoneRef.current?.focus();
   }, [expanded]);
@@ -289,69 +297,31 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
   const handleFile = useCallback(
     async (file: File) => {
       setSelectedFile(file);
-      if (file.size > MAX_GPX_SIZE_BYTES) return;
-      await onUpload(file);
-    },
-    [onUpload],
-  );
-
-  const handleBrowse = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file && !file.name.toLowerCase().endsWith(".gpx")) {
-        setSelectedFile(file);
-      } else if (file) {
-        void handleFile(file);
-      }
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    },
-    [handleFile],
-  );
-
-  const handleDragOver = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      if (disabled) return;
-      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
-      setIsDragOver(true);
-    },
-    [disabled],
-  );
-
-  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-    setIsDragOver(false);
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      setIsDragOver(false);
-      if (disabled) return;
-      const file = e.dataTransfer?.files[0];
-      if (!file) return;
       if (!file.name.toLowerCase().endsWith(".gpx")) {
-        setSelectedFile(file);
+        setDropZoneState({ status: "error", message: t("gpxInvalidType") });
         return;
       }
-      void handleFile(file);
-    },
-    [disabled, handleFile],
-  );
-
-  const handleKeyDown = useCallback(
-    (e: ReactKeyboardEvent<HTMLDivElement>) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        handleBrowse();
+      if (file.size > MAX_GPX_SIZE_BYTES) {
+        setDropZoneState({ status: "error", message: t("gpxFileTooLarge") });
+        return;
+      }
+      setDropZoneState({ status: "uploading", fileName: file.name });
+      try {
+        await onUpload(file);
+        // Caller is responsible for navigating away; if we're still mounted
+        // reset the state to idle so the user can retry if needed.
+        setDropZoneState({ status: "idle" });
+      } catch (e) {
+        setDropZoneState({
+          status: "error",
+          message:
+            e instanceof Error && e.message
+              ? e.message
+              : t("gpxUploadGenericError"),
+        });
       }
     },
-    [handleBrowse],
+    [onUpload, t],
   );
 
   const fileSizeMb = selectedFile
@@ -371,64 +341,17 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
     >
       {expanded && (
         <div className="flex flex-col gap-3 w-full">
-          <div
+          <GpxDropZoneCard
             ref={dropZoneRef}
-            role="button"
-            tabIndex={0}
-            aria-label={t("gpxDescription")}
-            onClick={handleBrowse}
-            onKeyDown={handleKeyDown}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={cn(
-              "flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 cursor-pointer transition-colors",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-              isDragOver
-                ? "border-brand bg-brand/5"
-                : "border-muted-foreground/30 hover:border-brand/60 hover:bg-muted/20",
-              disabled && "cursor-not-allowed opacity-60",
-            )}
-            data-testid="card-gpx-dropzone"
-            data-drag-over={isDragOver}
-          >
-            <Upload
-              className="h-8 w-8 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <p className="text-sm text-muted-foreground text-center">
-              {t("gpxDescription")}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleBrowse();
-              }}
-              disabled={disabled}
-              data-testid="card-gpx-browse"
-            >
-              {t("gpxBrowse")}
-            </Button>
-            <p className="text-xs text-muted-foreground/70">
-              {t("gpxSizeLimit")}
-            </p>
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".gpx"
-            onChange={handleInputChange}
+            state={dropZoneState}
             disabled={disabled}
-            className="hidden"
-            data-testid="gpx-file-input"
-            aria-label={t("gpxTitle")}
+            maxBytes={MAX_GPX_SIZE_BYTES}
+            onFileSelected={(file) => void handleFile(file)}
+            dropZoneTestId="card-gpx-dropzone"
+            fileInputTestId="gpx-file-input"
           />
 
-          {selectedFile && (
+          {selectedFile && dropZoneState.status !== "uploading" && (
             <div
               className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
               data-testid="card-gpx-file-feedback"
@@ -447,18 +370,6 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
               </span>
             </div>
           )}
-
-          {selectedFile && selectedFile.size > MAX_GPX_SIZE_BYTES && (
-            <p className="text-sm text-destructive" role="alert">
-              {t("gpxFileTooLarge")}
-            </p>
-          )}
-          {selectedFile &&
-            !selectedFile.name.toLowerCase().endsWith(".gpx") && (
-              <p className="text-sm text-destructive" role="alert">
-                {t("gpxInvalidType")}
-              </p>
-            )}
         </div>
       )}
     </CardShell>

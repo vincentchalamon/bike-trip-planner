@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { TripPlanner } from "@/components/trip-planner";
 import { TripPlannerErrorBoundary } from "@/components/trip-planner-error-boundary";
+import { TripNotFound } from "@/components/trip-not-found";
+import { TripSummarySkeleton } from "@/components/trip-summary-skeleton";
+import { TimelineSidebarSkeleton } from "@/components/timeline-sidebar-skeleton";
+import { StagePanelSkeleton } from "@/components/stage-panel-skeleton";
 import { HydrationBoundary } from "@/components/hydration-boundary";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
@@ -173,25 +175,30 @@ function TripLoader({ tripId }: { tripId: string }) {
   ]);
 
   if (loadError) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <p className="text-destructive">{t("loadingError")}</p>
-        <Button asChild variant="outline">
-          <Link href="/trips">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {t("backToList")}
-          </Link>
-        </Button>
-      </div>
-    );
+    return <TripNotFound />;
   }
 
   if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] gap-3 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
-        <span>{t("loading")}</span>
-      </div>
+      <main
+        className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 space-y-6"
+        data-testid="trip-loading-skeleton"
+        aria-busy="true"
+      >
+        <TripSummarySkeleton />
+        <div className="flex items-center justify-center gap-3 text-muted-foreground text-sm">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          <span>{t("loading")}</span>
+        </div>
+        <div className="flex flex-col gap-6 lg:flex-row lg:gap-8 lg:items-start">
+          <aside className="w-full lg:w-[260px] lg:shrink-0 rounded-xl border border-border bg-card/40 p-3 lg:p-4">
+            <TimelineSidebarSkeleton count={4} />
+          </aside>
+          <div className="flex-1 min-w-0">
+            <StagePanelSkeleton />
+          </div>
+        </div>
+      </main>
     );
   }
 

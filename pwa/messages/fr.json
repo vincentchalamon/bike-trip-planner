@@ -8,6 +8,43 @@
     "ariaLabel": "Importer un fichier GPX",
     "dropZone": "Déposez votre fichier GPX ici"
   },
+  "gpxDropZone": {
+    "ariaLabel": "Zone de dépôt GPX",
+    "ariaProgress": "Progression de l'import",
+    "idle": "Glissez-déposez votre fichier GPX ici",
+    "release": "Relâchez pour importer",
+    "uploading": "Import en cours…",
+    "browse": "Parcourir",
+    "retry": "Réessayer",
+    "sizeLimit": "Maximum {size} Mo"
+  },
+  "sourceChip": {
+    "komoot": "Komoot détecté",
+    "strava": "Strava détecté",
+    "ridewithgps": "RideWithGPS détecté",
+    "unsupported": "URL non supportée"
+  },
+  "destructiveDialog": {
+    "cancel": "Annuler",
+    "confirm": "Supprimer",
+    "typeKeyword": "Tapez « {keyword} » pour confirmer"
+  },
+  "tripNotFound": {
+    "title": "Voyage introuvable",
+    "subtitle": "Ce voyage n'existe pas ou a été supprimé.",
+    "illustrationAlt": "Cycliste perdu en montagne",
+    "back": "Retour à mes voyages"
+  },
+  "shareNotFound": {
+    "title": "Partage révoqué",
+    "subtitle": "Ce lien de partage est invalide ou a été révoqué par son propriétaire.",
+    "illustrationAlt": "Cycliste perdu en montagne",
+    "back": "Retour à l'accueil"
+  },
+  "roadbookEmpty": {
+    "title": "Carnet de route vierge",
+    "subtitle": "Aucune étape pour ce voyage. Importez un itinéraire ou ajoutez votre première étape pour commencer."
+  },
   "tripSummary": {
     "totalDistance": "Distance totale :",
     "totalElevation": "Dénivelé total :",
@@ -18,7 +55,8 @@
     "datesLabel": "Dates du voyage",
     "noDates": "Dates non définies",
     "profileLabel": "Profil cyclo",
-    "customProfile": "Personnalisé"
+    "customProfile": "Personnalisé",
+    "loadingAriaLabel": "Chargement du résumé du voyage"
   },
   "tripTitle": {
     "fallback": "Mon voyage",
@@ -50,7 +88,8 @@
     "travelTimeTooltip": "Estimation basée sur la vitesse moyenne et le dénivelé (règle de Naismith adaptée au vélo)",
     "diffDistanceChanged": "Distance modifiée",
     "diffAlertsAdded": "Nouvelles alertes ajoutées",
-    "sunriseSunsetTooltip": "Heures de lever et coucher du soleil au point d'arrivée de l'étape (UTC)"
+    "sunriseSunsetTooltip": "Heures de lever et coucher du soleil au point d'arrivée de l'étape (UTC)",
+    "noAlerts": "Aucune alerte pour cette étape"
   },
   "stageLocations": {
     "searchDeparture": "Rechercher un départ...",
@@ -493,6 +532,7 @@
     "gpxSizeLimit": "Maximum 30 Mo",
     "gpxFileTooLarge": "Fichier trop volumineux (max 30 Mo).",
     "gpxInvalidType": "Seuls les fichiers .gpx sont acceptés.",
+    "gpxUploadGenericError": "L'import a échoué. Veuillez réessayer.",
     "aiTitle": "Assistant IA",
     "aiDescription": "Créez un itinéraire sur mesure",
     "back": "Changer de méthode",

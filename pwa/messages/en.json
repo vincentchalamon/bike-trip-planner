@@ -4,6 +4,43 @@
     "description": "Plan your bikepacking trips with ease",
     "skipToTimeline": "Skip to timeline"
   },
+  "gpxDropZone": {
+    "ariaLabel": "GPX drop zone",
+    "ariaProgress": "Upload progress",
+    "idle": "Drag and drop your GPX file here",
+    "release": "Release to import",
+    "uploading": "Uploading…",
+    "browse": "Browse",
+    "retry": "Retry",
+    "sizeLimit": "Maximum {size} MB"
+  },
+  "sourceChip": {
+    "komoot": "Komoot detected",
+    "strava": "Strava detected",
+    "ridewithgps": "RideWithGPS detected",
+    "unsupported": "Unsupported URL"
+  },
+  "destructiveDialog": {
+    "cancel": "Cancel",
+    "confirm": "Delete",
+    "typeKeyword": "Type \"{keyword}\" to confirm"
+  },
+  "tripNotFound": {
+    "title": "Trip not found",
+    "subtitle": "This trip does not exist or has been deleted.",
+    "illustrationAlt": "Lost cyclist in the mountains",
+    "back": "Back to my trips"
+  },
+  "shareNotFound": {
+    "title": "Share revoked",
+    "subtitle": "This share link is invalid or has been revoked by its owner.",
+    "illustrationAlt": "Lost cyclist in the mountains",
+    "back": "Back to home"
+  },
+  "roadbookEmpty": {
+    "title": "Empty roadbook",
+    "subtitle": "No stages for this trip yet. Import a route or add your first stage to get started."
+  },
   "gpxUpload": {
     "ariaLabel": "Upload GPX file",
     "dropZone": "Drop your GPX file here"
@@ -18,7 +55,8 @@
     "datesLabel": "Trip dates",
     "noDates": "Dates not set",
     "profileLabel": "Rider profile",
-    "customProfile": "Custom"
+    "customProfile": "Custom",
+    "loadingAriaLabel": "Loading trip summary"
   },
   "tripTitle": {
     "fallback": "My Trip",
@@ -50,7 +88,8 @@
     "travelTimeTooltip": "Estimate based on average speed and elevation gain (Naismith rule adapted for cycling)",
     "diffDistanceChanged": "Distance changed",
     "diffAlertsAdded": "New alerts added",
-    "sunriseSunsetTooltip": "Sunrise and sunset times at stage end point (UTC)"
+    "sunriseSunsetTooltip": "Sunrise and sunset times at stage end point (UTC)",
+    "noAlerts": "No alerts for this stage"
   },
   "stageLocations": {
     "searchDeparture": "Search departure...",
@@ -493,6 +532,7 @@
     "gpxSizeLimit": "Max 30 MB",
     "gpxFileTooLarge": "File too large (max 30 MB).",
     "gpxInvalidType": "Only .gpx files are accepted.",
+    "gpxUploadGenericError": "Upload failed. Please try again.",
     "aiTitle": "AI Assistant",
     "aiDescription": "Build a custom route",
     "back": "Change method",

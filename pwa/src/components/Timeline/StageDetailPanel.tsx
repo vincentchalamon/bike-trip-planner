@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { StageCard } from "@/components/stage-card";
+import { StagePanelSkeleton } from "@/components/stage-panel-skeleton";
 import { StageSkeleton } from "@/components/stage-skeleton";
 import { RestDayCard } from "@/components/rest-day-card";
 import { NoDatesBanner } from "@/components/no-dates-banner";
+import { RoadbookEmptyState } from "@/components/roadbook-empty-state";
 import { AddStageButton } from "@/components/add-stage-button";
 import { AddRestDayButton } from "@/components/add-rest-day-button";
 import { useTripStore } from "@/store/trip-store";
@@ -88,7 +90,6 @@ export function StageDetailPanel({
   onClearNewAcc,
   onOpenConfig,
 }: StageDetailPanelProps) {
-  const t = useTranslations("timeline");
   const tStage = useTranslations("stage");
   const recomputingStages = useTripStore((s) => s.recomputingStages);
   const selectedRef = useRef<HTMLDivElement>(null);
@@ -111,12 +112,16 @@ export function StageDetailPanel({
   );
 
   if (stages.length === 0) {
+    if (isProcessing) {
+      return (
+        <div data-testid="stage-detail-loading">
+          <StagePanelSkeleton />
+        </div>
+      );
+    }
     return (
-      <div
-        className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground"
-        data-testid="stage-detail-empty"
-      >
-        {t("noStageSelected")}
+      <div data-testid="stage-detail-empty">
+        <RoadbookEmptyState />
       </div>
     );
   }
