@@ -103,7 +103,11 @@ export function DestructiveDialog({
           </DialogTitle>
           <DialogDescription asChild>
             <div className="space-y-2 text-muted-foreground text-sm">
-              {typeof description === "string" ? <p>{description}</p> : description}
+              {typeof description === "string" ? (
+                <p>{description}</p>
+              ) : (
+                description
+              )}
             </div>
           </DialogDescription>
         </DialogHeader>
@@ -125,9 +129,7 @@ export function DestructiveDialog({
               spellCheck={false}
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
-              placeholder={
-                confirmationPlaceholder ?? confirmationKeyword
-              }
+              placeholder={confirmationPlaceholder ?? confirmationKeyword}
               disabled={isLoading}
               className={cn(
                 keywordSatisfied
@@ -156,7 +158,10 @@ export function DestructiveDialog({
             data-testid={`${testId}-confirm`}
           >
             {isLoading && (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+              <Loader2
+                className="h-4 w-4 mr-2 animate-spin"
+                aria-hidden="true"
+              />
             )}
             {confirmLabel ?? t("confirm")}
           </Button>

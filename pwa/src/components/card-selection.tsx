@@ -263,9 +263,7 @@ function LinkCard({ expanded, disabled, onSelect, onSubmit }: LinkCardProps) {
               {error}
             </p>
           )}
-          {!error && url.trim().length > 0 && (
-            <SourceUrlChip value={url} />
-          )}
+          {!error && url.trim().length > 0 && <SourceUrlChip value={url} />}
         </div>
       )}
     </CardShell>

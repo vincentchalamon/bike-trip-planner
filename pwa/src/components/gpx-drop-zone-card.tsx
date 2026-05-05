@@ -217,7 +217,9 @@ export function GpxDropZoneCard({
                 )}
                 style={
                   typeof state.progress === "number"
-                    ? { width: `${Math.min(100, Math.max(0, state.progress))}%` }
+                    ? {
+                        width: `${Math.min(100, Math.max(0, state.progress))}%`,
+                      }
                     : { width: "40%" }
                 }
               />

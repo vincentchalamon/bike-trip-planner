@@ -10,11 +10,7 @@ import { useTranslations } from "next-intl";
  * navigated to a freshly-created draft. Mirrors the "off the trail" tone of
  * the not-found page: warm illustration plus a short, encouraging message.
  */
-export function RoadbookEmptyState({
-  className,
-}: {
-  className?: string;
-}) {
+export function RoadbookEmptyState({ className }: { className?: string }) {
   const t = useTranslations("roadbookEmpty");
 
   return (
