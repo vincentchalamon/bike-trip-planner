@@ -114,9 +114,7 @@ describe("MagicLinkForm", () => {
     render(<MagicLinkForm initialState="expired" />);
 
     expect(screen.getByTestId("magic-link-expired")).toBeInTheDocument();
-    expect(
-      screen.getByTestId("magic-link-request-new"),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("magic-link-request-new")).toBeInTheDocument();
   });
 
   it("returns to the form state from the expired state", () => {

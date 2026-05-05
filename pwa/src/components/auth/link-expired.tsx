@@ -33,7 +33,8 @@ export function LinkExpired({ onRequestNew, description }: LinkExpiredProps) {
         style={{
           width: "var(--spacing-4xl)",
           height: "var(--spacing-4xl)",
-          backgroundColor: "color-mix(in oklab, var(--destructive) 12%, transparent)",
+          backgroundColor:
+            "color-mix(in oklab, var(--destructive) 12%, transparent)",
           color: "var(--destructive)",
         }}
         aria-hidden

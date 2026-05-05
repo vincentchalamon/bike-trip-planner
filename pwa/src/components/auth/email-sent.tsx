@@ -83,9 +83,7 @@ export function EmailSent({
             ),
           })}
         </p>
-        <p className="text-muted-foreground text-xs">
-          {t("checkSpamHint")}
-        </p>
+        <p className="text-muted-foreground text-xs">{t("checkSpamHint")}</p>
       </div>
 
       <Button

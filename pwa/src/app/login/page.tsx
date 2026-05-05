@@ -85,7 +85,8 @@ export default function LoginPage() {
           style={{
             padding: "var(--spacing-base)",
             backgroundColor: "var(--accent-soft)",
-            borderColor: "color-mix(in oklab, var(--accent-brand) 20%, transparent)",
+            borderColor:
+              "color-mix(in oklab, var(--accent-brand) 20%, transparent)",
             display: "grid",
             gap: "var(--spacing-xs)",
           }}
