@@ -40,11 +40,11 @@ test.describe("Auth flow", () => {
       .getByRole("button", { name: "Recevoir un lien de connexion" })
       .click();
 
-    await expect(
-      page.getByText(
-        "Si votre adresse est enregistrée, vous allez recevoir un email avec un lien de connexion.",
-      ),
-    ).toBeVisible();
+    // After submit, the magic-link form transitions to the `sent` state and
+    // shows the EmailSent component with a confirmation message and a
+    // disabled resend button counting down from 60s.
+    await expect(page.getByTestId("magic-link-sent")).toBeVisible();
+    await expect(page.getByText("test@example.com")).toBeVisible();
   });
 
   test("unauthenticated user sees landing page at /", async ({ page }) => {

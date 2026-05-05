@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Loader2 } from "lucide-react";
 import { useAuthStore, parseJwtPayload } from "@/store/auth-store";
 import { API_URL } from "@/lib/constants";
+import { LinkExpired } from "@/components/auth/link-expired";
 
 /**
  * Magic link verification page.
@@ -14,6 +16,10 @@ import { API_URL } from "@/lib/constants";
  * On success the backend returns a JWT access token and sets a
  * refresh_token httpOnly cookie; the frontend stores the JWT and
  * redirects to the home page.
+ *
+ * On failure (invalid / expired token) the page renders the `LinkExpired`
+ * component, which lets the user request a fresh magic link without leaving
+ * the verification flow.
  */
 export default function VerifyPage() {
   const t = useTranslations("auth");
@@ -66,24 +72,49 @@ export default function VerifyPage() {
 
   if (verifying) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="text-muted-foreground text-sm">{t("verifying")}</div>
+      <div
+        className="flex min-h-screen flex-col items-center justify-center"
+        style={{
+          backgroundColor: "var(--surface)",
+          padding: "var(--spacing-lg)",
+          gap: "var(--spacing-md)",
+        }}
+        role="status"
+        aria-live="polite"
+        data-testid="magic-link-verifying"
+      >
+        <Loader2
+          className="size-8 animate-spin"
+          style={{ color: "var(--accent-brand)" }}
+          aria-hidden
+        />
+        <p className="text-muted-foreground text-sm">{t("verifying")}</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="w-full max-w-sm space-y-4 text-center">
-          <p className="text-destructive text-sm">{error}</p>
-          <a
-            href="/login"
-            className="text-primary text-sm underline underline-offset-4"
-          >
-            {t("backToLogin")}
-          </a>
-        </div>
+      <div
+        className="flex min-h-screen flex-col items-center justify-center"
+        style={{
+          backgroundColor: "var(--surface)",
+          padding: "var(--spacing-lg)",
+        }}
+      >
+        <section
+          className="w-full max-w-sm rounded-2xl border bg-card"
+          style={{
+            padding: "var(--spacing-xl)",
+            boxShadow: "var(--shadow-soft)",
+            borderColor: "var(--border)",
+          }}
+        >
+          <LinkExpired
+            description={error}
+            onRequestNew={() => router.replace("/login")}
+          />
+        </section>
       </div>
     );
   }

@@ -55,19 +55,13 @@ Then("I see an email field", async ({ page }) => {
 // "je vois le bouton {string}" / "I see the {string} button" are defined in sharing.steps.ts
 
 Then("je vois le message de confirmation d'envoi", async ({ page }) => {
-  await expect(
-    page.getByText(
-      "Si votre adresse est enregistrée, vous allez recevoir un email avec un lien de connexion.",
-    ),
-  ).toBeVisible();
+  // Magic-link `sent` state — EmailSent component shows a check-your-inbox
+  // confirmation with the submitted email and a (disabled) resend button.
+  await expect(page.getByTestId("magic-link-sent")).toBeVisible();
 });
 
 Then("I see the email confirmation message", async ({ page }) => {
-  await expect(
-    page.getByText(
-      "Si votre adresse est enregistrée, vous allez recevoir un email avec un lien de connexion.",
-    ),
-  ).toBeVisible();
+  await expect(page.getByTestId("magic-link-sent")).toBeVisible();
 });
 
 When(/^je navigue vers \/auth\/verify\/token-valide$/, async ({ page }) => {
