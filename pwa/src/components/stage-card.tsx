@@ -17,6 +17,7 @@ import {
   StageStatsRow,
   StageDifficultyComposed,
   StageWeatherCard,
+  StageSurfaceBreakdown,
 } from "@/components/StageDetail";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 import { useTripStore } from "@/store/trip-store";
@@ -58,11 +59,12 @@ interface StageCardProps {
 /**
  * Right-hand stage detail card.
  *
- * Block order (sprint 26 — issue #395):
+ * Block order:
  *   1. Locations (departure → arrival)
  *   2. AI summary (Fraunces italic, sparkle, collapsible if long)
  *   3. Stats 4-col (distance editable / D+ / duration / budget)
  *   4. Composed difficulty gauge (physical / technical / elevation)
+ *   4b. Surface breakdown (conditional — see StageDataSchema.surfaceBreakdown)
  *   5. Enriched weather card (forecast + sunrise/sunset)
  *   6. Alerts — collapsible by severity
  *   7. Events — collapsible
@@ -177,6 +179,12 @@ export function StageCard({
             distance={stage.distance}
             elevation={stage.elevation ?? 0}
           />
+        )}
+
+        {/* 4b. Surface breakdown — only when the backend exposes the field
+            (forward-compatible: see StageDataSchema.surfaceBreakdown). */}
+        {stage.surfaceBreakdown && stage.surfaceBreakdown.length > 0 && (
+          <StageSurfaceBreakdown breakdown={stage.surfaceBreakdown} />
         )}
 
         {/* 5. Enriched weather card */}

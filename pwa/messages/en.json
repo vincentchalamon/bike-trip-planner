@@ -257,7 +257,9 @@
     "cardAriaLabel": "Stage weather",
     "sunriseShort": "sunrise",
     "sunsetShort": "sunset",
-    "sunriseSunsetTooltip": "Sunrise and sunset times at stage end point (UTC)"
+    "sunriseSunsetTooltip": "Sunrise and sunset times at stage end point (UTC)",
+    "sunStateDay": "Daylight",
+    "sunStateNight": "Night"
   },
   "stageStats": {
     "distance": "Distance",
@@ -282,6 +284,15 @@
     "physicalDetail": "{distance} km covered",
     "technicalDetail": "{ratio} m of climbing per km — average slope proxy",
     "elevationDetail": "{elevation} m of total ascent"
+  },
+  "surfaceBreakdown": {
+    "ariaLabel": "Surface breakdown",
+    "title": "Surfaces",
+    "label_paved": "Paved",
+    "label_gravel": "Gravel",
+    "label_cobblestone": "Cobblestone",
+    "label_unpaved": "Unpaved",
+    "label_unknown": "Unknown"
   },
   "textExport": {
     "button": "Export",

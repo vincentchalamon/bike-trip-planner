@@ -257,7 +257,9 @@
     "cardAriaLabel": "Météo de l'étape",
     "sunriseShort": "lever",
     "sunsetShort": "coucher",
-    "sunriseSunsetTooltip": "Heures de lever et coucher du soleil au point d'arrivée de l'étape (UTC)"
+    "sunriseSunsetTooltip": "Heures de lever et coucher du soleil au point d'arrivée de l'étape (UTC)",
+    "sunStateDay": "Soleil levé",
+    "sunStateNight": "Nuit"
   },
   "stageStats": {
     "distance": "Distance",
@@ -282,6 +284,15 @@
     "physicalDetail": "{distance} km parcourus",
     "technicalDetail": "{ratio} m de D+ par km — proxy de pente moyenne",
     "elevationDetail": "{elevation} m de dénivelé positif"
+  },
+  "surfaceBreakdown": {
+    "ariaLabel": "Répartition des surfaces",
+    "title": "Surfaces",
+    "label_paved": "Revêtu",
+    "label_gravel": "Gravier",
+    "label_cobblestone": "Pavé",
+    "label_unpaved": "Non revêtu",
+    "label_unknown": "Inconnu"
   },
   "textExport": {
     "button": "Exporter",

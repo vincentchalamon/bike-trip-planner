@@ -118,6 +118,22 @@ export const AccommodationSchema = z.object({
   openingHours: z.string().nullable().optional(),
 });
 
+/**
+ * Single surface segment in a stage's surface breakdown — pairs an OSM-style
+ * `surface` tag (e.g. `paved`, `gravel`, `cobblestone`, `unknown`) with its
+ * cumulative length in metres along the route. The frontend converts the list
+ * to percentages on the fly.
+ *
+ * NOTE: backend (`StageResponse`) does not yet emit this field. The schema is
+ * forward-compatible so the SurfaceBreakdown component renders automatically
+ * when the field appears, without requiring a frontend release.
+ * TODO(#403 backend follow-up): wire via typegen once the OSM aggregation ships.
+ */
+export const SurfaceSegmentSchema = z.object({
+  surface: z.string(),
+  lengthMeters: z.number().nonnegative(),
+});
+
 export const StageDataSchema = z.object({
   dayNumber: z.number(),
   distance: z.number(),
@@ -151,6 +167,16 @@ export const StageDataSchema = z.object({
    * TODO(#395): wire via typegen once backend StageResponse DTO ships aiSummary
    */
   aiSummary: z.string().nullable().optional(),
+  /**
+   * Optional per-stage surface breakdown — list of `{ surface, lengthMeters }`
+   * pairs aggregated from OSM `surface` tags along the stage. Rendered as a
+   * stacked bar in the stage detail panel. Schema is forward-compatible:
+   * backend may emit this field when available without breaking existing
+   * clients.
+   * TODO(#403): wire via typegen once backend StageResponse DTO ships
+   * `surfaceBreakdown`.
+   */
+  surfaceBreakdown: z.array(SurfaceSegmentSchema).nullable().optional(),
 });
 
 export const TripStateSchema = z.object({
@@ -184,4 +210,5 @@ export type SupplyFoodPointData = z.infer<typeof SupplyFoodPointSchema>;
 export type SupplyMarkerData = z.infer<typeof SupplyMarkerSchema>;
 export type EventData = z.infer<typeof EventSchema>;
 export type AccommodationData = z.infer<typeof AccommodationSchema>;
+export type SurfaceSegmentData = z.infer<typeof SurfaceSegmentSchema>;
 export type StageData = z.infer<typeof StageDataSchema>;
