@@ -17,12 +17,22 @@ import { cn } from "@/lib/utils";
  * Discrete states the drop zone can be in. Drives both visual styling and
  * accessibility annotations (aria-busy / aria-invalid). Using a discriminated
  * union avoids juggling several boolean flags ("isUploading", "hasError"…).
+ *
+ * The `"hovering"` visual state is intentionally NOT part of this public
+ * union: it is purely a local, drag-event-driven display value (see
+ * `EffectiveStatus` below). Exposing it would let callers force the UI into
+ * a stuck "hovering" look that would never react to actual drag events.
  */
 export type GpxDropZoneState =
   | { status: "idle" }
-  | { status: "hovering" }
   | { status: "uploading"; fileName: string; progress?: number | null }
   | { status: "error"; message: string };
+
+/**
+ * Internal display value: the public statuses plus the locally-derived
+ * `"hovering"` state. Kept private to this module on purpose.
+ */
+type EffectiveStatus = GpxDropZoneState["status"] | "hovering";
 
 interface GpxDropZoneCardProps {
   /** External state if the parent wants to drive uploading/error UI. */
@@ -73,7 +83,7 @@ export const GpxDropZoneCard = forwardRef<HTMLDivElement, GpxDropZoneCardProps>(
 
     // Effective visual state: a local "hovering" overrides the parent-driven
     // "idle" state so we can show the hover styling without round-tripping.
-    const effectiveStatus =
+    const effectiveStatus: EffectiveStatus =
       state.status === "idle" && isDragOver ? "hovering" : state.status;
 
     const handleBrowse = useCallback(() => {
