@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 
 /**
  * Empty-state placeholder for an empty roadbook (sprint 27, #402).
@@ -15,10 +16,10 @@ export function RoadbookEmptyState({ className }: { className?: string }) {
 
   return (
     <div
-      className={[
+      className={cn(
         "flex flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-border bg-card/40 px-6 py-12 text-center",
-        className ?? "",
-      ].join(" ")}
+        className,
+      )}
       role="status"
       aria-live="polite"
       data-testid="roadbook-empty-state"
