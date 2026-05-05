@@ -50,19 +50,13 @@ export function TripCard({ trip, onDelete }: TripCardProps) {
       )}
       data-testid={`trip-card-${tripId}`}
     >
-      {/* Mini-map preview */}
-      <button
-        type="button"
-        onClick={() => router.push(`/trips/${tripId}`)}
-        className="relative block w-full text-left cursor-pointer focus:outline-none"
-        aria-label={t("openTrip", { title: trip.title ?? t("untitled") })}
-        data-testid={`trip-item-${tripId}`}
-      >
+      {/* Mini-map preview (decorative, click handled by stretched link below) */}
+      <div className="relative block w-full" aria-hidden="true">
         <TripMiniMap path={polylinePath} tripId={tripId} />
         <div className="absolute top-3 right-3">
           <TripStatusBadge status={trip.status} />
         </div>
-      </button>
+      </div>
 
       {/* Content */}
       <div className="flex flex-1 flex-col gap-3 p-4">
@@ -70,7 +64,13 @@ export function TripCard({ trip, onDelete }: TripCardProps) {
           <button
             type="button"
             onClick={() => router.push(`/trips/${tripId}`)}
-            className="text-left flex-1 min-w-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+            className={cn(
+              "text-left flex-1 min-w-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm",
+              // Stretched-link: extend click target to cover the entire card.
+              "after:absolute after:inset-0 after:z-0",
+            )}
+            aria-label={t("openTrip", { title: trip.title ?? t("untitled") })}
+            data-testid={`trip-item-${tripId}`}
           >
             <h3 className="font-serif text-lg font-semibold leading-tight tracking-tight truncate">
               {trip.title ?? t("untitled")}
@@ -85,7 +85,7 @@ export function TripCard({ trip, onDelete }: TripCardProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              className="relative z-10 h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(trip);
