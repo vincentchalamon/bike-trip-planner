@@ -51,7 +51,7 @@ const SOURCES: Source[] = [
   },
   {
     key: "ai",
-    name: "IA",
+    name: "AI",
     href: null,
     external: false,
     Icon: Sparkles,
