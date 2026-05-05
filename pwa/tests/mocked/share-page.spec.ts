@@ -107,6 +107,9 @@ test.describe("/s/[code] page", () => {
       timeout: 10000,
     });
 
+    // Top bar stays mounted in the error branch so the user has a home link
+    await expect(page.getByTestId("shared-top-bar")).toBeVisible();
+
     // Back to home link
     await expect(page.getByRole("link").first()).toBeVisible();
   });
