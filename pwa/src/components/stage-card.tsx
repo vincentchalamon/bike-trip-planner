@@ -59,12 +59,12 @@ interface StageCardProps {
 /**
  * Right-hand stage detail card.
  *
- * Block order (sprint 26 — issue #395):
+ * Block order:
  *   1. Locations (departure → arrival)
  *   2. AI summary (Fraunces italic, sparkle, collapsible if long)
  *   3. Stats 4-col (distance editable / D+ / duration / budget)
  *   4. Composed difficulty gauge (physical / technical / elevation)
- *   4b. Surface breakdown (sprint 27 — issue #403, conditional on backend field)
+ *   4b. Surface breakdown (conditional — see StageDataSchema.surfaceBreakdown)
  *   5. Enriched weather card (forecast + sunrise/sunset)
  *   6. Alerts — collapsible by severity
  *   7. Events — collapsible
