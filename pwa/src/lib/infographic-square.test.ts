@@ -55,7 +55,9 @@ function buildStage(
  * touching the DOM. Sufficient for verifying the renderer doesn't throw
  * and exercises the public API end-to-end.
  */
-function makeFakeCanvas(): HTMLCanvasElement {
+function makeFakeCanvas(
+  measureText?: (text: string) => { width: number },
+): HTMLCanvasElement {
   const ctxStub = {
     canvas: {} as HTMLCanvasElement,
     fillStyle: "",
@@ -83,7 +85,9 @@ function makeFakeCanvas(): HTMLCanvasElement {
     clip: vi.fn(),
     drawImage: vi.fn(),
     createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
-    measureText: vi.fn((text: string) => ({ width: text.length * 7 })),
+    measureText: vi.fn(
+      measureText ?? ((text: string) => ({ width: text.length * 7 })),
+    ),
   };
   const canvas = {
     width: 0,
@@ -153,6 +157,41 @@ describe("infographic-square", () => {
         labels,
       }),
     ).resolves.toBeUndefined();
+  });
+
+  it("preserves the last wrapped title line when the title exceeds maxLines at a word boundary", async () => {
+    // Stub measureText so each word is ~500px wide. At the title maxWidth
+    // of 968 (1080 − 2 × 56 padding), one word fits per line but two
+    // words (1000px) do not. With a 3-word title and maxLines=2, the
+    // wrap loop pushes "W1", then pushes "W2" to hit the maxLines budget
+    // with `current = ""` and `i = 2`. Without the `&& current` guard,
+    // the truncate branch overwrites lines[1] with words.slice(2) → "W3",
+    // silently dropping "W2".
+    const measureText = (t: string) => ({
+      width: t.split(" ").filter(Boolean).length * 500,
+    });
+    const canvas = makeFakeCanvas(measureText);
+    await renderSquareInfographic(canvas, {
+      title: "W1 W2 W3",
+      totalDistance: 120,
+      totalElevation: 800,
+      stages: [buildStage(1, 60, 400), buildStage(2, 60, 400)],
+      estimatedBudgetMin: 100,
+      estimatedBudgetMax: 200,
+      labels,
+    });
+    const ctx = (
+      canvas.getContext as unknown as {
+        mock: { results: Array<{ value: { fillText: { mock: { calls: unknown[][] } } } }> };
+      }
+    ).mock.results[0]!.value;
+    const fillTextCalls = ctx.fillText.mock.calls.map(
+      (call) => call[0] as string,
+    );
+    // The second wrapped title line must survive: "W2" should be drawn.
+    expect(fillTextCalls).toContain("W2");
+    // And the regression: line 2 must not have been overwritten with "W3".
+    expect(fillTextCalls).not.toContain("W3");
   });
 
   it("renderSquareInfographic truncates long stage lists", async () => {

@@ -555,10 +555,10 @@ function wrapText(
   }
   if (lines.length < maxLines && current) {
     lines.push(current);
-  } else if (i < words.length) {
+  } else if (i < words.length && current) {
     // We hit the maxLines budget mid-word; pack the remainder onto the
     // last line, truncated with an ellipsis if needed.
-    const remaining = [current, ...words.slice(i)].filter(Boolean).join(" ");
+    const remaining = [current, ...words.slice(i)].join(" ");
     lines[lines.length - 1] = truncateText(ctx, remaining, maxWidth);
   }
   return lines;
