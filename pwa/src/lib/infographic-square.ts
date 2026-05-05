@@ -48,7 +48,7 @@ export const SQUARE_INFOGRAPHIC_SIZE = 1080;
 
 /** Maximum number of stages listed in the summary block; remaining stages
  * are summarised as "+ N more". */
-export const MAX_STAGE_LIST = 6;
+export const MAX_STAGE_LIST = 5;
 
 const PADDING = 56;
 

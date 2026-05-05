@@ -125,7 +125,7 @@ describe("infographic-square", () => {
   });
 
   it("caps stage list at MAX_STAGE_LIST entries", () => {
-    expect(MAX_STAGE_LIST).toBe(6);
+    expect(MAX_STAGE_LIST).toBe(5);
   });
 
   it("renderSquareInfographic resolves on minimal data", async () => {
@@ -208,7 +208,7 @@ describe("infographic-square", () => {
         stages,
         estimatedBudgetMin: 0,
         estimatedBudgetMax: 0,
-        labels: { ...labels, more: "+ 4 more stages" },
+        labels: { ...labels, more: "+ 5 more stages" },
       }),
     ).resolves.toBeUndefined();
   });
