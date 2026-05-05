@@ -58,7 +58,7 @@ export function TripCard({ trip, onDelete }: TripCardProps) {
         aria-label={t("openTrip", { title: trip.title ?? t("untitled") })}
         data-testid={`trip-item-${tripId}`}
       >
-        <TripMiniMap path={polylinePath} />
+        <TripMiniMap path={polylinePath} tripId={tripId} />
         <div className="absolute top-3 right-3">
           <TripStatusBadge status={trip.status} />
         </div>
@@ -124,8 +124,14 @@ export function TripCard({ trip, onDelete }: TripCardProps) {
 
 /**
  * Decorative mini-map: gradient terrain background with a stylised polyline.
+ *
+ * SVG `<defs>` ids are suffixed with `tripId` to avoid duplicate-id collisions
+ * when many cards are rendered in a list.
  */
-function TripMiniMap({ path }: { path: string }) {
+function TripMiniMap({ path, tripId }: { path: string; tripId: string }) {
+  const idSuffix = sanitizeIdSuffix(tripId);
+  const gridId = `trip-card-grid-${idSuffix}`;
+  const routeId = `trip-card-route-${idSuffix}`;
   return (
     <div
       className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-emerald-50 via-sky-50 to-amber-50 dark:from-emerald-950/40 dark:via-sky-950/40 dark:to-amber-950/40"
@@ -138,7 +144,7 @@ function TripMiniMap({ path }: { path: string }) {
       >
         <defs>
           <pattern
-            id="trip-card-grid"
+            id={gridId}
             width="20"
             height="20"
             patternUnits="userSpaceOnUse"
@@ -151,18 +157,12 @@ function TripMiniMap({ path }: { path: string }) {
               className="text-foreground/10"
             />
           </pattern>
-          <linearGradient
-            id="trip-card-route"
-            x1="0%"
-            y1="0%"
-            x2="100%"
-            y2="0%"
-          >
+          <linearGradient id={routeId} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="var(--brand)" />
             <stop offset="100%" stopColor="var(--brand-hover)" />
           </linearGradient>
         </defs>
-        <rect width="200" height="100" fill="url(#trip-card-grid)" />
+        <rect width="200" height="100" fill={`url(#${gridId})`} />
 
         {/* Halo */}
         <path
@@ -178,7 +178,7 @@ function TripMiniMap({ path }: { path: string }) {
         <path
           d={path}
           fill="none"
-          stroke="url(#trip-card-route)"
+          stroke={`url(#${routeId})`}
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -187,6 +187,12 @@ function TripMiniMap({ path }: { path: string }) {
       </svg>
     </div>
   );
+}
+
+/** Sanitize an arbitrary string into a safe SVG id fragment. */
+function sanitizeIdSuffix(value: string): string {
+  const cleaned = value.replace(/[^a-zA-Z0-9_-]/g, "");
+  return cleaned.length > 0 ? cleaned : "default";
 }
 
 function PolylineEndpoints({ path }: { path: string }) {
