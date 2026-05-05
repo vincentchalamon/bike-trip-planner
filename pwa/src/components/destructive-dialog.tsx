@@ -137,7 +137,9 @@ export function DestructiveDialog({
                   : "ring-2 ring-destructive/20",
               )}
               data-testid={`${testId}-keyword-input`}
-              aria-invalid={!keywordSatisfied}
+              aria-invalid={
+                typed.length > 0 && !keywordSatisfied ? true : undefined
+              }
             />
           </div>
         )}
