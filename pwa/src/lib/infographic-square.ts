@@ -188,7 +188,15 @@ export async function renderSquareInfographic(
   const rowGap = 2;
   const rowH = 28;
   for (const stage of visibleStages) {
-    drawStageRow(ctx, PADDING, cursorY, SQUARE_INFOGRAPHIC_SIZE - PADDING * 2, rowH, stage, data.labels);
+    drawStageRow(
+      ctx,
+      PADDING,
+      cursorY,
+      SQUARE_INFOGRAPHIC_SIZE - PADDING * 2,
+      rowH,
+      stage,
+      data.labels,
+    );
     cursorY += rowH + rowGap;
   }
   if (activeStages.length > MAX_STAGE_LIST) {
