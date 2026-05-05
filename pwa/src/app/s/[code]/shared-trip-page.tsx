@@ -278,7 +278,7 @@ function SharedTripLoader({ code }: { code: string }) {
               <div
                 className={
                   viewMode === "split"
-                    ? "lg:w-[520px] lg:shrink-0"
+                    ? "hidden lg:block lg:w-[520px] lg:shrink-0"
                     : "w-full h-[calc(100vh-12rem)]"
                 }
               >
