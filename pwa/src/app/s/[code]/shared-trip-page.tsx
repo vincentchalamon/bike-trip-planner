@@ -186,7 +186,7 @@ function SharedTripLoader({ code }: { code: string }) {
 
   if (!isLoaded) {
     return (
-      <>
+      <ShareProvider value={null}>
         <SharedTopBar />
         <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
           <div className="flex items-center justify-center min-h-[60vh] gap-3 text-muted-foreground">
@@ -194,7 +194,7 @@ function SharedTripLoader({ code }: { code: string }) {
             <span>{t("loading")}</span>
           </div>
         </main>
-      </>
+      </ShareProvider>
     );
   }
 
