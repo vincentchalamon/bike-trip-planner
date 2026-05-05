@@ -31,10 +31,10 @@ export function EmailSent({
 
   useEffect(() => {
     if (remaining <= 0) return;
-    const id = window.setInterval(() => {
-      setRemaining((value) => (value > 0 ? value - 1 : 0));
+    const id = window.setTimeout(() => {
+      setRemaining((value) => Math.max(0, value - 1));
     }, 1000);
-    return () => window.clearInterval(id);
+    return () => window.clearTimeout(id);
   }, [remaining]);
 
   const ready = remaining <= 0;

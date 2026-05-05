@@ -99,7 +99,7 @@ describe("MagicLinkForm", () => {
       await Promise.resolve();
     });
 
-    // Tick past the cooldown — interval ticks once per second.
+    // Tick past the cooldown — a chained setTimeout fires once per second.
     await act(async () => {
       vi.advanceTimersByTime(2500);
     });
@@ -108,6 +108,42 @@ describe("MagicLinkForm", () => {
       screen.getByTestId("magic-link-sent").getAttribute("data-substate"),
     ).toBe("sent-ready");
     expect(screen.getByTestId("magic-link-resend")).toBeEnabled();
+  });
+
+  it("calls requestMagicLink again when the resend button is clicked after cooldown", async () => {
+    requestMagicLink.mockResolvedValue(undefined);
+    render(<MagicLinkForm cooldownSeconds={2} />);
+
+    fireEvent.change(screen.getByTestId("magic-link-input"), {
+      target: { value: "user@example.com" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("magic-link-submit"));
+      await Promise.resolve();
+    });
+
+    expect(requestMagicLink).toHaveBeenCalledTimes(1);
+
+    // Tick past the cooldown so the resend button becomes enabled.
+    await act(async () => {
+      vi.advanceTimersByTime(2500);
+    });
+
+    const resendButton = screen.getByTestId("magic-link-resend");
+    expect(resendButton).toBeEnabled();
+
+    await act(async () => {
+      fireEvent.click(resendButton);
+      await Promise.resolve();
+    });
+
+    expect(requestMagicLink).toHaveBeenCalledTimes(2);
+    expect(requestMagicLink).toHaveBeenLastCalledWith("user@example.com");
+    // Cooldown restarts after a successful resend.
+    expect(
+      screen.getByTestId("magic-link-sent").getAttribute("data-substate"),
+    ).toBe("sent");
+    expect(screen.getByTestId("magic-link-resend")).toBeDisabled();
   });
 
   it("renders the expired state when initialState=expired", () => {

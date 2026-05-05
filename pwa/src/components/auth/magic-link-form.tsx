@@ -10,18 +10,25 @@ import { EmailSent } from "./email-sent";
 import { LinkExpired } from "./link-expired";
 
 /**
- * Magic-link visual states.
+ * Public magic-link entry states.
  *
- * - `form`        : initial email form
- * - `sent`        : email submitted, cooldown timer running (handled inside `EmailSent`)
- * - `sent-ready`  : email submitted, cooldown elapsed (also handled inside `EmailSent`)
- * - `expired`    : verification failed (link invalid or expired)
+ * Restricted to states that make sense as initial render targets:
+ * - `form`    : initial email form
+ * - `expired` : verification failed (link invalid or expired)
  *
- * Note: `sent` and `sent-ready` are surfaced via the `data-substate` attribute
- * on the `<EmailSent>` root element rather than as separate top-level states,
- * because the timer transition is purely visual.
+ * The `sent` / `sent-ready` sub-states are internal-only (they require a
+ * `submittedEmail`, which only exists after a successful form submission)
+ * and therefore must not be reachable via the public `initialState` prop.
  */
-export type MagicLinkState = "form" | "sent" | "expired";
+export type MagicLinkState = "form" | "expired";
+
+/**
+ * Internal state machine — superset of {@link MagicLinkState} that adds the
+ * `sent` transition reached after a successful submit. `sent-ready` is purely
+ * visual and surfaced via the `data-substate` attribute on the `<EmailSent>`
+ * root element.
+ */
+type InternalMagicLinkState = MagicLinkState | "sent";
 
 export type MagicLinkFormProps = {
   /** Initial state — defaults to `form`. */
@@ -51,7 +58,7 @@ export function MagicLinkForm({
   const t = useTranslations("auth");
   const requestMagicLink = useAuthStore((s) => s.requestMagicLink);
 
-  const [state, setState] = useState<MagicLinkState>(initialState);
+  const [state, setState] = useState<InternalMagicLinkState>(initialState);
   const [email, setEmail] = useState("");
   const [submittedEmail, setSubmittedEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
