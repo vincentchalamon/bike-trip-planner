@@ -172,10 +172,12 @@ function SharedTripLoader({ code }: { code: string }) {
 
   if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] gap-3 text-muted-foreground">
-        <Loader2 className="h-5 w-5 animate-spin" />
-        <span>{t("loading")}</span>
-      </div>
+      <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
+        <div className="flex items-center justify-center min-h-[60vh] gap-3 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span>{t("loading")}</span>
+        </div>
+      </main>
     );
   }
 
@@ -184,7 +186,7 @@ function SharedTripLoader({ code }: { code: string }) {
 
   return (
     <ShareProvider value={{ shortCode: code, title: title ?? "" }}>
-      <div className="space-y-6">
+      <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 space-y-6">
         {/* Read-only banner */}
         <div
           data-testid="read-only-banner"
@@ -274,7 +276,7 @@ function SharedTripLoader({ code }: { code: string }) {
             </div>
           )}
         </div>
-      </div>
+      </main>
     </ShareProvider>
   );
 }
@@ -284,11 +286,9 @@ export default function SharedTripPage() {
 
   return (
     <HydrationBoundary>
-      <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
-        <Suspense fallback={null}>
-          <SharedTripLoader code={code} />
-        </Suspense>
-      </main>
+      <Suspense fallback={null}>
+        <SharedTripLoader code={code} />
+      </Suspense>
     </HydrationBoundary>
   );
 }
