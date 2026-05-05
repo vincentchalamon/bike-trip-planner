@@ -170,9 +170,9 @@ export const StageDataSchema = z.object({
   /**
    * Optional per-stage surface breakdown — list of `{ surface, lengthMeters }`
    * pairs aggregated from OSM `surface` tags along the stage. Rendered as a
-   * stacked bar in the stage detail panel (sprint 27 — issue #403). Schema is
-   * forward-compatible: backend may emit this field when available without
-   * breaking existing clients.
+   * stacked bar in the stage detail panel. Schema is forward-compatible:
+   * backend may emit this field when available without breaking existing
+   * clients.
    * TODO(#403): wire via typegen once backend StageResponse DTO ships
    * `surfaceBreakdown`.
    */

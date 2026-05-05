@@ -48,8 +48,8 @@ const SURFACE_TO_FAMILY: Record<string, SurfaceFamily> = {
 
 /**
  * Tailwind classes used to colour each surface family in the stacked bar.
- * Sprint 25 design tokens (semantic foreground/muted) used for the unknown
- * fallback so the bar still has a calm background where the data is sparse.
+ * Semantic foreground/muted design tokens are used for the unknown fallback
+ * so the bar still has a calm background where the data is sparse.
  */
 const FAMILY_BAR_CLASS: Record<SurfaceFamily, string> = {
   paved: "bg-sky-500 dark:bg-sky-400",
@@ -126,9 +126,9 @@ interface StageSurfaceBreakdownProps {
  * when every segment has zero length. The component is forward-compatible —
  * see `StageDataSchema.surfaceBreakdown` for the wire-format contract.
  *
- * Reuses sprint-25 design tokens (border, card, muted-foreground) and the same
- * `rounded-lg border bg-card/40` shell as the difficulty/weather cards so the
- * three blocks line up visually in the right-hand stage detail panel.
+ * Reuses the shared design tokens (border, card, muted-foreground) and the
+ * same `rounded-lg border bg-card/40` shell as the difficulty/weather cards
+ * so the three blocks line up visually in the right-hand stage detail panel.
  */
 export function StageSurfaceBreakdown({
   breakdown,
