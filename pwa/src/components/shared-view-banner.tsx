@@ -19,7 +19,6 @@ export function SharedViewBanner() {
   return (
     <div
       role="status"
-      aria-live="polite"
       data-testid="read-only-banner"
       className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300"
     >
