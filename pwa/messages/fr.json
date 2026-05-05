@@ -621,59 +621,80 @@
       "badge": "Accès anticipé — Places limitées",
       "title": "Votre copilote pour chaque kilomètre",
       "subtitle": "Préparez votre voyage à vélo en toute sérénité. Analyse d'itinéraire, alertes de terrain, météo, hébergements et ravitaillement — tout en un.",
-      "ctaPrimary": "Créer un itinéraire",
-      "ctaDemo": "Voir une démo"
+      "ctaPrimary": "Créer un voyage",
+      "ctaDemo": "Voir comment ça marche"
     },
     "howItWorks": {
       "title": "Comment ça marche",
-      "step1Title": "Importez votre itinéraire",
-      "step1Description": "Collez un lien Komoot, Strava, RideWithGPS ou importez un fichier GPX.",
-      "step2Title": "Prévisualisez votre voyage",
-      "step2Description": "La carte et la timeline affichent vos étapes calculées automatiquement.",
-      "step3Title": "On analyse tout",
-      "step3Description": "Notre moteur détecte les alertes terrain, météo, hébergements et ravitaillement.",
-      "step4Title": "Partez serein",
-      "step4Description": "Téléchargez votre GPX/FIT optimisé et partez l'esprit tranquille."
+      "subtitle": "Quatre étapes pour transformer un tracé en aventure prête à partir.",
+      "step1Title": "Importez",
+      "step1Description": "Collez un lien Komoot, Strava, RideWithGPS, importez un GPX ou laissez l'IA générer un itinéraire.",
+      "step2Title": "Analysez",
+      "step2Description": "Notre moteur découpe votre parcours en étapes journalières et détecte alertes, météo et points-clés.",
+      "step3Title": "Planifiez",
+      "step3Description": "Affinez vos étapes, ajoutez des hébergements, ajustez le pacing — tout est éditable.",
+      "step4Title": "Partez",
+      "step4Description": "Téléchargez votre GPX/FIT optimisé et roulez l'esprit tranquille, même hors ligne."
     },
     "features": {
-      "title": "Fonctionnalités",
+      "title": "Tout ce qu'il vous faut, dans une seule appli",
+      "subtitle": "Neuf modules conçus pour les cyclistes longue distance — et vous décidez lesquels activer.",
       "terrain": {
-        "title": "Terrain & Sécurité",
-        "description": "Alertes passages frontaliers, gares SNCF, services d'urgence à proximité."
-      },
-      "supply": {
-        "title": "Ravitaillement",
-        "description": "Points d'eau, épiceries, restaurants détectés sur votre tracé."
-      },
-      "ai": {
-        "title": "Assistant IA",
-        "description": "Générez ou optimisez votre itinéraire avec l'intelligence artificielle. Import depuis une conversation, suggestions de variantes."
-      },
-      "accommodation": {
-        "title": "Hébergements",
-        "description": "Campings, gîtes, hôtels suggérés à chaque étape avec budget estimé."
+        "title": "Terrain & dénivelé",
+        "description": "Profil altimétrique précis, détection des cols, surfaces et zones difficiles sur votre tracé."
       },
       "weather": {
         "title": "Météo",
-        "description": "Prévisions météo à 7 jours pour chaque étape de votre voyage."
+        "description": "Prévisions à 7 jours pour chaque étape, alertes vent et précipitations."
+      },
+      "supply": {
+        "title": "Ravitaillement",
+        "description": "Points d'eau, épiceries, restaurants détectés à proximité de votre route."
+      },
+      "ai": {
+        "title": "Assistant IA",
+        "description": "Générez ou optimisez votre itinéraire avec l'IA. Import depuis une conversation ChatGPT, suggestions de variantes, analyse contextuelle de chaque étape."
+      },
+      "accommodation": {
+        "title": "Hébergements",
+        "description": "Campings, gîtes, hôtels suggérés au point d'arrivée de chaque étape, avec budget estimé et liens de réservation."
       },
       "services": {
-        "title": "Services",
-        "description": "Pharmacies, médecins, réparateurs vélo signalés en cas d'urgence."
+        "title": "Services & santé",
+        "description": "Pharmacies, médecins et réparateurs vélo signalés sur votre parcours."
+      },
+      "safety": {
+        "title": "Sécurité",
+        "description": "Passages frontaliers, gares SNCF de repli et services d'urgence à proximité."
+      },
+      "poi": {
+        "title": "Points d'intérêt",
+        "description": "Patrimoine, festivals, sites naturels remarquables le long de votre route."
+      },
+      "export": {
+        "title": "Export GPX / FIT",
+        "description": "Téléchargez chaque étape au format GPX ou FIT pour Garmin, Wahoo et tous vos compteurs."
       }
     },
     "sources": {
-      "title": "Sources supportées"
+      "title": "Sources supportées",
+      "subtitle": "Importez votre itinéraire depuis votre plateforme préférée — ou laissez l'IA en générer un.",
+      "komootType": "Tour ou collection",
+      "stravaType": "Route publique",
+      "rwgpsType": "Route publique",
+      "gpxType": "Fichier .gpx",
+      "aiType": "Génération assistée"
     },
     "availability": {
       "title": "Disponible partout",
-      "responsive": "Site responsive",
-      "responsiveDescription": "Optimisé pour tous les écrans, du smartphone à l'écran large.",
-      "pwa": "PWA installable",
+      "subtitle": "Sur le web, sur votre poche et même sans réseau.",
+      "webTitle": "Web",
+      "webDescription": "Optimisé pour tous les écrans, du smartphone au desktop.",
+      "pwaTitle": "PWA",
       "pwaDescription": "Installez l'application sur votre appareil comme une app native.",
-      "android": "Application Android",
+      "androidTitle": "Android",
       "androidDescription": "Version Android native pour une expérience mobile optimale.",
-      "offline": "Mode hors ligne",
+      "offlineTitle": "Hors ligne",
       "offlineDescription": "Consultez vos voyages sans connexion pendant le trajet."
     },
     "screenshots": {
@@ -713,9 +734,10 @@
     "footer": {
       "tagline": "Le copilote open-source pour vos aventures à vélo.",
       "links": "Liens",
-      "createTrip": "Créer un itinéraire",
       "login": "Connexion",
+      "faq": "FAQ",
       "legal": "Mentions légales",
+      "privacy": "Confidentialité",
       "github": "GitHub (open-source)",
       "copyright": "© {year} Bike Trip Planner. Projet open-source."
     }
