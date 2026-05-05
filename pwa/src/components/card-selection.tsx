@@ -285,6 +285,14 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
     | { status: "uploading"; fileName: string; progress?: number | null }
     | { status: "error"; message: string }
   >({ status: "idle" });
+  const dropZoneRef = useRef<HTMLDivElement>(null);
+
+  // Auto-focus the drop zone when the card expands so keyboard users
+  // don't have to tab again to reach it. Mirrors the LinkCard's
+  // auto-focus on its URL input.
+  useEffect(() => {
+    if (expanded) dropZoneRef.current?.focus();
+  }, [expanded]);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -334,6 +342,7 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
       {expanded && (
         <div className="flex flex-col gap-3 w-full">
           <GpxDropZoneCard
+            ref={dropZoneRef}
             state={dropZoneState}
             disabled={disabled}
             maxBytes={MAX_GPX_SIZE_BYTES}
