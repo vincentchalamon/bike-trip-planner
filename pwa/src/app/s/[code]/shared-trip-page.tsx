@@ -178,9 +178,12 @@ function SharedTripLoader({ code }: { code: string }) {
 
   if (loadError) {
     return (
-      <div data-testid="share-error">
-        <TripNotFound variant="share" />
-      </div>
+      <ShareProvider value={null}>
+        <SharedTopBar />
+        <div data-testid="share-error">
+          <TripNotFound variant="share" />
+        </div>
+      </ShareProvider>
     );
   }
 
