@@ -127,3 +127,88 @@ test.describe("/trips page", () => {
     ).not.toBeVisible();
   });
 });
+
+test.describe("/trips empty states", () => {
+  test.beforeEach(async ({ page }) => {
+    // Mock auth refresh so AuthGuard passes
+    await page.route("**/auth/refresh", (route) =>
+      route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+      }),
+    );
+  });
+
+  test("shows empty state when no trips exist", async ({ page }) => {
+    await page.route("**/trips*", (route, request) => {
+      const accept = request.headers()["accept"] ?? "";
+      if (!accept.includes("application/ld+json")) return route.fallback();
+      if (request.method() !== "GET") return route.fallback();
+
+      return route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "application/ld+json; charset=utf-8" },
+        body: JSON.stringify({ member: [], totalItems: 0 }),
+      });
+    });
+
+    await page.goto("/trips");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByTestId("trips-empty-no-trips")).toBeVisible();
+    await expect(
+      page.getByTestId("trips-empty-new-trip-primary"),
+    ).toBeVisible();
+    // The no-results variant must NOT render in this case.
+    await expect(page.getByTestId("trips-empty-no-results")).not.toBeVisible();
+  });
+
+  test("shows no-results state when filter has no match", async ({ page }) => {
+    // Return populated trips when no title filter, empty otherwise.
+    await page.route("**/trips*", (route, request) => {
+      const accept = request.headers()["accept"] ?? "";
+      if (!accept.includes("application/ld+json")) return route.fallback();
+      if (request.method() !== "GET") return route.fallback();
+
+      const url = new URL(request.url());
+      const hasTitleFilter = url.searchParams.has("title");
+
+      const body = hasTitleFilter
+        ? { member: [], totalItems: 0 }
+        : MOCK_TRIPS;
+
+      return route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "application/ld+json; charset=utf-8" },
+        body: JSON.stringify(body),
+      });
+    });
+
+    await page.goto("/trips");
+    await page.waitForLoadState("networkidle");
+
+    // Initial state: trips visible.
+    await expect(page.getByText("Tour des Alpes")).toBeVisible();
+    await expect(page.getByText("Bretagne coastal")).toBeVisible();
+
+    // Type a non-matching title in the search filter (350ms debounce).
+    const searchInput = page.getByRole("searchbox", {
+      name: /rechercher par titre/i,
+    });
+    await searchInput.fill("zzz-no-match");
+
+    // No-results empty state appears.
+    await expect(page.getByTestId("trips-empty-no-results")).toBeVisible();
+    await expect(
+      page.getByTestId("trips-empty-active-filters"),
+    ).toBeVisible();
+
+    // Click reset-filters → original trips reappear.
+    await page.getByTestId("trips-empty-reset-filters").click();
+
+    await expect(page.getByText("Tour des Alpes")).toBeVisible();
+    await expect(page.getByText("Bretagne coastal")).toBeVisible();
+    await expect(page.getByTestId("trips-empty-no-results")).not.toBeVisible();
+  });
+});
