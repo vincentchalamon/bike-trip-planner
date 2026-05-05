@@ -1,7 +1,15 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Sunrise, Sunset, Droplets, Wind, Gauge, Moon, Sun } from "lucide-react";
+import {
+  Sunrise,
+  Sunset,
+  Droplets,
+  Wind,
+  Gauge,
+  Moon,
+  Sun,
+} from "lucide-react";
 import { weatherIconMap, DefaultWeatherIcon } from "@/lib/weather-icons";
 import {
   computeSunTimes,

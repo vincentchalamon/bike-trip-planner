@@ -13,12 +13,7 @@ import type { SurfaceSegmentData } from "@/lib/validation/schemas";
  * visual buckets. Keep this list aligned with `SURFACE_FAMILIES` and the
  * matching i18n keys in `messages/{fr,en}.json` (`surfaceBreakdown.label_*`).
  */
-type SurfaceFamily =
-  | "paved"
-  | "gravel"
-  | "cobblestone"
-  | "unpaved"
-  | "unknown";
+type SurfaceFamily = "paved" | "gravel" | "cobblestone" | "unpaved" | "unknown";
 
 /**
  * Maps OSM `surface=*` raw values to coarser display families. The list mirrors
@@ -85,9 +80,10 @@ interface AggregatedFamily {
 }
 
 /** Public for test purposes — pure aggregation step. */
-export function aggregateBreakdown(
-  segments: readonly SurfaceSegmentData[],
-): { totals: AggregatedFamily[]; totalMeters: number } {
+export function aggregateBreakdown(segments: readonly SurfaceSegmentData[]): {
+  totals: AggregatedFamily[];
+  totalMeters: number;
+} {
   const buckets = new Map<SurfaceFamily, AggregatedFamily>();
 
   for (const segment of segments) {
@@ -99,10 +95,7 @@ export function aggregateBreakdown(
       rawSurfaces: [],
     };
     bucket.meters += segment.lengthMeters;
-    if (
-      segment.surface &&
-      bucket.rawSurfaces.indexOf(segment.surface) === -1
-    ) {
+    if (segment.surface && bucket.rawSurfaces.indexOf(segment.surface) === -1) {
       bucket.rawSurfaces.push(segment.surface);
     }
     buckets.set(family, bucket);
