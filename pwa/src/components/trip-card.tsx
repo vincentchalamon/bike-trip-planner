@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
+import "dayjs/locale/en";
 import { Mountain, MapPin, Trash2, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TripStatusBadge } from "@/components/trip-status-badge";
