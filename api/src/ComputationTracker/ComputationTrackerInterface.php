@@ -24,8 +24,6 @@ interface ComputationTrackerInterface
 
     public function resetComputation(string $tripId, ComputationName $computation): void;
 
-    public function isAllComplete(string $tripId): bool;
-
     /**
      * Attempts to claim the "ready to publish" slot for the trip.
      *

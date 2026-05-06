@@ -57,16 +57,6 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
         $this->updateStatus($tripId, $computation, self::PENDING);
     }
 
-    public function isAllComplete(string $tripId): bool
-    {
-        $statuses = $this->getStatuses($tripId);
-        if (null === $statuses) {
-            return false;
-        }
-
-        return array_all($statuses, fn ($status): bool => !(self::DONE !== $status && self::FAILED !== $status));
-    }
-
     public function claimReadyPublication(string $tripId): bool
     {
         $item = $this->tripStateCache->getItem($this->readyClaimedKey($tripId));
