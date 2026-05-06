@@ -44,11 +44,6 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
         $tracker = $this->createStub(ComputationTrackerInterface::class);
         $tracker->method('claimReadyPublication')->willReturn(true);
         $tracker->method('getStatuses')->willReturn($statuses);
-        $tracker->method('getProgress')->willReturn([
-            'completed' => 2,
-            'failed' => 1,
-            'total' => 3,
-        ]);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn([$stage]);
@@ -103,7 +98,6 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
         $tracker = $this->createStub(ComputationTrackerInterface::class);
         $tracker->method('claimReadyPublication')->willReturn(true);
         $tracker->method('getStatuses')->willReturn([]);
-        $tracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 0]);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn(null);

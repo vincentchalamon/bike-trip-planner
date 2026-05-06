@@ -13,10 +13,10 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 /**
  * Targets the gate semantics added in issue #299:
  *
- * - {@see ComputationTracker::areAllEnrichmentsCompleted()} returns true once
- *   every initialized computation reached a terminal status (`done` or `failed`).
  * - {@see ComputationTracker::getProgress()} returns up-to-date counters that
  *   power the `computation_step_completed` Mercure event.
+ * - {@see ComputationTracker::claimReadyPublication()} implements a best-effort
+ *   idempotency guard so only one worker publishes the terminal TRIP_READY event.
  *
  * The tests use the in-memory {@see ArrayAdapter} so they remain fast and free
  * of any Redis/Predis dependency while exercising the same {@see CacheItemPoolInterface}
@@ -30,86 +30,6 @@ final class GateComputationTrackerTest extends TestCase
     protected function setUp(): void
     {
         $this->tracker = new ComputationTracker(new ArrayAdapter());
-    }
-
-    #[Test]
-    public function areAllEnrichmentsCompletedIsFalseWhenTripIsUnknown(): void
-    {
-        self::assertFalse($this->tracker->areAllEnrichmentsCompleted('unknown-trip'));
-    }
-
-    #[Test]
-    public function areAllEnrichmentsCompletedIsFalseWhilePending(): void
-    {
-        $this->tracker->initializeComputations('trip-1', [
-            ComputationName::ROUTE,
-            ComputationName::STAGES,
-        ]);
-
-        $this->tracker->markDone('trip-1', ComputationName::ROUTE);
-
-        self::assertFalse($this->tracker->areAllEnrichmentsCompleted('trip-1'));
-    }
-
-    #[Test]
-    public function areAllEnrichmentsCompletedIsFalseWhileRunning(): void
-    {
-        $this->tracker->initializeComputations('trip-1', [
-            ComputationName::ROUTE,
-            ComputationName::STAGES,
-        ]);
-
-        $this->tracker->markDone('trip-1', ComputationName::ROUTE);
-        $this->tracker->markRunning('trip-1', ComputationName::STAGES);
-
-        self::assertFalse($this->tracker->areAllEnrichmentsCompleted('trip-1'));
-    }
-
-    #[Test]
-    public function areAllEnrichmentsCompletedIsTrueWhenEveryStepIsDone(): void
-    {
-        $this->tracker->initializeComputations('trip-1', [
-            ComputationName::ROUTE,
-            ComputationName::STAGES,
-            ComputationName::WEATHER,
-        ]);
-
-        $this->tracker->markDone('trip-1', ComputationName::ROUTE);
-        $this->tracker->markDone('trip-1', ComputationName::STAGES);
-        $this->tracker->markDone('trip-1', ComputationName::WEATHER);
-
-        self::assertTrue($this->tracker->areAllEnrichmentsCompleted('trip-1'));
-    }
-
-    #[Test]
-    public function failedStepsCountAsCompletedForTheGate(): void
-    {
-        $this->tracker->initializeComputations('trip-1', [
-            ComputationName::ROUTE,
-            ComputationName::STAGES,
-        ]);
-
-        $this->tracker->markDone('trip-1', ComputationName::ROUTE);
-        $this->tracker->markFailed('trip-1', ComputationName::STAGES);
-
-        self::assertTrue(
-            $this->tracker->areAllEnrichmentsCompleted('trip-1'),
-            'Failed enrichments must satisfy the gate so a single failure does not stall the pipeline.',
-        );
-    }
-
-    #[Test]
-    public function gateRemainsOpenWhenAllStepsFailed(): void
-    {
-        $this->tracker->initializeComputations('trip-1', [
-            ComputationName::ROUTE,
-            ComputationName::STAGES,
-        ]);
-
-        $this->tracker->markFailed('trip-1', ComputationName::ROUTE);
-        $this->tracker->markFailed('trip-1', ComputationName::STAGES);
-
-        self::assertTrue($this->tracker->areAllEnrichmentsCompleted('trip-1'));
     }
 
     #[Test]
@@ -195,20 +115,16 @@ final class GateComputationTrackerTest extends TestCase
     }
 
     #[Test]
-    public function gateIsConsistentWithLegacyIsAllCompleteApi(): void
+    public function claimReadyPublicationReturnsTrueOnFirstCall(): void
     {
-        $this->tracker->initializeComputations('trip-1', [
-            ComputationName::ROUTE,
-            ComputationName::STAGES,
-        ]);
+        self::assertTrue($this->tracker->claimReadyPublication('trip-1'));
+    }
 
-        $this->tracker->markDone('trip-1', ComputationName::ROUTE);
-        $this->tracker->markFailed('trip-1', ComputationName::STAGES);
+    #[Test]
+    public function claimReadyPublicationReturnsFalseOnSubsequentCalls(): void
+    {
+        $this->tracker->claimReadyPublication('trip-1');
 
-        self::assertSame(
-            $this->tracker->isAllComplete('trip-1'),
-            $this->tracker->areAllEnrichmentsCompleted('trip-1'),
-            'areAllEnrichmentsCompleted() must mirror the existing isAllComplete() contract so callers can migrate safely.',
-        );
+        self::assertFalse($this->tracker->claimReadyPublication('trip-1'));
     }
 }

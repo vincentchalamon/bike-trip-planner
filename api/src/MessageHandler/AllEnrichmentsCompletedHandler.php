@@ -14,8 +14,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 /**
  * Terminal handler of the enrichment pipeline.
  *
- * This handler is fired exactly once per trip by {@see AbstractTripMessageHandler}
- * when the gate in `ComputationTracker::areAllEnrichmentsCompleted()` flips to true.
+ * This handler is fired by {@see AbstractTripMessageHandler} when the enrichment gate
+ * (progress arithmetic) detects that every computation has settled.
  *
  * The full design (issues #301-#303) is to chain this handler into the LLaMA 8B
  * narrative analysis. Until that pipeline exists, the handler implements a minimal
@@ -50,13 +50,13 @@ final readonly class AllEnrichmentsCompletedHandler
         }
 
         $statuses = $this->computationTracker->getStatuses($tripId) ?? [];
-        $progress = $this->computationTracker->getProgress($tripId);
+        $counts = array_count_values($statuses);
 
         $this->logger->info('All enrichments completed for trip {tripId} ({completed} done, {failed} failed of {total}).', [
             'tripId' => $tripId,
-            'completed' => $progress['completed'],
-            'failed' => $progress['failed'],
-            'total' => $progress['total'],
+            'completed' => $counts['done'] ?? 0,
+            'failed' => $counts['failed'] ?? 0,
+            'total' => \count($statuses),
         ]);
 
         // TODO(#301-#303): when the LLaMA 8B pipeline lands, dispatch the analysis

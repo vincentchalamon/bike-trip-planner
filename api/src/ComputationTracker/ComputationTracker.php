@@ -67,11 +67,6 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
         return array_all($statuses, fn ($status): bool => !(self::DONE !== $status && self::FAILED !== $status));
     }
 
-    public function areAllEnrichmentsCompleted(string $tripId): bool
-    {
-        return $this->isAllComplete($tripId);
-    }
-
     public function claimReadyPublication(string $tripId): bool
     {
         $item = $this->tripStateCache->getItem($this->readyClaimedKey($tripId));
