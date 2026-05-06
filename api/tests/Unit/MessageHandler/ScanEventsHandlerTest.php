@@ -22,6 +22,7 @@ use App\Wikidata\WikidataEnricherInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ScanEventsHandlerTest extends TestCase
@@ -49,6 +50,8 @@ final class ScanEventsHandlerTest extends TestCase
     ): ScanEventsHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
+        $computationTracker->method('areAllEnrichmentsCompleted')->willReturn(false);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
@@ -66,6 +69,7 @@ final class ScanEventsHandlerTest extends TestCase
             $this->createStub(WikidataEnricherInterface::class),
             $marketRepository,
             $translator,
+            $this->createStub(MessageBusInterface::class),
         );
     }
 

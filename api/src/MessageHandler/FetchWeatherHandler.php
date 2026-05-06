@@ -35,10 +35,10 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
         private WeatherProviderInterface $weatherProvider,
         #[Autowire(service: 'cache.weather')]
         private CacheItemPoolInterface $weatherCache,
-        private MessageBusInterface $messageBus,
+        MessageBusInterface $messageBus,
         private RelativeWindCalculator $relativeWindCalculator = new RelativeWindCalculator(),
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
     }
 
     public function __invoke(FetchWeather $message): void

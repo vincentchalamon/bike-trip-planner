@@ -67,6 +67,35 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
         return array_all($statuses, fn ($status): bool => !(self::DONE !== $status && self::FAILED !== $status));
     }
 
+    public function areAllEnrichmentsCompleted(string $tripId): bool
+    {
+        return $this->isAllComplete($tripId);
+    }
+
+    public function getProgress(string $tripId): array
+    {
+        $statuses = $this->getStatuses($tripId);
+        if (null === $statuses) {
+            return ['completed' => 0, 'failed' => 0, 'total' => 0];
+        }
+
+        $completed = 0;
+        $failed = 0;
+        foreach ($statuses as $status) {
+            if (self::DONE === $status) {
+                ++$completed;
+            } elseif (self::FAILED === $status) {
+                ++$failed;
+            }
+        }
+
+        return [
+            'completed' => $completed,
+            'failed' => $failed,
+            'total' => \count($statuses),
+        ];
+    }
+
     /** @return array<string, string>|null */
     public function getStatuses(string $tripId): ?array
     {

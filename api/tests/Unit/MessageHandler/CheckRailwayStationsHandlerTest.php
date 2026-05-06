@@ -19,6 +19,7 @@ use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CheckRailwayStationsHandlerTest extends TestCase
@@ -52,6 +53,8 @@ final class CheckRailwayStationsHandlerTest extends TestCase
     ): CheckRailwayStationsHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
+        $computationTracker->method('areAllEnrichmentsCompleted')->willReturn(false);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturnCallback(
@@ -73,6 +76,7 @@ final class CheckRailwayStationsHandlerTest extends TestCase
             $queryBuilder,
             $haversine,
             $translator,
+            $this->createStub(MessageBusInterface::class),
         );
     }
 

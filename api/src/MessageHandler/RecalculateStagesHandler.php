@@ -31,9 +31,9 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
-        private MessageBusInterface $messageBus,
+        MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
     }
 
     public function __invoke(RecalculateStages $message): void

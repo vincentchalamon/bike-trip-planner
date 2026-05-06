@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Message\AllEnrichmentsCompleted;
 use App\Message\AnalyzeTerrain;
 use App\Message\AnalyzeWind;
 use App\Message\CheckBikeShops;
@@ -56,6 +57,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 RecalculateRouteSegment::class => 'async',
                 RecalculateStages::class => 'async',
                 ScanEvents::class => 'async',
+                AllEnrichmentsCompleted::class => 'async',
             ],
         ],
     ]);

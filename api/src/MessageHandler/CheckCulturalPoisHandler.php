@@ -20,6 +20,7 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Wikidata\WikidataEnricherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
@@ -55,8 +56,9 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
         private WikidataEnricherInterface $wikidataEnricher,
+        MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
     }
 
     public function __invoke(CheckCulturalPois $message): void

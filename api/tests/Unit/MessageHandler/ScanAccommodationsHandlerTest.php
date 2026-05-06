@@ -24,6 +24,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\Exception\TimeoutException;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -52,6 +53,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
     ): ScanAccommodationsHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
+        $computationTracker->method('areAllEnrichmentsCompleted')->willReturn(false);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $metadataExtractor = new AccommodationMetadataExtractor();
 
@@ -81,6 +84,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
             $translator,
             $scraperClient,
             $this->createStub(WikidataEnricherInterface::class),
+            $this->createStub(MessageBusInterface::class),
         );
     }
 

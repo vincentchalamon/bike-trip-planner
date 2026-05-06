@@ -59,11 +59,13 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
         ComputationName $step,
         int $completed,
         int $total,
+        int $failed = 0,
     ): void {
         $this->publish($tripId, MercureEventType::COMPUTATION_STEP_COMPLETED, [
             'step' => $step->value,
             'category' => $step->category(),
             'completed' => $completed,
+            'failed' => $failed,
             'total' => $total,
         ]);
     }

@@ -8,8 +8,10 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Message\AllEnrichmentsCompleted;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 abstract readonly class AbstractTripMessageHandler
 {
@@ -19,6 +21,7 @@ abstract readonly class AbstractTripMessageHandler
         protected TripGenerationTrackerInterface $generationTracker,
         protected LoggerInterface $logger,
         protected TripRequestRepositoryInterface $tripRequestRepository,
+        protected MessageBusInterface $messageBus,
     ) {
     }
 
@@ -97,52 +100,39 @@ abstract readonly class AbstractTripMessageHandler
         // after every handler completes, so the frontend can drive its narrative stepper.
         $this->publishProgress($tripId, $computation);
 
-        if ($this->computationTracker->isAllComplete($tripId)) {
+        // Issue #299 — gate: when every initialized enrichment has settled
+        // (done OR failed), dispatch the terminal AllEnrichmentsCompleted message.
+        // The dedicated handler decides whether to chain into LLaMA 8B (issues
+        // #301-#303) or short-circuit by publishing TRIP_READY directly. This
+        // keeps the gate triggered exactly once per pipeline run.
+        if ($this->computationTracker->areAllEnrichmentsCompleted($tripId)) {
             $statuses = $this->computationTracker->getStatuses($tripId) ?? [];
             $this->publisher->publishTripComplete($tripId, $statuses);
-            // Mode 1 — terminal event: the frontend can swap the trip state atomically
-            // once all computations have reported done/failed.
-            $this->publishTripReady($tripId, $statuses);
+            $this->messageBus->dispatch(new AllEnrichmentsCompleted($tripId));
         }
     }
 
     /**
      * Publishes the computation_step_completed progress event.
      *
-     * The completed/total counts are derived from the ComputationTracker so a single
-     * handler failure does not stall the progress bar (failed statuses still count
-     * as "completed" from the user's perspective).
+     * Counts are derived from the {@see ComputationTrackerInterface::getProgress()}
+     * helper so a single handler failure does not stall the progress bar
+     * (failed statuses still count toward the total settled steps).
      */
     private function publishProgress(string $tripId, ComputationName $step): void
     {
-        $statuses = $this->computationTracker->getStatuses($tripId);
-        if (null === $statuses) {
+        $progress = $this->computationTracker->getProgress($tripId);
+
+        if (0 === $progress['total']) {
             return;
         }
 
-        $total = \count($statuses);
-        $completed = \count(array_filter(
-            $statuses,
-            static fn (string $status): bool => 'done' === $status || 'failed' === $status,
-        ));
-
-        $this->publisher->publishComputationStepCompleted($tripId, $step, $completed, $total);
-    }
-
-    /**
-     * Publishes the trip_ready terminal event with the fully enriched payload.
-     *
-     * The aggregated stage data is read back from the trip state repository
-     * when available, so the single event carries everything the frontend
-     * needs to render the full analysis without a layout shift.
-     *
-     * @param array<string, string> $statuses
-     */
-    private function publishTripReady(string $tripId, array $statuses): void
-    {
-        $stages = $this->tripRequestRepository->getStages($tripId) ?? [];
-        $this->publisher->publishTripReady($tripId, $stages, [
-            'status' => $statuses,
-        ]);
+        $this->publisher->publishComputationStepCompleted(
+            $tripId,
+            $step,
+            $progress['completed'],
+            $progress['total'],
+            $progress['failed'],
+        );
     }
 }

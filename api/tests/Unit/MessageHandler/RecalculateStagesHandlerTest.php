@@ -31,6 +31,8 @@ final class RecalculateStagesHandlerTest extends TestCase
     ): RecalculateStagesHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
+        $computationTracker->method('areAllEnrichmentsCompleted')->willReturn(false);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         return new RecalculateStagesHandler(
             $computationTracker,

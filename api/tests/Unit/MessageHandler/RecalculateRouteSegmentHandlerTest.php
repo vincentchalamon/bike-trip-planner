@@ -18,6 +18,7 @@ use App\Routing\RoutingResult;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 final class RecalculateRouteSegmentHandlerTest extends TestCase
 {
@@ -64,6 +65,8 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
 
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
+        $computationTracker->method('areAllEnrichmentsCompleted')->willReturn(false);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
@@ -74,6 +77,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $routingProvider,
+            $this->createStub(MessageBusInterface::class),
         );
 
         $handler(new RecalculateRouteSegment(
@@ -106,6 +110,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $routingProvider,
+            $this->createStub(MessageBusInterface::class),
         );
 
         $handler(new RecalculateRouteSegment(
@@ -147,6 +152,7 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $routingProvider,
+            $this->createStub(MessageBusInterface::class),
         );
 
         $handler(new RecalculateRouteSegment(

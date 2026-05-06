@@ -17,6 +17,7 @@ use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class AnalyzeWindHandlerTest extends TestCase
@@ -62,6 +63,8 @@ final class AnalyzeWindHandlerTest extends TestCase
     ): AnalyzeWindHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('isAllComplete')->willReturn(false);
+        $computationTracker->method('areAllEnrichmentsCompleted')->willReturn(false);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturnCallback(
@@ -79,6 +82,7 @@ final class AnalyzeWindHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $translator,
+            $this->createStub(MessageBusInterface::class),
         );
     }
 
