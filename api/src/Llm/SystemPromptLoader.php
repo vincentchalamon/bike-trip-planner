@@ -38,10 +38,10 @@ final readonly class SystemPromptLoader
      *
      * @param non-empty-string     $promptName Filename without extension, e.g. `stage-analysis`.
      *                                         Must not contain path separators.
-     * @param array<string,scalar> $variables  Map of placeholder name → replacement value.
+     * @param array<string,scalar> $variables  map of placeholder name → replacement value
      *
-     * @throws \InvalidArgumentException if the prompt name is empty or contains separators.
-     * @throws \RuntimeException         if the prompt file cannot be found or read.
+     * @throws \InvalidArgumentException if the prompt name is empty or contains separators
+     * @throws \RuntimeException         if the prompt file cannot be found or read
      */
     public function load(string $promptName, array $variables = []): string
     {
