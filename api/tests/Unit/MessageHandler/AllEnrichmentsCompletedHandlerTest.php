@@ -42,6 +42,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
         $statuses = ['route' => 'done', 'stages' => 'done', 'weather' => 'failed'];
 
         $tracker = $this->createStub(ComputationTrackerInterface::class);
+        $tracker->method('claimReadyPublication')->willReturn(true);
         $tracker->method('getStatuses')->willReturn($statuses);
         $tracker->method('getProgress')->willReturn([
             'completed' => 2,
@@ -72,11 +73,35 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
     }
 
     #[Test]
+    public function skipsWhenReadyPublicationAlreadyClaimed(): void
+    {
+        $tripId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+
+        $tracker = $this->createStub(ComputationTrackerInterface::class);
+        $tracker->method('claimReadyPublication')->willReturn(false);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects(self::never())->method('publishTripReady');
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+
+        $handler = new AllEnrichmentsCompletedHandler(
+            $tracker,
+            $publisher,
+            $tripStateManager,
+            new NullLogger(),
+        );
+
+        $handler(new AllEnrichmentsCompleted($tripId));
+    }
+
+    #[Test]
     public function tolerantWhenStagesRepositoryReturnsNull(): void
     {
         $tripId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
         $tracker = $this->createStub(ComputationTrackerInterface::class);
+        $tracker->method('claimReadyPublication')->willReturn(true);
         $tracker->method('getStatuses')->willReturn([]);
         $tracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 0]);
 

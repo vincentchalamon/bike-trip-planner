@@ -72,6 +72,21 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
         return $this->isAllComplete($tripId);
     }
 
+    public function claimReadyPublication(string $tripId): bool
+    {
+        $item = $this->tripStateCache->getItem($this->readyClaimedKey($tripId));
+        if ($item->isHit()) {
+            return false;
+        }
+
+        $item->set(true);
+        $item->expiresAfter(self::TTL);
+
+        $this->tripStateCache->save($item);
+
+        return true;
+    }
+
     public function getProgress(string $tripId): array
     {
         $statuses = $this->getStatuses($tripId);
@@ -163,5 +178,10 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
     private function statusKey(string $tripId): string
     {
         return \sprintf('trip.%s.computation_status', $tripId);
+    }
+
+    private function readyClaimedKey(string $tripId): string
+    {
+        return \sprintf('trip.%s.ready_claimed', $tripId);
     }
 }

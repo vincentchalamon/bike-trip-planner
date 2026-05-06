@@ -40,6 +40,15 @@ final readonly class AllEnrichmentsCompletedHandler
     public function __invoke(AllEnrichmentsCompleted $message): void
     {
         $tripId = $message->tripId;
+
+        if (!$this->computationTracker->claimReadyPublication($tripId)) {
+            $this->logger->info('AllEnrichmentsCompleted already handled for trip {tripId} — skipping duplicate.', [
+                'tripId' => $tripId,
+            ]);
+
+            return;
+        }
+
         $statuses = $this->computationTracker->getStatuses($tripId) ?? [];
         $progress = $this->computationTracker->getProgress($tripId);
 

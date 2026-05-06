@@ -106,7 +106,8 @@ abstract readonly class AbstractTripMessageHandler
         // #301-#303) or short-circuit by publishing TRIP_READY directly.
         // Note: with 5 concurrent workers the check-and-dispatch is not atomic; two
         // workers can both observe the settled condition and both dispatch the message.
-        // AllEnrichmentsCompletedHandler must be idempotent (tracked in issue #303).
+        // AllEnrichmentsCompletedHandler guards against duplicate processing via
+        // claimReadyPublication (PSR-6 best-effort NX; true atomicity tracked in #303).
         $allSettled = $progress['total'] > 0
             && $progress['completed'] + $progress['failed'] === $progress['total'];
 
