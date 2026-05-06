@@ -49,8 +49,8 @@ final readonly class SystemPromptLoader
             throw new \InvalidArgumentException('Prompt name must not be empty.');
         }
 
-        if (str_contains($promptName, '/') || str_contains($promptName, '\\') || str_contains($promptName, "\0")) {
-            throw new \InvalidArgumentException(\sprintf('Prompt name "%s" must not contain path separators.', $promptName));
+        if (str_contains($promptName, '/') || str_contains($promptName, '\\') || str_contains($promptName, "\0") || '.' === $promptName || '..' === $promptName) {
+            throw new \InvalidArgumentException(\sprintf('Prompt name "%s" must not contain path separators, null bytes, or be a relative-path reference.', $promptName));
         }
 
         $path = $this->promptDir.\DIRECTORY_SEPARATOR.$promptName.self::EXTENSION;

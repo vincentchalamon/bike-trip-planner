@@ -177,6 +177,28 @@ final class SystemPromptLoaderTest extends TestCase
     }
 
     #[Test]
+    public function loadRejectsSingleDotPromptName(): void
+    {
+        $loader = new SystemPromptLoader($this->tmpDir);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('must not contain path separators');
+
+        $loader->load('.');
+    }
+
+    #[Test]
+    public function loadRejectsDoubleDotPromptName(): void
+    {
+        $loader = new SystemPromptLoader($this->tmpDir);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('must not contain path separators');
+
+        $loader->load('..');
+    }
+
+    #[Test]
     public function shippedStageAnalysisPromptIsLoadable(): void
     {
         $loader = new SystemPromptLoader(__DIR__.'/../../../src/Llm/SystemPrompt');
