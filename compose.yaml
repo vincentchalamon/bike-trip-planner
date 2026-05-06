@@ -58,6 +58,8 @@ services:
       DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
       DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
       WIKIDATA_USER_AGENT: "${WIKIDATA_USER_AGENT:-BikeTripPlanner/1.0 (contact@example.org)}"
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-0}"
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -117,6 +119,8 @@ services:
       DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
       DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
       WIKIDATA_USER_AGENT: "${WIKIDATA_USER_AGENT:-BikeTripPlanner/1.0 (contact@example.org)}"
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-0}"
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
     extra_hosts:
@@ -238,6 +242,21 @@ services:
       retries: 3
       start_period: 10s
 
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    expose:
+      - 11434
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      # /api/tags is the lightest endpoint exposed by Ollama (lists local models).
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   provisioner:
     build:
       context: ./
@@ -256,3 +275,4 @@ volumes:
   valhalla-tiles: ~
   pwa_node_modules: ~
   pwa_next: ~
+  ollama-data: ~

@@ -100,6 +100,15 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'max_redirects' => 2,
                     'timeout' => 60,
                 ],
+                'ollama.client' => [
+                    'base_uri' => '%env(OLLAMA_BASE_URL)%',
+                    'max_redirects' => 0,
+                    'timeout' => 30,
+                    'headers' => [
+                        'Accept' => 'application/json',
+                        'Content-Type' => 'application/json',
+                    ],
+                ],
             ],
         ],
     ]);
