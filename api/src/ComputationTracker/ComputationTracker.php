@@ -57,14 +57,43 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
         $this->updateStatus($tripId, $computation, self::PENDING);
     }
 
-    public function isAllComplete(string $tripId): bool
+    public function claimReadyPublication(string $tripId): bool
     {
-        $statuses = $this->getStatuses($tripId);
-        if (null === $statuses) {
+        $item = $this->tripStateCache->getItem($this->readyClaimedKey($tripId));
+        if ($item->isHit()) {
             return false;
         }
 
-        return array_all($statuses, fn ($status): bool => !(self::DONE !== $status && self::FAILED !== $status));
+        $item->set(true);
+        $item->expiresAfter(self::TTL);
+
+        $this->tripStateCache->save($item);
+
+        return true;
+    }
+
+    public function getProgress(string $tripId): array
+    {
+        $statuses = $this->getStatuses($tripId);
+        if (null === $statuses) {
+            return ['completed' => 0, 'failed' => 0, 'total' => 0];
+        }
+
+        $completed = 0;
+        $failed = 0;
+        foreach ($statuses as $status) {
+            if (self::DONE === $status) {
+                ++$completed;
+            } elseif (self::FAILED === $status) {
+                ++$failed;
+            }
+        }
+
+        return [
+            'completed' => $completed,
+            'failed' => $failed,
+            'total' => \count($statuses),
+        ];
     }
 
     /** @return array<string, string>|null */
@@ -134,5 +163,10 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
     private function statusKey(string $tripId): string
     {
         return \sprintf('trip.%s.computation_status', $tripId);
+    }
+
+    private function readyClaimedKey(string $tripId): string
+    {
+        return \sprintf('trip.%s.ready_claimed', $tripId);
     }
 }

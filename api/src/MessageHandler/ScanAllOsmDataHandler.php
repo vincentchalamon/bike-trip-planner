@@ -16,6 +16,7 @@ use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class ScanAllOsmDataHandler extends AbstractTripMessageHandler
@@ -28,8 +29,9 @@ final readonly class ScanAllOsmDataHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private ScannerInterface $scanner,
         private QueryBuilderInterface $queryBuilder,
+        MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
     }
 
     public function __invoke(ScanAllOsmData $message): void

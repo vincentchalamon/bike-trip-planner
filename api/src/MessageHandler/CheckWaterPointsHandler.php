@@ -21,6 +21,7 @@ use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
@@ -39,8 +40,9 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
+        MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
     }
 
     public function __invoke(CheckWaterPoints $message): void

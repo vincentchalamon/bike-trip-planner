@@ -35,12 +35,15 @@ interface TripUpdatePublisherInterface
      * Publishes a progress-only event signalling a single computation step finished.
      *
      * The payload carries no business data — it is only used to drive the UI progress bar.
+     * `$completed` counts steps with terminal status `done`; `$failed` counts steps
+     * with terminal status `failed`. Both contribute to the gate (issue #299).
      */
     public function publishComputationStepCompleted(
         string $tripId,
         ComputationName $step,
         int $completed,
         int $total,
+        int $failed = 0,
     ): void;
 
     /**

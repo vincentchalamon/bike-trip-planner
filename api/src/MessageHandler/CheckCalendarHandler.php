@@ -15,6 +15,7 @@ use App\Message\CheckCalendar;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Yasumi\Yasumi;
 
@@ -28,8 +29,9 @@ final readonly class CheckCalendarHandler extends AbstractTripMessageHandler
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private TranslatorInterface $translator,
+        MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
     }
 
     public function __invoke(CheckCalendar $message): void

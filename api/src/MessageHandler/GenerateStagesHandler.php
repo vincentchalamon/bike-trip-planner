@@ -22,6 +22,7 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Service\TripAnalysisDispatcher;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
@@ -37,8 +38,9 @@ final readonly class GenerateStagesHandler extends AbstractTripMessageHandler
         private RouteSimplifierInterface $routeSimplifier,
         private PacingEngineInterface $pacingEngine,
         private TripAnalysisDispatcher $analysisDispatcher,
+        MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
     }
 
     public function __invoke(GenerateStages $message): void

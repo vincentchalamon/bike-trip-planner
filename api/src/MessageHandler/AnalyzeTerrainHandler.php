@@ -21,6 +21,7 @@ use App\Scanner\QueryBuilderInterface;
 use App\Scanner\ScannerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
@@ -36,8 +37,9 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         private QueryBuilderInterface $queryBuilder,
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $geoDistance,
+        MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
     }
 
     public function __invoke(AnalyzeTerrain $message): void

@@ -24,6 +24,7 @@ use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 final class AnalyzeTerrainHandlerTest extends TestCase
 {
@@ -54,7 +55,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         GeoDistanceInterface $geoDistance,
     ): AnalyzeTerrainHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('isAllComplete')->willReturn(false);
+        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
@@ -69,6 +70,7 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $queryBuilder,
             $distributor,
             $geoDistance,
+            $this->createStub(MessageBusInterface::class),
         );
     }
 

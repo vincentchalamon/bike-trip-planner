@@ -35,6 +35,7 @@ final readonly class NullTripUpdatePublisher implements TripUpdatePublisherInter
         ComputationName $step,
         int $completed,
         int $total,
+        int $failed = 0,
     ): void {
     }
 

@@ -19,6 +19,7 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Wikidata\WikidataEnricherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[AsMessageHandler]
@@ -47,8 +48,9 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         private WikidataEnricherInterface $wikidataEnricher,
         private MarketRepositoryInterface $marketRepository,
         private TranslatorInterface $translator,
+        MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
     }
 
     public function __invoke(ScanEvents $message): void

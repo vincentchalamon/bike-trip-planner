@@ -26,6 +26,7 @@ use App\Wikidata\WikidataEnricherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -51,8 +52,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         #[Autowire(service: 'accommodation_scraper.client')]
         private HttpClientInterface $scraperClient,
         private WikidataEnricherInterface $wikidataEnricher,
+        MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
     }
 
     public function __invoke(ScanAccommodations $message): void

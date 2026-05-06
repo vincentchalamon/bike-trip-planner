@@ -32,6 +32,7 @@ final class TripUpdatePublisherTest extends TestCase
                 self::assertSame('terrain', $decoded['data']['step']);
                 self::assertSame('terrain_security', $decoded['data']['category']);
                 self::assertSame(5, $decoded['data']['completed']);
+                self::assertSame(2, $decoded['data']['failed']);
                 self::assertSame(9, $decoded['data']['total']);
                 self::assertContains(\sprintf('/trips/%s', self::TRIP_ID), $update->getTopics());
                 self::assertTrue($update->isPrivate());
@@ -40,7 +41,7 @@ final class TripUpdatePublisherTest extends TestCase
             });
 
         $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper());
-        $publisher->publishComputationStepCompleted(self::TRIP_ID, ComputationName::TERRAIN, 5, 9);
+        $publisher->publishComputationStepCompleted(self::TRIP_ID, ComputationName::TERRAIN, 5, 9, 2);
     }
 
     #[Test]

@@ -15,6 +15,7 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Routing\RoutingProviderInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class RecalculateRouteSegmentHandler extends AbstractTripMessageHandler
@@ -26,8 +27,9 @@ final readonly class RecalculateRouteSegmentHandler extends AbstractTripMessageH
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private RoutingProviderInterface $routingProvider,
+        MessageBusInterface $messageBus,
     ) {
-        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager);
+        parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
     }
 
     public function __invoke(RecalculateRouteSegment $message): void
