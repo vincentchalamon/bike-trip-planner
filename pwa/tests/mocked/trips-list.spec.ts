@@ -174,9 +174,7 @@ test.describe("/trips empty states", () => {
       const url = new URL(request.url());
       const hasTitleFilter = url.searchParams.has("title");
 
-      const body = hasTitleFilter
-        ? { member: [], totalItems: 0 }
-        : MOCK_TRIPS;
+      const body = hasTitleFilter ? { member: [], totalItems: 0 } : MOCK_TRIPS;
 
       return route.fulfill({
         status: 200,
@@ -200,9 +198,7 @@ test.describe("/trips empty states", () => {
 
     // No-results empty state appears.
     await expect(page.getByTestId("trips-empty-no-results")).toBeVisible();
-    await expect(
-      page.getByTestId("trips-empty-active-filters"),
-    ).toBeVisible();
+    await expect(page.getByTestId("trips-empty-active-filters")).toBeVisible();
 
     // Click reset-filters → original trips reappear.
     await page.getByTestId("trips-empty-reset-filters").click();

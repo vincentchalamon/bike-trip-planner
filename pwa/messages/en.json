@@ -924,5 +924,15 @@
     "wikidataCredit": "Data under",
     "datagouvCredit": "Weekly markets (data.gouv.fr) —",
     "licenceOuverte": "Licence Ouverte 2.0"
+  },
+  "legal": {
+    "title": "Legal notice",
+    "comingSoon": "This page will be available soon.",
+    "backToHome": "Back to home"
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "comingSoon": "This page will be available soon.",
+    "backToHome": "Back to home"
   }
 }

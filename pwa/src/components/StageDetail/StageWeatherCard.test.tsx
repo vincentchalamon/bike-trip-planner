@@ -72,7 +72,7 @@ describe("StageWeatherCard sun-state pill", () => {
     expect(queryByTestId("stage-weather-sun-state")).toBeNull();
   });
 
-  it("shows the Sun pill during daylight (data-state=\"day\")", () => {
+  it('shows the Sun pill during daylight (data-state="day")', () => {
     // Stage is today, noon UTC at the equator → sun is up.
     vi.useFakeTimers();
     vi.setSystemTime(new Date(Date.UTC(2030, 5, 21, 12, 0, 0)));
@@ -91,7 +91,7 @@ describe("StageWeatherCard sun-state pill", () => {
     expect(pill).toHaveAttribute("data-state", "day");
   });
 
-  it("shows the Moon pill at night (data-state=\"night\")", () => {
+  it('shows the Moon pill at night (data-state="night")', () => {
     // Stage is today, 23:00 UTC at the equator → sun is down.
     vi.useFakeTimers();
     vi.setSystemTime(new Date(Date.UTC(2030, 5, 21, 23, 0, 0)));

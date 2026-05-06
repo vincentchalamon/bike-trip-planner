@@ -184,7 +184,11 @@ describe("infographic-square", () => {
     });
     const ctx = (
       canvas.getContext as unknown as {
-        mock: { results: Array<{ value: { fillText: { mock: { calls: unknown[][] } } } }> };
+        mock: {
+          results: Array<{
+            value: { fillText: { mock: { calls: unknown[][] } } };
+          }>;
+        };
       }
     ).mock.results[0]!.value;
     const fillTextCalls = ctx.fillText.mock.calls.map(
