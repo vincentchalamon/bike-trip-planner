@@ -109,6 +109,29 @@ final class SystemPromptLoaderTest extends TestCase
     }
 
     #[Test]
+    public function loadThrowsWhenPromptFileIsUnreadable(): void
+    {
+        if (0 === \posix_getuid()) {
+            self::markTestSkipped('Cannot test file-permission denial when running as root.');
+        }
+
+        $path = $this->tmpDir.\DIRECTORY_SEPARATOR.'unreadable.txt';
+        file_put_contents($path, 'content');
+        chmod($path, 0o000);
+
+        $loader = new SystemPromptLoader($this->tmpDir);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Failed to read system prompt "unreadable"');
+
+        try {
+            $loader->load('unreadable');
+        } finally {
+            chmod($path, 0o644);
+        }
+    }
+
+    #[Test]
     public function loadThrowsOnEmptyPromptName(): void
     {
         $loader = new SystemPromptLoader($this->tmpDir);

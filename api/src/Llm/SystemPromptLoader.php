@@ -77,6 +77,8 @@ final readonly class SystemPromptLoader
             $replace[] = (string) $value;
         }
 
+        // str_replace with arrays is sequential: each replacement is applied on the already-
+        // substituted string. Variable values must not contain the {{…}} delimiter themselves.
         return str_replace($search, $replace, $template);
     }
 }
