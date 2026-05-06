@@ -35,8 +35,6 @@ final class GenerateStagesHandlerTest extends TestCase
         MessageBusInterface $messageBus,
     ): GenerateStagesHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('isAllComplete')->willReturn(false);
-        $computationTracker->method('areAllEnrichmentsCompleted')->willReturn(false);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
@@ -110,8 +108,6 @@ final class GenerateStagesHandlerTest extends TestCase
             );
 
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('isAllComplete')->willReturn(false);
-        $computationTracker->method('areAllEnrichmentsCompleted')->willReturn(false);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
@@ -180,8 +176,6 @@ final class GenerateStagesHandlerTest extends TestCase
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
 
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('isAllComplete')->willReturn(false);
-        $computationTracker->method('areAllEnrichmentsCompleted')->willReturn(false);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);

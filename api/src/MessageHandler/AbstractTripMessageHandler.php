@@ -98,14 +98,19 @@ abstract readonly class AbstractTripMessageHandler
 
         // Mode 1 — progress bar: publish a business-data-free progress event
         // after every handler completes, so the frontend can drive its narrative stepper.
-        $this->publishProgress($tripId, $computation);
+        $progress = $this->publishProgress($tripId, $computation);
 
         // Issue #299 — gate: when every initialized enrichment has settled
         // (done OR failed), dispatch the terminal AllEnrichmentsCompleted message.
         // The dedicated handler decides whether to chain into LLaMA 8B (issues
-        // #301-#303) or short-circuit by publishing TRIP_READY directly. This
-        // keeps the gate triggered exactly once per pipeline run.
-        if ($this->computationTracker->areAllEnrichmentsCompleted($tripId)) {
+        // #301-#303) or short-circuit by publishing TRIP_READY directly.
+        // Note: with 5 concurrent workers the check-and-dispatch is not atomic; two
+        // workers can both observe the settled condition and both dispatch the message.
+        // AllEnrichmentsCompletedHandler must be idempotent (tracked in issue #303).
+        $allSettled = $progress['total'] > 0
+            && $progress['completed'] + $progress['failed'] === $progress['total'];
+
+        if ($allSettled) {
             $statuses = $this->computationTracker->getStatuses($tripId) ?? [];
             $this->publisher->publishTripComplete($tripId, $statuses);
             $this->messageBus->dispatch(new AllEnrichmentsCompleted($tripId));
@@ -113,26 +118,28 @@ abstract readonly class AbstractTripMessageHandler
     }
 
     /**
-     * Publishes the computation_step_completed progress event.
+     * Publishes the computation_step_completed progress event and returns the progress snapshot.
      *
      * Counts are derived from the {@see ComputationTrackerInterface::getProgress()}
      * helper so a single handler failure does not stall the progress bar
      * (failed statuses still count toward the total settled steps).
+     *
+     * @return array{completed: int, failed: int, total: int}
      */
-    private function publishProgress(string $tripId, ComputationName $step): void
+    private function publishProgress(string $tripId, ComputationName $step): array
     {
         $progress = $this->computationTracker->getProgress($tripId);
 
-        if (0 === $progress['total']) {
-            return;
+        if (0 !== $progress['total']) {
+            $this->publisher->publishComputationStepCompleted(
+                $tripId,
+                $step,
+                $progress['completed'],
+                $progress['total'],
+                $progress['failed'],
+            );
         }
 
-        $this->publisher->publishComputationStepCompleted(
-            $tripId,
-            $step,
-            $progress['completed'],
-            $progress['total'],
-            $progress['failed'],
-        );
+        return $progress;
     }
 }
