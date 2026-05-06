@@ -7,9 +7,12 @@ namespace App\Tests\Unit\Llm;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationTrackerInterface;
 use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
+use App\Mercure\NullTripUpdatePublisher;
 use App\Message\AnalyzeTripOverviewWithLlmMessage;
 use App\MessageHandler\AnalyzeTripOverviewWithLlmHandler;
 use App\Repository\TripRequestRepositoryInterface;
@@ -466,11 +469,21 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
         TripRequestRepositoryInterface $repo,
         LlmClientInterface $llmClient,
     ): AnalyzeTripOverviewWithLlmHandler {
+        $llmTracker = $this->createStub(LlmAnalysisTrackerInterface::class);
+        $llmTracker->method('getStageAnalysisProgress')->willReturn(['completed' => 1, 'failed' => 0, 'total' => 1]);
+        $llmTracker->method('claimTripReadyPublication')->willReturn(true);
+
+        $computationTracker = $this->createStub(ComputationTrackerInterface::class);
+        $computationTracker->method('getStatuses')->willReturn([]);
+
         return new AnalyzeTripOverviewWithLlmHandler(
             tripStateManager: $repo,
             llmClient: $llmClient,
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
             logger: new NullLogger(),
+            llmTracker: $llmTracker,
+            computationTracker: $computationTracker,
+            publisher: new NullTripUpdatePublisher(),
         );
     }
 

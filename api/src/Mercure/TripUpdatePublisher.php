@@ -71,8 +71,8 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
     }
 
     /**
-     * @param list<Stage>                                                $stages
-     * @param array{status: array<string, string>, aiOverview?: ?string} $summary
+     * @param list<Stage>                                                                                                                                                                                                                     $stages
+     * @param array{status: array<string, string>, aiOverview?: array{narrative: string, patterns: list<string>, recommendations: list<string>, crossStageAlerts: list<string>, model: string, promptVersion: int, generatedAt: string}|null} $summary
      */
     public function publishTripReady(string $tripId, array $stages, array $summary): void
     {
