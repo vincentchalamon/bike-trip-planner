@@ -96,6 +96,30 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
     }
 
     /**
+     * @param array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiAnalysis
+     */
+    public function updateStageAiAnalysis(string $tripId, int $dayNumber, ?array $aiAnalysis): void
+    {
+        $stages = $this->getStages($tripId);
+        if (null === $stages) {
+            return;
+        }
+
+        $changed = false;
+        foreach ($stages as $stage) {
+            if ($stage->dayNumber === $dayNumber) {
+                $stage->aiAnalysis = $aiAnalysis;
+                $changed = true;
+                break;
+            }
+        }
+
+        if ($changed) {
+            $this->storeStages($tripId, $stages);
+        }
+    }
+
+    /**
      * Stores multi-track data for Komoot Collection source type.
      *
      * @param list<list<array{lat: float, lon: float, ele: float}>> $tracksData

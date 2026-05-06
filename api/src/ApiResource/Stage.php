@@ -160,6 +160,16 @@ final class Stage
     public array $events = [];
 
     /**
+     * LLaMA 8B pass-1 analysis result (issue #301).
+     *
+     * Round-tripped through {@see \App\Repository\TripRequestRepositoryInterface} so handlers
+     * can read it from the in-memory DTO without an extra Doctrine fetch.
+     *
+     * @var array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}|null
+     */
+    public ?array $aiAnalysis = null;
+
+    /**
      * @param list<Coordinate> $geometry
      */
     public function __construct(

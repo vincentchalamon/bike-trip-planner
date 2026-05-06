@@ -45,6 +45,21 @@ interface TripRequestRepositoryInterface
     public function getStages(string $tripId): ?array;
 
     /**
+     * Persists the LLaMA 8B pass-1 AI analysis for a single stage atomically.
+     *
+     * Targeted by `dayNumber` (1-indexed, matches {@see Stage::$dayNumber}). Required
+     * because parallel `AnalyzeStageWithLlmHandler` workers each update one stage
+     * independently — using {@see self::storeStages()} would wipe stages still
+     * being processed by a sibling worker.
+     *
+     * Returns silently if the trip or matching stage does not exist anymore (e.g.
+     * the trip was deleted between dispatch and consumption).
+     *
+     * @param array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiAnalysis
+     */
+    public function updateStageAiAnalysis(string $tripId, int $dayNumber, ?array $aiAnalysis): void;
+
+    /**
      * Stores multi-track data for Komoot Collection source type.
      *
      * @param list<list<array{lat: float, lon: float, ele: float}>> $tracksData
