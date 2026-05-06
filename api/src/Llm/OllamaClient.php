@@ -7,7 +7,7 @@ namespace App\Llm;
 use App\Llm\Exception\OllamaUnavailableException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -122,14 +122,14 @@ final readonly class OllamaClient implements LlmClientInterface
             ]);
 
             return $response->toArray();
-        } catch (HttpExceptionInterface $httpException) {
+        } catch (ClientExceptionInterface $clientException) {
             $this->logger->warning('Ollama request failed.', [
                 'path' => $path,
                 'model' => $payload['model'] ?? null,
-                'error' => $httpException->getMessage(),
+                'error' => $clientException->getMessage(),
             ]);
 
-            throw new OllamaUnavailableException(\sprintf('Ollama request to "%s" failed: %s', $path, $httpException->getMessage()), $httpException->getCode(), previous: $httpException);
+            throw new OllamaUnavailableException(\sprintf('Ollama request to "%s" failed: %s', $path, $clientException->getMessage()), $clientException->getCode(), previous: $clientException);
         }
     }
 }

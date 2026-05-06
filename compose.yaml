@@ -44,6 +44,9 @@ services:
         condition: service_started
       redis:
         condition: service_started
+      ollama:
+        condition: service_healthy
+        required: false
     environment:
       APP_ENV: dev
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
@@ -103,6 +106,9 @@ services:
         condition: service_started
       redis:
         condition: service_started
+      ollama:
+        condition: service_healthy
+        required: false
       valhalla:
         condition: service_started
     environment:
