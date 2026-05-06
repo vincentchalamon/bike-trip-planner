@@ -504,11 +504,11 @@ Refonte des écrans restants : `/trips`, landing, auth, états UX transverses, v
 
 ## Sprint 28 — Intégration Ollama : fondations backend
 
-Service OllamaClient PHP, configuration Docker Ollama, gate mechanism dans ComputationTracker, system prompts cyclotourisme versionnés. ADR-027.
+Service OllamaClient PHP, configuration Docker Ollama, gate mechanism dans ComputationTracker, system prompts cyclotourisme versionnés. ADR-028.
 
 | Ordre | ID                                                                      | Titre                                                              | Effort | PRs | Dépend de |
 |-------|-------------------------------------------------------------------------|--------------------------------------------------------------------|--------|-----|-----------|
-| 1     | [#297](https://github.com/vincentchalamon/bike-trip-planner/issues/297) | ADR-027 : architecture Ollama/LLaMA (2 passes, context)            | S      | [#435](https://github.com/vincentchalamon/bike-trip-planner/pull/435) `feature/297` | —         |
+| 1     | [#297](https://github.com/vincentchalamon/bike-trip-planner/issues/297) | ADR-028 : architecture Ollama/LLaMA (2 passes, context)            | S      | [#435](https://github.com/vincentchalamon/bike-trip-planner/pull/435) `feature/297` | —         |
 | 2     | [#298](https://github.com/vincentchalamon/bike-trip-planner/issues/298) | Service OllamaClient PHP + configuration Docker Ollama             | M      | [#437](https://github.com/vincentchalamon/bike-trip-planner/pull/437) `feature/298` | —         |
 | 3     | [#299](https://github.com/vincentchalamon/bike-trip-planner/issues/299) | Gate mechanism dans ComputationTracker                             | M      | [#438](https://github.com/vincentchalamon/bike-trip-planner/pull/438) `feature/299` | —         |
 | 4     | [#300](https://github.com/vincentchalamon/bike-trip-planner/issues/300) | System prompts cyclotourisme versionnés (LLaMA 8B)                 | S      | [#436](https://github.com/vincentchalamon/bike-trip-planner/pull/436) `feature/300` | —         |
