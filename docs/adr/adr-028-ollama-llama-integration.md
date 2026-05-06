@@ -122,7 +122,7 @@ The original draft of this ADR specified a **graceful fallback**: if Ollama was 
 
 **Resolution:**
 
-- **Ollama is a hard runtime dependency.** The backend health check fails if `OLLAMA_BASE_URI` is unreachable; the deployment is considered unhealthy and traffic is not routed.
+- **Ollama is a hard runtime dependency.** The backend health check fails if `OLLAMA_BASE_URI` is unreachable; the deployment is considered unhealthy and traffic is not routed. Note: `OllamaClient` exposes an `enabled` flag (issue #298) for local dev and test isolation; this flag operates at the client layer only. The "no graceful fallback" rule applies at the pipeline orchestration layer (issue #303) — disabling the client in tests does not re-enable a fallback path in production.
 - **No frontend fallback.** The PWA does not implement a "rule-based-only" mode. If the LLM pass fails for a given trip, the trip surfaces an explicit error with a retry action; the user does not silently lose features.
 - **Issues closed for this reason.** #304 (LLM unavailable banner), #307 (rule-based-only toggle in settings), and #308 (form-based brief fallback) were closed as "won't do" because they implemented the fallback path that the v2 arbitration removed.
 - **Operational note.** Operators who cannot run Ollama (e.g. resource-constrained self-hosting) must run a smaller model (`llama3.2:1b` for dialogue, `llama3.1:8b-q4_K_M` for analysis) rather than disable the LLM tier.
@@ -152,7 +152,7 @@ This update supersedes the "graceful fallback" wording from the original draft. 
 
 ### Neutral
 
-- The `OllamaClient` is a new scoped HTTP client; it follows the existing SSRF policy unchanged.
+- The `OllamaClient` is a new scoped HTTP client bound to `OLLAMA_BASE_URI` (per ADR-001 SSRF policy). The dialogue pass uses the standard 10 s timeout; the analysis pass uses a 60 s timeout — an explicit deviation from the 10 s default, justified because Ollama is an internal Docker service (no SSRF exposure) and 8B inference routinely exceeds 10 s on CPU.
 - Phase 1 of the gate pipeline (route preview, pacing, stages) does not depend on Ollama. The dialogue pass for brief intake runs **before** Phase 1 and gates the import; the analysis pass runs in Phase 2.
 - The two-pass analysis pipeline integrates with the existing `ComputationTracker` (ADR-027): the per-stage and overview passes register `LLAMA_STAGE_*` and `LLAMA_OVERVIEW` computation names so that the gate can wait on them like any other Phase 2 enrichment.
 
