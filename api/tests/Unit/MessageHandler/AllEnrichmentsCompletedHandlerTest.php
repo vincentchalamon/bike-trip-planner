@@ -41,16 +41,16 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
 
         $statuses = ['route' => 'done', 'stages' => 'done', 'weather' => 'failed'];
 
-        $tracker = $this->createMock(ComputationTrackerInterface::class);
-        $tracker->method('getStatuses')->with($tripId)->willReturn($statuses);
-        $tracker->method('getProgress')->with($tripId)->willReturn([
+        $tracker = $this->createStub(ComputationTrackerInterface::class);
+        $tracker->method('getStatuses')->willReturn($statuses);
+        $tracker->method('getProgress')->willReturn([
             'completed' => 2,
             'failed' => 1,
             'total' => 3,
         ]);
 
-        $tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->with($tripId)->willReturn([$stage]);
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects(self::once())
