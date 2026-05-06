@@ -26,10 +26,10 @@ interface LlmClientInterface
     /**
      * Single-shot completion.
      *
-     * @param string                $model        e.g. "llama3.2:3b" or "llama3.1:8b"
-     * @param string                $prompt       user prompt
-     * @param string|null           $systemPrompt optional system instruction
-     * @param array<string, mixed>  $options      generation options (temperature, num_ctx, format, ...)
+     * @param string               $model        e.g. "llama3.2:3b" or "llama3.1:8b"
+     * @param string               $prompt       user prompt
+     * @param string|null          $systemPrompt optional system instruction
+     * @param array<string, mixed> $options      generation options (temperature, num_ctx, format, ...)
      *
      * @return array<string, mixed>|null parsed JSON response, or null when the client is disabled
      *
@@ -40,10 +40,10 @@ interface LlmClientInterface
     /**
      * Multi-turn chat completion.
      *
-     * @param string                                                   $model        e.g. "llama3.2:3b" or "llama3.1:8b"
-     * @param list<array{role: string, content: string}>               $messages     conversation history
-     * @param string|null                                              $systemPrompt optional system instruction prepended to the conversation
-     * @param array<string, mixed>                                     $options      generation options (temperature, num_ctx, format, ...)
+     * @param string                                     $model        e.g. "llama3.2:3b" or "llama3.1:8b"
+     * @param list<array{role: string, content: string}> $messages     conversation history
+     * @param string|null                                $systemPrompt optional system instruction prepended to the conversation
+     * @param array<string, mixed>                       $options      generation options (temperature, num_ctx, format, ...)
      *
      * @return array<string, mixed>|null parsed JSON response, or null when the client is disabled
      *

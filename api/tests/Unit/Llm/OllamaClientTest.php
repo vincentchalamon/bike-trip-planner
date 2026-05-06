@@ -97,6 +97,7 @@ final class OllamaClientTest extends TestCase
         $this->assertSame('You are a concise assistant.', $payload['system']);
         $this->assertFalse($payload['stream']);
         $this->assertSame('json', $payload['format']);
+        $this->assertIsArray($payload['options']);
         $this->assertSame(4096, $payload['options']['num_ctx']);
         $this->assertSame(0.2, $payload['options']['temperature']);
     }
@@ -118,6 +119,7 @@ final class OllamaClientTest extends TestCase
         $this->assertIsString($captured['body']);
         /** @var array<string, mixed> $payload */
         $payload = json_decode($captured['body'], true, flags: \JSON_THROW_ON_ERROR);
+        $this->assertIsArray($payload['options']);
         $this->assertSame(OllamaClient::DEFAULT_NUM_CTX, $payload['options']['num_ctx']);
         $this->assertSame(OllamaClient::DEFAULT_TEMPERATURE, $payload['options']['temperature']);
         $this->assertSame('json', $payload['format']);

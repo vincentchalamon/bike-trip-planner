@@ -122,17 +122,14 @@ final readonly class OllamaClient implements LlmClientInterface
             ]);
 
             return $response->toArray();
-        } catch (HttpExceptionInterface $exception) {
+        } catch (HttpExceptionInterface $httpException) {
             $this->logger->warning('Ollama request failed.', [
                 'path' => $path,
                 'model' => $payload['model'] ?? null,
-                'error' => $exception->getMessage(),
+                'error' => $httpException->getMessage(),
             ]);
 
-            throw new OllamaUnavailableException(
-                \sprintf('Ollama request to "%s" failed: %s', $path, $exception->getMessage()),
-                previous: $exception,
-            );
+            throw new OllamaUnavailableException(\sprintf('Ollama request to "%s" failed: %s', $path, $httpException->getMessage()), $httpException->getCode(), previous: $httpException);
         }
     }
 }
