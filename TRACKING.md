@@ -372,7 +372,7 @@ Champ `action` sur le modèle Alert, actions contextuelles sur les analyseurs ex
 | 5     | [#285](https://github.com/vincentchalamon/bike-trip-planner/issues/285) | Nouvel analyseur : passage frontière (nudge)               | M      | [#332](https://github.com/vincentchalamon/bike-trip-planner/pull/332) | —         |
 | 6     | [#313](https://github.com/vincentchalamon/bike-trip-planner/issues/313) | Nouvel analyseur : départ avant l'aube (warning)           | S      |     | —         |
 | 7     | [#314](https://github.com/vincentchalamon/bike-trip-planner/issues/314) | Nouvel analyseur : traversée cours d'eau sans pont (nudge) | M      |     | —         |
-| 8     | [#315](https://github.com/vincentchalamon/bike-trip-planner/issues/315) | ADR-028 : alertes actionnables (action DTO, 4 types)       | S      |     | —         |
+| 8     | [#315](https://github.com/vincentchalamon/bike-trip-planner/issues/315) | ADR-TBD : alertes actionnables (action DTO, 4 types)       | S      |     | —         |
 
 ---
 
