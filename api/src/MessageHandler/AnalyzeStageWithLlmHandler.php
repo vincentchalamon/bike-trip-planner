@@ -6,16 +6,21 @@ namespace App\MessageHandler;
 
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\Enum\ComputationName;
 use App\Llm\Dto\StageAiAnalysis;
 use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
 use App\Llm\StageAnalysisSummaryBuilder;
 use App\Llm\SystemPromptLoader;
+use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeStageWithLlmMessage;
+use App\Message\AnalyzeTripOverviewWithLlmMessage;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * LLaMA 8B pass-1: per-stage analysis (issue #301).
@@ -52,6 +57,9 @@ final readonly class AnalyzeStageWithLlmHandler
         private SystemPromptLoader $promptLoader,
         private StageAnalysisSummaryBuilder $summaryBuilder,
         private LoggerInterface $logger,
+        private LlmAnalysisTrackerInterface $llmTracker,
+        private MessageBusInterface $messageBus,
+        private TripUpdatePublisherInterface $publisher,
         #[Autowire(env: 'default::OLLAMA_STAGE_MODEL')]
         ?string $model = null,
     ) {
@@ -75,6 +83,7 @@ final readonly class AnalyzeStageWithLlmHandler
                 'tripId' => $message->tripId,
                 'dayNumber' => $message->dayNumber,
             ]);
+            $this->settle($message->tripId, success: false);
 
             return;
         }
@@ -85,6 +94,7 @@ final readonly class AnalyzeStageWithLlmHandler
                 'tripId' => $message->tripId,
                 'dayNumber' => $message->dayNumber,
             ]);
+            $this->settle($message->tripId, success: false);
 
             return;
         }
@@ -95,6 +105,8 @@ final readonly class AnalyzeStageWithLlmHandler
                 'dayNumber' => $message->dayNumber,
             ]);
 
+            // Rest days are not counted in the tracker total — do not settle here,
+            // the dispatcher already excluded them.
             return;
         }
 
@@ -112,6 +124,7 @@ final readonly class AnalyzeStageWithLlmHandler
                 'dayNumber' => $message->dayNumber,
                 'error' => $jsonException->getMessage(),
             ]);
+            $this->settle($message->tripId, success: false);
 
             return;
         }
@@ -133,11 +146,14 @@ final readonly class AnalyzeStageWithLlmHandler
                 'dayNumber' => $message->dayNumber,
                 'error' => $ollamaUnavailableException->getMessage(),
             ]);
+            $this->settle($message->tripId, success: false);
 
             return;
         }
 
         if (null === $response) {
+            $this->settle($message->tripId, success: false);
+
             return;
         }
 
@@ -147,6 +163,7 @@ final readonly class AnalyzeStageWithLlmHandler
                 'tripId' => $message->tripId,
                 'dayNumber' => $message->dayNumber,
             ]);
+            $this->settle($message->tripId, success: false);
 
             return;
         }
@@ -165,6 +182,57 @@ final readonly class AnalyzeStageWithLlmHandler
             'insights' => \count($analysis->insights),
             'suggestions' => \count($analysis->suggestions),
         ]);
+
+        $this->settle($message->tripId, success: true);
+    }
+
+    /**
+     * Settles one pass-1 slot on the LLM tracker, emits the AI progress event,
+     * and — when every pass-1 has settled — claims the pass-2 dispatch slot
+     * and queues the trip-overview message.
+     *
+     * Settling is intentionally idempotent at the dispatch level: if two
+     * concurrent workers race the final increment, only one will win the
+     * NX `claimOverviewDispatch()` call.
+     */
+    private function settle(string $tripId, bool $success): void
+    {
+        $progress = $this->llmTracker->markStageAnalysisSettled($tripId, $success);
+
+        // Total = pass-1 stages + 1 pass-2 overview. Progress published as steps
+        // so the AI category mirrors the regular pipeline progress bar.
+        $totalSteps = $progress['total'] + 1;
+        $this->publisher->publishComputationStepCompleted(
+            $tripId,
+            ComputationName::STAGE_AI_ANALYSIS,
+            completed: $progress['completed'],
+            total: $totalSteps,
+            failed: $progress['failed'],
+        );
+
+        $allSettled = $progress['total'] > 0
+            && $progress['completed'] + $progress['failed'] === $progress['total'];
+
+        if (!$allSettled) {
+            return;
+        }
+
+        if (!$this->llmTracker->claimOverviewDispatch($tripId)) {
+            $this->logger->debug('Trip overview already dispatched for trip {tripId} — skipping duplicate.', [
+                'tripId' => $tripId,
+            ]);
+
+            return;
+        }
+
+        $this->logger->info('All pass-1 LLM analyses settled for trip {tripId} — dispatching pass-2.', [
+            'tripId' => $tripId,
+            'completed' => $progress['completed'],
+            'failed' => $progress['failed'],
+            'total' => $progress['total'],
+        ]);
+
+        $this->messageBus->dispatch(new AnalyzeTripOverviewWithLlmMessage($tripId));
     }
 
     /**
