@@ -224,6 +224,20 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             ->execute();
     }
 
+    /**
+     * @param array{narrative: string, patterns: list<string>, recommendations: list<string>, crossStageAlerts: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiOverview
+     */
+    public function updateTripAiOverview(string $tripId, ?array $aiOverview): void
+    {
+        $trip = $this->findTripRequest($tripId);
+        if (!$trip instanceof TripRequest) {
+            return;
+        }
+
+        $trip->aiOverview = $aiOverview;
+        $this->getEntityManager()->flush();
+    }
+
     // --- Private helpers ---
 
     private function findTripRequest(string $tripId): ?TripRequest

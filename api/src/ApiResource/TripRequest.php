@@ -139,6 +139,22 @@ final class TripRequest
     #[ApiProperty(readable: false, writable: false)]
     public Collection $stages;
 
+    /**
+     * LLaMA 8B pass-2 trip overview (issue #302).
+     *
+     * Synthesises the per-stage briefings into a global narrative (cumulative
+     * fatigue, cross-stage patterns, trip-level recommendations). Persisted as
+     * JSONB so the schema can evolve without a migration on every prompt revision.
+     *
+     * Exposed as readable on the API to let the frontend render the overview
+     * once the pipeline finalises (Mercure TRIP_READY event — wired in #303).
+     *
+     * @var array{narrative: string, patterns: list<string>, recommendations: list<string>, crossStageAlerts: list<string>, model: string, promptVersion: int, generatedAt: string}|null
+     */
+    #[ORM\Column(name: 'ai_overview', type: 'jsonb', nullable: true)]
+    #[ApiProperty(writable: false)]
+    public ?array $aiOverview = null;
+
     public function __construct(?Uuid $id = null)
     {
         $this->id = $id ?? Uuid::v7();
