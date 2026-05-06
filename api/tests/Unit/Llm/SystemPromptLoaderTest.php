@@ -32,6 +32,7 @@ final class SystemPromptLoaderTest extends TestCase
         foreach (glob($this->tmpDir.\DIRECTORY_SEPARATOR.'*') ?: [] as $file) {
             unlink($file);
         }
+
         rmdir($this->tmpDir);
     }
 
@@ -115,6 +116,7 @@ final class SystemPromptLoaderTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Prompt name must not be empty.');
 
+        // @phpstan-ignore argument.type (intentional: this test verifies the runtime guard against empty input)
         $loader->load('');
     }
 
