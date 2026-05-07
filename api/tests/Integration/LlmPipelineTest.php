@@ -126,8 +126,20 @@ final class LlmPipelineTest extends TestCase
             publisher: $publisher,
         );
 
-        $bus->register(AnalyzeStageWithLlmMessage::class, $stageHandler);
-        $bus->register(AnalyzeTripOverviewWithLlmMessage::class, $overviewHandler);
+        $bus->register(
+            AnalyzeStageWithLlmMessage::class,
+            static function (object $message) use ($stageHandler): void {
+                \assert($message instanceof AnalyzeStageWithLlmMessage);
+                $stageHandler($message);
+            },
+        );
+        $bus->register(
+            AnalyzeTripOverviewWithLlmMessage::class,
+            static function (object $message) use ($overviewHandler): void {
+                \assert($message instanceof AnalyzeTripOverviewWithLlmMessage);
+                $overviewHandler($message);
+            },
+        );
 
         // The terminal handler shares the LLM tracker with both downstream handlers
         // so the gate→pass1→pass2→TRIP_READY flow is observable in-memory.
@@ -157,11 +169,16 @@ final class LlmPipelineTest extends TestCase
         self::assertCount(1, $tripReadyEvents, 'TRIP_READY must be published exactly once.');
 
         // The payload must contain stages with ai_analysis and the ai_overview.
-        [$tripReady] = array_values($tripReadyEvents);
+        $tripReady = $tripReadyEvents[0];
         self::assertSame(self::TRIP_ID, $tripReady['tripId']);
+        self::assertArrayHasKey('stages', $tripReady['data']);
+        self::assertIsArray($tripReady['data']['stages']);
         self::assertCount(3, $tripReady['data']['stages']);
+        self::assertIsArray($tripReady['data']['stages'][0]);
         self::assertNotNull($tripReady['data']['stages'][0]['aiAnalysis']);
+        self::assertIsArray($tripReady['data']['stages'][2]);
         self::assertNotNull($tripReady['data']['stages'][2]['aiAnalysis']);
+        self::assertIsArray($tripReady['data']['stages'][1]);
         self::assertNull($tripReady['data']['stages'][1]['aiAnalysis'], 'Rest stage payload carries no ai_analysis.');
         self::assertArrayHasKey('aiOverview', $tripReady['data']);
         self::assertIsArray($tripReady['data']['aiOverview']);
@@ -212,8 +229,10 @@ final class LlmPipelineTest extends TestCase
         $tripReadyEvents = $publisher->byType(MercureEventType::TRIP_READY);
         self::assertCount(1, $tripReadyEvents);
 
-        [$tripReady] = array_values($tripReadyEvents);
+        $tripReady = $tripReadyEvents[0];
         self::assertSame(self::TRIP_ID, $tripReady['tripId']);
+        self::assertArrayHasKey('stages', $tripReady['data']);
+        self::assertIsArray($tripReady['data']['stages']);
         self::assertCount(1, $tripReady['data']['stages']);
         self::assertArrayNotHasKey('aiOverview', $tripReady['data'], 'Disabled LLM means no aiOverview key.');
 
@@ -367,11 +386,17 @@ final class InMemoryTripRequestRepository implements TripRequestRepositoryInterf
         $this->aiOverview = $aiOverview;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function stageAiAnalysisFor(int $dayNumber): ?array
     {
         return $this->stageAiAnalysis[$dayNumber] ?? null;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function tripAiOverview(): ?array
     {
         return $this->aiOverview;
@@ -453,12 +478,15 @@ final class InMemoryTripRequestRepository implements TripRequestRepositoryInterf
  */
 final class InMemoryBus implements MessageBusInterface
 {
-    /** @var array<class-string, callable(object): void> */
+    /** @var array<string, callable(object): void> */
     private array $handlers = [];
 
     private int $dispatchCount = 0;
 
-    /** @param callable(object): void $handler */
+    /**
+     * @param class-string           $messageClass
+     * @param callable(object): void $handler
+     */
     public function register(string $messageClass, callable $handler): void
     {
         $this->handlers[$messageClass] = $handler;
