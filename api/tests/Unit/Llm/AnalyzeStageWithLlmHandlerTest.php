@@ -14,11 +14,13 @@ use App\Llm\SystemPromptLoader;
 use App\Message\AnalyzeStageWithLlmMessage;
 use App\MessageHandler\AnalyzeStageWithLlmHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
+#[AllowMockObjectsWithoutExpectations]
 final class AnalyzeStageWithLlmHandlerTest extends TestCase
 {
     private const string TRIP_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
