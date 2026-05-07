@@ -13,11 +13,13 @@ use App\Llm\SystemPromptLoader;
 use App\Message\AnalyzeTripOverviewWithLlmMessage;
 use App\MessageHandler\AnalyzeTripOverviewWithLlmHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
+#[AllowMockObjectsWithoutExpectations]
 final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
 {
     private const string TRIP_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
@@ -61,7 +63,7 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
     #[Test]
     public function skipsSilentlyWhenLlmIsDisabled(): void
     {
-        $llmClient = $this->createStub(LlmClientInterface::class);
+        $llmClient = $this->createMock(LlmClientInterface::class);
         $llmClient->method('isEnabled')->willReturn(false);
 
         $repo = $this->createMock(TripRequestRepositoryInterface::class);
@@ -155,10 +157,15 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
         $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
         $handler(new AnalyzeTripOverviewWithLlmMessage(self::TRIP_ID));
 
+        self::assertIsString($captured['prompt']);
         $payload = json_decode($captured['prompt'], true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($payload);
+        self::assertArrayHasKey('stages', $payload);
+        self::assertIsArray($payload['stages']);
         self::assertCount(2, $payload['stages']);
+        self::assertIsArray($payload['stages'][0]);
         self::assertSame(1, $payload['stages'][0]['stage_number']);
+        self::assertIsArray($payload['stages'][1]);
         self::assertSame(3, $payload['stages'][1]['stage_number']);
     }
 
@@ -265,9 +272,11 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
         self::assertIsArray($decoded);
         self::assertArrayHasKey('rider_profile', $decoded);
         self::assertArrayHasKey('stages', $decoded);
+        self::assertIsArray($decoded['stages']);
         self::assertCount(2, $decoded['stages']);
+        self::assertIsArray($decoded['stages'][0]);
         self::assertSame(1, $decoded['stages'][0]['stage_number']);
-        self::assertSame(65.0, $decoded['stages'][0]['distance_km']);
+        self::assertEqualsWithDelta(65.0, $decoded['stages'][0]['distance_km'], 0.01);
         self::assertSame(600, $decoded['stages'][0]['elevation_gain_m']);
         self::assertStringContainsString('Étape d\'approche', $decoded['stages'][0]['summary']);
 
@@ -276,6 +285,7 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
         self::assertStringNotContainsString('{{', $captured['systemPrompt']);
 
         // Format must be disabled (markdown response, not JSON-mode).
+        self::assertIsArray($captured['options']);
         self::assertSame('', $captured['options']['format']);
         self::assertSame(AnalyzeTripOverviewWithLlmHandler::OVERVIEW_NUM_CTX, $captured['options']['num_ctx']);
     }
@@ -434,9 +444,13 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
         $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
         $handler(new AnalyzeTripOverviewWithLlmMessage(self::TRIP_ID));
 
+        self::assertIsString($captured['prompt']);
         $payload = json_decode($captured['prompt'], true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($payload);
+        self::assertArrayHasKey('stages', $payload);
+        self::assertIsArray($payload['stages']);
         self::assertCount(1, $payload['stages']);
+        self::assertIsArray($payload['stages'][0]);
         self::assertSame(2, $payload['stages'][0]['stage_number']);
     }
 

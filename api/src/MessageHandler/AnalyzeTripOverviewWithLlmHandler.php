@@ -237,13 +237,20 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
      */
     private function buildRiderProfile(?TripRequest $request): array
     {
-        $ebike = (bool) $request?->ebikeMode;
+        if (!$request instanceof TripRequest) {
+            return [
+                'type' => 'gravel',
+                'fitness' => 'intermediate',
+                'ebike' => false,
+                'locale' => 'fr',
+            ];
+        }
 
         return [
-            'type' => $ebike ? 'e-bike' : 'gravel',
+            'type' => $request->ebikeMode ? 'e-bike' : 'gravel',
             'fitness' => 'intermediate',
-            'ebike' => $ebike,
-            'locale' => $request?->locale ?? 'fr',
+            'ebike' => $request->ebikeMode,
+            'locale' => $request->locale,
         ];
     }
 
@@ -254,17 +261,22 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
      */
     private function buildPromptVariables(?TripRequest $request): array
     {
-        $language = $request?->locale ?? 'fr';
-        $ebike = (bool) $request?->ebikeMode;
-        $riderProfile = $ebike ? 'e-bike/VAE' : 'randonneur/bikepacker';
+        if (!$request instanceof TripRequest) {
+            return [
+                'region' => 'Europe',
+                'rider_profile' => 'randonneur/bikepacker',
+                'language' => 'fr',
+                'date' => '',
+            ];
+        }
 
-        $startDate = $request?->startDate;
-        $date = $startDate instanceof \DateTimeImmutable ? $startDate->format('Y-m-d') : '';
+        $riderProfile = $request->ebikeMode ? 'e-bike/VAE' : 'randonneur/bikepacker';
+        $date = $request->startDate instanceof \DateTimeImmutable ? $request->startDate->format('Y-m-d') : '';
 
         return [
             'region' => 'Europe',
             'rider_profile' => $riderProfile,
-            'language' => $language,
+            'language' => $request->locale,
             'date' => $date,
         ];
     }
@@ -352,7 +364,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
             }
         }
 
-        return array_values($alerts);
+        return $alerts;
     }
 
     /**
