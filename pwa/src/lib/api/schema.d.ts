@@ -943,6 +943,10 @@ export interface components {
             accommodations?: components["schemas"]["Accommodation.fit"][];
             selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
             events?: components["schemas"]["Event.fit"][];
+            /** @description LLaMA 8B pass-1 analysis result (issue #301). */
+            aiAnalysis?: {
+                [key: string]: number | string[] | string;
+            } | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -961,6 +965,10 @@ export interface components {
             accommodations?: components["schemas"]["Accommodation.gpx"][];
             selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
             events?: components["schemas"]["Event.gpx"][];
+            /** @description LLaMA 8B pass-1 analysis result (issue #301). */
+            aiAnalysis?: {
+                [key: string]: number | string[] | string;
+            } | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -979,6 +987,10 @@ export interface components {
             accommodations?: components["schemas"]["Accommodation.jsonld"][];
             selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
             events?: components["schemas"]["Event.jsonld"][];
+            /** @description LLaMA 8B pass-1 analysis result (issue #301). */
+            aiAnalysis?: {
+                [key: string]: number | string[] | string;
+            } | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -1242,6 +1254,10 @@ export interface components {
             accommodations?: components["schemas"]["Accommodation.fit"][];
             selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
             events?: components["schemas"]["Event.fit"][];
+            /** @description LLaMA 8B pass-1 analysis result (issue #301). */
+            aiAnalysis?: {
+                [key: string]: number | string[] | string;
+            } | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -1260,6 +1276,10 @@ export interface components {
             accommodations?: components["schemas"]["Accommodation.gpx"][];
             selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
             events?: components["schemas"]["Event.gpx"][];
+            /** @description LLaMA 8B pass-1 analysis result (issue #301). */
+            aiAnalysis?: {
+                [key: string]: number | string[] | string;
+            } | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;

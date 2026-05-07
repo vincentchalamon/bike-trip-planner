@@ -202,6 +202,26 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         return $result;
     }
 
+    /**
+     * @param array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiAnalysis
+     */
+    public function updateStageAiAnalysis(string $tripId, int $dayNumber, ?array $aiAnalysis): void
+    {
+        $trip = $this->findTripRequest($tripId);
+        if (!$trip instanceof TripRequest) {
+            return;
+        }
+
+        foreach ($trip->stages as $stageEntity) {
+            if ($stageEntity->getDayNumber() === $dayNumber) {
+                $stageEntity->setAiAnalysis($aiAnalysis);
+                $this->getEntityManager()->flush();
+
+                return;
+            }
+        }
+    }
+
     // --- Private helpers ---
 
     private function findTripRequest(string $tripId): ?TripRequest
@@ -289,6 +309,9 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             $entity->setSelectedAccommodation($this->accommodationToArray($dto->selectedAccommodation));
         }
 
+        // AI analysis (LLaMA 8B pass-1 — issue #301)
+        $entity->setAiAnalysis($dto->aiAnalysis);
+
         return $entity;
     }
 
@@ -347,6 +370,9 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         if (null !== $selectedData) {
             $dto->selectedAccommodation = $this->arrayToAccommodation($selectedData);
         }
+
+        // AI analysis (LLaMA 8B pass-1 — issue #301)
+        $dto->aiAnalysis = $entity->getAiAnalysis();
 
         return $dto;
     }
