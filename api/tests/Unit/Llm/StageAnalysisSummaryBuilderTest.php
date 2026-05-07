@@ -24,7 +24,7 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
     {
         $stage = $this->makeStage(dayNumber: 3, distance: 72.4, elevation: 850.0, elevationLoss: 820.5);
 
-        $summary = (new StageAnalysisSummaryBuilder())->build($stage);
+        $summary = new StageAnalysisSummaryBuilder()->build($stage);
 
         self::assertSame(3, $summary['stage_number']);
         self::assertSame(72.4, $summary['distance_km']);
@@ -40,8 +40,9 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
         $stage = $this->makeStage();
         $stage->label = 'Cluny → Mâcon';
 
-        $summary = (new StageAnalysisSummaryBuilder())->build($stage);
+        $summary = new StageAnalysisSummaryBuilder()->build($stage);
 
+        self::assertArrayHasKey('label', $summary);
         self::assertSame('Cluny → Mâcon', $summary['label']);
     }
 
@@ -62,9 +63,9 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
             relativeWindDirection: WeatherForecast::RELATIVE_WIND_HEADWIND,
         );
 
-        $summary = (new StageAnalysisSummaryBuilder())->build($stage);
+        $summary = new StageAnalysisSummaryBuilder()->build($stage);
 
-        self::assertIsArray($summary['weather']);
+        self::assertArrayHasKey('weather', $summary);
         self::assertSame(8.4, $summary['weather']['temp_min_c']);
         self::assertSame(18.7, $summary['weather']['temp_max_c']);
         self::assertSame(22.0, $summary['weather']['wind_kmh']);
@@ -78,7 +79,7 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
     #[Test]
     public function dropsWeatherSectionWhenAbsent(): void
     {
-        $summary = (new StageAnalysisSummaryBuilder())->build($this->makeStage());
+        $summary = new StageAnalysisSummaryBuilder()->build($this->makeStage());
 
         self::assertArrayNotHasKey('weather', $summary);
     }
@@ -88,18 +89,20 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
     {
         $stage = $this->makeStage();
         for ($i = 0; $i < 5; ++$i) {
-            $stage->addAlert(new Alert(AlertType::NUDGE, "nudge-$i"));
-        }
-        for ($i = 0; $i < 5; ++$i) {
-            $stage->addAlert(new Alert(AlertType::WARNING, "warning-$i"));
-        }
-        for ($i = 0; $i < 5; ++$i) {
-            $stage->addAlert(new Alert(AlertType::CRITICAL, "critical-$i"));
+            $stage->addAlert(new Alert(AlertType::NUDGE, 'nudge-'.$i));
         }
 
-        $summary = (new StageAnalysisSummaryBuilder())->build($stage);
+        for ($i = 0; $i < 5; ++$i) {
+            $stage->addAlert(new Alert(AlertType::WARNING, 'warning-'.$i));
+        }
 
-        self::assertIsArray($summary['alerts']);
+        for ($i = 0; $i < 5; ++$i) {
+            $stage->addAlert(new Alert(AlertType::CRITICAL, 'critical-'.$i));
+        }
+
+        $summary = new StageAnalysisSummaryBuilder()->build($stage);
+
+        self::assertArrayHasKey('alerts', $summary);
         self::assertCount(StageAnalysisSummaryBuilder::MAX_ALERTS, $summary['alerts']);
 
         $criticalCount = 0;
@@ -108,13 +111,14 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
                 ++$criticalCount;
             }
         }
+
         self::assertSame(5, $criticalCount, 'All CRITICAL alerts must be retained before WARNING/NUDGE.');
     }
 
     #[Test]
     public function dropsAlertsSectionWhenEmpty(): void
     {
-        $summary = (new StageAnalysisSummaryBuilder())->build($this->makeStage());
+        $summary = new StageAnalysisSummaryBuilder()->build($this->makeStage());
 
         self::assertArrayNotHasKey('alerts', $summary);
     }
@@ -127,8 +131,9 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
         $stage->addPoi(new PointOfInterest('Source', 'water', 48.1, 2.1));
         $stage->addPoi(new PointOfInterest('Boulangerie', 'bakery', 48.2, 2.2));
 
-        $summary = (new StageAnalysisSummaryBuilder())->build($stage);
+        $summary = new StageAnalysisSummaryBuilder()->build($stage);
 
+        self::assertArrayHasKey('water_points', $summary);
         self::assertSame(2, $summary['water_points']);
     }
 
@@ -140,9 +145,9 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
         $stage->addPoi(new PointOfInterest('Carrefour Express', 'supermarket', 48.1, 2.1));
         $stage->addPoi(new PointOfInterest('Église', 'cultural', 48.2, 2.2));
 
-        $summary = (new StageAnalysisSummaryBuilder())->build($stage);
+        $summary = new StageAnalysisSummaryBuilder()->build($stage);
 
-        self::assertIsArray($summary['resupply']);
+        self::assertArrayHasKey('resupply', $summary);
         self::assertCount(2, $summary['resupply']);
         self::assertSame('Boulangerie Dupont', $summary['resupply'][0]['name']);
         self::assertSame('bakery', $summary['resupply'][0]['type']);
@@ -153,11 +158,12 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
     {
         $stage = $this->makeStage();
         for ($i = 0; $i < StageAnalysisSummaryBuilder::MAX_LIST_ITEMS + 4; ++$i) {
-            $stage->addPoi(new PointOfInterest("Shop $i", 'shop', 48.0 + $i / 100, 2.0));
+            $stage->addPoi(new PointOfInterest('Shop '.$i, 'shop', 48.0 + $i / 100, 2.0));
         }
 
-        $summary = (new StageAnalysisSummaryBuilder())->build($stage);
+        $summary = new StageAnalysisSummaryBuilder()->build($stage);
 
+        self::assertArrayHasKey('resupply', $summary);
         self::assertCount(StageAnalysisSummaryBuilder::MAX_LIST_ITEMS, $summary['resupply']);
     }
 
@@ -186,9 +192,9 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
             isExactPrice: false,
         ));
 
-        $summary = (new StageAnalysisSummaryBuilder())->build($stage);
+        $summary = new StageAnalysisSummaryBuilder()->build($stage);
 
-        self::assertIsArray($summary['accommodations']);
+        self::assertArrayHasKey('accommodations', $summary);
         self::assertCount(2, $summary['accommodations']);
         self::assertSame('Gîte du Moulin', $summary['accommodations'][0]['name']);
         self::assertSame('Hotel des Voyageurs', $summary['accommodations'][1]['name']);
@@ -212,13 +218,14 @@ final class StageAnalysisSummaryBuilderTest extends TestCase
             relativeWindDirection: WeatherForecast::RELATIVE_WIND_HEADWIND,
         );
         for ($i = 0; $i < StageAnalysisSummaryBuilder::MAX_ALERTS; ++$i) {
-            $stage->addAlert(new Alert(AlertType::WARNING, "alert message $i with some context"));
-        }
-        for ($i = 0; $i < StageAnalysisSummaryBuilder::MAX_LIST_ITEMS; ++$i) {
-            $stage->addPoi(new PointOfInterest("Boulangerie $i", 'bakery', 48.0, 2.0));
+            $stage->addAlert(new Alert(AlertType::WARNING, sprintf('alert message %d with some context', $i)));
         }
 
-        $summary = (new StageAnalysisSummaryBuilder())->build($stage);
+        for ($i = 0; $i < StageAnalysisSummaryBuilder::MAX_LIST_ITEMS; ++$i) {
+            $stage->addPoi(new PointOfInterest('Boulangerie '.$i, 'bakery', 48.0, 2.0));
+        }
+
+        $summary = new StageAnalysisSummaryBuilder()->build($stage);
 
         $encoded = json_encode($summary, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE);
         // Heuristic: Llama tokenizer ~ 1 token per 4 characters of compact JSON.

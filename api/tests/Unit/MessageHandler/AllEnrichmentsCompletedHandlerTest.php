@@ -175,10 +175,8 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
         $bus->expects(self::exactly(2))
             ->method('dispatch')
             ->with(self::callback(
-                static function (object $message): bool {
-                    return $message instanceof AnalyzeStageWithLlmMessage
-                        && \in_array($message->dayNumber, [1, 3], true);
-                },
+                static fn (object $message): bool => $message instanceof AnalyzeStageWithLlmMessage
+                    && \in_array($message->dayNumber, [1, 3], true),
             ))
             ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
 

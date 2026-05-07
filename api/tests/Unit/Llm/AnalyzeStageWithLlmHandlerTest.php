@@ -62,7 +62,7 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
     #[Test]
     public function skipsSilentlyWhenLlmIsDisabled(): void
     {
-        $llmClient = $this->createStub(LlmClientInterface::class);
+        $llmClient = $this->createMock(LlmClientInterface::class);
         $llmClient->method('isEnabled')->willReturn(false);
 
         $repo = $this->createMock(TripRequestRepositoryInterface::class);
@@ -80,7 +80,7 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         $repo->method('getStages')->willReturn(null);
         $repo->expects(self::never())->method('updateStageAiAnalysis');
 
-        $llmClient = $this->createStub(LlmClientInterface::class);
+        $llmClient = $this->createMock(LlmClientInterface::class);
         $llmClient->method('isEnabled')->willReturn(true);
         // The Ollama client must NOT be called when there are no stages.
         $llmClient->expects(self::never())->method('generate');
@@ -97,7 +97,7 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         $repo->method('getStages')->willReturn([$stage]);
         $repo->expects(self::never())->method('updateStageAiAnalysis');
 
-        $llmClient = $this->createStub(LlmClientInterface::class);
+        $llmClient = $this->createMock(LlmClientInterface::class);
         $llmClient->method('isEnabled')->willReturn(true);
 
         $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
@@ -221,6 +221,7 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         self::assertStringNotContainsString('{{', $captured['systemPrompt']);
 
         // Format must be disabled (markdown response, not JSON-mode).
+        self::assertIsArray($captured['options']);
         self::assertSame('', $captured['options']['format']);
     }
 
@@ -355,7 +356,6 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
             summaryBuilder: new StageAnalysisSummaryBuilder(),
             logger: new NullLogger(),
-            model: null,
         );
     }
 

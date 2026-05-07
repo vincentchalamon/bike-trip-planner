@@ -17,12 +17,12 @@ namespace App\Llm\Dto;
 final readonly class StageAiAnalysis
 {
     /**
-     * @param string       $narrative   short narrative paragraph (Synthèse section, ~80 words)
-     * @param list<string> $insights    list of non-obvious facts the rider should know
-     * @param list<string> $suggestions list of actionable recommendations for the rider
-     * @param string       $model       LLM model identifier used to produce the analysis (e.g. "llama3.1:8b")
+     * @param string       $narrative     short narrative paragraph (Synthèse section, ~80 words)
+     * @param list<string> $insights      list of non-obvious facts the rider should know
+     * @param list<string> $suggestions   list of actionable recommendations for the rider
+     * @param string       $model         LLM model identifier used to produce the analysis (e.g. "llama3.1:8b")
      * @param int          $promptVersion identifies the system prompt revision (so consumers can detect staleness)
-     * @param string       $generatedAt RFC3339 timestamp when the analysis was generated
+     * @param string       $generatedAt   RFC3339 timestamp when the analysis was generated
      */
     public function __construct(
         public string $narrative,

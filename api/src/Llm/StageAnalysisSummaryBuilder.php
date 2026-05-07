@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Llm;
 
+use App\ApiResource\Model\WeatherForecast;
+use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
@@ -36,7 +38,19 @@ final readonly class StageAnalysisSummaryBuilder
     /**
      * Builds the structured summary for a single stage.
      *
-     * @return array<string, mixed> structure suitable for `json_encode()` (no nested objects)
+     * @return array{
+     *     stage_number: int,
+     *     distance_km: float,
+     *     elevation_gain_m: int,
+     *     elevation_loss_m: int,
+     *     is_rest_day: bool,
+     *     label?: string,
+     *     weather?: array<string, scalar>,
+     *     alerts?: list<array{type: string, message: string}>,
+     *     water_points?: int,
+     *     resupply?: list<array{name: string, type: string}>,
+     *     accommodations?: list<array{name: string, type: string}>,
+     * } structure suitable for `json_encode()` (no nested objects)
      */
     public function build(Stage $stage): array
     {
@@ -81,12 +95,12 @@ final readonly class StageAnalysisSummaryBuilder
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, scalar>
      */
     private function buildWeather(Stage $stage): array
     {
         $weather = $stage->weather;
-        if (null === $weather) {
+        if (!$weather instanceof WeatherForecast) {
             return [];
         }
 
@@ -184,7 +198,7 @@ final readonly class StageAnalysisSummaryBuilder
         $items = [];
 
         // Surface the selected accommodation first if any.
-        if (null !== $stage->selectedAccommodation) {
+        if ($stage->selectedAccommodation instanceof Accommodation) {
             $items[] = [
                 'name' => $stage->selectedAccommodation->name,
                 'type' => $stage->selectedAccommodation->type,
@@ -193,7 +207,7 @@ final readonly class StageAnalysisSummaryBuilder
 
         foreach ($stage->accommodations as $accommodation) {
             if (
-                null !== $stage->selectedAccommodation
+                $stage->selectedAccommodation instanceof Accommodation
                 && $accommodation->name === $stage->selectedAccommodation->name
                 && $accommodation->lat === $stage->selectedAccommodation->lat
                 && $accommodation->lon === $stage->selectedAccommodation->lon

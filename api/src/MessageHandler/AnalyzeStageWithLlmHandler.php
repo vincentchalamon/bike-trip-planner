@@ -80,7 +80,7 @@ final readonly class AnalyzeStageWithLlmHandler
         }
 
         $stage = $this->findStage($stages, $message->dayNumber);
-        if (null === $stage) {
+        if (!$stage instanceof Stage) {
             $this->logger->info('Stage {dayNumber} not found for trip — skipping LLM stage analysis.', [
                 'tripId' => $message->tripId,
                 'dayNumber' => $message->dayNumber,
@@ -106,11 +106,11 @@ final readonly class AnalyzeStageWithLlmHandler
 
         try {
             $userPrompt = json_encode($summary, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE);
-        } catch (\JsonException $exception) {
+        } catch (\JsonException $jsonException) {
             $this->logger->warning('Failed to encode stage summary for LLM prompt.', [
                 'tripId' => $message->tripId,
                 'dayNumber' => $message->dayNumber,
-                'error' => $exception->getMessage(),
+                'error' => $jsonException->getMessage(),
             ]);
 
             return;
@@ -127,11 +127,11 @@ final readonly class AnalyzeStageWithLlmHandler
                     'num_predict' => self::MAX_RESPONSE_TOKENS,
                 ],
             );
-        } catch (OllamaUnavailableException $exception) {
+        } catch (OllamaUnavailableException $ollamaUnavailableException) {
             $this->logger->warning('Ollama unreachable — skipping stage analysis.', [
                 'tripId' => $message->tripId,
                 'dayNumber' => $message->dayNumber,
-                'error' => $exception->getMessage(),
+                'error' => $ollamaUnavailableException->getMessage(),
             ]);
 
             return;
@@ -188,21 +188,27 @@ final readonly class AnalyzeStageWithLlmHandler
      */
     private function buildPromptVariables(?TripRequest $request, Stage $stage): array
     {
-        $language = $request?->locale ?? 'fr';
-        $ebike = (bool) $request?->ebikeMode;
-        $riderProfile = $ebike ? 'e-bike/VAE' : 'randonneur/bikepacker';
+        if (!$request instanceof TripRequest) {
+            return [
+                'region' => 'Europe',
+                'rider_profile' => 'randonneur/bikepacker',
+                'language' => 'fr',
+                'date' => '',
+            ];
+        }
 
-        $startDate = $request?->startDate;
+        $riderProfile = $request->ebikeMode ? 'e-bike/VAE' : 'randonneur/bikepacker';
+
         $date = '';
-        if ($startDate instanceof \DateTimeImmutable) {
-            $stageDate = $startDate->modify(\sprintf('+%d days', max(0, $stage->dayNumber - 1)));
+        if ($request->startDate instanceof \DateTimeImmutable) {
+            $stageDate = $request->startDate->modify(\sprintf('+%d days', max(0, $stage->dayNumber - 1)));
             $date = $stageDate->format('Y-m-d');
         }
 
         return [
             'region' => 'Europe',
             'rider_profile' => $riderProfile,
-            'language' => $language,
+            'language' => $request->locale,
             'date' => $date,
         ];
     }
@@ -255,7 +261,7 @@ final readonly class AnalyzeStageWithLlmHandler
             suggestions: $suggestions,
             model: $this->model,
             promptVersion: self::PROMPT_VERSION,
-            generatedAt: (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DATE_ATOM),
+            generatedAt: new \DateTimeImmutable('now', new \DateTimeZone('UTC'))->format(\DATE_ATOM),
         );
     }
 
@@ -276,6 +282,7 @@ final readonly class AnalyzeStageWithLlmHandler
                 if (null !== $currentKey) {
                     $sections[$currentKey] = implode("\n", $buffer);
                 }
+
                 $currentKey = $this->normaliseHeading($matches[1]);
                 $buffer = [];
 
@@ -297,6 +304,7 @@ final readonly class AnalyzeStageWithLlmHandler
     private function normaliseHeading(string $heading): string
     {
         $lower = mb_strtolower(trim($heading));
+
         // Drop common French diacritics so "Synthèse" → "synthese" and "Recommandations" → "recommandations".
         return strtr($lower, [
             'à' => 'a', 'á' => 'a', 'â' => 'a', 'ä' => 'a', 'ã' => 'a', 'å' => 'a',
@@ -321,6 +329,7 @@ final readonly class AnalyzeStageWithLlmHandler
                 if (null !== $current) {
                     $bullets[] = trim($current);
                 }
+
                 $current = $matches[1];
 
                 continue;
