@@ -8,9 +8,11 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
 use App\Llm\StageAnalysisSummaryBuilder;
 use App\Llm\SystemPromptLoader;
+use App\Mercure\NullTripUpdatePublisher;
 use App\Message\AnalyzeStageWithLlmMessage;
 use App\MessageHandler\AnalyzeStageWithLlmHandler;
 use App\Repository\TripRequestRepositoryInterface;
@@ -19,6 +21,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AllowMockObjectsWithoutExpectations]
 final class AnalyzeStageWithLlmHandlerTest extends TestCase
@@ -352,12 +355,19 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         TripRequestRepositoryInterface $repo,
         LlmClientInterface $llmClient,
     ): AnalyzeStageWithLlmHandler {
+        $tracker = $this->createStub(LlmAnalysisTrackerInterface::class);
+        $tracker->method('markStageAnalysisSettled')->willReturn(['completed' => 0, 'failed' => 1, 'total' => 1]);
+        $tracker->method('claimOverviewDispatch')->willReturn(false);
+
         return new AnalyzeStageWithLlmHandler(
             tripStateManager: $repo,
             llmClient: $llmClient,
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
             summaryBuilder: new StageAnalysisSummaryBuilder(),
             logger: new NullLogger(),
+            llmTracker: $tracker,
+            messageBus: $this->createStub(MessageBusInterface::class),
+            publisher: new NullTripUpdatePublisher(),
         );
     }
 

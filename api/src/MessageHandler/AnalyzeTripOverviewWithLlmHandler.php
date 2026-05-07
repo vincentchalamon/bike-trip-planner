@@ -6,10 +6,14 @@ namespace App\MessageHandler;
 
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationTrackerInterface;
+use App\Enum\ComputationName;
 use App\Llm\Dto\TripAiOverview;
 use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
+use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTripOverviewWithLlmMessage;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
@@ -61,6 +65,9 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
         private LlmClientInterface $llmClient,
         private SystemPromptLoader $promptLoader,
         private LoggerInterface $logger,
+        private LlmAnalysisTrackerInterface $llmTracker,
+        private ComputationTrackerInterface $computationTracker,
+        private TripUpdatePublisherInterface $publisher,
         #[Autowire(env: 'default::OLLAMA_OVERVIEW_MODEL')]
         ?string $model = null,
     ) {
@@ -69,19 +76,26 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
 
     public function __invoke(AnalyzeTripOverviewWithLlmMessage $message): void
     {
+        $tripId = $message->tripId;
+
         if (!$this->llmClient->isEnabled()) {
+            // The dispatcher (AllEnrichmentsCompletedHandler) already short-circuits
+            // and publishes TRIP_READY directly when the LLM is disabled. Reaching
+            // this handler with a disabled LLM means a stale / replayed message —
+            // skip silently to avoid a double publish.
             $this->logger->debug('LLM disabled — skipping trip overview synthesis.', [
-                'tripId' => $message->tripId,
+                'tripId' => $tripId,
             ]);
 
             return;
         }
 
-        $stages = $this->tripStateManager->getStages($message->tripId);
+        $stages = $this->tripStateManager->getStages($tripId);
         if (null === $stages || [] === $stages) {
             $this->logger->info('No stages found for trip — skipping LLM trip overview.', [
-                'tripId' => $message->tripId,
+                'tripId' => $tripId,
             ]);
+            $this->finalize($tripId, overview: null);
 
             return;
         }
@@ -89,13 +103,14 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
         $stageInputs = $this->buildStageInputs($stages);
         if ([] === $stageInputs) {
             $this->logger->info('No pass-1 stage analyses available — skipping LLM trip overview.', [
-                'tripId' => $message->tripId,
+                'tripId' => $tripId,
             ]);
+            $this->finalize($tripId, overview: null);
 
             return;
         }
 
-        $request = $this->tripStateManager->getRequest($message->tripId);
+        $request = $this->tripStateManager->getRequest($tripId);
         $variables = $this->buildPromptVariables($request);
         $systemPrompt = $this->promptLoader->load(self::PROMPT_NAME, $variables);
 
@@ -108,9 +123,10 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
             $userPrompt = json_encode($payload, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE);
         } catch (\JsonException $jsonException) {
             $this->logger->warning('Failed to encode trip overview payload for LLM prompt.', [
-                'tripId' => $message->tripId,
+                'tripId' => $tripId,
                 'error' => $jsonException->getMessage(),
             ]);
+            $this->finalize($tripId, overview: null);
 
             return;
         }
@@ -129,22 +145,26 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
             );
         } catch (OllamaUnavailableException $ollamaUnavailableException) {
             $this->logger->warning('Ollama unreachable — skipping trip overview synthesis.', [
-                'tripId' => $message->tripId,
+                'tripId' => $tripId,
                 'error' => $ollamaUnavailableException->getMessage(),
             ]);
+            $this->finalize($tripId, overview: null);
 
             return;
         }
 
         if (null === $response) {
+            $this->finalize($tripId, overview: null);
+
             return;
         }
 
         $rawText = $this->extractText($response);
         if (null === $rawText || '' === trim($rawText)) {
             $this->logger->warning('LLM returned an empty response for trip overview.', [
-                'tripId' => $message->tripId,
+                'tripId' => $tripId,
             ]);
+            $this->finalize($tripId, overview: null);
 
             return;
         }
@@ -152,15 +172,75 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
         $overview = $this->parseMarkdownResponse($rawText);
 
         $this->tripStateManager->updateTripAiOverview(
-            $message->tripId,
+            $tripId,
             $overview->toArray(),
         );
 
         $this->logger->info('LLM trip overview persisted for trip {tripId}.', [
-            'tripId' => $message->tripId,
+            'tripId' => $tripId,
             'patterns' => \count($overview->patterns),
             'recommendations' => \count($overview->recommendations),
             'crossStageAlerts' => \count($overview->crossStageAlerts),
+        ]);
+
+        $this->finalize($tripId, $overview);
+    }
+
+    /**
+     * Terminal step of the LLM pipeline (issue #303).
+     *
+     * Whether pass-2 succeeds, fails or is skipped, the handler MUST publish
+     * the `TRIP_READY` Mercure event exactly once so the frontend renders the
+     * fully enriched trip atomically. The dual claim (`claimTripReadyPublication`)
+     * guards against retries when Messenger replays a soft-failed message.
+     *
+     * The published payload always includes:
+     *  - `stages` with their per-stage `aiAnalysis` (pass-1 result, may be null
+     *    for stages that failed),
+     *  - `computationStatus` from the gate tracker for diagnostic purposes,
+     *  - `aiOverview` whenever pass-2 produced one — omitted (key absent) when
+     *    pass-2 was skipped or failed, so the frontend can hide the section.
+     */
+    private function finalize(string $tripId, ?TripAiOverview $overview): void
+    {
+        // Emit the AI overview progress step regardless of outcome so the frontend
+        // can complete the "Analyse IA" category in the progress bar (issue #303).
+        $progress = $this->llmTracker->getStageAnalysisProgress($tripId);
+        if (null !== $progress) {
+            $totalSteps = $progress['total'] + 1;
+            $stageCompleted = $progress['completed'];
+            $stageFailed = $progress['failed'];
+
+            $this->publisher->publishComputationStepCompleted(
+                $tripId,
+                ComputationName::TRIP_AI_OVERVIEW,
+                completed: $stageCompleted + ($overview instanceof TripAiOverview ? 1 : 0),
+                total: $totalSteps,
+                failed: $stageFailed + ($overview instanceof TripAiOverview ? 0 : 1),
+            );
+        }
+
+        if (!$this->llmTracker->claimTripReadyPublication($tripId)) {
+            $this->logger->debug('TRIP_READY already published for trip {tripId} — skipping duplicate.', [
+                'tripId' => $tripId,
+            ]);
+
+            return;
+        }
+
+        $stages = $this->tripStateManager->getStages($tripId) ?? [];
+        $statuses = $this->computationTracker->getStatuses($tripId) ?? [];
+
+        $summary = ['status' => $statuses];
+        if ($overview instanceof TripAiOverview) {
+            $summary['aiOverview'] = $overview->toArray();
+        }
+
+        $this->publisher->publishTripReady($tripId, $stages, $summary);
+
+        $this->logger->info('TRIP_READY published for trip {tripId} with{withOverview} AI overview.', [
+            'tripId' => $tripId,
+            'withOverview' => $overview instanceof TripAiOverview ? '' : 'out',
         ]);
     }
 
