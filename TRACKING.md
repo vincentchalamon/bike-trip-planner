@@ -519,11 +519,11 @@ Service OllamaClient PHP, configuration Docker Ollama, gate mechanism dans Compu
 
 Pipeline d'analyse IA : passe 1 par étape (parallélisable via Messenger), passe 2 vue d'ensemble, orchestration gate → LLaMA → TRIP_READY. **Décision : Ollama est une dépendance dure** — pas de fallback gracieux (cf. issue #375 arbitrage v2 « IA toujours active »). Issue #304 fermée.
 
-| Ordre | ID                                                                      | Titre                                                     | Effort | PRs | Dépend de      |
-|-------|-------------------------------------------------------------------------|-----------------------------------------------------------|--------|-----|----------------|
-| 1     | [#301](https://github.com/vincentchalamon/bike-trip-planner/issues/301) | LLaMA 8B passe 1 : analyse par étape via Messenger        | L      |     | #298 #299 #300 |
-| 2     | [#302](https://github.com/vincentchalamon/bike-trip-planner/issues/302) | LLaMA 8B passe 2 : vue d'ensemble du trip                 | M      |     | #301           |
-| 3     | [#303](https://github.com/vincentchalamon/bike-trip-planner/issues/303) | Pipeline gate → LLaMA → TRIP_READY event Mercure          | M      |     | #299 #301 #302 |
+| Ordre | ID                                                                      | Titre                                                     | Effort | PRs                                                                                | Dépend de      |
+|-------|-------------------------------------------------------------------------|-----------------------------------------------------------|--------|------------------------------------------------------------------------------------|----------------|
+| 1     | [#301](https://github.com/vincentchalamon/bike-trip-planner/issues/301) | LLaMA 8B passe 1 : analyse par étape via Messenger        | L      | [#441](https://github.com/vincentchalamon/bike-trip-planner/pull/441) `feature/301` | #298 #299 #300 |
+| 2     | [#302](https://github.com/vincentchalamon/bike-trip-planner/issues/302) | LLaMA 8B passe 2 : vue d'ensemble du trip                 | M      | [#442](https://github.com/vincentchalamon/bike-trip-planner/pull/442) `feature/302` | #301           |
+| 3     | [#303](https://github.com/vincentchalamon/bike-trip-planner/issues/303) | Pipeline gate → LLaMA → TRIP_READY event Mercure          | M      | [#443](https://github.com/vincentchalamon/bike-trip-planner/pull/443) `feature/303` | #299 #301 #302 |
 
 ---
 
