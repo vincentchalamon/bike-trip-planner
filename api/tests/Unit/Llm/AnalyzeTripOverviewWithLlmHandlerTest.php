@@ -228,6 +228,7 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
     {
         $stage1 = $this->makeStage(dayNumber: 1, distance: 65.0, elevation: 600.0);
         $stage1->aiAnalysis = $this->makeAiAnalysis('Étape d\'approche roulante.');
+
         $stage2 = $this->makeStage(dayNumber: 2, distance: 92.0, elevation: 1240.0);
         $stage2->aiAnalysis = $this->makeAiAnalysis('Étape exigeante.');
 
@@ -412,6 +413,7 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
         $stage1 = $this->makeStage(dayNumber: 1);
         $stage2 = $this->makeStage(dayNumber: 2);
         $stage2->aiAnalysis = $this->makeAiAnalysis('Étape exigeante.');
+
         $stage3 = $this->makeStage(dayNumber: 3);
 
         $repo = $this->createMock(TripRequestRepositoryInterface::class);
@@ -455,7 +457,6 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
             llmClient: $llmClient,
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
             logger: new NullLogger(),
-            model: null,
         );
     }
 

@@ -106,10 +106,10 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
 
         try {
             $userPrompt = json_encode($payload, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_UNICODE);
-        } catch (\JsonException $exception) {
+        } catch (\JsonException $jsonException) {
             $this->logger->warning('Failed to encode trip overview payload for LLM prompt.', [
                 'tripId' => $message->tripId,
-                'error' => $exception->getMessage(),
+                'error' => $jsonException->getMessage(),
             ]);
 
             return;
@@ -127,10 +127,10 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
                     'num_predict' => self::MAX_RESPONSE_TOKENS,
                 ],
             );
-        } catch (OllamaUnavailableException $exception) {
+        } catch (OllamaUnavailableException $ollamaUnavailableException) {
             $this->logger->warning('Ollama unreachable — skipping trip overview synthesis.', [
                 'tripId' => $message->tripId,
-                'error' => $exception->getMessage(),
+                'error' => $ollamaUnavailableException->getMessage(),
             ]);
 
             return;
@@ -327,7 +327,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
             crossStageAlerts: $crossStageAlerts,
             model: $this->model,
             promptVersion: self::PROMPT_VERSION,
-            generatedAt: (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DATE_ATOM),
+            generatedAt: new \DateTimeImmutable('now', new \DateTimeZone('UTC'))->format(\DATE_ATOM),
         );
     }
 
@@ -372,6 +372,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
                 if (null !== $currentKey) {
                     $sections[$currentKey] = implode("\n", $buffer);
                 }
+
                 $currentKey = $this->normaliseHeading($matches[1]);
                 $buffer = [];
 
@@ -420,6 +421,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
                 if (null !== $current) {
                     $bullets[] = trim($current);
                 }
+
                 $current = $matches[1];
 
                 continue;

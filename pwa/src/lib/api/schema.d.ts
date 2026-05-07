@@ -1097,6 +1097,10 @@ export interface components {
              */
             enabledAccommodationTypes: string[];
             title?: string | null;
+            /** @description LLaMA 8B pass-2 trip overview (issue #302). */
+            readonly aiOverview?: {
+                [key: string]: number | string[] | string;
+            } | null;
         };
         "Trip.TripRequest.jsonMergePatch": {
             /** Format: uri */
@@ -1142,6 +1146,10 @@ export interface components {
              */
             enabledAccommodationTypes: string[];
             title?: string | null;
+            /** @description LLaMA 8B pass-2 trip overview (issue #302). */
+            readonly aiOverview?: {
+                [key: string]: number | string[] | string;
+            } | null;
         };
         "Trip.gpx": {
             id?: string;
