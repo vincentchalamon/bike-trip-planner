@@ -143,7 +143,7 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
             return;
         }
 
-        $request->aiOverview = $aiOverview;
+        $request->aiOverviewData = $aiOverview;
         $this->set($this->requestKey($tripId), $request);
     }
 

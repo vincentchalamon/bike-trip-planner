@@ -7,6 +7,7 @@ namespace App\ApiResource;
 use ApiPlatform\Metadata\ApiProperty;
 use App\Entity\Stage;
 use App\Entity\User;
+use App\Llm\Dto\TripAiOverview;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -146,14 +147,21 @@ final class TripRequest
      * fatigue, cross-stage patterns, trip-level recommendations). Persisted as
      * JSONB so the schema can evolve without a migration on every prompt revision.
      *
-     * Exposed as readable on the API to let the frontend render the overview
-     * once the pipeline finalises (Mercure TRIP_READY event — wired in #303).
+     * Internal storage — exposed on the API via {@see self::getAiOverview()} which returns
+     * a typed {@see TripAiOverview} DTO so the OpenAPI schema is precise and the frontend gets
+     * compile-time access to `narrative`, `patterns`, `recommendations`, etc.
      *
      * @var array{narrative: string, patterns: list<string>, recommendations: list<string>, crossStageAlerts: list<string>, model: string, promptVersion: int, generatedAt: string}|null
      */
     #[ORM\Column(name: 'ai_overview', type: 'jsonb', nullable: true)]
-    #[ApiProperty(writable: false)]
-    public ?array $aiOverview = null;
+    #[ApiProperty(readable: false, writable: false)]
+    public ?array $aiOverviewData = null;
+
+    #[ApiProperty(description: 'LLaMA 8B pass-2 trip overview (issue #302).', writable: false, identifier: false)]
+    public function getAiOverview(): ?TripAiOverview
+    {
+        return null === $this->aiOverviewData ? null : TripAiOverview::fromArray($this->aiOverviewData);
+    }
 
     public function __construct(?Uuid $id = null)
     {

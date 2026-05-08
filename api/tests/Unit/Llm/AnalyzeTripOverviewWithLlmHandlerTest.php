@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Llm;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\Llm\Dto\StageAiAnalysis;
 use App\Llm\Exception\OllamaUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
@@ -278,6 +279,7 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
         self::assertSame(1, $decoded['stages'][0]['stage_number']);
         self::assertEqualsWithDelta(65.0, $decoded['stages'][0]['distance_km'], 0.01);
         self::assertSame(600, $decoded['stages'][0]['elevation_gain_m']);
+        self::assertIsString($decoded['stages'][0]['summary']);
         self::assertStringContainsString('Étape d\'approche', $decoded['stages'][0]['summary']);
 
         // System prompt must have placeholders substituted (no remaining {{...}}).
@@ -487,19 +489,16 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
         );
     }
 
-    /**
-     * @return array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}
-     */
-    private function makeAiAnalysis(string $narrative): array
+    private function makeAiAnalysis(string $narrative): StageAiAnalysis
     {
-        return [
-            'narrative' => $narrative,
-            'insights' => ['Some insight'],
-            'suggestions' => ['Some suggestion'],
-            'model' => 'llama3.1:8b',
-            'promptVersion' => 1,
-            'generatedAt' => '2026-05-06T10:00:00+00:00',
-        ];
+        return new StageAiAnalysis(
+            narrative: $narrative,
+            insights: ['Some insight'],
+            suggestions: ['Some suggestion'],
+            model: 'llama3.1:8b',
+            promptVersion: 1,
+            generatedAt: '2026-05-06T10:00:00+00:00',
+        );
     }
 
     private function makeTripRequest(): TripRequest

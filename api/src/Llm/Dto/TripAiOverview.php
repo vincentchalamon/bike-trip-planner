@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Llm\Dto;
 
+use Symfony\Component\Validator\Constraints\NotBlank;
+use Symfony\Component\Validator\Constraints\NotNull;
+
 /**
  * Result of the LLaMA 8B pass-2 trip overview synthesis (issue #302).
  *
@@ -28,12 +31,19 @@ final readonly class TripAiOverview
      * @param string       $generatedAt      RFC3339 timestamp when the overview was generated
      */
     public function __construct(
+        #[NotBlank]
         public string $narrative,
+        #[NotNull]
         public array $patterns,
+        #[NotNull]
         public array $recommendations,
+        #[NotNull]
         public array $crossStageAlerts,
+        #[NotBlank]
         public string $model,
+        #[NotNull]
         public int $promptVersion,
+        #[NotBlank]
         public string $generatedAt,
     ) {
     }

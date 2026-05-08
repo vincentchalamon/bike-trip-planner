@@ -225,17 +225,22 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     }
 
     /**
+     * Atomic UPDATE on the JSONB column to avoid loading the full TripRequest aggregate.
+     *
      * @param array{narrative: string, patterns: list<string>, recommendations: list<string>, crossStageAlerts: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiOverview
      */
     public function updateTripAiOverview(string $tripId, ?array $aiOverview): void
     {
-        $trip = $this->findTripRequest($tripId);
-        if (!$trip instanceof TripRequest) {
+        if (!Uuid::isValid($tripId)) {
             return;
         }
 
-        $trip->aiOverview = $aiOverview;
-        $this->getEntityManager()->flush();
+        $this->getEntityManager()->createQuery(
+            'UPDATE App\ApiResource\TripRequest t SET t.aiOverviewData = :aiOverview WHERE t.id = :tripId',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('aiOverview', $aiOverview)
+            ->execute();
     }
 
     // --- Private helpers ---

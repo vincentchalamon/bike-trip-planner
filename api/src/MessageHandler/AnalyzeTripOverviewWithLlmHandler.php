@@ -6,6 +6,7 @@ namespace App\MessageHandler;
 
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\Llm\Dto\StageAiAnalysis;
 use App\Llm\Dto\TripAiOverview;
 use App\Llm\Exception\OllamaUnavailableException;
 use App\Llm\LlmClientInterface;
@@ -207,40 +208,37 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
      * Concatenates the pass-1 narrative + the most relevant insights/suggestions
      * into a single synthetic sentence-level summary. Mirrors the few-shot
      * example shape from the trip-overview system prompt.
-     *
-     * @param array{narrative?: string, insights?: list<string>, suggestions?: list<string>, model?: string, promptVersion?: int, generatedAt?: string} $analysis
      */
-    private function composeStageSummary(array $analysis): string
+    private function composeStageSummary(StageAiAnalysis $analysis): string
     {
         $parts = [];
 
-        $narrative = trim($analysis['narrative'] ?? '');
+        $narrative = trim($analysis->narrative);
         if ('' !== $narrative) {
             $parts[] = $narrative;
         }
 
-        $insights = $analysis['insights'] ?? [];
-        if ([] !== $insights) {
-            $parts[] = 'Insights: '.implode(' | ', $insights);
+        if ([] !== $analysis->insights) {
+            $parts[] = 'Insights: '.implode(' | ', $analysis->insights);
         }
 
-        $suggestions = $analysis['suggestions'] ?? [];
-        if ([] !== $suggestions) {
-            $parts[] = 'Recommandations: '.implode(' | ', $suggestions);
+        if ([] !== $analysis->suggestions) {
+            $parts[] = 'Recommandations: '.implode(' | ', $analysis->suggestions);
         }
 
         return trim(implode(' ', $parts));
     }
 
     /**
-     * @return array{type: string, fitness: string, ebike: bool, locale: string}
+     * @return array{type: string, ebike: bool, locale: string}
      */
     private function buildRiderProfile(?TripRequest $request): array
     {
+        // Note: a rider-fitness field will be added to TripRequest in a follow-up.
+        // Until then we omit the key entirely so the LLM uses its own default rather than a system-invented one.
         if (!$request instanceof TripRequest) {
             return [
                 'type' => 'gravel',
-                'fitness' => 'intermediate',
                 'ebike' => false,
                 'locale' => 'fr',
             ];
@@ -248,7 +246,6 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
 
         return [
             'type' => $request->ebikeMode ? 'e-bike' : 'gravel',
-            'fitness' => 'intermediate',
             'ebike' => $request->ebikeMode,
             'locale' => $request->locale,
         ];
@@ -261,9 +258,13 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
      */
     private function buildPromptVariables(?TripRequest $request): array
     {
+        // Note: `region` is left as an empty placeholder for now. The system prompt
+        // template tolerates an empty `{{region}}` placeholder, so the LLM degrades
+        // gracefully to its built-in regional knowledge until we wire a route-bbox-derived
+        // region or a TripRequest.region field.
         if (!$request instanceof TripRequest) {
             return [
-                'region' => 'Europe',
+                'region' => '',
                 'rider_profile' => 'randonneur/bikepacker',
                 'language' => 'fr',
                 'date' => '',
@@ -274,7 +275,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
         $date = $request->startDate instanceof \DateTimeImmutable ? $request->startDate->format('Y-m-d') : '';
 
         return [
-            'region' => 'Europe',
+            'region' => '',
             'rider_profile' => $riderProfile,
             'language' => $request->locale,
             'date' => $date,

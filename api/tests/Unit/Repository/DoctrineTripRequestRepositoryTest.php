@@ -626,4 +626,75 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->repository->storeStages($tripId, [$stageDto]);
     }
+
+    #[Test]
+    public function updateStageAiAnalysisRunsBulkUpdateWithoutLoadingTrip(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $payload = [
+            'narrative' => 'OK',
+            'insights' => ['i1'],
+            'suggestions' => ['s1'],
+            'model' => 'llama3.1:8b',
+            'promptVersion' => 1,
+            'generatedAt' => '2026-05-08T10:00:00+00:00',
+        ];
+
+        $this->entityManager->expects(self::never())->method('find');
+
+        $query = $this->createMock(Query::class);
+        $query->expects(self::exactly(3))->method('setParameter')->willReturnSelf();
+        $query->expects(self::once())->method('execute');
+
+        $this->entityManager->expects(self::once())
+            ->method('createQuery')
+            ->with(self::stringContains('UPDATE App\Entity\Stage'))
+            ->willReturn($query);
+
+        $this->repository->updateStageAiAnalysis($tripId, 3, $payload);
+    }
+
+    #[Test]
+    public function updateStageAiAnalysisIgnoresInvalidTripId(): void
+    {
+        $this->entityManager->expects(self::never())->method('createQuery');
+
+        $this->repository->updateStageAiAnalysis('not-a-uuid', 1, null);
+    }
+
+    #[Test]
+    public function updateTripAiOverviewRunsBulkUpdateWithoutLoadingTrip(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $payload = [
+            'narrative' => 'global',
+            'patterns' => ['p1'],
+            'recommendations' => ['r1'],
+            'crossStageAlerts' => [],
+            'model' => 'llama3.1:8b',
+            'promptVersion' => 1,
+            'generatedAt' => '2026-05-08T10:00:00+00:00',
+        ];
+
+        $this->entityManager->expects(self::never())->method('find');
+
+        $query = $this->createMock(Query::class);
+        $query->expects(self::exactly(2))->method('setParameter')->willReturnSelf();
+        $query->expects(self::once())->method('execute');
+
+        $this->entityManager->expects(self::once())
+            ->method('createQuery')
+            ->with(self::stringContains('UPDATE App\ApiResource\TripRequest'))
+            ->willReturn($query);
+
+        $this->repository->updateTripAiOverview($tripId, $payload);
+    }
+
+    #[Test]
+    public function updateTripAiOverviewIgnoresInvalidTripId(): void
+    {
+        $this->entityManager->expects(self::never())->method('createQuery');
+
+        $this->repository->updateTripAiOverview('not-a-uuid', null);
+    }
 }
