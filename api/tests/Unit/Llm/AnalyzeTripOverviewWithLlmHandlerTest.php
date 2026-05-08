@@ -14,6 +14,7 @@ use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
 use App\Mercure\NullTripUpdatePublisher;
+use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTripOverviewWithLlmMessage;
 use App\MessageHandler\AnalyzeTripOverviewWithLlmHandler;
 use App\Repository\TripRequestRepositoryInterface;
@@ -459,6 +460,36 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
         self::assertSame(2, $payload['stages'][0]['stage_number']);
     }
 
+    #[Test]
+    public function doesNotPublishTripReadyWhenClaimAlreadyTaken(): void
+    {
+        $stage = $this->makeStage(dayNumber: 1);
+        $stage->aiAnalysis = $this->makeAiAnalysis('Étape 1');
+
+        $repo = $this->createMock(TripRequestRepositoryInterface::class);
+        $repo->method('getStages')->willReturn([$stage]);
+        $repo->method('getRequest')->willReturn($this->makeTripRequest());
+        $repo->method('updateTripAiOverview');
+
+        $llmClient = $this->createMock(LlmClientInterface::class);
+        $llmClient->method('isEnabled')->willReturn(true);
+        $llmClient->method('generate')->willReturn([
+            'response' => "## Vue d'ensemble\nOK.",
+            'done' => true,
+        ]);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects(self::never())->method('publishTripReady');
+
+        $handler = $this->makeHandler(
+            repo: $repo,
+            llmClient: $llmClient,
+            claimsTripReadyPublication: false,
+            publisher: $publisher,
+        );
+        $handler(new AnalyzeTripOverviewWithLlmMessage(self::TRIP_ID));
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -470,10 +501,12 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
     private function makeHandler(
         TripRequestRepositoryInterface $repo,
         LlmClientInterface $llmClient,
+        bool $claimsTripReadyPublication = true,
+        ?TripUpdatePublisherInterface $publisher = null,
     ): AnalyzeTripOverviewWithLlmHandler {
         $llmTracker = $this->createStub(LlmAnalysisTrackerInterface::class);
         $llmTracker->method('getStageAnalysisProgress')->willReturn(['completed' => 1, 'failed' => 0, 'total' => 1]);
-        $llmTracker->method('claimTripReadyPublication')->willReturn(true);
+        $llmTracker->method('claimTripReadyPublication')->willReturn($claimsTripReadyPublication);
 
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getStatuses')->willReturn([]);
@@ -485,7 +518,7 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
             logger: new NullLogger(),
             llmTracker: $llmTracker,
             computationTracker: $computationTracker,
-            publisher: new NullTripUpdatePublisher(),
+            publisher: $publisher ?? new NullTripUpdatePublisher(),
         );
     }
 

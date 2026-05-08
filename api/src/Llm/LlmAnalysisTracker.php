@@ -6,6 +6,7 @@ namespace App\Llm;
 
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Lock\LockFactory;
 
 /**
  * PSR-6 backed implementation of {@see LlmAnalysisTrackerInterface}.
@@ -15,11 +16,12 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  *  - `trip.{id}.llm_overview_claimed` → boolean
  *  - `trip.{id}.llm_ready_claimed` → boolean
  *
- * The TOCTOU window of the read-modify-write counter is sub-millisecond and
- * acceptable for a non-business-critical progress signal: if two workers
- * settle simultaneously and one increment is lost, the only consequence is a
- * progress-bar tick missing from the wire — pass-2 still runs (claim is NX)
- * and TRIP_READY still fires.
+ * Concurrency guarantees:
+ *  - The progress counter read-modify-write is serialized through a Symfony Lock
+ *    so two parallel workers settling at the same instant cannot lose updates
+ *    (which would freeze the pipeline if the counter never reaches `total`).
+ *  - The two claim slots use Symfony Lock with `autoRelease: false` so the slot
+ *    stays held for the lifetime of the TTL — true NX semantics, no double-claim.
  */
 final readonly class LlmAnalysisTracker implements LlmAnalysisTrackerInterface
 {
@@ -28,6 +30,7 @@ final readonly class LlmAnalysisTracker implements LlmAnalysisTrackerInterface
     public function __construct(
         #[Autowire(service: 'cache.trip_state')]
         private CacheItemPoolInterface $tripStateCache,
+        private LockFactory $lockFactory,
     ) {
     }
 
@@ -42,21 +45,28 @@ final readonly class LlmAnalysisTracker implements LlmAnalysisTrackerInterface
 
     public function markStageAnalysisSettled(string $tripId, bool $success): array
     {
-        $progress = $this->getStageAnalysisProgress($tripId) ?? [
-            'completed' => 0,
-            'failed' => 0,
-            'total' => 0,
-        ];
+        $lock = $this->lockFactory->createLock(\sprintf('trip.%s.llm_progress.update', $tripId), ttl: 5);
+        $lock->acquire(blocking: true);
 
-        if ($success) {
-            ++$progress['completed'];
-        } else {
-            ++$progress['failed'];
+        try {
+            $progress = $this->getStageAnalysisProgress($tripId) ?? [
+                'completed' => 0,
+                'failed' => 0,
+                'total' => 0,
+            ];
+
+            if ($success) {
+                ++$progress['completed'];
+            } else {
+                ++$progress['failed'];
+            }
+
+            $this->set($this->progressKey($tripId), $progress);
+
+            return $progress;
+        } finally {
+            $lock->release();
         }
-
-        $this->set($this->progressKey($tripId), $progress);
-
-        return $progress;
     }
 
     public function getStageAnalysisProgress(string $tripId): ?array
@@ -82,19 +92,15 @@ final readonly class LlmAnalysisTracker implements LlmAnalysisTrackerInterface
         return $this->claim($this->readyClaimKey($tripId));
     }
 
+    /**
+     * Atomic NX-claim via Symfony Lock with autoRelease disabled — the lock survives
+     * the request and acts as a single-use slot for the TTL lifetime.
+     */
     private function claim(string $key): bool
     {
-        $item = $this->tripStateCache->getItem($key);
-        if ($item->isHit()) {
-            return false;
-        }
+        $lock = $this->lockFactory->createLock($key, ttl: self::TTL, autoRelease: false);
 
-        $item->set(true);
-        $item->expiresAfter(self::TTL);
-
-        $this->tripStateCache->save($item);
-
-        return true;
+        return $lock->acquire(blocking: false);
     }
 
     /** @param array{completed: int, failed: int, total: int} $value */

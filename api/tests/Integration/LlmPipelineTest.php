@@ -9,6 +9,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
+use App\Llm\Dto\StageAiAnalysis;
 use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
 use App\Llm\StageAnalysisSummaryBuilder;
@@ -363,7 +364,8 @@ final class InMemoryTripRequestRepository implements TripRequestRepositoryInterf
     {
         return array_map(
             function (Stage $stage): Stage {
-                $stage->aiAnalysis = $this->stageAiAnalysis[$stage->dayNumber] ?? null;
+                $analysisData = $this->stageAiAnalysis[$stage->dayNumber] ?? null;
+                $stage->aiAnalysis = null === $analysisData ? null : StageAiAnalysis::fromArray($analysisData);
 
                 return $stage;
             },
