@@ -35,7 +35,7 @@ export interface paths {
         put?: never;
         /**
          * Re-scan accommodations for all stages with a custom radius.
-         * @description Creates a AccommodationScan resource.
+         * @description Re-scan accommodations for all stages with a custom radius.
          */
         post: operations["api_trips_tripIdaccommodationsscan_post"];
         delete?: never;
@@ -135,7 +135,7 @@ export interface paths {
         put?: never;
         /**
          * Add a manual stage at a given position.
-         * @description Creates a Stage resource.
+         * @description Add a manual stage at a given position.
          */
         post: operations["api_trips_tripIdstages_post"];
         delete?: never;
@@ -153,21 +153,21 @@ export interface paths {
         };
         /**
          * Download a stage as GPX or FIT file.
-         * @description Retrieves a Stage resource.
+         * @description Download a stage as GPX or FIT file.
          */
         get: operations["api_trips_tripIdstages_index_get"];
         put?: never;
         post?: never;
         /**
          * Delete a stage (merge with adjacent).
-         * @description Removes the Stage resource.
+         * @description Delete a stage (merge with adjacent).
          */
         delete: operations["api_trips_tripIdstages_index_delete"];
         options?: never;
         head?: never;
         /**
          * Update stage data (start/end points, etc.).
-         * @description Updates the Stage resource.
+         * @description Update stage data (start/end points, etc.).
          */
         patch: operations["api_trips_tripIdstages_index_patch"];
         trace?: never;
@@ -187,7 +187,7 @@ export interface paths {
         head?: never;
         /**
          * Select or deselect an accommodation for a stage. Selecting updates stage endPoint and next stage startPoint.
-         * @description Updates the Stage resource.
+         * @description Select or deselect an accommodation for a stage. Selecting updates stage endPoint and next stage startPoint.
          */
         patch: operations["api_trips_tripIdstages_indexaccommodation_patch"];
         trace?: never;
@@ -207,7 +207,7 @@ export interface paths {
         head?: never;
         /**
          * Move a stage to a new position.
-         * @description Updates the Stage resource.
+         * @description Move a stage to a new position.
          */
         patch: operations["api_trips_tripIdstages_indexmove_patch"];
         trace?: never;
@@ -223,7 +223,7 @@ export interface paths {
         put?: never;
         /**
          * Add a cultural POI as a waypoint to a stage, triggering async route recalculation via Valhalla.
-         * @description Creates a Stage resource.
+         * @description Add a cultural POI as a waypoint to a stage, triggering async route recalculation via Valhalla.
          */
         post: operations["api_trips_tripIdstages_indexpoi-waypoint_post"];
         delete?: never;
@@ -243,7 +243,7 @@ export interface paths {
         put?: never;
         /**
          * Insert a rest day after a given stage. The next stage startPoint stays identical; dates shift by one day.
-         * @description Creates a Stage resource.
+         * @description Insert a rest day after a given stage. The next stage startPoint stays identical; dates shift by one day.
          */
         post: operations["api_trips_tripIdstages_indexrest-day_post"];
         delete?: never;
@@ -261,7 +261,7 @@ export interface paths {
         };
         /**
          * List all trips, paginated and filterable.
-         * @description Retrieves the collection of Trip resources.
+         * @description List all trips, paginated and filterable.
          */
         get: operations["api_trips_get_collection"];
         put?: never;
@@ -305,14 +305,14 @@ export interface paths {
         };
         /**
          * Download the full trip as a single GPX file containing all stages.
-         * @description Retrieves a Trip resource.
+         * @description Download the full trip as a single GPX file containing all stages.
          */
         get: operations["api_trips_id_get"];
         put?: never;
         post?: never;
         /**
          * Delete a trip and all its stages.
-         * @description Removes the Trip resource.
+         * @description Delete a trip and all its stages.
          */
         delete: operations["api_trips_id_delete"];
         options?: never;
@@ -335,7 +335,7 @@ export interface paths {
         put?: never;
         /**
          * Trigger the full enrichment pipeline (POIs, weather, terrain, …) for a trip whose stages have been pre-computed.
-         * @description Creates a Trip resource.
+         * @description Trigger the full enrichment pipeline (POIs, weather, terrain, …) for a trip whose stages have been pre-computed.
          */
         post: operations["api_trips_idanalyze_post"];
         delete?: never;
@@ -355,7 +355,7 @@ export interface paths {
         put?: never;
         /**
          * Duplicate an existing trip, deep-cloning all its stages and settings.
-         * @description Creates a Trip resource.
+         * @description Duplicate an existing trip, deep-cloning all its stages and settings.
          */
         post: operations["api_trips_idduplicate_post"];
         delete?: never;
@@ -375,7 +375,7 @@ export interface paths {
         put?: never;
         /**
          * Apply a batch of pending modifications in a single recompute pass, dispatching only the minimal set of handlers needed.
-         * @description Creates a Trip resource.
+         * @description Apply a batch of pending modifications in a single recompute pass, dispatching only the minimal set of handlers needed.
          */
         post: operations["api_trips_idrecompute_post"];
         delete?: never;
@@ -393,7 +393,7 @@ export interface paths {
         };
         /**
          * Load trip configuration and persisted stages for frontend hydration.
-         * @description Retrieves a TripDetail resource.
+         * @description Load trip configuration and persisted stages for frontend hydration.
          */
         get: operations["api_trips_iddetail_get"];
         put?: never;
@@ -413,7 +413,7 @@ export interface paths {
         };
         /**
          * View a shared trip via short code (anonymous).
-         * @description Retrieves a TripShare resource.
+         * @description View a shared trip via short code (anonymous).
          */
         get: operations["api_s_shortCode_get"];
         put?: never;
@@ -433,7 +433,7 @@ export interface paths {
         };
         /**
          * Download shared trip as GPX via short code.
-         * @description Retrieves a TripShare resource.
+         * @description Download shared trip as GPX via short code.
          */
         get: operations["api_s_shortCode.gpx_get"];
         put?: never;
@@ -453,7 +453,7 @@ export interface paths {
         };
         /**
          * Download shared stage as GPX or FIT via short code.
-         * @description Retrieves a TripShare resource.
+         * @description Download shared stage as GPX or FIT via short code.
          */
         get: operations["api_s_shortCodestages_index_get"];
         put?: never;
@@ -473,18 +473,18 @@ export interface paths {
         };
         /**
          * Get the active share link for a trip.
-         * @description Retrieves a TripShare resource.
+         * @description Get the active share link for a trip.
          */
         get: operations["api_trips_tripIdshare_get"];
         put?: never;
         /**
          * Create a read-only share link for a trip.
-         * @description Creates a TripShare resource.
+         * @description Create a read-only share link for a trip.
          */
         post: operations["api_trips_tripIdshare_post"];
         /**
          * Revoke the active share link.
-         * @description Removes the TripShare resource.
+         * @description Revoke the active share link.
          */
         delete: operations["api_trips_tripIdshare_delete"];
         options?: never;
@@ -943,10 +943,7 @@ export interface components {
             accommodations?: components["schemas"]["Accommodation.fit"][];
             selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
             events?: components["schemas"]["Event.fit"][];
-            /** @description LLaMA 8B pass-1 analysis result (issue #301). */
-            aiAnalysis?: {
-                [key: string]: number | string[] | string;
-            } | null;
+            readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.fit"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -965,10 +962,7 @@ export interface components {
             accommodations?: components["schemas"]["Accommodation.gpx"][];
             selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
             events?: components["schemas"]["Event.gpx"][];
-            /** @description LLaMA 8B pass-1 analysis result (issue #301). */
-            aiAnalysis?: {
-                [key: string]: number | string[] | string;
-            } | null;
+            readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.gpx"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -987,10 +981,7 @@ export interface components {
             accommodations?: components["schemas"]["Accommodation.jsonld"][];
             selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
             events?: components["schemas"]["Event.jsonld"][];
-            /** @description LLaMA 8B pass-1 analysis result (issue #301). */
-            aiAnalysis?: {
-                [key: string]: number | string[] | string;
-            } | null;
+            readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.jsonld"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -1001,6 +992,48 @@ export interface components {
             label?: string | null;
             elevationLoss?: number;
             isRestDay?: boolean;
+        };
+        "StageAiAnalysis.fit": {
+            /** @description short narrative paragraph (Synthèse section, ~80 words) */
+            narrative: string;
+            /** @description list of non-obvious facts the rider should know */
+            insights: string[];
+            /** @description list of actionable recommendations for the rider */
+            suggestions: string[];
+            /** @description LLM model identifier used to produce the analysis (e.g. "llama3.1:8b") */
+            model: string;
+            /** @description identifies the system prompt revision (so consumers can detect staleness) */
+            promptVersion: number;
+            /** @description RFC3339 timestamp when the analysis was generated */
+            generatedAt: string;
+        };
+        "StageAiAnalysis.gpx": {
+            /** @description short narrative paragraph (Synthèse section, ~80 words) */
+            narrative: string;
+            /** @description list of non-obvious facts the rider should know */
+            insights: string[];
+            /** @description list of actionable recommendations for the rider */
+            suggestions: string[];
+            /** @description LLM model identifier used to produce the analysis (e.g. "llama3.1:8b") */
+            model: string;
+            /** @description identifies the system prompt revision (so consumers can detect staleness) */
+            promptVersion: number;
+            /** @description RFC3339 timestamp when the analysis was generated */
+            generatedAt: string;
+        };
+        "StageAiAnalysis.jsonld": {
+            /** @description short narrative paragraph (Synthèse section, ~80 words) */
+            narrative: string;
+            /** @description list of non-obvious facts the rider should know */
+            insights: string[];
+            /** @description list of actionable recommendations for the rider */
+            suggestions: string[];
+            /** @description LLM model identifier used to produce the analysis (e.g. "llama3.1:8b") */
+            model: string;
+            /** @description identifies the system prompt revision (so consumers can detect staleness) */
+            promptVersion: number;
+            /** @description RFC3339 timestamp when the analysis was generated */
+            generatedAt: string;
         };
         "Trip.TripBatchRecomputeRequest": {
             modifications: components["schemas"]["TripModification"][];
@@ -1254,10 +1287,7 @@ export interface components {
             accommodations?: components["schemas"]["Accommodation.fit"][];
             selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
             events?: components["schemas"]["Event.fit"][];
-            /** @description LLaMA 8B pass-1 analysis result (issue #301). */
-            aiAnalysis?: {
-                [key: string]: number | string[] | string;
-            } | null;
+            readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.fit"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -1276,10 +1306,7 @@ export interface components {
             accommodations?: components["schemas"]["Accommodation.gpx"][];
             selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
             events?: components["schemas"]["Event.gpx"][];
-            /** @description LLaMA 8B pass-1 analysis result (issue #301). */
-            aiAnalysis?: {
-                [key: string]: number | string[] | string;
-            } | null;
+            readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.gpx"] | null;
             tripId?: string;
             dayNumber?: number;
             distance?: number;
@@ -2903,7 +2930,7 @@ export interface operations {
             path: {
                 /** @description TripShare identifier */
                 shortCode: string;
-                /** @description TripShare identifier */
+                /** @description Stage identifier */
                 index: string;
             };
             cookie?: never;
@@ -2949,7 +2976,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description TripShare identifier */
+                /** @description TripRequest identifier */
                 tripId: string;
             };
             cookie?: never;
@@ -2994,7 +3021,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description TripShare identifier */
+                /** @description TripRequest identifier */
                 tripId: string;
             };
             cookie?: never;
@@ -3055,7 +3082,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description TripShare identifier */
+                /** @description TripRequest identifier */
                 tripId: string;
             };
             cookie?: never;

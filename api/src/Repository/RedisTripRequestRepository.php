@@ -6,8 +6,10 @@ namespace App\Repository;
 
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\Llm\Dto\StageAiAnalysis;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Lock\LockFactory;
 
 final readonly class RedisTripRequestRepository implements TripRequestRepositoryInterface
 {
@@ -16,6 +18,7 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
     public function __construct(
         #[Autowire(service: 'cache.trip_state')]
         private CacheItemPoolInterface $tripStateCache,
+        private LockFactory $lockFactory,
     ) {
     }
 
@@ -96,26 +99,37 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
     }
 
     /**
+     * Atomic read-modify-write guarded by a Symfony Lock so concurrent pass-1 handlers
+     * (one Messenger worker per stage) cannot lose sibling-worker updates against the
+     * monolithic stages blob.
+     *
      * @param array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiAnalysis
      */
     public function updateStageAiAnalysis(string $tripId, int $dayNumber, ?array $aiAnalysis): void
     {
-        $stages = $this->getStages($tripId);
-        if (null === $stages) {
-            return;
-        }
+        $lock = $this->lockFactory->createLock(\sprintf('trip.%s.stages.update', $tripId), ttl: 5);
+        $lock->acquire(blocking: true);
 
-        $changed = false;
-        foreach ($stages as $stage) {
-            if ($stage->dayNumber === $dayNumber) {
-                $stage->aiAnalysis = $aiAnalysis;
-                $changed = true;
-                break;
+        try {
+            $stages = $this->getStages($tripId);
+            if (null === $stages) {
+                return;
             }
-        }
 
-        if ($changed) {
-            $this->storeStages($tripId, $stages);
+            $changed = false;
+            foreach ($stages as $stage) {
+                if ($stage->dayNumber === $dayNumber) {
+                    $stage->aiAnalysis = null === $aiAnalysis ? null : StageAiAnalysis::fromArray($aiAnalysis);
+                    $changed = true;
+                    break;
+                }
+            }
+
+            if ($changed) {
+                $this->storeStages($tripId, $stages);
+            }
+        } finally {
+            $lock->release();
         }
     }
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Llm\Dto;
 
+use ApiPlatform\Metadata\ApiProperty;
+
 /**
  * Result of the LLaMA 8B pass-1 stage analysis (issue #301).
  *
@@ -25,11 +27,17 @@ final readonly class StageAiAnalysis
      * @param string       $generatedAt   RFC3339 timestamp when the analysis was generated
      */
     public function __construct(
+        #[ApiProperty(required: true)]
         public string $narrative,
+        #[ApiProperty(required: true)]
         public array $insights,
+        #[ApiProperty(required: true)]
         public array $suggestions,
+        #[ApiProperty(required: true)]
         public string $model,
+        #[ApiProperty(required: true)]
         public int $promptVersion,
+        #[ApiProperty(required: true)]
         public string $generatedAt,
     ) {
     }
