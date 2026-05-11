@@ -137,7 +137,7 @@ export function TripAiOverview() {
             data-testid="trip-ai-overview-details"
             className={cn(
               "flex flex-col gap-4 text-sm",
-              isMobileExpanded ? "block" : "hidden md:flex",
+              !isMobileExpanded && "hidden md:flex",
             )}
           >
             {/* Remaining narrative paragraphs (after the teaser). */}
