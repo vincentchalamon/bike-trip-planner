@@ -22,6 +22,8 @@ export interface StagePayload {
  * Carried in each {@link EnrichedStagePayload} on the `trip_ready` Mercure
  * event. Mirrors the backend {@link StageAiAnalysis} DTO. Null/absent when
  * the AI pipeline is disabled, has failed, or has not yet completed.
+ *
+ * TODO(#450): wire via typegen once backend Stage DTO exposes aiAnalysis in OpenAPI.
  */
 export interface StageAiAnalysisPayload {
   /** Short narrative paragraph (~80 words) summarising the stage. */

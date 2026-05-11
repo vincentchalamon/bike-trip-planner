@@ -208,6 +208,8 @@ export function StageCard({
             - Without AI analysis: fall back to the legacy fully-expanded
               {@link StageAlerts} grouped by severity. */}
         {hasAiAnalysis ? (
+          // TODO(#451): move DiffHighlight inside StageAiSummary so the flash
+          // scopes to the alerts sub-section instead of wrapping the whole card.
           <DiffHighlight
             stageIndex={stageIndex}
             field="alerts_added"

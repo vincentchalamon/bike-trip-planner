@@ -68,7 +68,7 @@ export function StageAiSummary({
   const handleApplySuggestions = useCallback(() => {
     if (suggestions.length === 0) return;
     queueModification({
-      stageIndex,
+      stageIndex: null,
       type: "pacing",
       label: t("applyQueueLabel", {
         count: suggestions.length,
