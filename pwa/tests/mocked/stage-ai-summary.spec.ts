@@ -167,3 +167,39 @@ test.describe("StageAiSummary — apply suggestions", () => {
     });
   });
 });
+
+test.describe("StageAiSummary — empty alerts", () => {
+  test("renders only the AI card when aiAnalysis is present but alerts is empty", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    const base = tripReadyEventWithStageAiAnalysis();
+    if (base.type !== "trip_ready") throw new Error("unexpected event type");
+    const noAlerts = {
+      ...base,
+      data: {
+        ...base.data,
+        stages: [
+          { ...base.data.stages[0]!, alerts: [] },
+          ...base.data.stages.slice(1),
+        ],
+      },
+    };
+
+    await submitUrl();
+    await injectEvent(routeParsedEvent());
+    await injectEvent(stagesComputedEvent());
+    await injectEvent(noAlerts);
+
+    await expect(mockedPage.getByTestId("stage-ai-summary-0")).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(
+      mockedPage.getByTestId("stage-ai-summary-narrative"),
+    ).toBeVisible();
+    await expect(mockedPage.getByTestId("stage-ai-summary-alerts")).toHaveCount(
+      0,
+    );
+  });
+});
