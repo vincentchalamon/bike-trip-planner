@@ -676,6 +676,9 @@ export function useTripPlanner() {
         return false;
       }
       setProcessing(true);
+      // Clear stale AI overview so the card does not show outdated data
+      // while the new analysis is in flight.
+      useTripStore.getState().setAiOverview(null);
       setAccommodationScanning(true);
       useUiStore.getState().setAnalysisStarted(true);
       useUiStore.getState().setAnalysisPhaseActive(true);
