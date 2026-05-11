@@ -60,6 +60,16 @@ interface TripRequestRepositoryInterface
     public function updateStageAiAnalysis(string $tripId, int $dayNumber, ?array $aiAnalysis): void;
 
     /**
+     * Persists the LLaMA 8B pass-2 trip overview atomically (issue #302).
+     *
+     * Returns silently if the trip does not exist anymore (e.g. the trip was
+     * deleted between dispatch and consumption).
+     *
+     * @param array{narrative: string, patterns: list<string>, recommendations: list<string>, crossStageAlerts: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiOverview
+     */
+    public function updateTripAiOverview(string $tripId, ?array $aiOverview): void;
+
+    /**
      * Stores multi-track data for Komoot Collection source type.
      *
      * @param list<list<array{lat: float, lon: float, ele: float}>> $tracksData

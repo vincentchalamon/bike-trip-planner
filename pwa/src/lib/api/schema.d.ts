@@ -1097,6 +1097,7 @@ export interface components {
              */
             enabledAccommodationTypes: string[];
             title?: string | null;
+            readonly aiOverview?: components["schemas"]["TripAiOverview"] | null;
         };
         "Trip.TripRequest.jsonMergePatch": {
             /** Format: uri */
@@ -1142,6 +1143,7 @@ export interface components {
              */
             enabledAccommodationTypes: string[];
             title?: string | null;
+            readonly aiOverview?: components["schemas"]["TripAiOverview"] | null;
         };
         "Trip.gpx": {
             id?: string;
@@ -1158,6 +1160,22 @@ export interface components {
                 [key: string]: string;
             };
             isLocked?: boolean;
+        };
+        TripAiOverview: {
+            /** @description global narrative paragraph (Vue d'ensemble + Charge et fatigue cumulative, ~120 words) */
+            narrative: string;
+            /** @description cross-stage patterns the rider should be aware of */
+            patterns: string[];
+            /** @description trip-level actionable recommendations */
+            recommendations: string[];
+            /** @description trip-level alerts spanning multiple stages (subset of patterns flagged as warnings) */
+            crossStageAlerts: string[];
+            /** @description LLM model identifier used to produce the overview (e.g. "llama3.1:8b") */
+            model: string;
+            /** @description identifies the system prompt revision (so consumers can detect staleness) */
+            promptVersion: number;
+            /** @description RFC3339 timestamp when the overview was generated */
+            generatedAt: string;
         };
         /**
          * @description Read-only trip detail resource for loading a persisted trip on the frontend.
