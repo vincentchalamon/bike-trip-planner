@@ -82,7 +82,7 @@ export function TripAiOverview() {
           </div>
 
           {/* Mobile-only disclosure button — desktop always shows the full
-              content thanks to the `md:block` overrides below. */}
+              content thanks to the `md:flex` override below. */}
           {hasMore && (
             <button
               type="button"
@@ -129,7 +129,7 @@ export function TripAiOverview() {
         </p>
 
         {/* Expanded content. Mobile: revealed by the disclosure toggle.
-            Desktop: always rendered (md:block) so the user sees everything
+            Desktop: always rendered (md:flex) so the user sees everything
             without interaction, per the issue spec. */}
         {hasMore && (
           <div
