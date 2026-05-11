@@ -533,8 +533,8 @@ Affichage des résumés IA (global + par étape), layout hybride résumé/alerte
 
 | Ordre | ID                                                                      | Titre                                                                | Effort | PRs | Dépend de |
 |-------|-------------------------------------------------------------------------|----------------------------------------------------------------------|--------|-----|-----------|
-| 1     | [#305](https://github.com/vincentchalamon/bike-trip-planner/issues/305) | Résumé IA global dans "Mon voyage" (passe 2)                         | M      |     | #302      |
-| 2     | [#306](https://github.com/vincentchalamon/bike-trip-planner/issues/306) | Résumé IA par étape + layout hybride (résumé + alertes repliables)   | L      |     | #301 #305 |
+| 1     | [#305](https://github.com/vincentchalamon/bike-trip-planner/issues/305) | Résumé IA global dans "Mon voyage" (passe 2)                         | M      | [#447](https://github.com/vincentchalamon/bike-trip-planner/pull/447) `feature/305` | #302      |
+| 2     | [#306](https://github.com/vincentchalamon/bike-trip-planner/issues/306) | Résumé IA par étape + layout hybride (résumé + alertes repliables)   | L      | [#448](https://github.com/vincentchalamon/bike-trip-planner/pull/448) `feature/306` | #301 #305 |
 
 ---
 
