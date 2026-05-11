@@ -273,7 +273,13 @@
     "ariaLabel": "AI-generated stage summary",
     "label": "AI summary",
     "showMore": "Read more",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "insightsHeading": "Insights",
+    "suggestionsHeading": "Recommendations",
+    "applyCta": "Apply {count, plural, one {the AI suggestion} other {the # AI suggestions}}",
+    "applyQueueLabel": "Stage {dayNumber} — {count, plural, one {# AI suggestion applied} other {# AI suggestions applied}}",
+    "alertsTitle": "{count, plural, one {Detailed alert (#)} other {Detailed alerts (#)}}",
+    "showMoreAlerts": "Show {count, plural, one {the other alert} other {the other # alerts}}"
   },
   "difficultyComposed": {
     "ariaLabel": "Stage difficulty",

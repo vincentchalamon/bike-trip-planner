@@ -17,6 +17,28 @@ export interface StagePayload {
 }
 
 /**
+ * Per-stage AI analysis produced by the LLaMA pass 1 (issue #301 backend).
+ *
+ * Carried in each {@link EnrichedStagePayload} on the `trip_ready` Mercure
+ * event. Mirrors the backend {@link StageAiAnalysis} DTO. Null/absent when
+ * the AI pipeline is disabled, has failed, or has not yet completed.
+ */
+export interface StageAiAnalysisPayload {
+  /** Short narrative paragraph (~80 words) summarising the stage. */
+  narrative: string;
+  /** Non-obvious facts the rider should know. */
+  insights: string[];
+  /** Actionable recommendations for the rider. */
+  suggestions: string[];
+  /** LLM model identifier (e.g. `"llama3.1:8b"`). */
+  model: string;
+  /** System prompt revision — bumps trigger client-side staleness checks. */
+  promptVersion: number;
+  /** RFC3339 timestamp when the analysis was generated. */
+  generatedAt: string;
+}
+
+/**
  * Fully enriched stage payload carried by Mode 1 `trip_ready` and Mode 2
  * `stage_updated` events. Mirrors {@link StagePayloadMapper::toPayload} on
  * the backend — keep both in sync.
@@ -28,6 +50,8 @@ export interface EnrichedStagePayload extends StagePayload {
   accommodations: AccommodationPayload[];
   selectedAccommodation: AccommodationPayload | null;
   events: EventPayload[];
+  /** LLaMA pass-1 stage analysis (issue #301). Null when the pipeline is off or pending. */
+  aiAnalysis?: StageAiAnalysisPayload | null;
 }
 
 export interface WeatherPayload {

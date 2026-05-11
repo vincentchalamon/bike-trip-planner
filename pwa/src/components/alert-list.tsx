@@ -22,7 +22,7 @@ interface AlertListProps {
 }
 
 /** Order in which severity groups are rendered, top-down. */
-const SEVERITY_ORDER: readonly AlertSeverity[] = [
+export const SEVERITY_ORDER: readonly AlertSeverity[] = [
   "critical",
   "warning",
   "nudge",
