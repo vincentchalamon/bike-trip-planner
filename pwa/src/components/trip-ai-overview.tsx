@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Bot, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,15 +35,12 @@ export function TripAiOverview() {
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const detailsId = useId();
 
-  const paragraphs = useMemo(() => {
-    if (!overview?.narrative) return [] as string[];
-    // Split on blank lines so the narrative renders as separate `<p>` blocks.
-    // Single newlines inside a paragraph are preserved via `whitespace-pre-line`.
-    return overview.narrative
-      .split(/\n\s*\n/)
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0);
-  }, [overview?.narrative]);
+  const paragraphs = overview?.narrative
+    ? overview.narrative
+        .split(/\n\s*\n/)
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0)
+    : [];
 
   // Silent fallback when no overview is available — the issue spec requires
   // that the component does not render anything at all in that case.
