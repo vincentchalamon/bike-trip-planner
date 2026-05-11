@@ -7,6 +7,7 @@ namespace App\Tests\Unit\MessageHandler;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AllEnrichmentsCompleted;
@@ -20,12 +21,13 @@ use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
- * Validates the minimal fallback behaviour of the gate's terminal handler.
+ * Validates the dual-strategy behaviour of the gate's terminal handler (issue #303).
  *
- * The full LLaMA pipeline (issues #301-#303) is not wired yet; until then,
- * this handler must publish the `TRIP_READY` Mercure event directly so the
- * frontend receives the terminal signal. When the AI pipeline lands, the
- * downstream LLaMA handler will own that publication instead.
+ *  - When the LLM is disabled (or no analysable stage exists), this handler is
+ *    self-terminating and publishes `TRIP_READY` directly.
+ *  - When the LLM is enabled, it initialises the LLM analysis tracker, dispatches
+ *    one pass-1 message per non-rest stage, and defers `TRIP_READY` publication
+ *    to {@see \App\MessageHandler\AnalyzeTripOverviewWithLlmHandler}.
  */
 final class AllEnrichmentsCompletedHandlerTest extends TestCase
 {
@@ -68,6 +70,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             new NullLogger(),
             $this->createStub(MessageBusInterface::class),
             $this->disabledLlmClient(),
+            $this->createStub(LlmAnalysisTrackerInterface::class),
         );
 
         $handler(new AllEnrichmentsCompleted($tripId));
@@ -93,6 +96,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             new NullLogger(),
             $this->createStub(MessageBusInterface::class),
             $this->disabledLlmClient(),
+            $this->createStub(LlmAnalysisTrackerInterface::class),
         );
 
         $handler(new AllEnrichmentsCompleted($tripId));
@@ -126,6 +130,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             new NullLogger(),
             $this->createStub(MessageBusInterface::class),
             $this->disabledLlmClient(),
+            $this->createStub(LlmAnalysisTrackerInterface::class),
         );
 
         $handler(new AllEnrichmentsCompleted($tripId));
@@ -183,6 +188,11 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
         $llmClient = $this->createStub(LlmClientInterface::class);
         $llmClient->method('isEnabled')->willReturn(true);
 
+        $llmAnalysisTracker = $this->createMock(LlmAnalysisTrackerInterface::class);
+        $llmAnalysisTracker->expects(self::once())
+            ->method('initializeStageAnalyses')
+            ->with($tripId, 2);
+
         $handler = new AllEnrichmentsCompletedHandler(
             $tracker,
             $publisher,
@@ -190,6 +200,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             new NullLogger(),
             $bus,
             $llmClient,
+            $llmAnalysisTracker,
         );
 
         $handler(new AllEnrichmentsCompleted($tripId));
@@ -228,6 +239,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             new NullLogger(),
             $bus,
             $this->disabledLlmClient(),
+            $this->createStub(LlmAnalysisTrackerInterface::class),
         );
 
         $handler(new AllEnrichmentsCompleted($tripId));

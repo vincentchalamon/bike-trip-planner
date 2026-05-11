@@ -49,8 +49,13 @@ interface TripUpdatePublisherInterface
     /**
      * Publishes the single terminal event of Mode 1 with the fully enriched trip payload.
      *
-     * @param list<Stage>                                                $stages
-     * @param array{status: array<string, string>, aiOverview?: ?string} $summary additional aggregate metadata
+     * The summary may carry the optional pass-2 AI overview (issue #303). When
+     * present, it is forwarded as a structured array under the `aiOverview` key
+     * so the frontend can render the trip-level briefing alongside the per-stage
+     * `aiAnalysis` already embedded in each stage payload.
+     *
+     * @param list<Stage>                                                                                                                                                                                                                     $stages
+     * @param array{status: array<string, string>, aiOverview?: array{narrative: string, patterns: list<string>, recommendations: list<string>, crossStageAlerts: list<string>, model: string, promptVersion: int, generatedAt: string}|null} $summary additional aggregate metadata
      */
     public function publishTripReady(string $tripId, array $stages, array $summary): void;
 

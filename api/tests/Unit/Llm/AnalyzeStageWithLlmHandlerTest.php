@@ -8,10 +8,13 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
 use App\Llm\StageAnalysisSummaryBuilder;
 use App\Llm\SystemPromptLoader;
+use App\Mercure\NullTripUpdatePublisher;
 use App\Message\AnalyzeStageWithLlmMessage;
+use App\Message\AnalyzeTripOverviewWithLlmMessage;
 use App\MessageHandler\AnalyzeStageWithLlmHandler;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -19,6 +22,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AllowMockObjectsWithoutExpectations]
 final class AnalyzeStageWithLlmHandlerTest extends TestCase
@@ -340,6 +345,38 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         self::assertSame(['B'], $captured['suggestions']);
     }
 
+    #[Test]
+    public function dispatchesPass2WhenClaimingOverviewDispatch(): void
+    {
+        $stage = $this->makeStage(dayNumber: 1);
+
+        $repo = $this->createMock(TripRequestRepositoryInterface::class);
+        $repo->method('getStages')->willReturn([$stage]);
+        $repo->method('getRequest')->willReturn($this->makeTripRequest());
+        $repo->method('updateStageAiAnalysis');
+
+        $llmClient = $this->createMock(LlmClientInterface::class);
+        $llmClient->method('isEnabled')->willReturn(true);
+        $llmClient->method('generate')->willReturn([
+            'response' => "## Synthèse\nOK.",
+            'done' => true,
+        ]);
+
+        $messageBus = $this->createMock(MessageBusInterface::class);
+        $messageBus->expects(self::once())
+            ->method('dispatch')
+            ->with(self::isInstanceOf(AnalyzeTripOverviewWithLlmMessage::class))
+            ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
+
+        $handler = $this->makeHandler(
+            repo: $repo,
+            llmClient: $llmClient,
+            claimsOverviewDispatch: true,
+            messageBus: $messageBus,
+        );
+        $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 1));
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -347,17 +384,27 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
     /**
      * @param TripRequestRepositoryInterface&MockObject $repo
      * @param LlmClientInterface&MockObject             $llmClient
+     * @param (MessageBusInterface&MockObject)|null     $messageBus override the bus when the test asserts pass-2 dispatch
      */
     private function makeHandler(
         TripRequestRepositoryInterface $repo,
         LlmClientInterface $llmClient,
+        bool $claimsOverviewDispatch = false,
+        ?MessageBusInterface $messageBus = null,
     ): AnalyzeStageWithLlmHandler {
+        $tracker = $this->createStub(LlmAnalysisTrackerInterface::class);
+        $tracker->method('markStageAnalysisSettled')->willReturn(['completed' => 1, 'failed' => 0, 'total' => 1]);
+        $tracker->method('claimOverviewDispatch')->willReturn($claimsOverviewDispatch);
+
         return new AnalyzeStageWithLlmHandler(
             tripStateManager: $repo,
             llmClient: $llmClient,
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
             summaryBuilder: new StageAnalysisSummaryBuilder(),
             logger: new NullLogger(),
+            llmTracker: $tracker,
+            messageBus: $messageBus ?? $this->createStub(MessageBusInterface::class),
+            publisher: new NullTripUpdatePublisher(),
         );
     }
 

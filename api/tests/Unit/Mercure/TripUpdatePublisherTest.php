@@ -75,14 +75,24 @@ final class TripUpdatePublisherTest extends TestCase
     #[Test]
     public function publishesTripReadyWithOptionalAiOverview(): void
     {
+        $aiOverview = [
+            'narrative' => 'Sunny ride with moderate climbs.',
+            'patterns' => [],
+            'recommendations' => [],
+            'crossStageAlerts' => [],
+            'model' => 'llama3.1:8b',
+            'promptVersion' => 1,
+            'generatedAt' => '2026-05-07T18:00:00+00:00',
+        ];
+
         $hub = $this->createMock(HubInterface::class);
         $hub->expects(self::once())
             ->method('publish')
-            ->willReturnCallback(function (Update $update): string {
-                /** @var array{type: string, data: array{aiOverview?: ?string}} $decoded */
+            ->willReturnCallback(function (Update $update) use ($aiOverview): string {
+                /** @var array{type: string, data: array{aiOverview?: array<string, mixed>|null}} $decoded */
                 $decoded = json_decode($update->getData(), true, flags: \JSON_THROW_ON_ERROR);
                 self::assertArrayHasKey('aiOverview', $decoded['data']);
-                self::assertSame('Sunny ride with moderate climbs.', $decoded['data']['aiOverview']);
+                self::assertSame($aiOverview, $decoded['data']['aiOverview']);
 
                 return 'id';
             });
@@ -90,7 +100,7 @@ final class TripUpdatePublisherTest extends TestCase
         $publisher = new TripUpdatePublisher($hub, new StagePayloadMapper());
         $publisher->publishTripReady(self::TRIP_ID, [], [
             'status' => [],
-            'aiOverview' => 'Sunny ride with moderate climbs.',
+            'aiOverview' => $aiOverview,
         ]);
     }
 
