@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ApiResource;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
@@ -17,6 +18,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\Event;
 use App\ApiResource\Model\PointOfInterest;
 use App\ApiResource\Model\WeatherForecast;
+use App\Llm\Dto\StageAiAnalysis;
 use App\State\RestDayInsertProcessor;
 use App\State\StageCreateProcessor;
 use App\State\StageDeleteProcessor;
@@ -158,6 +160,18 @@ final class Stage
 
     /** @var Event[] */
     public array $events = [];
+
+    /**
+     * LLaMA 8B pass-1 analysis result (issue #301).
+     *
+     * Round-tripped through {@see \App\Repository\TripRequestRepositoryInterface} so handlers
+     * can read it from the in-memory DTO without an extra Doctrine fetch.
+     */
+    #[ApiProperty(
+        description: 'LLaMA 8B pass-1 analysis result.',
+        writable: false,
+    )]
+    public ?StageAiAnalysis $aiAnalysis = null;
 
     /**
      * @param list<Coordinate> $geometry

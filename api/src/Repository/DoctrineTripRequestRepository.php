@@ -14,6 +14,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\Stage as StageEntity;
 use App\Enum\AlertType;
+use App\Llm\Dto\StageAiAnalysis;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Cache\CacheItemPoolInterface;
@@ -202,6 +203,27 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         return $result;
     }
 
+    /**
+     * Atomic per-stage UPDATE on the JSONB column to avoid loading the full TripRequest +
+     * its entire stages collection on every parallel pass-1 message handler invocation.
+     *
+     * @param array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiAnalysis
+     */
+    public function updateStageAiAnalysis(string $tripId, int $dayNumber, ?array $aiAnalysis): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        $this->getEntityManager()->createQuery(
+            'UPDATE App\Entity\Stage s SET s.aiAnalysis = :aiAnalysis WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('dayNumber', $dayNumber)
+            ->setParameter('aiAnalysis', $aiAnalysis)
+            ->execute();
+    }
+
     // --- Private helpers ---
 
     private function findTripRequest(string $tripId): ?TripRequest
@@ -289,6 +311,9 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             $entity->setSelectedAccommodation($this->accommodationToArray($dto->selectedAccommodation));
         }
 
+        // AI analysis (LLaMA 8B pass-1 — issue #301)
+        $entity->setAiAnalysis($dto->aiAnalysis?->toArray());
+
         return $entity;
     }
 
@@ -346,6 +371,12 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         $selectedData = $entity->getSelectedAccommodation();
         if (null !== $selectedData) {
             $dto->selectedAccommodation = $this->arrayToAccommodation($selectedData);
+        }
+
+        // AI analysis (LLaMA 8B pass-1 — issue #301)
+        $aiAnalysisData = $entity->getAiAnalysis();
+        if (null !== $aiAnalysisData) {
+            $dto->aiAnalysis = StageAiAnalysis::fromArray($aiAnalysisData);
         }
 
         return $dto;

@@ -80,6 +80,18 @@ class Stage
     #[ORM\Column(type: 'jsonb', nullable: true)]
     private ?array $selectedAccommodation = null;
 
+    /**
+     * LLaMA 8B pass-1 stage analysis (issue #301).
+     *
+     * Persists the narrative + insights + suggestions produced by the LLM, plus
+     * the metadata required to invalidate stale analyses (model, prompt version,
+     * generation timestamp).
+     *
+     * @var array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}|null
+     */
+    #[ORM\Column(name: 'ai_analysis', type: 'jsonb', nullable: true)]
+    private ?array $aiAnalysis = null;
+
     public function __construct(#[ORM\ManyToOne(targetEntity: TripRequest::class, inversedBy: 'stages')]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
         private TripRequest $trip, ?Uuid $id = null)
@@ -333,6 +345,24 @@ class Stage
     public function setSelectedAccommodation(?array $selectedAccommodation): self
     {
         $this->selectedAccommodation = $selectedAccommodation;
+
+        return $this;
+    }
+
+    /**
+     * @return array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}|null
+     */
+    public function getAiAnalysis(): ?array
+    {
+        return $this->aiAnalysis;
+    }
+
+    /**
+     * @param array{narrative: string, insights: list<string>, suggestions: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiAnalysis
+     */
+    public function setAiAnalysis(?array $aiAnalysis): self
+    {
+        $this->aiAnalysis = $aiAnalysis;
 
         return $this;
     }

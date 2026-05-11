@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Llm\LlmClientInterface;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AllEnrichmentsCompleted;
+use App\Message\AnalyzeStageWithLlmMessage;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * Terminal handler of the enrichment pipeline.
@@ -34,6 +37,8 @@ final readonly class AllEnrichmentsCompletedHandler
         private TripUpdatePublisherInterface $publisher,
         private TripRequestRepositoryInterface $tripRequestRepository,
         private LoggerInterface $logger,
+        private MessageBusInterface $messageBus,
+        private LlmClientInterface $llmClient,
     ) {
     }
 
@@ -59,10 +64,23 @@ final readonly class AllEnrichmentsCompletedHandler
             'total' => \count($statuses),
         ]);
 
-        // TODO(#301-#303): when the LLaMA 8B pipeline lands, dispatch the analysis
-        // message here instead of publishing TRIP_READY directly. The downstream
-        // handler will then own the publication of TRIP_READY with the AI overview.
         $stages = $this->tripRequestRepository->getStages($tripId) ?? [];
+
+        // Issue #301 — LLaMA 8B pass 1: dispatch one AnalyzeStageWithLlmMessage per non-rest
+        // stage. Messages are independent and parallelisable across the worker pool. The
+        // handler is no-op when Ollama is disabled, so dispatching costs nothing in that case.
+        // TRIP_READY is still published synchronously here: the AI analysis is best-effort
+        // enrichment that lands later via a dedicated Mercure event (issues #302-#303).
+        if ($this->llmClient->isEnabled()) {
+            foreach ($stages as $stage) {
+                if ($stage->isRestDay) {
+                    continue;
+                }
+
+                $this->messageBus->dispatch(new AnalyzeStageWithLlmMessage($tripId, $stage->dayNumber));
+            }
+        }
+
         $this->publisher->publishTripReady($tripId, $stages, [
             'status' => $statuses,
         ]);
