@@ -549,6 +549,44 @@ export function tripReadyEvent(): MercureEvent {
   };
 }
 
+/**
+ * Variant of {@link tripReadyEvent} that carries a populated `aiOverview`
+ * payload, used by issue #305 tests to assert the {@link TripAiOverview}
+ * component renders the narrative, patterns, recommendations, and cross-stage
+ * alerts produced by the LLaMA pass 2.
+ */
+export function tripReadyEventWithAiOverview(): MercureEvent {
+  const base = tripReadyEvent();
+  if (base.type !== "trip_ready") {
+    throw new Error("tripReadyEvent() must return a trip_ready event");
+  }
+  return {
+    type: "trip_ready",
+    data: {
+      ...base.data,
+      aiOverview: {
+        narrative:
+          "Votre traversée de l'Ardèche s'étire sur deux jours bien rythmés.\n" +
+          "Le premier jour concentre le dénivelé positif, le second est plus roulant.",
+        patterns: [
+          "Dénivelé positif majoritairement sur le jour 1 (1180 m).",
+          "Vent dominant de secteur ouest sur les deux étapes.",
+        ],
+        recommendations: [
+          "Démarrer tôt le jour 1 pour profiter de la fraîcheur matinale.",
+          "Prévoir un ravitaillement complet avant Les Vans.",
+        ],
+        crossStageAlerts: [
+          "Charge cumulative supérieure à la moyenne — surveiller la fatigue J2.",
+        ],
+        model: "llama3.1:8b",
+        promptVersion: 1,
+        generatedAt: "2026-05-11T08:30:00Z",
+      },
+    },
+  };
+}
+
 export function stageUpdatedEvent(stageIndex: number): MercureEvent {
   return {
     type: "stage_updated",

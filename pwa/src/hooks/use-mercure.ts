@@ -477,6 +477,10 @@ function dispatchEvent(event: MercureEvent): void {
       const incomingStages = event.data.stages.map(enrichedPayloadToStageData);
       store.applyTripReady(incomingStages);
       store.setComputationStatus(event.data.computationStatus);
+      // Trip-level AI overview (issue #305) — `aiOverview` is optional; when
+      // the LLM pipeline is disabled or failed it is absent or `null`, in
+      // which case the overview component renders nothing.
+      store.setAiOverview(event.data.aiOverview ?? null);
       useUiStore.getState().setAnalysisProgress(null);
       useUiStore.getState().setAnalysisStarted(true);
       useUiStore.getState().setAnalysisPhaseActive(false);

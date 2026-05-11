@@ -584,6 +584,17 @@
     "analysisLaunched": "Analysis launched",
     "analysisLaunchFailed": "Failed to launch analysis. Please retry."
   },
+  "aiOverview": {
+    "title": "AI analysis",
+    "subtitle": "Assistant-generated summary covering the whole trip",
+    "patternsHeading": "Detected patterns",
+    "recommendationsHeading": "Recommendations",
+    "crossStageAlertsHeading": "Points to watch",
+    "expand": "Show more",
+    "expandAria": "Expand the AI summary",
+    "collapse": "Show less",
+    "collapseAria": "Collapse the AI summary"
+  },
   "aiRefinement": {
     "title": "Refine with the AI assistant",
     "helper": "Describe the change you want in one sentence — for example \"Add a stop in Ajaccio\" or \"Avoid main roads on day 3\".",

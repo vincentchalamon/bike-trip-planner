@@ -18,6 +18,7 @@ import { TripLockedBanner } from "@/components/trip-locked-banner";
 import { TripPreview } from "@/components/trip-preview";
 import { ProcessingProgress } from "@/components/processing-progress";
 import { TripSummary } from "@/components/trip-summary";
+import { TripAiOverview } from "@/components/trip-ai-overview";
 import { TripHeader } from "@/components/trip-header";
 import { TripDownloads } from "@/components/trip-downloads";
 import { StageProgressBar } from "@/components/stage-progress-bar";
@@ -657,6 +658,13 @@ export function TripPlanner({
                 maxDistancePerDay={maxDistancePerDay}
                 averageSpeed={averageSpeed}
               />
+
+              {/* Trip-level AI overview (issue #305) — narrative + patterns +
+                  recommendations produced by the LLaMA pass 2. Renders nothing
+                  silently when the LLM pipeline is disabled or did not produce
+                  an overview. Placed above the stage timeline so it gives the
+                  user a high-level view before they dive into per-stage data. */}
+              <TripAiOverview />
 
               {/* Sentinel — marks the natural position of the progress bar in the
                 flow. The sticky bar becomes visible once this exits the viewport. */}
