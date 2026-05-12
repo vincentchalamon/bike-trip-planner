@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { MercureClient } from "@/lib/mercure/client";
 import type { EnrichedStagePayload, MercureEvent } from "@/lib/mercure/types";
+import { TripAiOverviewSchema } from "@/lib/validation/schemas";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useOfflineStore } from "@/store/offline-store";
@@ -477,6 +478,15 @@ function dispatchEvent(event: MercureEvent): void {
       const incomingStages = event.data.stages.map(enrichedPayloadToStageData);
       store.applyTripReady(incomingStages);
       store.setComputationStatus(event.data.computationStatus);
+      // Trip-level AI overview (issue #305) — `aiOverview` is optional and
+      // arrives from an LLM pipeline, so partial / malformed payloads must
+      // not crash the renderer. Zod parses + coerces missing array fields to
+      // `[]`; any parse failure collapses to `null` so the component falls
+      // back silently rather than rendering a half-populated card.
+      const parsedOverview = TripAiOverviewSchema.safeParse(
+        event.data.aiOverview,
+      );
+      store.setAiOverview(parsedOverview.success ? parsedOverview.data : null);
       useUiStore.getState().setAnalysisProgress(null);
       useUiStore.getState().setAnalysisStarted(true);
       useUiStore.getState().setAnalysisPhaseActive(false);

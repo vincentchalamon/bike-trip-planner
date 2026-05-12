@@ -584,6 +584,17 @@
     "analysisLaunched": "Analyse lancée",
     "analysisLaunchFailed": "Impossible de lancer l'analyse. Réessayez."
   },
+  "aiOverview": {
+    "title": "Analyse IA",
+    "subtitle": "Synthèse générée par l'assistant à partir de l'ensemble du voyage",
+    "patternsHeading": "Tendances détectées",
+    "recommendationsHeading": "Recommandations",
+    "crossStageAlertsHeading": "Points d'attention",
+    "expand": "Voir plus",
+    "expandAria": "Déplier la synthèse IA",
+    "collapse": "Réduire",
+    "collapseAria": "Réduire la synthèse IA"
+  },
   "aiRefinement": {
     "title": "Affiner avec l'assistant IA",
     "helper": "Décrivez en une phrase la modification souhaitée — par exemple « Ajoute une étape à Ajaccio » ou « Évite les routes principales le jour 3 ».",

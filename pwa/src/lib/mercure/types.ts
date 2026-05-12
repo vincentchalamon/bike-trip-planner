@@ -129,6 +129,33 @@ export interface SupplyMarker {
   food: SupplyFoodPoint[];
 }
 
+/**
+ * Trip-level AI overview produced by the LLaMA pass 2 (issue #302 backend).
+ *
+ * Carried by the terminal `trip_ready` Mercure event. Mirrors the backend
+ * `TripAiOverview` DTO (`api/src/Llm/Dto/TripAiOverview.php`) and the
+ * OpenAPI-generated `components["schemas"]["TripAiOverview"]`.
+ *
+ * Null/absent when the AI pipeline is disabled, has failed, or has not yet
+ * completed — consumers must treat the entire overview as optional.
+ */
+export interface TripAiOverviewPayload {
+  /** Narrative paragraph (≈120 words) summarising the trip as a whole. */
+  narrative: string;
+  /** Cross-stage patterns the rider should be aware of (fatigue, weather…). */
+  patterns: string[];
+  /** Trip-level actionable recommendations. */
+  recommendations: string[];
+  /** Trip-level alerts spanning multiple stages (warnings flagged from patterns). */
+  crossStageAlerts: string[];
+  /** LLM model identifier (e.g. `"llama3.1:8b"`). */
+  model: string;
+  /** System prompt revision — bumps trigger client-side staleness checks. */
+  promptVersion: number;
+  /** RFC3339 timestamp when the overview was generated. */
+  generatedAt: string;
+}
+
 export type MercureEvent =
   | {
       type: "route_parsed";
@@ -334,7 +361,7 @@ export type MercureEvent =
       data: {
         stages: EnrichedStagePayload[];
         computationStatus: Record<string, string>;
-        aiOverview?: string | null;
+        aiOverview?: TripAiOverviewPayload | null;
       };
     }
   | {

@@ -13,6 +13,7 @@ import type {
   SupplyMarkerData,
   EventData,
 } from "@/lib/validation/schemas";
+import type { TripAiOverviewPayload } from "@/lib/mercure/types";
 
 /**
  * A single user modification accumulated in the batch queue before being applied
@@ -82,6 +83,14 @@ interface TripState {
    * `POST /trips/{id}/recompute` instead of N sequential recomputations.
    */
   pendingModifications: Modification[];
+
+  /**
+   * Trip-level narrative produced by the LLaMA pass 2 (issue #302 backend).
+   * Populated on `trip_ready` and rendered at the top of "Mon voyage" by
+   * {@link TripAiOverview}. Stays `null` when the AI pipeline is disabled or
+   * has not completed, in which case the overview component is suppressed.
+   */
+  aiOverview: TripAiOverviewPayload | null;
 
   /**
    * Index of the stage currently displayed in the master/detail roadbook view
@@ -174,6 +183,13 @@ interface TripState {
    */
   applyTripReady: (stages: StageData[]) => void;
   /**
+   * Store (or clear) the trip-level AI overview produced by the LLaMA pass 2
+   * (issue #302). Called from {@link useMercure} when `trip_ready` lands. The
+   * payload is null when the LLM pipeline is disabled, failed, or has not yet
+   * produced a result.
+   */
+  setAiOverview: (overview: TripAiOverviewPayload | null) => void;
+  /**
    * Mode 2 — Per-stage replacement when `stage_updated` arrives.
    *
    * Same preservation semantics as {@link applyTripReady} but for a single
@@ -257,6 +273,7 @@ const initialState = {
   stageDiffs: new Map<number, Set<string>>(),
   pendingModifications: [] as Modification[],
   selectedStageIndex: 0,
+  aiOverview: null as TripAiOverviewPayload | null,
 };
 
 /**
@@ -642,6 +659,11 @@ export const useTripStore = create<TripState>()(
         });
       }),
 
+    setAiOverview: (overview) =>
+      set((state) => {
+        state.aiOverview = overview;
+      }),
+
     applyStageUpdate: (stageIndex, stage) =>
       set((state) => {
         const prev = state.stages[stageIndex];
@@ -814,3 +836,21 @@ export const useTripTemporalStore = createTemporalStore(
     );
   },
 );
+
+/**
+ * Selector for the trip-level AI overview narrative (issue #305).
+ *
+ * Returns `null` when the LLM pipeline is disabled, has not completed, or has
+ * failed — consumers should treat that case as "no overview to display" and
+ * fall back silently rather than rendering a placeholder.
+ */
+export const useTripAiOverview = (): TripAiOverviewPayload | null =>
+  useTripStore((state) => state.aiOverview);
+
+// Expose the store for E2E tests so Playwright can manipulate trip state directly
+// without relying on user interactions.
+if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+  (
+    window as Window & { __zustand_trip_store?: typeof useTripStore }
+  ).__zustand_trip_store = useTripStore;
+}
