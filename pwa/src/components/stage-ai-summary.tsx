@@ -70,10 +70,7 @@ export function StageAiSummary({
     queueModification({
       stageIndex: null,
       type: "pacing",
-      label: t("applyQueueLabel", {
-        count: suggestions.length,
-        dayNumber: stageIndex + 1,
-      }),
+      label: t("applyQueueLabel", { dayNumber: stageIndex + 1 }),
     });
   }, [queueModification, stageIndex, suggestions.length, t]);
 
@@ -138,7 +135,7 @@ export function StageAiSummary({
                 data-testid="stage-ai-summary-apply"
               >
                 <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                {t("applyCta", { count: suggestions.length })}
+                {t("applyCta")}
               </Button>
             </section>
           )}

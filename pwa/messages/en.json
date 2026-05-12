@@ -276,8 +276,8 @@
     "showLess": "Show less",
     "insightsHeading": "Insights",
     "suggestionsHeading": "Recommendations",
-    "applyCta": "Apply {count, plural, one {the AI suggestion} other {the # AI suggestions}}",
-    "applyQueueLabel": "Stage {dayNumber} — {count, plural, one {# AI suggestion applied} other {# AI suggestions applied}}",
+    "applyCta": "Recalculate pacing with AI guidance",
+    "applyQueueLabel": "Stage {dayNumber} — AI-guided pacing recalculation queued",
     "alertsTitle": "{count, plural, one {Detailed alert (#)} other {Detailed alerts (#)}}",
     "showMoreAlerts": "Show {count, plural, one {the other alert} other {the other # alerts}}"
   },
