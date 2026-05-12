@@ -376,6 +376,63 @@ export async function launchTripAnalysis(tripId: string): Promise<boolean> {
 }
 
 /**
+ * Body of `POST /trips/{id}/chat`. Mirrors `App\ApiResource\TripChatRequest`
+ * on the backend; declared locally until `make typegen` ingests the schema
+ * change introduced by issue #309.
+ */
+export interface TripChatRequestBody {
+  message: string;
+  context?: {
+    currentStage: number | null;
+  } | null;
+}
+
+/**
+ * Response of `POST /trips/{id}/chat`. Mirrors `App\ApiResource\TripChatResponse`
+ * on the backend (`tripId`, `action`, `params`, `response`, `dispatched`).
+ */
+export interface TripChatResponseBody {
+  tripId: string;
+  action: string;
+  params: Record<string, unknown>;
+  response: string;
+  dispatched: boolean;
+}
+
+/**
+ * Send a natural-language instruction to the LLaMA 3B dialogue assistant.
+ *
+ * Until the OpenAPI schema is regenerated (after #309 lands on main), the
+ * `/trips/{id}/chat` route is not yet exposed via `apiClient.POST`, so this
+ * function talks to the server through {@link apiFetch}. Once the typegen
+ * catches up, this can be swapped for a typed call.
+ */
+export async function sendTripChat(
+  tripId: string,
+  body: TripChatRequestBody,
+): Promise<{
+  data: TripChatResponseBody | null;
+  error: string | null;
+  status: number;
+}> {
+  const res = await apiFetch(`${API_URL}/trips/${tripId}/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/ld+json",
+      Accept: "application/ld+json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    return { data: null, error: `HTTP ${res.status}`, status: res.status };
+  }
+
+  const data = (await res.json()) as TripChatResponseBody;
+  return { data, error: null, status: res.status };
+}
+
+/**
  * Duplicate an existing trip (deep-clone with all stages and settings).
  * Returns the new trip id on success, null on failure.
  */

@@ -590,6 +590,26 @@
     "analysisLaunched": "Analyse lancée",
     "analysisLaunchFailed": "Impossible de lancer l'analyse. Réessayez."
   },
+  "aiBubble": {
+    "label": "Assistant IA",
+    "openAria": "Ouvrir l'assistant IA",
+    "closeAria": "Fermer l'assistant IA",
+    "newBadge": "Nouveau",
+    "title": "Assistant IA",
+    "subtitle": "Posez une question ou demandez une modification.",
+    "greeting": "Bonjour ! Je suis votre assistant IA. Que puis-je faire pour vous ?",
+    "stageHint": "Vous consultez l'étape {stage}. Posez-moi une question !",
+    "inputPlaceholder": "Demandez une modification, par exemple « divise l'étape 3 »",
+    "inputAriaLabel": "Message pour l'assistant IA",
+    "send": "Envoyer",
+    "sendAria": "Envoyer le message",
+    "typing": "L'assistant rédige une réponse…",
+    "historyAriaLabel": "Conversation avec l'assistant IA",
+    "errorNetwork": "Erreur réseau. Vérifiez votre connexion puis réessayez.",
+    "errorRateLimit": "Vous avez atteint la limite de messages. Réessayez dans un instant.",
+    "errorUnavailable": "L'assistant IA est temporairement indisponible. Réessayez plus tard.",
+    "errorGeneric": "Une erreur est survenue. Réessayez plus tard."
+  },
   "aiOverview": {
     "title": "Analyse IA",
     "subtitle": "Synthèse générée par l'assistant à partir de l'ensemble du voyage",

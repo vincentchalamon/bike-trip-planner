@@ -26,6 +26,28 @@ export const STEPS: StepId[] = [
   "my_trip",
 ];
 
+/**
+ * One turn of the floating AI assistant conversation.
+ *
+ * Stored in-memory only — the dialogue history is intentionally not persisted
+ * across page reloads to mirror the backend-side {@link ChatHistoryStore} which
+ * uses a short-TTL Redis store per (trip, user) pair.
+ */
+export interface AiChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  ts: number;
+}
+
+/**
+ * Conversational context propagated with every chat request so the dialogue
+ * assistant can resolve referential phrases such as « cette étape » against
+ * the stage the user is currently consulting.
+ */
+export interface AiChatContext {
+  currentStage: number | null;
+}
+
 interface UiState {
   isProcessing: boolean;
   isAccommodationScanning: boolean;
@@ -108,6 +130,33 @@ interface UiState {
       error: string | null;
     }
   >;
+  /**
+   * Whether the floating AI assistant chat panel is currently open.
+   * Toggled by {@link toggleBubble}, {@link openBubble}, {@link closeBubble}.
+   */
+  isBubbleOpen: boolean;
+  /**
+   * Conversation history of the floating AI assistant, oldest first. Cleared
+   * when the user starts a new trip or invokes {@link clearHistory}. Not
+   * persisted across reloads — the backend keeps the canonical history.
+   */
+  chatHistory: AiChatMessage[];
+  /**
+   * Conversational context the chat panel sends along with every message.
+   * Mirrors `TripChatContext` on the backend.
+   */
+  currentContext: AiChatContext;
+  /**
+   * `true` while a chat message is in flight — drives the typing indicator
+   * inside the chat panel and disables the send button.
+   */
+  isChatSending: boolean;
+  /**
+   * Whether the user has ever opened the AI bubble. Stored in
+   * `localStorage` so the "Nouveau" badge only shows on the first visit.
+   * Hydrated from storage on mount via {@link markBubbleSeen}.
+   */
+  hasSeenBubble: boolean;
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -156,6 +205,42 @@ interface UiState {
   recordAnalysisStep: (step: string) => void;
   /** Mark a step as failed with a human-readable error message. */
   failAnalysisStep: (step: string, message: string) => void;
+  /** Flip {@link isBubbleOpen}. Also marks the bubble as seen. */
+  toggleBubble: () => void;
+  /** Force the chat panel open and mark the bubble as seen. */
+  openBubble: () => void;
+  /** Force the chat panel closed. */
+  closeBubble: () => void;
+  /** Append a turn to {@link chatHistory}. */
+  appendMessage: (message: AiChatMessage) => void;
+  /** Update the conversational context broadcast to the chat endpoint. */
+  setCurrentContext: (context: AiChatContext) => void;
+  /** Reset the chat history (Acte 1.5 → Acte 3 transition, manual clear). */
+  clearHistory: () => void;
+  /** Flip the in-flight indicator that drives the typing dots. */
+  setChatSending: (value: boolean) => void;
+  /** Persist that the user has seen the bubble (suppresses the badge). */
+  markBubbleSeen: () => void;
+}
+
+const BUBBLE_SEEN_STORAGE_KEY = "btp.ai-bubble.seen";
+
+function readBubbleSeenFromStorage(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(BUBBLE_SEEN_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeBubbleSeenToStorage(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(BUBBLE_SEEN_STORAGE_KEY, "1");
+  } catch {
+    // localStorage may be unavailable (private mode, quota) — degrade silently.
+  }
 }
 
 /**
@@ -205,6 +290,11 @@ export const useUiStore = create<UiState>()(
     isAnalysisPhaseActive: false,
     analysisProgress: null,
     analysisStepStates: {},
+    isBubbleOpen: false,
+    chatHistory: [],
+    currentContext: { currentStage: null },
+    isChatSending: false,
+    hasSeenBubble: readBubbleSeenFromStorage(),
 
     setProcessing: (value) =>
       set((state) => {
@@ -331,6 +421,57 @@ export const useUiStore = create<UiState>()(
           status: "failed",
           error: message,
         };
+      }),
+
+    toggleBubble: () =>
+      set((state) => {
+        const next = !state.isBubbleOpen;
+        state.isBubbleOpen = next;
+        if (next && !state.hasSeenBubble) {
+          state.hasSeenBubble = true;
+          writeBubbleSeenToStorage();
+        }
+      }),
+
+    openBubble: () =>
+      set((state) => {
+        state.isBubbleOpen = true;
+        if (!state.hasSeenBubble) {
+          state.hasSeenBubble = true;
+          writeBubbleSeenToStorage();
+        }
+      }),
+
+    closeBubble: () =>
+      set((state) => {
+        state.isBubbleOpen = false;
+      }),
+
+    appendMessage: (message) =>
+      set((state) => {
+        state.chatHistory.push(message);
+      }),
+
+    setCurrentContext: (context) =>
+      set((state) => {
+        state.currentContext = context;
+      }),
+
+    clearHistory: () =>
+      set((state) => {
+        state.chatHistory = [];
+      }),
+
+    setChatSending: (value) =>
+      set((state) => {
+        state.isChatSending = value;
+      }),
+
+    markBubbleSeen: () =>
+      set((state) => {
+        if (state.hasSeenBubble) return;
+        state.hasSeenBubble = true;
+        writeBubbleSeenToStorage();
       }),
   })),
 );

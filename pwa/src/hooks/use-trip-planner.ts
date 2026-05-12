@@ -22,6 +22,8 @@ import {
   duplicateTrip,
   launchTripAnalysis,
   applyBatchRecompute,
+  sendTripChat,
+  type TripChatResponseBody,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
 import {
@@ -716,6 +718,74 @@ export function useTripPlanner() {
     }
   }
 
+  /**
+   * Dispatch a chat turn to `POST /trips/{id}/chat`, append both the user
+   * message and the assistant reply to {@link useUiStore.chatHistory}, and
+   * surface any actionable response (`split_stage`, `adjust_distance`, …) so
+   * downstream wiring can trigger the matching store action.
+   *
+   * The actual recomputation hook-up is delivered by issue #311 — this hook
+   * focuses on the round-trip, history bookkeeping, and exposing the parsed
+   * action via the returned value (and the assistant message in the store).
+   */
+  async function sendChatMessage(
+    text: string,
+  ): Promise<TripChatResponseBody | null> {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    if (!tripId) return null;
+
+    const uiStore = useUiStore.getState();
+    uiStore.appendMessage({
+      role: "user",
+      content: trimmed,
+      ts: Date.now(),
+    });
+    uiStore.setChatSending(true);
+
+    try {
+      const { data, error, status } = await sendTripChat(tripId, {
+        message: trimmed,
+        context: { currentStage: uiStore.currentContext.currentStage },
+      });
+
+      if (error || !data) {
+        const message =
+          status === 429
+            ? t("aiBubble.errorRateLimit")
+            : status === 503
+              ? t("aiBubble.errorUnavailable")
+              : t("aiBubble.errorGeneric");
+        useUiStore.getState().appendMessage({
+          role: "assistant",
+          content: message,
+          ts: Date.now(),
+        });
+        return null;
+      }
+
+      useUiStore.getState().appendMessage({
+        role: "assistant",
+        content: data.response,
+        ts: Date.now(),
+      });
+
+      return data;
+    } catch (err) {
+      const message = isNetworkError(err)
+        ? t("aiBubble.errorNetwork")
+        : t("aiBubble.errorGeneric");
+      useUiStore.getState().appendMessage({
+        role: "assistant",
+        content: message,
+        ts: Date.now(),
+      });
+      return null;
+    } finally {
+      useUiStore.getState().setChatSending(false);
+    }
+  }
+
   const [isShareModalOpen, setShareModalOpen] = useState(false);
 
   function handleShareTrip(): void {
@@ -954,5 +1024,6 @@ export function useTripPlanner() {
     handleApplyBatch,
     handleCancelBatch,
     queueModification: actions.queueModification,
+    sendChatMessage,
   };
 }

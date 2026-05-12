@@ -21,6 +21,7 @@ import { TripSummary } from "@/components/trip-summary";
 import { TripAiOverview } from "@/components/trip-ai-overview";
 import { TripHeader } from "@/components/trip-header";
 import { TripDownloads } from "@/components/trip-downloads";
+import { AiBubble } from "@/components/ai-bubble";
 import { StageProgressBar } from "@/components/stage-progress-bar";
 import { RoadbookMasterDetail } from "@/components/Timeline";
 import { ConfigPanel } from "@/components/config-panel";
@@ -838,6 +839,11 @@ export function TripPlanner({
 
         {/* Keyboard shortcuts help modal */}
         <KeyboardHelpModal />
+
+        {/* Floating AI assistant — visible on Acte 1.5 (Aperçu) and Acte 3
+            (Mon voyage), hidden during Acte 2 thanks to the internal
+            `isAnalysisPhaseActive` guard. */}
+        <AiBubble />
       </main>
     </GpxDropZone>
   );

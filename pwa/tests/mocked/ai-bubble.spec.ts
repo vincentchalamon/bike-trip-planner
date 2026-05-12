@@ -1,0 +1,231 @@
+import { test, expect } from "../fixtures/base.fixture";
+import { fullTripEventSequence } from "../fixtures/mock-data";
+import { getTripId } from "../fixtures/api-mocks";
+
+/**
+ * Issue #310 — AiBubble floating assistant.
+ *
+ * Coverage:
+ *  - The bubble opens/closes a 400×500 chat panel from the bottom right.
+ *  - Submitting a message round-trips through `POST /trips/{id}/chat` and
+ *    appends the assistant reply to the conversation.
+ *  - Context-aware: the body sent to the backend carries
+ *    `context.currentStage` matching the active day number.
+ *  - Actionable replies (action != "info") trigger an
+ *    `ai-chat-action` CustomEvent so the recomputation wiring (#311) can
+ *    plug in without coupling to the panel.
+ *  - The bubble is hidden during Acte 2 (`isAnalysisPhaseActive=true`).
+ *  - On mobile viewports the panel covers the full screen.
+ */
+
+function chatUrlPattern(): RegExp {
+  return new RegExp(
+    `/trips/${getTripId().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/chat$`,
+  );
+}
+
+async function mockChat(
+  page: import("@playwright/test").Page,
+  responseBody: {
+    action: string;
+    params: Record<string, unknown>;
+    response: string;
+    dispatched?: boolean;
+  },
+  capturedRequests: { body: unknown }[],
+): Promise<void> {
+  await page.route(chatUrlPattern(), async (route, request) => {
+    if (request.method() !== "POST") return route.fallback();
+    try {
+      capturedRequests.push({ body: JSON.parse(request.postData() ?? "{}") });
+    } catch {
+      capturedRequests.push({ body: null });
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/ld+json",
+      body: JSON.stringify({
+        tripId: getTripId(),
+        action: responseBody.action,
+        params: responseBody.params,
+        response: responseBody.response,
+        dispatched: responseBody.dispatched ?? false,
+      }),
+    });
+  });
+}
+
+test.describe("AiBubble — open/close", () => {
+  test("opens the chat panel when clicked and closes it via the close button", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+
+    const bubble = mockedPage.getByTestId("ai-bubble");
+    await expect(bubble).toBeVisible({ timeout: 10_000 });
+
+    await expect(mockedPage.getByTestId("ai-chat-panel")).toHaveCount(0);
+
+    await bubble.click();
+    await expect(mockedPage.getByTestId("ai-chat-panel")).toBeVisible();
+
+    // The "Nouveau" badge disappears on first open and stays gone across toggles.
+    await expect(mockedPage.getByTestId("ai-bubble-badge")).toHaveCount(0);
+
+    await mockedPage.getByTestId("ai-chat-panel-close").click();
+    await expect(mockedPage.getByTestId("ai-chat-panel")).toHaveCount(0);
+  });
+});
+
+test.describe("AiBubble — chat round-trip", () => {
+  test("sends a message, appends the assistant reply, and propagates currentStage in the context", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+
+    const captured: { body: unknown }[] = [];
+    await mockChat(
+      mockedPage,
+      {
+        action: "info",
+        params: {},
+        response: "Compris, voici ce que je peux vous dire…",
+      },
+      captured,
+    );
+
+    // Select stage 3 so `activeDayNumber` propagates into `currentContext`.
+    await mockedPage.evaluate(() => {
+      const store = (
+        window as Window & {
+          __zustand_ui_store?: {
+            setState: (s: Record<string, unknown>) => void;
+          };
+        }
+      ).__zustand_ui_store;
+      store?.setState({ activeDayNumber: 3 });
+    });
+
+    await mockedPage.getByTestId("ai-bubble").click();
+    await expect(mockedPage.getByTestId("ai-chat-panel-hint")).toContainText(
+      /étape 3/i,
+    );
+
+    const input = mockedPage.getByTestId("ai-chat-panel-input");
+    await input.fill("Que penses-tu de cette étape ?");
+    await mockedPage.getByTestId("ai-chat-panel-send").click();
+
+    // The assistant bubble appears in the history.
+    await expect(
+      mockedPage
+        .getByTestId("ai-chat-panel-message")
+        .filter({ hasText: /Compris, voici ce que je peux vous dire/i }),
+    ).toBeVisible({ timeout: 5_000 });
+
+    expect(captured).toHaveLength(1);
+    const body = captured[0]?.body as {
+      message?: string;
+      context?: { currentStage?: number | null };
+    };
+    expect(body.message).toBe("Que penses-tu de cette étape ?");
+    expect(body.context?.currentStage).toBe(3);
+  });
+
+  test("dispatches an ai-chat-action event for actionable replies", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+
+    await mockChat(
+      mockedPage,
+      {
+        action: "split_stage",
+        params: { stage: 3 },
+        response: "Bien sûr, je divise l'étape 3.",
+        dispatched: true,
+      },
+      [],
+    );
+
+    // Subscribe before triggering the round-trip so we capture the event.
+    await mockedPage.evaluate(() => {
+      const w = window as Window & { __aiChatActionDetail?: unknown };
+      document.addEventListener(
+        "ai-chat-action",
+        (event) => {
+          w.__aiChatActionDetail = (event as CustomEvent<unknown>).detail;
+        },
+        { once: true },
+      );
+    });
+
+    await mockedPage.getByTestId("ai-bubble").click();
+    await mockedPage
+      .getByTestId("ai-chat-panel-input")
+      .fill("Divise l'étape 3");
+    await mockedPage.getByTestId("ai-chat-panel-send").click();
+
+    await expect(
+      mockedPage
+        .getByTestId("ai-chat-panel-message")
+        .filter({ hasText: /je divise l'étape 3/i }),
+    ).toBeVisible({ timeout: 5_000 });
+
+    const detail = await mockedPage.evaluate(
+      () =>
+        (window as Window & { __aiChatActionDetail?: unknown })
+          .__aiChatActionDetail,
+    );
+    expect(detail).toMatchObject({
+      action: "split_stage",
+      params: { stage: 3 },
+      dispatched: true,
+    });
+  });
+});
+
+test.describe("AiBubble — visibility gating", () => {
+  test("is hidden while Acte 2 (analysis phase) is active", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+
+    await expect(mockedPage.getByTestId("ai-bubble")).toBeVisible();
+
+    await mockedPage.evaluate(() => {
+      const store = (
+        window as Window & {
+          __zustand_ui_store?: {
+            setState: (s: Record<string, unknown>) => void;
+          };
+        }
+      ).__zustand_ui_store;
+      store?.setState({ isAnalysisPhaseActive: true });
+    });
+
+    await expect(mockedPage.getByTestId("ai-bubble")).toHaveCount(0);
+  });
+});
+
+test.describe("AiBubble — responsive", () => {
+  test("renders the panel as a full-screen sheet on mobile", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await mockedPage.setViewportSize({ width: 375, height: 800 });
+
+    await createFullTrip();
+
+    await mockedPage.getByTestId("ai-bubble").click();
+    const panel = mockedPage.getByTestId("ai-chat-panel");
+    await expect(panel).toBeVisible();
+
+    const box = await panel.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(350);
+    expect(box?.height).toBeGreaterThanOrEqual(700);
+  });
+});

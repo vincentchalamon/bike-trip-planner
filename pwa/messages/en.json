@@ -590,6 +590,26 @@
     "analysisLaunched": "Analysis launched",
     "analysisLaunchFailed": "Failed to launch analysis. Please retry."
   },
+  "aiBubble": {
+    "label": "AI assistant",
+    "openAria": "Open the AI assistant",
+    "closeAria": "Close the AI assistant",
+    "newBadge": "New",
+    "title": "AI assistant",
+    "subtitle": "Ask a question or request a change.",
+    "greeting": "Hi! I'm your AI assistant. How can I help?",
+    "stageHint": "You are viewing stage {stage}. Ask me anything!",
+    "inputPlaceholder": "Ask for a change, e.g. \"split stage 3\"",
+    "inputAriaLabel": "Message for the AI assistant",
+    "send": "Send",
+    "sendAria": "Send the message",
+    "typing": "The assistant is replying…",
+    "historyAriaLabel": "Conversation with the AI assistant",
+    "errorNetwork": "Network error. Check your connection then try again.",
+    "errorRateLimit": "You have reached the message rate limit. Please try again shortly.",
+    "errorUnavailable": "The AI assistant is temporarily unavailable. Try again later.",
+    "errorGeneric": "Something went wrong. Please try again later."
+  },
   "aiOverview": {
     "title": "AI analysis",
     "subtitle": "Assistant-generated summary covering the whole trip",
