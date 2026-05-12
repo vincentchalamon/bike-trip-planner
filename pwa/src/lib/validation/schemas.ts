@@ -179,6 +179,25 @@ export const StageDataSchema = z.object({
   surfaceBreakdown: z.array(SurfaceSegmentSchema).nullable().optional(),
 });
 
+/**
+ * Trip-level AI overview produced by the LLaMA pass 2 (issue #305).
+ *
+ * Mirrors the backend `TripAiOverview` DTO and the Mercure
+ * `TripAiOverviewPayload`. Array fields default to `[]` so partial LLM output
+ * (where the model omits a section) is coerced into safe empty lists rather
+ * than throwing at render time.
+ * TODO(#450): wire via typegen once backend Trip DTO exposes aiOverview in OpenAPI.
+ */
+export const TripAiOverviewSchema = z.object({
+  narrative: z.string(),
+  patterns: z.array(z.string()).default([]),
+  recommendations: z.array(z.string()).default([]),
+  crossStageAlerts: z.array(z.string()).default([]),
+  model: z.string().default(""),
+  promptVersion: z.number().int().default(1),
+  generatedAt: z.string().default(""),
+});
+
 export const TripStateSchema = z.object({
   trip: z
     .object({
@@ -212,3 +231,4 @@ export type EventData = z.infer<typeof EventSchema>;
 export type AccommodationData = z.infer<typeof AccommodationSchema>;
 export type SurfaceSegmentData = z.infer<typeof SurfaceSegmentSchema>;
 export type StageData = z.infer<typeof StageDataSchema>;
+export type TripAiOverviewData = z.infer<typeof TripAiOverviewSchema>;
