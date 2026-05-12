@@ -344,6 +344,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{id}/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a natural-language instruction to the LLaMA 3B dialogue assistant.
+         * @description Send a natural-language instruction to the LLaMA 3B dialogue assistant.
+         */
+        post: operations["api_trips_idchat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{id}/duplicate": {
         parameters: {
             query?: never;
@@ -1038,6 +1058,25 @@ export interface components {
         "Trip.TripBatchRecomputeRequest": {
             modifications: components["schemas"]["TripModification"][];
         };
+        "Trip.TripChatRequest": {
+            /** @description Natural language instruction or question from the rider. */
+            message: string;
+            context?: components["schemas"]["TripChatContext"] | null;
+        };
+        "Trip.TripChatResponse.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            /** @description Trip identifier (UUID v7) the chat exchange belongs to. */
+            tripId?: string;
+            /** @description Action interpreted by the dialogue assistant (split_stage, info, ...). */
+            action?: string;
+            /** @description Parameters required to execute the action. */
+            params?: {
+                [key: string]: string | null;
+            };
+            /** @description Conversational reply to display to the rider. */
+            response?: string;
+            /** @description True when the action triggered a backend recomputation. */
+            dispatched?: boolean;
+        };
         "Trip.TripListItem.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
             title?: string | null;
@@ -1176,6 +1215,10 @@ export interface components {
             promptVersion: number;
             /** @description RFC3339 timestamp when the overview was generated */
             generatedAt: string;
+        };
+        TripChatContext: {
+            /** @description 1-indexed day number of the stage currently consulted, when applicable. */
+            currentStage?: number | null;
         };
         /**
          * @description Read-only trip detail resource for loading a persisted trip on the frontend.
@@ -2683,6 +2726,88 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
+            };
+        };
+    };
+    api_trips_idchat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Trip identifier */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description The new Trip resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["Trip.TripChatRequest"];
+            };
+        };
+        responses: {
+            /** @description Trip resource created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Trip.TripChatResponse.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Trip not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AI assistant unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
