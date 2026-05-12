@@ -846,3 +846,11 @@ export const useTripTemporalStore = createTemporalStore(
  */
 export const useTripAiOverview = (): TripAiOverviewPayload | null =>
   useTripStore((state) => state.aiOverview);
+
+// Expose the store for E2E tests so Playwright can manipulate trip state directly
+// without relying on user interactions.
+if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+  (
+    window as Window & { __zustand_trip_store?: typeof useTripStore }
+  ).__zustand_trip_store = useTripStore;
+}

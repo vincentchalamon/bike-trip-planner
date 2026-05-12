@@ -68,6 +68,38 @@ test.describe("TripAiOverview — display", () => {
   });
 });
 
+test.describe("TripAiOverview — re-analysis", () => {
+  test("clears the stale overview when a new analysis is launched", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    // First analysis — overview appears.
+    await submitUrl();
+    await injectEvent(routeParsedEvent());
+    await injectEvent(stagesComputedEvent());
+    await injectEvent(tripReadyEventWithAiOverview());
+
+    await expect(mockedPage.getByTestId("trip-ai-overview")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Simulate the user triggering a fresh analysis from a downstream flow
+    // (batch refinement, etc.): `handleLaunchAnalysis` must clear the stale
+    // overview synchronously so the card does not show outdated data while
+    // the new pipeline is in flight.
+    await mockedPage.evaluate(() => {
+      window.__zustand_trip_store?.getState().setAiOverview(null);
+    });
+
+    await expect(mockedPage.getByTestId("trip-ai-overview")).toHaveCount(0);
+
+    // A new `trip_ready` without an overview keeps the card absent.
+    await injectEvent(tripReadyEvent());
+    await expect(mockedPage.getByTestId("trip-ai-overview")).toHaveCount(0);
+  });
+});
+
 test.describe("TripAiOverview — responsive", () => {
   test("collapses detailed sections behind a disclosure toggle on mobile", async ({
     submitUrl,
