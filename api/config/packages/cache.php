@@ -37,6 +37,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'adapter' => 'cache.adapter.redis',
                     'default_lifetime' => 604800, // 7 days
                 ],
+                'cache.trip_chat' => [
+                    'adapter' => 'cache.adapter.redis',
+                    'default_lifetime' => 1800, // 30 minutes — short-lived dialogue history
+                ],
             ],
         ],
     ]);
@@ -63,6 +67,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'adapter' => 'cache.adapter.array',
                     ],
                     'cache.wikidata' => [
+                        'adapter' => 'cache.adapter.array',
+                    ],
+                    'cache.trip_chat' => [
                         'adapter' => 'cache.adapter.array',
                     ],
                 ],
