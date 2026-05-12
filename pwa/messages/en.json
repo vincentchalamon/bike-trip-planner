@@ -273,7 +273,13 @@
     "ariaLabel": "AI-generated stage summary",
     "label": "AI summary",
     "showMore": "Read more",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "insightsHeading": "Insights",
+    "suggestionsHeading": "Recommendations",
+    "applyCta": "Recalculate pacing with AI guidance",
+    "applyQueueLabel": "Stage {dayNumber} — AI-guided pacing recalculation queued",
+    "alertsTitle": "{count, plural, one {Detailed alert (#)} other {Detailed alerts (#)}}",
+    "showMoreAlerts": "Show {count, plural, one {the other alert} other {the other # alerts}}"
   },
   "difficultyComposed": {
     "ariaLabel": "Stage difficulty",

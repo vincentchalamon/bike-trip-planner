@@ -550,6 +550,107 @@ export function tripReadyEvent(): MercureEvent {
 }
 
 /**
+ * Variant of {@link tripReadyEvent} that carries per-stage `aiAnalysis`
+ * payloads, used by issue #306 tests to assert the {@link StageAiSummary}
+ * component renders the narrative, insights, suggestions, and the collapsible
+ * top-3 alerts preview produced by the LLaMA pass 1.
+ *
+ * Stage 1 ships with 7 alerts (a mix of severities) so the preview / "show
+ * more" toggle can be exercised. Stage 2 ships with no analysis to verify
+ * the silent fallback to the legacy fully-expanded alert list.
+ */
+export function tripReadyEventWithStageAiAnalysis(): MercureEvent {
+  const base = tripReadyEvent();
+  if (base.type !== "trip_ready") {
+    throw new Error("tripReadyEvent() must return a trip_ready event");
+  }
+  return {
+    type: "trip_ready",
+    data: {
+      ...base.data,
+      stages: [
+        {
+          ...base.data.stages[0]!,
+          alerts: [
+            {
+              type: "warning",
+              message: "Pente raide km 55-58 (10%)",
+              lat: null,
+              lon: null,
+            },
+            {
+              type: "warning",
+              message: "Route sans piste cyclable km 60-65",
+              lat: null,
+              lon: null,
+            },
+            {
+              type: "nudge",
+              message: "Aucun point d'eau entre km 45 et km 72",
+              lat: null,
+              lon: null,
+            },
+            {
+              type: "critical",
+              message: "Tronçon non praticable km 20",
+              lat: null,
+              lon: null,
+            },
+            {
+              type: "warning",
+              message: "Trafic dense en sortie de Cassel",
+              lat: null,
+              lon: null,
+            },
+            {
+              type: "nudge",
+              message: "Pause ombragée recommandée vers km 30",
+              lat: null,
+              lon: null,
+            },
+            {
+              type: "nudge",
+              message: "Marché local le matin à Cassel",
+              lat: null,
+              lon: null,
+            },
+          ],
+          aiAnalysis: {
+            narrative:
+              "Journée exigeante : le D+ est concentré sur la première moitié,\n" +
+              "puis la route s'aplatit le long de la côte vers Boulogne.",
+            insights: [
+              "Pente moyenne de 6% entre les km 55 et 58.",
+              "Vent dominant de nord-ouest sur la deuxième moitié.",
+            ],
+            suggestions: [
+              "Démarrer tôt pour éviter la chaleur de l'après-midi.",
+              "Prévoir une recharge d'eau avant le km 45.",
+              "Réduire l'allure dans la portion vallonée.",
+            ],
+            model: "llama3.1:8b",
+            promptVersion: 1,
+            generatedAt: "2026-05-11T08:30:00Z",
+          },
+        },
+        {
+          ...base.data.stages[1]!,
+          alerts: [
+            {
+              type: "nudge",
+              message: "Pas d'alerte critique sur le jour 2",
+              lat: null,
+              lon: null,
+            },
+          ],
+          aiAnalysis: null,
+        },
+      ],
+    },
+  };
+}
+
+/**
  * Variant of {@link tripReadyEvent} that carries a populated `aiOverview`
  * payload, used by issue #305 tests to assert the {@link TripAiOverview}
  * component renders the narrative, patterns, recommendations, and cross-stage

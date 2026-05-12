@@ -273,7 +273,13 @@
     "ariaLabel": "Résumé de l'étape généré par IA",
     "label": "Résumé IA",
     "showMore": "Lire la suite",
-    "showLess": "Réduire"
+    "showLess": "Réduire",
+    "insightsHeading": "À retenir",
+    "suggestionsHeading": "Recommandations",
+    "applyCta": "Recalculer l'allure avec les conseils IA",
+    "applyQueueLabel": "Étape {dayNumber} — recalcul de l'allure IA mis en file",
+    "alertsTitle": "{count, plural, one {Alerte détaillée (#)} other {Alertes détaillées (#)}}",
+    "showMoreAlerts": "Voir {count, plural, one {l'autre alerte} other {les # autres alertes}}"
   },
   "difficultyComposed": {
     "ariaLabel": "Difficulté de l'étape",

@@ -650,6 +650,10 @@ function enrichedPayloadToStageData(payload: EnrichedStagePayload): StageData {
     isRestDay: payload.isRestDay ?? false,
     supplyTimeline: [],
     events: payload.events,
+    // LLaMA pass-1 stage analysis (issue #306). Forwarded as-is so the
+    // {@link StageAiSummary} can render it atomically with the rest of the
+    // stage data. Null/undefined when the AI pipeline is off or pending.
+    aiAnalysis: payload.aiAnalysis ?? null,
   };
 }
 

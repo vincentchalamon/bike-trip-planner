@@ -6,6 +6,7 @@ import { enableMapSet } from "immer";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 import type {
   StageData,
+  StageAiAnalysisData,
   WeatherData,
   PoiData,
   AccommodationData,
@@ -846,6 +847,18 @@ export const useTripTemporalStore = createTemporalStore(
  */
 export const useTripAiOverview = (): TripAiOverviewPayload | null =>
   useTripStore((state) => state.aiOverview);
+
+/**
+ * Selector for the LLaMA pass-1 per-stage AI analysis (issue #306).
+ *
+ * Returns `null` when the LLM pipeline is disabled, the analysis has not yet
+ * completed, or the stage index is out of range. Consumers should treat this
+ * as "no AI summary to display" and fall back to the rule-based alert list.
+ */
+export const useStageAiAnalysis = (
+  stageIndex: number,
+): StageAiAnalysisData | null =>
+  useTripStore((state) => state.stages[stageIndex]?.aiAnalysis ?? null);
 
 // Expose the store for E2E tests so Playwright can manipulate trip state directly
 // without relying on user interactions.

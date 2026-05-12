@@ -7,20 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { StageLocations } from "@/components/stage-locations";
 import { StageAlerts } from "@/components/stage-alerts";
+import { StageAiSummary } from "@/components/stage-ai-summary";
 import { AccommodationPanel } from "@/components/accommodation-panel";
 import { EventsPanel } from "@/components/events-panel";
 import { StageDownloads } from "@/components/stage-downloads";
 import { DiffHighlight } from "@/components/diff-highlight";
 import { SupplyTimeline } from "@/components/SupplyTimeline/SupplyTimeline";
 import {
-  StageAiSummary,
+  StageAiSummary as StageAiSummaryLegacy,
   StageStatsRow,
   StageDifficultyComposed,
   StageWeatherCard,
   StageSurfaceBreakdown,
 } from "@/components/StageDetail";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
-import { useTripStore } from "@/store/trip-store";
+import { useTripStore, useStageAiAnalysis } from "@/store/trip-store";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 
 function formatCoords(point: { lat: number; lon: number }): string {
@@ -104,6 +105,8 @@ export function StageCard({
   const startDate = useTripStore((s) => s.startDate);
 
   const aiSummary = stage.aiSummary?.trim();
+  const aiAnalysis = useStageAiAnalysis(stageIndex);
+  const hasAiAnalysis = Boolean(aiAnalysis?.narrative.trim());
   const hasAlerts = stage.alerts.length > 0;
 
   return (
@@ -155,9 +158,11 @@ export function StageCard({
           endLabel={stage.endLabel || formatCoords(stage.endPoint)}
         />
 
-        {/* 2. AI summary — only when the backend provided one */}
-        {aiSummary && aiSummary.length > 0 && (
-          <StageAiSummary summary={aiSummary} />
+        {/* 2. AI summary — legacy short string (sprint 26, forward-compat).
+            Suppressed when the richer pass-1 `aiAnalysis` is available so
+            the rider sees a single coach voice per stage. */}
+        {!hasAiAnalysis && aiSummary && aiSummary.length > 0 && (
+          <StageAiSummaryLegacy summary={aiSummary} />
         )}
 
         {/* 3. Stats 4-col — distance (editable), D+, duration, budget */}
@@ -196,18 +201,39 @@ export function StageCard({
           endPointLon={stage.isRestDay ? undefined : stage.endPoint.lon}
         />
 
-        {/* 6. Alerts — collapsible by severity (already implemented) */}
-        {hasAlerts && (
+        {/* 6. Alerts — hybrid layout (issue #306):
+            - With AI analysis: render {@link StageAiSummary} which surfaces the
+              pass-1 briefing on top and collapses the alerts behind a top-3
+              preview so the rider scans the coach view first.
+            - Without AI analysis: fall back to the legacy fully-expanded
+              {@link StageAlerts} grouped by severity. */}
+        {hasAiAnalysis ? (
+          // TODO(#451): move DiffHighlight inside StageAiSummary so the flash
+          // scopes to the alerts sub-section instead of wrapping the whole card.
           <DiffHighlight
             stageIndex={stageIndex}
             field="alerts_added"
             changeLabel={t("diffAlertsAdded")}
           >
-            <StageAlerts
+            <StageAiSummary
+              stageIndex={stageIndex}
               alerts={stage.alerts}
               onAddPoiWaypoint={onAddPoiWaypoint}
             />
           </DiffHighlight>
+        ) : (
+          hasAlerts && (
+            <DiffHighlight
+              stageIndex={stageIndex}
+              field="alerts_added"
+              changeLabel={t("diffAlertsAdded")}
+            >
+              <StageAlerts
+                alerts={stage.alerts}
+                onAddPoiWaypoint={onAddPoiWaypoint}
+              />
+            </DiffHighlight>
+          )
         )}
         {!hasAlerts && isProcessing && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">

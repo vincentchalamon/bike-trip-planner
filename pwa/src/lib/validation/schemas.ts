@@ -134,6 +134,23 @@ export const SurfaceSegmentSchema = z.object({
   lengthMeters: z.number().nonnegative(),
 });
 
+/**
+ * LLaMA pass-1 stage analysis (issue #301 backend, surfaced by issue #306).
+ *
+ * Mirrors the backend `StageAiAnalysis` DTO and the Mercure
+ * `StageAiAnalysisPayload`. The component is rendered above the per-stage
+ * alerts as the "coach summary" of the hybrid layout — null when the LLM
+ * pipeline is disabled, has not completed, or has failed.
+ */
+export const StageAiAnalysisSchema = z.object({
+  narrative: z.string(),
+  insights: z.array(z.string()).default([]),
+  suggestions: z.array(z.string()).default([]),
+  model: z.string().default(""),
+  promptVersion: z.number().int().default(1),
+  generatedAt: z.string().default(""),
+});
+
 export const StageDataSchema = z.object({
   dayNumber: z.number(),
   distance: z.number(),
@@ -167,6 +184,13 @@ export const StageDataSchema = z.object({
    * TODO(#395): wire via typegen once backend StageResponse DTO ships aiSummary
    */
   aiSummary: z.string().nullable().optional(),
+  /**
+   * LLaMA pass-1 narrative briefing + insights + suggestions (issue #306).
+   * Populated by the `trip_ready` Mercure event when the AI pipeline runs;
+   * null/undefined otherwise. Surfaced by {@link StageAiSummary} above the
+   * detail alerts in the hybrid stage layout.
+   */
+  aiAnalysis: StageAiAnalysisSchema.nullable().optional(),
   /**
    * Optional per-stage surface breakdown — list of `{ surface, lengthMeters }`
    * pairs aggregated from OSM `surface` tags along the stage. Rendered as a
@@ -230,5 +254,6 @@ export type SupplyMarkerData = z.infer<typeof SupplyMarkerSchema>;
 export type EventData = z.infer<typeof EventSchema>;
 export type AccommodationData = z.infer<typeof AccommodationSchema>;
 export type SurfaceSegmentData = z.infer<typeof SurfaceSegmentSchema>;
+export type StageAiAnalysisData = z.infer<typeof StageAiAnalysisSchema>;
 export type StageData = z.infer<typeof StageDataSchema>;
 export type TripAiOverviewData = z.infer<typeof TripAiOverviewSchema>;
