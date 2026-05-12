@@ -198,14 +198,19 @@ export function TripPlanner({
       useUiStore.getState().setAnalysisStarted(value);
       useUiStore.getState().setAnalysisPhaseActive(value);
     };
+    const onClearAiOverview = () => {
+      useTripStore.getState().setAiOverview(null);
+    };
     window.addEventListener("__test_set_processing", onProcessing);
     window.addEventListener("__test_set_analysis_started", onAnalysisStarted);
+    window.addEventListener("__test_clear_ai_overview", onClearAiOverview);
     return () => {
       window.removeEventListener("__test_set_processing", onProcessing);
       window.removeEventListener(
         "__test_set_analysis_started",
         onAnalysisStarted,
       );
+      window.removeEventListener("__test_clear_ai_overview", onClearAiOverview);
     };
   }, []);
 

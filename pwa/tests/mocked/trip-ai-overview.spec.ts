@@ -87,9 +87,10 @@ test.describe("TripAiOverview — re-analysis", () => {
     // Simulate the user triggering a fresh analysis from a downstream flow
     // (batch refinement, etc.): `handleLaunchAnalysis` must clear the stale
     // overview synchronously so the card does not show outdated data while
-    // the new pipeline is in flight.
+    // the new pipeline is in flight. The CustomEvent hook works in production
+    // builds (unlike `window.__zustand_trip_store` which is guarded by NODE_ENV).
     await mockedPage.evaluate(() => {
-      window.__zustand_trip_store?.getState().setAiOverview(null);
+      window.dispatchEvent(new CustomEvent("__test_clear_ai_overview"));
     });
 
     await expect(mockedPage.getByTestId("trip-ai-overview")).toHaveCount(0);
