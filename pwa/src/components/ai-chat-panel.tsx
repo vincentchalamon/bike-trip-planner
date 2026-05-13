@@ -156,7 +156,9 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
       <header className="flex items-center gap-2 border-b border-border px-4 py-3">
         <Sparkles className="h-4 w-4 text-brand" aria-hidden="true" />
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-semibold text-foreground">{t("title")}</h2>
+          <h2 className="text-sm font-semibold text-foreground">
+            {t("title")}
+          </h2>
           <p className="text-xs text-muted-foreground truncate">
             {t("subtitle")}
           </p>
@@ -282,4 +284,3 @@ function TypingDots() {
     </div>
   );
 }
-
