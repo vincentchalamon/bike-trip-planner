@@ -100,6 +100,7 @@ final readonly class ChatActionInterpreter
             if (false === $start || false === $end || $end <= $start) {
                 return null;
             }
+
             $candidate = substr($candidate, $start, $end - $start + 1);
         }
 
@@ -113,14 +114,22 @@ final readonly class ChatActionInterpreter
             return null;
         }
 
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
+        $result = [];
+        foreach ($decoded as $key => $value) {
+            if (!\is_string($key)) {
+                return null;
+            }
+
+            $result[$key] = $value;
+        }
+
+        return $result;
     }
 
     /**
      * @param array<string, mixed> $params
      *
-     * @return array<string, mixed>|null Returns null when the params are invalid for the given action.
+     * @return array<string, mixed>|null returns null when the params are invalid for the given action
      */
     private function normaliseParams(string $action, array $params): ?array
     {

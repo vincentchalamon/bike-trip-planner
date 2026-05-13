@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\ApiResource\TripRequest;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
@@ -114,7 +115,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
         }
 
         $request = $this->tripStateManager->getRequest($tripId);
-        if (null === $request) {
+        if (!$request instanceof TripRequest) {
             throw new NotFoundHttpException(\sprintf('Trip "%s" not found or has expired.', $tripId));
         }
 
@@ -144,7 +145,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
                 'error' => $ollamaUnavailableException->getMessage(),
             ]);
 
-            throw new ServiceUnavailableHttpException(retryAfter: null, message: 'AI assistant is temporarily unavailable. Please retry shortly.');
+            throw new ServiceUnavailableHttpException(retryAfter: null, message: 'AI assistant is temporarily unavailable. Please retry shortly.', previous: $ollamaUnavailableException);
         }
 
         if (null === $response) {

@@ -15,10 +15,15 @@ namespace App\Llm\Dto;
 final readonly class ChatAction
 {
     public const string ACTION_SPLIT_STAGE = 'split_stage';
+
     public const string ACTION_MERGE_STAGES = 'merge_stages';
+
     public const string ACTION_ADD_WAYPOINT = 'add_waypoint';
+
     public const string ACTION_CHANGE_ACCOMMODATION = 'change_accommodation';
+
     public const string ACTION_ADJUST_DISTANCE = 'adjust_distance';
+
     public const string ACTION_INFO = 'info';
 
     /**

@@ -39,8 +39,20 @@ final readonly class ChatHistoryStore
             return [];
         }
 
-        /** @var list<array{role: string, content: string}> $value */
-        return $value;
+        $result = [];
+        foreach ($value as $entry) {
+            if (!\is_array($entry)
+                || !isset($entry['role'], $entry['content'])
+                || !\is_string($entry['role'])
+                || !\is_string($entry['content'])
+            ) {
+                continue;
+            }
+
+            $result[] = ['role' => $entry['role'], 'content' => $entry['content']];
+        }
+
+        return $result;
     }
 
     public function append(string $tripId, string $userId, string $role, string $content): void
@@ -50,11 +62,12 @@ final readonly class ChatHistoryStore
 
         if (\count($history) > self::MAX_MESSAGES) {
             $history = \array_slice($history, -self::MAX_MESSAGES);
-            /** @var list<array{role: string, content: string}> $history */
+            /* @var list<array{role: string, content: string}> $history */
         }
 
         $item = $this->cache->getItem($this->key($tripId, $userId));
         $item->set($history);
+
         $this->cache->save($item);
     }
 

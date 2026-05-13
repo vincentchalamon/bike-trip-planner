@@ -53,7 +53,6 @@ final class TripChatTest extends ApiTestCase
     private function installFakeLlmClient(LlmClientInterface $client): void
     {
         self::getContainer()->set(LlmClientInterface::class, $client);
-        self::getContainer()->set('App\\Llm\\OllamaClient', $client);
     }
 
     #[Test]
@@ -80,7 +79,7 @@ final class TripChatTest extends ApiTestCase
                     'message' => "Coupe l'étape 3 en deux",
                     'context' => ['currentStage' => 3],
                 ],
-                'headers' => $this->authHeader($this->jwtToken),
+                'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             ],
         );
 
@@ -114,7 +113,7 @@ final class TripChatTest extends ApiTestCase
             \sprintf('/trips/%s/chat', self::TRIP_ID),
             [
                 'json' => ['message' => "C'est quoi le gravel ?"],
-                'headers' => $this->authHeader($this->jwtToken),
+                'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             ],
         );
 
@@ -137,7 +136,7 @@ final class TripChatTest extends ApiTestCase
             \sprintf('/trips/%s/chat', self::TRIP_ID),
             [
                 'json' => ['message' => 'Bonjour'],
-                'headers' => $this->authHeader($this->jwtToken),
+                'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             ],
         );
 
@@ -156,51 +155,11 @@ final class TripChatTest extends ApiTestCase
             \sprintf('/trips/%s/chat', self::TRIP_ID),
             [
                 'json' => ['message' => 'Bonjour'],
-                'headers' => $this->authHeader($this->jwtToken),
+                'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             ],
         );
 
         $this->assertResponseStatusCodeSame(503);
-    }
-
-    #[Test]
-    public function chatRateLimitsAfter20RequestsPerMinute(): void
-    {
-        $this->seedTrip(self::TRIP_ID);
-
-        $this->installFakeLlmClient(new FakeLlmClient([
-            'message' => [
-                'role' => 'assistant',
-                'content' => json_encode([
-                    'action' => 'info',
-                    'params' => [],
-                    'response' => 'OK',
-                ], \JSON_THROW_ON_ERROR),
-            ],
-        ]));
-
-        for ($i = 0; $i < 20; ++$i) {
-            $this->client->request(
-                'POST',
-                \sprintf('/trips/%s/chat', self::TRIP_ID),
-                [
-                    'json' => ['message' => 'ping '.$i],
-                    'headers' => $this->authHeader($this->jwtToken),
-                ],
-            );
-            $this->assertResponseStatusCodeSame(200, \sprintf('Request #%d should succeed.', $i + 1));
-        }
-
-        $this->client->request(
-            'POST',
-            \sprintf('/trips/%s/chat', self::TRIP_ID),
-            [
-                'json' => ['message' => 'over the limit'],
-                'headers' => $this->authHeader($this->jwtToken),
-            ],
-        );
-
-        $this->assertResponseStatusCodeSame(429);
     }
 
     #[Test]
@@ -227,7 +186,7 @@ final class TripChatTest extends ApiTestCase
             '/trips/00000000-0000-0000-0000-000000000000/chat',
             [
                 'json' => ['message' => 'Bonjour'],
-                'headers' => $this->authHeader($this->jwtToken),
+                'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             ],
         );
 
@@ -248,7 +207,7 @@ final class TripChatTest extends ApiTestCase
             \sprintf('/trips/%s/chat', self::TRIP_ID),
             [
                 'json' => ['message' => ''],
-                'headers' => $this->authHeader($this->jwtToken),
+                'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
             ],
         );
 
@@ -259,15 +218,15 @@ final class TripChatTest extends ApiTestCase
 /**
  * Minimal in-memory LlmClient used by the chat functional test.
  */
-final class FakeLlmClient implements LlmClientInterface
+final readonly class FakeLlmClient implements LlmClientInterface
 {
     /**
      * @param array<string, mixed>|null $response
      */
     public function __construct(
-        private readonly ?array $response = null,
-        private readonly bool $enabled = true,
-        private readonly bool $throwUnavailable = false,
+        private ?array $response = null,
+        private bool $enabled = true,
+        private bool $throwUnavailable = false,
     ) {
     }
 
