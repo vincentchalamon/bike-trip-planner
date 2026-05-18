@@ -110,8 +110,12 @@ final readonly class TripChatProcessor implements ProcessorInterface
         $userId = $user->getId()->toRfc4122();
 
         $limiter = $this->tripChatLimiter->create($userId);
-        if (!$limiter->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException(message: 'Chat rate limit reached. Please wait a moment before retrying.');
+        $rateLimit = $limiter->consume();
+        if (!$rateLimit->isAccepted()) {
+            $retryAfter = $rateLimit->getRetryAfter();
+            $secondsUntilRetry = max(0, $retryAfter->getTimestamp() - new \DateTimeImmutable()->getTimestamp());
+
+            throw new TooManyRequestsHttpException(retryAfter: $secondsUntilRetry, message: 'Chat rate limit reached. Please wait a moment before retrying.');
         }
 
         $request = $this->tripStateManager->getRequest($tripId);
@@ -149,7 +153,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
         }
 
         if (null === $response) {
-            throw new ServiceUnavailableHttpException(retryAfter: null, message: 'AI assistant is currently disabled.');
+            throw new ServiceUnavailableHttpException(retryAfter: null, message: 'AI assistant returned an empty response. Please retry.');
         }
 
         $rawContent = $this->extractText($response);
