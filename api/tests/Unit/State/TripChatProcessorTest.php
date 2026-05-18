@@ -38,6 +38,17 @@ final class TripChatProcessorTest extends TestCase
 {
     private const string TRIP_ID = '01936f6e-0000-7000-8000-000000000099';
 
+    private string $promptFixtureDir = '';
+
+    #[\Override]
+    protected function tearDown(): void
+    {
+        if ('' !== $this->promptFixtureDir && is_dir($this->promptFixtureDir)) {
+            @unlink($this->promptFixtureDir.\DIRECTORY_SEPARATOR.'dialogue.txt');
+            @rmdir($this->promptFixtureDir);
+        }
+    }
+
     #[Test]
     public function processThrows429WhenRateLimitExceeded(): void
     {
@@ -97,6 +108,7 @@ final class TripChatProcessorTest extends TestCase
         $dir = sys_get_temp_dir().\DIRECTORY_SEPARATOR.'trip-chat-prompts-'.bin2hex(random_bytes(4));
         mkdir($dir, 0o775, true);
         file_put_contents($dir.\DIRECTORY_SEPARATOR.'dialogue.txt', 'SYSTEM PROMPT');
+        $this->promptFixtureDir = $dir;
 
         return $dir;
     }
