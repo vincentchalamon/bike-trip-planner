@@ -161,8 +161,10 @@ final readonly class TripChatProcessor implements ProcessorInterface
 
         $action = $this->interpreter->interpret($rawContent);
 
-        $this->historyStore->append($tripId, $userId, 'user', $userMessage);
-        $this->historyStore->append($tripId, $userId, 'assistant', $rawContent);
+        $this->historyStore->appendMany($tripId, $userId, [
+            ['role' => 'user', 'content' => $userMessage],
+            ['role' => 'assistant', 'content' => $rawContent],
+        ]);
 
         $dispatched = \in_array($action->action, self::RECOMPUTE_ACTIONS, true);
 

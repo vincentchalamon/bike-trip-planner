@@ -1068,9 +1068,8 @@ export interface components {
             tripId?: string;
             /** @description Action interpreted by the dialogue assistant (split_stage, info, ...). */
             action?: string;
-            /** @description Parameters required to execute the action. */
             params?: {
-                [key: string]: string | null;
+                [key: string]: unknown;
             };
             /** @description Conversational reply to display to the rider. */
             response?: string;

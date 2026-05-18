@@ -24,7 +24,10 @@ final readonly class TripChatResponse
         public string $tripId,
         #[ApiProperty(description: 'Action interpreted by the dialogue assistant (split_stage, info, ...).')]
         public string $action,
-        #[ApiProperty(description: 'Parameters required to execute the action.')]
+        #[ApiProperty(
+            description: 'Parameters required to execute the action.',
+            schema: ['type' => 'object', 'additionalProperties' => true],
+        )]
         public array $params,
         #[ApiProperty(description: 'Conversational reply to display to the rider.')]
         public string $response,

@@ -57,12 +57,25 @@ final readonly class ChatHistoryStore
 
     public function append(string $tripId, string $userId, string $role, string $content): void
     {
+        $this->appendMany($tripId, $userId, [['role' => $role, 'content' => $content]]);
+    }
+
+    /**
+     * @param list<array{role: string, content: string}> $messages
+     */
+    public function appendMany(string $tripId, string $userId, array $messages): void
+    {
+        if ([] === $messages) {
+            return;
+        }
+
         $history = $this->get($tripId, $userId);
-        $history[] = ['role' => $role, 'content' => $content];
+        foreach ($messages as $message) {
+            $history[] = $message;
+        }
 
         if (\count($history) > self::MAX_MESSAGES) {
             $history = \array_slice($history, -self::MAX_MESSAGES);
-            /* @var list<array{role: string, content: string}> $history */
         }
 
         $item = $this->cache->getItem($this->key($tripId, $userId));
