@@ -78,9 +78,9 @@ Utilisateur : « Coupe l'étape 3 en deux »
 
 Utilisateur : « Évite les routes à trafic sur l'étape 4 »
 {
-  "action": "avoid_traffic",
-  "params": { "stage": 4 },
-  "response": "Je recalcule l'étape 4 en privilégiant les voies vertes et les routes secondaires à faible trafic."
+  "action": "info",
+  "params": {},
+  "response": "Je ne peux pas encore recalculer l'itinéraire pour éviter le trafic. Vous pouvez me demander de découper ou fusionner une étape, d'ajouter un point de passage, de changer l'hébergement ou d'ajuster la distance cible."
 }
 
 Utilisateur : « Ajoute un détour par le Mont Cassel »
