@@ -544,9 +544,9 @@ Assistant conversationnel via bulle flottante, LLaMA 3B pour interpréter les in
 
 | Ordre | ID                                                                      | Titre                                                                            | Effort | PRs | Dépend de |
 |-------|-------------------------------------------------------------------------|----------------------------------------------------------------------------------|--------|-----|-----------|
-| 1     | [#309](https://github.com/vincentchalamon/bike-trip-planner/issues/309) | System prompt dialogue LLaMA 3B + endpoint backend chat IA                       | M      |     | #298      |
-| 2     | [#310](https://github.com/vincentchalamon/bike-trip-planner/issues/310) | Composant AiBubble : bulle flottante + panneau chat                              | L      |     | #309 sprint 25 |
-| 3     | [#311](https://github.com/vincentchalamon/bike-trip-planner/issues/311) | Intégration bulle IA ↔ recomputation inline + skipAiAnalysis + toggle batch     | M      |     | #309 #310 |
+| 1     | [#309](https://github.com/vincentchalamon/bike-trip-planner/issues/309) | System prompt dialogue LLaMA 3B + endpoint backend chat IA                       | M      | [#453](https://github.com/vincentchalamon/bike-trip-planner/pull/453) `feature/309` | #298      |
+| 2     | [#310](https://github.com/vincentchalamon/bike-trip-planner/issues/310) | Composant AiBubble : bulle flottante + panneau chat                              | L      | [#454](https://github.com/vincentchalamon/bike-trip-planner/pull/454) `feature/310` | #309 sprint 25 |
+| 3     | [#311](https://github.com/vincentchalamon/bike-trip-planner/issues/311) | Intégration bulle IA ↔ recomputation inline + skipAiAnalysis + toggle batch     | M      | [#455](https://github.com/vincentchalamon/bike-trip-planner/pull/455) `feature/311` | #309 #310 |
 
 ---
 
