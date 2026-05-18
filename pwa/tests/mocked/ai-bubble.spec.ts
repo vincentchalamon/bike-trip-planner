@@ -98,14 +98,9 @@ test.describe("AiBubble — chat round-trip", () => {
 
     // Select stage 3 so `activeDayNumber` propagates into `currentContext`.
     await mockedPage.evaluate(() => {
-      const store = (
-        window as Window & {
-          __zustand_ui_store?: {
-            setState: (s: Record<string, unknown>) => void;
-          };
-        }
-      ).__zustand_ui_store;
-      store?.setState({ activeDayNumber: 3 });
+      window.dispatchEvent(
+        new CustomEvent("__test_set_active_day_number", { detail: 3 }),
+      );
     });
 
     await mockedPage.getByTestId("ai-bubble").click();
@@ -197,14 +192,9 @@ test.describe("AiBubble — visibility gating", () => {
     await expect(mockedPage.getByTestId("ai-bubble")).toBeVisible();
 
     await mockedPage.evaluate(() => {
-      const store = (
-        window as Window & {
-          __zustand_ui_store?: {
-            setState: (s: Record<string, unknown>) => void;
-          };
-        }
-      ).__zustand_ui_store;
-      store?.setState({ isAnalysisPhaseActive: true });
+      window.dispatchEvent(
+        new CustomEvent("__test_set_analysis_started", { detail: true }),
+      );
     });
 
     await expect(mockedPage.getByTestId("ai-bubble")).toHaveCount(0);
