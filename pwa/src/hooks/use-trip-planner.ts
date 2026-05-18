@@ -733,6 +733,7 @@ export function useTripPlanner() {
   ): Promise<TripChatResponseBody | null> {
     const trimmed = text.trim();
     if (!trimmed) return null;
+    if (trimmed.length > 2000) return null;
     if (!tripId) return null;
 
     const uiStore = useUiStore.getState();

@@ -1,4 +1,5 @@
 import createClient, { type Middleware } from "openapi-fetch";
+import { z } from "zod";
 import type { components, operations, paths } from "./schema";
 import { API_URL } from "@/lib/constants";
 import { useAuthStore } from "@/store/auth-store";
@@ -428,9 +429,26 @@ export async function sendTripChat(
     return { data: null, error: `HTTP ${res.status}`, status: res.status };
   }
 
-  const data = (await res.json()) as TripChatResponseBody;
-  return { data, error: null, status: res.status };
+  const raw: unknown = await res.json();
+  const parsed = tripChatResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      data: null,
+      error: "Invalid response shape",
+      status: res.status,
+    };
+  }
+
+  return { data: parsed.data, error: null, status: res.status };
 }
+
+const tripChatResponseSchema = z.object({
+  tripId: z.string(),
+  action: z.string(),
+  params: z.record(z.string(), z.unknown()),
+  response: z.string(),
+  dispatched: z.boolean(),
+});
 
 /**
  * Duplicate an existing trip (deep-clone with all stages and settings).

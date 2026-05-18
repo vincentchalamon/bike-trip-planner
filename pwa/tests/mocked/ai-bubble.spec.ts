@@ -219,3 +219,65 @@ test.describe("AiBubble — responsive", () => {
     expect(box?.height).toBeGreaterThanOrEqual(700);
   });
 });
+
+test.describe("AiBubble — error handling", () => {
+  test("surfaces the rate-limit message on HTTP 429", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+    await mockedPage.route(chatUrlPattern(), (route) =>
+      route.fulfill({
+        status: 429,
+        contentType: "application/problem+json",
+        body: "{}",
+      }),
+    );
+
+    await mockedPage.getByTestId("ai-bubble").click();
+    await mockedPage.getByTestId("ai-chat-panel-input").fill("test");
+    await mockedPage.getByTestId("ai-chat-panel-send").click();
+
+    await expect(
+      mockedPage.getByTestId("ai-chat-panel-message").last(),
+    ).toContainText(/limite de messages/i, { timeout: 5_000 });
+  });
+
+  test("surfaces the unavailable message on HTTP 503", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+    await mockedPage.route(chatUrlPattern(), (route) =>
+      route.fulfill({
+        status: 503,
+        contentType: "application/problem+json",
+        body: "{}",
+      }),
+    );
+
+    await mockedPage.getByTestId("ai-bubble").click();
+    await mockedPage.getByTestId("ai-chat-panel-input").fill("test");
+    await mockedPage.getByTestId("ai-chat-panel-send").click();
+
+    await expect(
+      mockedPage.getByTestId("ai-chat-panel-message").last(),
+    ).toContainText(/temporairement indisponible/i, { timeout: 5_000 });
+  });
+
+  test("surfaces the network message on connection failure", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+    await mockedPage.route(chatUrlPattern(), (route) => route.abort("failed"));
+
+    await mockedPage.getByTestId("ai-bubble").click();
+    await mockedPage.getByTestId("ai-chat-panel-input").fill("test");
+    await mockedPage.getByTestId("ai-chat-panel-send").click();
+
+    await expect(
+      mockedPage.getByTestId("ai-chat-panel-message").last(),
+    ).toContainText(/erreur réseau/i, { timeout: 5_000 });
+  });
+});

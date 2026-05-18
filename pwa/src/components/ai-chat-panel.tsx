@@ -215,6 +215,7 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
           placeholder={t("inputPlaceholder")}
           aria-label={t("inputAriaLabel")}
           rows={2}
+          maxLength={2000}
           disabled={isChatSending}
           data-testid="ai-chat-panel-input"
           className={cn(
