@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -143,6 +143,14 @@ export function useTripPlanner() {
 
   const tripId = trip?.id ?? null;
   useMercure(tripId, mercureToken);
+
+  // Chat history is scoped to a single trip session. Wipe it whenever the
+  // user switches trip so messages from trip A don't bleed into trip B's
+  // panel after navigation.
+  useEffect(() => {
+    if (!tripId) return;
+    useUiStore.getState().clearHistory();
+  }, [tripId]);
 
   async function handleMagicLink(sourceUrl: string) {
     actions.clearTrip();
