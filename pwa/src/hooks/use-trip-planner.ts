@@ -758,6 +758,12 @@ export function useTripPlanner() {
         context: { currentStage: uiStore.currentContext.currentStage },
       });
 
+      // Drop the response if the user switched trips while it was in-flight —
+      // appending it would interleave trip A's reply into trip B's panel.
+      if (useTripStore.getState().trip?.id !== tripId) {
+        return null;
+      }
+
       if (error || !data) {
         const message =
           status === 429

@@ -460,6 +460,7 @@ export const useUiStore = create<UiState>()(
     clearHistory: () =>
       set((state) => {
         state.chatHistory = [];
+        state.isChatSending = false;
       }),
 
     setChatSending: (value) =>
