@@ -10,6 +10,9 @@ use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
 abstract readonly class AbstractStageNormalizer implements NormalizerInterface
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function normalize(mixed $data, ?string $format = null, array $context = []): array
     {
         if (!$data instanceof Stage) {
