@@ -281,3 +281,51 @@ test.describe("AiBubble — error handling", () => {
     ).toContainText(/erreur réseau/i, { timeout: 5_000 });
   });
 });
+
+test.describe("AiBubble — cross-trip isolation", () => {
+  test("clears chat history when the active trip changes", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+
+    const captured: { body: unknown }[] = [];
+    await mockChat(
+      mockedPage,
+      { action: "info", params: {}, response: "Reply from trip A." },
+      captured,
+    );
+
+    // Send one message so chatHistory is non-empty (the panel also renders a
+    // static greeting bubble, so the transcript holds 3 messages here).
+    await mockedPage.getByTestId("ai-bubble").click();
+    await mockedPage.getByTestId("ai-chat-panel-input").fill("Hello trip A");
+    await mockedPage.getByTestId("ai-chat-panel-send").click();
+    await expect(
+      mockedPage
+        .getByTestId("ai-chat-panel-message")
+        .filter({ hasText: /Reply from trip A/i }),
+    ).toBeVisible({ timeout: 5_000 });
+    await expect(mockedPage.getByTestId("ai-chat-panel-message")).toHaveCount(
+      3,
+    );
+    await mockedPage.getByTestId("ai-chat-panel-close").click();
+
+    // Switch the active trip identifier in the store — the trip-planner
+    // useEffect keyed on tripId should fire and call clearHistory().
+    await mockedPage.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("__test_set_trip_id", {
+          detail: "01999999-0000-7000-8000-000000000099",
+        }),
+      );
+    });
+
+    // Reopening the bubble must only render the static greeting, not the
+    // user/assistant turns from the previous trip.
+    await mockedPage.getByTestId("ai-bubble").click();
+    await expect(mockedPage.getByTestId("ai-chat-panel-message")).toHaveCount(
+      1,
+    );
+  });
+});

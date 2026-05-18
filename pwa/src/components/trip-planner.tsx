@@ -208,6 +208,14 @@ export function TripPlanner({
         .getState()
         .setActiveDayNumber(typeof value === "number" ? value : null);
     };
+    const onSetTripId = (e: Event) => {
+      const id = (e as CustomEvent<string | null>).detail;
+      if (id) {
+        useTripStore.getState().setTrip({ id, title: "Test", sourceUrl: "" });
+      } else {
+        useTripStore.getState().clearTrip();
+      }
+    };
     window.addEventListener("__test_set_processing", onProcessing);
     window.addEventListener("__test_set_analysis_started", onAnalysisStarted);
     window.addEventListener("__test_clear_ai_overview", onClearAiOverview);
@@ -215,6 +223,7 @@ export function TripPlanner({
       "__test_set_active_day_number",
       onSetActiveDayNumber,
     );
+    window.addEventListener("__test_set_trip_id", onSetTripId);
     return () => {
       window.removeEventListener("__test_set_processing", onProcessing);
       window.removeEventListener(
@@ -226,6 +235,7 @@ export function TripPlanner({
         "__test_set_active_day_number",
         onSetActiveDayNumber,
       );
+      window.removeEventListener("__test_set_trip_id", onSetTripId);
     };
   }, []);
 
