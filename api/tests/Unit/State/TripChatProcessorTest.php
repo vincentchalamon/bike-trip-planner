@@ -436,7 +436,7 @@ final class TripChatProcessorTest extends TestCase
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->method('getReference')
-            ->willReturnCallback(static fn (string $class, string $id) => new TripRequest(Uuid::fromString($id)));
+            ->willReturnCallback(static fn (string $class, string $id): TripRequest => new TripRequest(Uuid::fromString($id)));
         $entityManager->expects(self::exactly(2))
             ->method('persist')
             ->willReturnCallback(static function (object $entity) use (&$persisted): void {
@@ -448,6 +448,7 @@ final class TripChatProcessorTest extends TestCase
                 ++$flushed;
             });
 
+        /** @phpstan-ignore method.unresolvableReturnType */
         $chatMessageRepository = $this->createStub(TripChatMessageRepository::class);
 
         $processor = $this->newProcessor(

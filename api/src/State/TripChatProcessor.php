@@ -372,6 +372,10 @@ final readonly class TripChatProcessor implements ProcessorInterface
             return;
         }
 
+        if (!$trip instanceof TripRequest) {
+            return;
+        }
+
         try {
             $userTurn = new TripChatMessage(
                 trip: $trip,

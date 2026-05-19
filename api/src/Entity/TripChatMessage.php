@@ -38,8 +38,8 @@ class TripChatMessage
     private \DateTimeImmutable $createdAt;
 
     /**
-     * @param non-empty-string                $role    one of {@see self::ROLE_USER} or {@see self::ROLE_ASSISTANT}
-     * @param array<string, mixed>|null       $pois    optional POIs payload referenced by the message (JSONB)
+     * @param non-empty-string          $role one of {@see self::ROLE_USER} or {@see self::ROLE_ASSISTANT}
+     * @param array<string, mixed>|null $pois optional POIs payload referenced by the message (JSONB)
      */
     public function __construct(
         #[ORM\ManyToOne(targetEntity: TripRequest::class)]

@@ -11,7 +11,7 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * @extends ServiceEntityRepository<TripChatMessage>
  */
-final class TripChatMessageRepository extends ServiceEntityRepository
+class TripChatMessageRepository extends ServiceEntityRepository
 {
     public const int DEFAULT_LIMIT = 50;
 

@@ -88,6 +88,8 @@ final class TripChatMessageRepositoryTest extends TestCase
     public function findByTripReversesMostRecentResultsForChronologicalOrder(): void
     {
         $trip = new TripRequest();
+        $trip->id = Uuid::v7();
+
         $user = new User('rider@example.com', Uuid::v7());
 
         $oldest = $this->makeMessage($trip, $user, TripChatMessage::ROLE_USER, 'Bonjour', '-3 minutes');
@@ -122,6 +124,9 @@ final class TripChatMessageRepositoryTest extends TestCase
         self::assertSame([], $messages);
     }
 
+    /**
+     * @param non-empty-string $role
+     */
     private function makeMessage(
         TripRequest $trip,
         User $user,
