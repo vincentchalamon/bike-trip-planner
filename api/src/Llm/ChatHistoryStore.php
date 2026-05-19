@@ -30,11 +30,44 @@ final readonly class ChatHistoryStore
     public function get(string $tripId, string $userId): array
     {
         $item = $this->cache->getItem($this->key($tripId, $userId));
-        if (!$item->isHit()) {
-            return [];
+
+        return $item->isHit() ? $this->sanitize($item->get()) : [];
+    }
+
+    public function append(string $tripId, string $userId, string $role, string $content): void
+    {
+        $this->appendMany($tripId, $userId, [['role' => $role, 'content' => $content]]);
+    }
+
+    /**
+     * @param list<array{role: string, content: string}> $messages
+     */
+    public function appendMany(string $tripId, string $userId, array $messages): void
+    {
+        if ([] === $messages) {
+            return;
         }
 
-        $value = $item->get();
+        $item = $this->cache->getItem($this->key($tripId, $userId));
+        $history = $item->isHit() ? $this->sanitize($item->get()) : [];
+
+        foreach ($messages as $message) {
+            $history[] = $message;
+        }
+
+        if (\count($history) > self::MAX_MESSAGES) {
+            $history = \array_slice($history, -self::MAX_MESSAGES);
+        }
+
+        $item->set($history);
+        $this->cache->save($item);
+    }
+
+    /**
+     * @return list<array{role: string, content: string}>
+     */
+    private function sanitize(mixed $value): array
+    {
         if (!\is_array($value)) {
             return [];
         }
@@ -53,35 +86,6 @@ final readonly class ChatHistoryStore
         }
 
         return $result;
-    }
-
-    public function append(string $tripId, string $userId, string $role, string $content): void
-    {
-        $this->appendMany($tripId, $userId, [['role' => $role, 'content' => $content]]);
-    }
-
-    /**
-     * @param list<array{role: string, content: string}> $messages
-     */
-    public function appendMany(string $tripId, string $userId, array $messages): void
-    {
-        if ([] === $messages) {
-            return;
-        }
-
-        $history = $this->get($tripId, $userId);
-        foreach ($messages as $message) {
-            $history[] = $message;
-        }
-
-        if (\count($history) > self::MAX_MESSAGES) {
-            $history = \array_slice($history, -self::MAX_MESSAGES);
-        }
-
-        $item = $this->cache->getItem($this->key($tripId, $userId));
-        $item->set($history);
-
-        $this->cache->save($item);
     }
 
     private function key(string $tripId, string $userId): string
