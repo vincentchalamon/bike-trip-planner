@@ -7,6 +7,8 @@ import { useShallow } from "zustand/react/shallow";
 import { useUiStore } from "@/store/ui-store";
 import { useTripStore } from "@/store/trip-store";
 import { AiChatPanel } from "@/components/ai-chat-panel";
+import { ChatOfflineBadge } from "@/components/chat/ChatOfflineBadge";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import { cn } from "@/lib/utils";
 
 /**
@@ -23,6 +25,8 @@ import { cn } from "@/lib/utils";
  */
 export function AiBubble() {
   const t = useTranslations("aiBubble");
+  const tOffline = useTranslations("chat.offline");
+  const isOnline = useOnlineStatus();
 
   const { isBubbleOpen, hasSeenBubble, toggleBubble, closeBubble } = useUiStore(
     useShallow((s) => ({
@@ -50,20 +54,27 @@ export function AiBubble() {
       <button
         type="button"
         onClick={toggleBubble}
+        disabled={!isOnline}
+        aria-disabled={!isOnline}
         aria-label={isBubbleOpen ? t("closeAria") : t("openAria")}
         aria-expanded={isBubbleOpen}
         aria-controls="ai-chat-panel"
         data-testid="ai-bubble"
         data-open={isBubbleOpen || undefined}
+        data-offline={!isOnline || undefined}
+        title={!isOnline ? tOffline("label") : undefined}
         className={cn(
           "fixed bottom-6 right-6 z-30 inline-flex items-center justify-center",
           "h-14 w-14 rounded-full bg-brand text-white shadow-lg",
           "hover:bg-brand-hover transition-transform hover:scale-105",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-hover focus-visible:ring-offset-2",
+          !isOnline &&
+            "cursor-not-allowed opacity-60 hover:scale-100 hover:bg-brand",
         )}
       >
         <Sparkles className="h-6 w-6" aria-hidden="true" />
-        {!hasSeenBubble && (
+        {!isOnline && <ChatOfflineBadge />}
+        {isOnline && !hasSeenBubble && (
           <span
             data-testid="ai-bubble-badge"
             className={cn(

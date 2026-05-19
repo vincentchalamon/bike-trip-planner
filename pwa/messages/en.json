@@ -612,6 +612,17 @@
     "fullAnalysisHint": "This change requires a brand-new full analysis.",
     "relaunchAnalysis": "Relaunch analysis"
   },
+  "chat": {
+    "offline": {
+      "label": "You are offline. The assistant is unavailable."
+    },
+    "geoloc": {
+      "requesting": "Requesting your location…",
+      "denied": "Location permission denied. Update your browser settings to share it.",
+      "unavailable": "Your device cannot determine your location right now.",
+      "timeout": "Locating you took too long. Please try again."
+    }
+  },
   "aiOverview": {
     "title": "AI analysis",
     "subtitle": "Assistant-generated summary covering the whole trip",
