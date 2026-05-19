@@ -21,6 +21,7 @@ import { TripSummary } from "@/components/trip-summary";
 import { TripAiOverview } from "@/components/trip-ai-overview";
 import { TripHeader } from "@/components/trip-header";
 import { TripDownloads } from "@/components/trip-downloads";
+import { AiBubble } from "@/components/ai-bubble";
 import { StageProgressBar } from "@/components/stage-progress-bar";
 import { RoadbookMasterDetail } from "@/components/Timeline";
 import { ConfigPanel } from "@/components/config-panel";
@@ -201,9 +202,28 @@ export function TripPlanner({
     const onClearAiOverview = () => {
       useTripStore.getState().setAiOverview(null);
     };
+    const onSetActiveDayNumber = (e: Event) => {
+      const value = (e as CustomEvent<number | null>).detail;
+      useUiStore
+        .getState()
+        .setActiveDayNumber(typeof value === "number" ? value : null);
+    };
+    const onSetTripId = (e: Event) => {
+      const id = (e as CustomEvent<string | null>).detail;
+      if (id) {
+        useTripStore.getState().setTrip({ id, title: "Test", sourceUrl: "" });
+      } else {
+        useTripStore.getState().clearTrip();
+      }
+    };
     window.addEventListener("__test_set_processing", onProcessing);
     window.addEventListener("__test_set_analysis_started", onAnalysisStarted);
     window.addEventListener("__test_clear_ai_overview", onClearAiOverview);
+    window.addEventListener(
+      "__test_set_active_day_number",
+      onSetActiveDayNumber,
+    );
+    window.addEventListener("__test_set_trip_id", onSetTripId);
     return () => {
       window.removeEventListener("__test_set_processing", onProcessing);
       window.removeEventListener(
@@ -211,6 +231,11 @@ export function TripPlanner({
         onAnalysisStarted,
       );
       window.removeEventListener("__test_clear_ai_overview", onClearAiOverview);
+      window.removeEventListener(
+        "__test_set_active_day_number",
+        onSetActiveDayNumber,
+      );
+      window.removeEventListener("__test_set_trip_id", onSetTripId);
     };
   }, []);
 
@@ -838,6 +863,11 @@ export function TripPlanner({
 
         {/* Keyboard shortcuts help modal */}
         <KeyboardHelpModal />
+
+        {/* Floating AI assistant — visible on Acte 1.5 (Aperçu) and Acte 3
+            (Mon voyage), hidden during Acte 2 thanks to the internal
+            `isAnalysisPhaseActive` guard. */}
+        <AiBubble />
       </main>
     </GpxDropZone>
   );

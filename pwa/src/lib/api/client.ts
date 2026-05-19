@@ -1,4 +1,5 @@
 import createClient, { type Middleware } from "openapi-fetch";
+import { z } from "zod";
 import type { components, operations, paths } from "./schema";
 import { API_URL } from "@/lib/constants";
 import { useAuthStore } from "@/store/auth-store";
@@ -374,6 +375,82 @@ export async function launchTripAnalysis(tripId: string): Promise<boolean> {
   });
   return res.ok;
 }
+
+/**
+ * Body of `POST /trips/{id}/chat`. Mirrors `App\ApiResource\TripChatRequest`
+ * on the backend; declared locally until `make typegen` ingests the schema
+ * change introduced by issue #309.
+ */
+export interface TripChatRequestBody {
+  message: string;
+  context?: {
+    currentStage: number | null;
+  } | null;
+}
+
+/**
+ * Response of `POST /trips/{id}/chat`. Mirrors `App\ApiResource\TripChatResponse`
+ * on the backend (`tripId`, `action`, `params`, `response`, `dispatched`).
+ */
+export interface TripChatResponseBody {
+  tripId: string;
+  action: string;
+  params: Record<string, unknown>;
+  response: string;
+  dispatched: boolean;
+}
+
+/**
+ * Send a natural-language instruction to the LLaMA 3B dialogue assistant.
+ *
+ * Until the OpenAPI schema is regenerated (after #309 lands on main), the
+ * `/trips/{id}/chat` route is not yet exposed via `apiClient.POST`, so this
+ * function talks to the server through {@link apiFetch}. Once the typegen
+ * catches up, this can be swapped for a typed call.
+ */
+export async function sendTripChat(
+  tripId: string,
+  body: TripChatRequestBody,
+  signal?: AbortSignal,
+): Promise<{
+  data: TripChatResponseBody | null;
+  error: string | null;
+  status: number;
+}> {
+  const res = await apiFetch(`${API_URL}/trips/${tripId}/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/ld+json",
+      Accept: "application/ld+json",
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+
+  if (!res.ok) {
+    return { data: null, error: `HTTP ${res.status}`, status: res.status };
+  }
+
+  const raw: unknown = await res.json();
+  const parsed = tripChatResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      data: null,
+      error: "Invalid response shape",
+      status: res.status,
+    };
+  }
+
+  return { data: parsed.data, error: null, status: res.status };
+}
+
+const tripChatResponseSchema = z.object({
+  tripId: z.string(),
+  action: z.string(),
+  params: z.record(z.string(), z.unknown()),
+  response: z.string(),
+  dispatched: z.boolean(),
+});
 
 /**
  * Duplicate an existing trip (deep-clone with all stages and settings).

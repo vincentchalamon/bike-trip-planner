@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,8 @@ import {
   duplicateTrip,
   launchTripAnalysis,
   applyBatchRecompute,
+  sendTripChat,
+  type TripChatResponseBody,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
 import {
@@ -138,9 +140,21 @@ export function useTripPlanner() {
   const preDragPacingSnapshot = useRef<ReturnType<
     typeof getUndoableSlice
   > | null>(null);
+  const chatAbortRef = useRef<AbortController | null>(null);
 
   const tripId = trip?.id ?? null;
   useMercure(tripId, mercureToken);
+
+  // Chat history is scoped to a single trip session. Wipe it whenever the
+  // user switches trip so messages from trip A don't bleed into trip B's
+  // panel after navigation. Also abort any chat request still in flight so
+  // the LLM server doesn't keep generating tokens for a panel that's gone.
+  useEffect(() => {
+    if (!tripId) return;
+    chatAbortRef.current?.abort();
+    chatAbortRef.current = null;
+    useUiStore.getState().clearHistory();
+  }, [tripId]);
 
   async function handleMagicLink(sourceUrl: string) {
     actions.clearTrip();
@@ -716,6 +730,102 @@ export function useTripPlanner() {
     }
   }
 
+  /**
+   * Dispatch a chat turn to `POST /trips/{id}/chat`, append both the user
+   * message and the assistant reply to {@link useUiStore.chatHistory}, and
+   * surface any actionable response (`split_stage`, `adjust_distance`, …) so
+   * downstream wiring can trigger the matching store action.
+   *
+   * The actual recomputation hook-up is delivered by issue #311 — this hook
+   * focuses on the round-trip, history bookkeeping, and exposing the parsed
+   * action via the returned value (and the assistant message in the store).
+   */
+  async function sendChatMessage(
+    text: string,
+  ): Promise<TripChatResponseBody | null> {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    if (trimmed.length > 2000) return null;
+    if (!tripId) return null;
+
+    const uiStore = useUiStore.getState();
+    uiStore.appendMessage({
+      role: "user",
+      content: trimmed,
+      ts: Date.now(),
+    });
+    uiStore.setChatSending(true);
+
+    // Track the in-flight request so the tripId useEffect can abort it on a
+    // trip switch. Any previous controller belongs to a settled request — we
+    // overwrite it without aborting (the request already completed).
+    const controller = new AbortController();
+    chatAbortRef.current = controller;
+
+    try {
+      const { data, error, status } = await sendTripChat(
+        tripId,
+        {
+          message: trimmed,
+          context: { currentStage: uiStore.currentContext.currentStage },
+        },
+        controller.signal,
+      );
+
+      // Drop the response if the user switched trips while it was in-flight —
+      // appending it would interleave trip A's reply into trip B's panel.
+      if (useTripStore.getState().trip?.id !== tripId) {
+        return null;
+      }
+
+      if (error || !data) {
+        const message =
+          status === 429
+            ? t("aiBubble.errorRateLimit")
+            : status === 503
+              ? t("aiBubble.errorUnavailable")
+              : t("aiBubble.errorGeneric");
+        useUiStore.getState().appendMessage({
+          role: "assistant",
+          content: message,
+          ts: Date.now(),
+        });
+        return null;
+      }
+
+      useUiStore.getState().appendMessage({
+        role: "assistant",
+        content: data.response,
+        ts: Date.now(),
+      });
+
+      return data;
+    } catch (err) {
+      // Drop the error message if the user switched trips while the request
+      // was in flight — appending it would surface the previous trip's
+      // failure inside the new trip's panel.
+      if (useTripStore.getState().trip?.id !== tripId) {
+        return null;
+      }
+
+      const message = isNetworkError(err)
+        ? t("aiBubble.errorNetwork")
+        : t("aiBubble.errorGeneric");
+      useUiStore.getState().appendMessage({
+        role: "assistant",
+        content: message,
+        ts: Date.now(),
+      });
+      return null;
+    } finally {
+      // Only flip our own in-flight indicator off — a trip switch may have
+      // already started a fresh request whose flag we must not clobber.
+      if (useTripStore.getState().trip?.id === tripId) {
+        useUiStore.getState().setChatSending(false);
+      }
+    }
+  }
+
   const [isShareModalOpen, setShareModalOpen] = useState(false);
 
   function handleShareTrip(): void {
@@ -954,5 +1064,6 @@ export function useTripPlanner() {
     handleApplyBatch,
     handleCancelBatch,
     queueModification: actions.queueModification,
+    sendChatMessage,
   };
 }
