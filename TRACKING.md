@@ -550,7 +550,40 @@ Assistant conversationnel via bulle flottante, LLaMA 3B pour interpréter les in
 
 ---
 
-## Sprint 32 — Analytics d'usage & conformité RGPD + parcours compte
+## Sprint 32 — Chat in-ride : assistant POI à proximité avec détour
+
+Extension du chat LLaMA 3B (sprint 31) au cas d'usage **in-ride** : pendant un voyage, l'utilisateur consulte son trip et demande à l'assistant de trouver un POI proche (friterie, abri, eau, mécano…) pour gérer un imprévu (faim, pluie, panne). Le chat existant (`POST /trips/{id}/chat`) détecte la présence d'une **position GPS** dans le payload pour basculer en mode in-ride : recherche Overpass + filtrage `opening_hours` + calcul approximatif du détour (Haversine + projection orthogonale) + deeplink Google Maps. Pas de recalcul GPX (V2 future) — l'itinéraire de base reste inchangé.
+
+| Ordre | ID  | Titre                                                                                                                | Effort | PRs | Dépend de |
+|-------|-----|----------------------------------------------------------------------------------------------------------------------|--------|-----|-----------|
+| 1     | [#458](https://github.com/vincentchalamon/bike-trip-planner/issues/458) | Entité `TripChatMessage` + repository + migration Doctrine (persistance long-terme par trip)                         | M      |     | sprint 31    |
+| 2     | [#459](https://github.com/vincentchalamon/bike-trip-planner/issues/459) | Endpoint `GET /trips/{id}/chat-history` : pagination de l'historique persisté                                        | S      |     | #458         |
+| 3     | [#460](https://github.com/vincentchalamon/bike-trip-planner/issues/460) | `OpeningHoursParser` PHP + benchmark lib tierce + tests cas OSM courants                                             | M      |     | —            |
+| 4     | [#461](https://github.com/vincentchalamon/bike-trip-planner/issues/461) | `DetourCalculator` : projection orthogonale POI → polyline restante + distance détour (Haversine)                    | M      |     | —            |
+| 5     | [#462](https://github.com/vincentchalamon/bike-trip-planner/issues/462) | `InRideAssistant` + `PoiIntentDetector` + `DeeplinkBuilder` + extensions `OsmOverpassQueryBuilder` (eau, abri)        | L      |     | #460, #461   |
+| 6     | [#463](https://github.com/vincentchalamon/bike-trip-planner/issues/463) | Branchement `TripChatProcessor` : détection mode in-ride par position, `ACTION_FIND_POI`, prompt système dédié        | M      |     | #462         |
+| 7     | [#464](https://github.com/vincentchalamon/bike-trip-planner/issues/464) | Hooks PWA `useGeolocation` (one-shot) + `useOnlineStatus` + badge offline sur bouton flottant                         | S      |     | —            |
+| 8     | [#465](https://github.com/vincentchalamon/bike-trip-planner/issues/465) | Composants PWA `PoiCard` + `InRideDisclaimer` + `ChatHistoryLoader` + i18n FR/EN + tests Playwright in-ride/offline   | L      |     | #459, #463, #464 |
+
+### Recette Sprint 32
+
+- **Tests E2E :** `pwa/tests/e2e/chat-in-ride.spec.ts`, `pwa/tests/e2e/chat-offline.spec.ts`
+- **Checklist manuelle :**
+  - [ ] Mobile (iPhone 14 Pro emulator) : bouton flottant visible, drawer plein écran
+  - [ ] Autoriser géoloc → top 3 POI affichés avec nom, distance, horaires, badge détour
+  - [ ] Bouton « Ouvrir dans Google Maps » → deeplink `?api=1&travelmode=bicycling` avec coords correctes
+  - [ ] Disclaimer « votre itinéraire de base n'est pas modifié » visible sous les cards
+  - [ ] Filtre horaires : POI fermé ou fermeture < 1h est exclu ; POI sans `opening_hours` affiché avec avertissement
+  - [ ] Persistance : refresh page → historique rechargé depuis `/chat-history`
+  - [ ] Refus géoloc → message clair, le chat planning continue de fonctionner
+  - [ ] DevTools Offline → badge offline + bouton désactivé
+  - [ ] Non-régression : les 7 actions planning existantes (split, merge, add waypoint, change accommodation, adjust distance, change route, info) marchent sans géoloc
+  - [ ] PHPStan L9 OK, ESLint OK, Playwright OK
+  - [ ] `make typegen` : types frontend cohérents avec `TripChatResponse` étendu
+
+---
+
+## Sprint 33 — Analytics d'usage & conformité RGPD + parcours compte
 
 Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes, profil trips, valeur features, rétention/UX) via **Plausible Analytics** (privacy-first, RGPD-compatible, sans cookie ni empreinte navigateur), avec prérequis RGPD (privacy policy, mentions légales, anonymisation user). **Décision arbitrage v3 #375** : abandon de l'implémentation native (UsageEvent partitionnée + endpoint `/events` + vue matérialisée) au profit de Plausible — simplification majeure du sprint. Voir issue [#370](https://github.com/vincentchalamon/bike-trip-planner/issues/370) (épic). **Sprint élargi** avec 3 issues compte/top bar/cookies (cf. issue #375 §13, §14, §15).
 
@@ -567,7 +600,7 @@ Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes,
 | 9     | [#384](https://github.com/vincentchalamon/bike-trip-planner/issues/384) | Refonte top bar desktop (logo + tabs + undo/redo + Partager + ? aide unifiée + pills FR\|EN + thème + profil)    | L      |     | #383       |
 | 10    | [#385](https://github.com/vincentchalamon/bike-trip-planner/issues/385) | Bannière cookies bas d'écran + modale granularité (Tout accepter / refuser / Personnaliser) — gating Plausible    | M      |     | TBD item 1, #5 (TBD) |
 
-### Recette Sprint 32
+### Recette Sprint 33
 
 - **Checklist manuelle :**
   - [ ] Page `/privacy` accessible et complète (base légale, conservation, droits utilisateurs, mention Plausible)
@@ -585,9 +618,9 @@ Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes,
 
 ---
 
-## Sprint 33 — Recette complète & Audit
+## Sprint 34 — Recette complète & Audit
 
-Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 31, hors sprint 32 RGPD/parcours compte qui a sa propre recette) et audit complet : performance, sécurité, accessibilité, SEO, qualité de code, couverture de tests. Deux phases : **audit** (cartographier les problèmes) puis **corrections** (fixer par lots thématiques).
+Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 32, hors sprint 33 RGPD/parcours compte qui a sa propre recette) et audit complet : performance, sécurité, accessibilité, SEO, qualité de code, couverture de tests. Deux phases : **audit** (cartographier les problèmes) puis **corrections** (fixer par lots thématiques).
 
 ### Phase 1 — Outillage automatisé
 
@@ -645,7 +678,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 31
 | 35    | Fix : performance et polish (P3)                           | M      |
 | 36    | Re-test : golden path A final après corrections            | M      |
 
-### Recette Sprint 33 — Golden Path A (Komoot)
+### Recette Sprint 34 — Golden Path A (Komoot)
 
 - **Checklist :**
   - [ ] Connexion via magic link (email → Mailcatcher → clic → connecté)
@@ -663,7 +696,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 31
   - [ ] Dupliquer le trip → modifier le duplicata → l'original est inchangé
   - [ ] Se déconnecter → se reconnecter → le trip est toujours là
 
-### Recette Sprint 33 — Cas limites
+### Recette Sprint 34 — Cas limites
 
 - **Inputs invalides :**
   - [ ] GPX malformé (XML invalide) → message d'erreur clair
@@ -688,7 +721,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 31
   - [ ] 0 hébergement trouvé → message informatif
   - [ ] Undo jusqu'au début → bouton disabled, pas de crash
 
-### Recette Sprint 33 — Audit visuel multi-device
+### Recette Sprint 34 — Audit visuel multi-device
 
 | Device | Navigateur | Thème | Langue | OK ? |
 |---|---|---|---|---|
@@ -708,7 +741,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 31
   - [ ] Switch de vue (timeline/map/split) fonctionnel
   - [ ] Pas de flash blanc au chargement en dark mode
 
-### Recette Sprint 33 — Audits automatisés
+### Recette Sprint 34 — Audits automatisés
 
 - **Seuils :**
   - [ ] `make qa` : 0 erreur
@@ -730,7 +763,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 31
 
 ---
 
-## Sprint 34 — Garmin Connect
+## Sprint 35 — Garmin Connect
 
 Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase 2). Voir [ADR-018](docs/adr/adr-018-garmin-export-and-device-sync-strategy.md). Test local via ngrok pour le callback OAuth. Le visuel des menus downloads et de la modale partage a déjà été refondu en sprint 27 — cette implémentation y ajoute l'option FIT et la 4ᵉ section Garmin Connect en consommant les tokens design en place.
 
@@ -740,9 +773,9 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 |-------|-----------------------------------------------------------------------|----------------|--------|-----|------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | 1     | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Garmin Connect | L      | 3   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76), sprint 27                                                                            |
 
-### Recette Sprint 34
+### Recette Sprint 35
 
-- **Tests E2E :** `tests/recette/sprint-34.spec.ts`
+- **Tests E2E :** `tests/recette/sprint-35.spec.ts`
 - **Checklist manuelle :**
   - [ ] Export FIT téléchargeable par étape
   - [ ] Flux OAuth Garmin Connect complet (via ngrok)
@@ -751,7 +784,7 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 
 ---
 
-## Sprint 35 — Déploiement
+## Sprint 36 — Déploiement
 
 Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructure-strategy.md). Issues GitHub à créer au moment venu. **Inclut Ollama** dans la stack production (conséquence de la décision « Ollama = dépendance dure » prise au sprint 29).
 
@@ -766,7 +799,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 7     | Migration données + smoke test production (incl. passe LLaMA 8B) | M      |
 | 8     | [#312](https://github.com/vincentchalamon/bike-trip-planner/issues/312) Feature-deploy : preview par PR (Étapes 1-7) | L |
 
-### Recette Sprint 35
+### Recette Sprint 36
 
 - **Checklist manuelle :**
   - [ ] Application accessible via URL publique
@@ -836,8 +869,9 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 29        | LLaMA 8B : analyse 2 passes              | 3       | ~4           |
 | 30        | Frontend IA : résumés hybrides           | 2       | ~3           |
 | 31        | Bulle IA (LLaMA 3B) dialogue             | 3       | ~4           |
-| 32        | Analytics Plausible + RGPD + parcours compte | 10    | ~10          |
-| 33        | Recette complète & Audit                 | 36      | ~12          |
-| 34        | Garmin Connect                           | 1       | 3            |
-| 35        | Déploiement (incl. Ollama prod)          | 8       | ~8           |
-| **Total** |                                          | **184** | **~194**     |
+| 32        | Chat in-ride : POI + détour              | 8       | ~8           |
+| 33        | Analytics Plausible + RGPD + parcours compte | 10    | ~10          |
+| 34        | Recette complète & Audit                 | 36      | ~12          |
+| 35        | Garmin Connect                           | 1       | 3            |
+| 36        | Déploiement (incl. Ollama prod)          | 8       | ~8           |
+| **Total** |                                          | **192** | **~202**     |
