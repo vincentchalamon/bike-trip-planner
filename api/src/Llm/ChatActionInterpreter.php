@@ -140,6 +140,7 @@ final readonly class ChatActionInterpreter
             ChatAction::ACTION_ADD_WAYPOINT => $this->normaliseAddWaypoint($params),
             ChatAction::ACTION_CHANGE_ACCOMMODATION => $this->normaliseChangeAccommodation($params),
             ChatAction::ACTION_ADJUST_DISTANCE => $this->normaliseAdjustDistance($params),
+            ChatAction::ACTION_CHANGE_ROUTE => [],
             ChatAction::ACTION_INFO => [],
             default => null,
         };

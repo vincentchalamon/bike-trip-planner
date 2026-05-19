@@ -56,4 +56,21 @@ interface LlmAnalysisTrackerInterface
      * retried by the messenger.
      */
     public function claimTripReadyPublication(string $tripId): bool;
+
+    /**
+     * Marks the next pending enrichment cycle as "skip LLaMA 8B re-analysis".
+     *
+     * Used by chat-driven inline edits (issue #311): when the rider acts on the
+     * trip via the AI bubble, the recomputation pipeline reruns the geographic
+     * scans but the AI overview should NOT be invalidated by default. The flag
+     * is consumed by the gate handler so it only impacts the very next cycle.
+     */
+    public function markSkipAiAnalysis(string $tripId): void;
+
+    /**
+     * Atomically reads and clears the "skip LLaMA 8B re-analysis" marker.
+     *
+     * Returns true when the marker was set (and is now consumed), false otherwise.
+     */
+    public function consumeSkipAiAnalysis(string $tripId): bool;
 }

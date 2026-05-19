@@ -5,12 +5,19 @@ declare(strict_types=1);
 namespace App\Tests\Unit\State;
 
 use ApiPlatform\Metadata\Post;
+use App\ApiResource\Model\Coordinate;
+use App\ApiResource\Model\TripChatContext;
+use App\ApiResource\Stage;
 use App\ApiResource\TripChatRequest;
+use App\ApiResource\TripRequest;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
+use App\Message\RecalculateStages;
+use App\Repository\TripRequestRepositoryInterface;
 use App\State\TripChatProcessor;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -19,17 +26,29 @@ use Psr\Log\NullLogger;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * Unit coverage for the rate-limit branch of {@see TripChatProcessor}.
+ * Verifies that the chat processor maps each parsed action to the right
+ * inline recomputation dispatch (issue #311):
+ *  - `split_stage` → RecalculateStages on 2 halves
+ *  - `merge_stages` → RecalculateStages on the merged stage
+ *  - `add_waypoint` → RecalculateStages on 1 stage
+ *  - `change_accommodation` → RecalculateStages on arrival + next stage
+ *  - `adjust_distance` → RecalculateStages on 1 stage
+ *  - `info` → no dispatch
+ *  - `change_route` → no dispatch, requiresFullAnalysis=true.
  *
- * The functional layer cannot exercise the cross-request limiter state because
- * the test cache pool (array adapter) is reset between kernel requests. This
- * test wires the processor against an in-memory rate limiter sized so the
- * second `process()` call exhausts the quota and triggers the 429 branch.
+ * Also covers the 429 rate-limit branch — exercised here because the test
+ * cache pool resets between kernel requests at the functional layer so
+ * a multi-request HTTP test cannot accumulate limiter state.
+ *
+ * All recomputation dispatches must carry `skipAiAnalysis: true` so the
+ * LLaMA 8B re-analysis is skipped by default during inline edits.
  */
 #[AllowMockObjectsWithoutExpectations]
 final class TripChatProcessorTest extends TestCase
@@ -48,52 +67,411 @@ final class TripChatProcessorTest extends TestCase
     }
 
     #[Test]
+    public function splitStageActionDispatchesRecomputeForBothHalves(): void
+    {
+        $bus = $this->newMessageBus();
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('split_stage', ['stage' => 3], 'OK'),
+            stagesCount: 5,
+            messageBus: $bus,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest("Coupe l'étape 3 en deux", new TripChatContext(currentStage: 3)),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame('split_stage', $response->action);
+        self::assertTrue($response->dispatched);
+        self::assertSame([3, 4], $response->impactedStageNumbers);
+        self::assertFalse($response->requiresFullAnalysis);
+
+        $messages = $this->collectDispatched($bus, RecalculateStages::class);
+        self::assertCount(1, $messages);
+        self::assertSame([2, 3], $messages[0]->affectedIndices);
+        self::assertTrue($messages[0]->skipAiAnalysis);
+    }
+
+    /**
+     * Splitting the last stage of the trip yields a brand-new day number beyond
+     * the current stage list. Both halves are still surfaced in
+     * {@see TripChatResponse::$impactedStageNumbers} so the frontend can shimmer
+     * the new slot once the recomputation lands.
+     */
+    #[Test]
+    public function splitLastStageActionDispatchesBothHalves(): void
+    {
+        $bus = $this->newMessageBus();
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('split_stage', ['stage' => 5], 'OK'),
+            stagesCount: 5,
+            messageBus: $bus,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest('Coupe la dernière étape en deux'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame([5, 6], $response->impactedStageNumbers);
+        self::assertTrue($response->dispatched);
+
+        $messages = $this->collectDispatched($bus, RecalculateStages::class);
+        self::assertCount(1, $messages);
+        self::assertSame([4, 5], $messages[0]->affectedIndices);
+        self::assertTrue($messages[0]->skipAiAnalysis);
+    }
+
+    #[Test]
+    public function mergeStagesActionDispatchesRecomputeForMergedStage(): void
+    {
+        $bus = $this->newMessageBus();
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('merge_stages', ['stages' => [2, 3]], 'OK'),
+            stagesCount: 5,
+            messageBus: $bus,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest('Fusionne les étapes 2 et 3'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertTrue($response->dispatched);
+        self::assertSame([2], $response->impactedStageNumbers);
+
+        $messages = $this->collectDispatched($bus, RecalculateStages::class);
+        self::assertCount(1, $messages);
+        self::assertSame([1], $messages[0]->affectedIndices);
+        self::assertTrue($messages[0]->skipAiAnalysis);
+    }
+
+    /**
+     * The system prompt does not constrain the order of the merge pair, so the
+     * LLM may emit `{"stages": [3, 2]}` for the same intent. The processor must
+     * normalise the surviving stage to the lower index so the right card
+     * shimmers in the UI.
+     */
+    #[Test]
+    public function mergeStagesReversedOrderDispatchesLowerStage(): void
+    {
+        $bus = $this->newMessageBus();
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('merge_stages', ['stages' => [3, 2]], 'OK'),
+            stagesCount: 5,
+            messageBus: $bus,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest('Fusionne les étapes 2 et 3'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame([2], $response->impactedStageNumbers);
+        $messages = $this->collectDispatched($bus, RecalculateStages::class);
+        self::assertCount(1, $messages);
+        self::assertSame([1], $messages[0]->affectedIndices);
+    }
+
+    #[Test]
+    public function addWaypointActionDispatchesRecomputeForTheStage(): void
+    {
+        $bus = $this->newMessageBus();
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope(
+                'add_waypoint',
+                ['name' => 'Mont Cassel', 'stage' => 4],
+                'Ajout',
+            ),
+            stagesCount: 5,
+            messageBus: $bus,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest('Ajoute un détour par le Mont Cassel'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertTrue($response->dispatched);
+        self::assertSame([4], $response->impactedStageNumbers);
+
+        $messages = $this->collectDispatched($bus, RecalculateStages::class);
+        self::assertCount(1, $messages);
+        self::assertSame([3], $messages[0]->affectedIndices);
+        self::assertTrue($messages[0]->skipAiAnalysis);
+    }
+
+    /**
+     * The dialogue prompt allows `add_waypoint` with `stage: null` when the rider
+     * does not specify a day. In that case the processor returns a successful
+     * action but does not dispatch any recomputation — the frontend reads
+     * `dispatched=false` and surfaces the conversational reply only.
+     *
+     * Behaviour is documented here so callers don't mistake the no-op for a bug.
+     */
+    #[Test]
+    public function addWaypointWithNullStageIsAcceptedButDispatchesNothing(): void
+    {
+        $bus = $this->newMessageBus();
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope(
+                'add_waypoint',
+                ['name' => 'Mont Cassel', 'stage' => null],
+                'Ajout sans étape précise',
+            ),
+            stagesCount: 5,
+            messageBus: $bus,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest("Ajoute un point d'eau quelque part"),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame('add_waypoint', $response->action);
+        self::assertFalse($response->dispatched);
+        self::assertSame([], $response->impactedStageNumbers);
+        self::assertEmpty($this->collectDispatched($bus, RecalculateStages::class));
+    }
+
+    #[Test]
+    public function changeAccommodationActionRecomputesArrivalAndNextStage(): void
+    {
+        $bus = $this->newMessageBus();
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope(
+                'change_accommodation',
+                ['stage' => 2, 'type' => 'guest_house'],
+                'OK',
+            ),
+            stagesCount: 5,
+            messageBus: $bus,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest('Sur cette étape je préfère dormir en gîte'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertTrue($response->dispatched);
+        self::assertSame([2, 3], $response->impactedStageNumbers);
+
+        $messages = $this->collectDispatched($bus, RecalculateStages::class);
+        self::assertCount(1, $messages);
+        self::assertSame([1, 2], $messages[0]->affectedIndices);
+        self::assertTrue($messages[0]->skipAiAnalysis);
+    }
+
+    #[Test]
+    public function changeAccommodationOnLastStageOnlyRecomputesTheStage(): void
+    {
+        $bus = $this->newMessageBus();
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope(
+                'change_accommodation',
+                ['stage' => 5, 'type' => 'camp_site'],
+                'OK',
+            ),
+            stagesCount: 5,
+            messageBus: $bus,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest('Camping pour la dernière étape'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame([5], $response->impactedStageNumbers);
+
+        $messages = $this->collectDispatched($bus, RecalculateStages::class);
+        self::assertCount(1, $messages);
+        self::assertSame([4], $messages[0]->affectedIndices);
+    }
+
+    #[Test]
+    public function adjustDistanceActionDispatchesRecomputeForOneStage(): void
+    {
+        $bus = $this->newMessageBus();
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope(
+                'adjust_distance',
+                ['stage' => 5, 'km' => 95],
+                'OK',
+            ),
+            stagesCount: 5,
+            messageBus: $bus,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest("Allonge l'étape 5 à 95 km"),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertTrue($response->dispatched);
+        self::assertSame([5], $response->impactedStageNumbers);
+
+        $messages = $this->collectDispatched($bus, RecalculateStages::class);
+        self::assertCount(1, $messages);
+        self::assertSame([4], $messages[0]->affectedIndices);
+        self::assertTrue($messages[0]->skipAiAnalysis);
+    }
+
+    #[Test]
+    public function infoActionDispatchesNothing(): void
+    {
+        $bus = $this->newMessageBus();
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('info', [], 'Le gravel désigne…'),
+            stagesCount: 5,
+            messageBus: $bus,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest("C'est quoi le gravel ?"),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame('info', $response->action);
+        self::assertFalse($response->dispatched);
+        self::assertSame([], $response->impactedStageNumbers);
+        self::assertFalse($response->requiresFullAnalysis);
+
+        self::assertCount(0, $this->collectDispatched($bus, RecalculateStages::class));
+    }
+
+    #[Test]
+    public function changeRouteActionFlagsFullAnalysisAndDispatchesNothing(): void
+    {
+        $bus = $this->newMessageBus();
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope(
+                'change_route',
+                [],
+                'Cette modification touche tout le tracé.',
+            ),
+            stagesCount: 5,
+            messageBus: $bus,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest("Change l'itinéraire pour passer par la côte"),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame('change_route', $response->action);
+        self::assertTrue($response->requiresFullAnalysis);
+        self::assertFalse($response->dispatched);
+        self::assertSame([], $response->impactedStageNumbers);
+
+        self::assertCount(0, $this->collectDispatched($bus, RecalculateStages::class));
+    }
+
+    #[Test]
+    public function dispatchesNothingWhenStageNumberIsOutOfRange(): void
+    {
+        $bus = $this->newMessageBus();
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('split_stage', ['stage' => 99], 'OK'),
+            stagesCount: 5,
+            messageBus: $bus,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest("Coupe l'étape 99"),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertFalse($response->dispatched);
+        self::assertSame([], $response->impactedStageNumbers);
+        self::assertCount(0, $this->collectDispatched($bus, RecalculateStages::class));
+    }
+
+    #[Test]
     public function processThrows429WhenRateLimitExceeded(): void
     {
-        $processor = $this->newProcessor(limit: 1);
-        $request = new TripChatRequest('Bonjour');
-        $operation = new Post();
+        $factory = new RateLimiterFactory(
+            ['id' => 'trip_chat_test_429', 'policy' => 'fixed_window', 'limit' => 1, 'interval' => '1 hour'],
+            new InMemoryStorage(),
+        );
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('info', [], 'OK'),
+            stagesCount: 1,
+            messageBus: $this->newMessageBus(),
+            limiterFactory: $factory,
+        );
 
         // First call consumes the only token.
-        $processor->process($request, $operation, ['id' => self::TRIP_ID]);
+        $processor->process(new TripChatRequest('Bonjour'), new Post(), ['id' => self::TRIP_ID]);
 
         // Second call must hit the limiter and trip the 429 branch.
         $this->expectException(TooManyRequestsHttpException::class);
-        $processor->process($request, $operation, ['id' => self::TRIP_ID]);
+        $processor->process(new TripChatRequest('Encore'), new Post(), ['id' => self::TRIP_ID]);
     }
 
-    private function newProcessor(int $limit): TripChatProcessor
-    {
+    private function newProcessor(
+        string $llmContent,
+        int $stagesCount,
+        MessageBusInterface $messageBus,
+        ?RateLimiterFactory $limiterFactory = null,
+    ): TripChatProcessor {
+        $tripRequest = new TripRequest();
+        $stages = [];
+        for ($i = 1; $i <= $stagesCount; ++$i) {
+            $stages[] = new Stage(
+                tripId: self::TRIP_ID,
+                dayNumber: $i,
+                distance: 50.0,
+                elevation: 200.0,
+                startPoint: new Coordinate(48.0, 2.0, 0.0),
+                endPoint: new Coordinate(48.1, 2.1, 0.0),
+            );
+        }
+
+        $repository = $this->createStub(TripRequestRepositoryInterface::class);
+        $repository->method('getRequest')->willReturn($tripRequest);
+        $repository->method('getStages')->willReturn($stages);
+
+
         $llmClient = $this->createStub(LlmClientInterface::class);
         $llmClient->method('isEnabled')->willReturn(true);
         $llmClient->method('chat')->willReturn([
-            'message' => [
-                'role' => 'assistant',
-                'content' => json_encode([
-                    'action' => 'info',
-                    'params' => [],
-                    'response' => 'OK',
-                ], \JSON_THROW_ON_ERROR),
-            ],
+            'message' => ['role' => 'assistant', 'content' => $llmContent],
         ]);
 
+        $promptLoader = new SystemPromptLoader($this->createPromptFixtureDir());
+        $historyStore = new ChatHistoryStore(new ArrayAdapter());
+
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('increment')->willReturn(42);
+
         $user = new User('chat@example.com', Uuid::v7());
+
         $security = $this->createStub(Security::class);
         $security->method('getUser')->willReturn($user);
 
-        $factory = new RateLimiterFactory(
-            ['id' => 'trip_chat', 'policy' => 'fixed_window', 'limit' => $limit, 'interval' => '1 hour'],
-            new InMemoryStorage(),
-        );
-
         return new TripChatProcessor(
+            tripStateManager: $repository,
             llmClient: $llmClient,
-            promptLoader: new SystemPromptLoader($this->createPromptFixtureDir()),
+            promptLoader: $promptLoader,
             interpreter: new ChatActionInterpreter(new NullLogger()),
-            historyStore: new ChatHistoryStore(new ArrayAdapter()),
+            historyStore: $historyStore,
             security: $security,
             logger: new NullLogger(),
-            tripChatLimiter: $factory,
+            messageBus: $messageBus,
+            generationTracker: $generationTracker,
+            tripChatLimiter: $limiterFactory ?? $this->newNoLimiterFactory(),
         );
     }
 
@@ -105,5 +483,64 @@ final class TripChatProcessorTest extends TestCase
         $this->promptFixtureDir = $dir;
 
         return $dir;
+    }
+
+    private function newMessageBus(): MessageBusInterface
+    {
+        return new class () implements MessageBusInterface {
+            /** @var list<Envelope> */
+            public array $dispatched = [];
+
+            public function dispatch(object $message, array $stamps = []): Envelope
+            {
+                $envelope = $message instanceof Envelope ? $message : new Envelope($message, $stamps);
+                $this->dispatched[] = $envelope;
+
+                return $envelope;
+            }
+        };
+    }
+
+    /**
+     * @template T of object
+     *
+     * @param class-string<T> $messageClass
+     *
+     * @return list<T>
+     */
+    private function collectDispatched(MessageBusInterface $bus, string $messageClass): array
+    {
+        \assert(property_exists($bus, 'dispatched'));
+
+        $collected = [];
+        /** @var Envelope $envelope */
+        foreach ($bus->dispatched as $envelope) {
+            $message = $envelope->getMessage();
+            if ($message instanceof $messageClass) {
+                $collected[] = $message;
+            }
+        }
+
+        return $collected;
+    }
+
+    /**
+     * @param array<string, mixed> $params
+     */
+    private function jsonEnvelope(string $action, array $params, string $response): string
+    {
+        return json_encode([
+            'action' => $action,
+            'params' => $params,
+            'response' => $response,
+        ], \JSON_THROW_ON_ERROR);
+    }
+
+    private function newNoLimiterFactory(): RateLimiterFactory
+    {
+        return new RateLimiterFactory(
+            ['id' => 'trip_chat_test', 'policy' => 'no_limit'],
+            new InMemoryStorage(),
+        );
     }
 }

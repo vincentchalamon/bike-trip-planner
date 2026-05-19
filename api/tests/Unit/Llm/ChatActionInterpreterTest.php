@@ -216,6 +216,22 @@ final class ChatActionInterpreterTest extends TestCase
     }
 
     #[Test]
+    public function parsesChangeRouteAction(): void
+    {
+        $action = $this->interpreter->interpret(
+            json_encode([
+                'action' => 'change_route',
+                'params' => [],
+                'response' => 'Cette modification touche tout le tracé.',
+            ], \JSON_THROW_ON_ERROR),
+        );
+
+        $this->assertSame(ChatAction::ACTION_CHANGE_ROUTE, $action->action);
+        $this->assertSame([], $action->params);
+        $this->assertStringContainsString('tracé', $action->response);
+    }
+
+    #[Test]
     public function malformedJsonFallsBackToInfo(): void
     {
         $action = $this->interpreter->interpret('not a json payload');

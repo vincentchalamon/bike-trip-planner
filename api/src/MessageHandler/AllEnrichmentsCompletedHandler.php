@@ -81,9 +81,17 @@ final readonly class AllEnrichmentsCompletedHandler
 
         $analysableStages = $this->countAnalysableStages($stages);
 
-        // Short-circuit: when the LLM is disabled OR there is no stage to analyse
-        // (e.g. all rest days), publish TRIP_READY directly — no AI overview to await.
-        if (!$this->llmClient->isEnabled() || 0 === $analysableStages) {
+        // Issue #311 — chat-driven inline edits set a one-shot "skip AI" marker via
+        // the LlmAnalysisTracker. When present, consume it now so the gate behaves
+        // exactly like the "LLM disabled" branch: publish TRIP_READY directly and
+        // do not invalidate the existing AI overview / per-stage briefings.
+        $skipAiAnalysis = $this->llmTracker->consumeSkipAiAnalysis($tripId);
+
+        // Short-circuit: when the LLM is disabled, when the rider explicitly opted
+        // out of re-analysis via the chat bubble, or when there is no stage to
+        // analyse (e.g. all rest days), publish TRIP_READY directly — no AI
+        // overview to await.
+        if (!$this->llmClient->isEnabled() || $skipAiAnalysis || 0 === $analysableStages) {
             $this->publisher->publishTripReady($tripId, $stages, [
                 'status' => $statuses,
             ]);

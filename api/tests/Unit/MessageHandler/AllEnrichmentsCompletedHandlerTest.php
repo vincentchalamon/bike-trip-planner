@@ -245,6 +245,56 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
         $handler(new AllEnrichmentsCompleted($tripId));
     }
 
+    #[Test]
+    public function skipsLlmDispatchWhenSkipAiAnalysisMarkerIsConsumed(): void
+    {
+        $tripId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+
+        $stage = new Stage(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 80.0,
+            elevation: 500.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.5, 2.5),
+        );
+
+        $tracker = $this->createStub(ComputationTrackerInterface::class);
+        $tracker->method('claimReadyPublication')->willReturn(true);
+        $tracker->method('getStatuses')->willReturn([]);
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+
+        $llmClient = $this->createStub(LlmClientInterface::class);
+        $llmClient->method('isEnabled')->willReturn(true);
+
+        $llmAnalysisTracker = $this->createMock(LlmAnalysisTrackerInterface::class);
+        $llmAnalysisTracker->expects(self::once())
+            ->method('consumeSkipAiAnalysis')
+            ->with($tripId)
+            ->willReturn(true);
+        $llmAnalysisTracker->expects(self::never())->method('initializeStageAnalyses');
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects(self::once())->method('publishTripReady');
+
+        $bus = $this->createMock(MessageBusInterface::class);
+        $bus->expects(self::never())->method('dispatch');
+
+        $handler = new AllEnrichmentsCompletedHandler(
+            $tracker,
+            $publisher,
+            $tripStateManager,
+            new NullLogger(),
+            $bus,
+            $llmClient,
+            $llmAnalysisTracker,
+        );
+
+        $handler(new AllEnrichmentsCompleted($tripId));
+    }
+
     private function disabledLlmClient(): LlmClientInterface
     {
         $llmClient = $this->createStub(LlmClientInterface::class);

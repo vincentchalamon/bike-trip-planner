@@ -390,7 +390,8 @@ export interface TripChatRequestBody {
 
 /**
  * Response of `POST /trips/{id}/chat`. Mirrors `App\ApiResource\TripChatResponse`
- * on the backend (`tripId`, `action`, `params`, `response`, `dispatched`).
+ * on the backend (`tripId`, `action`, `params`, `response`, `dispatched`,
+ * `impactedStageNumbers`, `requiresFullAnalysis`).
  */
 export interface TripChatResponseBody {
   tripId: string;
@@ -398,6 +399,17 @@ export interface TripChatResponseBody {
   params: Record<string, unknown>;
   response: string;
   dispatched: boolean;
+  /**
+   * 1-indexed day numbers whose recomputation was dispatched (chat-driven
+   * inline edits). Empty for `info` and `change_route` actions.
+   */
+  impactedStageNumbers?: number[];
+  /**
+   * True when the action requires a full trip re-analysis (Acte 2). The
+   * frontend should bounce the rider back to the analysis screen and offer
+   * a "Relancer l'analyse" button.
+   */
+  requiresFullAnalysis?: boolean;
 }
 
 /**
@@ -450,6 +462,8 @@ const tripChatResponseSchema = z.object({
   params: z.record(z.string(), z.unknown()),
   response: z.string(),
   dispatched: z.boolean(),
+  impactedStageNumbers: z.array(z.number()).optional(),
+  requiresFullAnalysis: z.boolean().optional(),
 });
 
 /**

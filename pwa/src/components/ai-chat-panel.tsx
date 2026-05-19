@@ -32,6 +32,10 @@ export interface AiChatActionEventDetail {
   response: string;
   tripId: string;
   dispatched: boolean;
+  /** 1-indexed day numbers whose recomputation has been dispatched. */
+  impactedStageNumbers?: number[];
+  /** True when the action requires a full trip re-analysis (Acte 2). */
+  requiresFullAnalysis?: boolean;
 }
 
 interface AiChatPanelProps {
@@ -69,9 +73,10 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
     })),
   );
 
-  const { sendChatMessage } = useTripPlanner();
+  const { sendChatMessage, relaunchFullAnalysis } = useTripPlanner();
 
   const [draft, setDraft] = useState("");
+  const [pendingFullAnalysis, setPendingFullAnalysis] = useState(false);
   const historyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -115,14 +120,28 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
         response: response.response,
         tripId: response.tripId,
         dispatched: response.dispatched,
+        impactedStageNumbers: response.impactedStageNumbers,
+        requiresFullAnalysis: response.requiresFullAnalysis,
       };
       document.dispatchEvent(
         new CustomEvent<AiChatActionEventDetail>(AI_CHAT_ACTION_EVENT, {
           detail,
         }),
       );
+      setPendingFullAnalysis(response.requiresFullAnalysis === true);
     }
   }, [draft, isChatSending, sendChatMessage]);
+
+  const handleRelaunchAnalysis = useCallback(async () => {
+    // Only clear the banner + close the panel once the analysis dispatch has
+    // succeeded — otherwise the "Relancer l'analyse" CTA would vanish on
+    // failure and the rider would have to ask the AI again to get it back.
+    const ok = await relaunchFullAnalysis();
+    if (ok) {
+      setPendingFullAnalysis(false);
+      onClose();
+    }
+  }, [relaunchFullAnalysis, onClose]);
 
   const handleKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -201,6 +220,26 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
         ))}
         {isChatSending && <TypingDots />}
       </div>
+
+      {pendingFullAnalysis && (
+        <div
+          data-testid="ai-chat-panel-full-analysis"
+          className="border-t border-border bg-muted/30 px-4 py-3 flex flex-col gap-2"
+        >
+          <p className="text-xs text-muted-foreground">
+            {t("fullAnalysisHint")}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void handleRelaunchAnalysis()}
+            data-testid="ai-chat-panel-relaunch"
+            className="bg-brand text-white hover:bg-brand-hover"
+          >
+            {t("relaunchAnalysis")}
+          </Button>
+        </div>
+      )}
 
       <div className="border-t border-border p-3 flex items-end gap-2">
         <label htmlFor="ai-chat-panel-textarea" className="sr-only">

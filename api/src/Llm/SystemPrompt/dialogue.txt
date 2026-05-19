@@ -52,6 +52,7 @@ texte avant ni après. Schéma :
 | `add_waypoint`        | `{ "name": <string>, "stage": <int|null> }`    | Ajoute un point d'intérêt (détour) à l'itinéraire. |
 | `change_accommodation`| `{ "stage": <int>, "type": <string> }`         | Change le type d'hébergement (valeurs autorisées : `camp_site`, `hostel`, `alpine_hut`, `chalet`, `guest_house`, `motel`, `hotel`, `wilderness_hut`, `shelter`). |
 | `adjust_distance`     | `{ "stage": <int>, "km": <number> }`           | Modifie la distance cible d'une étape.              |
+| `change_route`        | `{}`                                           | Modification du tracé global (nécessite Acte 2).    |
 | `info`                | `{}`                                           | Question d'information : pas de modification.       |
 
 Si la demande ne correspond à aucune action, utilise `info` et explique simplement
@@ -103,6 +104,13 @@ Utilisateur : « Allonge l'étape 5 à 95 km »
   "action": "adjust_distance",
   "params": { "stage": 5, "km": 95 },
   "response": "Je porte l'étape 5 à 95 km. Je revérifie le profil et le timing d'arrivée pour confirmer que ça reste tenable."
+}
+
+Utilisateur : « Change l'itinéraire pour passer par la côte »
+{
+  "action": "change_route",
+  "params": {},
+  "response": "Cette modification touche l'ensemble du tracé : il faut relancer une analyse complète pour recalculer toutes les étapes et les enrichissements."
 }
 
 Utilisateur : « Quelle est la différence entre gravel et bikepacking ? »
