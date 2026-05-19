@@ -144,6 +144,27 @@ final class TripChatTest extends ApiTestCase
     }
 
     #[Test]
+    public function chatReturns503WhenLlmEnabledButReturnsNull(): void
+    {
+        $this->seedTrip(self::TRIP_ID);
+
+        // Edge case: client reports as enabled but chat() returns null. The
+        // dedicated 503 wording for this branch is otherwise untested.
+        $this->installFakeLlmClient(new FakeLlmClient(response: null, enabled: true));
+
+        $this->client->request(
+            'POST',
+            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            [
+                'json' => ['message' => 'Bonjour'],
+                'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
+            ],
+        );
+
+        $this->assertResponseStatusCodeSame(503);
+    }
+
+    #[Test]
     public function chatReturns503WhenOllamaUnreachable(): void
     {
         $this->seedTrip(self::TRIP_ID);
