@@ -9,6 +9,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Llm\LlmAnalysisTrackerInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
@@ -32,6 +33,7 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         MessageBusInterface $messageBus,
+        private LlmAnalysisTrackerInterface $llmTracker,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
     }
@@ -55,6 +57,15 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
 
         if (null === $stages) {
             return;
+        }
+
+        // Inline edits (issue #311): when the caller signals "skip AI re-analysis",
+        // mark the trip so the downstream gate handler skips dispatching the
+        // LLaMA 8B passes. The marker is consumed (one-shot) by the gate handler.
+        // Set after the stages guard so a dangling marker can't leak to an
+        // unrelated AllEnrichmentsCompleted cycle if stage data is missing.
+        if ($message->skipAiAnalysis) {
+            $this->llmTracker->markSkipAiAnalysis($tripId);
         }
 
         $affectedIndices = $message->affectedIndices;

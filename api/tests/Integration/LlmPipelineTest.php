@@ -653,4 +653,23 @@ final class InMemoryLlmAnalysisTracker implements LlmAnalysisTrackerInterface
 
         return true;
     }
+
+    /** @var array<string, true> */
+    private array $skipFlags = [];
+
+    public function markSkipAiAnalysis(string $tripId): void
+    {
+        $this->skipFlags[$tripId] = true;
+    }
+
+    public function consumeSkipAiAnalysis(string $tripId): bool
+    {
+        if (!isset($this->skipFlags[$tripId])) {
+            return false;
+        }
+
+        unset($this->skipFlags[$tripId]);
+
+        return true;
+    }
 }

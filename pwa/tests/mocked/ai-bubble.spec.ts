@@ -1,5 +1,8 @@
 import { test, expect } from "../fixtures/base.fixture";
-import { fullTripEventSequence } from "../fixtures/mock-data";
+import {
+  fullTripEventSequence,
+  stageUpdatedEvent,
+} from "../fixtures/mock-data";
 import { getTripId } from "../fixtures/api-mocks";
 
 /**
@@ -31,6 +34,8 @@ async function mockChat(
     params: Record<string, unknown>;
     response: string;
     dispatched?: boolean;
+    impactedStageNumbers?: number[];
+    requiresFullAnalysis?: boolean;
   },
   capturedRequests: { body: unknown }[],
 ): Promise<void> {
@@ -50,6 +55,8 @@ async function mockChat(
         params: responseBody.params,
         response: responseBody.response,
         dispatched: responseBody.dispatched ?? false,
+        impactedStageNumbers: responseBody.impactedStageNumbers ?? [],
+        requiresFullAnalysis: responseBody.requiresFullAnalysis ?? false,
       }),
     });
   });
@@ -198,6 +205,115 @@ test.describe("AiBubble — visibility gating", () => {
     });
 
     await expect(mockedPage.getByTestId("ai-bubble")).toHaveCount(0);
+  });
+});
+
+test.describe("AiBubble — inline recomputation (#311)", () => {
+  test("split_stage action triggers shimmer on the two impacted stages and clears it when stage_updated lands", async ({
+    createFullTrip,
+    mockedPage,
+    injectSequence,
+  }) => {
+    await createFullTrip();
+
+    await mockChat(
+      mockedPage,
+      {
+        action: "split_stage",
+        params: { stage: 1 },
+        response: "Je découpe l'étape 1 en deux.",
+        dispatched: true,
+        impactedStageNumbers: [1, 2],
+      },
+      [],
+    );
+
+    await mockedPage.getByTestId("ai-bubble").click();
+    await mockedPage
+      .getByTestId("ai-chat-panel-input")
+      .fill("Coupe l'étape 1 en deux");
+    await mockedPage.getByTestId("ai-chat-panel-send").click();
+
+    // Wait for the assistant reply to confirm the response landed.
+    await expect(
+      mockedPage
+        .getByTestId("ai-chat-panel-message")
+        .filter({ hasText: /je découpe l'étape 1/i }),
+    ).toBeVisible({ timeout: 5_000 });
+
+    // The two impacted stage cards now render as shimmer skeletons.
+    await expect
+      .poll(async () => mockedPage.getByTestId("stage-skeleton").count())
+      .toBe(2);
+
+    // Inject a stage_updated event for stage 0 — one shimmer clears.
+    await injectSequence([stageUpdatedEvent(0)]);
+
+    await expect
+      .poll(async () => mockedPage.getByTestId("stage-skeleton").count())
+      .toBe(1);
+  });
+
+  test("info action does not mark any stage as recomputing", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+
+    await mockChat(
+      mockedPage,
+      {
+        action: "info",
+        params: {},
+        response: "Le gravel désigne…",
+      },
+      [],
+    );
+
+    await mockedPage.getByTestId("ai-bubble").click();
+    await mockedPage
+      .getByTestId("ai-chat-panel-input")
+      .fill("C'est quoi le gravel ?");
+    await mockedPage.getByTestId("ai-chat-panel-send").click();
+
+    await expect(
+      mockedPage
+        .getByTestId("ai-chat-panel-message")
+        .filter({ hasText: /Le gravel désigne/i }),
+    ).toBeVisible({ timeout: 5_000 });
+
+    await expect(mockedPage.getByTestId("stage-skeleton")).toHaveCount(0);
+  });
+
+  test("change_route action surfaces the relaunch full-analysis button", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+
+    await mockChat(
+      mockedPage,
+      {
+        action: "change_route",
+        params: {},
+        response: "Cette modification touche tout le tracé.",
+        requiresFullAnalysis: true,
+      },
+      [],
+    );
+
+    await mockedPage.getByTestId("ai-bubble").click();
+    await mockedPage
+      .getByTestId("ai-chat-panel-input")
+      .fill("Change l'itinéraire pour passer par la côte");
+    await mockedPage.getByTestId("ai-chat-panel-send").click();
+
+    await expect(
+      mockedPage.getByTestId("ai-chat-panel-full-analysis"),
+    ).toBeVisible({ timeout: 5_000 });
+    await expect(
+      mockedPage.getByTestId("ai-chat-panel-relaunch"),
+    ).toBeVisible();
   });
 });
 

@@ -608,7 +608,9 @@
     "errorNetwork": "Network error. Check your connection then try again.",
     "errorRateLimit": "You have reached the message rate limit. Please try again shortly.",
     "errorUnavailable": "The AI assistant is temporarily unavailable. Try again later.",
-    "errorGeneric": "Something went wrong. Please try again later."
+    "errorGeneric": "Something went wrong. Please try again later.",
+    "fullAnalysisHint": "This change requires a brand-new full analysis.",
+    "relaunchAnalysis": "Relaunch analysis"
   },
   "aiOverview": {
     "title": "AI analysis",

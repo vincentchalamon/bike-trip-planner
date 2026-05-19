@@ -733,12 +733,13 @@ export function useTripPlanner() {
   /**
    * Dispatch a chat turn to `POST /trips/{id}/chat`, append both the user
    * message and the assistant reply to {@link useUiStore.chatHistory}, and
-   * surface any actionable response (`split_stage`, `adjust_distance`, …) so
-   * downstream wiring can trigger the matching store action.
+   * — when the backend dispatched an inline recomputation — flag the impacted
+   * stages as `recomputing` so the timeline shows the shimmer skeleton until
+   * the matching `stage_updated` Mercure events land.
    *
-   * The actual recomputation hook-up is delivered by issue #311 — this hook
-   * focuses on the round-trip, history bookkeeping, and exposing the parsed
-   * action via the returned value (and the assistant message in the store).
+   * Issue #311: actionable replies carry `impactedStageNumbers` (1-indexed)
+   * and a `requiresFullAnalysis` flag. The latter triggers a bounce back to
+   * Acte 2 because the rider asked for a tracé-wide modification.
    */
   async function sendChatMessage(
     text: string,
@@ -799,6 +800,19 @@ export function useTripPlanner() {
         ts: Date.now(),
       });
 
+      // Inline recomputation: surface the shimmer skeleton on the impacted
+      // stage cards until the matching `stage_updated` SSE event clears it.
+      const impactedStages = data.impactedStageNumbers ?? [];
+      if (data.dispatched && impactedStages.length > 0) {
+        const indices = impactedStages
+          .filter((n): n is number => Number.isInteger(n) && n > 0)
+          .map((n) => n - 1);
+        if (indices.length > 0) {
+          actions.startStageRecomputation(indices);
+          setProcessing(true);
+        }
+      }
+
       return data;
     } catch (err) {
       // Drop the error message if the user switched trips while the request
@@ -824,6 +838,15 @@ export function useTripPlanner() {
         useUiStore.getState().setChatSending(false);
       }
     }
+  }
+
+  /**
+   * Bounce the rider back to Acte 2 (full re-analysis) on a `change_route`
+   * chat action. Mirrors {@link handleLaunchAnalysis} but is invoked from the
+   * chat panel "Relancer l'analyse" button.
+   */
+  async function relaunchFullAnalysis(): Promise<boolean> {
+    return handleLaunchAnalysis();
   }
 
   const [isShareModalOpen, setShareModalOpen] = useState(false);
@@ -1065,5 +1088,6 @@ export function useTripPlanner() {
     handleCancelBatch,
     queueModification: actions.queueModification,
     sendChatMessage,
+    relaunchFullAnalysis,
   };
 }

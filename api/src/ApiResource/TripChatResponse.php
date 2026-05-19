@@ -18,6 +18,8 @@ final readonly class TripChatResponse
 {
     /**
      * @param array<string, mixed> $params
+     * @param list<int>            $impactedStageNumbers Day numbers (1-indexed) whose recomputation has been dispatched.
+     *                                                   Empty when the action is informational or requires full analysis.
      */
     public function __construct(
         #[ApiProperty(description: 'Trip identifier (UUID v7) the chat exchange belongs to.', required: true)]
@@ -30,6 +32,10 @@ final readonly class TripChatResponse
         public string $response,
         #[ApiProperty(description: 'True when this action will trigger a backend recomputation (Messenger dispatch wired in #311).', required: true)]
         public bool $dispatched = false,
+        #[ApiProperty(description: 'Day numbers (1-indexed) whose recomputation has been dispatched.')]
+        public array $impactedStageNumbers = [],
+        #[ApiProperty(description: 'True when the action requires a full trip re-analysis (Acte 2).')]
+        public bool $requiresFullAnalysis = false,
     ) {
     }
 }

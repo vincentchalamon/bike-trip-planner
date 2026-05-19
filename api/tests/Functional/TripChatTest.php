@@ -89,7 +89,12 @@ final class TripChatTest extends ApiTestCase
         $this->assertSame('split_stage', $data['action']);
         $this->assertSame(['stage' => 3], $data['params']);
         $this->assertStringContainsString('étape 3', $data['response']);
-        $this->assertTrue($data['dispatched']);
+        // The functional fixture has no stages, so the recompute guard short-circuits
+        // and no Messenger message is dispatched. The dispatch path itself is covered
+        // by TripChatProcessorTest with a seeded stage list.
+        $this->assertFalse($data['dispatched']);
+        $this->assertSame([], $data['impactedStageNumbers']);
+        $this->assertFalse($data['requiresFullAnalysis']);
     }
 
     #[Test]
@@ -122,6 +127,42 @@ final class TripChatTest extends ApiTestCase
         $data = $response->toArray(false);
         $this->assertSame('info', $data['action']);
         $this->assertFalse($data['dispatched']);
+        $this->assertSame([], $data['impactedStageNumbers']);
+        $this->assertFalse($data['requiresFullAnalysis']);
+    }
+
+    #[Test]
+    public function chatChangeRouteActionFlagsFullAnalysis(): void
+    {
+        $this->seedTrip(self::TRIP_ID);
+
+        $this->installFakeLlmClient(new FakeLlmClient([
+            'message' => [
+                'role' => 'assistant',
+                'content' => json_encode([
+                    'action' => 'change_route',
+                    'params' => [],
+                    'response' => 'Cette modification touche tout le tracé.',
+                ], \JSON_THROW_ON_ERROR),
+            ],
+        ]));
+
+        $response = $this->client->request(
+            'POST',
+            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            [
+                'json' => ['message' => "Change l'itinéraire pour passer par la côte"],
+                'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
+            ],
+        );
+
+        $this->assertResponseStatusCodeSame(200);
+
+        $data = $response->toArray(false);
+        $this->assertSame('change_route', $data['action']);
+        $this->assertFalse($data['dispatched']);
+        $this->assertSame([], $data['impactedStageNumbers']);
+        $this->assertTrue($data['requiresFullAnalysis']);
     }
 
     #[Test]

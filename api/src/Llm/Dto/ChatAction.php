@@ -24,6 +24,8 @@ final readonly class ChatAction
 
     public const string ACTION_ADJUST_DISTANCE = 'adjust_distance';
 
+    public const string ACTION_CHANGE_ROUTE = 'change_route';
+
     public const string ACTION_INFO = 'info';
 
     /**
@@ -35,6 +37,7 @@ final readonly class ChatAction
         self::ACTION_ADD_WAYPOINT,
         self::ACTION_CHANGE_ACCOMMODATION,
         self::ACTION_ADJUST_DISTANCE,
+        self::ACTION_CHANGE_ROUTE,
         self::ACTION_INFO,
     ];
 

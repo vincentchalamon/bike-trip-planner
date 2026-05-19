@@ -92,6 +92,28 @@ final readonly class LlmAnalysisTracker implements LlmAnalysisTrackerInterface
         return $this->claim($this->readyClaimKey($tripId));
     }
 
+    public function markSkipAiAnalysis(string $tripId): void
+    {
+        $item = $this->tripStateCache->getItem($this->skipAiAnalysisKey($tripId));
+        $item->set(true);
+        $item->expiresAfter(self::TTL);
+
+        $this->tripStateCache->save($item);
+    }
+
+    public function consumeSkipAiAnalysis(string $tripId): bool
+    {
+        $key = $this->skipAiAnalysisKey($tripId);
+        $item = $this->tripStateCache->getItem($key);
+        if (!$item->isHit()) {
+            return false;
+        }
+
+        $this->tripStateCache->deleteItem($key);
+
+        return true === $item->get();
+    }
+
     /**
      * Atomic NX-claim via Symfony Lock with autoRelease disabled — the lock survives
      * the request and acts as a single-use slot for the TTL lifetime.
@@ -126,5 +148,10 @@ final readonly class LlmAnalysisTracker implements LlmAnalysisTrackerInterface
     private function readyClaimKey(string $tripId): string
     {
         return \sprintf('trip.%s.llm_ready_claimed', $tripId);
+    }
+
+    private function skipAiAnalysisKey(string $tripId): string
+    {
+        return \sprintf('trip.%s.llm_skip_analysis', $tripId);
     }
 }

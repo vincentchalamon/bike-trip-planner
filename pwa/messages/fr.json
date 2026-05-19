@@ -608,7 +608,9 @@
     "errorNetwork": "Erreur réseau. Vérifiez votre connexion puis réessayez.",
     "errorRateLimit": "Vous avez atteint la limite de messages. Réessayez dans un instant.",
     "errorUnavailable": "L'assistant IA est temporairement indisponible. Réessayez plus tard.",
-    "errorGeneric": "Une erreur est survenue. Réessayez plus tard."
+    "errorGeneric": "Une erreur est survenue. Réessayez plus tard.",
+    "fullAnalysisHint": "Cette modification nécessite une nouvelle analyse complète.",
+    "relaunchAnalysis": "Relancer l'analyse"
   },
   "aiOverview": {
     "title": "Analyse IA",

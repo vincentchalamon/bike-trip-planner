@@ -9,6 +9,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Llm\LlmAnalysisTrackerInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateStages;
@@ -28,6 +29,7 @@ final class RecalculateStagesHandlerTest extends TestCase
         TripUpdatePublisherInterface $publisher,
         MessageBusInterface $messageBus,
         ?TripGenerationTrackerInterface $generationTracker = null,
+        ?LlmAnalysisTrackerInterface $llmTracker = null,
     ): RecalculateStagesHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
@@ -39,6 +41,7 @@ final class RecalculateStagesHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $messageBus,
+            $llmTracker ?? $this->createStub(LlmAnalysisTrackerInterface::class),
         );
     }
 
@@ -174,5 +177,82 @@ final class RecalculateStagesHandlerTest extends TestCase
         $second = $scanMessages[1];
         $this->assertSame(2, $second->stageIndex);
         $this->assertFalse($second->isExpandScan);
+    }
+
+    #[Test]
+    public function skipAiAnalysisFlagMarksTrackerOnce(): void
+    {
+        $stage = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 1,
+            distance: 80.0,
+            elevation: 500.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.5, 2.5),
+        );
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+
+        $llmTracker = $this->createMock(LlmAnalysisTrackerInterface::class);
+        $llmTracker->expects($this->once())->method('markSkipAiAnalysis')->with('trip-1');
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $publisher,
+            $messageBus,
+            null,
+            $llmTracker,
+        );
+
+        $handler(new RecalculateStages(
+            tripId: 'trip-1',
+            affectedIndices: [0],
+            skipGeographicScans: true,
+            skipAiAnalysis: true,
+        ));
+    }
+
+    #[Test]
+    public function skipAiAnalysisDefaultsToFalseAndDoesNotMarkTracker(): void
+    {
+        $stage = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 1,
+            distance: 80.0,
+            elevation: 500.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.5, 2.5),
+        );
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([$stage]);
+
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+
+        $llmTracker = $this->createMock(LlmAnalysisTrackerInterface::class);
+        $llmTracker->expects($this->never())->method('markSkipAiAnalysis');
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $publisher,
+            $messageBus,
+            null,
+            $llmTracker,
+        );
+
+        $handler(new RecalculateStages(
+            tripId: 'trip-1',
+            affectedIndices: [0],
+            skipGeographicScans: true,
+        ));
     }
 }

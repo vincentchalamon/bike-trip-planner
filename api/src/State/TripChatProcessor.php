@@ -10,12 +10,15 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\TripChatRequest;
 use App\ApiResource\TripChatResponse;
 use App\Entity\User;
+use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
 use App\Llm\Dto\ChatAction;
 use App\Llm\Exception\OllamaUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
+use App\Message\RecalculateStages;
+use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -23,6 +26,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 /**
@@ -53,10 +57,8 @@ final readonly class TripChatProcessor implements ProcessorInterface
     /**
      * Actions that mutate the trip and therefore require backend recomputation.
      *
-     * The actual Messenger dispatch is intentionally deferred to a follow-up
-     * issue (#311): the chat endpoint signals the intent via `dispatched=true`
-     * so the frontend can show a "computing" state, while the message routing
-     * itself remains a single point to extend.
+     * Each non-info, non-change_route action is mapped to a {@see RecalculateStages}
+     * dispatch (with `skipAiAnalysis: true`) by {@see self::dispatchRecomputation()}.
      *
      * @var list<string>
      */
@@ -71,12 +73,15 @@ final readonly class TripChatProcessor implements ProcessorInterface
     private string $model;
 
     public function __construct(
+        private TripRequestRepositoryInterface $tripStateManager,
         private LlmClientInterface $llmClient,
         private SystemPromptLoader $promptLoader,
         private ChatActionInterpreter $interpreter,
         private ChatHistoryStore $historyStore,
         private Security $security,
         private LoggerInterface $logger,
+        private MessageBusInterface $messageBus,
+        private TripGenerationTrackerInterface $generationTracker,
         #[Autowire(service: 'limiter.trip_chat')]
         private RateLimiterFactory $tripChatLimiter,
         #[Autowire(env: 'default::OLLAMA_DIALOGUE_MODEL')]
@@ -168,14 +173,25 @@ final readonly class TripChatProcessor implements ProcessorInterface
             ['role' => 'assistant', 'content' => $rawContent],
         ]);
 
-        $dispatched = \in_array($action->action, self::RECOMPUTE_ACTIONS, true);
+        $impactedStageNumbers = $this->resolveImpactedStageNumbers($tripId, $action);
+        $requiresFullAnalysis = ChatAction::ACTION_CHANGE_ROUTE === $action->action;
+        $dispatched = false;
 
-        if ($dispatched) {
-            $this->logger->info('Chat action ready for recomputation.', [
+        if ($requiresFullAnalysis) {
+            $this->logger->info('Chat action requires full trip re-analysis (Acte 2).', [
                 'tripId' => $tripId,
                 'action' => $action->action,
-                'params' => $action->params,
             ]);
+        } elseif ([] !== $impactedStageNumbers) {
+            $dispatched = $this->dispatchRecomputation($tripId, $impactedStageNumbers);
+
+            if ($dispatched) {
+                $this->logger->info('Chat action triggered inline recomputation.', [
+                    'tripId' => $tripId,
+                    'action' => $action->action,
+                    'impactedStageNumbers' => $impactedStageNumbers,
+                ]);
+            }
         }
 
         return new TripChatResponse(
@@ -184,7 +200,137 @@ final readonly class TripChatProcessor implements ProcessorInterface
             params: $action->params,
             response: $action->response,
             dispatched: $dispatched,
+            impactedStageNumbers: $impactedStageNumbers,
+            requiresFullAnalysis: $requiresFullAnalysis,
         );
+    }
+
+    /**
+     * Maps a parsed action to the list of 1-indexed day numbers whose
+     * recomputation must be triggered.
+     *
+     * @return list<int>
+     */
+    private function resolveImpactedStageNumbers(string $tripId, ChatAction $action): array
+    {
+        if (!\in_array($action->action, self::RECOMPUTE_ACTIONS, true)) {
+            return [];
+        }
+
+        $stages = $this->tripStateManager->getStages($tripId) ?? [];
+        $totalStages = \count($stages);
+        if (0 === $totalStages) {
+            return [];
+        }
+
+        $params = $action->params;
+
+        switch ($action->action) {
+            case ChatAction::ACTION_SPLIT_STAGE:
+                $stage = $this->extractStageNumber($params['stage'] ?? null);
+                if (null === $stage || $stage < 1 || $stage > $totalStages) {
+                    return [];
+                }
+
+                // Split produces two halves: the original day and the new day immediately
+                // after it. When the rider asks to split the last stage, the second half
+                // becomes a brand-new day number.
+                $second = min($stage + 1, $totalStages + 1);
+
+                return [$stage, $second];
+
+            case ChatAction::ACTION_MERGE_STAGES:
+                $raw = $params['stages'] ?? null;
+                if (!\is_array($raw)) {
+                    return [];
+                }
+
+                $values = array_values($raw);
+                $first = $this->extractStageNumber($values[0] ?? null);
+                $second = $this->extractStageNumber($values[1] ?? null);
+                if (null === $first || null === $second) {
+                    return [];
+                }
+
+                if ($first < 1 || $first > $totalStages || $second < 1 || $second > $totalStages) {
+                    return [];
+                }
+
+                // The surviving stage after merging two consecutive days is the
+                // lower-numbered one. Normalise to min() so a reversed [3, 2]
+                // pair from the LLM still shimmers the correct card.
+                return [min($first, $second)];
+
+            case ChatAction::ACTION_ADD_WAYPOINT:
+
+            case ChatAction::ACTION_ADJUST_DISTANCE:
+                $stage = $this->extractStageNumber($params['stage'] ?? null);
+                if (null === $stage || $stage < 1 || $stage > $totalStages) {
+                    return [];
+                }
+
+                return [$stage];
+            case ChatAction::ACTION_CHANGE_ACCOMMODATION:
+                $stage = $this->extractStageNumber($params['stage'] ?? null);
+                if (null === $stage || $stage < 1 || $stage > $totalStages) {
+                    return [];
+                }
+
+                // Changing the accommodation moves the arrival point — the next stage
+                // departs from the new spot, so recompute it too when it exists.
+                $next = $stage + 1;
+
+                return $next <= $totalStages ? [$stage, $next] : [$stage];
+            default:
+                return [];
+        }
+    }
+
+    private function extractStageNumber(mixed $value): ?int
+    {
+        if (\is_int($value) && $value > 0) {
+            return $value;
+        }
+
+        if (\is_string($value) && ctype_digit($value)) {
+            $int = (int) $value;
+
+            return $int > 0 ? $int : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Dispatches a single {@see RecalculateStages} message covering the affected
+     * stage indices (0-indexed for the message contract). Returns `true` when a
+     * dispatch happened — `false` when the indices map to nothing recomputable.
+     *
+     * @param list<int> $stageNumbers 1-indexed day numbers
+     */
+    private function dispatchRecomputation(string $tripId, array $stageNumbers): bool
+    {
+        $indices = array_values(array_unique(array_map(
+            static fn (int $n): int => $n - 1,
+            $stageNumbers,
+        )));
+
+        if ([] === $indices) {
+            return false;
+        }
+
+        // Bump generation: chat-driven edits invalidate in-flight computations on
+        // the same trip so a stale ScanPois cannot land after the new STAGE_UPDATED.
+        $generation = $this->generationTracker->increment($tripId);
+
+        $this->messageBus->dispatch(new RecalculateStages(
+            tripId: $tripId,
+            affectedIndices: $indices,
+            generation: $generation,
+            skipAiAnalysis: true,
+        ));
+
+        return true;
     }
 
     private function buildUserMessage(TripChatRequest $request): string

@@ -1075,6 +1075,10 @@ export interface components {
             response: string;
             /** @description True when this action will trigger a backend recomputation (Messenger dispatch wired in #311). */
             dispatched: boolean;
+            /** @description Day numbers (1-indexed) whose recomputation has been dispatched. */
+            impactedStageNumbers?: number[];
+            /** @description True when the action requires a full trip re-analysis (Acte 2). */
+            requiresFullAnalysis?: boolean;
         };
         "Trip.TripListItem.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;
