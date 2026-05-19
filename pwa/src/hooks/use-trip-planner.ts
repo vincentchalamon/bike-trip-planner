@@ -140,15 +140,19 @@ export function useTripPlanner() {
   const preDragPacingSnapshot = useRef<ReturnType<
     typeof getUndoableSlice
   > | null>(null);
+  const chatAbortRef = useRef<AbortController | null>(null);
 
   const tripId = trip?.id ?? null;
   useMercure(tripId, mercureToken);
 
   // Chat history is scoped to a single trip session. Wipe it whenever the
   // user switches trip so messages from trip A don't bleed into trip B's
-  // panel after navigation.
+  // panel after navigation. Also abort any chat request still in flight so
+  // the LLM server doesn't keep generating tokens for a panel that's gone.
   useEffect(() => {
     if (!tripId) return;
+    chatAbortRef.current?.abort();
+    chatAbortRef.current = null;
     useUiStore.getState().clearHistory();
   }, [tripId]);
 
@@ -752,11 +756,21 @@ export function useTripPlanner() {
     });
     uiStore.setChatSending(true);
 
+    // Track the in-flight request so the tripId useEffect can abort it on a
+    // trip switch. Any previous controller belongs to a settled request — we
+    // overwrite it without aborting (the request already completed).
+    const controller = new AbortController();
+    chatAbortRef.current = controller;
+
     try {
-      const { data, error, status } = await sendTripChat(tripId, {
-        message: trimmed,
-        context: { currentStage: uiStore.currentContext.currentStage },
-      });
+      const { data, error, status } = await sendTripChat(
+        tripId,
+        {
+          message: trimmed,
+          context: { currentStage: uiStore.currentContext.currentStage },
+        },
+        controller.signal,
+      );
 
       // Drop the response if the user switched trips while it was in-flight —
       // appending it would interleave trip A's reply into trip B's panel.

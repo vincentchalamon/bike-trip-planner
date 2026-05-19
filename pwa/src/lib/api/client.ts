@@ -411,6 +411,7 @@ export interface TripChatResponseBody {
 export async function sendTripChat(
   tripId: string,
   body: TripChatRequestBody,
+  signal?: AbortSignal,
 ): Promise<{
   data: TripChatResponseBody | null;
   error: string | null;
@@ -423,6 +424,7 @@ export async function sendTripChat(
       Accept: "application/ld+json",
     },
     body: JSON.stringify(body),
+    signal,
   });
 
   if (!res.ok) {
