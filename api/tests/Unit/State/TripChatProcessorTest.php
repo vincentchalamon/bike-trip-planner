@@ -448,8 +448,8 @@ final class TripChatProcessorTest extends TestCase
                 ++$flushed;
             });
 
-        /** @phpstan-ignore method.unresolvableReturnType */
         $chatMessageRepository = $this->createStub(TripChatMessageRepository::class);
+        \assert($chatMessageRepository instanceof TripChatMessageRepository);
 
         $processor = $this->newProcessor(
             llmContent: $this->jsonEnvelope('info', [], 'Réponse persistée'),
