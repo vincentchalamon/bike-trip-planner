@@ -797,7 +797,11 @@ export function useTripPlanner() {
       });
       return null;
     } finally {
-      useUiStore.getState().setChatSending(false);
+      // Only flip our own in-flight indicator off — a trip switch may have
+      // already started a fresh request whose flag we must not clobber.
+      if (useTripStore.getState().trip?.id === tripId) {
+        useUiStore.getState().setChatSending(false);
+      }
     }
   }
 

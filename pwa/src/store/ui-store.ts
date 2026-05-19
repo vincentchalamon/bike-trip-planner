@@ -132,7 +132,7 @@ interface UiState {
   >;
   /**
    * Whether the floating AI assistant chat panel is currently open.
-   * Toggled by {@link toggleBubble}, {@link openBubble}, {@link closeBubble}.
+   * Toggled by {@link toggleBubble} / {@link closeBubble}.
    */
   isBubbleOpen: boolean;
   /**
@@ -154,7 +154,7 @@ interface UiState {
   /**
    * Whether the user has ever opened the AI bubble. Stored in
    * `localStorage` so the "Nouveau" badge only shows on the first visit.
-   * Hydrated from storage on mount via {@link markBubbleSeen}.
+   * Persisted by {@link toggleBubble} the first time the panel opens.
    */
   hasSeenBubble: boolean;
 
@@ -205,10 +205,8 @@ interface UiState {
   recordAnalysisStep: (step: string) => void;
   /** Mark a step as failed with a human-readable error message. */
   failAnalysisStep: (step: string, message: string) => void;
-  /** Flip {@link isBubbleOpen}. Also marks the bubble as seen. */
+  /** Flip {@link isBubbleOpen}. Also marks the bubble as seen on first open. */
   toggleBubble: () => void;
-  /** Force the chat panel open and mark the bubble as seen. */
-  openBubble: () => void;
   /** Force the chat panel closed. */
   closeBubble: () => void;
   /** Append a turn to {@link chatHistory}. */
@@ -219,8 +217,6 @@ interface UiState {
   clearHistory: () => void;
   /** Flip the in-flight indicator that drives the typing dots. */
   setChatSending: (value: boolean) => void;
-  /** Persist that the user has seen the bubble (suppresses the badge). */
-  markBubbleSeen: () => void;
 }
 
 const BUBBLE_SEEN_STORAGE_KEY = "btp.ai-bubble.seen";
@@ -433,15 +429,6 @@ export const useUiStore = create<UiState>()(
         }
       }),
 
-    openBubble: () =>
-      set((state) => {
-        state.isBubbleOpen = true;
-        if (!state.hasSeenBubble) {
-          state.hasSeenBubble = true;
-          writeBubbleSeenToStorage();
-        }
-      }),
-
     closeBubble: () =>
       set((state) => {
         state.isBubbleOpen = false;
@@ -466,13 +453,6 @@ export const useUiStore = create<UiState>()(
     setChatSending: (value) =>
       set((state) => {
         state.isChatSending = value;
-      }),
-
-    markBubbleSeen: () =>
-      set((state) => {
-        if (state.hasSeenBubble) return;
-        state.hasSeenBubble = true;
-        writeBubbleSeenToStorage();
       }),
   })),
 );
