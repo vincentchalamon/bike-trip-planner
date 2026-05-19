@@ -35,7 +35,6 @@ describe("useGeolocation", () => {
         originalGeolocation,
       );
     } else {
-      // @ts-expect-error - cleaning up
       delete (globalThis.navigator as { geolocation?: unknown }).geolocation;
     }
     vi.restoreAllMocks();
