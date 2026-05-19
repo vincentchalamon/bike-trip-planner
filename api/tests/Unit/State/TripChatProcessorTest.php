@@ -6,13 +6,11 @@ namespace App\Tests\Unit\State;
 
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\TripChatRequest;
-use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
-use App\Repository\TripRequestRepositoryInterface;
 use App\State\TripChatProcessor;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -66,9 +64,6 @@ final class TripChatProcessorTest extends TestCase
 
     private function newProcessor(int $limit): TripChatProcessor
     {
-        $repository = $this->createStub(TripRequestRepositoryInterface::class);
-        $repository->method('getRequest')->willReturn(new TripRequest(Uuid::fromString(self::TRIP_ID)));
-
         $llmClient = $this->createStub(LlmClientInterface::class);
         $llmClient->method('isEnabled')->willReturn(true);
         $llmClient->method('chat')->willReturn([
@@ -92,7 +87,6 @@ final class TripChatProcessorTest extends TestCase
         );
 
         return new TripChatProcessor(
-            tripStateManager: $repository,
             llmClient: $llmClient,
             promptLoader: new SystemPromptLoader($this->createPromptFixtureDir()),
             interpreter: new ChatActionInterpreter(new NullLogger()),

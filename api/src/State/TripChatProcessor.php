@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use App\ApiResource\TripRequest;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
@@ -17,7 +16,6 @@ use App\Llm\Dto\ChatAction;
 use App\Llm\Exception\OllamaUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
-use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -73,7 +71,6 @@ final readonly class TripChatProcessor implements ProcessorInterface
     private string $model;
 
     public function __construct(
-        private TripRequestRepositoryInterface $tripStateManager,
         private LlmClientInterface $llmClient,
         private SystemPromptLoader $promptLoader,
         private ChatActionInterpreter $interpreter,
@@ -109,6 +106,16 @@ final readonly class TripChatProcessor implements ProcessorInterface
 
         $userId = $user->getId()->toRfc4122();
 
+        // Trip existence is guaranteed by TripRequestProvider — wired as the
+        // operation's provider, it throws NotFoundHttpException before this
+        // processor is entered. Don't re-read the cache here.
+
+        // Feature-flag guard before consuming a rate-limit token, so a user
+        // hitting a disabled endpoint doesn't burn their 20 req/min quota.
+        if (!$this->llmClient->isEnabled()) {
+            throw new ServiceUnavailableHttpException(retryAfter: null, message: 'AI assistant is currently disabled.');
+        }
+
         $limiter = $this->tripChatLimiter->create($userId);
         $rateLimit = $limiter->consume();
         if (!$rateLimit->isAccepted()) {
@@ -116,15 +123,6 @@ final readonly class TripChatProcessor implements ProcessorInterface
             $secondsUntilRetry = max(0, $retryAfter->getTimestamp() - new \DateTimeImmutable()->getTimestamp());
 
             throw new TooManyRequestsHttpException(retryAfter: $secondsUntilRetry, message: 'Chat rate limit reached. Please wait a moment before retrying.');
-        }
-
-        $request = $this->tripStateManager->getRequest($tripId);
-        if (!$request instanceof TripRequest) {
-            throw new NotFoundHttpException(\sprintf('Trip "%s" not found or has expired.', $tripId));
-        }
-
-        if (!$this->llmClient->isEnabled()) {
-            throw new ServiceUnavailableHttpException(retryAfter: null, message: 'AI assistant is currently disabled.');
         }
 
         $systemPrompt = $this->promptLoader->load(self::PROMPT_NAME);
