@@ -177,7 +177,11 @@ final readonly class ChatActionInterpreter
             return null;
         }
 
-        if ($second !== $first + 1) {
+        // Accept either order — the dialogue prompt asks for consecutive
+        // stages but does not constrain which one comes first. Downstream
+        // consumers normalise the surviving stage via min() before
+        // dispatching the recomputation.
+        if (1 !== abs($first - $second)) {
             return null;
         }
 

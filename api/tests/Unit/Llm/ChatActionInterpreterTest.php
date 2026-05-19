@@ -51,6 +51,21 @@ final class ChatActionInterpreterTest extends TestCase
     }
 
     #[Test]
+    public function acceptsMergeStagesInReversedOrder(): void
+    {
+        $action = $this->interpreter->interpret(
+            json_encode([
+                'action' => 'merge_stages',
+                'params' => ['stages' => [3, 2]],
+                'response' => 'Je fusionne les étapes 2 et 3.',
+            ], \JSON_THROW_ON_ERROR),
+        );
+
+        $this->assertSame(ChatAction::ACTION_MERGE_STAGES, $action->action);
+        $this->assertSame(['stages' => [3, 2]], $action->params);
+    }
+
+    #[Test]
     public function rejectsNonConsecutiveMergeStages(): void
     {
         $action = $this->interpreter->interpret(
