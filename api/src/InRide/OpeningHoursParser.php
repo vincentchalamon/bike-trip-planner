@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\InRide;
 
+use Yasumi\Yasumi;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -24,15 +25,16 @@ use Psr\Log\NullLogger;
  * sunset/sunrise, easter, complex date selectors. Unknown tokens cause the rule
  * to be skipped (defensive parsing — never throws).
  */
-final class OpeningHoursParser
+final readonly class OpeningHoursParser
 {
     private const array DAYS = ['Mo' => 1, 'Tu' => 2, 'We' => 3, 'Th' => 4, 'Fr' => 5, 'Sa' => 6, 'Su' => 7];
+
     private const array MONTHS = [
         'jan' => 1, 'feb' => 2, 'mar' => 3, 'apr' => 4, 'may' => 5, 'jun' => 6,
         'jul' => 7, 'aug' => 8, 'sep' => 9, 'oct' => 10, 'nov' => 11, 'dec' => 12,
     ];
 
-    private readonly LoggerInterface $logger;
+    private LoggerInterface $logger;
 
     public function __construct(?LoggerInterface $logger = null)
     {
@@ -85,7 +87,7 @@ final class OpeningHoursParser
     public function isOpenForAtLeast(string $tag, \DateTimeImmutable $now, \DateInterval $duration): bool
     {
         $closes = $this->closesAt($tag, $now);
-        if (null === $closes) {
+        if (!$closes instanceof \DateTimeImmutable) {
             return false;
         }
 
@@ -112,10 +114,10 @@ final class OpeningHoursParser
         try {
             $today = $this->intervalsForSingleDate($tag, $now);
             $yesterday = $this->intervalsForSingleDate($tag, $now->modify('-1 day'));
-        } catch (\Throwable $e) {
+        } catch (\Throwable $throwable) {
             $this->logger->info('Failed to parse opening_hours tag', [
                 'tag' => $tag,
-                'error' => $e->getMessage(),
+                'error' => $throwable->getMessage(),
             ]);
 
             return null;
@@ -148,8 +150,8 @@ final class OpeningHoursParser
      */
     private function intervalsForSingleDate(string $tag, \DateTimeImmutable $date): ?array
     {
-        $rules = array_map('trim', explode(';', $tag));
-        $rules = array_values(array_filter($rules, static fn (string $r) => '' !== $r));
+        $rules = array_map(trim(...), explode(';', $tag));
+        $rules = array_values(array_filter($rules, static fn (string $r): bool => '' !== $r));
 
         if ([] === $rules) {
             return null;
@@ -301,6 +303,7 @@ final class OpeningHoursParser
             if (!isset(self::MONTHS[$monthKey])) {
                 return null;
             }
+
             $month = self::MONTHS[$monthKey];
             $day = (int) $m[2];
 
@@ -316,7 +319,7 @@ final class OpeningHoursParser
      */
     private function weekdaySelectorMatches(string $selector, \DateTimeImmutable $date): ?bool
     {
-        $parts = array_map('trim', explode(',', $selector));
+        $parts = array_map(trim(...), explode(',', $selector));
         $dayOfWeek = (int) $date->format('N'); // 1=Mo .. 7=Su
 
         foreach ($parts as $part) {
@@ -328,6 +331,7 @@ final class OpeningHoursParser
                 if ($this->isPublicHoliday($date)) {
                     return true;
                 }
+
                 continue;
             }
 
@@ -335,18 +339,18 @@ final class OpeningHoursParser
                 if (!isset(self::DAYS[$m[1]], self::DAYS[$m[2]])) {
                     return null;
                 }
+
                 $from = self::DAYS[$m[1]];
                 $to = self::DAYS[$m[2]];
                 if ($from <= $to) {
                     if ($dayOfWeek >= $from && $dayOfWeek <= $to) {
                         return true;
                     }
-                } else {
+                } elseif ($dayOfWeek >= $from || $dayOfWeek <= $to) {
                     // Wraparound: Fr-Mo means Fr, Sa, Su, Mo.
-                    if ($dayOfWeek >= $from || $dayOfWeek <= $to) {
-                        return true;
-                    }
+                    return true;
                 }
+
                 continue;
             }
 
@@ -354,9 +358,11 @@ final class OpeningHoursParser
                 if (!isset(self::DAYS[$part])) {
                     return null;
                 }
+
                 if (self::DAYS[$part] === $dayOfWeek) {
                     return true;
                 }
+
                 continue;
             }
 
@@ -372,17 +378,17 @@ final class OpeningHoursParser
      */
     private function isPublicHoliday(\DateTimeImmutable $date): bool
     {
-        if (!class_exists(\Yasumi\Yasumi::class)) {
+        if (!class_exists(Yasumi::class)) {
             return false;
         }
 
         try {
             $year = (int) $date->format('Y');
-            $holidays = \Yasumi\Yasumi::create('France', $year);
+            $holidays = Yasumi::create('France', $year);
 
             return $holidays->isHoliday(new \DateTime($date->format('Y-m-d'), $date->getTimezone()));
-        } catch (\Throwable $e) {
-            $this->logger->info('Failed to compute public holiday', ['error' => $e->getMessage()]);
+        } catch (\Throwable $throwable) {
+            $this->logger->info('Failed to compute public holiday', ['error' => $throwable->getMessage()]);
 
             return false;
         }
@@ -396,7 +402,7 @@ final class OpeningHoursParser
     private function parseTimes(string $timesPart, \DateTimeImmutable $date): ?array
     {
         $ranges = preg_split('/[\s,]+/', $timesPart) ?: [];
-        $ranges = array_values(array_filter($ranges, static fn (string $r) => '' !== $r));
+        $ranges = array_values(array_filter($ranges, static fn (string $r): bool => '' !== $r));
 
         $intervals = [];
         foreach ($ranges as $range) {
