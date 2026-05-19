@@ -328,4 +328,44 @@ test.describe("AiBubble — cross-trip isolation", () => {
       1,
     );
   });
+
+  test("discards a stale network error after a trip switch", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+
+    // Hold the chat request so we can switch trips before it settles.
+    let releaseRoute!: () => void;
+    await mockedPage.route(chatUrlPattern(), async (route) => {
+      await new Promise<void>((res) => {
+        releaseRoute = res;
+      });
+      await route.abort("failed");
+    });
+
+    await mockedPage.getByTestId("ai-bubble").click();
+    await mockedPage.getByTestId("ai-chat-panel-input").fill("Hello trip A");
+    await mockedPage.getByTestId("ai-chat-panel-send").click();
+    await mockedPage.getByTestId("ai-chat-panel-close").click();
+
+    // Switch trips while the request is still in-flight.
+    await mockedPage.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("__test_set_trip_id", {
+          detail: "01999999-0000-7000-8000-000000000099",
+        }),
+      );
+    });
+
+    // Re-open the bubble on the new trip, then let the stale request fail.
+    await mockedPage.getByTestId("ai-bubble").click();
+    releaseRoute();
+
+    // Only the static greeting should remain — no error bubble from trip A.
+    await expect(mockedPage.getByTestId("ai-chat-panel-message")).toHaveCount(
+      1,
+      { timeout: 5_000 },
+    );
+  });
 });
