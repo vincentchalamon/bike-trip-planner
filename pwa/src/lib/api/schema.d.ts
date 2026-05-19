@@ -1073,7 +1073,7 @@ export interface components {
             };
             /** @description Conversational reply to display to the rider. */
             response: string;
-            /** @description True when the action triggered a backend recomputation. */
+            /** @description True when this action will trigger a backend recomputation (Messenger dispatch wired in #311). */
             dispatched: boolean;
         };
         "Trip.TripListItem.jsonld": components["schemas"]["HydraItemBaseSchema"] & {

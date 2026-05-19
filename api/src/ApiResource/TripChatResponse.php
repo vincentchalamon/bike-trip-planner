@@ -28,7 +28,7 @@ final readonly class TripChatResponse
         public array $params,
         #[ApiProperty(description: 'Conversational reply to display to the rider.', required: true)]
         public string $response,
-        #[ApiProperty(description: 'True when the action triggered a backend recomputation.', required: true)]
+        #[ApiProperty(description: 'True when this action will trigger a backend recomputation (Messenger dispatch wired in #311).', required: true)]
         public bool $dispatched = false,
     ) {
     }
