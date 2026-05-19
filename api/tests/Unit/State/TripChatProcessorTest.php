@@ -11,14 +11,17 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripChatRequest;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Entity\TripChatMessage;
 use App\Entity\User;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
 use App\Message\RecalculateStages;
+use App\Repository\TripChatMessageRepository;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\TripChatProcessor;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -420,11 +423,94 @@ final class TripChatProcessorTest extends TestCase
         $processor->process(new TripChatRequest('Encore'), new Post(), ['id' => self::TRIP_ID]);
     }
 
+    /**
+     * Long-term persistence regression test (#458): every chat turn must be
+     * written to PostgreSQL *in addition* to the rolling Redis context window
+     * so the rider can recover their conversation from a cold reload.
+     */
+    #[Test]
+    public function chatTurnIsPersistedToPostgresInAdditionToRedis(): void
+    {
+        $persisted = [];
+        $flushed = 0;
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getReference')
+            ->willReturnCallback(static fn (string $class, string $id) => new TripRequest(Uuid::fromString($id)));
+        $entityManager->expects(self::exactly(2))
+            ->method('persist')
+            ->willReturnCallback(static function (object $entity) use (&$persisted): void {
+                $persisted[] = $entity;
+            });
+        $entityManager->expects(self::once())
+            ->method('flush')
+            ->willReturnCallback(static function () use (&$flushed): void {
+                ++$flushed;
+            });
+
+        $chatMessageRepository = $this->createStub(TripChatMessageRepository::class);
+
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('info', [], 'Réponse persistée'),
+            stagesCount: 3,
+            messageBus: $this->newMessageBus(),
+            chatMessageRepository: $chatMessageRepository,
+            entityManager: $entityManager,
+        );
+
+        $processor->process(
+            new TripChatRequest('Quel est mon dénivelé total ?'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertCount(2, $persisted, 'Both the user turn and the assistant reply must be persisted.');
+        self::assertSame(1, $flushed, 'A single flush is expected per chat turn.');
+
+        /** @var TripChatMessage $userTurn */
+        $userTurn = $persisted[0];
+        /** @var TripChatMessage $assistantTurn */
+        $assistantTurn = $persisted[1];
+
+        self::assertInstanceOf(TripChatMessage::class, $userTurn);
+        self::assertInstanceOf(TripChatMessage::class, $assistantTurn);
+        self::assertSame(TripChatMessage::ROLE_USER, $userTurn->getRole());
+        self::assertSame(TripChatMessage::ROLE_ASSISTANT, $assistantTurn->getRole());
+        self::assertStringContainsString('Quel est mon dénivelé total ?', $userTurn->getContent());
+        self::assertSame('info', $assistantTurn->getAction());
+    }
+
+    /**
+     * Without the optional repository/entity manager (e.g. legacy wiring during
+     * the rollout), the processor must continue to function: the Redis history
+     * is the legacy single source of truth and a missing PG writer should not
+     * break the chat endpoint.
+     */
+    #[Test]
+    public function chatStillWorksWhenChatMessageRepositoryIsUnwired(): void
+    {
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('info', [], 'OK'),
+            stagesCount: 3,
+            messageBus: $this->newMessageBus(),
+        );
+
+        $response = $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame('info', $response->action);
+    }
+
     private function newProcessor(
         string $llmContent,
         int $stagesCount,
         MessageBusInterface $messageBus,
         ?RateLimiterFactory $limiterFactory = null,
+        ?TripChatMessageRepository $chatMessageRepository = null,
+        ?EntityManagerInterface $entityManager = null,
     ): TripChatProcessor {
         $tripRequest = new TripRequest();
         $stages = [];
@@ -472,6 +558,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $messageBus,
             generationTracker: $generationTracker,
             tripChatLimiter: $limiterFactory ?? $this->newNoLimiterFactory(),
+            chatMessageRepository: $chatMessageRepository,
+            entityManager: $entityManager,
         );
     }
 

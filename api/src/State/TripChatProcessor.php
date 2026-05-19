@@ -9,6 +9,8 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\TripChatRequest;
 use App\ApiResource\TripChatResponse;
+use App\ApiResource\TripRequest;
+use App\Entity\TripChatMessage;
 use App\Entity\User;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Llm\ChatActionInterpreter;
@@ -18,7 +20,10 @@ use App\Llm\Exception\OllamaUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
 use App\Message\RecalculateStages;
+use App\Repository\TripChatMessageRepository;
 use App\Repository\TripRequestRepositoryInterface;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\EntityNotFoundException;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -84,6 +89,8 @@ final readonly class TripChatProcessor implements ProcessorInterface
         private TripGenerationTrackerInterface $generationTracker,
         #[Autowire(service: 'limiter.trip_chat')]
         private RateLimiterFactory $tripChatLimiter,
+        private ?TripChatMessageRepository $chatMessageRepository = null,
+        private ?EntityManagerInterface $entityManager = null,
         #[Autowire(env: 'default::OLLAMA_DIALOGUE_MODEL')]
         ?string $model = null,
     ) {
@@ -172,6 +179,8 @@ final readonly class TripChatProcessor implements ProcessorInterface
             ['role' => 'user', 'content' => $userMessage],
             ['role' => 'assistant', 'content' => $rawContent],
         ]);
+
+        $this->persistChatTurn($tripId, $user, $userMessage, $rawContent, $action);
 
         $impactedStageNumbers = $this->resolveImpactedStageNumbers($tripId, $action);
         $requiresFullAnalysis = ChatAction::ACTION_CHANGE_ROUTE === $action->action;
@@ -331,6 +340,62 @@ final readonly class TripChatProcessor implements ProcessorInterface
         ));
 
         return true;
+    }
+
+    /**
+     * Writes the user prompt + assistant reply to PostgreSQL alongside the Redis
+     * context window (cf. #458). Failures are logged but never bubble up so a
+     * transient DB hiccup cannot abort an otherwise successful chat turn — the
+     * Redis history remains authoritative for the next LLM call either way.
+     */
+    private function persistChatTurn(
+        string $tripId,
+        User $user,
+        string $userMessage,
+        string $assistantContent,
+        ChatAction $action,
+    ): void {
+        if (!$this->chatMessageRepository instanceof TripChatMessageRepository
+            || !$this->entityManager instanceof EntityManagerInterface
+        ) {
+            return;
+        }
+
+        try {
+            $trip = $this->entityManager->getReference(TripRequest::class, $tripId);
+        } catch (EntityNotFoundException $entityNotFoundException) {
+            $this->logger->warning('Cannot persist chat history — trip reference missing.', [
+                'tripId' => $tripId,
+                'error' => $entityNotFoundException->getMessage(),
+            ]);
+
+            return;
+        }
+
+        try {
+            $userTurn = new TripChatMessage(
+                trip: $trip,
+                user: $user,
+                role: TripChatMessage::ROLE_USER,
+                content: $userMessage,
+            );
+            $assistantTurn = new TripChatMessage(
+                trip: $trip,
+                user: $user,
+                role: TripChatMessage::ROLE_ASSISTANT,
+                content: $assistantContent,
+                action: $action->action,
+            );
+
+            $this->entityManager->persist($userTurn);
+            $this->entityManager->persist($assistantTurn);
+            $this->entityManager->flush();
+        } catch (\Throwable $throwable) {
+            $this->logger->warning('Failed to persist trip chat history to PostgreSQL.', [
+                'tripId' => $tripId,
+                'error' => $throwable->getMessage(),
+            ]);
+        }
     }
 
     private function buildUserMessage(TripChatRequest $request): string
