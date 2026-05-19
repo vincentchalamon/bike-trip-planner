@@ -36,10 +36,10 @@ final readonly class DetourCalculator
     }
 
     /**
-     * @param list<GeoPoint> $remainingRoute Polyline of the rider's remaining itinerary,
-     *                                       ordered from current position towards the end.
+     * @param list<GeoPoint> $remainingRoute polyline of the rider's remaining itinerary,
+     *                                       ordered from current position towards the end
      *
-     * @throws \InvalidArgumentException When $remainingRoute is empty.
+     * @throws \InvalidArgumentException when $remainingRoute is empty
      */
     public function calculate(GeoPoint $from, GeoPoint $poi, array $remainingRoute): DetourResult
     {
@@ -49,19 +49,24 @@ final readonly class DetourCalculator
 
         $rejoinPoint = $remainingRoute[0];
         $segmentIndex = 0;
-        $minPerpendicular = $this->distance->inMeters(
-            $poi->lat,
-            $poi->lon,
-            $rejoinPoint->lat,
-            $rejoinPoint->lon,
-        );
+        $minPerpendicular = \PHP_FLOAT_MAX;
+        $bestRawT = 0.0;
 
         $segmentsCount = \count($remainingRoute) - 1;
+        if (0 === $segmentsCount) {
+            $minPerpendicular = $this->distance->inMeters(
+                $poi->lat,
+                $poi->lon,
+                $rejoinPoint->lat,
+                $rejoinPoint->lon,
+            );
+        }
+
         for ($i = 0; $i < $segmentsCount; ++$i) {
             $a = $remainingRoute[$i];
             $b = $remainingRoute[$i + 1];
 
-            $projection = $this->projectOnSegment($poi, $a, $b);
+            [$projection, $rawT] = $this->projectOnSegment($poi, $a, $b);
             $perpendicular = $this->distance->inMeters(
                 $poi->lat,
                 $poi->lon,
@@ -73,6 +78,7 @@ final readonly class DetourCalculator
                 $minPerpendicular = $perpendicular;
                 $rejoinPoint = $projection;
                 $segmentIndex = $i;
+                $bestRawT = $rawT;
             }
         }
 
@@ -81,7 +87,11 @@ final readonly class DetourCalculator
         $fromToRejoin = $this->distance->inMeters($from->lat, $from->lon, $rejoinPoint->lat, $rejoinPoint->lon);
 
         $rawDetour = $straightLineToPoi + $poiToRejoin - $fromToRejoin;
-        $clamped = $rawDetour < 0.0;
+        // POI is behind the rider when its projection on the first segment is before the segment start
+        // (rawT < 0 on segment 0) — the rejoin clamps to the rider's position so the detour would
+        // require backtracking. Surface that explicitly by clamping to zero and flagging.
+        $isBehind = 0 === $segmentIndex && $bestRawT < 0.0;
+        $clamped = $rawDetour < 0.0 || $isBehind;
         $detour = $clamped ? 0.0 : $rawDetour;
 
         return new DetourResult(
@@ -103,10 +113,13 @@ final readonly class DetourCalculator
      * The resulting parameter t is clamped to [0, 1] so the projection always lies on
      * the segment (extremities included), which is what we want for a "rejoin point".
      */
-    private function projectOnSegment(GeoPoint $poi, GeoPoint $a, GeoPoint $b): GeoPoint
+    /**
+     * @return array{GeoPoint, float} the clamped projection point and the raw (unclamped) parameter t
+     */
+    private function projectOnSegment(GeoPoint $poi, GeoPoint $a, GeoPoint $b): array
     {
         if ($a->lat === $b->lat && $a->lon === $b->lon) {
-            return $a;
+            return [$a, 0.0];
         }
 
         // Use a local equirectangular projection: x scaled by cos(latitude) so degrees
@@ -126,15 +139,18 @@ final readonly class DetourCalculator
         $denominator = $dx * $dx + $dy * $dy;
 
         if (0.0 === $denominator) {
-            return $a;
+            return [$a, 0.0];
         }
 
-        $t = (($px - $ax) * $dx + ($py - $ay) * $dy) / $denominator;
-        $t = max(0.0, min(1.0, $t));
+        $rawT = (($px - $ax) * $dx + ($py - $ay) * $dy) / $denominator;
+        $t = max(0.0, min(1.0, $rawT));
 
-        return new GeoPoint(
-            lat: $a->lat + $t * ($b->lat - $a->lat),
-            lon: $a->lon + $t * ($b->lon - $a->lon),
-        );
+        return [
+            new GeoPoint(
+                lat: $a->lat + $t * ($b->lat - $a->lat),
+                lon: $a->lon + $t * ($b->lon - $a->lon),
+            ),
+            $rawT,
+        ];
     }
 }

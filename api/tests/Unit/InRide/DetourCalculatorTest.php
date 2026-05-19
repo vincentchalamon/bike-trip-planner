@@ -74,9 +74,11 @@ final class DetourCalculatorTest extends TestCase
         $this->assertEqualsWithDelta(5.010, $result->rejoinPoint->lon, 1e-4);
         $this->assertSame(0, $result->segmentIndex);
 
-        // Detour roughly equals 2 × perpendicular distance (~222 m).
-        $this->assertGreaterThan(150.0, $result->detourMeters);
-        $this->assertLessThan(260.0, $result->detourMeters);
+        // Going through the POI costs ~119 m extra vs. staying on the segment
+        // (the rider is at the segment start, so the detour is asymmetric and
+        // smaller than 2× the perpendicular distance).
+        $this->assertGreaterThan(50.0, $result->detourMeters);
+        $this->assertLessThan(200.0, $result->detourMeters);
         $this->assertFalse($result->poiFarFromRoute);
         $this->assertFalse($result->detourClampedToZero);
     }
@@ -163,7 +165,7 @@ final class DetourCalculatorTest extends TestCase
 
         $result = $this->calculator->calculate($from, $poi, $route);
 
-        $expected = (new HaversineDistance())->inMeters(45.0, 5.000, 45.001, 5.010);
+        $expected = new HaversineDistance()->inMeters(45.0, 5.000, 45.001, 5.010);
         $this->assertEqualsWithDelta($expected, $result->straightLineToPoiMeters, 0.001);
     }
 }
