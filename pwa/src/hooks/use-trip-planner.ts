@@ -787,6 +787,13 @@ export function useTripPlanner() {
 
       return data;
     } catch (err) {
+      // Drop the error message if the user switched trips while the request
+      // was in flight — appending it would surface the previous trip's
+      // failure inside the new trip's panel.
+      if (useTripStore.getState().trip?.id !== tripId) {
+        return null;
+      }
+
       const message = isNetworkError(err)
         ? t("aiBubble.errorNetwork")
         : t("aiBubble.errorGeneric");
