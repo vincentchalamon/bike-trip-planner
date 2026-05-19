@@ -1065,16 +1065,16 @@ export interface components {
         };
         "Trip.TripChatResponse.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             /** @description Trip identifier (UUID v7) the chat exchange belongs to. */
-            tripId?: string;
+            tripId: string;
             /** @description Action interpreted by the dialogue assistant (split_stage, info, ...). */
-            action?: string;
-            params?: {
+            action: string;
+            params: {
                 [key: string]: unknown;
             };
             /** @description Conversational reply to display to the rider. */
-            response?: string;
+            response: string;
             /** @description True when the action triggered a backend recomputation. */
-            dispatched?: boolean;
+            dispatched: boolean;
         };
         "Trip.TripListItem.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
             id?: string;

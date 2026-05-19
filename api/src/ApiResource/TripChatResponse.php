@@ -20,18 +20,15 @@ final readonly class TripChatResponse
      * @param array<string, mixed> $params
      */
     public function __construct(
-        #[ApiProperty(description: 'Trip identifier (UUID v7) the chat exchange belongs to.')]
+        #[ApiProperty(description: 'Trip identifier (UUID v7) the chat exchange belongs to.', required: true)]
         public string $tripId,
-        #[ApiProperty(description: 'Action interpreted by the dialogue assistant (split_stage, info, ...).')]
+        #[ApiProperty(description: 'Action interpreted by the dialogue assistant (split_stage, info, ...).', required: true)]
         public string $action,
-        #[ApiProperty(
-            description: 'Parameters required to execute the action.',
-            schema: ['type' => 'object', 'additionalProperties' => true],
-        )]
+        #[ApiProperty(description: 'Parameters required to execute the action.', required: true, schema: ['type' => 'object', 'additionalProperties' => true])]
         public array $params,
-        #[ApiProperty(description: 'Conversational reply to display to the rider.')]
+        #[ApiProperty(description: 'Conversational reply to display to the rider.', required: true)]
         public string $response,
-        #[ApiProperty(description: 'True when the action triggered a backend recomputation.')]
+        #[ApiProperty(description: 'True when the action triggered a backend recomputation.', required: true)]
         public bool $dispatched = false,
     ) {
     }
