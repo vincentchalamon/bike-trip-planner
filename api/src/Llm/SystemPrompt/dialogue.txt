@@ -50,7 +50,7 @@ texte avant ni après. Schéma :
 | `split_stage`         | `{ "stage": <int> }`                           | Découpe l'étape indiquée en deux étapes.            |
 | `merge_stages`        | `{ "stages": [<int>, <int>] }`                 | Fusionne deux étapes consécutives.                  |
 | `add_waypoint`        | `{ "name": <string>, "stage": <int|null> }`    | Ajoute un point d'intérêt (détour) à l'itinéraire. |
-| `change_accommodation`| `{ "stage": <int>, "type": <string> }`         | Change le type d'hébergement de l'étape.            |
+| `change_accommodation`| `{ "stage": <int>, "type": <string> }`         | Change le type d'hébergement (valeurs autorisées : `camp_site`, `hostel`, `alpine_hut`, `chalet`, `guest_house`, `motel`, `hotel`, `wilderness_hut`, `shelter`). |
 | `adjust_distance`     | `{ "stage": <int>, "km": <number> }`           | Modifie la distance cible d'une étape.              |
 | `info`                | `{}`                                           | Question d'information : pas de modification.       |
 
@@ -94,7 +94,7 @@ Utilisateur : « Sur cette étape je préférerais dormir en gîte plutôt qu'en
 (contexte : currentStage = 2)
 {
   "action": "change_accommodation",
-  "params": { "stage": 2, "type": "gite" },
+  "params": { "stage": 2, "type": "guest_house" },
   "response": "Je remplace l'hébergement de l'étape 2 par un gîte. Je relance la recherche pour trouver les meilleures options sur place."
 }
 

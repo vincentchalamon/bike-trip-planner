@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Llm;
 
+use App\ApiResource\TripRequest;
 use App\Llm\Dto\ChatAction;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -216,11 +217,16 @@ final readonly class ChatActionInterpreter
         $stage = $this->toPositiveInt($params['stage'] ?? null);
         $type = $params['type'] ?? null;
 
-        if (null === $stage || !\is_string($type) || '' === trim($type)) {
+        if (null === $stage || !\is_string($type)) {
             return null;
         }
 
-        return ['stage' => $stage, 'type' => trim($type)];
+        $normalised = strtolower(trim($type));
+        if (!\in_array($normalised, TripRequest::ALL_ACCOMMODATION_TYPES, true)) {
+            return null;
+        }
+
+        return ['stage' => $stage, 'type' => $normalised];
     }
 
     /**

@@ -115,13 +115,28 @@ final class ChatActionInterpreterTest extends TestCase
         $action = $this->interpreter->interpret(
             json_encode([
                 'action' => 'change_accommodation',
-                'params' => ['stage' => 2, 'type' => 'gite'],
+                'params' => ['stage' => 2, 'type' => 'guest_house'],
                 'response' => "J'ajuste l'hébergement.",
             ], \JSON_THROW_ON_ERROR),
         );
 
         $this->assertSame(ChatAction::ACTION_CHANGE_ACCOMMODATION, $action->action);
-        $this->assertSame(['stage' => 2, 'type' => 'gite'], $action->params);
+        $this->assertSame(['stage' => 2, 'type' => 'guest_house'], $action->params);
+    }
+
+    #[Test]
+    public function changeAccommodationFallsBackToInfoWhenTypeIsNotInTheAllowlist(): void
+    {
+        $action = $this->interpreter->interpret(
+            json_encode([
+                'action' => 'change_accommodation',
+                'params' => ['stage' => 2, 'type' => 'palace'],
+                'response' => 'Bien noté.',
+            ], \JSON_THROW_ON_ERROR),
+        );
+
+        $this->assertSame(ChatAction::ACTION_INFO, $action->action);
+        $this->assertSame([], $action->params);
     }
 
     #[Test]
