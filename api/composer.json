@@ -116,15 +116,15 @@
         "ekino/phpstan-banned-code": "^3.2",
         "justinrainbow/json-schema": "^6.8.2",
         "phpstan/extension-installer": "^1.4.3",
-        "phpstan/phpstan": "^2.1.54",
+        "phpstan/phpstan": "^2.1.55",
         "phpstan/phpstan-phpunit": "^2.0.16",
-        "phpstan/phpstan-symfony": "^2.0.17",
+        "phpstan/phpstan-symfony": "^2.0.18",
         "phpunit/phpunit": "^13.1.10",
         "rector/rector": "^2.4.3",
         "roave/security-advisories": "dev-latest",
         "symfony/browser-kit": "8.0.*",
         "symfony/stopwatch": "8.0.*",
         "symfony/web-profiler-bundle": "8.0.*",
-        "zenstruck/foundry": "^2.9.2"
+        "zenstruck/foundry": "^2.10.1"
     }
 }
