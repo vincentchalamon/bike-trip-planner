@@ -9,45 +9,20 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
+ * Persistence boundary for the long-term chat history.
+ *
+ * Read methods are intentionally kept out of this PR: the write path proves
+ * the dual Redis + PostgreSQL persistence in isolation, and the read endpoint
+ * (`GET /trips/{id}/chat-history`) is delivered by issue #459 / PR #471 where
+ * the cursor pagination semantics live with the State Provider that consumes
+ * them.
+ *
  * @extends ServiceEntityRepository<TripChatMessage>
  */
 class TripChatMessageRepository extends ServiceEntityRepository
 {
-    public const int DEFAULT_LIMIT = 50;
-
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, TripChatMessage::class);
-    }
-
-    /**
-     * Returns the most recent chat turns for the given (trip, user) pair,
-     * ordered oldest first so the frontend can render the timeline directly.
-     *
-     * The composite index `(trip_id, user_id, created_at)` keeps the lookup
-     * O(log n) even after months of in-ride consultations (PostgreSQL scans
-     * B-tree indexes equally in either direction, so an ASC index serves the
-     * DESC query without a separate descending index).
-     *
-     * @return list<TripChatMessage>
-     */
-    public function findByTrip(string $tripId, string $userId, int $limit = self::DEFAULT_LIMIT): array
-    {
-        if ($limit <= 0) {
-            return [];
-        }
-
-        /** @var list<TripChatMessage> $recent */
-        $recent = $this->createQueryBuilder('m')
-            ->andWhere('IDENTITY(m.trip) = :tripId')
-            ->andWhere('IDENTITY(m.user) = :userId')
-            ->setParameter('tripId', $tripId)
-            ->setParameter('userId', $userId)
-            ->orderBy('m.createdAt', 'DESC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
-
-        return array_reverse($recent);
     }
 }
