@@ -24,6 +24,7 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\Entity(repositoryClass: TripChatMessageRepository::class)]
 #[ORM\Table(name: 'trip_chat_message')]
 #[ORM\Index(name: 'idx_trip_chat_trip_user_created', columns: ['trip_id', 'user_id', 'created_at'])]
+#[ORM\Index(name: 'IDX_trip_chat_message_user', columns: ['user_id'])]
 class TripChatMessage
 {
     public const string ROLE_USER = 'user';
@@ -54,6 +55,10 @@ class TripChatMessage
         private string $content,
         #[ORM\Column(length: 32, nullable: true)]
         private ?string $action = null,
+        // Geo + pois columns are populated by the in-ride branch (#463 →
+        // PR #473 wires TripChatRequest.position; #465 → PR #474 fills these
+        // on persist). The schema lives here so the whole chat persistence
+        // (planning + in-ride) shares a single table from day one.
         #[ORM\Column(name: 'geo_lat', type: 'float', nullable: true)]
         private ?float $geoLat = null,
         #[ORM\Column(name: 'geo_lon', type: 'float', nullable: true)]

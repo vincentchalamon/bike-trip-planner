@@ -382,6 +382,13 @@ final readonly class TripChatProcessor implements ProcessorInterface
 
             $this->entityManager->persist($userTurn);
             $this->entityManager->persist($assistantTurn);
+            // Note: Doctrine ORM 3 dropped the optional `flush($entity)` argument,
+            // so this commits the whole UoW. In this request lifecycle the chat
+            // processor is the only writer (API Platform processors run after
+            // input validation, no other entities are dirty), so a wider flush
+            // is acceptable. If a future feature adds a writer earlier in the
+            // pipeline we would need to switch to an explicit transaction
+            // (beginTransaction / commit) around just these two persists.
             $this->entityManager->flush();
         } catch (\Throwable $throwable) {
             // Proxy-load failures surface here at `flush()` time, not at `getReference()`;
