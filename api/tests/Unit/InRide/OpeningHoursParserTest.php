@@ -71,6 +71,14 @@ final class OpeningHoursParserTest extends TestCase
 
         yield 'day list Mo,We,Fr on Wednesday' => ['Mo,We,Fr 10:00-12:00', '2024-06-05 11:00:00', true];
         yield 'day list Mo,We,Fr on Tuesday' => ['Mo,We,Fr 10:00-12:00', '2024-06-04 11:00:00', false];
+
+        // Wraparound day range Fr-Mo covers Fri, Sat, Sun, Mon.
+        yield 'wraparound Fr-Mo on Saturday' => ['Fr-Mo 10:00-12:00', '2024-06-08 11:00:00', true];
+        yield 'wraparound Fr-Mo on Monday' => ['Fr-Mo 10:00-12:00', '2024-06-03 11:00:00', true];
+        yield 'wraparound Fr-Mo on Wednesday' => ['Fr-Mo 10:00-12:00', '2024-06-05 11:00:00', false];
+
+        // 24:00 is only valid as an end marker — `24:30` start is malformed.
+        yield 'invalid start hour 24' => ['24:30-25:00', '2024-06-05 11:00:00', false];
     }
 
     #[Test]

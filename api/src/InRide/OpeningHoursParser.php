@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\InRide;
 
+use Yasumi\ProviderInterface;
 use Yasumi\Yasumi;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -25,7 +26,7 @@ use Psr\Log\NullLogger;
  * sunset/sunrise, easter, complex date selectors. Unknown tokens cause the rule
  * to be skipped (defensive parsing — never throws).
  */
-final readonly class OpeningHoursParser
+final class OpeningHoursParser
 {
     private const array DAYS = ['Mo' => 1, 'Tu' => 2, 'We' => 3, 'Th' => 4, 'Fr' => 5, 'Sa' => 6, 'Su' => 7];
 
@@ -34,7 +35,17 @@ final readonly class OpeningHoursParser
         'jul' => 7, 'aug' => 8, 'sep' => 9, 'oct' => 10, 'nov' => 11, 'dec' => 12,
     ];
 
-    private LoggerInterface $logger;
+    /**
+     * Process-wide cache of Yasumi holiday providers keyed by year. Yasumi
+     * recomputes the full French holiday set on every {@see Yasumi::create()}
+     * call (~120 µs per call), so a typical in-ride page rendering N POIs with
+     * `PH` tags would burn 2N initialisations without this cache.
+     *
+     * @var array<int, ProviderInterface>
+     */
+    private static array $yasumiCache = [];
+
+    private readonly LoggerInterface $logger;
 
     public function __construct(?LoggerInterface $logger = null)
     {
@@ -384,7 +395,11 @@ final readonly class OpeningHoursParser
 
         try {
             $year = (int) $date->format('Y');
-            $holidays = Yasumi::create('France', $year);
+            if (!isset(self::$yasumiCache[$year])) {
+                self::$yasumiCache[$year] = Yasumi::create('France', $year);
+            }
+
+            $holidays = self::$yasumiCache[$year];
 
             return $holidays->isHoliday(new \DateTime($date->format('Y-m-d'), $date->getTimezone()));
         } catch (\Throwable $throwable) {
@@ -415,7 +430,9 @@ final readonly class OpeningHoursParser
             $endH = (int) $m[3];
             $endM = (int) $m[4];
 
-            if ($startH > 24 || $endH > 24 || $startM > 59 || $endM > 59) {
+            // OSM accepts 24:00 only as an *end* marker (midnight of the next day),
+            // so the start hour caps at 23 while the end hour caps at 24.
+            if ($startH > 23 || $endH > 24 || $startM > 59 || $endM > 59) {
                 return null;
             }
 
@@ -423,9 +440,9 @@ final readonly class OpeningHoursParser
 
             if (24 === $endH && 0 === $endM) {
                 $end = $date->modify('+1 day')->setTime(0, 0);
-            } elseif ($endH < $startH || (24 === $endH)) {
+            } elseif ($endH < $startH) {
                 // Overnight: end is on the next day.
-                $end = $date->modify('+1 day')->setTime($endH % 24, $endM);
+                $end = $date->modify('+1 day')->setTime($endH, $endM);
             } else {
                 $end = $date->setTime($endH, $endM);
             }
