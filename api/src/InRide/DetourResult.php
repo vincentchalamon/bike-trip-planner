@@ -14,12 +14,15 @@ use App\Geo\GeoPoint;
  * - $segmentIndex: index of the segment of the polyline (i.e. between point $i and $i+1)
  *   on which $rejoinPoint lies.
  * - $detourMeters: estimated additional distance in meters compared to staying on the route.
- *   Clamped to 0 when the POI is behind the rider (negative raw value).
+ *   Clamped to 0 either when the raw Haversine sum is slightly negative (floating-point
+ *   noise on a POI essentially on the route) or when the POI is behind the rider (the
+ *   detour is positive but represents unavoidable backtracking).
  * - $straightLineToPoiMeters: Haversine distance between the rider position and the POI.
  * - $poiFarFromRoute: true when the perpendicular distance from the POI to the route
  *   exceeds the {@see DetourCalculator::POI_FAR_THRESHOLD_METERS} warning threshold.
- * - $detourClampedToZero: true when the raw detour value was negative (POI behind the rider)
- *   and has been clamped to 0.
+ * - $detourClampedToZero: true when `detourMeters` was clamped to 0, either because the
+ *   raw Haversine sum was slightly negative or because the POI is behind the rider
+ *   (raw `t < 0` on segment 0).
  */
 final readonly class DetourResult
 {

@@ -19,7 +19,7 @@ use App\Geo\GeoPoint;
  *
  * Edge cases:
  *  - Empty polyline → throws {@see \InvalidArgumentException}.
- *  - POI "behind" the rider (negative detour) → detour clamped to 0 and flagged.
+ *  - POI "behind" the rider (raw `t < 0` on segment 0; raw detour is positive) → detour clamped to 0 and flagged.
  *  - POI further than {@see self::POI_FAR_THRESHOLD_METERS} from the route → flagged.
  */
 final readonly class DetourCalculator
@@ -112,8 +112,7 @@ final readonly class DetourCalculator
      *
      * The resulting parameter t is clamped to [0, 1] so the projection always lies on
      * the segment (extremities included), which is what we want for a "rejoin point".
-     */
-    /**
+     *
      * @return array{GeoPoint, float} the clamped projection point and the raw (unclamped) parameter t
      */
     private function projectOnSegment(GeoPoint $poi, GeoPoint $a, GeoPoint $b): array
