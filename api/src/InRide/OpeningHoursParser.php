@@ -143,16 +143,25 @@ final class OpeningHoursParser
             return null;
         }
 
+        // Neither date had a rule for the tag → no information available.
         if (null === $today && null === $yesterday) {
             return null;
         }
 
         $intervals = [];
 
-        // Include overnight intervals from the previous day that bleed into today.
-        foreach ($yesterday ?? [] as [$start, $end]) {
-            if ($end > $start && $end->format('Y-m-d') !== $start->format('Y-m-d')) {
-                $intervals[] = [$start, $end];
+        // Include overnight intervals from yesterday that bleed into today —
+        // but only when today is not explicitly closed by a rule. A tag like
+        // `22:00-02:00; PH off` must stay closed all day on a public holiday,
+        // even though yesterday's 22:00-02:00 interval otherwise crosses
+        // midnight. `intervalsForSingleDate` returns `null` for "no rule
+        // matched" and `[]` for "explicitly closed".
+        $todayExplicitlyClosed = is_array($today) && [] === $today;
+        if (!$todayExplicitlyClosed) {
+            foreach ($yesterday ?? [] as [$start, $end]) {
+                if ($end > $start && $end->format('Y-m-d') !== $start->format('Y-m-d')) {
+                    $intervals[] = [$start, $end];
+                }
             }
         }
 
@@ -210,8 +219,10 @@ final class OpeningHoursParser
         }
 
         if (!$matchedAnyRule) {
-            // No rule matched this date → considered closed for this date (return empty list, not null).
-            return [];
+            // No rule matched this calendar date — the tag is simply silent
+            // about it. Return null so the caller can distinguish this "no
+            // information" case from "explicitly closed" (returning []).
+            return null;
         }
 
         if ($closedByRule) {
@@ -394,14 +405,12 @@ final class OpeningHoursParser
     }
 
     /**
-     * Best-effort public holiday detection for France using yasumi.
+     * Best-effort public holiday detection using {@see self::HOLIDAY_LOCALES}.
+     * `azuyalabs/yasumi` is a hard composer dependency of the project, so no
+     * fallback is needed when the class is missing.
      */
     private function isPublicHoliday(\DateTimeImmutable $date): bool
     {
-        if (!class_exists(Yasumi::class)) {
-            return false;
-        }
-
         try {
             $year = (int) $date->format('Y');
             $needle = new \DateTime($date->format('Y-m-d'), $date->getTimezone());
