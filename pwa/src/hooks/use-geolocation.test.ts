@@ -117,4 +117,45 @@ describe("useGeolocation", () => {
 
     expect(result.current.error?.code).toBe("unsupported");
   });
+
+  it("re-entrancy guard: a double-tap fires getCurrentPosition only once", () => {
+    // The first call captures the success callback without invoking it, so the
+    // hook is left in flight (isRequesting=true) — the second call must short
+    // out via the ref-based guard.
+    let capturedSuccess: PositionCallback | undefined;
+    mockGeolocation.getCurrentPosition.mockImplementation((successCb) => {
+      capturedSuccess = successCb;
+    });
+
+    const { result } = renderHook(() => useGeolocation());
+
+    act(() => {
+      result.current.request();
+      result.current.request();
+    });
+
+    expect(mockGeolocation.getCurrentPosition).toHaveBeenCalledTimes(1);
+
+    // Resolve the first request so the guard releases for a follow-up call.
+    act(() => {
+      capturedSuccess?.({
+        coords: {
+          latitude: 48.8566,
+          longitude: 2.3522,
+          accuracy: 12,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        },
+        timestamp: Date.now(),
+      } as GeolocationPosition);
+    });
+
+    act(() => {
+      result.current.request();
+    });
+
+    expect(mockGeolocation.getCurrentPosition).toHaveBeenCalledTimes(2);
+  });
 });
