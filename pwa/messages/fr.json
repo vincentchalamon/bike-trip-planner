@@ -615,12 +615,6 @@
   "chat": {
     "offline": {
       "label": "Vous êtes hors ligne. L'assistant est indisponible."
-    },
-    "geoloc": {
-      "requesting": "Récupération de votre position…",
-      "denied": "Permission de localisation refusée. Modifiez les réglages du navigateur pour la partager.",
-      "unavailable": "Votre appareil ne parvient pas à déterminer votre position pour le moment.",
-      "timeout": "La localisation a pris trop de temps. Réessayez."
     }
   },
   "aiOverview": {

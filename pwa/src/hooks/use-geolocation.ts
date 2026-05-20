@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 /**
  * Reason codes for a geolocation failure.
@@ -52,8 +52,15 @@ export function useGeolocation(): UseGeolocationResult {
   const [position, setPosition] = useState<GeolocationCoords | null>(null);
   const [error, setError] = useState<GeolocationErrorInfo | null>(null);
   const [isRequesting, setIsRequesting] = useState(false);
+  // Re-entrancy guard: the useCallback closure captures the *initial* value of
+  // isRequesting, so a state-based guard would never fire. A ref stays current
+  // across renders and prevents racing getCurrentPosition() calls from a
+  // double-tap or retry-on-error pattern.
+  const isRequestingRef = useRef(false);
 
   const request = useCallback(() => {
+    if (isRequestingRef.current) return;
+
     if (
       typeof navigator === "undefined" ||
       !("geolocation" in navigator) ||
@@ -66,6 +73,7 @@ export function useGeolocation(): UseGeolocationResult {
       return;
     }
 
+    isRequestingRef.current = true;
     setIsRequesting(true);
     setError(null);
 
@@ -77,6 +85,7 @@ export function useGeolocation(): UseGeolocationResult {
           accuracy: pos.coords.accuracy,
           timestamp: pos.timestamp,
         });
+        isRequestingRef.current = false;
         setIsRequesting(false);
       },
       (err) => {
@@ -87,6 +96,7 @@ export function useGeolocation(): UseGeolocationResult {
               ? "timeout"
               : "unavailable";
         setError({ code, message: err.message });
+        isRequestingRef.current = false;
         setIsRequesting(false);
       },
       DEFAULT_OPTIONS,

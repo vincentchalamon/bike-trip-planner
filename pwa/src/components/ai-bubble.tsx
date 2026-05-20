@@ -53,8 +53,7 @@ export function AiBubble() {
     <>
       <button
         type="button"
-        onClick={toggleBubble}
-        disabled={!isOnline}
+        onClick={isOnline ? toggleBubble : undefined}
         aria-disabled={!isOnline}
         aria-label={isBubbleOpen ? t("closeAria") : t("openAria")}
         aria-expanded={isBubbleOpen}
