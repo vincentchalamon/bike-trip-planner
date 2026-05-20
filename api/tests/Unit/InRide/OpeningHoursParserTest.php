@@ -82,6 +82,13 @@ final class OpeningHoursParserTest extends TestCase
 
         // 24:30 end is malformed: PHP would silently normalise it to `00:30 next day`.
         yield 'invalid end hour 24 with non-zero minutes' => ['22:00-24:30', '2024-06-05 22:30:00', false];
+
+        // Public holidays: cover both FR and BE locales so the parser stays
+        // useful for Belgian itineraries.
+        yield 'FR Bastille Day (Jul 14) marks PH off' => ['Mo-Su 09:00-18:00; PH off', '2024-07-14 12:00:00', false];
+        yield 'BE National Day (Jul 21) marks PH off' => ['Mo-Su 09:00-18:00; PH off', '2024-07-21 12:00:00', false];
+        // Day that is a holiday neither in FR nor BE — must read as open.
+        yield 'non-holiday Wednesday with PH off' => ['Mo-Su 09:00-18:00; PH off', '2024-06-05 12:00:00', true];
     }
 
     #[Test]

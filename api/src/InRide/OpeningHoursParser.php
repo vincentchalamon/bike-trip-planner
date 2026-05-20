@@ -36,12 +36,21 @@ final class OpeningHoursParser
     ];
 
     /**
-     * Process-wide cache of Yasumi holiday providers keyed by year. Yasumi
-     * recomputes the full French holiday set on every {@see Yasumi::create()}
-     * call (~120 µs per call), so a typical in-ride page rendering N POIs with
-     * `PH` tags would burn 2N initialisations without this cache.
+     * Yasumi provider locales evaluated by {@see self::isPublicHoliday()}. The
+     * class docblock advertises France + Belgium coverage; both providers ship
+     * with the `azuyalabs/yasumi` package the project already depends on.
      *
-     * @var array<int, ProviderInterface>
+     * @var list<string>
+     */
+    private const array HOLIDAY_LOCALES = ['France', 'Belgium'];
+
+    /**
+     * Process-wide cache of Yasumi holiday providers keyed by `locale-year`.
+     * Yasumi recomputes the full holiday set on every {@see Yasumi::create()}
+     * call (~120 µs per call), so a typical in-ride page rendering N POIs with
+     * `PH` tags would burn 2N × |locales| initialisations without this cache.
+     *
+     * @var array<string, ProviderInterface>
      */
     private static array $yasumiCache = [];
 
@@ -395,13 +404,25 @@ final class OpeningHoursParser
 
         try {
             $year = (int) $date->format('Y');
-            if (!isset(self::$yasumiCache[$year])) {
-                self::$yasumiCache[$year] = Yasumi::create('France', $year);
+            $needle = new \DateTime($date->format('Y-m-d'), $date->getTimezone());
+
+            // Check every supported locale (FR + BE) so a date that is a public
+            // holiday in either country triggers `PH off` rules — a Belgian
+            // shop tagged `Mo-Fr 09:00-18:00; PH off` must read as closed on
+            // July 21 (Belgian National Day) even though Yasumi/France has no
+            // such date.
+            foreach (self::HOLIDAY_LOCALES as $locale) {
+                $key = $locale.'-'.$year;
+                if (!isset(self::$yasumiCache[$key])) {
+                    self::$yasumiCache[$key] = Yasumi::create($locale, $year);
+                }
+
+                if (self::$yasumiCache[$key]->isHoliday($needle)) {
+                    return true;
+                }
             }
 
-            $holidays = self::$yasumiCache[$year];
-
-            return $holidays->isHoliday(new \DateTime($date->format('Y-m-d'), $date->getTimezone()));
+            return false;
         } catch (\Throwable $throwable) {
             $this->logger->info('Failed to compute public holiday', ['error' => $throwable->getMessage()]);
 
