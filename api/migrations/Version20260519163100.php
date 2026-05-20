@@ -31,10 +31,6 @@ final class Version20260519163100 extends AbstractMigration
                 role VARCHAR(16) NOT NULL,
                 content TEXT NOT NULL,
                 action VARCHAR(32) DEFAULT NULL,
-                geo_lat DOUBLE PRECISION DEFAULT NULL,
-                geo_lon DOUBLE PRECISION DEFAULT NULL,
-                geo_accuracy_m DOUBLE PRECISION DEFAULT NULL,
-                pois JSONB DEFAULT NULL,
                 created_at TIMESTAMP(6) WITHOUT TIME ZONE NOT NULL,
                 PRIMARY KEY(id)
             )

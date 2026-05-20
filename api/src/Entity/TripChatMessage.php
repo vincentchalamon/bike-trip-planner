@@ -39,8 +39,7 @@ class TripChatMessage
     private \DateTimeImmutable $createdAt;
 
     /**
-     * @param non-empty-string          $role one of {@see self::ROLE_USER} or {@see self::ROLE_ASSISTANT}
-     * @param array<string, mixed>|null $pois optional POIs payload referenced by the message (JSONB)
+     * @param non-empty-string $role one of {@see self::ROLE_USER} or {@see self::ROLE_ASSISTANT}
      */
     public function __construct(
         #[ORM\ManyToOne(targetEntity: TripRequest::class)]
@@ -55,18 +54,6 @@ class TripChatMessage
         private string $content,
         #[ORM\Column(length: 32, nullable: true)]
         private ?string $action = null,
-        // Geo + pois columns are populated by the in-ride branch (#463 →
-        // PR #473 wires TripChatRequest.position; #465 → PR #474 fills these
-        // on persist). The schema lives here so the whole chat persistence
-        // (planning + in-ride) shares a single table from day one.
-        #[ORM\Column(name: 'geo_lat', type: 'float', nullable: true)]
-        private ?float $geoLat = null,
-        #[ORM\Column(name: 'geo_lon', type: 'float', nullable: true)]
-        private ?float $geoLon = null,
-        #[ORM\Column(name: 'geo_accuracy_m', type: 'float', nullable: true)]
-        private ?float $geoAccuracyM = null,
-        #[ORM\Column(type: 'jsonb', nullable: true)]
-        private ?array $pois = null,
         ?Uuid $id = null,
         ?\DateTimeImmutable $createdAt = null,
     ) {
@@ -102,29 +89,6 @@ class TripChatMessage
     public function getAction(): ?string
     {
         return $this->action;
-    }
-
-    public function getGeoLat(): ?float
-    {
-        return $this->geoLat;
-    }
-
-    public function getGeoLon(): ?float
-    {
-        return $this->geoLon;
-    }
-
-    public function getGeoAccuracyM(): ?float
-    {
-        return $this->geoAccuracyM;
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    public function getPois(): ?array
-    {
-        return $this->pois;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

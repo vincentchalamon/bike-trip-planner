@@ -18,7 +18,6 @@ use App\Llm\ChatHistoryStore;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
 use App\Message\RecalculateStages;
-use App\Repository\TripChatMessageRepository;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\TripChatProcessor;
 use Doctrine\ORM\EntityManagerInterface;
@@ -437,6 +436,8 @@ final class TripChatProcessorTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->method('getReference')
             ->willReturnCallback(static fn (string $class, string $id): TripRequest => new TripRequest(Uuid::fromString($id)));
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (callable $callback) => $callback($entityManager));
         $entityManager->expects(self::exactly(2))
             ->method('persist')
             ->willReturnCallback(static function (object $entity) use (&$persisted): void {
@@ -448,14 +449,10 @@ final class TripChatProcessorTest extends TestCase
                 ++$flushed;
             });
 
-        $chatMessageRepository = $this->createStub(TripChatMessageRepository::class);
-        \assert($chatMessageRepository instanceof TripChatMessageRepository);
-
         $processor = $this->newProcessor(
             llmContent: $this->jsonEnvelope('info', [], 'Réponse persistée'),
             stagesCount: 3,
             messageBus: $this->newMessageBus(),
-            chatMessageRepository: $chatMessageRepository,
             entityManager: $entityManager,
         );
 
@@ -510,7 +507,6 @@ final class TripChatProcessorTest extends TestCase
         int $stagesCount,
         MessageBusInterface $messageBus,
         ?RateLimiterFactory $limiterFactory = null,
-        ?TripChatMessageRepository $chatMessageRepository = null,
         ?EntityManagerInterface $entityManager = null,
     ): TripChatProcessor {
         $tripRequest = new TripRequest();
@@ -559,7 +555,6 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $messageBus,
             generationTracker: $generationTracker,
             tripChatLimiter: $limiterFactory ?? $this->newNoLimiterFactory(),
-            chatMessageRepository: $chatMessageRepository,
             entityManager: $entityManager,
         );
     }

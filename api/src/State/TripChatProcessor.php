@@ -20,7 +20,6 @@ use App\Llm\Exception\OllamaUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
 use App\Message\RecalculateStages;
-use App\Repository\TripChatMessageRepository;
 use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -88,7 +87,6 @@ final readonly class TripChatProcessor implements ProcessorInterface
         private TripGenerationTrackerInterface $generationTracker,
         #[Autowire(service: 'limiter.trip_chat')]
         private RateLimiterFactory $tripChatLimiter,
-        private ?TripChatMessageRepository $chatMessageRepository = null,
         private ?EntityManagerInterface $entityManager = null,
         #[Autowire(env: 'default::OLLAMA_DIALOGUE_MODEL')]
         ?string $model = null,
@@ -354,9 +352,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
         string $assistantContent,
         ChatAction $action,
     ): void {
-        if (!$this->chatMessageRepository instanceof TripChatMessageRepository
-            || !$this->entityManager instanceof EntityManagerInterface
-        ) {
+        if (!$this->entityManager instanceof EntityManagerInterface) {
             return;
         }
 
@@ -380,16 +376,17 @@ final readonly class TripChatProcessor implements ProcessorInterface
                 action: $action->action,
             );
 
-            $this->entityManager->persist($userTurn);
-            $this->entityManager->persist($assistantTurn);
-            // Note: Doctrine ORM 3 dropped the optional `flush($entity)` argument,
-            // so this commits the whole UoW. In this request lifecycle the chat
-            // processor is the only writer (API Platform processors run after
-            // input validation, no other entities are dirty), so a wider flush
-            // is acceptable. If a future feature adds a writer earlier in the
-            // pipeline we would need to switch to an explicit transaction
-            // (beginTransaction / commit) around just these two persists.
-            $this->entityManager->flush();
+            // Wrap the two persists in an explicit transaction so we only
+            // commit the chat-message writes — Doctrine ORM 3 dropped the
+            // optional `flush($entity)` argument, so a plain `flush()` would
+            // also publish any unrelated dirty entity tracked by the shared
+            // UoW. The savepoint keeps the chat write atomic and reversible
+            // on failure without touching the caller's session.
+            $this->entityManager->wrapInTransaction(function () use ($userTurn, $assistantTurn): void {
+                $this->entityManager->persist($userTurn);
+                $this->entityManager->persist($assistantTurn);
+                $this->entityManager->flush();
+            });
         } catch (\Throwable $throwable) {
             // Proxy-load failures surface here at `flush()` time, not at `getReference()`;
             // a missing trip yields a foreign-key violation that we log and swallow so the
