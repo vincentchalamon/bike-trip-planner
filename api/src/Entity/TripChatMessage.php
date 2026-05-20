@@ -34,7 +34,7 @@ class TripChatMessage
     #[ORM\Column(type: 'uuid')]
     private Uuid $id;
 
-    #[ORM\Column(name: 'created_at')]
+    #[ORM\Column(name: 'created_at', type: 'datetime_immutable', options: ['precision' => 6])]
     private \DateTimeImmutable $createdAt;
 
     /**

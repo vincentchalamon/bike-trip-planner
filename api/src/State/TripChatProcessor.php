@@ -23,7 +23,6 @@ use App\Message\RecalculateStages;
 use App\Repository\TripChatMessageRepository;
 use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityNotFoundException;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -363,20 +362,10 @@ final readonly class TripChatProcessor implements ProcessorInterface
 
         try {
             $trip = $this->entityManager->getReference(TripRequest::class, $tripId);
-        } catch (EntityNotFoundException $entityNotFoundException) {
-            $this->logger->warning('Cannot persist chat history — trip reference missing.', [
-                'tripId' => $tripId,
-                'error' => $entityNotFoundException->getMessage(),
-            ]);
+            if (!$trip instanceof TripRequest) {
+                return;
+            }
 
-            return;
-        }
-
-        if (!$trip instanceof TripRequest) {
-            return;
-        }
-
-        try {
             $userTurn = new TripChatMessage(
                 trip: $trip,
                 user: $user,
@@ -395,6 +384,10 @@ final readonly class TripChatProcessor implements ProcessorInterface
             $this->entityManager->persist($assistantTurn);
             $this->entityManager->flush();
         } catch (\Throwable $throwable) {
+            // Proxy-load failures surface here at `flush()` time, not at `getReference()`;
+            // a missing trip yields a foreign-key violation that we log and swallow so the
+            // Redis sliding-window context (already updated) remains authoritative for the
+            // current request.
             $this->logger->warning('Failed to persist trip chat history to PostgreSQL.', [
                 'tripId' => $tripId,
                 'error' => $throwable->getMessage(),

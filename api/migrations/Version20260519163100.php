@@ -35,13 +35,16 @@ final class Version20260519163100 extends AbstractMigration
                 geo_lon DOUBLE PRECISION DEFAULT NULL,
                 geo_accuracy_m DOUBLE PRECISION DEFAULT NULL,
                 pois JSONB DEFAULT NULL,
-                created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
+                created_at TIMESTAMP(6) WITHOUT TIME ZONE NOT NULL,
                 PRIMARY KEY(id)
             )
             SQL);
 
+        // The composite index already serves single-column trip_id filters via the
+        // leftmost-prefix optimisation, so no standalone IDX_trip_chat_message_trip is
+        // required. We still index user_id separately to support trip-agnostic per-user
+        // lookups (e.g. RGPD export).
         $this->addSql('CREATE INDEX idx_trip_chat_trip_user_created ON trip_chat_message (trip_id, user_id, created_at)');
-        $this->addSql('CREATE INDEX IDX_trip_chat_message_trip ON trip_chat_message (trip_id)');
         $this->addSql('CREATE INDEX IDX_trip_chat_message_user ON trip_chat_message (user_id)');
 
         $this->addSql(<<<'SQL'

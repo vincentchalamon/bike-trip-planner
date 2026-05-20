@@ -24,8 +24,10 @@ class TripChatMessageRepository extends ServiceEntityRepository
      * Returns the most recent chat turns for the given (trip, user) pair,
      * ordered oldest first so the frontend can render the timeline directly.
      *
-     * The composite index `(trip_id, user_id, created_at DESC)` keeps the lookup
-     * O(log n) even after months of in-ride consultations.
+     * The composite index `(trip_id, user_id, created_at)` keeps the lookup
+     * O(log n) even after months of in-ride consultations (PostgreSQL scans
+     * B-tree indexes equally in either direction, so an ASC index serves the
+     * DESC query without a separate descending index).
      *
      * @return list<TripChatMessage>
      */
