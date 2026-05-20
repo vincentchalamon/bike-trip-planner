@@ -1,6 +1,5 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -10,19 +9,16 @@ interface ChatOfflineBadgeProps {
 
 /**
  * Small visual indicator overlaid on the floating chat button when the user
- * has lost network connectivity. The badge is purely decorative for sighted
- * users; the parent button is responsible for the matching `aria-disabled`
- * state and tooltip wording.
+ * has lost network connectivity. The badge is purely decorative — the parent
+ * button already owns the accessible name, the `aria-disabled` state, and the
+ * tooltip wording — so we hide it from assistive technologies to avoid a
+ * duplicate "offline" announcement in NVDA / JAWS browse mode.
  */
 export function ChatOfflineBadge({ className }: ChatOfflineBadgeProps) {
-  const t = useTranslations("chat.offline");
-
   return (
     <span
       data-testid="chat-offline-badge"
-      role="img"
-      aria-label={t("label")}
-      title={t("label")}
+      aria-hidden="true"
       className={cn(
         "absolute -top-1 -right-1 inline-flex items-center justify-center",
         "h-5 w-5 rounded-full bg-neutral-700 text-white shadow-sm",
