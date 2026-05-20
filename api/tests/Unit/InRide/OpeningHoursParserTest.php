@@ -79,6 +79,9 @@ final class OpeningHoursParserTest extends TestCase
 
         // 24:00 is only valid as an end marker — `24:30` start is malformed.
         yield 'invalid start hour 24' => ['24:30-25:00', '2024-06-05 11:00:00', false];
+
+        // 24:30 end is malformed: PHP would silently normalise it to `00:30 next day`.
+        yield 'invalid end hour 24 with non-zero minutes' => ['22:00-24:30', '2024-06-05 22:30:00', false];
     }
 
     #[Test]

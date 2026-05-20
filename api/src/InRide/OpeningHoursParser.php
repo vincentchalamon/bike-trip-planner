@@ -431,8 +431,14 @@ final class OpeningHoursParser
             $endM = (int) $m[4];
 
             // OSM accepts 24:00 only as an *end* marker (midnight of the next day),
-            // so the start hour caps at 23 while the end hour caps at 24.
+            // so the start hour caps at 23 while the end hour caps at 24 with a
+            // zero minute (`24:30` would not be valid OSM and PHP would silently
+            // normalise it to `00:30 next day`, producing a wrong open interval).
             if ($startH > 23 || $endH > 24 || $startM > 59 || $endM > 59) {
+                return null;
+            }
+
+            if (24 === $endH && 0 !== $endM) {
                 return null;
             }
 
