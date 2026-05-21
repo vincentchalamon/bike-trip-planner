@@ -24,6 +24,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -517,11 +518,23 @@ final class TripChatProcessorTest extends TestCase
         $entityManager->method('wrapInTransaction')
             ->willThrowException(new \RuntimeException('PG connection lost'));
 
+        // Capture the swallowed exception via the logger contract so a future
+        // refactor that silently drops the `logger->warning(...)` call cannot
+        // hide the failure from operators.
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::atLeastOnce())
+            ->method('warning')
+            ->with(
+                self::stringContains('Failed to persist trip chat history'),
+                self::callback(static fn (array $ctx): bool => 'PG connection lost' === ($ctx['error'] ?? null)),
+            );
+
         $processor = $this->newProcessor(
             llmContent: $this->jsonEnvelope('info', [], 'OK même si PG est cassé'),
             stagesCount: 3,
             messageBus: $this->newMessageBus(),
             entityManager: $entityManager,
+            logger: $logger,
         );
 
         $response = $processor->process(
@@ -540,6 +553,7 @@ final class TripChatProcessorTest extends TestCase
         MessageBusInterface $messageBus,
         ?RateLimiterFactory $limiterFactory = null,
         ?EntityManagerInterface $entityManager = null,
+        ?LoggerInterface $logger = null,
     ): TripChatProcessor {
         $tripRequest = new TripRequest();
         $stages = [];
@@ -583,7 +597,7 @@ final class TripChatProcessorTest extends TestCase
             interpreter: new ChatActionInterpreter(new NullLogger()),
             historyStore: $historyStore,
             security: $security,
-            logger: new NullLogger(),
+            logger: $logger ?? new NullLogger(),
             messageBus: $messageBus,
             generationTracker: $generationTracker,
             tripChatLimiter: $limiterFactory ?? $this->newNoLimiterFactory(),
