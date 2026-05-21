@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use Doctrine\ORM\EntityManagerInterface;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\GeoPosition;
@@ -176,10 +177,58 @@ final class TripChatInRideTest extends TestCase
         self::assertStringContainsString("point d'intérêt", $response->response);
     }
 
+    /**
+     * Ensures the in-ride branch reaches the EntityManager so PostgreSQL
+     * captures both turns of the consultation (Redis sliding-window context
+     * alone disappears after MAX_MESSAGES).
+     */
+    #[AllowMockObjectsWithoutExpectations]
+    #[Test]
+    public function inRideTurnsArePersistedToPostgres(): void
+    {
+        $persisted = [];
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getReference')
+            ->willReturnCallback(static fn (string $class, string $id): TripRequest => new TripRequest(Uuid::fromString($id)));
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (callable $callback) => $callback($entityManager));
+        $entityManager->expects(self::exactly(2))
+            ->method('persist')
+            ->willReturnCallback(static function (object $entity) use (&$persisted): void {
+                $persisted[] = $entity;
+            });
+        $entityManager->expects(self::once())->method('flush');
+
+        $scanner = $this->createMock(ScannerInterface::class);
+        $scanner->method('query')->willReturn(['elements' => []]);
+
+        $llm = $this->createMock(LlmClientInterface::class);
+        $llm->method('isEnabled')->willReturn(true);
+        $llm->method('generate')->willReturn([
+            'response' => '{"category":"unknown","max_distance_m":3000}',
+        ]);
+
+        $processor = $this->newProcessor($llm, $scanner, $this->newMessageBus(), $entityManager);
+
+        $processor->process(
+            new TripChatRequest(
+                message: 'Point eau ?',
+                context: null,
+                position: new GeoPosition(50.8503, 4.3517),
+            ),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertCount(2, $persisted, 'In-ride turns must persist both user prompt and assistant reply.');
+    }
+
     private function newProcessor(
         LlmClientInterface $llm,
         ScannerInterface $scanner,
         MessageBusInterface $messageBus,
+        ?EntityManagerInterface $entityManager = null,
     ): TripChatProcessor {
         $tripRequest = new TripRequest();
         $stages = [
@@ -234,6 +283,7 @@ final class TripChatInRideTest extends TestCase
             generationTracker: $generationTracker,
             inRideAssistant: $inRideAssistant,
             tripChatLimiter: $this->newNoLimiterFactory(),
+            entityManager: $entityManager,
         );
     }
 
