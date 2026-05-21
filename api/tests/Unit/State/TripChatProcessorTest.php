@@ -502,6 +502,38 @@ final class TripChatProcessorTest extends TestCase
         self::assertSame('info', $response->action);
     }
 
+    /**
+     * When PostgreSQL is reachable but the persist or flush throws (FK
+     * violation, connection drop mid-transaction, …), the chat endpoint must
+     * still return a usable response — the Redis sliding-window context has
+     * already been updated and remains authoritative for the next LLM call.
+     */
+    #[Test]
+    public function chatStillReturnsResponseWhenPgPersistFails(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getReference')
+            ->willReturnCallback(static fn (string $class, string $id): TripRequest => new TripRequest(Uuid::fromString($id)));
+        $entityManager->method('wrapInTransaction')
+            ->willThrowException(new \RuntimeException('PG connection lost'));
+
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('info', [], 'OK même si PG est cassé'),
+            stagesCount: 3,
+            messageBus: $this->newMessageBus(),
+            entityManager: $entityManager,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame('info', $response->action);
+        self::assertSame('OK même si PG est cassé', $response->response);
+    }
+
     private function newProcessor(
         string $llmContent,
         int $stagesCount,
