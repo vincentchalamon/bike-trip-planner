@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use App\ApiResource\Model\GeoPosition;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\TripChatContext;
@@ -11,6 +12,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripChatRequest;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Entity\TripChatMessage;
 use App\Entity\User;
 use App\Geo\HaversineDistance;
 use App\InRide\DeeplinkBuilder;
@@ -27,9 +29,11 @@ use App\Scanner\ScannerInterface;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\TripChatProcessor;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -428,11 +432,231 @@ final class TripChatProcessorTest extends TestCase
         $processor->process(new TripChatRequest('Encore'), new Post(), ['id' => self::TRIP_ID]);
     }
 
+    /**
+     * Long-term persistence regression test (#458): every chat turn must be
+     * written to PostgreSQL *in addition* to the rolling Redis context window
+     * so the rider can recover their conversation from a cold reload.
+     */
+    #[Test]
+    public function chatTurnIsPersistedToPostgresInAdditionToRedis(): void
+    {
+        $persisted = [];
+        $flushed = 0;
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getReference')
+            ->willReturnCallback(static fn (string $class, string $id): TripRequest => new TripRequest(Uuid::fromString($id)));
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (callable $callback) => $callback($entityManager));
+        $entityManager->expects(self::exactly(2))
+            ->method('persist')
+            ->willReturnCallback(static function (object $entity) use (&$persisted): void {
+                $persisted[] = $entity;
+            });
+        $entityManager->expects(self::once())
+            ->method('flush')
+            ->willReturnCallback(static function () use (&$flushed): void {
+                ++$flushed;
+            });
+
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('info', [], 'Réponse persistée'),
+            stagesCount: 3,
+            messageBus: $this->newMessageBus(),
+            entityManager: $entityManager,
+        );
+
+        $processor->process(
+            new TripChatRequest('Quel est mon dénivelé total ?'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertCount(2, $persisted, 'Both the user turn and the assistant reply must be persisted.');
+        self::assertSame(1, $flushed, 'A single flush is expected per chat turn.');
+
+        /** @var TripChatMessage $userTurn */
+        $userTurn = $persisted[0];
+        /** @var TripChatMessage $assistantTurn */
+        $assistantTurn = $persisted[1];
+
+        self::assertInstanceOf(TripChatMessage::class, $userTurn);
+        self::assertInstanceOf(TripChatMessage::class, $assistantTurn);
+        self::assertSame(TripChatMessage::ROLE_USER, $userTurn->getRole());
+        self::assertSame(TripChatMessage::ROLE_ASSISTANT, $assistantTurn->getRole());
+        self::assertStringContainsString('Quel est mon dénivelé total ?', $userTurn->getContent());
+        self::assertSame('info', $assistantTurn->getAction());
+        // Planning turns carry no geo / POI data — those columns must stay null.
+        self::assertNull($userTurn->getGeoLat());
+        self::assertNull($assistantTurn->getGeoLat());
+        self::assertNull($assistantTurn->getPois());
+    }
+
+    /**
+     * Counterpart to the previous test for the in-ride branch: a chat request
+     * carrying a GPS position must persist the geo columns and the POI list on
+     * the assistant turn so {@see \App\State\TripChatHistoryProvider} can
+     * rehydrate the PoiCard renderings after a page reload.
+     */
+    #[Test]
+    public function inRideTurnIsPersistedWithGeoAndPois(): void
+    {
+        $persisted = [];
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getReference')
+            ->willReturnCallback(static fn (string $class, string $id): TripRequest => new TripRequest(Uuid::fromString($id)));
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (callable $callback) => $callback($entityManager));
+        $entityManager->method('persist')
+            ->willReturnCallback(static function (object $entity) use (&$persisted): void {
+                $persisted[] = $entity;
+            });
+        $entityManager->method('flush');
+
+        // Scanner returns one named water POI close to the rider so the
+        // in-ride pipeline produces a non-empty $poisPayload that
+        // `persistChatTurn` stores on the assistant turn.
+        $scannerResponse = [
+            'elements' => [
+                [
+                    'type' => 'node',
+                    'lat' => 48.8570,
+                    'lon' => 2.3530,
+                    'tags' => ['name' => 'Fontaine Wallace'],
+                ],
+            ],
+        ];
+
+        $processor = $this->newProcessor(
+            // The first LLM call (intent detection) returns a water envelope;
+            // the narrative call uses the same chat() stub which we also wire
+            // for the planning fallback. Both paths come through `chat()` in
+            // PoiIntentDetector → LlmClientInterface::generate, so we drive
+            // them via the chat stub on InRideAssistant's narrative call.
+            llmContent: '{"category":"water","max_distance_m":3000}',
+            stagesCount: 3,
+            messageBus: $this->newMessageBus(),
+            entityManager: $entityManager,
+            scannerResponse: $scannerResponse,
+        );
+
+        $processor->process(
+            new TripChatRequest(
+                message: "Un point d'eau pas loin ?",
+                position: new GeoPosition(lat: 48.8566, lon: 2.3522),
+            ),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertCount(2, $persisted, 'Both user and assistant turns must be persisted for in-ride messages.');
+
+        /** @var TripChatMessage $userTurn */
+        $userTurn = $persisted[0];
+        /** @var TripChatMessage $assistantTurn */
+        $assistantTurn = $persisted[1];
+
+        self::assertSame(TripChatMessage::ROLE_USER, $userTurn->getRole());
+        self::assertSame(TripChatMessage::ROLE_ASSISTANT, $assistantTurn->getRole());
+
+        // Geo columns must be populated so ChatHistoryLoader can show the
+        // rider's position context after a page reload.
+        self::assertEqualsWithDelta(48.8566, $userTurn->getGeoLat(), 0.0001);
+        self::assertEqualsWithDelta(2.3522, $userTurn->getGeoLon(), 0.0001);
+        self::assertEqualsWithDelta(48.8566, $assistantTurn->getGeoLat(), 0.0001);
+        self::assertEqualsWithDelta(2.3522, $assistantTurn->getGeoLon(), 0.0001);
+
+        // POI payload is attached to the assistant turn only; the user prompt has none.
+        self::assertNull($userTurn->getPois());
+
+        // The scanner returned one POI → the assistant turn must carry the
+        // serialised payload so a page-reload rehydration can paint PoiCards.
+        $pois = $assistantTurn->getPois();
+        self::assertIsArray($pois);
+        self::assertCount(1, $pois);
+        self::assertSame('Fontaine Wallace', $pois[0]['name']);
+    }
+
+    /**
+     * Without the optional repository/entity manager (e.g. legacy wiring during
+     * the rollout), the processor must continue to function: the Redis history
+     * is the legacy single source of truth and a missing PG writer should not
+     * break the chat endpoint.
+     */
+    #[Test]
+    public function chatStillWorksWhenChatMessageRepositoryIsUnwired(): void
+    {
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('info', [], 'OK'),
+            stagesCount: 3,
+            messageBus: $this->newMessageBus(),
+        );
+
+        $response = $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame('info', $response->action);
+    }
+
+    /**
+     * When PostgreSQL is reachable but the persist or flush throws (FK
+     * violation, connection drop mid-transaction, …), the chat endpoint must
+     * still return a usable response — the Redis sliding-window context has
+     * already been updated and remains authoritative for the next LLM call.
+     */
+    #[Test]
+    public function chatStillReturnsResponseWhenPgPersistFails(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getReference')
+            ->willReturnCallback(static fn (string $class, string $id): TripRequest => new TripRequest(Uuid::fromString($id)));
+        $entityManager->method('wrapInTransaction')
+            ->willThrowException(new \RuntimeException('PG connection lost'));
+
+        // Capture the swallowed exception via the logger contract so a future
+        // refactor that silently drops the `logger->warning(...)` call cannot
+        // hide the failure from operators.
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::atLeastOnce())
+            ->method('warning')
+            ->with(
+                self::stringContains('Failed to persist trip chat history'),
+                self::callback(static fn (array $ctx): bool => 'PG connection lost' === ($ctx['error'] ?? null)),
+            );
+
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('info', [], 'OK même si PG est cassé'),
+            stagesCount: 3,
+            messageBus: $this->newMessageBus(),
+            entityManager: $entityManager,
+            logger: $logger,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame('info', $response->action);
+        self::assertSame('OK même si PG est cassé', $response->response);
+    }
+
+    /**
+     * @param array<string, mixed>|null $scannerResponse optional Overpass payload returned by the in-ride scanner mock
+     */
     private function newProcessor(
         string $llmContent,
         int $stagesCount,
         MessageBusInterface $messageBus,
         ?RateLimiterFactory $limiterFactory = null,
+        ?EntityManagerInterface $entityManager = null,
+        ?array $scannerResponse = null,
+        ?LoggerInterface $logger = null,
     ): TripChatProcessor {
         $tripRequest = new TripRequest();
         $stages = [];
@@ -457,6 +681,13 @@ final class TripChatProcessorTest extends TestCase
         $llmClient->method('chat')->willReturn([
             'message' => ['role' => 'assistant', 'content' => $llmContent],
         ]);
+        // PoiIntentDetector + InRideAssistant narrative both call generate().
+        // We return the same `$llmContent` envelope so in-ride tests can drive
+        // the intent classifier with the same fixture as planning tests; the
+        // narrative call also receives this JSON and falls back to the default
+        // markdown narrative if it cannot parse it (acceptable for the in-ride
+        // assertion that only inspects `pois`, not the narrative wording).
+        $llmClient->method('generate')->willReturn(['response' => $llmContent]);
 
         $promptLoader = new SystemPromptLoader($this->createPromptFixtureDir());
         $historyStore = new ChatHistoryStore(new ArrayAdapter());
@@ -471,7 +702,7 @@ final class TripChatProcessorTest extends TestCase
 
         $distance = new HaversineDistance();
         $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn(['elements' => []]);
+        $scanner->method('query')->willReturn($scannerResponse ?? ['elements' => []]);
         $inRideAssistant = new InRideAssistant(
             intentDetector: new PoiIntentDetector($llmClient),
             scanner: $scanner,
@@ -492,11 +723,12 @@ final class TripChatProcessorTest extends TestCase
             interpreter: new ChatActionInterpreter(new NullLogger()),
             historyStore: $historyStore,
             security: $security,
-            logger: new NullLogger(),
+            logger: $logger ?? new NullLogger(),
             messageBus: $messageBus,
             generationTracker: $generationTracker,
             inRideAssistant: $inRideAssistant,
             tripChatLimiter: $limiterFactory ?? $this->newNoLimiterFactory(),
+            entityManager: $entityManager,
         );
     }
 

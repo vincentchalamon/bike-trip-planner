@@ -29,10 +29,10 @@ final readonly class PoiSuggestionDto
         public float $lat,
         #[ApiProperty(description: 'POI longitude (WGS84).', required: true)]
         public float $lon,
-        #[ApiProperty(description: 'Straight-line distance from the rider to the POI, in meters.', required: true)]
-        public float $distance_m,
-        #[ApiProperty(description: 'Estimated additional meters if the rider detours to the POI (0 when no remaining route is known).', required: true)]
-        public float $detour_m,
+        #[ApiProperty(description: 'Straight-line distance from the rider to the POI, in meters (rounded).', required: true)]
+        public int $distance_m,
+        #[ApiProperty(description: 'Estimated additional meters if the rider detours to the POI (0 when no remaining route is known, rounded).', required: true)]
+        public int $detour_m,
         #[ApiProperty(description: 'Raw OSM `opening_hours` tag for the current day, when available.')]
         public ?string $opening_hours_today,
         #[ApiProperty(description: 'RFC 3339 closing time of the currently-open interval, or null when the POI never closes / is closed.')]
@@ -52,8 +52,8 @@ final readonly class PoiSuggestionDto
      *     category: string,
      *     lat: float,
      *     lon: float,
-     *     distance_m: float,
-     *     detour_m: float,
+     *     distance_m: int,
+     *     detour_m: int,
      *     opening_hours_today: ?string,
      *     closes_at: ?string,
      *     phone: ?string,

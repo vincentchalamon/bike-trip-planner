@@ -92,9 +92,9 @@ final readonly class TripChatProcessor implements ProcessorInterface
         private InRideAssistant $inRideAssistant,
         #[Autowire(service: 'limiter.trip_chat')]
         private RateLimiterFactory $tripChatLimiter,
+        private ?EntityManagerInterface $entityManager = null,
         #[Autowire(env: 'default::OLLAMA_DIALOGUE_MODEL')]
         ?string $model = null,
-        private ?EntityManagerInterface $entityManager = null,
     ) {
         $this->model = (null === $model || '' === $model) ? self::DEFAULT_MODEL : $model;
     }
@@ -143,7 +143,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
         // POI search mode. The planning pipeline (dialogue prompt, action
         // interpreter, Messenger dispatch) is bypassed entirely.
         if ($data->position instanceof GeoPosition) {
-            return $this->processInRide($tripId, $userId, $data);
+            return $this->processInRide($user, $tripId, $userId, $data);
         }
 
         $systemPrompt = $this->promptLoader->load(self::PROMPT_NAME);
@@ -356,7 +356,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
      * a response carrying the `find_poi` action together with the structured
      * POI suggestions.
      */
-    private function processInRide(string $tripId, string $userId, TripChatRequest $data): TripChatResponse
+    private function processInRide(User $user, string $tripId, string $userId, TripChatRequest $data): TripChatResponse
     {
         \assert($data->position instanceof GeoPosition);
 
@@ -373,6 +373,27 @@ final readonly class TripChatProcessor implements ProcessorInterface
             ['role' => 'assistant', 'content' => $response->narrative],
         ]);
 
+        $poisPayload = array_map(static fn (PoiSuggestion $p): array => $p->toArray(), $response->pois);
+
+        // In-ride turns must reach PostgreSQL too, otherwise the rider's POI
+        // search history disappears on the next page reload and defeats the
+        // long-term persistence we wired in #458. We also fill the geo_*
+        // columns and the pois JSONB so ChatHistoryLoader can rehydrate the
+        // POI cards on a refresh.
+        $this->persistChatTurn(
+            $tripId,
+            $user,
+            $data->message,
+            $response->narrative,
+            new ChatAction(
+                action: ChatAction::ACTION_FIND_POI,
+                params: ['category' => $response->category],
+                response: $response->narrative,
+            ),
+            position: $data->position,
+            pois: $poisPayload,
+        );
+
         return new TripChatResponse(
             tripId: $tripId,
             action: ChatAction::ACTION_FIND_POI,
@@ -381,12 +402,12 @@ final readonly class TripChatProcessor implements ProcessorInterface
             dispatched: false,
             impactedStageNumbers: [],
             requiresFullAnalysis: false,
-            // API Platform serialises PoiSuggestionDto's public snake_case
-            // properties directly, so the wire JSON matches the snake_case
-            // contract the PWA Zod schema and PoiCard rendering expect.
+            // Hydrate the typed wire DTO so API Platform's serializer emits the
+            // snake_case keys the PWA Zod schema and PoiCard expect (mirrors
+            // PoiSuggestion::toArray() field-for-field).
             pois: array_map(
-                static fn (PoiSuggestion $p): PoiSuggestionDto => PoiSuggestionDto::fromArray($p->toArray()),
-                $response->pois,
+                PoiSuggestionDto::fromArray(...),
+                $poisPayload,
             ),
         );
     }
@@ -396,6 +417,8 @@ final readonly class TripChatProcessor implements ProcessorInterface
      * context window (cf. #458). Failures are logged but never bubble up so a
      * transient DB hiccup cannot abort an otherwise successful chat turn — the
      * Redis history remains authoritative for the next LLM call either way.
+     *
+     * @param list<array{name: string, category: string, lat: float, lon: float, distance_m: int, detour_m: int, opening_hours_today: ?string, closes_at: ?string, phone: ?string, deeplink: string, warning: ?string}>|null $pois optional POI suggestions stored alongside an in-ride assistant turn
      */
     private function persistChatTurn(
         string $tripId,
@@ -403,10 +426,13 @@ final readonly class TripChatProcessor implements ProcessorInterface
         string $userMessage,
         string $assistantContent,
         ChatAction $action,
+        ?GeoPosition $position = null,
+        ?array $pois = null,
     ): void {
-        // Pin the EntityManager to a local variable so PHPStan keeps the
-        // non-null narrowing inside the wrapInTransaction closure (Level 9
-        // does not carry property-type narrowing across closure boundaries).
+        // Pin the entity manager to a local variable so PHPStan keeps the
+        // non-null narrowing inside the closure passed to wrapInTransaction
+        // (property accesses widen back to `?EntityManagerInterface` across
+        // closure boundaries at Level 9).
         $entityManager = $this->entityManager;
         if (!$entityManager instanceof EntityManagerInterface) {
             return;
@@ -418,11 +444,16 @@ final readonly class TripChatProcessor implements ProcessorInterface
                 return;
             }
 
+            $geoLat = $position?->lat;
+            $geoLon = $position?->lon;
+
             $userTurn = new TripChatMessage(
                 trip: $trip,
                 user: $user,
                 role: TripChatMessage::ROLE_USER,
                 content: $userMessage,
+                geoLat: $geoLat,
+                geoLon: $geoLon,
             );
             $assistantTurn = new TripChatMessage(
                 trip: $trip,
@@ -430,6 +461,9 @@ final readonly class TripChatProcessor implements ProcessorInterface
                 role: TripChatMessage::ROLE_ASSISTANT,
                 content: $assistantContent,
                 action: $action->action,
+                geoLat: $geoLat,
+                geoLon: $geoLon,
+                pois: null !== $pois && [] !== $pois ? $pois : null,
             );
 
             // `wrapInTransaction` gives us atomicity (both turns persisted or
