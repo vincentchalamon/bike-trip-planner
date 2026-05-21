@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\TripChatMessage;
+use Psr\Log\LoggerInterface;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\TripChatContext;
@@ -428,11 +431,137 @@ final class TripChatProcessorTest extends TestCase
         $processor->process(new TripChatRequest('Encore'), new Post(), ['id' => self::TRIP_ID]);
     }
 
+    /**
+     * Guarantees the dual-write contract from #458: each chat turn persisted to
+     * Redis is also written to PostgreSQL via the EntityManager. Both the user
+     * prompt and the assistant reply must reach `persist()` and a single
+     * `flush()` must be issued per turn.
+     */
+    #[AllowMockObjectsWithoutExpectations]
+    #[Test]
+    public function chatTurnIsPersistedToPostgresInAdditionToRedis(): void
+    {
+        $persisted = [];
+        $flushed = 0;
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getReference')
+            ->willReturnCallback(static fn (string $class, string $id): TripRequest => new TripRequest(Uuid::fromString($id)));
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (callable $callback) => $callback($entityManager));
+        $entityManager->expects(self::exactly(2))
+            ->method('persist')
+            ->willReturnCallback(static function (object $entity) use (&$persisted): void {
+                $persisted[] = $entity;
+            });
+        $entityManager->expects(self::once())
+            ->method('flush')
+            ->willReturnCallback(static function () use (&$flushed): void {
+                ++$flushed;
+            });
+
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('info', [], 'Réponse persistée'),
+            stagesCount: 3,
+            messageBus: $this->newMessageBus(),
+            entityManager: $entityManager,
+        );
+
+        $processor->process(
+            new TripChatRequest('Quel est mon dénivelé total ?'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertCount(2, $persisted, 'Both the user turn and the assistant reply must be persisted.');
+        self::assertSame(1, $flushed, 'A single flush is expected per chat turn.');
+
+        /** @var TripChatMessage $userTurn */
+        $userTurn = $persisted[0];
+        /** @var TripChatMessage $assistantTurn */
+        $assistantTurn = $persisted[1];
+
+        self::assertInstanceOf(TripChatMessage::class, $userTurn);
+        self::assertInstanceOf(TripChatMessage::class, $assistantTurn);
+        self::assertSame(TripChatMessage::ROLE_USER, $userTurn->getRole());
+        self::assertSame(TripChatMessage::ROLE_ASSISTANT, $assistantTurn->getRole());
+        self::assertStringContainsString('Quel est mon dénivelé total ?', $userTurn->getContent());
+        self::assertSame('info', $assistantTurn->getAction());
+    }
+
+    /**
+     * Without the optional EntityManager (e.g. legacy wiring during the
+     * rollout), the processor must continue to function: the Redis history
+     * is the legacy single source of truth and a missing PG writer should
+     * not break the chat endpoint.
+     */
+    #[Test]
+    public function chatStillWorksWhenChatMessageRepositoryIsUnwired(): void
+    {
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('info', [], 'OK'),
+            stagesCount: 3,
+            messageBus: $this->newMessageBus(),
+        );
+
+        $response = $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame('info', $response->action);
+    }
+
+    /**
+     * When PostgreSQL is reachable but the persist or flush throws (FK
+     * violation, connection drop mid-transaction, …), the chat endpoint must
+     * still return a usable response — the Redis sliding-window context has
+     * already been updated and remains authoritative for the next LLM call.
+     */
+    #[AllowMockObjectsWithoutExpectations]
+    #[Test]
+    public function chatStillReturnsResponseWhenPgPersistFails(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getReference')
+            ->willReturnCallback(static fn (string $class, string $id): TripRequest => new TripRequest(Uuid::fromString($id)));
+        $entityManager->method('wrapInTransaction')
+            ->willThrowException(new \RuntimeException('PG connection lost'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::atLeastOnce())
+            ->method('warning')
+            ->with(
+                self::stringContains('Failed to persist trip chat history'),
+                self::callback(static fn (array $ctx): bool => 'PG connection lost' === ($ctx['error'] ?? null)),
+            );
+
+        $processor = $this->newProcessor(
+            llmContent: $this->jsonEnvelope('info', [], 'OK même si PG est cassé'),
+            stagesCount: 3,
+            messageBus: $this->newMessageBus(),
+            entityManager: $entityManager,
+            logger: $logger,
+        );
+
+        $response = $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertSame('info', $response->action);
+        self::assertSame('OK même si PG est cassé', $response->response);
+    }
+
     private function newProcessor(
         string $llmContent,
         int $stagesCount,
         MessageBusInterface $messageBus,
         ?RateLimiterFactory $limiterFactory = null,
+        ?EntityManagerInterface $entityManager = null,
+        ?LoggerInterface $logger = null,
     ): TripChatProcessor {
         $tripRequest = new TripRequest();
         $stages = [];
@@ -492,11 +621,12 @@ final class TripChatProcessorTest extends TestCase
             interpreter: new ChatActionInterpreter(new NullLogger()),
             historyStore: $historyStore,
             security: $security,
-            logger: new NullLogger(),
+            logger: $logger ?? new NullLogger(),
             messageBus: $messageBus,
             generationTracker: $generationTracker,
             inRideAssistant: $inRideAssistant,
             tripChatLimiter: $limiterFactory ?? $this->newNoLimiterFactory(),
+            entityManager: $entityManager,
         );
     }
 
