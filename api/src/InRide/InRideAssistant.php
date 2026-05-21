@@ -35,10 +35,9 @@ use Symfony\Contracts\Cache\ItemInterface;
  *     intent carries an `open_for_minutes` constraint, only POIs that remain
  *     open at least that long are kept.
  *  4. {@see DetourCalculator} approximates the detour required to visit each
- *     POI. The remaining route polyline is provided by the caller (the
- *     frontend store keeps it in memory) — when none is supplied, the rider
- *     position is used as a single-point polyline and detours collapse to the
- *     straight-line distance.
+ *     POI. The remaining-route polyline is provided by the caller (the
+ *     frontend store keeps it in memory); when none is supplied the detour
+ *     stays at 0 because there is no rejoin point to measure against.
  *  5. Top-3 POIs are picked using a score of "proximity × low-detour" and
  *     enriched with {@see DeeplinkBuilder} navigation URLs.
  *  6. The LLM is given a deterministic JSON view of the selected POIs (via the
@@ -107,9 +106,12 @@ final readonly class InRideAssistant
 
         $rawElements = $this->fetchPois($center, $intent);
 
-        $polyline = [] === $remainingRoute ? [$center] : $remainingRoute;
-
-        $suggestions = $this->buildSuggestions($rawElements, $center, $polyline, $intent, $now);
+        // When the rider hasn't shared a remaining-route polyline, we have no
+        // notion of "rejoining" the planned itinerary — a single-point
+        // polyline would yield a detour ≈ 2 × straight-line (out-and-back),
+        // which is misleading. Pass an empty polyline so buildSuggestions
+        // can record `detour_m = 0` for these rows.
+        $suggestions = $this->buildSuggestions($rawElements, $center, $remainingRoute, $intent, $now);
 
         // Rank by combined "distance + DETOUR_WEIGHT × detour" score.
         usort(
@@ -265,10 +267,17 @@ final readonly class InRideAssistant
                 }
             }
 
-            $detour = $this->detourCalculator->calculate($center, $poiPoint, $polyline);
-
-            if ($detour->poiFarFromRoute && null === $warning) {
-                $warning = 'Éloigné de l\'itinéraire';
+            if ([] === $polyline) {
+                // Without a planned itinerary we have no rejoin point to
+                // measure against, so the "detour" cost is unknown — surface
+                // it as 0 instead of fabricating a 2× round-trip estimate.
+                $detourMeters = 0.0;
+            } else {
+                $detour = $this->detourCalculator->calculate($center, $poiPoint, $polyline);
+                $detourMeters = $detour->detourMeters;
+                if ($detour->poiFarFromRoute && null === $warning) {
+                    $warning = 'Éloigné de l\'itinéraire';
+                }
             }
 
             $deeplink = $this->deeplinkBuilder->googleMapsBicycling($center, $poiPoint);
@@ -279,7 +288,7 @@ final readonly class InRideAssistant
                 lat: $poiPoint->lat,
                 lon: $poiPoint->lon,
                 distanceMeters: $straightLine,
-                detourMeters: $detour->detourMeters,
+                detourMeters: $detourMeters,
                 openingHoursToday: $openingHoursTag,
                 closesAt: $closesAt,
                 phone: \is_string($tags['phone'] ?? null) ? $tags['phone'] : (\is_string($tags['contact:phone'] ?? null) ? $tags['contact:phone'] : null),

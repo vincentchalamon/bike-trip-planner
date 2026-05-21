@@ -11,20 +11,25 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripChatRequest;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\Entity\TripChatMessage;
 use App\Entity\User;
+use App\Geo\HaversineDistance;
+use App\InRide\DeeplinkBuilder;
+use App\InRide\DetourCalculator;
+use App\InRide\InRideAssistant;
+use App\InRide\OpeningHoursParser;
+use App\InRide\PoiIntentDetector;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
+use App\Scanner\OsmOverpassQueryBuilder;
+use App\Scanner\ScannerInterface;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\TripChatProcessor;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -423,137 +428,11 @@ final class TripChatProcessorTest extends TestCase
         $processor->process(new TripChatRequest('Encore'), new Post(), ['id' => self::TRIP_ID]);
     }
 
-    /**
-     * Long-term persistence regression test (#458): every chat turn must be
-     * written to PostgreSQL *in addition* to the rolling Redis context window
-     * so the rider can recover their conversation from a cold reload.
-     */
-    #[Test]
-    public function chatTurnIsPersistedToPostgresInAdditionToRedis(): void
-    {
-        $persisted = [];
-        $flushed = 0;
-
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('getReference')
-            ->willReturnCallback(static fn (string $class, string $id): TripRequest => new TripRequest(Uuid::fromString($id)));
-        $entityManager->method('wrapInTransaction')
-            ->willReturnCallback(static fn (callable $callback) => $callback($entityManager));
-        $entityManager->expects(self::exactly(2))
-            ->method('persist')
-            ->willReturnCallback(static function (object $entity) use (&$persisted): void {
-                $persisted[] = $entity;
-            });
-        $entityManager->expects(self::once())
-            ->method('flush')
-            ->willReturnCallback(static function () use (&$flushed): void {
-                ++$flushed;
-            });
-
-        $processor = $this->newProcessor(
-            llmContent: $this->jsonEnvelope('info', [], 'Réponse persistée'),
-            stagesCount: 3,
-            messageBus: $this->newMessageBus(),
-            entityManager: $entityManager,
-        );
-
-        $processor->process(
-            new TripChatRequest('Quel est mon dénivelé total ?'),
-            new Post(),
-            ['id' => self::TRIP_ID],
-        );
-
-        self::assertCount(2, $persisted, 'Both the user turn and the assistant reply must be persisted.');
-        self::assertSame(1, $flushed, 'A single flush is expected per chat turn.');
-
-        /** @var TripChatMessage $userTurn */
-        $userTurn = $persisted[0];
-        /** @var TripChatMessage $assistantTurn */
-        $assistantTurn = $persisted[1];
-
-        self::assertInstanceOf(TripChatMessage::class, $userTurn);
-        self::assertInstanceOf(TripChatMessage::class, $assistantTurn);
-        self::assertSame(TripChatMessage::ROLE_USER, $userTurn->getRole());
-        self::assertSame(TripChatMessage::ROLE_ASSISTANT, $assistantTurn->getRole());
-        self::assertStringContainsString('Quel est mon dénivelé total ?', $userTurn->getContent());
-        self::assertSame('info', $assistantTurn->getAction());
-    }
-
-    /**
-     * Without the optional repository/entity manager (e.g. legacy wiring during
-     * the rollout), the processor must continue to function: the Redis history
-     * is the legacy single source of truth and a missing PG writer should not
-     * break the chat endpoint.
-     */
-    #[Test]
-    public function chatStillWorksWhenChatMessageRepositoryIsUnwired(): void
-    {
-        $processor = $this->newProcessor(
-            llmContent: $this->jsonEnvelope('info', [], 'OK'),
-            stagesCount: 3,
-            messageBus: $this->newMessageBus(),
-        );
-
-        $response = $processor->process(
-            new TripChatRequest('Bonjour'),
-            new Post(),
-            ['id' => self::TRIP_ID],
-        );
-
-        self::assertSame('info', $response->action);
-    }
-
-    /**
-     * When PostgreSQL is reachable but the persist or flush throws (FK
-     * violation, connection drop mid-transaction, …), the chat endpoint must
-     * still return a usable response — the Redis sliding-window context has
-     * already been updated and remains authoritative for the next LLM call.
-     */
-    #[Test]
-    public function chatStillReturnsResponseWhenPgPersistFails(): void
-    {
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('getReference')
-            ->willReturnCallback(static fn (string $class, string $id): TripRequest => new TripRequest(Uuid::fromString($id)));
-        $entityManager->method('wrapInTransaction')
-            ->willThrowException(new \RuntimeException('PG connection lost'));
-
-        // Capture the swallowed exception via the logger contract so a future
-        // refactor that silently drops the `logger->warning(...)` call cannot
-        // hide the failure from operators.
-        $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::atLeastOnce())
-            ->method('warning')
-            ->with(
-                self::stringContains('Failed to persist trip chat history'),
-                self::callback(static fn (array $ctx): bool => 'PG connection lost' === ($ctx['error'] ?? null)),
-            );
-
-        $processor = $this->newProcessor(
-            llmContent: $this->jsonEnvelope('info', [], 'OK même si PG est cassé'),
-            stagesCount: 3,
-            messageBus: $this->newMessageBus(),
-            entityManager: $entityManager,
-            logger: $logger,
-        );
-
-        $response = $processor->process(
-            new TripChatRequest('Bonjour'),
-            new Post(),
-            ['id' => self::TRIP_ID],
-        );
-
-        self::assertSame('info', $response->action);
-        self::assertSame('OK même si PG est cassé', $response->response);
-    }
-
     private function newProcessor(
         string $llmContent,
         int $stagesCount,
         MessageBusInterface $messageBus,
         ?RateLimiterFactory $limiterFactory = null,
-        ?EntityManagerInterface $entityManager = null,
-        ?LoggerInterface $logger = null,
     ): TripChatProcessor {
         $tripRequest = new TripRequest();
         $stages = [];
@@ -590,6 +469,22 @@ final class TripChatProcessorTest extends TestCase
         $security = $this->createStub(Security::class);
         $security->method('getUser')->willReturn($user);
 
+        $distance = new HaversineDistance();
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('query')->willReturn(['elements' => []]);
+        $inRideAssistant = new InRideAssistant(
+            intentDetector: new PoiIntentDetector($llmClient),
+            scanner: $scanner,
+            queryBuilder: new OsmOverpassQueryBuilder(),
+            openingHoursParser: new OpeningHoursParser(),
+            detourCalculator: new DetourCalculator($distance),
+            deeplinkBuilder: new DeeplinkBuilder(),
+            distance: $distance,
+            llmClient: $llmClient,
+            promptLoader: $promptLoader,
+            cache: new ArrayAdapter(),
+        );
+
         return new TripChatProcessor(
             tripStateManager: $repository,
             llmClient: $llmClient,
@@ -597,11 +492,11 @@ final class TripChatProcessorTest extends TestCase
             interpreter: new ChatActionInterpreter(new NullLogger()),
             historyStore: $historyStore,
             security: $security,
-            logger: $logger ?? new NullLogger(),
+            logger: new NullLogger(),
             messageBus: $messageBus,
             generationTracker: $generationTracker,
+            inRideAssistant: $inRideAssistant,
             tripChatLimiter: $limiterFactory ?? $this->newNoLimiterFactory(),
-            entityManager: $entityManager,
         );
     }
 
