@@ -583,7 +583,31 @@ Extension du chat LLaMA 3B (sprint 31) au cas d'usage **in-ride** : pendant un v
 
 ---
 
-## Sprint 33 — Analytics d'usage & conformité RGPD + parcours compte
+## Sprint 33 — OSM Data Refresh quotidien
+
+Mise à jour automatique des cartes OSM consommées par Valhalla. Le provisioner devient une commande unifiée install/update auto-détectée selon l'état (`/data/regions.json`). Un service `osm-cron` intégré à Docker Compose orchestre nuit après nuit le re-téléchargement des PBF Geofabrik et le redémarrage de Valhalla pour rebuild des tuiles. Voir ADR-030.
+
+| Ordre | ID                                                                      | Titre                                                                                                                                  | Effort | PRs | Dépend de |
+|-------|-------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|--------|-----|-----------|
+| 1     | [#477](https://github.com/vincentchalamon/bike-trip-planner/issues/477) | Commande `provision` unifiée install/update + `RegionSelectionStore` + persistance `/data/regions.json`                                | M      |     | —         |
+| 2     | [#478](https://github.com/vincentchalamon/bike-trip-planner/issues/478) | `OsmDataDownloader` partagé : download atomique (`.tmp` + rename) + merge osmium + tests unitaires                                     | S      |     | #477      |
+| 3     | [#479](https://github.com/vincentchalamon/bike-trip-planner/issues/479) | Service `osm-cron` (Dockerfile docker:cli + supercronic + script orchestration) + intégration Compose dev/prod                         | M      |     | #477      |
+| 4     | [#480](https://github.com/vincentchalamon/bike-trip-planner/issues/480) | ADR-030 stratégie refresh OSM (re-download vs pyosmium-up-to-date, scheduler Compose vs crontab hôte) + README provisioning            | S      |     | —         |
+
+### Recette Sprint 33
+
+- **Tests E2E :** N/A (infra) — couverture via tests unitaires PHPUnit + smoke test cron.
+- **Checklist manuelle :**
+  - [ ] Bootstrap fresh : `rm -rf .docker/osm/data/*` puis `make provision` → sélection Ile-de-France → vérifier `.docker/osm/data/regions/ile-de-france-latest.osm.pbf`, `.docker/osm/data/regions.json` créés, `default.osm.pbf` mergé
+  - [ ] Update non-interactif : `docker compose run --rm provisioner php bin/provision --no-interaction` → mtime PBF récent + `default.osm.pbf` re-mergé
+  - [ ] Update sans config : `rm .docker/osm/data/regions.json && make provision-update` → erreur claire « First run requires interactive setup »
+  - [ ] Service cron : `docker compose --profile routing up -d osm-cron` avec `OSM_CRON_SCHEDULE="* * * * *"` → `docker logs osm-cron` montre provisioner OK + Valhalla redémarré
+  - [ ] Reconstruction Valhalla : après restart, healthcheck `service_starting` puis `service_healthy` (< 10 min sur Ile-de-France), test `/route` Valhalla
+  - [ ] PHPStan L9 + PHPUnit + `make qa` green
+
+---
+
+## Sprint 34 — Analytics d'usage & conformité RGPD + parcours compte
 
 Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes, profil trips, valeur features, rétention/UX) via **Plausible Analytics** (privacy-first, RGPD-compatible, sans cookie ni empreinte navigateur), avec prérequis RGPD (privacy policy, mentions légales, anonymisation user). **Décision arbitrage v3 #375** : abandon de l'implémentation native (UsageEvent partitionnée + endpoint `/events` + vue matérialisée) au profit de Plausible — simplification majeure du sprint. Voir issue [#370](https://github.com/vincentchalamon/bike-trip-planner/issues/370) (épic). **Sprint élargi** avec 3 issues compte/top bar/cookies (cf. issue #375 §13, §14, §15).
 
@@ -600,7 +624,7 @@ Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes,
 | 9     | [#384](https://github.com/vincentchalamon/bike-trip-planner/issues/384) | Refonte top bar desktop (logo + tabs + undo/redo + Partager + ? aide unifiée + pills FR\|EN + thème + profil)    | L      |     | #383       |
 | 10    | [#385](https://github.com/vincentchalamon/bike-trip-planner/issues/385) | Bannière cookies bas d'écran + modale granularité (Tout accepter / refuser / Personnaliser) — gating Plausible    | M      |     | TBD item 1, #5 (TBD) |
 
-### Recette Sprint 33
+### Recette Sprint 34
 
 - **Checklist manuelle :**
   - [ ] Page `/privacy` accessible et complète (base légale, conservation, droits utilisateurs, mention Plausible)
@@ -618,9 +642,9 @@ Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes,
 
 ---
 
-## Sprint 34 — Recette complète & Audit
+## Sprint 35 — Recette complète & Audit
 
-Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 32, hors sprint 33 RGPD/parcours compte qui a sa propre recette) et audit complet : performance, sécurité, accessibilité, SEO, qualité de code, couverture de tests. Deux phases : **audit** (cartographier les problèmes) puis **corrections** (fixer par lots thématiques).
+Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 33, hors sprint 34 RGPD/parcours compte qui a sa propre recette) et audit complet : performance, sécurité, accessibilité, SEO, qualité de code, couverture de tests. Deux phases : **audit** (cartographier les problèmes) puis **corrections** (fixer par lots thématiques).
 
 ### Phase 1 — Outillage automatisé
 
@@ -678,7 +702,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 32
 | 35    | Fix : performance et polish (P3)                           | M      |
 | 36    | Re-test : golden path A final après corrections            | M      |
 
-### Recette Sprint 34 — Golden Path A (Komoot)
+### Recette Sprint 35 — Golden Path A (Komoot)
 
 - **Checklist :**
   - [ ] Connexion via magic link (email → Mailcatcher → clic → connecté)
@@ -696,7 +720,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 32
   - [ ] Dupliquer le trip → modifier le duplicata → l'original est inchangé
   - [ ] Se déconnecter → se reconnecter → le trip est toujours là
 
-### Recette Sprint 34 — Cas limites
+### Recette Sprint 35 — Cas limites
 
 - **Inputs invalides :**
   - [ ] GPX malformé (XML invalide) → message d'erreur clair
@@ -721,7 +745,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 32
   - [ ] 0 hébergement trouvé → message informatif
   - [ ] Undo jusqu'au début → bouton disabled, pas de crash
 
-### Recette Sprint 34 — Audit visuel multi-device
+### Recette Sprint 35 — Audit visuel multi-device
 
 | Device | Navigateur | Thème | Langue | OK ? |
 |---|---|---|---|---|
@@ -741,7 +765,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 32
   - [ ] Switch de vue (timeline/map/split) fonctionnel
   - [ ] Pas de flash blanc au chargement en dark mode
 
-### Recette Sprint 34 — Audits automatisés
+### Recette Sprint 35 — Audits automatisés
 
 - **Seuils :**
   - [ ] `make qa` : 0 erreur
@@ -763,7 +787,7 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 32
 
 ---
 
-## Sprint 35 — Garmin Connect
+## Sprint 36 — Garmin Connect
 
 Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase 2). Voir [ADR-018](docs/adr/adr-018-garmin-export-and-device-sync-strategy.md). Test local via ngrok pour le callback OAuth. Le visuel des menus downloads et de la modale partage a déjà été refondu en sprint 27 — cette implémentation y ajoute l'option FIT et la 4ᵉ section Garmin Connect en consommant les tokens design en place.
 
@@ -773,9 +797,9 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 |-------|-----------------------------------------------------------------------|----------------|--------|-----|------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | 1     | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Garmin Connect | L      | 3   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76), sprint 27                                                                            |
 
-### Recette Sprint 35
+### Recette Sprint 36
 
-- **Tests E2E :** `tests/recette/sprint-35.spec.ts`
+- **Tests E2E :** `tests/recette/sprint-36.spec.ts`
 - **Checklist manuelle :**
   - [ ] Export FIT téléchargeable par étape
   - [ ] Flux OAuth Garmin Connect complet (via ngrok)
@@ -784,7 +808,7 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 
 ---
 
-## Sprint 36 — Déploiement
+## Sprint 37 — Déploiement
 
 Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructure-strategy.md). Issues GitHub à créer au moment venu. **Inclut Ollama** dans la stack production (conséquence de la décision « Ollama = dépendance dure » prise au sprint 29).
 
@@ -799,7 +823,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 7     | Migration données + smoke test production (incl. passe LLaMA 8B) | M      |
 | 8     | [#312](https://github.com/vincentchalamon/bike-trip-planner/issues/312) Feature-deploy : preview par PR (Étapes 1-7) | L |
 
-### Recette Sprint 36
+### Recette Sprint 37
 
 - **Checklist manuelle :**
   - [ ] Application accessible via URL publique
@@ -870,8 +894,9 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 30        | Frontend IA : résumés hybrides           | 2       | ~3           |
 | 31        | Bulle IA (LLaMA 3B) dialogue             | 3       | ~4           |
 | 32        | Chat in-ride : POI + détour              | 8       | ~8           |
-| 33        | Analytics Plausible + RGPD + parcours compte | 10    | ~10          |
-| 34        | Recette complète & Audit                 | 36      | ~12          |
-| 35        | Garmin Connect                           | 1       | 3            |
-| 36        | Déploiement (incl. Ollama prod)          | 8       | ~8           |
-| **Total** |                                          | **192** | **~202**     |
+| 33        | OSM Data Refresh quotidien               | 4       | ~4           |
+| 34        | Analytics Plausible + RGPD + parcours compte | 10    | ~10          |
+| 35        | Recette complète & Audit                 | 36      | ~12          |
+| 36        | Garmin Connect                           | 1       | 3            |
+| 37        | Déploiement (incl. Ollama prod)          | 8       | ~8           |
+| **Total** |                                          | **196** | **~206**     |
