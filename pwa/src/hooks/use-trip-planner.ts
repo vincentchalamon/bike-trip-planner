@@ -743,6 +743,7 @@ export function useTripPlanner() {
    */
   async function sendChatMessage(
     text: string,
+    position?: { lat: number; lon: number; bearing?: number | null } | null,
   ): Promise<TripChatResponseBody | null> {
     const trimmed = text.trim();
     if (!trimmed) return null;
@@ -769,6 +770,7 @@ export function useTripPlanner() {
         {
           message: trimmed,
           context: { currentStage: uiStore.currentContext.currentStage },
+          ...(position ? { position } : {}),
         },
         controller.signal,
       );
@@ -798,6 +800,7 @@ export function useTripPlanner() {
         role: "assistant",
         content: data.response,
         ts: Date.now(),
+        ...(data.pois && data.pois.length > 0 ? { pois: data.pois } : {}),
       });
 
       // Inline recomputation: surface the shimmer skeleton on the impacted

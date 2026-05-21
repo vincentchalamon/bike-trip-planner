@@ -615,6 +615,20 @@
   "chat": {
     "offline": {
       "label": "You are offline. The assistant is unavailable."
+    },
+    "inRide": {
+      "openInMaps": "Open in Google Maps",
+      "detourBadge": "+{km} km",
+      "opensAt": "Opens at {time}",
+      "closesAt": "Closes at {time}",
+      "noOpeningHours": "Opening hours unverified — confirm on site.",
+      "routeNotModified": "Your planned route is not modified.",
+      "osmDisclaimer": "OpenStreetMap data — verify on the ground when in doubt.",
+      "geolocPrompt": "Share my location for nearby suggestions"
+    },
+    "history": {
+      "loading": "Loading conversation…",
+      "empty": "No messages yet."
     }
   },
   "aiOverview": {

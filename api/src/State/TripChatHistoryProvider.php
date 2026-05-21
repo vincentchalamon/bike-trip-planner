@@ -7,6 +7,7 @@ namespace App\State;
 use Symfony\Component\HttpFoundation\Request;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
+use App\ApiResource\Model\PoiSuggestionDto;
 use App\ApiResource\TripChatMessageResource;
 use App\Entity\TripChatMessage;
 use App\Entity\User;
@@ -111,6 +112,9 @@ final readonly class TripChatHistoryProvider implements ProviderInterface
 
     private function toResource(TripChatMessage $entity, string $tripId): TripChatMessageResource
     {
+        $rawPois = $entity->getPois();
+        $pois = null === $rawPois ? null : array_map(PoiSuggestionDto::fromArray(...), $rawPois);
+
         return new TripChatMessageResource(
             id: $entity->getId()->toRfc4122(),
             // $tripId comes from the URL — using it directly avoids a SELECT to
@@ -119,6 +123,10 @@ final readonly class TripChatHistoryProvider implements ProviderInterface
             role: $entity->getRole(),
             content: $entity->getContent(),
             action: $entity->getAction(),
+            geoLat: $entity->getGeoLat(),
+            geoLon: $entity->getGeoLon(),
+            geoAccuracyM: $entity->getGeoAccuracyM(),
+            pois: $pois,
             createdAt: $entity->getCreatedAt(),
         );
     }
