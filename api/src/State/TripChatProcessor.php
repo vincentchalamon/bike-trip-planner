@@ -143,7 +143,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
         // POI search mode. The planning pipeline (dialogue prompt, action
         // interpreter, Messenger dispatch) is bypassed entirely.
         if ($data->position instanceof GeoPosition) {
-            return $this->processInRide($tripId, $userId, $data);
+            return $this->processInRide($user, $tripId, $userId, $data);
         }
 
         $systemPrompt = $this->promptLoader->load(self::PROMPT_NAME);
@@ -356,7 +356,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
      * a response carrying the `find_poi` action together with the structured
      * POI suggestions.
      */
-    private function processInRide(string $tripId, string $userId, TripChatRequest $data): TripChatResponse
+    private function processInRide(User $user, string $tripId, string $userId, TripChatRequest $data): TripChatResponse
     {
         \assert($data->position instanceof GeoPosition);
 
@@ -372,6 +372,21 @@ final readonly class TripChatProcessor implements ProcessorInterface
             ['role' => 'user', 'content' => $data->message],
             ['role' => 'assistant', 'content' => $response->narrative],
         ]);
+
+        // In-ride turns must also reach PostgreSQL so the rider's full chat
+        // history (planning + in-ride) survives a page reload. The geo/pois
+        // columns required to faithfully rehydrate POI cards land in #465.
+        $this->persistChatTurn(
+            $tripId,
+            $user,
+            $data->message,
+            $response->narrative,
+            new ChatAction(
+                action: ChatAction::ACTION_FIND_POI,
+                params: ['category' => $response->category],
+                response: $response->narrative,
+            ),
+        );
 
         return new TripChatResponse(
             tripId: $tripId,
