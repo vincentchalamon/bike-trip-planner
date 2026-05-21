@@ -89,6 +89,17 @@ final class OpeningHoursParserTest extends TestCase
         yield 'BE National Day (Jul 21) marks PH off' => ['Mo-Su 09:00-18:00; PH off', '2024-07-21 12:00:00', false];
         // Day that is a holiday neither in FR nor BE — must read as open.
         yield 'non-holiday Wednesday with PH off' => ['Mo-Su 09:00-18:00; PH off', '2024-06-05 12:00:00', true];
+
+        // Regression for the overnight bleed bug: `22:00-02:00; PH off` opens
+        // late on a normal night, so on Bastille Day morning (00:30) yesterday's
+        // overnight slice would normally bleed through. But today (Jul 14) is
+        // explicitly closed by the `PH off` rule, so the venue must read as
+        // closed — `intervalsForDate` skips yesterday's overnight slice when
+        // today returns `[]` (explicitly closed).
+        yield 'PH off blocks overnight bleed at 00:30 Bastille Day' => ['22:00-02:00; PH off', '2024-07-14 00:30:00', false];
+        // Sanity check: the same tag on a non-holiday morning at 00:30 stays
+        // open because yesterday's overnight slice bleeds through normally.
+        yield 'overnight bleed allowed at 00:30 on a regular day' => ['22:00-02:00', '2024-06-05 00:30:00', true];
     }
 
     #[Test]
