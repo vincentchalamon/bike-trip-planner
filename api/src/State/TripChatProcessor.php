@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use App\ApiResource\Model\GeoPosition;
+use App\ApiResource\Model\PoiSuggestionDto;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\State\ProcessorInterface;
@@ -13,6 +15,8 @@ use App\ApiResource\TripRequest;
 use App\Entity\TripChatMessage;
 use App\Entity\User;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\InRide\InRideAssistant;
+use App\InRide\PoiSuggestion;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
 use App\Llm\Dto\ChatAction;
@@ -85,6 +89,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
         private LoggerInterface $logger,
         private MessageBusInterface $messageBus,
         private TripGenerationTrackerInterface $generationTracker,
+        private InRideAssistant $inRideAssistant,
         #[Autowire(service: 'limiter.trip_chat')]
         private RateLimiterFactory $tripChatLimiter,
         private ?EntityManagerInterface $entityManager = null,
@@ -132,6 +137,13 @@ final readonly class TripChatProcessor implements ProcessorInterface
             $secondsUntilRetry = max(0, $retryAfter->getTimestamp() - new \DateTimeImmutable()->getTimestamp());
 
             throw new TooManyRequestsHttpException(retryAfter: $secondsUntilRetry, message: 'Chat rate limit reached. Please wait a moment before retrying.');
+        }
+
+        // In-ride branch: the rider's GPS position switches the assistant into
+        // POI search mode. The planning pipeline (dialogue prompt, action
+        // interpreter, Messenger dispatch) is bypassed entirely.
+        if ($data->position instanceof GeoPosition) {
+            return $this->processInRide($user, $tripId, $userId, $data);
         }
 
         $systemPrompt = $this->promptLoader->load(self::PROMPT_NAME);
@@ -340,10 +352,73 @@ final readonly class TripChatProcessor implements ProcessorInterface
     }
 
     /**
+     * In-ride mode: delegate POI search to {@see InRideAssistant} and return
+     * a response carrying the `find_poi` action together with the structured
+     * POI suggestions.
+     */
+    private function processInRide(User $user, string $tripId, string $userId, TripChatRequest $data): TripChatResponse
+    {
+        \assert($data->position instanceof GeoPosition);
+
+        // InRideAssistant::assist() already catches OllamaUnavailableException
+        // and produces a markdown fallback narrative, so we do not re-wrap it
+        // here.
+        $response = $this->inRideAssistant->assist(
+            message: $data->message,
+            position: $data->position,
+        );
+
+        $this->historyStore->appendMany($tripId, $userId, [
+            ['role' => 'user', 'content' => $data->message],
+            ['role' => 'assistant', 'content' => $response->narrative],
+        ]);
+
+        $poisPayload = array_map(static fn (PoiSuggestion $p): array => $p->toArray(), $response->pois);
+
+        // In-ride turns must reach PostgreSQL too, otherwise the rider's POI
+        // search history disappears on the next page reload and defeats the
+        // long-term persistence we wired in #458. We also fill the geo_*
+        // columns and the pois JSONB so ChatHistoryLoader can rehydrate the
+        // POI cards on a refresh.
+        $this->persistChatTurn(
+            $tripId,
+            $user,
+            $data->message,
+            $response->narrative,
+            new ChatAction(
+                action: ChatAction::ACTION_FIND_POI,
+                params: ['category' => $response->category],
+                response: $response->narrative,
+            ),
+            position: $data->position,
+            pois: $poisPayload,
+        );
+
+        return new TripChatResponse(
+            tripId: $tripId,
+            action: ChatAction::ACTION_FIND_POI,
+            params: ['category' => $response->category],
+            response: $response->narrative,
+            dispatched: false,
+            impactedStageNumbers: [],
+            requiresFullAnalysis: false,
+            // Hydrate the typed wire DTO so API Platform's serializer emits the
+            // snake_case keys the PWA Zod schema and PoiCard expect (mirrors
+            // PoiSuggestion::toArray() field-for-field).
+            pois: array_map(
+                PoiSuggestionDto::fromArray(...),
+                $poisPayload,
+            ),
+        );
+    }
+
+    /**
      * Writes the user prompt + assistant reply to PostgreSQL alongside the Redis
      * context window (cf. #458). Failures are logged but never bubble up so a
      * transient DB hiccup cannot abort an otherwise successful chat turn — the
      * Redis history remains authoritative for the next LLM call either way.
+     *
+     * @param list<array{name: string, category: string, lat: float, lon: float, distance_m: int, detour_m: int, opening_hours_today: ?string, closes_at: ?string, phone: ?string, deeplink: string, warning: ?string}>|null $pois optional POI suggestions stored alongside an in-ride assistant turn
      */
     private function persistChatTurn(
         string $tripId,
@@ -351,22 +426,34 @@ final readonly class TripChatProcessor implements ProcessorInterface
         string $userMessage,
         string $assistantContent,
         ChatAction $action,
+        ?GeoPosition $position = null,
+        ?array $pois = null,
     ): void {
-        if (!$this->entityManager instanceof EntityManagerInterface) {
+        // Pin the entity manager to a local variable so PHPStan keeps the
+        // non-null narrowing inside the closure passed to wrapInTransaction
+        // (property accesses widen back to `?EntityManagerInterface` across
+        // closure boundaries at Level 9).
+        $entityManager = $this->entityManager;
+        if (!$entityManager instanceof EntityManagerInterface) {
             return;
         }
 
         try {
-            $trip = $this->entityManager->getReference(TripRequest::class, $tripId);
+            $trip = $entityManager->getReference(TripRequest::class, $tripId);
             if (!$trip instanceof TripRequest) {
                 return;
             }
+
+            $geoLat = $position?->lat;
+            $geoLon = $position?->lon;
 
             $userTurn = new TripChatMessage(
                 trip: $trip,
                 user: $user,
                 role: TripChatMessage::ROLE_USER,
                 content: $userMessage,
+                geoLat: $geoLat,
+                geoLon: $geoLon,
             );
             $assistantTurn = new TripChatMessage(
                 trip: $trip,
@@ -374,6 +461,9 @@ final readonly class TripChatProcessor implements ProcessorInterface
                 role: TripChatMessage::ROLE_ASSISTANT,
                 content: $assistantContent,
                 action: $action->action,
+                geoLat: $geoLat,
+                geoLon: $geoLon,
+                pois: null !== $pois && [] !== $pois ? $pois : null,
             );
 
             // `wrapInTransaction` gives us atomicity (both turns persisted or
@@ -384,10 +474,10 @@ final readonly class TripChatProcessor implements ProcessorInterface
             // dirty by then), so a wider flush is acceptable in practice;
             // the transaction keeps the rollback semantics if the persist or
             // FK validation fails partway through.
-            $this->entityManager->wrapInTransaction(function () use ($userTurn, $assistantTurn): void {
-                $this->entityManager->persist($userTurn);
-                $this->entityManager->persist($assistantTurn);
-                $this->entityManager->flush();
+            $entityManager->wrapInTransaction(static function () use ($entityManager, $userTurn, $assistantTurn): void {
+                $entityManager->persist($userTurn);
+                $entityManager->persist($assistantTurn);
+                $entityManager->flush();
             });
         } catch (\Throwable $throwable) {
             // Proxy-load failures surface here at `flush()` time, not at `getReference()`;

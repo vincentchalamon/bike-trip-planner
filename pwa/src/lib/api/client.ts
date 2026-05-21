@@ -386,7 +386,27 @@ export interface TripChatRequestBody {
   context?: {
     currentStage: number | null;
   } | null;
+  /**
+   * Optional rider GPS position. When set, the backend switches the assistant
+   * to in-ride POI search mode (see `App\InRide\InRideAssistant`).
+   *
+   * Sourced from the generated OpenAPI schema so any future field addition on
+   * the backend `GeoPosition` model (e.g. accuracy) is picked up here without
+   * a manual edit.
+   */
+  position?: components["schemas"]["GeoPosition"] | null;
 }
+
+/**
+ * POI payload returned in-ride. Sourced directly from the generated OpenAPI
+ * schema (`pois` items on `Trip.TripChatResponse.jsonld`) so the wire contract
+ * stays in lockstep with `App\InRide\PoiSuggestion::toArray()`.
+ */
+export type PoiSuggestionDto = NonNullable<
+  NonNullable<
+    components["schemas"]["Trip.TripChatResponse.jsonld"]["pois"]
+  >[number]
+>;
 
 /**
  * Response of `POST /trips/{id}/chat`. Mirrors `App\ApiResource\TripChatResponse`
@@ -410,6 +430,11 @@ export interface TripChatResponseBody {
    * a "Relancer l'analyse" button.
    */
   requiresFullAnalysis?: boolean;
+  /**
+   * Top POI suggestions returned in-ride. Only populated when the request
+   * carried a GPS `position`. Empty / undefined in planning mode.
+   */
+  pois?: PoiSuggestionDto[] | null;
 }
 
 /**
@@ -456,6 +481,112 @@ export async function sendTripChat(
   return { data: parsed.data, error: null, status: res.status };
 }
 
+/**
+ * One persisted chat turn returned by `GET /trips/{id}/chat-history`.
+ *
+ * Mirrors `App\ApiResource\TripChatMessageResource`. Messages are returned
+ * most-recent first; consumers reverse the array for chronological rendering.
+ *
+ * We intentionally keep this interface manual rather than swapping it for
+ * `components["schemas"]["TripChatMessage.jsonld"]`: API Platform marks every
+ * field on the generated schema as optional, which weakens the consumer
+ * contract (every property reads as `T | undefined`). The Zod schema below
+ * still enforces the strict shape at runtime, so any backend drift would
+ * surface as a parse failure in `fetchTripChatHistory`.
+ */
+export interface TripChatMessageHistoryEntry {
+  id: string;
+  tripId: string;
+  role: "user" | "assistant";
+  content: string;
+  action: string | null;
+  geoLat: number | null;
+  geoLon: number | null;
+  pois: PoiSuggestionDto[];
+  createdAt: string;
+}
+
+/**
+ * Single source of truth for the POI payload Zod shape — referenced by both
+ * the chat-history entry schema and the trip-chat response schema below so a
+ * future field addition or rename in `App\InRide\PoiSuggestion::toArray()`
+ * only has to be reflected here.
+ */
+// `deeplink` is rendered straight into `<a href={poi.deeplink}>` in PoiCard.
+// React 19 still emits a runtime warning for `javascript:`/`data:` URLs
+// instead of stripping them, so we treat the Zod schema as a defence-in-depth
+// gate: only http(s) deeplinks pass validation. The backend's DeeplinkBuilder
+// already only produces https URLs, so this exclusively guards against a
+// tampered or corrupt persisted record reaching the DOM.
+const safeUrlSchema = z
+  .string()
+  .url()
+  .refine((u) => /^https?:\/\//i.test(u), {
+    message: "deeplink must be an http(s) URL",
+  });
+
+const poiSuggestionSchema = z.object({
+  name: z.string(),
+  category: z.string(),
+  lat: z.number(),
+  lon: z.number(),
+  distance_m: z.number(),
+  detour_m: z.number(),
+  opening_hours_today: z.string().nullable(),
+  closes_at: z.string().nullable(),
+  phone: z.string().nullable(),
+  deeplink: safeUrlSchema,
+  warning: z.string().nullable(),
+});
+
+const chatHistoryEntrySchema = z.object({
+  id: z.string(),
+  tripId: z.string(),
+  role: z.enum(["user", "assistant"]),
+  content: z.string(),
+  action: z.string().nullable(),
+  geoLat: z.number().nullable(),
+  geoLon: z.number().nullable(),
+  pois: z.array(poiSuggestionSchema).default([]),
+  createdAt: z.string(),
+});
+
+/**
+ * Fetch the persisted chat history for a trip. Returns chronologically-ordered
+ * turns (oldest first) ready to feed into the chat panel store.
+ *
+ * The backend serves a JSON-LD `member` collection sorted most-recent first;
+ * this helper reverses it so callers can `push` each message in order.
+ */
+export async function fetchTripChatHistory(
+  tripId: string,
+  options: { limit?: number; signal?: AbortSignal } = {},
+): Promise<TripChatMessageHistoryEntry[]> {
+  const params = new URLSearchParams();
+  if (options.limit !== undefined) params.set("limit", String(options.limit));
+  const query = params.toString();
+  const url = `${API_URL}/trips/${tripId}/chat-history${query ? `?${query}` : ""}`;
+
+  const res = await apiFetch(url, {
+    method: "GET",
+    headers: { Accept: "application/ld+json" },
+    signal: options.signal,
+  });
+
+  if (!res.ok) {
+    return [];
+  }
+
+  const raw: unknown = await res.json();
+  const envelope = z
+    .object({ member: z.array(chatHistoryEntrySchema) })
+    .safeParse(raw);
+  if (!envelope.success) {
+    return [];
+  }
+  return [...envelope.data.member].reverse();
+}
+
 const tripChatResponseSchema = z.object({
   tripId: z.string(),
   action: z.string(),
@@ -464,6 +595,7 @@ const tripChatResponseSchema = z.object({
   dispatched: z.boolean(),
   impactedStageNumbers: z.array(z.number()).optional(),
   requiresFullAnalysis: z.boolean().optional(),
+  pois: z.array(poiSuggestionSchema).nullable().optional(),
 });
 
 /**

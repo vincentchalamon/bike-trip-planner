@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { enableMapSet } from "immer";
+import type { components } from "@/lib/api/schema";
 
 // Required for Immer to allow mutating Set/Map drafts (used by completedSteps).
 enableMapSet();
@@ -27,16 +28,32 @@ export const STEPS: StepId[] = [
 ];
 
 /**
+ * POI shape carried by in-ride assistant replies. Derived from the generated
+ * OpenAPI schema (`pois` items on `Trip.TripChatResponse.jsonld`) so the store
+ * stays in lockstep with the backend `App\InRide\PoiSuggestion::toArray()`.
+ */
+export type PoiSuggestion = NonNullable<
+  NonNullable<
+    components["schemas"]["Trip.TripChatResponse.jsonld"]["pois"]
+  >[number]
+>;
+
+/**
  * One turn of the floating AI assistant conversation.
  *
  * Stored in-memory only — the dialogue history is intentionally not persisted
  * across page reloads to mirror the backend-side {@link ChatHistoryStore} which
  * uses a short-TTL Redis store per (trip, user) pair.
+ *
+ * When the assistant returned POI suggestions (in-ride mode), {@link pois}
+ * carries the structured payload so the chat panel can render the POI cards
+ * beneath the conversational text.
  */
 export interface AiChatMessage {
   role: "user" | "assistant";
   content: string;
   ts: number;
+  pois?: PoiSuggestion[];
 }
 
 /**

@@ -615,6 +615,20 @@
   "chat": {
     "offline": {
       "label": "Vous êtes hors ligne. L'assistant est indisponible."
+    },
+    "inRide": {
+      "openInMaps": "Ouvrir dans Google Maps",
+      "detourBadge": "+{km} km",
+      "opensAt": "Ouvre à {time}",
+      "closesAt": "Ferme à {time}",
+      "noOpeningHours": "Horaires non vérifiés — confirmez sur place.",
+      "routeNotModified": "Votre itinéraire de base n'est pas modifié.",
+      "osmDisclaimer": "Données OpenStreetMap — vérifier sur place en cas de doute.",
+      "geolocPrompt": "Partager ma position pour des suggestions à proximité"
+    },
+    "history": {
+      "loading": "Chargement de la conversation…",
+      "empty": "Aucun message pour l'instant."
     }
   },
   "aiOverview": {
