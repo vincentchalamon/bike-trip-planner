@@ -31,7 +31,7 @@ final readonly class PoiSuggestionDto
         public float $lon,
         #[ApiProperty(description: 'Straight-line distance from the rider to the POI, in meters.', required: true)]
         public float $distance_m,
-        #[ApiProperty(description: 'Estimated additional kilometers if the rider detours to the POI (0 when no remaining route is known).', required: true)]
+        #[ApiProperty(description: 'Estimated additional meters if the rider detours to the POI (0 when no remaining route is known).', required: true)]
         public float $detour_m,
         #[ApiProperty(description: 'Raw OSM `opening_hours` tag for the current day, when available.')]
         public ?string $opening_hours_today,
