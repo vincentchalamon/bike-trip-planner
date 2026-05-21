@@ -41,6 +41,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'adapter' => 'cache.adapter.redis',
                     'default_lifetime' => 1800, // 30 minutes — short-lived dialogue history
                 ],
+                'cache.in_ride_poi' => [
+                    'adapter' => 'cache.adapter.redis',
+                    'default_lifetime' => 300, // 5 minutes — short-lived in-ride POI scans
+                ],
             ],
         ],
     ]);
@@ -70,6 +74,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'adapter' => 'cache.adapter.array',
                     ],
                     'cache.trip_chat' => [
+                        'adapter' => 'cache.adapter.array',
+                    ],
+                    'cache.in_ride_poi' => [
                         'adapter' => 'cache.adapter.array',
                     ],
                 ],
