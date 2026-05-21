@@ -59,8 +59,6 @@ class TripChatMessage
         private ?float $geoLat = null,
         #[ORM\Column(name: 'geo_lon', type: 'float', nullable: true)]
         private ?float $geoLon = null,
-        #[ORM\Column(name: 'geo_accuracy_m', type: 'float', nullable: true)]
-        private ?float $geoAccuracyM = null,
         #[ORM\Column(type: 'jsonb', nullable: true)]
         private ?array $pois = null,
         ?Uuid $id = null,
@@ -111,11 +109,6 @@ class TripChatMessage
     public function getGeoLon(): ?float
     {
         return $this->geoLon;
-    }
-
-    public function getGeoAccuracyM(): ?float
-    {
-        return $this->geoAccuracyM;
     }
 
     /**

@@ -502,8 +502,7 @@ export interface TripChatMessageHistoryEntry {
   action: string | null;
   geoLat: number | null;
   geoLon: number | null;
-  geoAccuracyM: number | null;
-  pois: PoiSuggestionDto[] | null;
+  pois: PoiSuggestionDto[];
   createdAt: string;
 }
 
@@ -548,8 +547,7 @@ const chatHistoryEntrySchema = z.object({
   action: z.string().nullable(),
   geoLat: z.number().nullable(),
   geoLon: z.number().nullable(),
-  geoAccuracyM: z.number().nullable(),
-  pois: z.array(poiSuggestionSchema).nullable(),
+  pois: z.array(poiSuggestionSchema).default([]),
   createdAt: z.string(),
 });
 
