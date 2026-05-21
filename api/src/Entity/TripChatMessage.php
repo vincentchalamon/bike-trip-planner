@@ -76,6 +76,9 @@ class TripChatMessage
         return $this->user;
     }
 
+    /**
+     * @return non-empty-string
+     */
     public function getRole(): string
     {
         return $this->role;
