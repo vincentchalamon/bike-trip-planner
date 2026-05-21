@@ -612,6 +612,11 @@
     "fullAnalysisHint": "This change requires a brand-new full analysis.",
     "relaunchAnalysis": "Relaunch analysis"
   },
+  "chat": {
+    "offline": {
+      "label": "You are offline. The assistant is unavailable."
+    }
+  },
   "aiOverview": {
     "title": "AI analysis",
     "subtitle": "Assistant-generated summary covering the whole trip",

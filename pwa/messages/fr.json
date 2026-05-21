@@ -612,6 +612,11 @@
     "fullAnalysisHint": "Cette modification nécessite une nouvelle analyse complète.",
     "relaunchAnalysis": "Relancer l'analyse"
   },
+  "chat": {
+    "offline": {
+      "label": "Vous êtes hors ligne. L'assistant est indisponible."
+    }
+  },
   "aiOverview": {
     "title": "Analyse IA",
     "subtitle": "Synthèse générée par l'assistant à partir de l'ensemble du voyage",
