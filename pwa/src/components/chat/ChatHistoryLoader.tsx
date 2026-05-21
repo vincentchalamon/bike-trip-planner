@@ -105,9 +105,12 @@ export function ChatHistoryLoader({
         if (cancelled) return;
 
         const ui = useUiStore.getState();
-        // Only seed the store when the backend actually returned messages so
-        // a fresh in-memory conversation isn't wiped by an empty response.
-        if (entries.length > 0) {
+        // Race guard: if the rider sent a message while the fetch was in
+        // flight the in-memory store is no longer empty. Wiping it via
+        // clearHistory() would discard their freshly-typed turn (already on
+        // its way to the backend), so we skip seeding entirely and let the
+        // next reload pick up the merged history from PostgreSQL.
+        if (entries.length > 0 && ui.chatHistory.length === 0) {
           ui.clearHistory();
           for (const entry of entries) {
             ui.appendMessage(toAiChatMessage(entry));

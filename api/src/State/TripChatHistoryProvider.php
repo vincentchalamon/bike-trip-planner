@@ -114,12 +114,12 @@ final readonly class TripChatHistoryProvider implements ProviderInterface
     {
         $rawPois = $entity->getPois();
         try {
-            $pois = null === $rawPois ? null : array_map(PoiSuggestionDto::fromArray(...), $rawPois);
+            $pois = null === $rawPois ? [] : array_map(PoiSuggestionDto::fromArray(...), $rawPois);
         } catch (\InvalidArgumentException) {
             // A corrupted JSONB row (legacy data, manual SQL fix) must not 500
             // the whole history page — surface the turn without its POIs so
             // the rider still sees the conversation.
-            $pois = null;
+            $pois = [];
         }
 
         return new TripChatMessageResource(
@@ -132,7 +132,6 @@ final readonly class TripChatHistoryProvider implements ProviderInterface
             action: $entity->getAction(),
             geoLat: $entity->getGeoLat(),
             geoLon: $entity->getGeoLon(),
-            geoAccuracyM: $entity->getGeoAccuracyM(),
             pois: $pois,
             createdAt: $entity->getCreatedAt(),
         );

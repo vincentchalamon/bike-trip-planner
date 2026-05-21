@@ -61,8 +61,8 @@ use App\State\TripChatHistoryProvider;
 final readonly class TripChatMessageResource
 {
     /**
-     * @param non-empty-string            $role one of `user` or `assistant`
-     * @param list<PoiSuggestionDto>|null $pois optional POI suggestions referenced by the message
+     * @param non-empty-string       $role one of `user` or `assistant`
+     * @param list<PoiSuggestionDto> $pois POI suggestions referenced by the message (empty in planning mode)
      */
     public function __construct(
         #[ApiProperty(description: 'Message identifier (UUID v7).', identifier: true)]
@@ -79,10 +79,8 @@ final readonly class TripChatMessageResource
         public ?float $geoLat,
         #[ApiProperty(description: 'Optional longitude captured when the rider sent the message.')]
         public ?float $geoLon,
-        #[ApiProperty(description: 'Optional GPS accuracy in meters captured alongside lat/lon.')]
-        public ?float $geoAccuracyM,
-        #[ApiProperty(description: 'Optional POI suggestions captured when the message was sent in in-ride mode.')]
-        public ?array $pois,
+        #[ApiProperty(description: 'POI suggestions captured when the message was sent in in-ride mode (empty in planning mode).')]
+        public array $pois,
         #[ApiProperty(description: 'Server-side creation timestamp (RFC 3339).')]
         public \DateTimeImmutable $createdAt,
     ) {

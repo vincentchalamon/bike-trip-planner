@@ -1304,8 +1304,6 @@ export interface components {
             geoLat?: number | null;
             /** @description Optional longitude captured when the rider sent the message. */
             geoLon?: number | null;
-            /** @description Optional GPS accuracy in meters captured alongside lat/lon. */
-            geoAccuracyM?: number | null;
             pois?: components["schemas"]["PoiSuggestionDto.jsonld"][];
             /**
              * Format: date-time

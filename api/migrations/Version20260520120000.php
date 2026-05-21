@@ -28,7 +28,6 @@ final class Version20260520120000 extends AbstractMigration
             ALTER TABLE trip_chat_message
                 ADD geo_lat DOUBLE PRECISION DEFAULT NULL,
                 ADD geo_lon DOUBLE PRECISION DEFAULT NULL,
-                ADD geo_accuracy_m DOUBLE PRECISION DEFAULT NULL,
                 ADD pois JSONB DEFAULT NULL
             SQL);
     }
@@ -39,7 +38,6 @@ final class Version20260520120000 extends AbstractMigration
             ALTER TABLE trip_chat_message
                 DROP geo_lat,
                 DROP geo_lon,
-                DROP geo_accuracy_m,
                 DROP pois
             SQL);
     }
