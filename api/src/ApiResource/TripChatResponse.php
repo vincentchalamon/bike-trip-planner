@@ -6,20 +6,26 @@ namespace App\ApiResource;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use App\ApiResource\Model\PoiSuggestionDto;
 
 /**
  * Output DTO for the trip chat endpoint.
  *
  * Contains the structured action interpreted by the dialogue assistant alongside
  * the conversational response surfaced to the user in the chat panel.
+ *
+ * When the request carries a GPS {@see TripChatRequest::$position}, the
+ * processor switches to in-ride mode and populates {@see $pois} with the
+ * top-3 POI suggestions returned by {@see \App\InRide\InRideAssistant}.
  */
 #[ApiResource(shortName: 'TripChat', operations: [])]
 final readonly class TripChatResponse
 {
     /**
-     * @param array<string, mixed> $params
-     * @param list<int>            $impactedStageNumbers Day numbers (1-indexed) whose recomputation has been dispatched.
-     *                                                   Empty when the action is informational or requires full analysis.
+     * @param array<string, mixed>   $params
+     * @param list<int>              $impactedStageNumbers Day numbers (1-indexed) whose recomputation has been dispatched.
+     *                                                     Empty when the action is informational or requires full analysis.
+     * @param list<PoiSuggestionDto> $pois                 top POIs suggested in in-ride mode (empty in planning mode)
      */
     public function __construct(
         #[ApiProperty(description: 'Trip identifier (UUID v7) the chat exchange belongs to.', required: true)]
@@ -36,6 +42,8 @@ final readonly class TripChatResponse
         public array $impactedStageNumbers = [],
         #[ApiProperty(description: 'True when the action requires a full trip re-analysis (Acte 2).')]
         public bool $requiresFullAnalysis = false,
+        #[ApiProperty(description: 'Top POI suggestions (empty in planning mode, populated in in-ride mode when GPS position is provided).')]
+        public array $pois = [],
     ) {
     }
 }
