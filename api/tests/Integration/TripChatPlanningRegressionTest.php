@@ -123,7 +123,7 @@ final class TripChatPlanningRegressionTest extends TestCase
         self::assertSame($expectedDispatched, $response->dispatched);
         self::assertSame($expectedRequiresFullAnalysis, $response->requiresFullAnalysis);
         self::assertSame($expectedImpactedStageNumbers, $response->impactedStageNumbers);
-        self::assertNull($response->pois, 'pois must be null in planning mode');
+        self::assertSame([], $response->pois, 'pois must be empty in planning mode');
 
         $dispatched = $this->collectDispatched($bus, RecalculateStages::class);
         if ($expectedDispatched) {

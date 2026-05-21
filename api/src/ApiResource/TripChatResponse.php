@@ -22,10 +22,10 @@ use App\ApiResource\Model\PoiSuggestionDto;
 final readonly class TripChatResponse
 {
     /**
-     * @param array<string, mixed>        $params
-     * @param list<int>                   $impactedStageNumbers Day numbers (1-indexed) whose recomputation has been dispatched.
-     *                                                          Empty when the action is informational or requires full analysis.
-     * @param list<PoiSuggestionDto>|null $pois                 top POIs suggested in in-ride mode (null in planning mode)
+     * @param array<string, mixed>   $params
+     * @param list<int>              $impactedStageNumbers Day numbers (1-indexed) whose recomputation has been dispatched.
+     *                                                     Empty when the action is informational or requires full analysis.
+     * @param list<PoiSuggestionDto> $pois                 top POIs suggested in in-ride mode (empty in planning mode)
      */
     public function __construct(
         #[ApiProperty(description: 'Trip identifier (UUID v7) the chat exchange belongs to.', required: true)]
@@ -43,7 +43,7 @@ final readonly class TripChatResponse
         #[ApiProperty(description: 'True when the action requires a full trip re-analysis (Acte 2).')]
         public bool $requiresFullAnalysis = false,
         #[ApiProperty(description: 'Top POI suggestions (only set in in-ride mode when GPS position is provided).')]
-        public ?array $pois = null,
+        public array $pois = [],
     ) {
     }
 }

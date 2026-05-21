@@ -113,7 +113,14 @@ final readonly class TripChatHistoryProvider implements ProviderInterface
     private function toResource(TripChatMessage $entity, string $tripId): TripChatMessageResource
     {
         $rawPois = $entity->getPois();
-        $pois = null === $rawPois ? null : array_map(PoiSuggestionDto::fromArray(...), $rawPois);
+        try {
+            $pois = null === $rawPois ? null : array_map(PoiSuggestionDto::fromArray(...), $rawPois);
+        } catch (\InvalidArgumentException) {
+            // A corrupted JSONB row (legacy data, manual SQL fix) must not 500
+            // the whole history page — surface the turn without its POIs so
+            // the rider still sees the conversation.
+            $pois = null;
+        }
 
         return new TripChatMessageResource(
             id: $entity->getId()->toRfc4122(),
