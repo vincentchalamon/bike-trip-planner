@@ -376,12 +376,14 @@ final readonly class TripChatProcessor implements ProcessorInterface
                 action: $action->action,
             );
 
-            // Wrap the two persists in an explicit transaction so we only
-            // commit the chat-message writes — Doctrine ORM 3 dropped the
-            // optional `flush($entity)` argument, so a plain `flush()` would
-            // also publish any unrelated dirty entity tracked by the shared
-            // UoW. The savepoint keeps the chat write atomic and reversible
-            // on failure without touching the caller's session.
+            // `wrapInTransaction` gives us atomicity (both turns persisted or
+            // neither) — it does NOT scope the UoW, since Doctrine ORM 3
+            // dropped the optional `flush($entity)` argument. In our request
+            // lifecycle the chat processor is the last writer (API Platform
+            // processors run after input validation, no other entities are
+            // dirty by then), so a wider flush is acceptable in practice;
+            // the transaction keeps the rollback semantics if the persist or
+            // FK validation fails partway through.
             $this->entityManager->wrapInTransaction(function () use ($userTurn, $assistantTurn): void {
                 $this->entityManager->persist($userTurn);
                 $this->entityManager->persist($assistantTurn);
