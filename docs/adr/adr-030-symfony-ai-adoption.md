@@ -68,11 +68,9 @@ Stay on the custom `OllamaClient` end-to-end. Re-evaluate `symfony/ai` after it 
 
 ## POC Results — Tool calling on llama3.2:3b
 
-The POC lives under `api/src/Llm/Poc/` and `api/src/Command/PocToolCallingCommand.php`. It runs 20 representative French chat prompts (3 per action + 3 "info"/no-tool prompts) through both pipelines back-to-back, against the **same** Ollama daemon with the **same** model. Pre-warming and `keep_alive: 30m` are applied to both passes so the comparison is not skewed by model load. Reproduce with:
+The findings below come from a throwaway benchmark that ran 20 representative French chat prompts (3 per action + 3 "info"/no-tool prompts) through both pipelines back-to-back, against the **same** Ollama daemon with the **same** model. Pre-warming and `keep_alive: 30m` were applied to both passes so the comparison was not skewed by model load. The benchmark code was deliberately not kept in the repository — this ADR captures the substance.
 
-```bash
-docker exec -e OLLAMA_ENABLED=1 <php-container> bin/console app:poc:tool-calling
-```
+The six tools exposed to `symfony/ai-agent` mirrored the six actions of the JSON envelope (`split_stage`, `merge_stages`, `add_waypoint`, `change_accommodation`, `adjust_distance`, `change_route`) as `#[AsTool]` classes, with the same parameter shapes (integer stage indices, string accommodation enums, etc.). The toolbox-generated JSON Schema matched what the bridge sends on the wire (verified by `Symfony\AI\Platform\Bridge\Ollama\Contract\OllamaContract::createToolOption()`).
 
 ### Headline numbers (single run, 20 prompts, llama3.2:3b)
 
@@ -124,15 +122,15 @@ These observations are **specific to ~3B-parameter local models**. On a 70B+ mod
 
 - The `ollama.client` scoped HTTP client timeout was raised from 30s to 300s. Cold model loads on CPU can exceed 60s; the previous 30s budget caused spurious `OllamaUnavailableException` until the model was paged in.
 - The Ollama bridge issues a `POST /api/show` per `Platform::invoke()` to discover model capabilities. For our two-model fixed setup this overhead is ~2 ms locally. Acceptable; if it ever shows up in latency budgets, the fix is a static `ModelCatalogInterface` returning hard-coded `Ollama` instances.
-- The POC code (`src/Llm/Poc/`, `src/Command/PocToolCallingCommand.php`) is kept in the repo as a regression harness: rerun whenever the model or bridge version changes to confirm tool-calling has not crossed the viability threshold.
+- The POC harness used to produce the numbers above is not retained in the repository. If the trigger conditions below fire and we need to re-evaluate, rebuild the benchmark from the methodology described in the previous section.
 
 ### When to revisit
 
-The "stay on JSON envelope" decision is conditional on **continuing to run small local models**. Re-run the POC and reopen this ADR when any of these hold:
+The "stay on JSON envelope" decision is conditional on **continuing to run small local models**. Rebuild the benchmark and reopen this ADR when any of these hold:
 
 - We upgrade the dialogue model to ≥ 8B parameters (e.g. switching `OLLAMA_DIALOGUE_MODEL` to `llama3.1:8b` or a tool-call-tuned variant such as `hermes-3:8b`).
 - Ollama ships a deterministic fix for the schema-leakage failure mode on 3B models.
 - A future `symfony/ai-platform` release introduces an Ollama contract that constrains arguments more strictly (e.g. by post-validating tool_call arguments against the schema).
 - Product evolution requires multi-step agentic flows (chain of tool calls, RAG over a vector store) that the JSON envelope cannot express in a single shot.
 
-Until one of these triggers fires: the dialogue stays on the envelope, the POC stays in the repo, this ADR stays accepted.
+Until one of these triggers fires: the dialogue stays on the envelope, this ADR stays accepted.
