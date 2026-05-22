@@ -547,7 +547,7 @@ const chatHistoryEntrySchema = z.object({
   action: z.string().nullable(),
   geoLat: z.number().nullable(),
   geoLon: z.number().nullable(),
-  pois: z.array(poiSuggestionSchema).default([]),
+  pois: z.array(poiSuggestionSchema).catch([]).default([]),
   createdAt: z.string(),
 });
 
