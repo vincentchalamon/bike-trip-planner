@@ -69,7 +69,7 @@ final class OllamaClientTest extends TestCase
             model: 'llama3.2:3b',
             prompt: 'Summarize this stage.',
             systemPrompt: 'You are a concise assistant.',
-            options: ['temperature' => 0.2, 'num_ctx' => 4096],
+            options: ['temperature' => 0.2, 'num_ctx' => 4096, 'num_predict' => 100],
         );
 
         $this->assertSame(['response' => '{"ok":true}'], $result);
@@ -86,6 +86,9 @@ final class OllamaClientTest extends TestCase
         \assert(\is_array($options));
         $this->assertSame(4096, $options['num_ctx']);
         $this->assertSame(0.2, $options['temperature']);
+        // Guards token-count caps (50–600 across callers): if the bridge ever stops forwarding
+        // unknown nested keys, inference would become unbounded on every production call.
+        $this->assertSame(100, $options['num_predict']);
     }
 
     #[Test]
