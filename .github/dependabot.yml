@@ -3,7 +3,8 @@ version: 2
 updates:
   # Maintain Docker base image digests
   - package-ecosystem: docker
-    directory: /.docker
+    directories:
+      - /.docker/*
     schedule:
       interval: weekly
     labels:
