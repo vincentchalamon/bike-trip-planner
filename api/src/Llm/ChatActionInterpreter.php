@@ -142,6 +142,9 @@ final readonly class ChatActionInterpreter
             ChatAction::ACTION_ADJUST_DISTANCE => $this->normaliseAdjustDistance($params),
             ChatAction::ACTION_CHANGE_ROUTE => [],
             ChatAction::ACTION_INFO => [],
+            // `find_poi` is intentionally absent from ChatAction::SUPPORTED_ACTIONS,
+            // so the action check upstream already collapses any planning-mode
+            // hallucination to `info` before reaching this normaliser.
             default => null,
         };
     }

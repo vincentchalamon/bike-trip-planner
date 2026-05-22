@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\State;
 
+use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\TripChatMessage;
+use Psr\Log\LoggerInterface;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\TripChatContext;
@@ -11,20 +14,25 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripChatRequest;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\Entity\TripChatMessage;
 use App\Entity\User;
+use App\Geo\HaversineDistance;
+use App\InRide\DeeplinkBuilder;
+use App\InRide\DetourCalculator;
+use App\InRide\InRideAssistant;
+use App\InRide\OpeningHoursParser;
+use App\InRide\PoiIntentDetector;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
+use App\Scanner\OsmOverpassQueryBuilder;
+use App\Scanner\ScannerInterface;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\TripChatProcessor;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -424,10 +432,12 @@ final class TripChatProcessorTest extends TestCase
     }
 
     /**
-     * Long-term persistence regression test (#458): every chat turn must be
-     * written to PostgreSQL *in addition* to the rolling Redis context window
-     * so the rider can recover their conversation from a cold reload.
+     * Guarantees the dual-write contract from #458: each chat turn persisted to
+     * Redis is also written to PostgreSQL via the EntityManager. Both the user
+     * prompt and the assistant reply must reach `persist()` and a single
+     * `flush()` must be issued per turn.
      */
+    #[AllowMockObjectsWithoutExpectations]
     #[Test]
     public function chatTurnIsPersistedToPostgresInAdditionToRedis(): void
     {
@@ -480,10 +490,10 @@ final class TripChatProcessorTest extends TestCase
     }
 
     /**
-     * Without the optional repository/entity manager (e.g. legacy wiring during
-     * the rollout), the processor must continue to function: the Redis history
-     * is the legacy single source of truth and a missing PG writer should not
-     * break the chat endpoint.
+     * Without the optional EntityManager (e.g. legacy wiring during the
+     * rollout), the processor must continue to function: the Redis history
+     * is the legacy single source of truth and a missing PG writer should
+     * not break the chat endpoint.
      */
     #[Test]
     public function chatStillWorksWhenChatMessageRepositoryIsUnwired(): void
@@ -509,6 +519,7 @@ final class TripChatProcessorTest extends TestCase
      * still return a usable response — the Redis sliding-window context has
      * already been updated and remains authoritative for the next LLM call.
      */
+    #[AllowMockObjectsWithoutExpectations]
     #[Test]
     public function chatStillReturnsResponseWhenPgPersistFails(): void
     {
@@ -518,9 +529,6 @@ final class TripChatProcessorTest extends TestCase
         $entityManager->method('wrapInTransaction')
             ->willThrowException(new \RuntimeException('PG connection lost'));
 
-        // Capture the swallowed exception via the logger contract so a future
-        // refactor that silently drops the `logger->warning(...)` call cannot
-        // hide the failure from operators.
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::atLeastOnce())
             ->method('warning')
@@ -590,6 +598,22 @@ final class TripChatProcessorTest extends TestCase
         $security = $this->createStub(Security::class);
         $security->method('getUser')->willReturn($user);
 
+        $distance = new HaversineDistance();
+        $scanner = $this->createStub(ScannerInterface::class);
+        $scanner->method('query')->willReturn(['elements' => []]);
+        $inRideAssistant = new InRideAssistant(
+            intentDetector: new PoiIntentDetector($llmClient),
+            scanner: $scanner,
+            queryBuilder: new OsmOverpassQueryBuilder(),
+            openingHoursParser: new OpeningHoursParser(),
+            detourCalculator: new DetourCalculator($distance),
+            deeplinkBuilder: new DeeplinkBuilder(),
+            distance: $distance,
+            llmClient: $llmClient,
+            promptLoader: $promptLoader,
+            cache: new ArrayAdapter(),
+        );
+
         return new TripChatProcessor(
             tripStateManager: $repository,
             llmClient: $llmClient,
@@ -600,6 +624,7 @@ final class TripChatProcessorTest extends TestCase
             logger: $logger ?? new NullLogger(),
             messageBus: $messageBus,
             generationTracker: $generationTracker,
+            inRideAssistant: $inRideAssistant,
             tripChatLimiter: $limiterFactory ?? $this->newNoLimiterFactory(),
             entityManager: $entityManager,
         );
