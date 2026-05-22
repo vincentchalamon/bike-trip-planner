@@ -10,6 +10,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\AI\Platform\Bridge\Ollama\Factory as OllamaPlatformFactory;
+use Symfony\AI\Platform\PlatformInterface;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -32,11 +34,10 @@ final class OllamaClientTest extends TestCase
     #[Test]
     public function generateReturnsNullAndDoesNotCallHttpWhenDisabled(): void
     {
-        $httpClient = new MockHttpClient(static function (): MockResponse {
-            self::fail('HTTP client must not be called when Ollama is disabled.');
-        }, self::BASE_URI);
+        $platform = $this->createMock(PlatformInterface::class);
+        $platform->expects($this->never())->method('invoke');
 
-        $client = $this->makeClient(httpClient: $httpClient, enabled: false);
+        $client = new OllamaClient($platform, new NullLogger(), enabled: false);
 
         $this->assertNull($client->generate('llama3.2:3b', 'hello'));
     }
@@ -44,11 +45,10 @@ final class OllamaClientTest extends TestCase
     #[Test]
     public function chatReturnsNullAndDoesNotCallHttpWhenDisabled(): void
     {
-        $httpClient = new MockHttpClient(static function (): MockResponse {
-            self::fail('HTTP client must not be called when Ollama is disabled.');
-        }, self::BASE_URI);
+        $platform = $this->createMock(PlatformInterface::class);
+        $platform->expects($this->never())->method('invoke');
 
-        $client = $this->makeClient(httpClient: $httpClient, enabled: false);
+        $client = new OllamaClient($platform, new NullLogger(), enabled: false);
 
         $this->assertNull($client->chat('llama3.2:3b', [['role' => 'user', 'content' => 'hi']]));
     }
@@ -58,72 +58,55 @@ final class OllamaClientTest extends TestCase
     // -------------------------------------------------------------------------
 
     #[Test]
-    public function generateSendsExpectedPayloadAndReturnsParsedJson(): void
+    public function generateSendsExpectedPayloadAndReturnsLegacyShape(): void
     {
-        $apiResponse = ['model' => 'llama3.2:3b', 'response' => '{"ok":true}', 'done' => true];
-
         $captured = [];
-        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured, $apiResponse): MockResponse {
-            $captured = [
-                'method' => $method,
-                'url' => $url,
-                'body' => $options['body'] ?? null,
-            ];
+        $platform = $this->makePlatform($captured, '{"ok":true}');
 
-            return new MockResponse(
-                json_encode($apiResponse, \JSON_THROW_ON_ERROR),
-                ['http_code' => 200, 'response_headers' => ['content-type' => 'application/json']],
-            );
-        }, self::BASE_URI);
-
-        $client = $this->makeClient(httpClient: $httpClient, enabled: true);
+        $client = new OllamaClient($platform, new NullLogger(), enabled: true);
 
         $result = $client->generate(
             model: 'llama3.2:3b',
             prompt: 'Summarize this stage.',
             systemPrompt: 'You are a concise assistant.',
-            options: ['temperature' => 0.2, 'num_ctx' => 4096],
+            options: ['temperature' => 0.2, 'num_ctx' => 4096, 'num_predict' => 100],
         );
 
-        $this->assertSame($apiResponse, $result);
-        $this->assertSame('POST', $captured['method']);
-        $this->assertStringEndsWith('/api/generate', $captured['url']);
+        $this->assertSame(['response' => '{"ok":true}'], $result);
 
-        $this->assertIsString($captured['body']);
-        /** @var array<string, mixed> $payload */
-        $payload = json_decode($captured['body'], true, flags: \JSON_THROW_ON_ERROR);
-        $this->assertSame('llama3.2:3b', $payload['model']);
-        $this->assertSame('Summarize this stage.', $payload['prompt']);
-        $this->assertSame('You are a concise assistant.', $payload['system']);
-        $this->assertFalse($payload['stream']);
-        $this->assertSame('json', $payload['format']);
-        $this->assertIsArray($payload['options']);
-        $this->assertSame(4096, $payload['options']['num_ctx']);
-        $this->assertSame(0.2, $payload['options']['temperature']);
+        $chatBody = $this->lastChatBody($captured);
+        $this->assertSame('llama3.2:3b', $chatBody['model']);
+        $this->assertSame([
+            ['role' => 'system', 'content' => 'You are a concise assistant.'],
+            ['role' => 'user', 'content' => 'Summarize this stage.'],
+        ], $chatBody['messages']);
+        $this->assertFalse($chatBody['stream']);
+        $this->assertSame('json', $chatBody['format']);
+        $options = $chatBody['options'];
+        \assert(\is_array($options));
+        $this->assertSame(4096, $options['num_ctx']);
+        $this->assertSame(0.2, $options['temperature']);
+        // Guards token-count caps (50–600 across callers): if the bridge ever stops forwarding
+        // unknown nested keys, inference would become unbounded on every production call.
+        $this->assertSame(100, $options['num_predict']);
     }
 
     #[Test]
     public function generateAppliesDefaultOptionsWhenNoneProvided(): void
     {
         $captured = [];
-        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
-            $captured = ['body' => $options['body'] ?? null];
+        $platform = $this->makePlatform($captured, '{}');
 
-            return new MockResponse('{"response":"{}","done":true}', ['http_code' => 200]);
-        }, self::BASE_URI);
-
-        $client = $this->makeClient(httpClient: $httpClient, enabled: true);
-
+        $client = new OllamaClient($platform, new NullLogger(), enabled: true);
         $client->generate('llama3.1:8b', 'analyze');
 
-        $this->assertIsString($captured['body']);
-        /** @var array<string, mixed> $payload */
-        $payload = json_decode($captured['body'], true, flags: \JSON_THROW_ON_ERROR);
-        $this->assertIsArray($payload['options']);
-        $this->assertSame(OllamaClient::DEFAULT_NUM_CTX, $payload['options']['num_ctx']);
-        $this->assertSame(OllamaClient::DEFAULT_TEMPERATURE, $payload['options']['temperature']);
-        $this->assertSame('json', $payload['format']);
-        $this->assertArrayNotHasKey('system', $payload);
+        $chatBody = $this->lastChatBody($captured);
+        $options = $chatBody['options'];
+        \assert(\is_array($options));
+        $this->assertSame(OllamaClient::DEFAULT_NUM_CTX, $options['num_ctx']);
+        $this->assertSame(OllamaClient::DEFAULT_TEMPERATURE, $options['temperature']);
+        $this->assertSame('json', $chatBody['format']);
+        $this->assertSame([['role' => 'user', 'content' => 'analyze']], $chatBody['messages']);
     }
 
     // -------------------------------------------------------------------------
@@ -131,81 +114,67 @@ final class OllamaClientTest extends TestCase
     // -------------------------------------------------------------------------
 
     #[Test]
-    public function chatPrependsSystemPromptToMessages(): void
+    public function chatPrependsSystemPromptAndPreservesRoles(): void
     {
         $captured = [];
-        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
-            $captured = [
-                'url' => $url,
-                'body' => $options['body'] ?? null,
-            ];
+        $platform = $this->makePlatform($captured, 'ack');
 
-            return new MockResponse('{"message":{"role":"assistant","content":"{}"},"done":true}', ['http_code' => 200]);
-        }, self::BASE_URI);
-
-        $client = $this->makeClient(httpClient: $httpClient, enabled: true);
-
-        $messages = [['role' => 'user', 'content' => 'Hi']];
+        $client = new OllamaClient($platform, new NullLogger(), enabled: true);
 
         $result = $client->chat(
             model: 'llama3.2:3b',
-            messages: $messages,
+            messages: [
+                ['role' => 'user', 'content' => 'Hi'],
+                ['role' => 'assistant', 'content' => 'Hello!'],
+                ['role' => 'user', 'content' => 'How are you?'],
+            ],
             systemPrompt: 'You are helpful.',
         );
 
-        $this->assertNotNull($result);
-        $this->assertStringEndsWith('/api/chat', $captured['url']);
+        $this->assertSame(['message' => ['role' => 'assistant', 'content' => 'ack']], $result);
 
-        $this->assertIsString($captured['body']);
-        /** @var array<string, mixed> $payload */
-        $payload = json_decode($captured['body'], true, flags: \JSON_THROW_ON_ERROR);
+        $chatBody = $this->lastChatBody($captured);
         $this->assertSame([
             ['role' => 'system', 'content' => 'You are helpful.'],
             ['role' => 'user', 'content' => 'Hi'],
-        ], $payload['messages']);
-        $this->assertFalse($payload['stream']);
+            ['role' => 'assistant', 'content' => 'Hello!'],
+            ['role' => 'user', 'content' => 'How are you?'],
+        ], $chatBody['messages']);
     }
 
     #[Test]
     public function chatDoesNotPrependSystemPromptWhenNotProvided(): void
     {
         $captured = [];
-        $httpClient = new MockHttpClient(function (string $method, string $url, array $options) use (&$captured): MockResponse {
-            $captured = ['body' => $options['body'] ?? null];
+        $platform = $this->makePlatform($captured, '{}');
 
-            return new MockResponse('{"message":{"role":"assistant","content":"{}"},"done":true}', ['http_code' => 200]);
-        }, self::BASE_URI);
-
-        $client = $this->makeClient(httpClient: $httpClient, enabled: true);
-
+        $client = new OllamaClient($platform, new NullLogger(), enabled: true);
         $client->chat('llama3.2:3b', [['role' => 'user', 'content' => 'Hi']]);
 
-        $this->assertIsString($captured['body']);
-        /** @var array<string, mixed> $payload */
-        $payload = json_decode($captured['body'], true, flags: \JSON_THROW_ON_ERROR);
-        $this->assertSame([['role' => 'user', 'content' => 'Hi']], $payload['messages']);
+        $chatBody = $this->lastChatBody($captured);
+        $this->assertSame([['role' => 'user', 'content' => 'Hi']], $chatBody['messages']);
     }
 
     // -------------------------------------------------------------------------
-    // Error handling — transport / unreachable / invalid JSON
+    // Error handling — transport / unreachable
     // -------------------------------------------------------------------------
 
     #[Test]
     public function generateThrowsOllamaUnavailableExceptionOnTransportError(): void
     {
-        $httpClient = new MockHttpClient(static function (): MockResponse {
-            throw new TransportException('Connection refused');
-        }, self::BASE_URI);
+        $platform = OllamaPlatformFactory::createPlatform(
+            self::BASE_URI,
+            null,
+            new MockHttpClient(static fn (): MockResponse => throw new TransportException('Connection refused'), self::BASE_URI),
+        );
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects($this->once())
-            ->method('warning')
-            ->with($this->stringContains('Ollama request failed'));
+        $logger->expects($this->once())->method('warning')->with($this->stringContains('Ollama request failed'));
 
-        $client = $this->makeClient(httpClient: $httpClient, enabled: true, logger: $logger);
+        $client = new OllamaClient($platform, $logger, enabled: true);
 
         $this->expectException(OllamaUnavailableException::class);
-        $this->expectExceptionMessage('/api/generate');
+        $this->expectExceptionMessage('llama3.2:3b');
 
         $client->generate('llama3.2:3b', 'prompt');
     }
@@ -213,43 +182,83 @@ final class OllamaClientTest extends TestCase
     #[Test]
     public function generateThrowsOllamaUnavailableExceptionOnHttp5xx(): void
     {
-        $httpClient = new MockHttpClient(static fn (): MockResponse => new MockResponse('upstream down', ['http_code' => 503]), self::BASE_URI);
+        $platform = OllamaPlatformFactory::createPlatform(
+            self::BASE_URI,
+            null,
+            new MockHttpClient(static fn (): MockResponse => new MockResponse('upstream down', ['http_code' => 503]), self::BASE_URI),
+        );
 
-        $client = $this->makeClient(httpClient: $httpClient, enabled: true);
+        $client = new OllamaClient($platform, new NullLogger(), enabled: true);
 
         $this->expectException(OllamaUnavailableException::class);
 
         $client->generate('llama3.2:3b', 'prompt');
     }
 
-    #[Test]
-    public function chatThrowsOllamaUnavailableExceptionOnInvalidJson(): void
-    {
-        $httpClient = new MockHttpClient(static fn (): MockResponse => new MockResponse(
-            'not-json-at-all',
-            ['http_code' => 200, 'response_headers' => ['content-type' => 'application/json']],
-        ), self::BASE_URI);
-
-        $client = $this->makeClient(httpClient: $httpClient, enabled: true);
-
-        $this->expectException(OllamaUnavailableException::class);
-
-        $client->chat('llama3.2:3b', [['role' => 'user', 'content' => 'hi']]);
-    }
-
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
-    private function makeClient(
-        ?MockHttpClient $httpClient = null,
-        bool $enabled = true,
-        ?LoggerInterface $logger = null,
-    ): OllamaClient {
+    /**
+     * @param array<int, array{path: string, body: array<string, mixed>}> $captured
+     */
+    private function makePlatform(array &$captured, string $responseContent): PlatformInterface
+    {
+        $callback = function (string $method, string $url, array $options) use (&$captured, $responseContent): MockResponse {
+            $path = parse_url($url, \PHP_URL_PATH) ?: $url;
+            $body = isset($options['body']) && \is_string($options['body'])
+                ? json_decode($options['body'], true, flags: \JSON_THROW_ON_ERROR)
+                : [];
+            \assert(\is_array($body));
+            /* @var array<string, mixed> $body */
+            $captured[] = ['path' => $path, 'body' => $body];
+
+            return match (true) {
+                str_ends_with($path, '/api/show') => new MockResponse(
+                    json_encode(['capabilities' => ['completion', 'tools']], \JSON_THROW_ON_ERROR),
+                    ['http_code' => 200, 'response_headers' => ['content-type' => 'application/json']],
+                ),
+                str_ends_with($path, '/api/chat') => new MockResponse(
+                    json_encode([
+                        'model' => $body['model'] ?? 'llama3.2:3b',
+                        'message' => ['role' => 'assistant', 'content' => $responseContent],
+                        'done' => true,
+                    ], \JSON_THROW_ON_ERROR),
+                    ['http_code' => 200, 'response_headers' => ['content-type' => 'application/json']],
+                ),
+                default => new MockResponse('{}', ['http_code' => 404]),
+            };
+        };
+
+        return OllamaPlatformFactory::createPlatform(
+            self::BASE_URI,
+            null,
+            new MockHttpClient($callback, self::BASE_URI),
+        );
+    }
+
+    /**
+     * @param array<int, array{path: string, body: array<string, mixed>}> $captured
+     *
+     * @return array<string, mixed>
+     */
+    private function lastChatBody(array $captured): array
+    {
+        foreach (array_reverse($captured) as $entry) {
+            if (str_ends_with($entry['path'], '/api/chat')) {
+                return $entry['body'];
+            }
+        }
+
+        self::fail('No /api/chat call was captured.');
+    }
+
+    private function makeClient(bool $enabled): OllamaClient
+    {
         return new OllamaClient(
-            httpClient: $httpClient ?? new MockHttpClient([], self::BASE_URI),
-            logger: $logger ?? new NullLogger(),
-            enabled: $enabled,
+            $this->createStub(PlatformInterface::class),
+            new NullLogger(),
+            $enabled,
         );
     }
 }

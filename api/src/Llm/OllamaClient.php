@@ -6,36 +6,33 @@ namespace App\Llm;
 
 use App\Llm\Exception\OllamaUnavailableException;
 use Psr\Log\LoggerInterface;
+use Symfony\AI\Platform\Exception\ExceptionInterface as PlatformExceptionInterface;
+use Symfony\AI\Platform\Message\Message;
+use Symfony\AI\Platform\Message\MessageBag;
+use Symfony\AI\Platform\Message\MessageInterface;
+use Symfony\AI\Platform\PlatformInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as ClientExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpExceptionInterface;
 
 /**
- * Thin client over the Ollama HTTP API (https://github.com/ollama/ollama/blob/main/docs/api.md).
+ * Façade over the symfony/ai-platform Ollama bridge that preserves the legacy
+ * Ollama HTTP response shape (`['response' => ...]` / `['message' => ['content' => ...]]`)
+ * so existing callers (analyze handlers, intent detector, in-ride assistant,
+ * chat processor) keep working unchanged.
  *
- * Designed for local LLMs (LLaMA 3.x via Ollama). Returns parsed JSON payloads;
- * `format: "json"` is enabled by default so the model is constrained to emit valid JSON.
- *
- * When `ollama.enabled` is false, every call returns null without issuing any HTTP traffic.
- * When the LLM is enabled but unreachable or returns garbage, an OllamaUnavailableException
- * is thrown so the caller can decide between a graceful fallback or an explicit failure.
+ * When `ollama.enabled` is false, every call short-circuits to null without
+ * touching the platform. Transport or platform errors are wrapped into
+ * {@see OllamaUnavailableException} so the existing graceful-fallback logic
+ * upstream still applies.
  */
 final readonly class OllamaClient implements LlmClientInterface
 {
-    /**
-     * Default number of context tokens. 8192 covers most prompts/responses while staying
-     * cheap on CPU. Caller can override via the `num_ctx` option.
-     */
     public const int DEFAULT_NUM_CTX = 8192;
 
-    /**
-     * Default temperature for analysis tasks (deterministic, low randomness).
-     */
     public const float DEFAULT_TEMPERATURE = 0.3;
 
     public function __construct(
-        #[Autowire(service: 'ollama.client')]
-        private HttpClientInterface $httpClient,
+        private PlatformInterface $platform,
         private LoggerInterface $logger,
         #[Autowire(env: 'bool:default::OLLAMA_ENABLED')]
         private bool $enabled,
@@ -53,19 +50,14 @@ final readonly class OllamaClient implements LlmClientInterface
             return null;
         }
 
-        $payload = [
-            'model' => $model,
-            'prompt' => $prompt,
-            'stream' => false,
-            'format' => $options['format'] ?? 'json',
-            'options' => $this->buildOptions($options),
-        ];
-
+        $messages = [];
         if (null !== $systemPrompt) {
-            $payload['system'] = $systemPrompt;
+            $messages[] = Message::forSystem($systemPrompt);
         }
 
-        return $this->postJson('/api/generate', $payload);
+        $messages[] = Message::ofUser($prompt);
+
+        return ['response' => $this->invoke($model, $messages, $options)];
     }
 
     public function chat(string $model, array $messages, ?string $systemPrompt = null, array $options = []): ?array
@@ -74,20 +66,44 @@ final readonly class OllamaClient implements LlmClientInterface
             return null;
         }
 
-        $finalMessages = $messages;
+        $bag = [];
         if (null !== $systemPrompt) {
-            array_unshift($finalMessages, ['role' => 'system', 'content' => $systemPrompt]);
+            $bag[] = Message::forSystem($systemPrompt);
         }
 
-        $payload = [
-            'model' => $model,
-            'messages' => $finalMessages,
-            'stream' => false,
-            'format' => $options['format'] ?? 'json',
-            'options' => $this->buildOptions($options),
-        ];
+        foreach ($messages as $message) {
+            $bag[] = match ($message['role']) {
+                'system' => Message::forSystem($message['content']),
+                'assistant' => Message::ofAssistant($message['content']),
+                default => Message::ofUser($message['content']),
+            };
+        }
 
-        return $this->postJson('/api/chat', $payload);
+        return ['message' => ['role' => 'assistant', 'content' => $this->invoke($model, $bag, $options)]];
+    }
+
+    /**
+     * @param list<MessageInterface> $messages
+     * @param array<string, mixed>   $options
+     */
+    private function invoke(string $model, array $messages, array $options): string
+    {
+        if ('' === $model) {
+            throw new \InvalidArgumentException('Model name must not be empty.');
+        }
+
+        $options = $this->normalizeOptions($options);
+
+        try {
+            return $this->platform->invoke($model, new MessageBag(...$messages), $options)->asText();
+        } catch (PlatformExceptionInterface|HttpExceptionInterface $exception) {
+            $this->logger->warning('Ollama request failed.', [
+                'model' => $model,
+                'error' => $exception->getMessage(),
+            ]);
+
+            throw new OllamaUnavailableException(\sprintf('Ollama request for model "%s" failed: %s', $model, $exception->getMessage()), $exception->getCode(), previous: $exception);
+        }
     }
 
     /**
@@ -95,41 +111,12 @@ final readonly class OllamaClient implements LlmClientInterface
      *
      * @return array<string, mixed>
      */
-    private function buildOptions(array $options): array
+    private function normalizeOptions(array $options): array
     {
-        // Drop top-level keys that belong to the request envelope, not to the LLM options.
-        unset($options['format']);
+        $options['num_ctx'] ??= self::DEFAULT_NUM_CTX;
+        $options['temperature'] ??= self::DEFAULT_TEMPERATURE;
+        $options['format'] ??= 'json';
 
-        return [
-            'num_ctx' => $options['num_ctx'] ?? self::DEFAULT_NUM_CTX,
-            'temperature' => $options['temperature'] ?? self::DEFAULT_TEMPERATURE,
-            ...$options,
-        ];
-    }
-
-    /**
-     * @param array<string, mixed> $payload
-     *
-     * @return array<string, mixed>
-     *
-     * @throws OllamaUnavailableException
-     */
-    private function postJson(string $path, array $payload): array
-    {
-        try {
-            $response = $this->httpClient->request('POST', $path, [
-                'json' => $payload,
-            ]);
-
-            return $response->toArray();
-        } catch (ClientExceptionInterface $clientException) {
-            $this->logger->warning('Ollama request failed.', [
-                'path' => $path,
-                'model' => $payload['model'] ?? null,
-                'error' => $clientException->getMessage(),
-            ]);
-
-            throw new OllamaUnavailableException(\sprintf('Ollama request to "%s" failed: %s', $path, $clientException->getMessage()), $clientException->getCode(), previous: $clientException);
-        }
+        return $options;
     }
 }
