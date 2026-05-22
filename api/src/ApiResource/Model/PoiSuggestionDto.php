@@ -29,10 +29,10 @@ final readonly class PoiSuggestionDto
         public float $lat,
         #[ApiProperty(description: 'POI longitude (WGS84).', required: true)]
         public float $lon,
-        #[ApiProperty(description: 'Straight-line distance from the rider to the POI, in meters.', required: true)]
-        public float $distance_m,
-        #[ApiProperty(description: 'Estimated additional meters if the rider detours to the POI (0 when no remaining route is known).', required: true)]
-        public float $detour_m,
+        #[ApiProperty(description: 'Straight-line distance from the rider to the POI, in meters (rounded).', required: true)]
+        public int $distance_m,
+        #[ApiProperty(description: 'Estimated additional meters if the rider detours to the POI (0 when no remaining route is known, rounded).', required: true)]
+        public int $detour_m,
         #[ApiProperty(description: 'Raw OSM `opening_hours` tag for the current day, when available.')]
         public ?string $opening_hours_today,
         #[ApiProperty(description: 'RFC 3339 closing time of the currently-open interval, or null when the POI never closes / is closed.')]
@@ -52,8 +52,8 @@ final readonly class PoiSuggestionDto
      *     category: string,
      *     lat: float,
      *     lon: float,
-     *     distance_m: float,
-     *     detour_m: float,
+     *     distance_m: int,
+     *     detour_m: int,
      *     opening_hours_today: ?string,
      *     closes_at: ?string,
      *     phone: ?string,
@@ -63,6 +63,17 @@ final readonly class PoiSuggestionDto
      */
     public static function fromArray(array $payload): self
     {
+        // The pois JSONB column accepts arbitrary shapes, so a corrupted row
+        // (legacy migration, manual SQL fix, …) could surface missing keys
+        // and yield a runtime TypeError far away from the read site. Assert
+        // the contract here so a bad row fails fast with an explicit message
+        // the operator can correlate with the offending trip_chat_message id.
+        foreach (['name', 'category', 'lat', 'lon', 'distance_m', 'detour_m', 'deeplink'] as $key) {
+            if (!\array_key_exists($key, $payload)) {
+                throw new \InvalidArgumentException(\sprintf('PoiSuggestionDto: missing required key "%s".', $key));
+            }
+        }
+
         return new self(
             name: $payload['name'],
             category: $payload['category'],
@@ -70,11 +81,11 @@ final readonly class PoiSuggestionDto
             lon: $payload['lon'],
             distance_m: $payload['distance_m'],
             detour_m: $payload['detour_m'],
-            opening_hours_today: $payload['opening_hours_today'],
-            closes_at: $payload['closes_at'],
-            phone: $payload['phone'],
+            opening_hours_today: $payload['opening_hours_today'] ?? null,
+            closes_at: $payload['closes_at'] ?? null,
+            phone: $payload['phone'] ?? null,
             deeplink: $payload['deeplink'],
-            warning: $payload['warning'],
+            warning: $payload['warning'] ?? null,
         );
     }
 }

@@ -26,17 +26,33 @@ export const STEPS: StepId[] = [
   "my_trip",
 ];
 
+import type { PoiSuggestionDto } from "@/lib/api/client";
+
+/**
+ * POI shape carried by in-ride assistant replies. Re-exported from the API
+ * client so both the history loader and the chat store share a single
+ * derivation of `Trip.TripChatResponse.jsonld.pois[number]` — a future schema
+ * refactor (e.g. moving `pois` onto a dedicated InRideResponse) can't leave
+ * one copy out of sync.
+ */
+export type PoiSuggestion = PoiSuggestionDto;
+
 /**
  * One turn of the floating AI assistant conversation.
  *
  * Stored in-memory only — the dialogue history is intentionally not persisted
  * across page reloads to mirror the backend-side {@link ChatHistoryStore} which
  * uses a short-TTL Redis store per (trip, user) pair.
+ *
+ * When the assistant returned POI suggestions (in-ride mode), {@link pois}
+ * carries the structured payload so the chat panel can render the POI cards
+ * beneath the conversational text.
  */
 export interface AiChatMessage {
   role: "user" | "assistant";
   content: string;
   ts: number;
+  pois?: PoiSuggestion[];
 }
 
 /**

@@ -921,9 +921,9 @@ export interface components {
             lat: number;
             /** @description POI longitude (WGS84). */
             lon: number;
-            /** @description Straight-line distance from the rider to the POI, in meters. */
+            /** @description Straight-line distance from the rider to the POI, in meters (rounded). */
             distance_m: number;
-            /** @description Estimated additional meters if the rider detours to the POI (0 when no remaining route is known). */
+            /** @description Estimated additional meters if the rider detours to the POI (0 when no remaining route is known, rounded). */
             detour_m: number;
             /** @description Raw OSM `opening_hours` tag for the current day, when available. */
             opening_hours_today?: string | null;
@@ -1300,6 +1300,11 @@ export interface components {
             content?: string;
             /** @description Structured action interpreted by the dialogue assistant (e.g. `split_stage`, `info`). */
             action?: string | null;
+            /** @description Optional latitude captured when the rider sent the message. */
+            geoLat?: number | null;
+            /** @description Optional longitude captured when the rider sent the message. */
+            geoLon?: number | null;
+            pois?: components["schemas"]["PoiSuggestionDto.jsonld"][];
             /**
              * Format: date-time
              * @description Server-side creation timestamp (RFC 3339).

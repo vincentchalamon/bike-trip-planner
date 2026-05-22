@@ -9,6 +9,8 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
+ * Persistence boundary for the long-term chat history.
+ *
  * @extends ServiceEntityRepository<TripChatMessage>
  */
 class TripChatMessageRepository extends ServiceEntityRepository

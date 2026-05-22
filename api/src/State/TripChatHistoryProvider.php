@@ -7,6 +7,7 @@ namespace App\State;
 use Symfony\Component\HttpFoundation\Request;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
+use App\ApiResource\Model\PoiSuggestionDto;
 use App\ApiResource\TripChatMessageResource;
 use App\Entity\TripChatMessage;
 use App\Entity\User;
@@ -111,6 +112,18 @@ final readonly class TripChatHistoryProvider implements ProviderInterface
 
     private function toResource(TripChatMessage $entity, string $tripId): TripChatMessageResource
     {
+        $rawPois = $entity->getPois();
+        try {
+            $pois = null === $rawPois ? [] : array_map(PoiSuggestionDto::fromArray(...), $rawPois);
+        } catch (\InvalidArgumentException|\TypeError) {
+            // A corrupted JSONB row (legacy data, manual SQL fix) must not 500
+            // the whole history page — surface the turn without its POIs so
+            // the rider still sees the conversation. Wrong types (e.g. lat
+            // stored as string) surface as \TypeError under strict_types=1,
+            // missing keys as \InvalidArgumentException from fromArray.
+            $pois = [];
+        }
+
         return new TripChatMessageResource(
             id: $entity->getId()->toRfc4122(),
             // $tripId comes from the URL — using it directly avoids a SELECT to
@@ -119,6 +132,9 @@ final readonly class TripChatHistoryProvider implements ProviderInterface
             role: $entity->getRole(),
             content: $entity->getContent(),
             action: $entity->getAction(),
+            geoLat: $entity->getGeoLat(),
+            geoLon: $entity->getGeoLon(),
+            pois: $pois,
             createdAt: $entity->getCreatedAt(),
         );
     }

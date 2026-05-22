@@ -39,7 +39,8 @@ class TripChatMessage
     private \DateTimeImmutable $createdAt;
 
     /**
-     * @param non-empty-string $role one of {@see self::ROLE_USER} or {@see self::ROLE_ASSISTANT}
+     * @param non-empty-string                                                                                                                                                                                               $role one of {@see self::ROLE_USER} or {@see self::ROLE_ASSISTANT}
+     * @param list<array{name: string, category: string, lat: float, lon: float, distance_m: int, detour_m: int, opening_hours_today: ?string, closes_at: ?string, phone: ?string, deeplink: string, warning: ?string}>|null $pois optional POI suggestions referenced by the message (JSONB)
      */
     public function __construct(
         #[ORM\ManyToOne(targetEntity: TripRequest::class)]
@@ -54,6 +55,12 @@ class TripChatMessage
         private string $content,
         #[ORM\Column(length: 32, nullable: true)]
         private ?string $action = null,
+        #[ORM\Column(name: 'geo_lat', type: 'float', nullable: true)]
+        private ?float $geoLat = null,
+        #[ORM\Column(name: 'geo_lon', type: 'float', nullable: true)]
+        private ?float $geoLon = null,
+        #[ORM\Column(type: 'jsonb', nullable: true)]
+        private ?array $pois = null,
         ?Uuid $id = null,
         ?\DateTimeImmutable $createdAt = null,
     ) {
@@ -92,6 +99,24 @@ class TripChatMessage
     public function getAction(): ?string
     {
         return $this->action;
+    }
+
+    public function getGeoLat(): ?float
+    {
+        return $this->geoLat;
+    }
+
+    public function getGeoLon(): ?float
+    {
+        return $this->geoLon;
+    }
+
+    /**
+     * @return list<array{name: string, category: string, lat: float, lon: float, distance_m: int, detour_m: int, opening_hours_today: ?string, closes_at: ?string, phone: ?string, deeplink: string, warning: ?string}>|null
+     */
+    public function getPois(): ?array
+    {
+        return $this->pois;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

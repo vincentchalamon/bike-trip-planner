@@ -14,7 +14,12 @@ import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useUiStore, type AiChatMessage } from "@/store/ui-store";
+import { useTripStore } from "@/store/trip-store";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
+import { useGeolocation } from "@/hooks/use-geolocation";
+import { PoiCard } from "@/components/chat/PoiCard";
+import { InRideDisclaimer } from "@/components/chat/InRideDisclaimer";
+import { ChatHistoryLoader } from "@/components/chat/ChatHistoryLoader";
 
 const CHAT_ACTION_INFO = "info";
 
@@ -64,6 +69,7 @@ interface AiChatPanelProps {
  */
 export function AiChatPanel({ onClose }: AiChatPanelProps) {
   const t = useTranslations("aiBubble");
+  const tGeoloc = useTranslations("chat.inRide");
 
   const { chatHistory, isChatSending, currentContext } = useUiStore(
     useShallow((s) => ({
@@ -73,7 +79,9 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
     })),
   );
 
+  const tripId = useTripStore((s) => s.trip?.id ?? null);
   const { sendChatMessage, relaunchFullAnalysis } = useTripPlanner();
+  const geo = useGeolocation();
 
   const [draft, setDraft] = useState("");
   const [pendingFullAnalysis, setPendingFullAnalysis] = useState(false);
@@ -112,7 +120,13 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
     const trimmed = draft.trim();
     if (!trimmed || isChatSending) return;
     setDraft("");
-    const response = await sendChatMessage(trimmed);
+    // When the rider has granted geolocation permission and we have a fresh
+    // fix, forward it to the backend so it can switch to in-ride POI search
+    // mode. Without a position the planning pipeline runs as before.
+    const position = geo.position
+      ? { lat: geo.position.latitude, lon: geo.position.longitude }
+      : null;
+    const response = await sendChatMessage(trimmed, position);
     if (response && response.action !== CHAT_ACTION_INFO) {
       const detail: AiChatActionEventDetail = {
         action: response.action,
@@ -212,6 +226,7 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
         data-testid="ai-chat-panel-history"
         className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3 bg-muted/20"
       >
+        {tripId && <ChatHistoryLoader tripId={tripId} />}
         {transcript.map((message, index) => (
           <ChatBubble
             key={`${message.role}-${message.ts}-${index}`}
@@ -220,6 +235,17 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
         ))}
         {isChatSending && <TypingDots />}
       </div>
+
+      {!geo.position && !geo.isRequesting && (
+        <button
+          type="button"
+          data-testid="ai-chat-panel-geoloc-prompt"
+          onClick={() => geo.request()}
+          className="block w-full border-t border-border bg-muted/30 px-4 py-2 text-left text-xs text-muted-foreground underline-offset-2 hover:underline"
+        >
+          {tGeoloc("geolocPrompt")}
+        </button>
+      )}
 
       {pendingFullAnalysis && (
         <div
@@ -286,6 +312,9 @@ interface ChatBubbleProps {
 
 function ChatBubble({ message }: ChatBubbleProps) {
   const isUser = message.role === "user";
+  const hasPois =
+    !isUser && Array.isArray(message.pois) && message.pois.length > 0;
+
   return (
     <div
       data-testid="ai-chat-panel-message"
@@ -294,13 +323,28 @@ function ChatBubble({ message }: ChatBubbleProps) {
     >
       <div
         className={cn(
-          "max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed shadow-sm whitespace-pre-wrap",
-          isUser
-            ? "bg-brand text-white rounded-br-sm"
-            : "bg-background border border-border text-foreground rounded-bl-sm",
+          "flex flex-col gap-2",
+          hasPois ? "max-w-[95%] w-full" : "max-w-[85%]",
         )}
       >
-        {message.content}
+        <div
+          className={cn(
+            "rounded-2xl px-3 py-2 text-sm leading-relaxed shadow-sm whitespace-pre-wrap",
+            isUser
+              ? "bg-brand text-white rounded-br-sm self-end"
+              : "bg-background border border-border text-foreground rounded-bl-sm self-start",
+          )}
+        >
+          {message.content}
+        </div>
+        {hasPois && (
+          <div data-testid="ai-chat-panel-pois" className="flex flex-col gap-2">
+            {message.pois!.map((poi, idx) => (
+              <PoiCard key={`${poi.deeplink}-${idx}`} poi={poi} />
+            ))}
+            <InRideDisclaimer />
+          </div>
+        )}
       </div>
     </div>
   );
