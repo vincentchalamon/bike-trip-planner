@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2bdb6829db987395f2fa61c85a8cc7f9",
+    "content-hash": "b4e047763f04af5b9ea0e2de3bfa523c",
     "packages": [
         {
             "name": "api-platform/doctrine-common",
@@ -3729,105 +3729,6 @@
                 "source": "https://github.com/php-fig/log/tree/3.0.2"
             },
             "time": "2024-09-11T13:17:53+00:00"
-        },
-        {
-            "name": "symfony/ai-agent",
-            "version": "v0.9.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/symfony/ai-agent.git",
-                "reference": "f88590db43e89483f194fd92fa4a12c916bbed86"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/symfony/ai-agent/zipball/f88590db43e89483f194fd92fa4a12c916bbed86",
-                "reference": "f88590db43e89483f194fd92fa4a12c916bbed86",
-                "shasum": ""
-            },
-            "require": {
-                "ext-fileinfo": "*",
-                "php": ">=8.2",
-                "phpdocumentor/reflection-docblock": "^5.4|^6.0",
-                "phpstan/phpdoc-parser": "^2.1",
-                "psr/log": "^3.0",
-                "symfony/ai-platform": "^0.9",
-                "symfony/clock": "^7.3|^8.0",
-                "symfony/http-client": "^7.3|^8.0",
-                "symfony/polyfill-php85": "^1.33",
-                "symfony/property-access": "^7.3|^8.0",
-                "symfony/property-info": "^7.3|^8.0",
-                "symfony/serializer": "^7.3|^8.0",
-                "symfony/type-info": "^7.3|^8.0"
-            },
-            "require-dev": {
-                "phpstan/phpstan": "^2.1",
-                "phpstan/phpstan-phpunit": "^2.0",
-                "phpstan/phpstan-strict-rules": "^2.0",
-                "phpunit/phpunit": "^11.5.53",
-                "symfony/ai-store": "^0.9",
-                "symfony/event-dispatcher": "^7.3|^8.0",
-                "symfony/translation": "^7.3|^8.0",
-                "symfony/translation-contracts": "^3.6",
-                "symfony/validator": "^7.3|^8.0"
-            },
-            "type": "library",
-            "extra": {
-                "thanks": {
-                    "url": "https://github.com/symfony/ai",
-                    "name": "symfony/ai"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Symfony\\AI\\Agent\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Christopher Hertel",
-                    "email": "mail@christopher-hertel.de"
-                },
-                {
-                    "name": "Oskar Stark",
-                    "email": "oskarstark@googlemail.com"
-                },
-                {
-                    "name": "Symfony Community",
-                    "homepage": "https://symfony.com/contributors"
-                }
-            ],
-            "description": "PHP library for building agentic applications.",
-            "keywords": [
-                "Agent",
-                "ai",
-                "llm"
-            ],
-            "support": {
-                "source": "https://github.com/symfony/ai-agent/tree/v0.9.0"
-            },
-            "funding": [
-                {
-                    "url": "https://symfony.com/sponsor",
-                    "type": "custom"
-                },
-                {
-                    "url": "https://github.com/fabpot",
-                    "type": "github"
-                },
-                {
-                    "url": "https://github.com/nicolas-grekas",
-                    "type": "github"
-                },
-                {
-                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
-                    "type": "tidelift"
-                }
-            ],
-            "time": "2026-05-16T08:40:45+00:00"
         },
         {
             "name": "symfony/ai-bundle",
