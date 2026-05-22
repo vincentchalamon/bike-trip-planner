@@ -115,10 +115,12 @@ final readonly class TripChatHistoryProvider implements ProviderInterface
         $rawPois = $entity->getPois();
         try {
             $pois = null === $rawPois ? [] : array_map(PoiSuggestionDto::fromArray(...), $rawPois);
-        } catch (\InvalidArgumentException) {
+        } catch (\InvalidArgumentException|\TypeError) {
             // A corrupted JSONB row (legacy data, manual SQL fix) must not 500
             // the whole history page — surface the turn without its POIs so
-            // the rider still sees the conversation.
+            // the rider still sees the conversation. Wrong types (e.g. lat
+            // stored as string) surface as \TypeError under strict_types=1,
+            // missing keys as \InvalidArgumentException from fromArray.
             $pois = [];
         }
 

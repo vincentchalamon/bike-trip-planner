@@ -111,7 +111,6 @@ export function ChatHistoryLoader({
         // its way to the backend), so we skip seeding entirely and let the
         // next reload pick up the merged history from PostgreSQL.
         if (entries.length > 0 && ui.chatHistory.length === 0) {
-          ui.clearHistory();
           for (const entry of entries) {
             ui.appendMessage(toAiChatMessage(entry));
           }
