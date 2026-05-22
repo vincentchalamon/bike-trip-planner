@@ -120,8 +120,8 @@ These observations are **specific to ~3B-parameter local models**. On a 70B+ mod
 
 ### Implementation notes
 
-- The `ollama.client` scoped HTTP client timeout was raised from 30s to 300s. Cold model loads on CPU can exceed 60s; the previous 30s budget caused spurious `OllamaUnavailableException` until the model was paged in.
 - The Ollama bridge issues a `POST /api/show` per `Platform::invoke()` to discover model capabilities. For our two-model fixed setup this overhead is ~2 ms locally. Acceptable; if it ever shows up in latency budgets, the fix is a static `ModelCatalogInterface` returning hard-coded `Ollama` instances.
+- Cold model loads on CPU can exceed the default 30 s `ollama.client` timeout. The existing `OllamaUnavailableException` + graceful-fallback chain already covers the user-visible behaviour; bump the scoped timeout if this becomes a recurring complaint in production.
 - The POC harness used to produce the numbers above is not retained in the repository. If the trigger conditions below fire and we need to re-evaluate, rebuild the benchmark from the methodology described in the previous section.
 
 ### When to revisit
