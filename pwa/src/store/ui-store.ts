@@ -3,7 +3,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { enableMapSet } from "immer";
-import type { components } from "@/lib/api/schema";
 
 // Required for Immer to allow mutating Set/Map drafts (used by completedSteps).
 enableMapSet();
@@ -27,16 +26,16 @@ export const STEPS: StepId[] = [
   "my_trip",
 ];
 
+import type { PoiSuggestionDto } from "@/lib/api/client";
+
 /**
- * POI shape carried by in-ride assistant replies. Derived from the generated
- * OpenAPI schema (`pois` items on `Trip.TripChatResponse.jsonld`) so the store
- * stays in lockstep with the backend `App\InRide\PoiSuggestion::toArray()`.
+ * POI shape carried by in-ride assistant replies. Re-exported from the API
+ * client so both the history loader and the chat store share a single
+ * derivation of `Trip.TripChatResponse.jsonld.pois[number]` — a future schema
+ * refactor (e.g. moving `pois` onto a dedicated InRideResponse) can't leave
+ * one copy out of sync.
  */
-export type PoiSuggestion = NonNullable<
-  NonNullable<
-    components["schemas"]["Trip.TripChatResponse.jsonld"]["pois"]
-  >[number]
->;
+export type PoiSuggestion = PoiSuggestionDto;
 
 /**
  * One turn of the floating AI assistant conversation.
