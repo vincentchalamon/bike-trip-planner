@@ -81,6 +81,35 @@ final class UserDataEnricherTest extends TestCase
         self::assertSame($user->getId()->toRfc4122(), $userBag->getId());
     }
 
+    public function testTagsTripIdFromIdAttributeOnTripRoute(): void
+    {
+        $request = Request::create('/trips/11111111-1111-7000-9000-000000000001');
+        $request->attributes->set('id', '11111111-1111-7000-9000-000000000001');
+
+        $scope = new Scope();
+        $enricher = new UserDataEnricher($this->capturingHub($scope));
+        $enricher->onRequest($this->event($request));
+
+        $event = $this->applyScope($scope);
+        self::assertSame(
+            '11111111-1111-7000-9000-000000000001',
+            $event->getTags()['trip_id'] ?? null,
+        );
+    }
+
+    public function testDoesNotTagTripIdFromIdAttributeOnNonTripRoute(): void
+    {
+        $request = Request::create('/stages/22222222-2222-7000-9000-000000000002');
+        $request->attributes->set('id', '22222222-2222-7000-9000-000000000002');
+
+        $scope = new Scope();
+        $enricher = new UserDataEnricher($this->capturingHub($scope));
+        $enricher->onRequest($this->event($request));
+
+        $event = $this->applyScope($scope);
+        self::assertArrayNotHasKey('trip_id', $event->getTags());
+    }
+
     public function testDoesNotLeakPiiIntoTagsWhenAttributesAreMissing(): void
     {
         $request = new Request();
