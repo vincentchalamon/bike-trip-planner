@@ -37,7 +37,10 @@ function decorate(data: ExternalToast | undefined): ExternalToast | undefined {
     return data;
   }
   const existing = data ?? {};
-  const description = existing.description ?? `Request ID: ${requestId}`;
+  const description =
+    existing.description != null && existing.description !== ""
+      ? `${String(existing.description)}\nRequest ID: ${requestId}`
+      : `Request ID: ${requestId}`;
   return {
     ...existing,
     description,

@@ -65,7 +65,6 @@ final class RequestIdListener
             $response->headers->set(
                 'Access-Control-Expose-Headers',
                 '' === $exposed ? self::HEADER : $exposed.', '.self::HEADER,
-                false,
             );
         }
     }
