@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 interface ErrorBoundaryProps {
   error: Error & { digest?: string };
@@ -15,7 +16,10 @@ export default function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
 
   useEffect(() => {
     // Log the original error for diagnostics; the user only sees a generic message.
-    console.error(error);
+    logger.error("App error boundary triggered", {
+      error,
+      digest: error.digest,
+    });
   }, [error]);
 
   return (
