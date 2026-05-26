@@ -44,5 +44,7 @@ body:
     id: payload
     attributes:
       label: Raw payload
-      description: Raw JSON payload from the alert source (optional, collapse if long).
+      description: >
+        Raw JSON payload from the alert source (optional, collapse if long).
+        **Scrub sensitive values** (IPs, env vars, internal hostnames, stack traces with file paths) before saving — this repository is public.
       render: json
