@@ -109,6 +109,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'Content-Type' => 'application/json',
                     ],
                 ],
+                'mercure.health.client' => [
+                    'base_uri' => '%env(MERCURE_URL)%',
+                    'max_redirects' => 0,
+                    'timeout' => 2,
+                ],
             ],
         ],
     ]);
