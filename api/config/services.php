@@ -10,6 +10,10 @@ use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
+    $containerConfigurator->parameters()
+        ->set('app.commit_sha', '%env(default:default_commit_sha:APP_COMMIT)%')
+        ->set('default_commit_sha', 'unknown');
+
     $services = $containerConfigurator->services();
 
     $services->defaults()

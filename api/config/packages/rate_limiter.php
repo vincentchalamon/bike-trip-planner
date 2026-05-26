@@ -49,6 +49,18 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '60 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
+            'health_liveness' => [
+                'policy' => 'sliding_window',
+                'limit' => 60,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            'health_readiness' => [
+                'policy' => 'sliding_window',
+                'limit' => 20,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
         ],
         'cache' => [
             'pools' => [
