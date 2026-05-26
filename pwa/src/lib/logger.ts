@@ -36,6 +36,14 @@ function serializeError(value: Error): Record<string, unknown> {
     name: value.name,
     message: value.message,
     stack: value.stack,
+    ...(value.cause !== undefined
+      ? {
+          cause:
+            value.cause instanceof Error
+              ? serializeError(value.cause)
+              : value.cause,
+        }
+      : {}),
   };
 }
 

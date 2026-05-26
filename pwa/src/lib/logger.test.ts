@@ -71,6 +71,26 @@ describe("logger", () => {
       expect(parsed.context.cause.message).toBe("kaboom");
       expect(typeof parsed.context.cause.stack).toBe("string");
     });
+
+    it("serializes Error.cause chains", () => {
+      const root = new Error("root");
+      const outer = new Error("outer", { cause: root });
+      logger.error("chained", { error: outer });
+
+      const parsed = JSON.parse(errorSpy.mock.calls[0]?.[0] as string);
+      expect(parsed.context.error.message).toBe("outer");
+      expect(parsed.context.error.cause.name).toBe("Error");
+      expect(parsed.context.error.cause.message).toBe("root");
+      expect(typeof parsed.context.error.cause.stack).toBe("string");
+    });
+
+    it("serializes non-Error Error.cause values verbatim", () => {
+      const outer = new Error("outer", { cause: "string-reason" });
+      logger.error("chained", { error: outer });
+
+      const parsed = JSON.parse(errorSpy.mock.calls[0]?.[0] as string);
+      expect(parsed.context.error.cause).toBe("string-reason");
+    });
   });
 
   describe("in production", () => {
