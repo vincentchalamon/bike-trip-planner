@@ -53,12 +53,16 @@ Sentry.init({
 
 function isLikelyNetworkError(error: unknown): boolean {
   if (!error) return false;
-  if (error instanceof TypeError) return true; // fetch network failures land here
+  // Restrict the `TypeError` short-circuit to messages that match a known
+  // network failure shape across browsers (Chrome/Firefox/Safari/WebKit).
+  // A bare `instanceof TypeError` is too broad: real application bugs (e.g.
+  // `Cannot read properties of undefined`) would otherwise be silently
+  // dropped whenever the user happens to be offline.
   if (error instanceof Error) {
     const msg = error.message.toLowerCase();
     return (
-      msg.includes("network") ||
       msg.includes("failed to fetch") ||
+      msg.includes("network") ||
       msg.includes("load failed")
     );
   }
