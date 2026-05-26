@@ -14,15 +14,23 @@ final readonly class TripUpdatePublisher implements TripUpdatePublisherInterface
     public function __construct(
         private HubInterface $hub,
         private StagePayloadMapper $stagePayloadMapper,
+        private CurrentCorrelationIdProvider $correlationIdProvider,
     ) {
     }
 
     /** @param array<string, mixed> $data */
     public function publish(string $tripId, MercureEventType $type, array $data = []): void
     {
+        $payload = ['type' => $type->value, 'data' => $data];
+
+        $correlationId = $this->correlationIdProvider->current();
+        if (null !== $correlationId) {
+            $payload['correlationId'] = $correlationId;
+        }
+
         $update = new Update(
             topics: [\sprintf('/trips/%s', $tripId)],
-            data: json_encode(['type' => $type->value, 'data' => $data], \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION),
+            data: json_encode($payload, \JSON_THROW_ON_ERROR | \JSON_PRESERVE_ZERO_FRACTION),
             private: true,
         );
 
