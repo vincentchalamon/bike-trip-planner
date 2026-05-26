@@ -12,6 +12,7 @@ Active user impact. The application is unusable for all or most users.
 - Caddy / Mercure / PHP container in restart loop
 - Error rate > 5 % per minute on any `/api/*` route
 - Oracle VM reclaimed or unreachable for more than 5 minutes
+- Ollama unreachable (hard runtime dependency per ADR-028 — gate pipeline blocked, no fallback path)
 
 **SLO**: acknowledge < 15 min, mitigate < 60 min. Post-mortem mandatory.
 
@@ -23,7 +24,6 @@ Service is up but a feature is degraded or one redundancy is lost.
 
 - One Messenger worker stuck or in a retry loop while the others process
 - `/api/health` latency > 2 s (slow dependency, but green)
-- Ollama unreachable — note that Ollama is a hard dependency per ADR-028, so this becomes P1 if the LLM tier blocks the gate pipeline
 - Valhalla `/status` red — routing fallback unavailable, new trips cannot be computed
 - Overpass / external API cache miss rate > 50 % for more than 30 min
 - Redis memory > 80 % `maxmemory`

@@ -32,6 +32,12 @@ docker compose exec redis redis-cli LLEN failed
 docker compose exec redis redis-cli --scan --pattern 'cache.trip_state:*' | wc -l
 docker compose exec redis redis-cli --scan --pattern 'osm:*' | wc -l
 docker compose exec redis redis-cli --scan --pattern 'weather:*' | wc -l
+docker compose exec redis redis-cli --scan --pattern 'route_fetch:*' | wc -l
+docker compose exec redis redis-cli --scan --pattern 'routing:*' | wc -l
+docker compose exec redis redis-cli --scan --pattern 'datatourisme:*' | wc -l
+docker compose exec redis redis-cli --scan --pattern 'wikidata:*' | wc -l
+docker compose exec redis redis-cli --scan --pattern 'trip_chat:*' | wc -l
+docker compose exec redis redis-cli --scan --pattern 'in_ride_poi:*' | wc -l
 ```
 
 ## Procédure
@@ -43,11 +49,17 @@ docker compose exec redis redis-cli --scan --pattern 'weather:*' | wc -l
    docker compose exec php bin/console messenger:failed:remove --all
    ```
 
-2. **Selective flush** of an external API cache (preserves Messenger state):
+2. **Selective flush** of external API caches (preserves Messenger state):
 
    ```bash
-   docker compose exec php bin/console cache:pool:clear cache.app
+   docker compose exec php bin/console cache:pool:clear \
+     cache.osm cache.weather cache.route_fetch cache.routing \
+     cache.datatourisme cache.wikidata cache.trip_chat cache.in_ride_poi
    ```
+
+   Note: `cache.app` (Symfony default pool) does **not** include the project's
+   external API caches — clearing it would only purge framework metadata
+   (Doctrine result cache, etc.) and would not reclaim Redis memory.
 
    Or targeted scan + delete from the Redis CLI:
 
