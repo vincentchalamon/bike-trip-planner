@@ -1,0 +1,50 @@
+name: Incident
+description: Track a production incident (typically created automatically by alerting workflows)
+labels: ["incident"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This template is used to track production incidents. It is typically populated automatically by the incident-create workflow, but can also be filled manually.
+
+  - type: input
+    id: event_id
+    attributes:
+      label: Event ID
+      description: GlitchTip event identifier (if available).
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: |
+        - **P1** — critical, user-facing outage or data loss
+        - **P2** — major degradation, workaround possible
+        - **P3** — minor issue, low user impact
+      options:
+        - P1
+        - P2
+        - P3
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      description: What triggered this incident report?
+      options:
+        - error_alert
+        - uptime_alert
+        - manual
+    validations:
+      required: true
+
+  - type: textarea
+    id: payload
+    attributes:
+      label: Raw payload
+      description: >
+        Raw JSON payload from the alert source (optional, collapse if long).
+        **Scrub sensitive values** (IPs, env vars, internal hostnames, stack traces with file paths) before saving — this repository is public.
+      render: json

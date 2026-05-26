@@ -8,11 +8,21 @@
 
 -
 
+## Bug fix
+
+<!-- Fill this section only if the PR fixes a bug. -->
+
+- [ ] Linked GlitchTip event ID and related incident issue (if applicable)
+
 ## Test plan
 
 - [ ] `make qa` passes
 - [ ] New/updated tests cover changed behavior
 - [ ] Manual verification (describe below)
+
+## Verification
+
+- [ ] Related runbook updated if applicable
 
 ## Auto-critique
 
