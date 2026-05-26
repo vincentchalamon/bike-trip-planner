@@ -1,20 +1,23 @@
 /**
  * Structured logger for the PWA.
  *
- * Provides a uniform API ready to be wired to Sentry (or another remote sink)
- * in phase P1.1. Today:
+ * Provides a uniform API used across the app to surface errors and useful
+ * diagnostics:
  *
  *   - In development (`process.env.NODE_ENV === "development"`), entries are
- *     emitted to the browser console as a structured JSON payload so logs stay
- *     greppable while we iterate.
- *   - In production and test environments, all methods are no-ops. This keeps
- *     the surface area stable for Sentry wiring and prevents noisy console
- *     output from leaking to users.
- *
- * TODO P1.1: replace the production no-ops with `Sentry.captureException` for
- * `error`, and `Sentry.addBreadcrumb` (or `Sentry.captureMessage`) for the
- * other levels.
+ *     emitted to the browser console as a structured JSON payload so logs
+ *     stay greppable while we iterate.
+ *   - In production, entries are forwarded to Sentry / GlitchTip:
+ *       * `logger.error`  → `Sentry.captureException` (Error context) or
+ *         `Sentry.captureMessage(level: "error")`.
+ *       * `logger.warn`   → `Sentry.captureMessage(level: "warning")`.
+ *       * `logger.info`   → `Sentry.addBreadcrumb(level: "info")`.
+ *       * `logger.debug`  → `Sentry.addBreadcrumb(level: "debug")`.
+ *     Sentry SDK calls become no-ops if `NEXT_PUBLIC_SENTRY_DSN` is empty,
+ *     so we never hard-depend on the DSN being configured.
+ *   - In the test environment, all methods are no-ops.
  */
+import * as Sentry from "@sentry/nextjs";
 
 export type LogLevel = "error" | "warn" | "info" | "debug";
 
@@ -29,6 +32,10 @@ interface LogEntry {
 
 function isDevelopment(): boolean {
   return process.env.NODE_ENV === "development";
+}
+
+function isTest(): boolean {
+  return process.env.NODE_ENV === "test";
 }
 
 function serializeError(value: Error): Record<string, unknown> {
@@ -47,16 +54,15 @@ function normalizeContext(context: LogContext): LogContext {
   return out;
 }
 
-function emit(level: LogLevel, message: string, context?: LogContext): void {
-  if (!isDevelopment()) {
-    // TODO P1.1: replace with Sentry.captureException / Sentry.addBreadcrumb.
-    // NOTE: until P1.1 lands, production errors are silently dropped — this is
-    // an intentional, time-bounded observability gap. If P1.1 slips, restore a
-    // console.error fallback here so server-side stdout (visible via container
-    // logs) still captures `error`-level entries.
-    return;
+function pickError(context?: LogContext): Error | undefined {
+  if (!context) return undefined;
+  for (const value of Object.values(context)) {
+    if (value instanceof Error) return value;
   }
+  return undefined;
+}
 
+function emitDev(level: LogLevel, message: string, context?: LogContext): void {
   const entry: LogEntry = {
     level,
     message,
@@ -93,6 +99,65 @@ function emit(level: LogLevel, message: string, context?: LogContext): void {
       console.debug(payload);
       return;
   }
+}
+
+function emitProd(
+  level: LogLevel,
+  message: string,
+  context?: LogContext,
+): void {
+  // Sentry calls are no-ops when the DSN is missing, so this is safe to call
+  // unconditionally in production.
+  switch (level) {
+    case "error": {
+      const err = pickError(context);
+      if (err) {
+        Sentry.captureException(err, {
+          extra: context ? normalizeContext(context) : undefined,
+          tags: { logger_message: message },
+        });
+      } else {
+        Sentry.captureMessage(message, {
+          level: "error",
+          extra: context ? normalizeContext(context) : undefined,
+        });
+      }
+      return;
+    }
+    case "warn":
+      Sentry.captureMessage(message, {
+        level: "warning",
+        extra: context ? normalizeContext(context) : undefined,
+      });
+      return;
+    case "info":
+      Sentry.addBreadcrumb({
+        level: "info",
+        category: "logger",
+        message,
+        data: context ? normalizeContext(context) : undefined,
+      });
+      return;
+    case "debug":
+      Sentry.addBreadcrumb({
+        level: "debug",
+        category: "logger",
+        message,
+        data: context ? normalizeContext(context) : undefined,
+      });
+      return;
+  }
+}
+
+function emit(level: LogLevel, message: string, context?: LogContext): void {
+  if (isTest()) {
+    return;
+  }
+  if (isDevelopment()) {
+    emitDev(level, message, context);
+    return;
+  }
+  emitProd(level, message, context);
 }
 
 export const logger = {

@@ -15,6 +15,7 @@ use Symfony\Bundle\SecurityBundle\SecurityBundle;
 use Lexik\Bundle\JWTAuthenticationBundle\LexikJWTAuthenticationBundle;
 use Zenstruck\Foundry\ZenstruckFoundryBundle;
 use Symfony\AI\AiBundle\AiBundle;
+use Sentry\SentryBundle\SentryBundle;
 
 return [
     FrameworkBundle::class => ['all' => true],
@@ -30,4 +31,5 @@ return [
     LexikJWTAuthenticationBundle::class => ['all' => true],
     ZenstruckFoundryBundle::class => ['dev' => true, 'test' => true],
     AiBundle::class => ['all' => true],
+    SentryBundle::class => ['prod' => true],
 ];
