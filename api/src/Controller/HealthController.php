@@ -40,8 +40,8 @@ final readonly class HealthController
         private RateLimiterFactory $healthReadinessLimiter,
         #[Autowire(param: 'app.commit_sha')]
         private string $commitSha,
-        #[Autowire(env: 'REDIS_URL')]
-        private string $redisUrl,
+        #[Autowire(service: 'app.redis.health')]
+        private \Redis $redis,
     ) {
     }
 
@@ -154,31 +154,11 @@ final readonly class HealthController
         $start = hrtime(true);
 
         try {
-            $redis = new \Redis();
-            $parsed = parse_url($this->redisUrl);
-            if (false === $parsed || !isset($parsed['host'])) {
-                throw new \RuntimeException('invalid redis url');
-            }
-
-            $host = $parsed['host'];
-            $port = $parsed['port'] ?? 6379;
-            $connected = $redis->connect($host, $port, self::CHECK_TIMEOUT);
-            if (!$connected) {
-                throw new \RuntimeException('connection failed');
-            }
-
-            // Authenticate if the URL carries credentials (Coolify-managed
-            // Redis is typically password-protected). Without this PING
-            // returns NOAUTH and the probe falsely reports `down`.
-            if (isset($parsed['pass']) && '' !== $parsed['pass']) {
-                $user = $parsed['user'] ?? null;
-                $redis->auth(null !== $user && '' !== $user ? [$user, $parsed['pass']] : $parsed['pass']);
-            }
-
-            $pong = $redis->ping();
-            $redis->close();
-
-            $ok = '+PONG' === $pong || true === $pong || 'PONG' === $pong;
+            // The injected service is a lazy \Redis (or RedisProxy) produced by
+            // RedisAdapter::createConnection — connection + auth are handled
+            // from REDIS_URL at first use. We only need to confirm liveness.
+            $pong = $this->redis->ping();
+            $ok = true === $pong || '+PONG' === $pong || 'PONG' === $pong;
 
             return [
                 'status' => $ok ? 'ok' : 'down',

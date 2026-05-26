@@ -31,12 +31,11 @@ final class HealthControllerTest extends ApiTestCase
     #[\Override]
     protected function tearDown(): void
     {
-        // Reset overridden services so that the broken-Postgres mock and the
-        // unreachable REDIS_URL injected by a given test do not leak into
-        // subsequent ones — the kernel is reused ($alwaysBootKernel = false).
+        // Reset overridden services so that the broken-Postgres / broken-Redis
+        // mock injected by a given test does not leak into subsequent ones —
+        // the kernel is reused ($alwaysBootKernel = false).
         $container = self::getContainer();
         $container->reset();
-        putenv('REDIS_URL');
         parent::tearDown();
     }
 
@@ -148,28 +147,30 @@ final class HealthControllerTest extends ApiTestCase
     }
 
     #[Test]
+    #[AllowMockObjectsWithoutExpectations]
     public function readinessReturns503WhenRedisIsDown(): void
     {
-        // Bind an unreachable Redis URL before the kernel is booted so the
-        // HealthController is built with it as its `$redisUrl` arg.
-        $_ENV['REDIS_URL'] = 'redis://127.0.0.1:19999';
-        $_SERVER['REDIS_URL'] = 'redis://127.0.0.1:19999';
-        self::ensureKernelShutdown();
-        $client = self::createClient();
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
 
-        // Now register the mocked HTTP clients on the freshly booted container.
-        $container = self::getContainer();
-        $container->set('routing.client', new MockHttpClient(new MockResponse('OK', ['http_code' => 200])));
-        $container->set('ollama.client', new MockHttpClient(new MockResponse('{"models":[]}', ['http_code' => 200])));
-        $container->set('mercure.health.client', new MockHttpClient(new MockResponse('', ['http_code' => 200])));
+        // Swap the lazy Redis health client for a mock whose ->ping() throws,
+        // mirroring an unreachable Redis without mutating env vars.
+        $brokenRedis = $this->createMock(\Redis::class);
+        $brokenRedis->method('ping')->willThrowException(
+            new \RuntimeException('connection refused')
+        );
+        self::getContainer()->set('app.redis.health', $brokenRedis);
 
-        $response = $client->request('GET', '/api/health');
-
-        unset($_ENV['REDIS_URL'], $_SERVER['REDIS_URL']);
+        $response = $this->client->request('GET', '/api/health');
 
         $this->assertResponseStatusCodeSame(503);
         $data = $response->toArray(false);
         $this->assertSame('down', $data['deps']['redis']['status']);
+        $this->assertArrayHasKey('error', $data['deps']['redis']);
+        $this->assertSame('RuntimeException', $data['deps']['redis']['error']);
     }
 
     private function mockHealthHttpClients(
