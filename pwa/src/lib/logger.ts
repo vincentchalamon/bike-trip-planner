@@ -50,6 +50,10 @@ function normalizeContext(context: LogContext): LogContext {
 function emit(level: LogLevel, message: string, context?: LogContext): void {
   if (!isDevelopment()) {
     // TODO P1.1: replace with Sentry.captureException / Sentry.addBreadcrumb.
+    // NOTE: until P1.1 lands, production errors are silently dropped — this is
+    // an intentional, time-bounded observability gap. If P1.1 slips, restore a
+    // console.error fallback here so server-side stdout (visible via container
+    // logs) still captures `error`-level entries.
     return;
   }
 
@@ -60,7 +64,19 @@ function emit(level: LogLevel, message: string, context?: LogContext): void {
     ...(context !== undefined ? { context: normalizeContext(context) } : {}),
   };
 
-  const payload = JSON.stringify(entry);
+  // JSON.stringify can throw on BigInt, circular references, or a user-defined
+  // toJSON() that throws. A logger must never propagate errors to its caller.
+  let payload: string;
+  try {
+    payload = JSON.stringify(entry);
+  } catch {
+    payload = JSON.stringify({
+      level,
+      message,
+      ts: entry.ts,
+      context: "[unserializable]",
+    });
+  }
 
   // logger.ts is the single sanctioned console caller (see module docblock).
   switch (level) {
