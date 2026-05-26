@@ -111,9 +111,9 @@ final class CorrelationIdProcessorTest extends TestCase
     }
 
     #[Test]
-    public function fallsBackToIdPathAttributeForTripId(): void
+    public function fallsBackToIdPathAttributeForTripIdOnTripRoutes(): void
     {
-        $request = new Request();
+        $request = Request::create('/trips/22222222-2222-7000-9000-000000000002');
         $request->attributes->set('id', '22222222-2222-7000-9000-000000000002');
 
         $stack = new RequestStack();
@@ -127,6 +127,25 @@ final class CorrelationIdProcessorTest extends TestCase
         $record = $processor($this->buildRecord());
 
         self::assertSame('22222222-2222-7000-9000-000000000002', $record->extra['trip_id']);
+    }
+
+    #[Test]
+    public function doesNotUseIdPathAttributeForTripIdOnNonTripRoutes(): void
+    {
+        $request = Request::create('/users/33333333-3333-7000-9000-000000000003');
+        $request->attributes->set('id', '33333333-3333-7000-9000-000000000003');
+
+        $stack = new RequestStack();
+        $stack->push($request);
+
+        $security = $this->createMock(Security::class);
+        $security->method('getUser')->willReturn(null);
+
+        $processor = new CorrelationIdProcessor($stack, $security);
+
+        $record = $processor($this->buildRecord());
+
+        self::assertArrayNotHasKey('trip_id', $record->extra);
     }
 
     #[Test]

@@ -18,10 +18,19 @@ import { getLastRequestId } from "@/lib/api/client";
 
 /**
  * Augments error/warning toasts with the last known correlation ID
- * (`X-Request-Id`). The ID is exposed both as a `data-request-id` attribute on
- * the rendered toast element (selectable by tests / power users via DevTools)
- * and as a `Request ID: <uuid>` description line so support requests can
- * carry the trace identifier. See issue #485.
+ * (`X-Request-Id`).
+ *
+ * The ID is exposed in two reliable ways:
+ *  - As a `Request ID: <uuid>` line appended to the toast description, so
+ *    end-users can copy-paste it into a support request.
+ *  - As the Sonner toast `id` (`toast-<uuid>`), which Sonner renders as the
+ *    rendered `<li id>` DOM attribute, making the value selectable by
+ *    Playwright tests and observable via DevTools. We deliberately do *not*
+ *    spread arbitrary `data-*` keys on the toast options object: Sonner v2
+ *    only forwards a fixed allow-list of known fields to the `<li>`, so a
+ *    `data-request-id` entry would never reach the DOM.
+ *
+ * See issue #485.
  *
  * The original `sonner.toast.error` / `sonner.toast.warning` functions are
  * wrapped in place once at module load, so every caller importing `toast`
@@ -44,10 +53,10 @@ function decorate(data: ExternalToast | undefined): ExternalToast | undefined {
   return {
     ...existing,
     description,
-    // Cast: sonner spreads unknown props onto the rendered <li>, so `data-*`
-    // keys land on the DOM element where they can be queried by tests and
-    // copied by users via DevTools.
-    ...({ "data-request-id": requestId } as Record<string, unknown>),
+    // Sonner forwards `id` straight to the rendered `<li id>` DOM attribute,
+    // so prefixing the request id keeps the value selectable from Playwright
+    // / DevTools without relying on undocumented prop-spreading behaviour.
+    id: existing.id ?? `toast-${requestId}`,
   };
 }
 

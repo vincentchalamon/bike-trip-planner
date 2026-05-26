@@ -35,10 +35,12 @@ use Symfony\Component\HttpFoundation\RequestStack;
 final class CorrelationIdProcessor implements ProcessorInterface
 {
     /**
-     * Path-attribute keys that hold a trip identifier across API Platform
-     * routes (`/trips/{id}`, `/trips/{tripId}/stages/{index}`, …).
+     * Path-attribute keys that explicitly name a trip identifier (used by
+     * sub-resource routes like `/trips/{tripId}/stages/{index}`). The generic
+     * `id` parameter is handled separately in {@see self::resolveTripId()} so
+     * we never mislabel a user/stage UUID as `trip_id` on non-trip routes.
      */
-    private const array TRIP_ATTRIBUTES = ['tripId', 'id', 'trip_id'];
+    private const array TRIP_ATTRIBUTES = ['tripId', 'trip_id'];
 
     /**
      * Worker-side correlation override. Populated by
@@ -134,6 +136,17 @@ final class CorrelationIdProcessor implements ProcessorInterface
 
         foreach (self::TRIP_ATTRIBUTES as $key) {
             $value = $request->attributes->get($key);
+            if (\is_string($value) && '' !== $value) {
+                return $value;
+            }
+        }
+
+        // The Trip resource uses the default API Platform `{id}` parameter
+        // (`/trips/{id}`, `/trips/{id}/duplicate`, …). Only treat that
+        // parameter as a trip id when the path is unambiguously trip-scoped
+        // so we never mislabel a user/stage UUID emitted from other resources.
+        if (str_starts_with($request->getPathInfo(), '/trips/')) {
+            $value = $request->attributes->get('id');
             if (\is_string($value) && '' !== $value) {
                 return $value;
             }

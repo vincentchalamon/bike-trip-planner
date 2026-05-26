@@ -21,8 +21,8 @@ export const REQUEST_ID_HEADER = "X-Request-Id";
  * Last known correlation ID observed from a server response. The value is
  * resent on every subsequent request as `X-Request-Id` so all calls in the
  * same user session share a trace identifier, and surfaced to UI components
- * (e.g. the Sonner toast `data-request-id` attribute) for copy-paste
- * diagnostics.
+ * (e.g. the Sonner toast `Request ID: <uuid>` description / `toast-<uuid>`
+ * `<li id>`) for copy-paste diagnostics.
  *
  * Stored in module scope (not the auth store) so it survives auth state
  * resets and remains importable from non-React code (`parseApiError`
