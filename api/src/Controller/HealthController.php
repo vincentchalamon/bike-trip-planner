@@ -167,16 +167,21 @@ final readonly class HealthController
                 throw new \RuntimeException('connection failed');
             }
 
-            // Authenticate if the URL carries credentials (Coolify-managed
-            // Redis is typically password-protected). Without this PING
-            // returns NOAUTH and the probe falsely reports `down`.
-            if (isset($parsed['pass']) && '' !== $parsed['pass']) {
-                $user = $parsed['user'] ?? null;
-                $redis->auth(null !== $user && '' !== $user ? [$user, $parsed['pass']] : $parsed['pass']);
-            }
+            try {
+                // Authenticate if the URL carries credentials (Coolify-managed
+                // Redis is typically password-protected). Without this PING
+                // returns NOAUTH and the probe falsely reports `down`.
+                if (isset($parsed['pass']) && '' !== $parsed['pass']) {
+                    $user = $parsed['user'] ?? null;
+                    $redis->auth(null !== $user && '' !== $user ? [$user, $parsed['pass']] : $parsed['pass']);
+                }
 
-            $pong = $redis->ping();
-            $redis->close();
+                $pong = $redis->ping();
+            } finally {
+                // Always close the connection, even if auth/ping throws,
+                // to prevent socket leaks under failure conditions.
+                $redis->close();
+            }
 
             $ok = '+PONG' === $pong || true === $pong || 'PONG' === $pong;
 
