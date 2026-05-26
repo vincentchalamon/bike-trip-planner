@@ -34,6 +34,13 @@ RUN npm ci
 
 FROM deps AS builder
 
+# Build-time secret consumed by `withSentryConfig` (next.config.ts) to upload
+# source maps to GlitchTip during `next build`. Inject via CI / Coolify build
+# secret — must NEVER be baked into the runtime image. When unset, the build
+# proceeds without source-map upload (Sentry plugin silently skips).
+ARG SENTRY_AUTH_TOKEN
+ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
+
 COPY --link pwa/. .
 RUN npm run build
 

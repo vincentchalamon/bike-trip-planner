@@ -146,6 +146,12 @@ services:
       context: ./
       dockerfile: .docker/pwa/Dockerfile
       target: prod
+      args:
+        # Build-time secret consumed by `withSentryConfig` during `next build`
+        # to upload source maps to GlitchTip. Inject via CI / Coolify build-time
+        # secrets — never expose at runtime (it grants org-wide release write
+        # access). When unset, the build proceeds without source-map upload.
+        SENTRY_AUTH_TOKEN: "${SENTRY_AUTH_TOKEN:-}"
     restart: unless-stopped
     depends_on:
       - php # Mercure dependency
@@ -157,7 +163,6 @@ services:
       NEXT_PUBLIC_APP_RELEASE: "${APP_RELEASE:-}"
       NEXT_PUBLIC_APP_ENV: "${APP_ENV:-prod}"
       SENTRY_DSN: "${SENTRY_DSN:-}"
-      SENTRY_AUTH_TOKEN: "${SENTRY_AUTH_TOKEN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
     volumes:
       - ./pwa/:/app

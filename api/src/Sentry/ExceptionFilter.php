@@ -7,8 +7,6 @@ namespace App\Sentry;
 use Sentry\Event;
 use Sentry\EventHint;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
-use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 
 /**
@@ -17,11 +15,9 @@ use Symfony\Component\Validator\Exception\ValidationFailedException;
  * Drops well-known noise from the ingestion pipeline so the GlitchTip free
  * quota and triage queue stay focused on actual server-side bugs:
  *
- *   - `NotFoundHttpException` (404) and `MethodNotAllowedHttpException` (405)
- *     are crawler / bad-URL noise.
- *   - Any other {@see HttpExceptionInterface} below status 500 is a client
- *     error (bad request, unauthorized, forbidden, conflict, etc.) and is
- *     already returned to the caller as a structured API Problem response.
+ *   - Any {@see HttpExceptionInterface} below status 500 is a client error
+ *     (404, 405, 400, 401, 403, 409, …) — crawler / bad-URL noise or already
+ *     returned to the caller as a structured API Problem response.
  *   - {@see ValidationFailedException} is the expected outcome of an invalid
  *     payload and should not page anyone.
  *
@@ -35,12 +31,6 @@ final class ExceptionFilter
         $exception = $hint?->exception;
         if (!$exception instanceof \Throwable) {
             return $event;
-        }
-
-        if ($exception instanceof NotFoundHttpException
-            || $exception instanceof MethodNotAllowedHttpException
-        ) {
-            return null;
         }
 
         if ($exception instanceof HttpExceptionInterface && $exception->getStatusCode() < 500) {
