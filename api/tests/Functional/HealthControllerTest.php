@@ -28,6 +28,18 @@ final class HealthControllerTest extends ApiTestCase
         $this->client = self::createClient();
     }
 
+    #[\Override]
+    protected function tearDown(): void
+    {
+        // Reset overridden services so that the broken-Postgres mock and the
+        // unreachable REDIS_URL injected by a given test do not leak into
+        // subsequent ones — the kernel is reused ($alwaysBootKernel = false).
+        $container = self::getContainer();
+        $container->reset();
+        putenv('REDIS_URL');
+        parent::tearDown();
+    }
+
     #[Test]
     public function livenessReturns200WithCommitSha(): void
     {
@@ -135,6 +147,31 @@ final class HealthControllerTest extends ApiTestCase
         $this->assertSame('RuntimeException', $data['deps']['postgres']['error']);
     }
 
+    #[Test]
+    public function readinessReturns503WhenRedisIsDown(): void
+    {
+        // Bind an unreachable Redis URL before the kernel is booted so the
+        // HealthController is built with it as its `$redisUrl` arg.
+        $_ENV['REDIS_URL'] = 'redis://127.0.0.1:19999';
+        $_SERVER['REDIS_URL'] = 'redis://127.0.0.1:19999';
+        self::ensureKernelShutdown();
+        $client = self::createClient();
+
+        // Now register the mocked HTTP clients on the freshly booted container.
+        $container = self::getContainer();
+        $container->set('routing.client', new MockHttpClient(new MockResponse('OK', ['http_code' => 200])));
+        $container->set('ollama.client', new MockHttpClient(new MockResponse('{"models":[]}', ['http_code' => 200])));
+        $container->set('mercure.health.client', new MockHttpClient(new MockResponse('', ['http_code' => 200])));
+
+        $response = $client->request('GET', '/api/health');
+
+        unset($_ENV['REDIS_URL'], $_SERVER['REDIS_URL']);
+
+        $this->assertResponseStatusCodeSame(503);
+        $data = $response->toArray(false);
+        $this->assertSame('down', $data['deps']['redis']['status']);
+    }
+
     private function mockHealthHttpClients(
         MockResponse $valhalla,
         MockResponse $ollama,
@@ -143,7 +180,6 @@ final class HealthControllerTest extends ApiTestCase
         $container = self::getContainer();
         $container->set('routing.client', new MockHttpClient($valhalla));
         $container->set('ollama.client', new MockHttpClient($ollama));
-        // Default HTTP client is used for the Mercure HEAD check.
-        $container->set('http_client', new MockHttpClient($mercure));
+        $container->set('mercure.health.client', new MockHttpClient($mercure));
     }
 }

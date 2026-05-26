@@ -32,7 +32,8 @@ final readonly class HealthController
         private HttpClientInterface $valhallaClient,
         #[Autowire(service: 'ollama.client')]
         private HttpClientInterface $ollamaClient,
-        private HttpClientInterface $httpClient,
+        #[Autowire(service: 'mercure.health.client')]
+        private HttpClientInterface $mercureClient,
         #[Autowire(service: 'limiter.health_liveness')]
         private RateLimiterFactory $healthLivenessLimiter,
         #[Autowire(service: 'limiter.health_readiness')]
@@ -41,8 +42,6 @@ final readonly class HealthController
         private string $commitSha,
         #[Autowire(env: 'REDIS_URL')]
         private string $redisUrl,
-        #[Autowire(env: 'MERCURE_URL')]
-        private string $mercureUrl,
     ) {
     }
 
@@ -73,7 +72,7 @@ final readonly class HealthController
 
         // Launch HTTP-based checks in parallel by issuing their requests up front.
         $pending = [
-            'mercure' => $this->startHttpCheck('HEAD', $this->mercureUrl.'?topic=health'),
+            'mercure' => $this->startHttpCheck('HEAD', '?topic=health', $this->mercureClient),
             'valhalla' => $this->startHttpCheck('GET', '/status', $this->valhallaClient),
             'ollama' => $this->startHttpCheck('GET', '/api/tags', $this->ollamaClient),
         ];
@@ -128,6 +127,10 @@ final readonly class HealthController
         $start = hrtime(true);
 
         try {
+            // Cap statement and any implicit reconnect to ~1s to avoid
+            // letting the probe block on the OS TCP timeout (~30s) when
+            // Postgres is unreachable.
+            $this->connection->executeStatement('SET statement_timeout = 1000');
             $this->connection->executeQuery('SELECT 1');
 
             return [
@@ -185,9 +188,8 @@ final readonly class HealthController
     /**
      * @return array{response: ?ResponseInterface, start: int, error: ?string}
      */
-    private function startHttpCheck(string $method, string $url, ?HttpClientInterface $client = null): array
+    private function startHttpCheck(string $method, string $url, HttpClientInterface $client): array
     {
-        $client ??= $this->httpClient;
         $start = hrtime(true);
 
         try {
