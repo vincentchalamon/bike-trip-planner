@@ -22,7 +22,7 @@ final class HandleCorrelationIdMiddlewareTest extends TestCase
     {
         return new CorrelationIdProcessor(
             new RequestStack(),
-            $this->createMock(Security::class),
+            $this->createStub(Security::class),
         );
     }
 
@@ -65,13 +65,15 @@ final class HandleCorrelationIdMiddlewareTest extends TestCase
             throw new \RuntimeException('handler boom');
         });
 
+        $caught = null;
         try {
             $middleware->handle($envelope, $stack);
-            self::fail('Expected exception was not thrown.');
-        } catch (\RuntimeException $e) {
-            self::assertSame('handler boom', $e->getMessage());
+        } catch (\RuntimeException $runtimeException) {
+            $caught = $runtimeException;
         }
 
+        self::assertInstanceOf(\RuntimeException::class, $caught, 'Expected exception was not thrown.');
+        self::assertSame('handler boom', $caught->getMessage());
         self::assertNull(
             $processor->getOverrideRequestId(),
             'Override must be cleared even when the handler throws — otherwise subsequent messages leak the stale request_id.',
@@ -121,11 +123,13 @@ final class HandleCorrelationIdMiddlewareTest extends TestCase
      * Builds a `StackInterface` whose `next()` invokes the provided handler
      * on the envelope passed through `handle()`. Mirrors what Messenger does
      * internally so tests can assert the override state inside the handler.
+     *
+     * @param \Closure(Envelope): Envelope $handler
      */
-    private function stackThat(callable $handler): StackInterface
+    private function stackThat(\Closure $handler): StackInterface
     {
-        $middleware = new class($handler) implements MiddlewareInterface {
-            public function __construct(private $handler)
+        $middleware = new readonly class ($handler) implements MiddlewareInterface {
+            public function __construct(private \Closure $handler)
             {
             }
 
@@ -136,7 +140,7 @@ final class HandleCorrelationIdMiddlewareTest extends TestCase
             }
         };
 
-        return new class($middleware) implements StackInterface {
+        return new readonly class ($middleware) implements StackInterface {
             public function __construct(private MiddlewareInterface $middleware)
             {
             }
