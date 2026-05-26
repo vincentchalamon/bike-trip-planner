@@ -117,10 +117,13 @@ jobs:
               const heartbeat = payload.heartbeat || {};
               const latencyMs = Number(heartbeat.ping || payload.responseTime || 0);
 
+              // Cap at 41 chars so the resulting `event-fp:<fingerprint>`
+              // label (9-char prefix + fingerprint) fits within GitHub's
+              // 50-character label name limit.
               fingerprint = `${monitorName}-${status}`
                 .toLowerCase()
                 .replace(/[^a-z0-9-]+/g, '-')
-                .slice(0, 48);
+                .slice(0, 41);
               shortDescription = `${monitorName} is ${status}`;
               source = 'Uptime';
 

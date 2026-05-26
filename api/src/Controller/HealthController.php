@@ -127,15 +127,12 @@ final readonly class HealthController
         $start = hrtime(true);
 
         try {
-            // Cap server-side query execution to 1s so a slow planner
-            // cannot stall the probe once the session is established.
-            // Note: this is a session-level limit and does NOT bound the
-            // TCP connect step — when Postgres is unreachable the lazy
-            // DBAL connect can still block up to the kernel TCP timeout.
-            // Hard bounding the connect step requires `connect_timeout`
-            // on the DBAL DSN itself, which is intentionally left to the
-            // platform configuration (see `doctrine.dbal.options`).
-            $this->connection->executeStatement('SET statement_timeout = 1000');
+            // A single `SELECT 1` is enough to validate the connection.
+            // The TCP connect step is bounded at the DBAL/DSN level via
+            // `connect_timeout` (operator-configurable); we do not set
+            // `statement_timeout` here because it is a session parameter
+            // that only takes effect after the connection is already open
+            // and therefore offers no protection against unreachable hosts.
             $this->connection->executeQuery('SELECT 1');
 
             return [
