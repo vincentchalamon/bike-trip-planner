@@ -49,7 +49,10 @@ final readonly class HealthController
     #[Route('/api/healthz', name: 'app_healthz', methods: ['GET'])]
     public function liveness(Request $request): JsonResponse
     {
-        $this->enforceRateLimit($this->healthLivenessLimiter, $request);
+        // Liveness must remain dependency-free: rate limiting is best-effort and
+        // must never turn a healthy instance into a 5xx if Redis (or the cache
+        // pool backing the limiter) happens to be unreachable.
+        $this->enforceRateLimit($this->healthLivenessLimiter, $request, bestEffort: true);
 
         return new JsonResponse([
             'status' => 'ok',
@@ -60,7 +63,9 @@ final readonly class HealthController
     #[Route('/api/health', name: 'app_health', methods: ['GET'])]
     public function readiness(Request $request): JsonResponse
     {
-        $this->enforceRateLimit($this->healthReadinessLimiter, $request);
+        // Readiness reports degradation via the response body; do not let the
+        // rate limiter backend take down the probe itself.
+        $this->enforceRateLimit($this->healthReadinessLimiter, $request, bestEffort: true);
 
         $deps = [];
         $deps['postgres'] = $this->checkPostgres();
@@ -95,12 +100,23 @@ final readonly class HealthController
         ], $httpStatus);
     }
 
-    private function enforceRateLimit(RateLimiterFactory $factory, Request $request): void
+    private function enforceRateLimit(RateLimiterFactory $factory, Request $request, bool $bestEffort = false): void
     {
-        $limiter = $factory->create($request->getClientIp() ?? 'anonymous');
+        try {
+            $limiter = $factory->create($request->getClientIp() ?? 'anonymous');
 
-        if (!$limiter->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
+            if (!$limiter->consume()->isAccepted()) {
+                throw new TooManyRequestsHttpException();
+            }
+        } catch (TooManyRequestsHttpException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            // The backing cache (e.g. Redis) is unavailable. Health probes must
+            // not fail on infrastructure issues unrelated to the probe itself —
+            // skip rate limiting rather than emit a 5xx.
+            if (!$bestEffort) {
+                throw $e;
+            }
         }
     }
 
@@ -118,11 +134,11 @@ final readonly class HealthController
                 'status' => 'ok',
                 'latency_ms' => $this->elapsedMs($start),
             ];
-        } catch (\Throwable $e) {
+        } catch (\Throwable $throwable) {
             return [
                 'status' => 'down',
                 'latency_ms' => $this->elapsedMs($start),
-                'error' => $this->sanitizeError($e),
+                'error' => $this->sanitizeError($throwable),
             ];
         }
     }
@@ -212,11 +228,11 @@ final readonly class HealthController
                 'status' => $code < 500 ? 'ok' : 'down',
                 'latency_ms' => $this->elapsedMs($start),
             ];
-        } catch (\Throwable $e) {
+        } catch (\Throwable $throwable) {
             return [
                 'status' => 'down',
                 'latency_ms' => $this->elapsedMs($start),
-                'error' => $this->sanitizeError($e),
+                'error' => $this->sanitizeError($throwable),
             ];
         }
     }
