@@ -35,7 +35,7 @@ Four containers on an isolated Docker network:
 
 The sub-domain `errors.biketrip.mooo.com` lives on FreeDNS:
 
-```
+```text
 errors.biketrip.mooo.com   CNAME   biketrip.mooo.com
 ```
 
@@ -45,7 +45,7 @@ errors.biketrip.mooo.com   CNAME   biketrip.mooo.com
 
 ### Backend (`api/.env.local.prod`)
 
-```
+```dotenv
 SENTRY_DSN=https://<public_key>@errors.biketrip.mooo.com/<project_id>
 APP_RELEASE=<commit_sha>
 ```
@@ -54,7 +54,7 @@ APP_RELEASE=<commit_sha>
 
 ### Frontend (`pwa/.env.production`)
 
-```
+```dotenv
 NEXT_PUBLIC_SENTRY_DSN=https://<public_key>@errors.biketrip.mooo.com/<project_id>
 NEXT_PUBLIC_APP_RELEASE=<commit_sha>
 SENTRY_AUTH_TOKEN=<glitchtip_auth_token>   # required for source-map upload at build time
