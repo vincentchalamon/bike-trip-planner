@@ -129,14 +129,12 @@ jobs:
                 /\/api\/healthz/.test(path) ||
                 monitorName.toLowerCase().includes('homepage') ||
                 monitorName.toLowerCase().includes('healthz');
-              const isOptionalPath =
-                /\/api\/health(\?|$|\/)/.test(path) ||
-                /ollama|valhalla|overpass/i.test(monitorName);
 
+              // Per severity-levels.md, any `status == down` on a non-critical
+              // monitor (deep health, optional deps, anything else) is P2.
+              // Recoveries and other statuses default to P3.
               if (status === 'down' && isCriticalPath) {
                 severity = 1;
-              } else if (status === 'down' && isOptionalPath) {
-                severity = 2;
               } else if (status === 'down') {
                 severity = 2;
               } else {

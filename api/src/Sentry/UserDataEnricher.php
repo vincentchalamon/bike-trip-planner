@@ -53,9 +53,15 @@ final readonly class UserDataEnricher
                 $scope->setTag('request_id', $correlationId);
             }
 
+            // Mirror CorrelationIdProcessor::resolveTripId(): the bare `id`
+            // route attribute only carries a trip UUID on `/trips/...` routes.
+            // On other routes (e.g. `/stages/{id}`) it would mistakenly tag
+            // unrelated UUIDs as `trip_id` and pollute Sentry filtering.
             $tripId = $this->stringAttribute($request, 'tripId')
                 ?? $this->stringAttribute($request, 'trip_id')
-                ?? $this->stringAttribute($request, 'id');
+                ?? (str_starts_with($request->getPathInfo(), '/trips/')
+                    ? $this->stringAttribute($request, 'id')
+                    : null);
             if (null !== $tripId) {
                 $scope->setTag('trip_id', $tripId);
             }
