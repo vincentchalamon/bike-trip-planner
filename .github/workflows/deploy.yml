@@ -1,0 +1,217 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: vincentchalamon/bike-trip-planner
+  HEALTH_URL: https://biketrip.mooo.com
+
+jobs:
+  build-images:
+    name: Build & push ${{ matrix.service }} image
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: php
+            dockerfile: .docker/php/Dockerfile
+            target: frankenphp_prod
+          - service: pwa
+            dockerfile: .docker/pwa/Dockerfile
+            target: prod
+          - service: provisioner
+            dockerfile: .docker/provisioner/Dockerfile
+            target: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: tags
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          SERVICE: ${{ matrix.service }}
+        run: |
+          IMAGE="${REGISTRY}/${IMAGE_OWNER}-${SERVICE}"
+          TAGS="${IMAGE}:${SHA}"
+          if [ "${REF_TYPE}" = "tag" ]; then
+            TAGS="${TAGS},${IMAGE}:${REF_NAME}"
+          fi
+          {
+            echo "tags=${TAGS}"
+            echo "image=${IMAGE}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max
+          provenance: false
+
+  upload-sourcemaps:
+    name: Upload PWA source maps to GlitchTip
+    runs-on: ubuntu-latest
+    needs: build-images
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_URL: ${{ secrets.SENTRY_URL }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      SHA: ${{ github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Skip when Sentry/GlitchTip is not configured
+        id: gate
+        run: |
+          if [ -z "${SENTRY_AUTH_TOKEN}" ] || [ -z "${SENTRY_URL}" ] || [ -z "${SENTRY_ORG}" ] || [ -z "${SENTRY_PROJECT}" ]; then
+            echo "Sentry/GlitchTip secrets missing — skipping source map upload."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: pwa/package-lock.json
+
+      - name: Install PWA dependencies
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: pwa
+        run: npm ci
+
+      - name: Build PWA (produces source maps)
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: pwa
+        env:
+          NEXT_PUBLIC_APP_RELEASE: ${{ github.sha }}
+          NEXT_PUBLIC_APP_ENV: production
+        run: npm run build
+
+      - name: Create GlitchTip release & upload source maps
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: pwa
+        run: |
+          npx --yes @sentry/cli releases new "$SHA" \
+            --org "$SENTRY_ORG" --project "$SENTRY_PROJECT"
+          npx --yes @sentry/cli releases files "$SHA" \
+            upload-sourcemaps .next \
+            --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" \
+            --url-prefix '~/_next'
+          npx --yes @sentry/cli releases set-commits "$SHA" \
+            --auto --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" || true
+          npx --yes @sentry/cli releases finalize "$SHA" \
+            --org "$SENTRY_ORG" --project "$SENTRY_PROJECT"
+
+  trigger-coolify:
+    name: Trigger Coolify deploy webhook
+    runs-on: ubuntu-latest
+    needs: [build-images, upload-sourcemaps]
+    steps:
+      - name: POST to Coolify webhook
+        env:
+          WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
+          DEPLOY_SECRET: ${{ secrets.COOLIFY_DEPLOY_SECRET }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref }}
+        run: |
+          if [ -z "${WEBHOOK_URL}" ]; then
+            echo "COOLIFY_WEBHOOK_URL secret not configured — skipping deploy trigger."
+            exit 0
+          fi
+          curl -fsS -X POST "${WEBHOOK_URL}" \
+            -H "Authorization: Bearer ${DEPLOY_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d "{\"sha\":\"${SHA}\",\"ref\":\"${REF}\"}"
+
+  smoke-test:
+    name: Smoke test post-deploy
+    runs-on: ubuntu-latest
+    needs: trigger-coolify
+    if: success()
+    steps:
+      - name: Wait for Coolify to roll the new image
+        run: sleep 60
+
+      - name: Probe /api/healthz with retry
+        id: healthz
+        run: |
+          set +e
+          for attempt in 1 2 3; do
+            if curl -fsS --max-time 10 "${HEALTH_URL}/api/healthz"; then
+              echo "healthz_ok=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Attempt ${attempt} failed, retrying in 30s..."
+            sleep 30
+          done
+          echo "healthz_ok=false" >> "$GITHUB_OUTPUT"
+          exit 1
+
+      - name: Probe /api/health and assert all deps healthy
+        run: |
+          response=$(curl -fsS --max-time 10 "${HEALTH_URL}/api/health")
+          echo "$response"
+          echo "$response" | jq -e '.deps | to_entries | map(.value.status) | all(. == "ok")'
+
+      - name: Open incident on smoke-test failure
+        if: failure()
+        env:
+          INCIDENT_TOKEN: ${{ secrets.INCIDENT_DISPATCH_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ -z "${INCIDENT_TOKEN}" ]; then
+            echo "INCIDENT_DISPATCH_TOKEN not configured — cannot raise incident."
+            exit 1
+          fi
+          curl -fsS -X POST \
+            "https://api.github.com/repos/${REPO}/dispatches" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${INCIDENT_TOKEN}" \
+            -d "{\"event_type\":\"uptime_alert\",\"client_payload\":{\"source\":\"deploy-smoke\",\"sha\":\"${SHA}\",\"status\":\"down\"}}"

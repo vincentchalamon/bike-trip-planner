@@ -130,6 +130,8 @@ services:
       # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
+      # Workers must not run migrations — only the php service does (see ADR-032).
+      MIGRATIONS_ON_BOOT: "false"
     secrets:
       - jwt_private_key
       - jwt_public_key

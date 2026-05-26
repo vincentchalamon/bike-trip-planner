@@ -182,6 +182,7 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 |---|---|
 | [Getting Started](docs/getting-started.md) | Requirements, installation, and local setup |
 | [Contributing](docs/contributing.md) | Development workflow, standards, and tooling |
+| [Deployment](docs/deployment.md) | CI/CD pipeline, required secrets, rollback procedure |
 | [Architecture Decisions](docs/adr/) | 26 ADRs explaining every major technical choice |
 | [Claude Code Tooling](docs/claude-code-tooling.md) | MCP servers, hooks, and skills for AI-assisted development |
 
