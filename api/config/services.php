@@ -29,7 +29,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     // than re-implemented in the controller. The connection is lazy so the
     // service can be constructed even when Redis is down — checkRedis() then
     // surfaces the failure via ->ping() instead of breaking DI.
-    $services->set('app.redis.health', \Redis::class)
+    $services->set('app.redis.health', Redis::class)
         ->factory([RedisAdapter::class, 'createConnection'])
         ->args([
             '%env(REDIS_URL)%',
