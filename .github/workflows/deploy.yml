@@ -96,6 +96,16 @@ jobs:
           cache-to: type=gha,scope=${{ matrix.service }},mode=max
           provenance: false
 
+      # Keep the registry tidy: retain the 10 most recent versions of each
+      # image (enough rollback targets) and prune the rest. GHCR storage is
+      # free for this public repo, so this is hygiene, not a cost control.
+      - name: Prune old image versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: bike-trip-planner-${{ matrix.service }}
+          package-type: container
+          min-versions-to-keep: 10
+
   upload-sourcemaps:
     name: Upload PWA source maps to GlitchTip
     runs-on: ubuntu-latest
