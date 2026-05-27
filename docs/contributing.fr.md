@@ -207,12 +207,14 @@ Ces hooks sont scopés au projet et s'appliquent à tous les contributeurs qui u
 
 ### Skills (commandes slash)
 
-Deux skills personnalisés sont disponibles dans Claude Code :
+Quatre skills personnalisés sont disponibles dans Claude Code :
 
 | Commande | Description |
 |----------|-------------|
 | `/pick <numero-issue> [branche-base]` | Implémente une issue GitHub de bout en bout (branche, code, test, PR, monitoring CI) |
 | `/sprint <numero-sprint>` | Implémente toutes les issues du sprint en parallèle via des agents worktree |
+| `/check [qa\|test\|all]` | Goal-loop qualité : lance QA/tests et corrige jusqu'au vert, avec la sortie réelle |
+| `/close [numero-sprint]` | Clôture un sprint : nettoie worktrees/branches, met à jour main, rétrospective |
 
 ### Automatisation GitHub
 
@@ -302,7 +304,7 @@ bike-trip-planner/
 |       +-- claude-code-review.yml  # Revue de code automatisée des PR
 +-- .claude/
 |   +-- settings.json             # Hooks (auto-formatting, protection de fichiers)
-|   +-- skills/                   # Commandes slash personnalisées (pick, sprint)
+|   +-- skills/                   # Commandes slash personnalisées (pick, sprint, check, close)
 ```
 
 ---

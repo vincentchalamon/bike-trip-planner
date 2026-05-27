@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
 Bike Trip Planner — a bikepacking trip planner. Decoupled architecture: PHP backend (API Platform on Symfony 8) provides stateless computation via async workers, Next.js 16 frontend manages presentation and state. PostgreSQL persists trip data (via Doctrine ORM); Redis handles transient computation state, Messenger transport, and external API caches.
@@ -41,11 +39,17 @@ make typegen                # Regenerate TS types from backend OpenAPI spec
 
 Pre-commit hook runs `make qa` automatically; commit aborts on failure.
 
+## Verification
+
+Never declare a task done without proof of execution. Paste the real output of `make qa` / `make test` (or run `/check`); never claim success from assumption. A green claim without evidence is not acceptable.
+
 ### Claude Code Skills
 
 ```bash
 /pick <issue-number> [base-branch]  # Implement a GitHub issue end-to-end
 /sprint <sprint-number>             # Implement all sprint issues in parallel via worktree agents
+/check [qa|test|all]                # Goal-loop: run QA/tests, fix until green, report real output
+/close [sprint-number]              # Close a sprint: clean worktrees/branches, update main, retrospective
 ```
 
 ### GitHub Automation

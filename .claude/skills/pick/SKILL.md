@@ -55,12 +55,19 @@ Fix anything found, commit, and push.
 - Create the PR: `gh pr create --fill --base <base-branch>`
 - The PR body must include an **Auto-critique** section per CLAUDE.md
 
-## Step 9 -- Wait for CI
+## Step 9 -- Drive the PR to READY
 
-Run `gh pr checks --watch`. If CI fails, read the logs, fix the issues, push, and watch again.
+Run the **bounded surveillance loop** (max 3 cycles) until the PR is READY. Never merge — the user merges.
+
+Each cycle:
+1. **CI** — `gh pr checks`. If red: read the logs (`gh run view --log-failed`), fix, push.
+2. **Review comments** — fetch PR-level (`gh pr view --json comments`) and inline (`gh api repos/:owner/:repo/pulls/<pr>/comments`) comments. Address actionable points, push, resolve threads; list any left unactioned with the reason.
+3. **Conflicts** — `gh pr view --json mergeable,mergeStateStatus`. If `CONFLICTING`: rebase onto the base and resolve **conservatively**; if ambiguous or risky, stop and flag rather than force.
+
+**READY** when: CI green AND mergeable AND not draft AND `claude-code-review.yml` has completed (`gh run view --workflow=claude-code-review.yml` shows `completed`) with no new blocking (Critical/High) comment. Wait for that workflow to finish before evaluating — it runs asynchronously after each push. After 3 cycles without convergence, report **NEEDS ATTENTION** with the blocker.
 
 ## Step 10 -- Finalize
 
 - If TRACKING.md exists, update the row for this issue: change status to "En cours" and branch to `feature/<issue-number>`. Commit and push.
 - Remove the worktree: `git worktree remove .claude/worktrees/feature-<issue-number>`
-- Report the PR URL to the user.
+- Report the PR URL and its final status (READY / NEEDS ATTENTION + blocker) to the user.
