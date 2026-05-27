@@ -172,6 +172,11 @@ services:
     tty: true
     environment:
       NODE_ENV: production
+      # Server-side Sentry reads APP_ENV ?? NODE_ENV; without APP_ENV here it
+      # would tag SSR/API events "production" while the client bundle (baked
+      # NEXT_PUBLIC_APP_ENV) tags "prod" — two distinct Sentry environments.
+      # Keep this aligned with the NEXT_PUBLIC_APP_ENV build arg above.
+      APP_ENV: "${APP_ENV:-prod}"
       # Error tracking (P1.1 / ADR-031). Leave empty to disable.
       NEXT_PUBLIC_SENTRY_DSN: "${NEXT_PUBLIC_SENTRY_DSN:-}"
       NEXT_PUBLIC_APP_RELEASE: "${APP_RELEASE:-}"
