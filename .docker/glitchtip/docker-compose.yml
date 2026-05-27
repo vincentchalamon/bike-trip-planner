@@ -50,7 +50,7 @@ services:
       glitchtip-postgres:
         condition: service_healthy
       glitchtip-redis:
-        condition: service_started
+        condition: service_healthy
     environment:
       DATABASE_URL: postgres://glitchtip:${GLITCHTIP_DB_PASSWORD}@glitchtip-postgres:5432/glitchtip
       REDIS_URL: redis://glitchtip-redis:6379/0
@@ -79,7 +79,7 @@ services:
       glitchtip-postgres:
         condition: service_healthy
       glitchtip-redis:
-        condition: service_started
+        condition: service_healthy
     command: ./bin/run-celery-with-beat.sh
     environment:
       DATABASE_URL: postgres://glitchtip:${GLITCHTIP_DB_PASSWORD}@glitchtip-postgres:5432/glitchtip
