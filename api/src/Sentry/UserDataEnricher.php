@@ -53,9 +53,15 @@ final readonly class UserDataEnricher
                 $scope->setTag('request_id', $correlationId);
             }
 
+            // Mirror CorrelationIdProcessor: only treat the generic `id`
+            // attribute as a trip id when the path is unambiguously
+            // trip-scoped, otherwise a user/stage UUID on `/users/{id}`
+            // or `/stages/{id}` would be mislabelled as `trip_id`.
             $tripId = $this->stringAttribute($request, 'tripId')
                 ?? $this->stringAttribute($request, 'trip_id')
-                ?? $this->stringAttribute($request, 'id');
+                ?? (str_starts_with($request->getPathInfo(), '/trips/')
+                    ? $this->stringAttribute($request, 'id')
+                    : null);
             if (null !== $tripId) {
                 $scope->setTag('trip_id', $tripId);
             }
