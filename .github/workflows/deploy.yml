@@ -84,6 +84,9 @@ jobs:
           tags: ${{ steps.tags.outputs.tags }}
           build-args: |
             COMMIT_SHA=${{ github.sha }}
+            NEXT_PUBLIC_APP_RELEASE=${{ github.sha }}
+            NEXT_PUBLIC_APP_ENV=production
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
           # BuildKit secret consumed only by the pwa Dockerfile (source-map
           # upload). Mounted, never written to a layer or the gha cache.
           secrets: |
@@ -132,9 +135,14 @@ jobs:
       - name: Build PWA (produces source maps)
         if: steps.gate.outputs.skip != 'true'
         working-directory: pwa
+        # These NEXT_PUBLIC_* values MUST mirror the Docker image build args
+        # exactly — any divergence changes the inlined config and the emitted
+        # chunk hashes, so the uploaded maps would no longer match the deployed
+        # bundle and symbolication would silently fail.
         env:
           NEXT_PUBLIC_APP_RELEASE: ${{ github.sha }}
           NEXT_PUBLIC_APP_ENV: production
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
         run: npm run build
 
       - name: Create GlitchTip release & upload source maps
