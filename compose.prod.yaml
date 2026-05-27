@@ -8,6 +8,9 @@ secrets:
     file: ${JWT_PRIVATE_KEY_PATH:-/etc/bike-trip-planner/jwt/private.pem}
   jwt_public_key:
     file: ${JWT_PUBLIC_KEY_PATH:-/etc/bike-trip-planner/jwt/public.pem}
+  # Build-time only: consumed by the pwa image build for source-map upload.
+  sentry_auth_token:
+    environment: SENTRY_AUTH_TOKEN
 
 services:
   php:
@@ -55,6 +58,9 @@ services:
       MAILER_DSN: "${MAILER_DSN}"
       DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
       DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
+      # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+      APP_RELEASE: "${APP_RELEASE:-}"
       APP_COMMIT: "${COMMIT_SHA:-unknown}"
     secrets:
       - jwt_private_key
@@ -126,6 +132,9 @@ services:
       MAILER_DSN: "${MAILER_DSN}"
       DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
       DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
+      # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+      APP_RELEASE: "${APP_RELEASE:-}"
     secrets:
       - jwt_private_key
       - jwt_public_key
@@ -148,12 +157,30 @@ services:
       context: ./
       dockerfile: .docker/pwa/Dockerfile
       target: prod
+      args:
+        # NEXT_PUBLIC_* are inlined into the client bundle at build time, so
+        # they must be supplied to `next build` (not just at runtime), otherwise
+        # client-side Sentry runs with an undefined DSN and the release tag
+        # won't match the uploaded source maps.
+        NEXT_PUBLIC_APP_RELEASE: "${APP_RELEASE:-}"
+        NEXT_PUBLIC_APP_ENV: "${APP_ENV:-prod}"
+        NEXT_PUBLIC_SENTRY_DSN: "${NEXT_PUBLIC_SENTRY_DSN:-}"
+      # SENTRY_AUTH_TOKEN (source-map upload) is a real secret: passed as a
+      # BuildKit secret so it never lands in an image layer or the build cache.
+      secrets:
+        - sentry_auth_token
     restart: unless-stopped
     depends_on:
       - php # Mercure dependency
     tty: true
     environment:
       NODE_ENV: production
+      # Error tracking (P1.1 / ADR-031). Leave empty to disable.
+      NEXT_PUBLIC_SENTRY_DSN: "${NEXT_PUBLIC_SENTRY_DSN:-}"
+      NEXT_PUBLIC_APP_RELEASE: "${APP_RELEASE:-}"
+      NEXT_PUBLIC_APP_ENV: "${APP_ENV:-prod}"
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+      APP_RELEASE: "${APP_RELEASE:-}"
     volumes:
       - ./pwa/:/app
       - .docker/pwa/:/app/docker/pwa

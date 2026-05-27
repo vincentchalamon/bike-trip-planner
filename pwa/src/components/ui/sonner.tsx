@@ -32,14 +32,13 @@ import { getLastRequestId } from "@/lib/api/client";
  *
  * See issue #485.
  *
- * The original `sonner.toast.error` / `sonner.toast.warning` functions are
- * wrapped in place once at module load, so every caller importing `toast`
- * from `"sonner"` automatically benefits from the enrichment without a
- * codebase-wide refactor.
+ * Rather than mutating `sonner.toast.error` / `sonner.toast.warning` in
+ * place (fragile: ESM namespaces are frozen in strict mode, load-order
+ * dependent, and silently breaks on upstream upgrades), we expose a
+ * thin wrapper `toast` object that delegates to the upstream callable
+ * while decorating the options bag. PWA callers import `toast` from this
+ * module instead of `"sonner"`.
  */
-type ToastMessage = Parameters<typeof sonnerToast.error>[0];
-type ToastFn = (message: ToastMessage, data?: ExternalToast) => string | number;
-
 function decorate(data: ExternalToast | undefined): ExternalToast | undefined {
   const requestId = getLastRequestId();
   if (requestId === null || requestId === "") {
@@ -60,18 +59,21 @@ function decorate(data: ExternalToast | undefined): ExternalToast | undefined {
   };
 }
 
-const sonnerWithCorrelation = sonnerToast as typeof sonnerToast & {
-  __correlationIdInstalled?: boolean;
-};
-if (!sonnerWithCorrelation.__correlationIdInstalled) {
-  const originalError = sonnerToast.error.bind(sonnerToast) as ToastFn;
-  const originalWarning = sonnerToast.warning.bind(sonnerToast) as ToastFn;
-  sonnerToast.error = ((message: ToastMessage, data?: ExternalToast) =>
-    originalError(message, decorate(data))) as typeof sonnerToast.error;
-  sonnerToast.warning = ((message: ToastMessage, data?: ExternalToast) =>
-    originalWarning(message, decorate(data))) as typeof sonnerToast.warning;
-  sonnerWithCorrelation.__correlationIdInstalled = true;
-}
+const toast = Object.assign(
+  (message: Parameters<typeof sonnerToast>[0], data?: ExternalToast) =>
+    sonnerToast(message, data),
+  sonnerToast,
+  {
+    error: (
+      message: Parameters<typeof sonnerToast.error>[0],
+      data?: ExternalToast,
+    ) => sonnerToast.error(message, decorate(data)),
+    warning: (
+      message: Parameters<typeof sonnerToast.warning>[0],
+      data?: ExternalToast,
+    ) => sonnerToast.warning(message, decorate(data)),
+  },
+) as typeof sonnerToast;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
@@ -100,4 +102,4 @@ const Toaster = ({ ...props }: ToasterProps) => {
   );
 };
 
-export { Toaster };
+export { Toaster, toast };

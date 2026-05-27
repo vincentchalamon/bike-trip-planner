@@ -34,8 +34,25 @@ RUN npm ci
 
 FROM deps AS builder
 
+# Public client config inlined into the bundle by Next.js at build time
+# (NEXT_PUBLIC_* are not secrets — the DSN ships in every error payload). These
+# MUST be set during `next build`, otherwise Sentry.init runs with an undefined
+# DSN (client capture disabled) and the release tag won't match uploaded maps.
+ARG NEXT_PUBLIC_APP_RELEASE
+ARG NEXT_PUBLIC_APP_ENV=production
+ARG NEXT_PUBLIC_SENTRY_DSN
+
 COPY --link pwa/. .
-RUN npm run build
+
+# SENTRY_AUTH_TOKEN (source-map upload) is a real secret: mounted via BuildKit
+# so it never lands in an image layer or the build cache. Absent → the build
+# proceeds without source-map upload (Sentry plugin silently skips).
+RUN --mount=type=secret,id=sentry_auth_token \
+    SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null || true)" \
+    NEXT_PUBLIC_APP_RELEASE="${NEXT_PUBLIC_APP_RELEASE}" \
+    NEXT_PUBLIC_APP_ENV="${NEXT_PUBLIC_APP_ENV}" \
+    NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
+    npm run build
 
 
 # Production image, copy all the files and run next
