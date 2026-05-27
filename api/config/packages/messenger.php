@@ -22,12 +22,22 @@ use App\Message\ScanAccommodations;
 use App\Message\ScanAllOsmData;
 use App\Message\ScanEvents;
 use App\Message\ScanPois;
+use App\Messenger\HandleCorrelationIdMiddleware;
+use App\Messenger\SendCorrelationIdMiddleware;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
     $containerConfigurator->extension('framework', [
         'messenger' => [
             'failure_transport' => 'failed',
+            'buses' => [
+                'messenger.bus.default' => [
+                    'middleware' => [
+                        SendCorrelationIdMiddleware::class,
+                        HandleCorrelationIdMiddleware::class,
+                    ],
+                ],
+            ],
             'transports' => [
                 'async' => [
                     'dsn' => '%env(MESSENGER_TRANSPORT_DSN)%',

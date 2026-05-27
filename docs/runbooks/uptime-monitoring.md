@@ -1,83 +1,129 @@
-# Uptime Monitoring
+# Runbook — Uptime monitoring
 
-Two layers per the plan:
+Two-layer uptime monitoring for Bike Trip Planner production:
 
-- **Uptime Kuma** self-hosted on the Oracle VM via Coolify — fine-grained probes against internal endpoints.
-- **UptimeRobot** free tier (external, hors VM) — single probe against `/api/healthz`, the only signal that survives a full-VM outage.
+1. **Self-hosted (Uptime Kuma)** on the Coolify VM — sub-minute detection,
+   rich monitor types, public status page. Configuration documented in
+   [`.docker/uptime-kuma/README.md`](../../.docker/uptime-kuma/README.md).
+2. **External (UptimeRobot)** — single off-host probe that survives a full VM
+   outage. This document covers (2).
 
-Both forward alerts to GitHub through `repository_dispatch` (see `incident-create.yml` workflow, plan P1.3).
+## Why two layers?
 
-## Symptômes (when to use this runbook)
+Uptime Kuma runs on the same Oracle Cloud Always Free VM as the application
+(see [ADR-019](../adr/0019-hosting-coolify-oracle-cloud.md)). If the VM goes
+down — kernel panic, network ACL change, Oracle reclaims the instance — Uptime
+Kuma goes down with it and emits no alert. UptimeRobot's free tier runs from
+external probes; a single HTTP monitor is enough to detect a host-level outage
+and trigger the incident workflow.
 
-- Setting up monitoring for the first time
-- A monitor fires falsely (false positive) or fails to fire (false negative)
-- Adding a new probe after shipping a new endpoint or dependency
-- Rotating the `INCIDENT_DISPATCH_TOKEN`
+## UptimeRobot setup
 
-## Diagnostic
+### Account
 
-Self-hosted Uptime Kuma on `status.<domain>` — check the monitor list and recent history. UptimeRobot dashboard — check the single `/api/healthz` monitor status.
+1. Create a free account on <https://uptimerobot.com> with the team alias
+   `oncall@biketrip.mooo.com` (or any shared inbox). Free tier allows 50
+   monitors at 5-minute intervals; we use one.
+2. Enable **two-factor authentication** on the account.
 
-If alerts are silent, validate the dispatch token end-to-end:
+### Monitor
+
+**+ Add New Monitor**:
+
+- **Monitor Type**: `HTTP(s)`
+- **Friendly Name**: `biketrip-healthz`
+- **URL**: `https://biketrip.mooo.com/api/healthz`
+- **Monitoring Interval**: `5 minutes` (free tier minimum)
+- **Monitor Timeout**: `30 seconds`
+- **HTTP Method**: `GET`
+- **Accepted Status Codes**: `200`
+- **Alert Contacts**: see below
+
+### Alert contact — GitHub `repository_dispatch` webhook
+
+**My Settings → Alert Contacts → Add Alert Contact**:
+
+- **Alert Contact Type**: `Webhook`
+- **Friendly Name**: `github-incident-dispatch`
+- **URL to Notify**:
+  `https://api.github.com/repos/vincentchalamon/bike-trip-planner/dispatches`
+- **POST Value (JSON Format)**: enable
+- **POST Value**:
+
+  ```json
+  {
+    "event_type": "uptime_alert",
+    "client_payload": {
+      "source": "uptimerobot",
+      "monitor": "biketrip-healthz",
+      "status": "*alertTypeFriendlyName*",
+      "url": "*monitorURL*",
+      "details": "*alertDetails*"
+    }
+  }
+  ```
+
+- **Custom HTTP Headers** (UptimeRobot Pro feature; on free tier, encode the
+  token in the URL query string as a fallback — see workaround below):
+
+  ```json
+  {
+    "Authorization": "Bearer <INCIDENT_DISPATCH_TOKEN>",
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  }
+  ```
+
+  > **Free tier workaround**: UptimeRobot free does not allow custom headers.
+  > Route the webhook through a tiny relay (Cloudflare Worker or a
+  > GitHub-hosted `workflow_dispatch` proxy) that adds the `Authorization`
+  > header server-side. Document the relay URL in the Coolify secret store.
+  > Until the relay exists, the UptimeRobot alert still fires by email; the
+  > `repository_dispatch` automation is best-effort on free tier.
+
+- **Enable notifications for**: `Down` and `Up`.
+
+Attach the alert contact to the `biketrip-healthz` monitor.
+
+### Verification
 
 ```bash
-curl -X POST \
+# Simulate a down event from a workstation (requires the PAT):
+curl -fsS -X POST \
   -H "Authorization: Bearer $INCIDENT_DISPATCH_TOKEN" \
   -H "Accept: application/vnd.github+json" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
   https://api.github.com/repos/vincentchalamon/bike-trip-planner/dispatches \
-  -d '{"event_type":"uptime_alert","client_payload":{"severity":"p3","monitor":"manual-test","message":"dispatch token check"}}'
+  -d '{"event_type":"uptime_alert","client_payload":{"source":"uptimerobot","monitor":"biketrip-healthz","status":"down"}}'
 ```
 
-A 204 response with no issue created indicates the workflow is misconfigured; a 401 indicates the token is wrong or expired.
+GitHub answers `204 No Content` on success. The future incident workflow
+(#P1.3) listens on `repository_dispatch` events of type `uptime_alert`.
 
-## Procédure
+## Severity & escalation
 
-### 1. Uptime Kuma — initial setup
+| Monitor                                  | Source        | Severity | First responder         |
+| ---------------------------------------- | ------------- | -------- | ----------------------- |
+| `/api/healthz` (60 s)                    | Uptime Kuma   | P1       | On-call engineer        |
+| `/api/healthz` (5 min, external)         | UptimeRobot   | P1       | On-call engineer        |
+| `/api/health` (5 min)                    | Uptime Kuma   | P2       | On-call engineer        |
+| Keyword `/`                              | Uptime Kuma   | P1       | On-call engineer        |
+| DNS `A` record                           | Uptime Kuma   | P2       | Infra owner             |
+| Mercure hub                              | Uptime Kuma   | P2       | Backend owner           |
 
-1. Deploy via Coolify using image `louislam/uptime-kuma:latest`, expose on subdomain `status.<domain>` (Traefik auto-TLS).
-2. Create the admin account on first visit.
-3. Add the following monitors (TCP or HTTP):
+UptimeRobot is intentionally redundant with Uptime Kuma #1. The duplicate alarm
+is the trade-off: if both fire, the issue is real; if only UptimeRobot fires,
+the VM (or Uptime Kuma) is the problem.
 
-   | Monitor | Type | Target | Interval | Notes |
-   |---|---|---|---|---|
-   | API liveness | HTTP(S) | `https://<host>/api/healthz` | 60 s | Expect 200 |
-   | API readiness | HTTP(S) | `https://<host>/api/health` | 300 s | Keyword match `"status":"ok"` |
-   | PWA home | HTTP(S) - keyword | `https://<host>/` | 300 s | Keyword: distinctive page string |
-   | DNS | DNS | apex domain | 600 s | Resolver: 1.1.1.1 |
-   | Mercure | HTTP(S) | `https://<host>/.well-known/mercure?topic=__healthcheck__` | 300 s | Custom: EventSource heartbeat or HEAD |
+## Token rotation
 
-4. Configure notifications → Webhook → `POST https://api.github.com/repos/vincentchalamon/bike-trip-planner/dispatches` with Bearer `INCIDENT_DISPATCH_TOKEN`, body `{"event_type":"uptime_alert","client_payload":{...}}`.
-5. Enable the public status page at `status.<host>/status/public`.
+`INCIDENT_DISPATCH_TOKEN` is a fine-grained GitHub PAT with
+**Contents: Read & write** on `vincentchalamon/bike-trip-planner` only.
 
-### 2. UptimeRobot — initial setup
+- Lifetime: 90 days (GitHub maximum for fine-grained PATs without SSO).
+- Storage: Coolify secret store (for Uptime Kuma) + UptimeRobot alert contact
+  (or relay env var).
+- Rotation runbook: generate a new PAT, update both stores, send a test
+  dispatch, then revoke the old PAT.
 
-1. Sign up for free tier at <https://uptimerobot.com> (50 monitors, 5 min interval).
-2. Add a single HTTP(S) monitor on `https://<host>/api/healthz`.
-3. Add a webhook integration with the same GitHub `repository_dispatch` URL, body `{"event_type":"uptime_alert","client_payload":{"severity":"p1","monitor":"uptimerobot","message":"$monitorFriendlyName is $alertTypeFriendlyName"}}`.
-4. Verify by pausing the monitor briefly — the issue should auto-open.
-
-### 3. Token rotation (every 90 d)
-
-1. GitHub → Settings → Developer settings → Personal access tokens (fine-grained) → regenerate `INCIDENT_DISPATCH_TOKEN` with scopes `Contents: write` + `Issues: write` and 90 d expiry.
-2. Update the secret in Uptime Kuma webhook config and in UptimeRobot webhook config.
-3. Trigger a manual test (curl above) to confirm.
-4. Note the rotation date in the incident issue tracker (a recurring calendar reminder helps).
-
-### 4. Adding a new monitor
-
-- New backend dependency → add an Uptime Kuma probe and update the `/api/health` controller to include it.
-- New PWA route critical for users → keyword monitor on Uptime Kuma.
-- Never add the external dependency to UptimeRobot — keep that single probe focused on `/api/healthz` (the "is the VM alive" signal).
-
-## Post-action
-
-- All monitors green for 24 h after setup or change.
-- A test webhook dispatch produced a real issue with the correct severity label.
-- Rotation date recorded; next rotation calendared.
-- Status page reachable from a clean network (mobile data) to confirm DNS and TLS.
-
-## References
-
-- `severity-levels.md` — mapping monitor → severity
-- ADR-019 — Deployment infrastructure (Coolify hosting Uptime Kuma)
-- Plan P1.2 / P1.3 — alerting and uptime monitoring design
+Never commit the token to the repository.
