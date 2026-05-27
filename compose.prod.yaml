@@ -8,6 +8,9 @@ secrets:
     file: ${JWT_PRIVATE_KEY_PATH:-/etc/bike-trip-planner/jwt/private.pem}
   jwt_public_key:
     file: ${JWT_PUBLIC_KEY_PATH:-/etc/bike-trip-planner/jwt/public.pem}
+  # Build-time only: consumed by the pwa image build for source-map upload.
+  sentry_auth_token:
+    environment: SENTRY_AUTH_TOKEN
 
 services:
   php:
@@ -159,12 +162,12 @@ services:
       context: ./
       dockerfile: .docker/pwa/Dockerfile
       target: prod
-      args:
-        # Build-time secret consumed by `withSentryConfig` during `next build`
-        # to upload source maps to GlitchTip. Inject via CI / Coolify build-time
-        # secrets — never expose at runtime (it grants org-wide release write
-        # access). When unset, the build proceeds without source-map upload.
-        SENTRY_AUTH_TOKEN: "${SENTRY_AUTH_TOKEN:-}"
+      # Source-map upload token consumed by `withSentryConfig` during
+      # `next build`. Passed as a BuildKit secret (mounted, never baked into an
+      # image layer or the build cache) — it grants org-wide release write
+      # access. When unset, the build proceeds without source-map upload.
+      secrets:
+        - sentry_auth_token
     restart: unless-stopped
     depends_on:
       - php # Mercure dependency

@@ -84,6 +84,10 @@ jobs:
           tags: ${{ steps.tags.outputs.tags }}
           build-args: |
             COMMIT_SHA=${{ github.sha }}
+          # BuildKit secret consumed only by the pwa Dockerfile (source-map
+          # upload). Mounted, never written to a layer or the gha cache.
+          secrets: |
+            sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,scope=${{ matrix.service }},mode=max
           provenance: false
@@ -193,11 +197,14 @@ jobs:
           echo "healthz_ok=false" >> "$GITHUB_OUTPUT"
           exit 1
 
-      - name: Probe /api/health and assert all deps healthy
+      - name: Probe /api/health and assert overall status
         run: |
           response=$(curl -fsS --max-time 10 "${HEALTH_URL}/api/health")
           echo "$response"
-          echo "$response" | jq -e '.deps | to_entries | map(.value.status) | all(. == "ok")'
+          # Trust the controller's own readiness verdict (its $required list
+          # excludes optional deps like ollama), instead of asserting every
+          # entry in .deps which would false-positive on an optional degradation.
+          echo "$response" | jq -e '.status == "ok"'
 
       - name: Open incident on smoke-test failure
         if: failure()

@@ -34,15 +34,16 @@ RUN npm ci
 
 FROM deps AS builder
 
-# Build-time secret consumed by `withSentryConfig` (next.config.ts) to upload
-# source maps to GlitchTip during `next build`. Inject via CI / Coolify build
-# secret — must NEVER be baked into the runtime image. When unset, the build
-# proceeds without source-map upload (Sentry plugin silently skips).
-ARG SENTRY_AUTH_TOKEN
-ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
-
 COPY --link pwa/. .
-RUN npm run build
+
+# `SENTRY_AUTH_TOKEN` is consumed by `withSentryConfig` (next.config.ts) to
+# upload source maps to GlitchTip during `next build`. It is mounted as a
+# BuildKit secret so the value is never written to an image layer or the build
+# cache (`docker history` / cache extraction stay clean). When the secret is
+# absent the build proceeds without source-map upload (Sentry plugin skips).
+RUN --mount=type=secret,id=sentry_auth_token \
+    SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null || true)" \
+    npm run build
 
 
 # Production image, copy all the files and run next
