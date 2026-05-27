@@ -1,8 +1,9 @@
 name: Deploy
 
 on:
+  # Deploy only on a version tag: a tag marks a deliberate stable release and a
+  # clear rollback point, and avoids a slow QEMU arm64 build on every main push.
   push:
-    branches: [main]
     tags: ['v*']
 
 permissions:
