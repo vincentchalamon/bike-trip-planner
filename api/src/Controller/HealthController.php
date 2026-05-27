@@ -127,12 +127,10 @@ final readonly class HealthController
         $start = hrtime(true);
 
         try {
-            // A single `SELECT 1` is enough to validate the connection.
-            // The TCP connect step is bounded at the DBAL/DSN level via
-            // `connect_timeout` (operator-configurable); we do not set
-            // `statement_timeout` here because it is a session parameter
-            // that only takes effect after the connection is already open
-            // and therefore offers no protection against unreachable hosts.
+            // Cap statement and any implicit reconnect to ~1s to avoid
+            // letting the probe block on the OS TCP timeout (~30s) when
+            // Postgres is unreachable.
+            $this->connection->executeStatement('SET statement_timeout = 1000');
             $this->connection->executeQuery('SELECT 1');
 
             return [
@@ -169,21 +167,16 @@ final readonly class HealthController
                 throw new \RuntimeException('connection failed');
             }
 
-            try {
-                // Authenticate if the URL carries credentials (Coolify-managed
-                // Redis is typically password-protected). Without this PING
-                // returns NOAUTH and the probe falsely reports `down`.
-                if (isset($parsed['pass']) && '' !== $parsed['pass']) {
-                    $user = $parsed['user'] ?? null;
-                    $redis->auth(null !== $user && '' !== $user ? [$user, $parsed['pass']] : $parsed['pass']);
-                }
-
-                $pong = $redis->ping();
-            } finally {
-                // Always close the connection, even if auth/ping throws,
-                // to prevent socket leaks under failure conditions.
-                $redis->close();
+            // Authenticate if the URL carries credentials (Coolify-managed
+            // Redis is typically password-protected). Without this PING
+            // returns NOAUTH and the probe falsely reports `down`.
+            if (isset($parsed['pass']) && '' !== $parsed['pass']) {
+                $user = $parsed['user'] ?? null;
+                $redis->auth(null !== $user && '' !== $user ? [$user, $parsed['pass']] : $parsed['pass']);
             }
+
+            $pong = $redis->ping();
+            $redis->close();
 
             $ok = '+PONG' === $pong || true === $pong || 'PONG' === $pong;
 

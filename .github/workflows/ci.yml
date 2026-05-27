@@ -127,7 +127,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
       - name: Run Hadolint
-        uses: hadolint/hadolint-action@v3.3.0
+        uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
         with:
           dockerfile: .docker/**/Dockerfile
 
@@ -152,7 +152,7 @@ jobs:
             ${{ runner.OS }}-phpcsfixer-
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v47
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
           files: ${{ matrix.project }}/**/*.php
       - name: Get Extra Arguments for PHP-CS-Fixer
@@ -297,7 +297,7 @@ jobs:
           echo "JWT_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/jwt/private.pem" >> "$GITHUB_ENV"
           echo "JWT_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/jwt/public.pem" >> "$GITHUB_ENV"
       - name: Build Docker images
-        uses: docker/bake-action@v7
+        uses: docker/bake-action@6614cfa25eff9a0b2b2697efb0b6159e7680d584 # v7.2.0
         with:
           load: true
           files: |
@@ -358,7 +358,7 @@ jobs:
           echo "JWT_PRIVATE_KEY_PATH=${{ github.workspace }}/api/config/jwt/private.pem" >> "$GITHUB_ENV"
           echo "JWT_PUBLIC_KEY_PATH=${{ github.workspace }}/api/config/jwt/public.pem" >> "$GITHUB_ENV"
       - name: Build Docker images
-        uses: docker/bake-action@v7
+        uses: docker/bake-action@6614cfa25eff9a0b2b2697efb0b6159e7680d584 # v7.2.0
         with:
           load: true
           files: |
