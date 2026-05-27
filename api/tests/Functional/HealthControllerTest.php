@@ -129,7 +129,13 @@ final class HealthControllerTest extends ApiTestCase
             mercure: new MockResponse('', ['http_code' => 200]),
         );
 
+        // checkPostgres() runs `SET statement_timeout` (executeStatement) before
+        // `SELECT 1` (executeQuery); when Postgres is unreachable the former
+        // throws first, so both must fail to mirror the real failure mode.
         $brokenConnection = $this->createMock(Connection::class);
+        $brokenConnection->method('executeStatement')->willThrowException(
+            new \RuntimeException('connection refused')
+        );
         $brokenConnection->method('executeQuery')->willThrowException(
             new \RuntimeException('connection refused')
         );
@@ -171,6 +177,25 @@ final class HealthControllerTest extends ApiTestCase
         $this->assertSame('down', $data['deps']['redis']['status']);
         $this->assertArrayHasKey('error', $data['deps']['redis']);
         $this->assertSame('RuntimeException', $data['deps']['redis']['error']);
+    }
+
+    #[Test]
+    public function readinessReturns200WhenOllamaIsDown(): void
+    {
+        // Ollama is intentionally excluded from $required, so its outage must
+        // not flip the aggregate status — pin that contract here.
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            ollama: new MockResponse('error', ['http_code' => 500]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $response = $this->client->request('GET', '/api/health');
+
+        $this->assertResponseStatusCodeSame(200);
+        $data = $response->toArray();
+        $this->assertSame('ok', $data['status']);
+        $this->assertSame('down', $data['deps']['ollama']['status']);
     }
 
     private function mockHealthHttpClients(

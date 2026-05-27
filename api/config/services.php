@@ -34,7 +34,12 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->args([
             '%env(REDIS_URL)%',
             ['lazy' => true, 'timeout' => 1.0, 'read_timeout' => 1.0],
-        ]);
+        ])
+        // Not shared: ext-redis does not auto-reconnect, so a connection broken
+        // by a Redis restart would make the probe report "down" forever in the
+        // long-lived FrankenPHP worker. A fresh connection per check (~sub-ms on
+        // the Docker network) keeps readiness accurate.
+        ->shared(false);
 
     if ('test' === $containerConfigurator->env()) {
         $services->alias(TripUpdatePublisherInterface::class, NullTripUpdatePublisher::class);
