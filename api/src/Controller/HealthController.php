@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Health\RedisHealthClientFactory;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -40,8 +41,7 @@ final readonly class HealthController
         private RateLimiterFactory $healthReadinessLimiter,
         #[Autowire(param: 'app.commit_sha')]
         private string $commitSha,
-        #[Autowire(service: 'app.redis.health')]
-        private \Redis $redis,
+        private RedisHealthClientFactory $redisClientFactory,
     ) {
     }
 
@@ -154,10 +154,9 @@ final readonly class HealthController
         $start = hrtime(true);
 
         try {
-            // The injected service is a lazy \Redis (or RedisProxy) produced by
-            // RedisAdapter::createConnection — connection + auth are handled
-            // from REDIS_URL at first use. We only need to confirm liveness.
-            $pong = $this->redis->ping();
+            // A fresh connection per check (see RedisHealthClientFactory): never
+            // reuse a connection a Redis restart may have broken in the worker.
+            $pong = $this->redisClientFactory->create()->ping();
             $ok = true === $pong || '+PONG' === $pong || 'PONG' === $pong;
 
             return [

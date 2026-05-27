@@ -6,6 +6,7 @@ namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\Health\RedisHealthClientFactory;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -162,13 +163,15 @@ final class HealthControllerTest extends ApiTestCase
             mercure: new MockResponse('', ['http_code' => 200]),
         );
 
-        // Swap the lazy Redis health client for a mock whose ->ping() throws,
-        // mirroring an unreachable Redis without mutating env vars.
+        // Swap the connection factory for one returning a \Redis whose ->ping()
+        // throws, mirroring an unreachable Redis without mutating env vars.
         $brokenRedis = $this->createMock(\Redis::class);
         $brokenRedis->method('ping')->willThrowException(
             new \RuntimeException('connection refused')
         );
-        self::getContainer()->set('app.redis.health', $brokenRedis);
+        $factory = $this->createMock(RedisHealthClientFactory::class);
+        $factory->method('create')->willReturn($brokenRedis);
+        self::getContainer()->set(RedisHealthClientFactory::class, $factory);
 
         $response = $this->client->request('GET', '/api/health');
 

@@ -7,7 +7,6 @@ use App\Mercure\TripUpdatePublisher;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\RedisTripRequestRepository;
 use App\Repository\TripRequestRepositoryInterface;
-use Symfony\Component\Cache\Adapter\RedisAdapter;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
@@ -22,26 +21,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->autoconfigure();
 
     $services->load('App\\', __DIR__.'/../src/');
-
-    // Dedicated lazy Redis client used by the readiness probe. Built via
-    // RedisAdapter::createConnection so authentication, scheme parsing and
-    // (later) Sentinel/Cluster setups are handled by Symfony Cache rather
-    // than re-implemented in the controller. The connection is lazy so the
-    // service can be constructed even when Redis is down — checkRedis() then
-    // surfaces the failure via ->ping() instead of breaking DI.
-    $services->set('app.redis.health', Redis::class)
-        ->factory([RedisAdapter::class, 'createConnection'])
-        ->args([
-            '%env(REDIS_URL)%',
-            ['lazy' => true, 'timeout' => 1.0, 'read_timeout' => 1.0],
-        ])
-        // Not shared in prod: ext-redis does not auto-reconnect, so a connection
-        // broken by a Redis restart would make the probe report "down" forever in
-        // the long-lived FrankenPHP worker. A fresh connection per check (~sub-ms
-        // on the Docker network) keeps readiness accurate. Kept shared under test
-        // so HealthControllerTest can swap in a broken \Redis mock via
-        // Container::set() (non-shared services bypass set() overrides).
-        ->share('test' === $containerConfigurator->env());
 
     if ('test' === $containerConfigurator->env()) {
         $services->alias(TripUpdatePublisherInterface::class, NullTripUpdatePublisher::class);
