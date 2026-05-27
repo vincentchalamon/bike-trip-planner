@@ -1,78 +1,65 @@
-# Runbook — Incident severity levels
+# Severity Levels
 
-Severity classification used by the alerting pipeline (GlitchTip, Uptime Kuma
-and UptimeRobot → `repository_dispatch` → [`incident-create.yml`](../../.github/workflows/incident-create.yml)).
-Each level maps to a GitHub label (`severity-p1`, `severity-p2`, `severity-p3`)
-applied automatically when an incident issue is opened.
+Definitions used by alerting workflows (`incident-create.yml`, GlitchTip webhooks, Uptime Kuma, UptimeRobot). The severity label drives notification urgency and response SLO.
 
-## Levels
+## P1 — Critical (user-facing outage)
 
-### P1 — Critical, page now
+Active user impact. The application is unusable for all or most users.
 
-User-facing outage or imminent data risk. Acknowledge within 15 minutes,
-target restoration under 60 minutes.
+- `/api/healthz` returns non-2xx for more than 2 consecutive probes (≥ 60 s)
+- PostgreSQL unreachable, in read-only mode, or disk full
+- All 5 Messenger workers stuck or crashed (no message processed > 5 min while queue depth > 0)
+- Caddy / Mercure / PHP container in restart loop
+- Error rate > 5 % per minute on any `/api/*` route
+- Oracle VM reclaimed or unreachable for more than 5 minutes
+- Ollama unreachable (hard runtime dependency per ADR-028 — gate pipeline blocked, no fallback path)
 
-Triggers:
+**SLO**: acknowledge < 15 min, mitigate < 60 min. Post-mortem mandatory.
 
-- Uptime alert on `/api/healthz` (app down / VM down)
-- Uptime alert on the homepage (PWA unreachable)
-- Error volume spike: more than 50 occurrences of the same fingerprint in the
-  last alerting window
-- Error matching the keyword list `database`, `connection refused`,
-  `out of memory`, `panic`
-- Error level `fatal` or `critical`
+GitHub label: `incident`, `severity-p1`.
 
-### P2 — Degraded, fix today
+## P2 — Major (degraded, non-blocking)
 
-Service still reachable but a dependency is impaired or a worker is failing.
-Acknowledge within 2 hours, target restoration end of day.
+Service is up but a feature is degraded or one redundancy is lost.
 
-Triggers:
+- One Messenger worker stuck or in a retry loop while the others process
+- `/api/health` latency > 2 s (slow dependency, but green)
+- Valhalla `/status` red — routing fallback unavailable, new trips cannot be computed
+- Overpass / external API cache miss rate > 50 % for more than 30 min
+- Redis memory > 80 % `maxmemory`
+- GlitchTip event spike > 100 events/h for a single fingerprint
 
-- Uptime alert on `/api/health` (composite dependency check) without `/healthz`
-  being down
-- Uptime alert on an optional dependency (Ollama, Valhalla, Overpass)
-- Worker stuck in a failure retry loop
-- Error level `error` not matching the P1 keyword list
+**SLO**: acknowledge < 1 h, mitigate < 4 h (business hours). Post-mortem optional.
 
-### P3 — Warning, fix this sprint
+GitHub label: `incident`, `severity-p2`.
 
-Non-blocking signal: business validation warnings, deprecations, recovery
-notifications.
+## P3 — Minor (warning / hygiene)
 
-Triggers:
+No user impact. Captured for trend analysis.
 
-- Error level `warning`, `info`, or `deprecation`
-- Recovery events (`status: up`) from any monitor
-- Anything not matched by P1 or P2 rules (default fallback)
+- Recurring `validation_error` for the same user (UX issue, not an outage)
+- Deprecation warnings in logs
+- PHPStan / Rector / markdownlint failures on `main` (build-only)
+- Backup job warning (succeeded but slow / partial)
+- Mercure reconnect rate > expected baseline (clients flapping)
 
-## Routing automatique
+**SLO**: triage next business day. No post-mortem.
 
-The workflow [`incident-create.yml`](../../.github/workflows/incident-create.yml)
-applies these rules in order:
+GitHub label: `incident`, `severity-p3`.
 
-| Event type     | Signal                                                                                  | Severity |
-| -------------- | --------------------------------------------------------------------------------------- | -------- |
-| `error_alert`  | `level ∈ {fatal, critical}` OR `count > 50` OR title matches critical keywords          | P1       |
-| `error_alert`  | `level == error` (default for errors)                                                   | P2       |
-| `error_alert`  | other levels (`warning`, `info`, …)                                                     | P3       |
-| `uptime_alert` | `status == down` AND monitor targets `/api/healthz` or homepage                         | P1       |
-| `uptime_alert` | `status == down` AND monitor targets `/api/health` or an optional dep (Ollama/Valhalla) | P2       |
-| `uptime_alert` | `status == down` on any other monitor                                                   | P2       |
-| `uptime_alert` | `status != down` (recovery / warning)                                                   | P3       |
+## Mapping
 
-### Payload to label mapping
+| Trigger source | Default severity | Override |
+|---|---|---|
+| UptimeRobot `/api/healthz` red | P1 | — |
+| Uptime Kuma `/api/health` red | P1 | P2 if only optional deps red |
+| GlitchTip new issue, level=fatal | P1 | — |
+| GlitchTip new issue, level=error | P2 | P1 if rate > 5/min |
+| GlitchTip new issue, level=warning | P3 | — |
+| `incident-create.yml` manual dispatch | from payload `severity` | — |
 
-```text
-client_payload  ──► event_fingerprint = sha256(culprit::title)[:12]   (error_alert)
-                ──► event_fingerprint = "<monitor>-<status>"           (uptime_alert)
-                ──► severity = rule table above
-                ──► labels = ["incident", "severity-p<n>", "event-fp:<fingerprint>"]
-```
+## References
 
-Issues are deduplicated by searching open issues with the `event-fp:<fingerprint>`
-label: a match means a comment is appended with the new occurrence timestamp
-and workflow run URL instead of opening a duplicate issue.
-
-See [`docs/runbooks/incident-alerting.md`](./incident-alerting.md) for the full
-architecture, payload schemas, and webhook configuration.
+- ADR-019 — Deployment infrastructure on Oracle Always Free + Coolify
+- ADR-028 — Ollama hard dependency (no graceful fallback)
+- `incident-template.md` — post-mortem template

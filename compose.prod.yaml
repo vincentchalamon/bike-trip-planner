@@ -19,6 +19,8 @@ services:
       context: ./
       dockerfile: .docker/php/Dockerfile
       target: frankenphp_prod
+      args:
+        COMMIT_SHA: ${COMMIT_SHA:-unknown}
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -59,6 +61,7 @@ services:
       # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
+      APP_COMMIT: "${COMMIT_SHA:-unknown}"
     secrets:
       - jwt_private_key
       - jwt_public_key
@@ -82,7 +85,7 @@ services:
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
       - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini:ro
     healthcheck:
-      test: curl --fail http://php/docs || exit 1
+      test: curl -fsS http://php/api/healthz || exit 1
       start_period: 30s
       interval: 10s
       timeout: 3s
