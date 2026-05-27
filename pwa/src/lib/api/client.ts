@@ -12,6 +12,43 @@ function getBrowserLocale(): string {
 }
 
 /**
+ * Header name used to propagate the correlation ID end-to-end (Caddy →
+ * Symfony → workers → Mercure → PWA). See issue #485.
+ */
+export const REQUEST_ID_HEADER = "X-Request-Id";
+
+/**
+ * Last known correlation ID observed from a server response. The value is
+ * resent on every subsequent request as `X-Request-Id` so all calls in the
+ * same user session share a trace identifier, and surfaced to UI components
+ * (e.g. the Sonner toast `Request ID: <uuid>` description / `toast-<uuid>`
+ * `<li id>`) for copy-paste diagnostics.
+ *
+ * Stored in module scope (not the auth store) so it survives auth state
+ * resets and remains importable from non-React code (`parseApiError`
+ * callers, error boundaries, …).
+ */
+let lastRequestId: string | null = null;
+
+export function getLastRequestId(): string | null {
+  return lastRequestId;
+}
+
+/**
+ * Extracts the correlation ID from a `Response` (case-insensitive) and pins
+ * it as the last-seen value when present. Exposed for callers that talk to
+ * the API outside of the `openapi-fetch` middleware (e.g. `apiFetch`).
+ */
+export function rememberRequestId(response: Response): string | null {
+  const value = response.headers.get(REQUEST_ID_HEADER);
+  if (value && value.trim() !== "") {
+    lastRequestId = value;
+    return value;
+  }
+  return null;
+}
+
+/**
  * Get the current Authorization header value from the auth store.
  * Returns undefined when no access token is available.
  */
@@ -32,28 +69,47 @@ export async function apiFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const authHeader = getAuthHeader();
+  const baseHeaders: Record<string, string> = {
+    "Accept-Language": getBrowserLocale(),
+  };
+  if (lastRequestId !== null) {
+    baseHeaders[REQUEST_ID_HEADER] = lastRequestId;
+  }
+  if (authHeader) {
+    baseHeaders.Authorization = authHeader;
+  }
   const res = await fetch(input, {
     ...init,
     headers: {
-      "Accept-Language": getBrowserLocale(),
-      ...(authHeader ? { Authorization: authHeader } : {}),
+      ...baseHeaders,
       ...init?.headers,
     },
   });
+  rememberRequestId(res);
 
   // On 401, attempt a silent refresh and retry once
   if (res.status === 401) {
     const refreshed = await useAuthStore.getState().silentRefresh();
     if (refreshed) {
       const newAuthHeader = getAuthHeader();
-      return fetch(input, {
+      const retryHeaders: Record<string, string> = {
+        "Accept-Language": getBrowserLocale(),
+      };
+      if (lastRequestId !== null) {
+        retryHeaders[REQUEST_ID_HEADER] = lastRequestId;
+      }
+      if (newAuthHeader) {
+        retryHeaders.Authorization = newAuthHeader;
+      }
+      const retry = await fetch(input, {
         ...init,
         headers: {
-          "Accept-Language": getBrowserLocale(),
-          ...(newAuthHeader ? { Authorization: newAuthHeader } : {}),
+          ...retryHeaders,
           ...init?.headers,
         },
       });
+      rememberRequestId(retry);
+      return retry;
     }
     // Refresh failed — redirect to login
     if (typeof window !== "undefined") {
@@ -75,6 +131,29 @@ export async function apiFetch(
  */
 // Cache request bodies before they are consumed by fetch, so the retry can reuse them.
 const requestBodyCache = new WeakMap<Request, BodyInit | null>();
+
+/**
+ * openapi-fetch middleware that propagates the correlation ID:
+ * - injects the last-seen `X-Request-Id` on outgoing requests so all calls
+ *   in the same user session share a trace identifier;
+ * - captures the response header value (whether Caddy forwarded ours or
+ *   minted a fresh one) and pins it for the next call + UI consumers.
+ *
+ * Mounted before {@link authMiddleware} so retries triggered by the auth
+ * middleware reuse the captured request ID rather than overwriting it.
+ */
+const requestIdMiddleware: Middleware = {
+  onRequest({ request }) {
+    if (lastRequestId && !request.headers.has(REQUEST_ID_HEADER)) {
+      request.headers.set(REQUEST_ID_HEADER, lastRequestId);
+    }
+    return request;
+  },
+  onResponse({ response }) {
+    rememberRequestId(response);
+    return response;
+  },
+};
 
 const authMiddleware: Middleware = {
   onRequest({ request }) {
@@ -131,6 +210,7 @@ export const apiClient = createClient<paths>({
   },
 });
 
+apiClient.use(requestIdMiddleware);
 apiClient.use(authMiddleware);
 
 export interface ApiError {
