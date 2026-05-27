@@ -85,29 +85,46 @@ For each branch that passed Phase 2, create a PR:
    - Title: Conventional Commit format matching the issue type
    - Body: summary + Auto-critique section per CLAUDE.md
    - Base branch: `main` (or `feature/<dep-number>` for dependent issues)
-3. Run `gh pr checks --watch` to wait for CI (run multiple watches in parallel if possible)
 
-If CI fails, read logs, fix, push, and re-check (up to 2 attempts).
+## Step 6 — Phase 4: Drive each PR to READY
 
-## Step 6 — Update TRACKING.md
+For each open PR, run the **bounded surveillance loop** until it converges. **Maximum K=3 cycles per PR.** Never merge — the user merges (a PR is only ever brought to READY).
+
+Each cycle:
+
+1. **CI** — `gh pr checks <pr>`. If red: read the failing logs (`gh run view --log-failed`), apply the smallest fix, commit, push.
+2. **Review comments** — fetch both:
+   - PR-level comments: `gh pr view <pr> --json comments`
+   - Inline review comments: `gh api repos/:owner/:repo/pulls/<pr>/comments`
+
+   Address every **actionable** point, commit, push, then reply to / resolve the corresponding threads. List any comment you deliberately did not action, with the reason.
+3. **Conflicts** — `gh pr view <pr> --json mergeable,mergeStateStatus`. If `CONFLICTING`: rebase onto the base branch and resolve **conservatively**. If the resolution is ambiguous or risks discarding work, **stop and flag it** — do not force a resolution.
+
+**Termination (READY)** when all hold: CI green **AND** `mergeable` **AND** not draft **AND** a fresh `claude-code-review.yml` cycle adds **no new blocking comment** (Critical/High).
+
+**Loop note:** each push triggers `synchronize` → the review bot re-runs and auto-resolves its own fixed threads. Treat that auto-resolution as progress; stop as soon as a cycle produces no new blocking comment. After K cycles without convergence, mark the PR **NEEDS ATTENTION** with the blocking reason and move on.
+
+## Step 7 — Update TRACKING.md
 
 For each issue, update the TRACKING.md row:
-- SUCCESS with PR: set status to "En cours", add PR link and branch name
+- READY PR: set status to "En cours", add PR link and branch name
+- NEEDS ATTENTION: set status to "En cours", add PR link, note the blocker
 - FAILED: set status to "Échoué"
 - BLOCKED: set status to "Bloqué"
 
 Commit and push the TRACKING.md update.
 
-## Step 7 — Final report
+## Step 8 — Final report
 
 Display a summary table:
 
 ```
 | Issue | Title | Status | PR | Notes |
 |-------|-------|--------|----|-------|
-| #42   | Add X | ✅ PR  | #50 | CI passing |
-| #43   | Fix Y | ❌ FAILED | — | QA: PHPStan error in Foo.php |
-| #44   | Add Z | 🚫 BLOCKED | — | Depends on #43 |
+| #42   | Add X | ✅ READY | #50 | CI green, no blocking review |
+| #43   | Fix Y | ⚠️ NEEDS ATTENTION | #51 | Conflict on Foo.php, flagged |
+| #44   | Add Z | ❌ FAILED | — | QA: PHPStan error in Bar.php |
+| #45   | Add W | 🚫 BLOCKED | — | Depends on #44 |
 ```
 
 Include timing information if available (total duration, per-phase breakdown).
