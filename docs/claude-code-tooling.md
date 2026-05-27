@@ -164,6 +164,26 @@ Skills are `.claude/skills/<name>/SKILL.md` files in the project. They add `/nam
 - **Location:** `.claude/skills/sprint/SKILL.md`
 - **Usage:** `/sprint <sprint-number>`
 
+The sprint drives each PR through a bounded surveillance loop (CI, review comments including inline, conservative conflict handling) until it reaches **READY** or **NEEDS ATTENTION** — it never merges.
+
+---
+
+### 3.3 Skill `/check` (ALREADY INSTALLED)
+
+**Purpose:** Quality goal-loop — runs `make qa` / `make test`, fixes failures until green (max 3 runs), and reports the real output as proof. Never declares success from assumption.
+
+- **Location:** `.claude/skills/check/SKILL.md`
+- **Usage:** `/check [qa|test|all]` (default `all`)
+
+---
+
+### 3.4 Skill `/close` (ALREADY INSTALLED)
+
+**Purpose:** Closes a sprint — auto-detects the current sprint, cleans up local worktrees/branches (with explicit confirmation before any deletion), updates `main` via `--ff-only`, and runs a retrospective proposing config improvements without applying them.
+
+- **Location:** `.claude/skills/close/SKILL.md`
+- **Usage:** `/close [sprint-number]` (sprint auto-detected if omitted)
+
 ---
 
 ## 4. GitHub Workflows (CI Automation)
@@ -199,6 +219,8 @@ Triggers automatically on every PR (open, sync, reopen, ready for review). Perfo
 | ✅        | File protection (hook)          | Hook PreToolUse   | Configured        |
 | ✅        | Skill `/pick`                   | Skill custom      | Installed         |
 | ✅        | Skill `/sprint`                 | Skill custom      | Installed         |
+| ✅        | Skill `/check`                  | Skill custom      | Installed         |
+| ✅        | Skill `/close`                  | Skill custom      | Installed         |
 | ✅        | `@claude pick` workflow         | GitHub Actions    | Configured        |
 | ✅        | Automated code review           | GitHub Actions    | Configured        |
 | 💡       | Post-compaction reminder        | Hook SessionStart | Optional          |
