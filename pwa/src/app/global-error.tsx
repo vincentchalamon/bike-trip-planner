@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { logger } from "@/lib/logger";
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -16,7 +17,10 @@ interface GlobalErrorProps {
  */
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    console.error(error);
+    logger.error("Global error boundary triggered", {
+      error,
+      digest: error.digest,
+    });
   }, [error]);
 
   // lang hardcoded: GlobalError replaces the root layout so next-intl context is unavailable

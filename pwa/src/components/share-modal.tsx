@@ -38,6 +38,7 @@ import {
 import { useExportInfographic } from "@/hooks/use-export-infographic";
 import { MAX_STAGE_LIST } from "@/lib/infographic-square";
 import { buildTripText } from "@/lib/text-export";
+import { logger } from "@/lib/logger";
 import {
   buildShareUrl,
   getTripShare,
@@ -157,7 +158,7 @@ export function ShareModal({
         },
       })
         .catch((err: unknown) => {
-          console.error("[infographic] render failed", err);
+          logger.error("[infographic] render failed", { error: err });
         })
         .finally(() => {
           setIsRenderingInfographic(false);

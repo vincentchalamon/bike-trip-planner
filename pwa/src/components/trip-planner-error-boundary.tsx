@@ -2,6 +2,7 @@
 
 import { Component } from "react";
 import type { ReactNode, ErrorInfo } from "react";
+import { logger } from "@/lib/logger";
 
 interface Props {
   children: ReactNode;
@@ -22,7 +23,10 @@ export class TripPlannerErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error("TripPlanner error:", error, errorInfo);
+    logger.error("TripPlanner error", {
+      error,
+      componentStack: errorInfo.componentStack,
+    });
   }
 
   render(): ReactNode {

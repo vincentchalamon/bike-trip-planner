@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 interface Copy {
   title: string;
@@ -27,9 +28,9 @@ export default async function NotFound() {
       backHome: t("backHome"),
     };
   } catch (e) {
-    console.error(
-      "[not-found] getTranslations failed, falling back to default copy:",
-      e,
+    logger.error(
+      "[not-found] getTranslations failed, falling back to default copy",
+      { error: e },
     );
     copy = FALLBACK_COPY;
   }
