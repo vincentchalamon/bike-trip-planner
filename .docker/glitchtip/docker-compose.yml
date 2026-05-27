@@ -44,10 +44,7 @@ services:
       - glitchtip
 
   glitchtip-web:
-    # Pinned to the v4 major tag instead of :latest to prevent unintended
-    # upgrades that could break Sentry wire-protocol compatibility with the
-    # backend SDK. Bump deliberately after testing each new GlitchTip release.
-    image: glitchtip/glitchtip:v4
+    image: glitchtip/glitchtip:6.1.6
     restart: unless-stopped
     depends_on:
       glitchtip-postgres:
@@ -76,9 +73,7 @@ services:
       retries: 3
 
   glitchtip-worker:
-    # Keep aligned with glitchtip-web above; both containers ship from the
-    # same image and must stay in lockstep.
-    image: glitchtip/glitchtip:v4
+    image: glitchtip/glitchtip:6.1.6
     restart: unless-stopped
     depends_on:
       glitchtip-postgres:

@@ -80,7 +80,9 @@ function isMercureReconnectError(
   ) {
     return true;
   }
-  // EventSource native errors carry no useful message; tag them via the
-  // breadcrumb category set by `lib/mercure/client.ts`.
+  // Native EventSource errors (plain Event, no message) are intentionally NOT
+  // matched here: only our explicit MercureReconnectError / "mercure reconnect"
+  // messages are dropped. A bare EventSource failure may signal a real
+  // connectivity problem, so it is left visible in GlitchTip.
   return false;
 }
