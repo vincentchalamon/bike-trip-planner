@@ -8,6 +8,9 @@ secrets:
     file: ${JWT_PRIVATE_KEY_PATH:-/etc/bike-trip-planner/jwt/private.pem}
   jwt_public_key:
     file: ${JWT_PUBLIC_KEY_PATH:-/etc/bike-trip-planner/jwt/public.pem}
+  # Build-time only: consumed by the pwa image build for source-map upload.
+  sentry_auth_token:
+    environment: SENTRY_AUTH_TOKEN
 
 services:
   php:
@@ -152,11 +155,17 @@ services:
       dockerfile: .docker/pwa/Dockerfile
       target: prod
       args:
-        # Build-time secret consumed by `withSentryConfig` during `next build`
-        # to upload source maps to GlitchTip. Inject via CI / Coolify build-time
-        # secrets — never expose at runtime (it grants org-wide release write
-        # access). When unset, the build proceeds without source-map upload.
-        SENTRY_AUTH_TOKEN: "${SENTRY_AUTH_TOKEN:-}"
+        # NEXT_PUBLIC_* are inlined into the client bundle at build time, so
+        # they must be supplied to `next build` (not just at runtime), otherwise
+        # client-side Sentry runs with an undefined DSN and the release tag
+        # won't match the uploaded source maps.
+        NEXT_PUBLIC_APP_RELEASE: "${APP_RELEASE:-}"
+        NEXT_PUBLIC_APP_ENV: "${APP_ENV:-prod}"
+        NEXT_PUBLIC_SENTRY_DSN: "${NEXT_PUBLIC_SENTRY_DSN:-}"
+      # SENTRY_AUTH_TOKEN (source-map upload) is a real secret: passed as a
+      # BuildKit secret so it never lands in an image layer or the build cache.
+      secrets:
+        - sentry_auth_token
     restart: unless-stopped
     depends_on:
       - php # Mercure dependency
