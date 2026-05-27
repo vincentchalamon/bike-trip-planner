@@ -12,8 +12,8 @@ Valhalla provides routing (ADR-017); Overpass usage was moved off the self-hoste
 ## Diagnostic
 
 ```bash
-docker compose --profile routing ps valhalla
-docker compose --profile routing logs --tail=200 valhalla
+docker compose ps valhalla
+docker compose logs --tail=200 valhalla
 docker compose exec php curl -sS http://valhalla:8002/status | jq
 ```
 
@@ -50,10 +50,10 @@ ls -lh .docker/default.osm.pbf
 3. **Force a full Valhalla rebuild** when tiles are corrupted (destructive — clears the volume):
 
    ```bash
-   docker compose --profile routing down valhalla
+   docker compose down valhalla
    docker volume rm <project>_valhalla-tiles
    make provision
-   docker compose --profile routing up -d valhalla
+   docker compose up -d valhalla
    ```
 
 4. **Re-warm caches** by issuing a known-good routing request:
