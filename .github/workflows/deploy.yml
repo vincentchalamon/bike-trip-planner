@@ -86,10 +86,12 @@ jobs:
             NEXT_PUBLIC_APP_RELEASE=${{ github.sha }}
             NEXT_PUBLIC_APP_ENV=production
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-          # BuildKit secret consumed only by the pwa Dockerfile (source-map
-          # upload). Mounted, never written to a layer or the gha cache.
-          secrets: |
-            sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN }}
+          # SENTRY_AUTH_TOKEN is intentionally NOT mounted here. Without it
+          # withSentryConfig is a no-op, so the deployed image never emits the
+          # `.map` files (deleteSourcemapsAfterUpload only deletes *after* a
+          # successful upload, which needs org/project/url absent from this
+          # build). Source-map upload to GlitchTip happens in the dedicated
+          # `upload-sourcemaps` job, which builds with all SENTRY_* present.
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,scope=${{ matrix.service }},mode=max
           provenance: false
