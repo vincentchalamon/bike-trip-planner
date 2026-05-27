@@ -23,6 +23,16 @@ const eslintConfig = defineConfig([
       "react-hooks/immutability": "off",
       "react-hooks/refs": "off",
       "react-hooks/set-state-in-effect": "off",
+      // The structured logger (src/lib/logger.ts) is the single sanctioned
+      // console caller; everything else must route through it so production
+      // logging stays consistent and Sentry-ready.
+      "no-console": "error",
+    },
+  },
+  {
+    files: ["src/lib/logger.ts"],
+    rules: {
+      "no-console": "off",
     },
   },
   {
