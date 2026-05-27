@@ -131,9 +131,15 @@ jobs:
         working-directory: pwa
         run: npm ci
 
-      - name: Build PWA (produces source maps)
+      - name: Build PWA and upload source maps via withSentryConfig
         if: steps.gate.outputs.skip != 'true'
         working-directory: pwa
+        # withSentryConfig creates the release and uploads the source maps during
+        # the build itself (all four SENTRY_* vars are present in this job's env),
+        # then deletes the .map files (deleteSourcemapsAfterUpload). A separate
+        # `@sentry/cli releases files upload-sourcemaps` step would find nothing —
+        # so it is intentionally omitted; the plugin owns the upload.
+        #
         # These NEXT_PUBLIC_* values MUST mirror the Docker image build args
         # exactly — any divergence changes the inlined config and the emitted
         # chunk hashes, so the uploaded maps would no longer match the deployed
@@ -143,21 +149,6 @@ jobs:
           NEXT_PUBLIC_APP_ENV: production
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
         run: npm run build
-
-      - name: Create GlitchTip release & upload source maps
-        if: steps.gate.outputs.skip != 'true'
-        working-directory: pwa
-        run: |
-          npx --yes @sentry/cli releases new "$SHA" \
-            --org "$SENTRY_ORG" --project "$SENTRY_PROJECT"
-          npx --yes @sentry/cli releases files "$SHA" \
-            upload-sourcemaps .next \
-            --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" \
-            --url-prefix '~/_next'
-          npx --yes @sentry/cli releases set-commits "$SHA" \
-            --auto --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" || true
-          npx --yes @sentry/cli releases finalize "$SHA" \
-            --org "$SENTRY_ORG" --project "$SENTRY_PROJECT"
 
   trigger-coolify:
     name: Trigger Coolify deploy webhook
