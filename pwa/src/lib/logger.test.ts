@@ -97,6 +97,24 @@ describe("logger", () => {
       expect(captureMessageMock).not.toHaveBeenCalled();
       expect(addBreadcrumbMock).not.toHaveBeenCalled();
     });
+
+    it("serializes Error.cause chains in dev output", () => {
+      const root = new Error("root");
+      const outer = new Error("outer", { cause: root });
+      logger.error("chained", { error: outer });
+
+      const parsed = JSON.parse(errorSpy.mock.calls[0]?.[0] as string);
+      expect(parsed.context.error.cause.name).toBe("Error");
+      expect(parsed.context.error.cause.message).toBe("root");
+    });
+
+    it("serializes non-Error cause values verbatim in dev output", () => {
+      const outer = new Error("outer", { cause: "string-reason" });
+      logger.error("chained", { error: outer });
+
+      const parsed = JSON.parse(errorSpy.mock.calls[0]?.[0] as string);
+      expect(parsed.context.error.cause).toBe("string-reason");
+    });
   });
 
   describe("in production", () => {
