@@ -76,13 +76,11 @@ LIMIT 10;
    VACUUM FULL VERBOSE stage;
    ```
 
-3. **Truncate transient tables** if a runaway test fixture leaked into prod (verify environment first):
+   The Messenger transport is Redis-backed (`redis://.../messages`), not Doctrine,
+   so there is no `messenger_messages` table to truncate here — queue pressure is
+   handled in [`redis-out-of-memory.md`](./redis-out-of-memory.md).
 
-   ```sql
-   TRUNCATE TABLE messenger_messages;
-   ```
-
-4. **Resize the boot volume** on Oracle Cloud (last resort, requires VM reboot):
+3. **Resize the boot volume** on Oracle Cloud (last resort, requires VM reboot):
    - OCI console → Compute → Instances → select VM → Boot volume → "Edit" → raise size (free tier ceiling: 200 GB total block storage across all volumes)
    - SSH into VM and run `sudo /usr/libexec/oci-growfs -y` to extend the filesystem
    - Coolify auto-restarts the stack after reboot
