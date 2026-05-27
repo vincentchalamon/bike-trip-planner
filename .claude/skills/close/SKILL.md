@@ -25,7 +25,7 @@ List the **concrete** items that would be removed, with their PR/merge status:
 ## Step 3 — Clean up (plain git, only after confirmation)
 
 For each branch whose PR is **merged or closed**:
-- `git worktree remove <path>` then `git worktree prune`
+- `git worktree remove <path>` then `git worktree prune`. If removal fails (dirty worktree), **flag it and skip** rather than force.
 - `git branch -d feature/<n>` — use **`-d`, not `-D`**. If git refuses (unmerged), **flag it and skip** rather than force-delete.
 
 Worktrees live under the gitignored `.claude/worktrees/`, so these removals are purely local.
