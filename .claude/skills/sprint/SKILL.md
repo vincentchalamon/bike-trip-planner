@@ -100,7 +100,7 @@ Each cycle:
    Address every **actionable** point, commit, push, then reply to / resolve the corresponding threads. List any comment you deliberately did not action, with the reason.
 3. **Conflicts** — `gh pr view <pr> --json mergeable,mergeStateStatus`. If `CONFLICTING`: rebase onto the base branch and resolve **conservatively**. If the resolution is ambiguous or risks discarding work, **stop and flag it** — do not force a resolution.
 
-**Termination (READY)** when all hold: CI green **AND** `mergeable` **AND** not draft **AND** a fresh `claude-code-review.yml` cycle adds **no new blocking comment** (Critical/High).
+**Termination (READY)** when all hold: CI green **AND** `mergeable` **AND** not draft **AND** `claude-code-review.yml` has completed (`gh run view --workflow=claude-code-review.yml` shows `completed`) with **no new blocking comment** (Critical/High). Wait for that workflow to finish before evaluating its output — after a push it is triggered asynchronously and may still be `pending`/`in_progress`.
 
 **Loop note:** each push triggers `synchronize` → the review bot re-runs and auto-resolves its own fixed threads. Treat that auto-resolution as progress; stop as soon as a cycle produces no new blocking comment. After K cycles without convergence, mark the PR **NEEDS ATTENTION** with the blocking reason and move on.
 

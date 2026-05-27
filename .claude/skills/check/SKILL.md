@@ -21,11 +21,11 @@ Run the target. If it passes, go to Step 4.
 
 If it fails, read the **real error output**. Identify the failing tool (PHP-CS-Fixer, Rector, PHPStan, ESLint, Prettier, TS, PHPUnit, Playwright) and the precise cause.
 
-## Step 3 — Fix and retry (max 3 attempts)
+## Step 3 — Fix and retry (max 3 runs total)
 
 Apply the **smallest fix that makes the check pass** — lint/format/type errors, broken assertions, missing typegen. **Do not change feature behavior** to force a pass: if a test reveals a real regression, stop and report it instead of editing the test to match.
 
-Re-run the target. Repeat up to **3 attempts total**. After 3 failed attempts, stop and list the remaining errors verbatim — do not loop further.
+Re-run the target. Repeat up to **2 more times** (3 runs total including Step 2). After 3 failed runs, stop and list the remaining errors verbatim — do not loop further.
 
 ## Step 4 — Report with proof
 

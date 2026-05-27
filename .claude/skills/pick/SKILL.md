@@ -64,7 +64,7 @@ Each cycle:
 2. **Review comments** — fetch PR-level (`gh pr view --json comments`) and inline (`gh api repos/:owner/:repo/pulls/<pr>/comments`) comments. Address actionable points, push, resolve threads; list any left unactioned with the reason.
 3. **Conflicts** — `gh pr view --json mergeable,mergeStateStatus`. If `CONFLICTING`: rebase onto the base and resolve **conservatively**; if ambiguous or risky, stop and flag rather than force.
 
-**READY** when: CI green AND mergeable AND not draft AND a fresh `claude-code-review.yml` cycle adds no new blocking (Critical/High) comment. After 3 cycles without convergence, report **NEEDS ATTENTION** with the blocker.
+**READY** when: CI green AND mergeable AND not draft AND `claude-code-review.yml` has completed (`gh run view --workflow=claude-code-review.yml` shows `completed`) with no new blocking (Critical/High) comment. Wait for that workflow to finish before evaluating — it runs asynchronously after each push. After 3 cycles without convergence, report **NEEDS ATTENTION** with the blocker.
 
 ## Step 10 -- Finalize
 

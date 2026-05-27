@@ -2,7 +2,7 @@
 name: close
 description: Close a sprint — clean up local worktrees/branches, update main, and run a retrospective into the Claude config
 argument-hint: "[sprint-number]"
-allowed-tools: Bash(git *), Bash(gh *), Read, Edit, Grep, Glob
+allowed-tools: Bash(git *), Bash(gh *), Read, Write, Edit, Grep, Glob
 ---
 
 Close the current sprint: tidy local state and capture learnings. Parse `$ARGUMENTS`: an optional sprint number (override). If absent, **auto-detect** the current sprint.
@@ -45,4 +45,4 @@ Synthesize what went well / badly during this sprint, grounded in **actual event
 - a new/updated skill (`pick`, `sprint`, `check`, …)
 - a hook or permission in `.claude/settings.json`
 
-**Propose, do not apply.** If the user approves a change, implement it via a **feature branch + PR** — never commit config directly to `main` (and TRACKING.md changes also go through a PR).
+**Propose, do not apply.** If the user approves a change, implement it via a **feature branch + PR** — never commit config directly to `main`.
