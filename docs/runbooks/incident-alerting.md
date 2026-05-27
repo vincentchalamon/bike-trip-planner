@@ -109,7 +109,7 @@ UptimeRobot field aliases (`monitorFriendlyName`, `alertType`,
 `alertDetails`, `responseTime`) are accepted as fallbacks.
 
 Fingerprint: `<monitor_name>-<status>` lowercased, non-alphanumerics replaced
-with `-`, truncated to 48 chars (e.g. `biketrip-healthz-down`).
+with `-`, truncated to 41 chars (e.g. `biketrip-healthz-down`).
 
 ## Manual test
 
