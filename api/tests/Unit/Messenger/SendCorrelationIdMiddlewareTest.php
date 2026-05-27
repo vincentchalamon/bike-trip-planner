@@ -14,7 +14,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
-use Symfony\Component\Messenger\Middleware\StackMiddleware;
 
 #[CoversClass(SendCorrelationIdMiddleware::class)]
 final class SendCorrelationIdMiddlewareTest extends TestCase
@@ -108,17 +107,26 @@ final class SendCorrelationIdMiddlewareTest extends TestCase
 
     private function stackOf(\Closure $handler): StackInterface
     {
-        $inner = new readonly class ($handler) implements MiddlewareInterface {
+        return new readonly class ($handler) implements StackInterface {
             public function __construct(private \Closure $handler)
             {
             }
 
-            public function handle(Envelope $envelope, StackInterface $stack): Envelope
+            #[\Override]
+            public function next(): MiddlewareInterface
             {
-                return ($this->handler)($envelope, $stack);
+                return new readonly class ($this->handler) implements MiddlewareInterface {
+                    public function __construct(private \Closure $handler)
+                    {
+                    }
+
+                    #[\Override]
+                    public function handle(Envelope $envelope, StackInterface $stack): Envelope
+                    {
+                        return ($this->handler)($envelope, $stack);
+                    }
+                };
             }
         };
-
-        return new StackMiddleware([$inner]);
     }
 }
