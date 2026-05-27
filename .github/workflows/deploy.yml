@@ -8,7 +8,6 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -163,7 +162,10 @@ jobs:
   trigger-coolify:
     name: Trigger Coolify deploy webhook
     runs-on: ubuntu-latest
-    needs: [build-images, upload-sourcemaps]
+    # Source-map upload is a diagnostic aid, not a deploy gate: GlitchTip shares
+    # the Oracle VM and is most likely degraded during a heavy deploy, so a
+    # transient @sentry/cli failure must not block shipping the new images.
+    needs: build-images
     steps:
       - name: POST to Coolify webhook
         env:
