@@ -53,16 +53,12 @@ Sentry.init({
 
 function isLikelyNetworkError(error: unknown): boolean {
   if (!error) return false;
-  // Restrict the `TypeError` short-circuit to messages that match a known
-  // network failure shape across browsers (Chrome/Firefox/Safari/WebKit).
-  // A bare `instanceof TypeError` is too broad: real application bugs (e.g.
-  // `Cannot read properties of undefined`) would otherwise be silently
-  // dropped whenever the user happens to be offline.
+  if (error instanceof TypeError) return true; // fetch network failures land here
   if (error instanceof Error) {
     const msg = error.message.toLowerCase();
     return (
-      msg.includes("failed to fetch") ||
       msg.includes("network") ||
+      msg.includes("failed to fetch") ||
       msg.includes("load failed")
     );
   }
@@ -84,7 +80,9 @@ function isMercureReconnectError(
   ) {
     return true;
   }
-  // EventSource native errors carry no useful message; tag them via the
-  // breadcrumb category set by `lib/mercure/client.ts`.
+  // Native EventSource errors (plain Event, no message) are intentionally NOT
+  // matched here: only our explicit MercureReconnectError / "mercure reconnect"
+  // messages are dropped. A bare EventSource failure may signal a real
+  // connectivity problem, so it is left visible in GlitchTip.
   return false;
 }
