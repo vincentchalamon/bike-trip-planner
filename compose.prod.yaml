@@ -19,8 +19,6 @@ services:
       context: ./
       dockerfile: .docker/php/Dockerfile
       target: frankenphp_prod
-      args:
-        COMMIT_SHA: ${COMMIT_SHA:-unknown}
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -61,10 +59,6 @@ services:
       # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
-      APP_COMMIT: "${COMMIT_SHA:-unknown}"
-      # Doctrine migrations executed at container boot via entrypoint.sh (ADR-032).
-      # Set to "false" if a migration is suspected to be problematic — then run migrations manually.
-      MIGRATIONS_ON_BOOT: "${MIGRATIONS_ON_BOOT:-true}"
     secrets:
       - jwt_private_key
       - jwt_public_key
@@ -88,7 +82,7 @@ services:
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
       - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini:ro
     healthcheck:
-      test: curl -fsS http://php/api/healthz || exit 1
+      test: curl --fail http://php/docs || exit 1
       start_period: 30s
       interval: 10s
       timeout: 3s
@@ -138,8 +132,6 @@ services:
       # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
-      # Workers must not run migrations — only the php service does (see ADR-032).
-      MIGRATIONS_ON_BOOT: "false"
     secrets:
       - jwt_private_key
       - jwt_public_key
@@ -162,10 +154,16 @@ services:
       context: ./
       dockerfile: .docker/pwa/Dockerfile
       target: prod
-      # Source-map upload token consumed by `withSentryConfig` during
-      # `next build`. Passed as a BuildKit secret (mounted, never baked into an
-      # image layer or the build cache) — it grants org-wide release write
-      # access. When unset, the build proceeds without source-map upload.
+      args:
+        # NEXT_PUBLIC_* are inlined into the client bundle at build time, so
+        # they must be supplied to `next build` (not just at runtime), otherwise
+        # client-side Sentry runs with an undefined DSN and the release tag
+        # won't match the uploaded source maps.
+        NEXT_PUBLIC_APP_RELEASE: "${APP_RELEASE:-}"
+        NEXT_PUBLIC_APP_ENV: "${APP_ENV:-prod}"
+        NEXT_PUBLIC_SENTRY_DSN: "${NEXT_PUBLIC_SENTRY_DSN:-}"
+      # SENTRY_AUTH_TOKEN (source-map upload) is a real secret: passed as a
+      # BuildKit secret so it never lands in an image layer or the build cache.
       secrets:
         - sentry_auth_token
     restart: unless-stopped
