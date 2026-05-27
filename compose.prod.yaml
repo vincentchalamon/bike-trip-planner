@@ -19,6 +19,8 @@ services:
       context: ./
       dockerfile: .docker/php/Dockerfile
       target: frankenphp_prod
+      args:
+        COMMIT_SHA: ${COMMIT_SHA:-unknown}
     restart: unless-stopped
     read_only: true
     tmpfs:
