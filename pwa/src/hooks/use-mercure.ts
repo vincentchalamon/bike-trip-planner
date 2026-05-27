@@ -9,7 +9,7 @@ import { useUiStore } from "@/store/ui-store";
 import { useOfflineStore } from "@/store/offline-store";
 import type { SavedTrip } from "@/store/offline-store";
 import { reverseGeocode } from "@/lib/geocode/client";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 import type { StageData } from "@/lib/validation/schemas";
 

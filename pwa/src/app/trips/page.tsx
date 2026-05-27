@@ -6,7 +6,7 @@ import Link from "next/link";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

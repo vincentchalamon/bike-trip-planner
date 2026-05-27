@@ -2,7 +2,7 @@
 
 import { useCallback, useId, useState } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { Sparkles, Loader2, Eraser, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
