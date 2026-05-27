@@ -1,3 +1,8 @@
+# Uptime monitoring (Uptime Kuma) is deployed as a separate Coolify resource,
+# not embedded in this stack. See .docker/uptime-kuma/README.md for the
+# installation procedure and the external UptimeRobot safety net is documented
+# in docs/runbooks/uptime-monitoring.md.
+
 secrets:
   jwt_private_key:
     file: ${JWT_PRIVATE_KEY_PATH:-/etc/bike-trip-planner/jwt/private.pem}

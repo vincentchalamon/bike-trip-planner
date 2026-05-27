@@ -79,7 +79,9 @@ CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile", "--watch" ]
 # Prod FrankenPHP image
 FROM frankenphp_base AS frankenphp_prod
 
+ARG COMMIT_SHA=unknown
 ENV APP_ENV=prod
+ENV APP_COMMIT=${COMMIT_SHA}
 
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
