@@ -35,11 +35,13 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             '%env(REDIS_URL)%',
             ['lazy' => true, 'timeout' => 1.0, 'read_timeout' => 1.0],
         ])
-        // Not shared: ext-redis does not auto-reconnect, so a connection broken
-        // by a Redis restart would make the probe report "down" forever in the
-        // long-lived FrankenPHP worker. A fresh connection per check (~sub-ms on
-        // the Docker network) keeps readiness accurate.
-        ->share(false);
+        // Not shared in prod: ext-redis does not auto-reconnect, so a connection
+        // broken by a Redis restart would make the probe report "down" forever in
+        // the long-lived FrankenPHP worker. A fresh connection per check (~sub-ms
+        // on the Docker network) keeps readiness accurate. Kept shared under test
+        // so HealthControllerTest can swap in a broken \Redis mock via
+        // Container::set() (non-shared services bypass set() overrides).
+        ->share('test' === $containerConfigurator->env());
 
     if ('test' === $containerConfigurator->env()) {
         $services->alias(TripUpdatePublisherInterface::class, NullTripUpdatePublisher::class);
