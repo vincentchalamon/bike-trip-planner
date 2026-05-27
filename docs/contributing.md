@@ -207,12 +207,14 @@ These hooks are project-scoped and apply to all contributors who use Claude Code
 
 ### Skills (slash commands)
 
-Two custom skills are available in Claude Code:
+Four custom skills are available in Claude Code:
 
 | Command                              | Description                                                                  |
 |--------------------------------------|------------------------------------------------------------------------------|
 | `/pick <issue-number> [base-branch]` | Implements a GitHub issue end-to-end (branch, code, test, PR, CI monitoring) |
 | `/sprint <sprint-number>`            | Implements all sprint issues in parallel via worktree agents                 |
+| `/check [qa\|test\|all]`             | Quality goal-loop: runs QA/tests and fixes until green, with real output     |
+| `/close [sprint-number]`             | Closes a sprint: cleans worktrees/branches, updates main, retrospective      |
 
 ### GitHub automation
 
@@ -297,7 +299,7 @@ bike-trip-planner/
 │       └── claude-code-review.yml  # Automated PR code review
 ├── .claude/
 │   ├── settings.json             # Hooks (auto-formatting, file protection)
-│   └── skills/                   # Custom slash commands (pick, sprint)
+│   └── skills/                   # Custom slash commands (pick, sprint, check, close)
 ```
 
 ---
