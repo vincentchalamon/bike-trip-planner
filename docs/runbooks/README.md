@@ -27,6 +27,8 @@ Every runbook follows the same four sections:
 | [release-rollback.md](release-rollback.md) | Roll back a bad deploy via Coolify |
 | [release-checklist.md](release-checklist.md) | Pre-release checklist |
 | [uptime-monitoring.md](uptime-monitoring.md) | Uptime Kuma + UptimeRobot configuration |
+| [secrets-inventory.md](secrets-inventory.md) | Source of truth for every production secret |
+| [secrets-rotation.md](secrets-rotation.md) | Rotation policy + per-class procedures |
 
 ## Conventions
 
