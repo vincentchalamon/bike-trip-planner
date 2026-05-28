@@ -12,7 +12,7 @@ ARG SUPERCRONIC_SHA1SUM=5bcefed628e32adc08e32634db2d10e9230dbca0
 SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 
 # hadolint ignore=DL3018
-RUN apk add --no-cache curl tini \
+RUN apk add --no-cache curl tini flock \
     && curl -fsSLO "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-amd64" \
     && echo "${SUPERCRONIC_SHA1SUM}  supercronic-linux-amd64" | sha1sum -c - \
     && chmod +x supercronic-linux-amd64 \

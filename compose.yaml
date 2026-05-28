@@ -289,6 +289,8 @@ services:
       OSM_CRON_SCHEDULE: "${OSM_CRON_SCHEDULE:-0 3 * * *}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   caddy_data: ~

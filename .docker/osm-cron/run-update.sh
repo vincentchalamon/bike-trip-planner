@@ -16,6 +16,17 @@ log() {
     printf '[osm-cron] %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"
 }
 
+# Concurrency guard — a long-running provisioner must not overlap with the
+# next scheduled fire, otherwise two sibling containers would write to the
+# same OSM data directory and corrupt the merged PBF. flock -n exits
+# immediately when the lock is already held; -E 0 turns that into a benign
+# skip (rc 0) so cron doesn't treat it as a failure.
+LOCK_FILE="${OSM_CRON_LOCK_FILE:-/tmp/osm-cron.lock}"
+if [ -z "${OSM_CRON_LOCKED:-}" ]; then
+    export OSM_CRON_LOCKED=1
+    exec flock -n -E 0 "${LOCK_FILE}" "$0" "$@"
+fi
+
 # Identify the current Compose project from our own labels so we target the
 # Valhalla instance belonging to *this* stack (multi-tenant safe). Falls back
 # to OSM_CRON_PROJECT if the label is unset.
