@@ -10,7 +10,7 @@
 #
 # Designed to be invoked by supercronic in the osm-cron container.
 
-set -eu
+set -euo pipefail
 
 log() {
     printf '[osm-cron] %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"
