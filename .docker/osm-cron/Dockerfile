@@ -7,14 +7,14 @@
 FROM docker:28-cli
 
 ARG SUPERCRONIC_VERSION=v0.2.46
-ARG SUPERCRONIC_SHA1SUM=5bcefed628e32adc08e32634db2d10e9230dbca0
+ARG SUPERCRONIC_SHA256SUM=5adff01c5a797663948e656d2b61d10932369ee437eb5cb54fa872b2960f222b
 
 SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 
 # hadolint ignore=DL3018
 RUN apk add --no-cache curl tini flock \
     && curl -fsSLO "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-amd64" \
-    && echo "${SUPERCRONIC_SHA1SUM}  supercronic-linux-amd64" | sha1sum -c - \
+    && echo "${SUPERCRONIC_SHA256SUM}  supercronic-linux-amd64" | sha256sum -c - \
     && chmod +x supercronic-linux-amd64 \
     && mv supercronic-linux-amd64 /usr/local/bin/supercronic \
     && apk del curl

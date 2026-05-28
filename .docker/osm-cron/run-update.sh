@@ -48,7 +48,7 @@ log "project=${PROJECT} provisioner_image=${PROVISIONER_IMAGE}"
 VALHALLA_CID="$(docker ps \
     --filter "label=com.docker.compose.project=${PROJECT}" \
     --filter "label=com.docker.compose.service=valhalla" \
-    --format '{{.ID}}')"
+    --format '{{.ID}}' | head -n 1)"
 
 if [ -z "${VALHALLA_CID}" ]; then
     log "ERROR: no running Valhalla container found for project ${PROJECT}"
