@@ -29,7 +29,7 @@ final readonly class OsmDataDownloader
         ?\Closure $processFactory = null,
         private int $mergeTimeoutSeconds = 600,
     ) {
-        $this->httpClient = $httpClient ?? HttpClient::create();
+        $this->httpClient = $httpClient ?? HttpClient::create(['max_redirects' => 2]);
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
     }
 
@@ -41,20 +41,24 @@ final readonly class OsmDataDownloader
     /**
      * Download the PBF for the given slug.
      *
-     * When $forceOverwrite is true, the file is written to "{target}.tmp" first
-     * then atomically renamed to the final path so a partial download cannot
-     * corrupt an existing PBF if the process is interrupted.
+     * The file is always written to "{target}.tmp" first then atomically
+     * renamed to the final path so a partial download (or any pre-rename
+     * failure) cannot corrupt an existing PBF at the target path.
      *
      * @throws DownloadFailedException
      */
-    public function download(string $slug, bool $forceOverwrite): void
+    public function download(string $slug): void
     {
         if (!is_dir($this->regionsDir) && !mkdir($this->regionsDir, 0o755, true) && !is_dir($this->regionsDir)) {
             throw new DownloadFailedException(\sprintf('Cannot create regions directory "%s"', $this->regionsDir));
         }
 
         $targetPath = $this->targetPath($slug);
-        $writePath = $forceOverwrite ? $targetPath.'.tmp' : $targetPath;
+        // Always write through a .tmp + atomic rename so a transport failure
+        // can never destroy an existing PBF at $targetPath. The behaviour
+        // difference for $forceOverwrite is in the caller (which skips
+        // download entirely when the file already exists and force is false).
+        $writePath = $targetPath.'.tmp';
         $url = GeofabrikRegionRegistry::downloadUrl($slug);
 
         $fileHandle = fopen($writePath, 'w');
@@ -89,7 +93,7 @@ final readonly class OsmDataDownloader
 
         fclose($fileHandle);
 
-        if ($forceOverwrite && !rename($writePath, $targetPath)) {
+        if (!rename($writePath, $targetPath)) {
             @unlink($writePath);
 
             throw new DownloadFailedException(\sprintf('Atomic rename of "%s" to "%s" failed', $writePath, $targetPath));

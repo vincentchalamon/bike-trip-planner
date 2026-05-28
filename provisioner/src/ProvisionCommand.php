@@ -257,7 +257,7 @@ final class ProvisionCommand extends Command
             $io->write(\sprintf('  [%d/%d] Downloading %s... ', $i + 1, $total, $slug));
 
             try {
-                $this->downloader->download($slug, forceOverwrite: $force);
+                $this->downloader->download($slug);
             } catch (DownloadFailedException $e) {
                 $io->newLine();
                 $io->error($e->getMessage());

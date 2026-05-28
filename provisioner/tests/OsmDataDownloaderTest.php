@@ -54,7 +54,7 @@ final class OsmDataDownloaderTest extends TestCase
         $httpClient = new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes'));
         $downloader = new OsmDataDownloader($this->regionsDir, $httpClient);
 
-        $downloader->download('bretagne', forceOverwrite: false);
+        $downloader->download('bretagne');
 
         $finalPath = $this->regionsDir.'/bretagne-latest.osm.pbf';
         self::assertFileExists($finalPath);
@@ -70,7 +70,7 @@ final class OsmDataDownloaderTest extends TestCase
 
         self::assertDirectoryDoesNotExist($this->regionsDir);
 
-        $downloader->download('alsace', forceOverwrite: false);
+        $downloader->download('alsace');
 
         self::assertDirectoryExists($this->regionsDir);
     }
@@ -96,7 +96,7 @@ final class OsmDataDownloaderTest extends TestCase
         });
 
         $downloader = new OsmDataDownloader($this->regionsDir, $httpClient);
-        $downloader->download('bretagne', forceOverwrite: true);
+        $downloader->download('bretagne');
 
         self::assertTrue($tmpExistedDuringStreaming, '.tmp file should be created before streaming starts');
         self::assertFileExists($finalPath);
@@ -115,7 +115,7 @@ final class OsmDataDownloaderTest extends TestCase
         $downloader = new OsmDataDownloader($this->regionsDir, $httpClient);
 
         try {
-            $downloader->download('bretagne', forceOverwrite: true);
+            $downloader->download('bretagne');
             self::fail('Expected DownloadFailedException');
         } catch (DownloadFailedException $downloadFailedException) {
             self::assertStringContainsString('bretagne', $downloadFailedException->getMessage());
@@ -138,7 +138,7 @@ final class OsmDataDownloaderTest extends TestCase
 
         $this->expectException(DownloadFailedException::class);
 
-        $downloader->download('bretagne', forceOverwrite: false);
+        $downloader->download('bretagne');
     }
 
     #[Test]
