@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision provision-update coverage coverage-ci migration migrate db-create fixtures
 
 help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -122,6 +122,9 @@ test: qa test-php test-e2e openapi-lint security-check ## Run full test suite (R
 ## --- 🗺️ OSM Provisioning ---
 provision: ensure-default-pbf ## Provision OSM regions interactively
 	@docker compose --profile provisioning run --rm provisioner
+
+provision-update: ## Trigger a non-interactive provisioner update (manual osm-cron debug)
+	@docker compose --profile provisioning run --rm provisioner --no-interaction
 
 ## --- 🗄️ Database ---
 migration: ## Generate a Doctrine migration
