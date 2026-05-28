@@ -589,10 +589,10 @@ Mise à jour automatique des cartes OSM consommées par Valhalla. Le provisioner
 
 | Ordre | ID                                                                      | Titre                                                                                                                                  | Effort | PRs | Dépend de |
 |-------|-------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|--------|-----|-----------|
-| 1     | [#477](https://github.com/vincentchalamon/bike-trip-planner/issues/477) | Commande `provision` unifiée install/update + `RegionSelectionStore` + persistance `/data/regions.json`                                | M      |     | —         |
-| 2     | [#478](https://github.com/vincentchalamon/bike-trip-planner/issues/478) | `OsmDataDownloader` partagé : download atomique (`.tmp` + rename) + merge osmium + tests unitaires                                     | S      |     | #477      |
-| 3     | [#479](https://github.com/vincentchalamon/bike-trip-planner/issues/479) | Service `osm-cron` (Dockerfile docker:cli + supercronic + script orchestration) + intégration Compose dev/prod                         | M      |     | #477      |
-| 4     | [#480](https://github.com/vincentchalamon/bike-trip-planner/issues/480) | ADR-030 stratégie refresh OSM (re-download vs pyosmium-up-to-date, scheduler Compose vs crontab hôte) + README provisioning            | S      |     | —         |
+| 1     | [#477](https://github.com/vincentchalamon/bike-trip-planner/issues/477) | Commande `provision` unifiée install/update + `RegionSelectionStore` + persistance `/data/regions.json`                                | M      | [#538](https://github.com/vincentchalamon/bike-trip-planner/pull/538) | —         |
+| 2     | [#478](https://github.com/vincentchalamon/bike-trip-planner/issues/478) | `OsmDataDownloader` partagé : download atomique (`.tmp` + rename) + merge osmium + tests unitaires                                     | S      | [#540](https://github.com/vincentchalamon/bike-trip-planner/pull/540) | #477      |
+| 3     | [#479](https://github.com/vincentchalamon/bike-trip-planner/issues/479) | Service `osm-cron` (Dockerfile docker:cli + supercronic + script orchestration) + intégration Compose dev/prod                         | M      | [#541](https://github.com/vincentchalamon/bike-trip-planner/pull/541) | #477      |
+| 4     | [#480](https://github.com/vincentchalamon/bike-trip-planner/issues/480) | ADR-030 stratégie refresh OSM (re-download vs pyosmium-up-to-date, scheduler Compose vs crontab hôte) + README provisioning            | S      | [#539](https://github.com/vincentchalamon/bike-trip-planner/pull/539) | —         |
 
 ### Recette Sprint 33
 
