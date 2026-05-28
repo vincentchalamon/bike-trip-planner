@@ -30,7 +30,6 @@ final readonly class RegionSelectionStore
         }
 
         try {
-            /** @var mixed $decoded */
             $decoded = json_decode($contents, true, 512, \JSON_THROW_ON_ERROR);
         } catch (\JsonException) {
             return [];
