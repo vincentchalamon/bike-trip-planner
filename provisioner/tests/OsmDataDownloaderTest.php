@@ -129,16 +129,26 @@ final class OsmDataDownloaderTest extends TestCase
     }
 
     #[Test]
-    public function downloadTransportErrorRaisesDownloadFailedException(): void
+    public function downloadTransportErrorRaisesDownloadFailedExceptionAndCleansTempFile(): void
     {
+        mkdir($this->regionsDir, 0o755, true);
+        $finalPath = $this->regionsDir.'/bretagne-latest.osm.pbf';
+        file_put_contents($finalPath, 'stale-but-valid');
+
         $httpClient = new MockHttpClient(static fn (): MockResponse => new MockResponse('', [
             'error' => 'connection refused',
         ]));
         $downloader = new OsmDataDownloader($this->regionsDir, $httpClient);
 
-        $this->expectException(DownloadFailedException::class);
+        try {
+            $downloader->download('bretagne');
+            self::fail('Expected DownloadFailedException');
+        } catch (DownloadFailedException) {
+        }
 
-        $downloader->download('bretagne');
+        self::assertFileExists($finalPath);
+        self::assertSame('stale-but-valid', file_get_contents($finalPath));
+        self::assertFileDoesNotExist($finalPath.'.tmp');
     }
 
     #[Test]
