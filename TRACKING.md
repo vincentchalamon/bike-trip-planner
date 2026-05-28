@@ -889,6 +889,46 @@ Suite à Sprint 35 (recette + audits standards), Sprint 38 industrialise l'analy
 
 ---
 
+## Sprint 39 — Backup & Disaster Recovery
+
+Sprint dédié à la résilience de la donnée en production. ADR-032 (Migrations & Rollback) appelle explicitement un "future plan PostgreSQL backup" en §51-59 : c'est ce sprint. La stack opérationnelle (Coolify, GlitchTip, Uptime Kuma, /api/health, 14 runbooks) et la résilience services (Sprint 38 chaos tests + OOM recovery) sont en place ; il reste à protéger la donnée elle-même. Sans ce sprint, un DROP TABLE accidentel, une destructive migration shippée par erreur, ou une perte de la VM Oracle entraîne une perte de données irréversible. Voir le plan détaillé `/home/vincent/.claude/plans/en-cas-de-bug-mossy-castle.md`.
+
+> **Prérequis :** Sprint 37 (Déploiement) et Sprint 38 (Perf & Resilience) terminés. App déployée iso-prod sur Oracle + Coolify, GlitchTip + Uptime Kuma + Sentry spans + chaos tests opérationnels.
+>
+> **Bloque :** ouverture publique. Tant que ce sprint n'est pas livré, le projet reste en iso-prod sans données utilisateur réelles.
+
+| Ordre | ID                                                                      | Titre                                                                                  | Effort | PRs | Dépend de                                                                                                                                                                                                                                                                                       |
+|-------|-------------------------------------------------------------------------|----------------------------------------------------------------------------------------|--------|-----|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1     | [#527](https://github.com/vincentchalamon/bike-trip-planner/issues/527) | docs(adr): add adr-033 backup and disaster recovery strategy                           | S      | —   | —                                                                                                                                                                                                                                                                                               |
+| 2     | [#528](https://github.com/vincentchalamon/bike-trip-planner/issues/528) | feat(backup): add backup container with pg_dump + age + zstd (local volume)            | M      | —   | [#527](https://github.com/vincentchalamon/bike-trip-planner/issues/527)                                                                                                                                                                                                                         |
+| 3     | [#529](https://github.com/vincentchalamon/bike-trip-planner/issues/529) | feat(backup): wire OCI Object Storage + Backblaze B2 destinations with object lock     | M      | —   | [#528](https://github.com/vincentchalamon/bike-trip-planner/issues/528)                                                                                                                                                                                                                         |
+| 4     | [#530](https://github.com/vincentchalamon/bike-trip-planner/issues/530) | feat(backup): add secrets bundle export (Coolify API + JWT PEMs)                       | S      | —   | [#528](https://github.com/vincentchalamon/bike-trip-planner/issues/528)                                                                                                                                                                                                                         |
+| 5     | [#531](https://github.com/vincentchalamon/bike-trip-planner/issues/531) | feat(backup): backup freshness endpoint + Uptime Kuma monitor                          | S      | —   | [#528](https://github.com/vincentchalamon/bike-trip-planner/issues/528)                                                                                                                                                                                                                         |
+| 6     | [#532](https://github.com/vincentchalamon/bike-trip-planner/issues/532) | docs(runbooks): disaster recovery + backup architecture + key rotation                 | M      | —   | [#528](https://github.com/vincentchalamon/bike-trip-planner/issues/528), [#529](https://github.com/vincentchalamon/bike-trip-planner/issues/529), [#530](https://github.com/vincentchalamon/bike-trip-planner/issues/530)                                                                       |
+| 7     | [#534](https://github.com/vincentchalamon/bike-trip-planner/issues/534) | feat(backup): partial restore script with FK safety + compose.restore.yaml             | S      | —   | [#528](https://github.com/vincentchalamon/bike-trip-planner/issues/528), [#532](https://github.com/vincentchalamon/bike-trip-planner/issues/532)                                                                                                                                                 |
+| 8     | [#535](https://github.com/vincentchalamon/bike-trip-planner/issues/535) | ci: pre-deploy backup step in deploy workflow with [skip backup] bypass                | S      | —   | [#529](https://github.com/vincentchalamon/bike-trip-planner/issues/529)                                                                                                                                                                                                                         |
+| 9     | [#536](https://github.com/vincentchalamon/bike-trip-planner/issues/536) | ci: monthly restore drill workflow dispatching incident-create on failure              | M      | —   | [#529](https://github.com/vincentchalamon/bike-trip-planner/issues/529), [#532](https://github.com/vincentchalamon/bike-trip-planner/issues/532)                                                                                                                                                 |
+
+### Recette Sprint 39
+
+- **Tests E2E :** `tests/recette/sprint-39-backup.spec.ts` (déclenche le service backup, vérifie présence du dump localement + sur OCI + B2 via rclone).
+- **Checklist manuelle :**
+  - [ ] `make backup-now` produit un dump chiffré localement + uploads OCI + B2.
+  - [ ] `rclone ls b2:btp-backups` montre le dump du jour.
+  - [ ] OCI lifecycle retention et B2 Object Lock vérifiés (tentative de delete via UI doit échouer).
+  - [ ] `curl https://biketrip.mooo.com/internal/backup/status` retourne JSON avec `age_seconds < 90000`.
+  - [ ] Uptime Kuma monitor "backup-freshness" actif et green.
+  - [ ] Drill manuel complet : suivre `docs/runbooks/disaster-recovery.md` § "Procédure générique" sur DB ephemeral → `/api/health` green.
+  - [ ] Test restauration sélective : `restore-table.sh trip "id='<uuid>'"` réinjecte sans casser FK.
+  - [ ] `gh workflow run restore-drill.yml` → succès, artefact stocké, `pg_stat_statements` réactivée post-restore.
+  - [ ] Test KO forcé : corrompre volontairement le dump dans le drill → issue créée via `incident-create.yml` avec labels `backup` + `severity:high`.
+  - [ ] Tag `v0.0.0-backup-test` → `deploy.yml` exécute pre-deploy backup avant Coolify dispatch.
+  - [ ] Tag annoté `v0.0.1-hotfix [skip backup]` → pre-deploy backup skippé.
+  - [ ] Runbook DR ouvert par un opérateur qui n'a jamais vu le projet, restauration complète end-to-end < 2 h.
+  - [ ] Triple stockage clé age vérifié (Bitwarden + papier + USB chiffré).
+
+---
+
 ## Hors Sprints
 
 | ID  | Titre                            | Note                     |
@@ -948,4 +988,5 @@ Suite à Sprint 35 (recette + audits standards), Sprint 38 industrialise l'analy
 | 36        | Garmin Connect                           | 1       | 3            |
 | 37        | Déploiement (incl. Ollama prod)          | 8       | ~8           |
 | 38        | Performance & Resilience Deep Dive       | 18      | ~12          |
-| **Total** |                                          | **214** | **~218**     |
+| 39        | Backup & Disaster Recovery               | 9       | ~9           |
+| **Total** |                                          | **223** | **~227**     |
