@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Provisioner;
 
+use Provisioner\Exception\DownloadFailedException;
+use Provisioner\Exception\MergeFailedException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -12,8 +14,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\HttpClient\HttpClient;
-use Symfony\Component\Process\Process;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsCommand(
@@ -30,7 +30,7 @@ final class ProvisionCommand extends Command
 
     private readonly RegionSelectionStore $selectionStore;
 
-    private readonly HttpClientInterface $httpClient;
+    private readonly OsmDataDownloader $downloader;
 
     public function __construct(
         private readonly string $regionsDir = self::DEFAULT_REGIONS_DIR,
@@ -38,12 +38,16 @@ final class ProvisionCommand extends Command
         string $selectionFile = self::DEFAULT_SELECTION_FILE,
         ?RegionSelectionStore $selectionStore = null,
         ?HttpClientInterface $httpClient = null,
+        ?OsmDataDownloader $downloader = null,
         private readonly bool $runMerge = true,
     ) {
         parent::__construct();
 
         $this->selectionStore = $selectionStore ?? new RegionSelectionStore($selectionFile);
-        $this->httpClient = $httpClient ?? HttpClient::create();
+        $this->downloader = $downloader ?? new OsmDataDownloader(
+            regionsDir: $this->regionsDir,
+            httpClient: $httpClient ?? HttpClient::create(),
+        );
     }
 
     protected function configure(): void
@@ -242,57 +246,31 @@ final class ProvisionCommand extends Command
      */
     private function downloadAndMerge(SymfonyStyle $io, array $slugs, bool $force): int
     {
-        if (!is_dir($this->regionsDir) && !mkdir($this->regionsDir, 0o755, true) && !is_dir($this->regionsDir)) {
-            $io->error(\sprintf('Cannot create regions directory: %s', $this->regionsDir));
-
-            return Command::FAILURE;
-        }
-
         $toDownload = [];
         foreach ($slugs as $slug) {
-            $targetPath = \sprintf('%s/%s-latest.osm.pbf', $this->regionsDir, $slug);
+            $targetPath = $this->downloader->targetPath($slug);
 
             if (!$force && file_exists($targetPath)) {
                 $io->writeln(\sprintf('  [skip] %s (already downloaded)', $slug));
                 continue;
             }
 
-            $toDownload[] = ['slug' => $slug, 'path' => $targetPath];
+            $toDownload[] = $slug;
         }
 
         $total = \count($toDownload);
-        foreach ($toDownload as $i => $region) {
-            $io->write(\sprintf('  [%d/%d] Downloading %s... ', $i + 1, $total, $region['slug']));
-            $url = GeofabrikRegionRegistry::downloadUrl($region['slug']);
-
-            $response = $this->httpClient->request('GET', $url);
-            $fileHandle = fopen($region['path'], 'w');
-
-            if (false === $fileHandle) {
-                $io->error(\sprintf('Cannot write to %s', $region['path']));
-
-                return Command::FAILURE;
-            }
+        foreach ($toDownload as $i => $slug) {
+            $io->write(\sprintf('  [%d/%d] Downloading %s... ', $i + 1, $total, $slug));
 
             try {
-                foreach ($this->httpClient->stream($response) as $chunk) {
-                    if (false === fwrite($fileHandle, $chunk->getContent())) {
-                        fclose($fileHandle);
-                        @unlink($region['path']);
-                        $io->error(\sprintf('Failed to write to %s', $region['path']));
-
-                        return Command::FAILURE;
-                    }
-                }
-            } catch (TransportExceptionInterface $e) {
-                fclose($fileHandle);
-                @unlink($region['path']);
-                $io->error(\sprintf('Download of %s interrupted: %s', $region['slug'], $e->getMessage()));
+                $this->downloader->download($slug, forceOverwrite: $force);
+            } catch (DownloadFailedException $e) {
+                $io->newLine();
+                $io->error($e->getMessage());
 
                 return Command::FAILURE;
             }
 
-            fclose($fileHandle);
             $io->writeln("\u{2713}");
         }
 
@@ -304,17 +282,11 @@ final class ProvisionCommand extends Command
         if ([] !== $pbfFiles) {
             $io->write('  Merging PBF files with osmium... ');
 
-            $mergeCmd = array_merge(
-                ['osmium', 'merge', '--overwrite', '-o', $this->mergedPbf],
-                $pbfFiles,
-            );
-
-            $process = new Process($mergeCmd);
-            $process->setTimeout(600);
-            $process->run();
-
-            if (!$process->isSuccessful()) {
-                $io->error('osmium merge failed: '.$process->getErrorOutput());
+            try {
+                $this->downloader->merge(array_values($pbfFiles), $this->mergedPbf);
+            } catch (MergeFailedException $e) {
+                $io->newLine();
+                $io->error($e->getMessage());
 
                 return Command::FAILURE;
             }
