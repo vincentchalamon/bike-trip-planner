@@ -11,23 +11,23 @@ use Symfony\Component\Process\Process;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-final class OsmDataDownloader
+final readonly class OsmDataDownloader
 {
-    private readonly HttpClientInterface $httpClient;
+    private HttpClientInterface $httpClient;
 
     /**
      * @var \Closure(list<string>): Process
      */
-    private readonly \Closure $processFactory;
+    private \Closure $processFactory;
 
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory factory used to build the osmium process; defaults to a real {@see Process}
      */
     public function __construct(
-        private readonly string $regionsDir,
+        private string $regionsDir,
         ?HttpClientInterface $httpClient = null,
         ?\Closure $processFactory = null,
-        private readonly int $mergeTimeoutSeconds = 600,
+        private int $mergeTimeoutSeconds = 600,
     ) {
         $this->httpClient = $httpClient ?? HttpClient::create();
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);

@@ -283,7 +283,7 @@ final class ProvisionCommand extends Command
             $io->write('  Merging PBF files with osmium... ');
 
             try {
-                $this->downloader->merge(array_values($pbfFiles), $this->mergedPbf);
+                $this->downloader->merge($pbfFiles, $this->mergedPbf);
             } catch (MergeFailedException $e) {
                 $io->newLine();
                 $io->error($e->getMessage());

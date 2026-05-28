@@ -44,6 +44,7 @@ final class OsmDataDownloaderTest extends TestCase
                 unlink($entry);
             }
         }
+
         rmdir($dir);
     }
 
@@ -116,9 +117,9 @@ final class OsmDataDownloaderTest extends TestCase
         try {
             $downloader->download('bretagne', forceOverwrite: true);
             self::fail('Expected DownloadFailedException');
-        } catch (DownloadFailedException $e) {
-            self::assertStringContainsString('bretagne', $e->getMessage());
-            self::assertStringContainsString('404', $e->getMessage());
+        } catch (DownloadFailedException $downloadFailedException) {
+            self::assertStringContainsString('bretagne', $downloadFailedException->getMessage());
+            self::assertStringContainsString('404', $downloadFailedException->getMessage());
         }
 
         // Stale final file must remain untouched, temp must be gone.
@@ -181,10 +182,10 @@ final class OsmDataDownloaderTest extends TestCase
         try {
             $downloader->merge(['/a.osm.pbf'], $this->tmpDir.'/merged.osm.pbf');
             self::fail('Expected MergeFailedException');
-        } catch (MergeFailedException $e) {
-            self::assertStringContainsString('osmium merge failed', $e->getMessage());
-            self::assertStringContainsString('boom', $e->getMessage());
-            self::assertStringContainsString('exit 2', $e->getMessage());
+        } catch (MergeFailedException $mergeFailedException) {
+            self::assertStringContainsString('osmium merge failed', $mergeFailedException->getMessage());
+            self::assertStringContainsString('boom', $mergeFailedException->getMessage());
+            self::assertStringContainsString('exit 2', $mergeFailedException->getMessage());
         }
     }
 
