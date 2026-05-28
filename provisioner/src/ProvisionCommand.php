@@ -13,6 +13,7 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\Process\Process;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsCommand(
@@ -273,14 +274,22 @@ final class ProvisionCommand extends Command
                 return Command::FAILURE;
             }
 
-            foreach ($this->httpClient->stream($response) as $chunk) {
-                if (false === fwrite($fileHandle, $chunk->getContent())) {
-                    fclose($fileHandle);
-                    @unlink($region['path']);
-                    $io->error(\sprintf('Failed to write to %s', $region['path']));
+            try {
+                foreach ($this->httpClient->stream($response) as $chunk) {
+                    if (false === fwrite($fileHandle, $chunk->getContent())) {
+                        fclose($fileHandle);
+                        @unlink($region['path']);
+                        $io->error(\sprintf('Failed to write to %s', $region['path']));
 
-                    return Command::FAILURE;
+                        return Command::FAILURE;
+                    }
                 }
+            } catch (TransportExceptionInterface $e) {
+                fclose($fileHandle);
+                @unlink($region['path']);
+                $io->error(\sprintf('Download of %s interrupted: %s', $region['slug'], $e->getMessage()));
+
+                return Command::FAILURE;
             }
 
             fclose($fileHandle);
