@@ -64,13 +64,16 @@ final readonly class OsmDataDownloader
 
         try {
             $response = $this->httpClient->request('GET', $url);
-            foreach ($this->httpClient->stream($response) as $chunk) {
-                fwrite($fileHandle, $chunk->getContent());
-            }
 
             $statusCode = $response->getStatusCode();
             if ($statusCode < 200 || $statusCode >= 300) {
                 throw new DownloadFailedException(\sprintf('Download of "%s" failed with HTTP %d', $slug, $statusCode));
+            }
+
+            foreach ($this->httpClient->stream($response) as $chunk) {
+                if (false === fwrite($fileHandle, $chunk->getContent())) {
+                    throw new DownloadFailedException(\sprintf('Failed to write to "%s" while downloading "%s"', $writePath, $slug));
+                }
             }
         } catch (HttpClientExceptionInterface $e) {
             fclose($fileHandle);

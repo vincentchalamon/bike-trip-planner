@@ -13,8 +13,6 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\HttpClient\HttpClient;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsCommand(
     name: 'provision',
@@ -37,17 +35,13 @@ final class ProvisionCommand extends Command
         private readonly string $mergedPbf = self::DEFAULT_MERGED_PBF,
         string $selectionFile = self::DEFAULT_SELECTION_FILE,
         ?RegionSelectionStore $selectionStore = null,
-        ?HttpClientInterface $httpClient = null,
         ?OsmDataDownloader $downloader = null,
         private readonly bool $runMerge = true,
     ) {
         parent::__construct();
 
         $this->selectionStore = $selectionStore ?? new RegionSelectionStore($selectionFile);
-        $this->downloader = $downloader ?? new OsmDataDownloader(
-            regionsDir: $this->regionsDir,
-            httpClient: $httpClient ?? HttpClient::create(),
-        );
+        $this->downloader = $downloader ?? new OsmDataDownloader(regionsDir: $this->regionsDir);
     }
 
     protected function configure(): void

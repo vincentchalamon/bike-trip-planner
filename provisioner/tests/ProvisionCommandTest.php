@@ -61,7 +61,10 @@ final class ProvisionCommandTest extends TestCase
             regionsDir: $this->regionsDir,
             mergedPbf: $this->mergedPbf,
             selectionFile: $this->selectionFile,
-            httpClient: $httpClient ?? new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes')),
+            downloader: new \Provisioner\OsmDataDownloader(
+                regionsDir: $this->regionsDir,
+                httpClient: $httpClient ?? new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes')),
+            ),
             runMerge: false,
         );
 
