@@ -276,6 +276,22 @@ services:
     restart: "no"
     profiles: ["provisioning"]
 
+  # Nightly OSM refresh scheduler (mirrors compose.prod.yaml).
+  # Profile-gated to "routing" so it only runs when explicitly opted in
+  # locally — useful to exercise the full refresh + Valhalla restart cycle.
+  osm-cron:
+    build:
+      context: ./
+      dockerfile: .docker/osm-cron/Dockerfile
+    restart: unless-stopped
+    profiles: ["routing"]
+    environment:
+      OSM_CRON_SCHEDULE: "${OSM_CRON_SCHEDULE:-0 3 * * *}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    security_opt:
+      - no-new-privileges:true
+
 volumes:
   caddy_data: ~
   caddy_config: ~

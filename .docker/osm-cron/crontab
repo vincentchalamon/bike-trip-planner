@@ -1,0 +1,3 @@
+# Placeholder crontab. The actual schedule is written at container start
+# from the OSM_CRON_SCHEDULE env var (see Dockerfile CMD).
+0 3 * * * /usr/local/bin/run-update.sh
