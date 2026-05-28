@@ -841,6 +841,54 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 
 ---
 
+## Sprint 38 — Performance & Resilience Deep Dive
+
+Suite à Sprint 35 (recette + audits standards), Sprint 38 industrialise l'analyse de performance avancée : micro-benchs PHP, load testing scriptable, profiling à la demande, observabilité applicative ciblée, audit infrastructure, résilience aux pannes, et empreinte carbone publiée. Tests menés en iso-prod sur la VM Oracle pré-ouverture, avec validation device physique (Samsung Galaxy S20 FE). Voir le plan détaillé `/home/vincent/.claude/plans/quelle-solution-d-analyse-des-zippy-hoare.md`.
+
+> **Prérequis :** Sprint 37 (Déploiement) terminé, app déployée iso-prod sur Oracle + Coolify, GlitchTip + Uptime Kuma opérationnels (ADR-031).
+
+| Ordre | ID                                                                    | Titre                                                                                                              | Effort | PRs | Dépend de                                                                                                                                                  |
+|-------|-----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|--------|-----|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1     | [#508](https://github.com/vincentchalamon/bike-trip-planner/issues/508) | feat(perf): PHPBench hot paths + in-ride benchs                                                                  | M      | —   | —                                                                                                                                                          |
+| 2     | [#509](https://github.com/vincentchalamon/bike-trip-planner/issues/509) | feat(perf): k6 scenarios + fixtures Komoot/GPX + Makefile                                                        | M      | —   | —                                                                                                                                                          |
+| 3     | [#510](https://github.com/vincentchalamon/bike-trip-planner/issues/510) | feat(observability): Postgres pg_stat_statements + Redis SLOWLOG + Messenger queue depth                          | S      | —   | —                                                                                                                                                          |
+| 4     | [#511](https://github.com/vincentchalamon/bike-trip-planner/issues/511) | feat(ci): perf.yml workflow (PHPBench + k6 + bundle-analyzer nightly)                                            | S      | —   | [#508](https://github.com/vincentchalamon/bike-trip-planner/issues/508), [#509](https://github.com/vincentchalamon/bike-trip-planner/issues/509)            |
+| 5     | [#512](https://github.com/vincentchalamon/bike-trip-planner/issues/512) | feat(perf): Lighthouse CI desktop + mobile (S20 FE preset)                                                       | S      | —   | —                                                                                                                                                          |
+| 6     | [#513](https://github.com/vincentchalamon/bike-trip-planner/issues/513) | docs(perf): S20 FE physical device test checklist + IndexedDB perf                                               | S      | —   | —                                                                                                                                                          |
+| 7     | [#514](https://github.com/vincentchalamon/bike-trip-planner/issues/514) | feat(eco): Carbon footprint measure + public /eco page + CarbonStatsCard                                         | M      | —   | [#512](https://github.com/vincentchalamon/bike-trip-planner/issues/512)                                                                                    |
+| 8     | [#515](https://github.com/vincentchalamon/bike-trip-planner/issues/515) | feat(observability): Sentry custom spans backend (Ollama/InRide/Overpass/Valhalla/TripDetail/TripChat/Mercure)    | M      | —   | —                                                                                                                                                          |
+| 9     | [#516](https://github.com/vincentchalamon/bike-trip-planner/issues/516) | feat(observability): Sentry spans frontend + Mercure SSE end-to-end latency                                      | M      | —   | [#515](https://github.com/vincentchalamon/bike-trip-planner/issues/515)                                                                                    |
+| 10    | [#517](https://github.com/vincentchalamon/bike-trip-planner/issues/517) | fix(perf): ChatHistoryLoader AbortController + PoiCard React.memo                                                | S      | —   | —                                                                                                                                                          |
+| 11    | [#518](https://github.com/vincentchalamon/bike-trip-planner/issues/518) | feat(perf): Excimer + Speedscope ad-hoc profiling on iso-prod                                                    | M      | —   | —                                                                                                                                                          |
+| 12    | [#519](https://github.com/vincentchalamon/bike-trip-planner/issues/519) | feat(ci): smoke-test extended with latency assertions + Lighthouse post-deploy                                   | S      | —   | [#512](https://github.com/vincentchalamon/bike-trip-planner/issues/512)                                                                                    |
+| 13    | [#520](https://github.com/vincentchalamon/bike-trip-planner/issues/520) | docs(perf): GlitchTip dashboards documentation + slow-trip-computation runbook                                   | S      | —   | [#515](https://github.com/vincentchalamon/bike-trip-planner/issues/515), [#516](https://github.com/vincentchalamon/bike-trip-planner/issues/516)            |
+| 14    | [#521](https://github.com/vincentchalamon/bike-trip-planner/issues/521) | chore(infra): Caddy audit (Brotli, cache headers, HTTP/3, Server-Timing)                                         | S      | —   | —                                                                                                                                                          |
+| 15    | [#522](https://github.com/vincentchalamon/bike-trip-planner/issues/522) | chore(infra): Postgres indexes audit + Redis bigkeys audit                                                       | M      | —   | [#510](https://github.com/vincentchalamon/bike-trip-planner/issues/510)                                                                                    |
+| 16    | [#523](https://github.com/vincentchalamon/bike-trip-planner/issues/523) | feat(resilience): chaos test scripts (Ollama/Overpass/Valhalla/Mercure/Redis/Postgres down) + resilience-tests doc | M      | —   | —                                                                                                                                                          |
+| 17    | [#524](https://github.com/vincentchalamon/bike-trip-planner/issues/524) | feat(resilience): OOM / VM recovery test + update oracle-vm-reclaimed runbook                                    | S      | —   | [#523](https://github.com/vincentchalamon/bike-trip-planner/issues/523)                                                                                    |
+| 18    | [#525](https://github.com/vincentchalamon/bike-trip-planner/issues/525) | feat(perf): inter-release baselines comparison script + CI diff comment                                          | S      | —   | [#508](https://github.com/vincentchalamon/bike-trip-planner/issues/508), [#509](https://github.com/vincentchalamon/bike-trip-planner/issues/509), [#512](https://github.com/vincentchalamon/bike-trip-planner/issues/512) |
+
+### Recette Sprint 38
+
+- **Tests E2E :** `tests/recette/sprint-38.spec.ts` (nouveaux scénarios perf + résilience)
+- **Checklist manuelle :**
+  - [ ] `make phpbench` exécute les 7 benchs, baselines stockées dans `docs/perf/baselines/<release>/`
+  - [ ] `make perf-load TARGET=https://biketrip.mooo.com` exécute les 5 scénarios k6 cold + hot, baselines stockées
+  - [ ] Workflow CI `perf.yml` exécute Lighthouse desktop + mobile à chaque PR avec assertions
+  - [ ] Page `/eco` publique affiche l'empreinte carbone mesurée, lien depuis footer
+  - [ ] GlitchTip Performance UI montre les transactions custom (Ollama, InRide, Mercure, etc.)
+  - [ ] `coolify env set EXCIMER_ENABLED=1` + `curl -H "X-Profile: 1" .../api/trips/<id>` produit un Speedscope JSON exploitable
+  - [ ] Smoke-test post-deploy échoue si `/api/health` deps latency dépasse les seuils
+  - [ ] Session S20 FE physique : checklist `docs/perf/mobile-device-test.md` complétée, baselines enregistrées
+  - [ ] Caddy : Brotli actif, cache headers immutable sur statics, HTTP/3 activé
+  - [ ] Postgres `pg_stat_statements` actif, slow query log opérationnel
+  - [ ] Chaos tests : Ollama/Overpass/Valhalla/Mercure down → app dégrade proprement (pas de 500, message user clair)
+  - [ ] OOM test : time-to-recovery VM mesuré, runbook `oracle-vm-reclaimed.md` updaté
+  - [ ] `scripts/perf-diff.sh <a> <b>` produit un Markdown lisible de comparaison de releases
+  - [ ] Tous les SLOs cibles du plan validés ou écarts documentés en issues `[perf-debt]`
+
+---
+
 ## Hors Sprints
 
 | ID  | Titre                            | Note                     |
@@ -899,4 +947,5 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 35        | Recette complète & Audit                 | 36      | ~12          |
 | 36        | Garmin Connect                           | 1       | 3            |
 | 37        | Déploiement (incl. Ollama prod)          | 8       | ~8           |
-| **Total** |                                          | **196** | **~206**     |
+| 38        | Performance & Resilience Deep Dive       | 18      | ~12          |
+| **Total** |                                          | **214** | **~218**     |
