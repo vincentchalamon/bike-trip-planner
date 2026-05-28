@@ -23,6 +23,7 @@
 ## Verification
 
 - [ ] Related runbook updated if applicable
+- [ ] If this PR introduces or removes a secret, `docs/runbooks/secrets-inventory.md` is updated
 
 ## Auto-critique
 
