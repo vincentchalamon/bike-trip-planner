@@ -4,10 +4,12 @@
 # Uses supercronic (cron designed for containers, logs to stdout) and the
 # official Docker CLI binary to orchestrate sibling containers via the
 # host's Docker socket (bind-mounted by compose).
-FROM docker:28-cli-alpine3.21
+FROM docker:28-cli
 
 ARG SUPERCRONIC_VERSION=v0.2.46
 ARG SUPERCRONIC_SHA1SUM=5bcefed628e32adc08e32634db2d10e9230dbca0
+
+SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 
 # hadolint ignore=DL3018
 RUN apk add --no-cache curl tini \
