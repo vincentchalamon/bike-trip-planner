@@ -1,0 +1,243 @@
+name: Incident — auto-create issue
+
+# Listens to repository_dispatch events emitted by external monitoring services
+# (GlitchTip, Uptime Kuma, UptimeRobot) and opens a deduplicated incident
+# issue. See docs/runbooks/incident-alerting.md for the full flow.
+#
+# Security: all untrusted input (client_payload) is consumed via the
+# `context.payload.client_payload` JS object inside actions/github-script.
+# We never interpolate ${{ github.event.* }} into `run:` blocks, so shell
+# injection from a forged dispatch payload is not possible.
+
+on:
+  repository_dispatch:
+    types:
+      - error_alert
+      - uptime_alert
+
+permissions:
+  issues: write
+
+jobs:
+  create-incident:
+    name: Create or update incident issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Parse payload, dedupe, create or comment
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const crypto = require('crypto');
+
+            const eventType = context.payload.action;
+            const payload = context.payload.client_payload || {};
+
+            core.info(`Received event_type=${eventType}`);
+
+            const safe = (value, fallback = 'unknown') =>
+              typeof value === 'string' && value.length > 0 ? value : fallback;
+
+            const sha256Short = (input) =>
+              crypto.createHash('sha256').update(String(input)).digest('hex').slice(0, 12);
+
+            let fingerprint;
+            let shortDescription;
+            let source;
+            let severity;
+            let bodySections;
+
+            if (eventType === 'error_alert') {
+              const issue = payload.issue || payload.event || {};
+              const culprit = safe(issue.culprit || issue.location, 'unknown-culprit');
+              const title = safe(issue.title || payload.message, 'untitled-error');
+              const level = safe(issue.level || payload.level, 'error').toLowerCase();
+              const count = Number(issue.count || payload.count || 0);
+              const eventUrl = safe(issue.web_url || issue.url || payload.url, '');
+              const environment = safe(payload.environment || issue.environment, 'production');
+              const release = safe(payload.release || issue.release, 'unknown');
+              const requestId = safe(
+                (issue.tags && issue.tags.request_id) || payload.request_id,
+                'n/a',
+              );
+
+              fingerprint = sha256Short(`${culprit}::${title}`);
+              shortDescription = title.slice(0, 80);
+              source = 'GlitchTip';
+
+              const isCritical =
+                level === 'fatal' ||
+                level === 'critical' ||
+                count > 50 ||
+                /database|connection refused|out of memory|panic/i.test(title);
+              severity = isCritical ? 1 : level === 'error' ? 2 : 3;
+
+              bodySections = [
+                '## Source',
+                '',
+                '- **System:** GlitchTip (`error_alert`)',
+                `- **Environment:** \`${environment}\``,
+                `- **Release:** \`${release}\``,
+                `- **Level:** \`${level}\``,
+                `- **Occurrences (last window):** ${count || 'n/a'}`,
+                '',
+                '## Event details',
+                '',
+                `- **Title:** ${title}`,
+                `- **Culprit:** \`${culprit}\``,
+                `- **Request ID:** \`${requestId}\``,
+                eventUrl ? `- **GlitchTip event:** ${eventUrl}` : '',
+                '',
+                '## Stack/Context',
+                '',
+                '```json',
+                JSON.stringify(payload, null, 2).slice(0, 4000),
+                '```',
+                '',
+                '## Diagnostic',
+                '',
+                '1. Open the GlitchTip event URL above for the full stack trace and breadcrumbs.',
+                '2. Cross-reference the `request_id` in Caddy/Symfony/Messenger logs.',
+                '3. Follow the relevant runbook in [`docs/runbooks/`](../tree/main/docs/runbooks):',
+                '   - `worker-stuck.md` if the error comes from a Messenger handler',
+                '   - `database-disk-full.md` / `redis-out-of-memory.md` for infrastructure errors',
+                '   - `mercure-disconnected.md` for SSE issues',
+                '',
+                '## Resolution',
+                '',
+                '_To be filled when the incident is closed._',
+              ];
+            } else if (eventType === 'uptime_alert') {
+              const monitorName = safe(
+                payload.monitor_name || payload.monitorFriendlyName || payload.monitor,
+                'unknown-monitor',
+              );
+              const monitorUrl = safe(payload.monitor_url || payload.url, '');
+              const status = safe(payload.status || payload.alertType, 'down').toLowerCase();
+              const message = safe(payload.message || payload.alertDetails, '');
+              const heartbeat = payload.heartbeat || {};
+              const latencyMs = Number(heartbeat.ping || payload.responseTime || 0);
+
+              // Cap at 41 chars so the resulting `event-fp:<fingerprint>`
+              // label (9-char prefix + fingerprint) fits within GitHub's
+              // 50-character label name limit.
+              fingerprint = `${monitorName}-${status}`
+                .toLowerCase()
+                .replace(/[^a-z0-9-]+/g, '-')
+                .slice(0, 41);
+              shortDescription = `${monitorName} is ${status}`;
+              source = 'Uptime';
+
+              const path = monitorUrl.toLowerCase();
+              const isCriticalPath =
+                /\/api\/healthz/.test(path) ||
+                monitorName.toLowerCase().includes('homepage') ||
+                monitorName.toLowerCase().includes('healthz');
+
+              // Per severity-levels.md, any `status == down` on a non-critical
+              // monitor (deep health, optional deps, anything else) is P2.
+              // Recoveries and other statuses default to P3.
+              if (status === 'down' && isCriticalPath) {
+                severity = 1;
+              } else if (status === 'down') {
+                severity = 2;
+              } else {
+                severity = 3;
+              }
+
+              bodySections = [
+                '## Source',
+                '',
+                '- **System:** Uptime monitoring (`uptime_alert`)',
+                `- **Monitor:** \`${monitorName}\``,
+                monitorUrl ? `- **URL:** ${monitorUrl}` : '',
+                `- **Status:** \`${status}\``,
+                latencyMs ? `- **Latency:** ${latencyMs} ms` : '',
+                '',
+                '## Event details',
+                '',
+                message ? `- **Message:** ${message}` : '- _No message provided_',
+                '',
+                '## Stack/Context',
+                '',
+                '```json',
+                JSON.stringify(payload, null, 2).slice(0, 4000),
+                '```',
+                '',
+                '## Diagnostic',
+                '',
+                '1. Check Coolify dashboard for container status.',
+                '2. `curl https://biketrip.mooo.com/api/health | jq` to inspect dependencies.',
+                '3. Follow the relevant runbook in [`docs/runbooks/`](../tree/main/docs/runbooks):',
+                '   - `uptime-monitoring.md` for the monitoring architecture',
+                '   - `worker-stuck.md`, `redis-out-of-memory.md`, `database-disk-full.md` per cause',
+                '   - `release-rollback.md` if the outage followed a deploy',
+                '',
+                '## Resolution',
+                '',
+                '_To be filled when the incident is closed._',
+              ];
+            } else {
+              core.setFailed(`Unsupported event_type: ${eventType}`);
+              return;
+            }
+
+            const fingerprintLabel = `event-fp:${fingerprint}`;
+            const severityLabel = `severity-p${severity}`;
+            const issueTitle = `[P${severity}] ${source}: ${shortDescription}`;
+            const body = bodySections.filter(Boolean).join('\n');
+
+            const { owner, repo } = context.repo;
+            const existing = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: fingerprintLabel,
+              per_page: 5,
+            });
+
+            const now = new Date().toISOString();
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+
+            if (existing.data.length > 0) {
+              const existingIssue = existing.data[0];
+              core.info(`Found existing issue #${existingIssue.number}, adding comment`);
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existingIssue.number,
+                body: [
+                  `Additional occurrence at \`${now}\` (event_type: \`${eventType}\`).`,
+                  '',
+                  `- Workflow run: ${runUrl}`,
+                  '',
+                  '<details><summary>Raw payload</summary>',
+                  '',
+                  '```json',
+                  JSON.stringify(payload, null, 2).slice(0, 3500),
+                  '```',
+                  '',
+                  '</details>',
+                ].join('\n'),
+              });
+              core.setOutput('issue_number', existingIssue.number);
+              core.setOutput('action', 'commented');
+              return;
+            }
+
+            core.info(`No existing issue, creating new one with fingerprint ${fingerprint}`);
+            const created = await github.rest.issues.create({
+              owner,
+              repo,
+              title: issueTitle,
+              body: [
+                body,
+                '',
+                '---',
+                `Auto-created by [\`incident-create.yml\`](../blob/main/.github/workflows/incident-create.yml) at \`${now}\`.`,
+                `Workflow run: ${runUrl}`,
+              ].join('\n'),
+              labels: ['incident', severityLabel, fingerprintLabel],
+            });
+            core.setOutput('issue_number', created.data.number);
+            core.setOutput('action', 'created');
+            core.info(`Created issue #${created.data.number}`);
