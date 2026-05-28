@@ -65,6 +65,8 @@ final readonly class RegionSelectionStore
             \JSON_PRETTY_PRINT | \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES,
         );
 
-        file_put_contents($this->path, $payload.\PHP_EOL);
+        if (false === file_put_contents($this->path, $payload.\PHP_EOL)) {
+            throw new \RuntimeException(\sprintf('Failed to write region selection to %s', $this->path));
+        }
     }
 }

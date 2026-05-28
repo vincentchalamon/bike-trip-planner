@@ -177,6 +177,37 @@ final class ProvisionCommandTest extends TestCase
     }
 
     #[Test]
+    public function dryRunDuringUpdateFlowDoesNotDownload(): void
+    {
+        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
+
+        $httpClient = new MockHttpClient(static function (): MockResponse {
+            self::fail('Dry run should not perform HTTP requests');
+        });
+        $tester = $this->buildTester($httpClient);
+
+        $exitCode = $tester->execute(['--dry-run' => true], ['interactive' => false]);
+
+        self::assertSame(0, $exitCode, $tester->getDisplay());
+        self::assertStringContainsString('Dry run', $tester->getDisplay());
+        self::assertFalse(is_file($this->regionsDir.'/bretagne-latest.osm.pbf'));
+    }
+
+    #[Test]
+    public function unknownSlugInSelectionFailsWithClearError(): void
+    {
+        // Write a tampered selection bypassing RegionSelectionStore::save() validation.
+        file_put_contents($this->selectionFile, json_encode(['slugs' => ['../../evil']]));
+
+        $tester = $this->buildTester();
+
+        $exitCode = $tester->execute([], ['interactive' => false]);
+
+        self::assertSame(1, $exitCode);
+        self::assertStringContainsString('unknown slugs', $tester->getDisplay());
+    }
+
+    #[Test]
     public function emptySelectionExitsGracefully(): void
     {
         $tester = $this->buildTester();

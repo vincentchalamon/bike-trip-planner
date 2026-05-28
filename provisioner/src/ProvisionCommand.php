@@ -169,8 +169,25 @@ final class ProvisionCommand extends Command
     private function runUpdateFlow(SymfonyStyle $io, bool $dryRun, bool $interactive): int
     {
         $slugs = $this->selectionStore->load();
+        $knownSlugs = array_column(GeofabrikRegionRegistry::all(), 'slug');
+        $unknown = array_values(array_diff($slugs, $knownSlugs));
+
+        if ([] !== $unknown) {
+            $io->error(\sprintf(
+                'Selection file contains unknown slugs: %s. Run `make provision` interactively to reconfigure.',
+                implode(', ', $unknown),
+            ));
+
+            return Command::FAILURE;
+        }
 
         if ([] === $slugs) {
+            if (!$interactive) {
+                $io->error('Selection file exists but is empty or invalid. Run `make provision` interactively to recreate it.');
+
+                return Command::FAILURE;
+            }
+
             $io->warning('Selection file exists but is empty or invalid. Falling back to install flow.');
 
             return $this->runInstallFlow($io, $dryRun);
@@ -255,7 +272,13 @@ final class ProvisionCommand extends Command
             }
 
             foreach ($this->httpClient->stream($response) as $chunk) {
-                fwrite($fileHandle, $chunk->getContent());
+                if (false === fwrite($fileHandle, $chunk->getContent())) {
+                    fclose($fileHandle);
+                    @unlink($region['path']);
+                    $io->error(\sprintf('Failed to write to %s', $region['path']));
+
+                    return Command::FAILURE;
+                }
             }
 
             fclose($fileHandle);
