@@ -123,11 +123,7 @@ final readonly class OsmDataDownloader
         $process->run();
 
         if (!$process->isSuccessful()) {
-            throw new MergeFailedException(\sprintf(
-                'osmium merge failed (exit %s): %s',
-                (string) $process->getExitCode(),
-                $process->getErrorOutput(),
-            ));
+            throw new MergeFailedException(\sprintf('osmium merge failed (exit %s): %s', (string) $process->getExitCode(), $process->getErrorOutput()));
         }
     }
 }
