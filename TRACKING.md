@@ -891,7 +891,7 @@ Suite à Sprint 35 (recette + audits standards), Sprint 38 industrialise l'analy
 
 ## Sprint 39 — Backup & Disaster Recovery
 
-Sprint dédié à la résilience de la donnée en production. ADR-032 (Migrations & Rollback) appelle explicitement un "future plan PostgreSQL backup" en §51-59 : c'est ce sprint. La stack opérationnelle (Coolify, GlitchTip, Uptime Kuma, /api/health, 14 runbooks) et la résilience services (Sprint 38 chaos tests + OOM recovery) sont en place ; il reste à protéger la donnée elle-même. Sans ce sprint, un DROP TABLE accidentel, une destructive migration shippée par erreur, ou une perte de la VM Oracle entraîne une perte de données irréversible. Voir le plan détaillé `/home/vincent/.claude/plans/en-cas-de-bug-mossy-castle.md`.
+Sprint dédié à la résilience de la donnée en production. ADR-032 (Migrations & Rollback) appelle explicitement un "future plan PostgreSQL backup" en §51-59 : c'est ce sprint. La stack opérationnelle (Coolify, GlitchTip, Uptime Kuma, /api/health, 14 runbooks) et la résilience services (Sprint 38 chaos tests + OOM recovery) sont en place ; il reste à protéger la donnée elle-même. Sans ce sprint, un DROP TABLE accidentel, une destructive migration shippée par erreur, ou une perte de la VM Oracle entraîne une perte de données irréversible.
 
 > **Prérequis :** Sprint 37 (Déploiement) et Sprint 38 (Perf & Resilience) terminés. App déployée iso-prod sur Oracle + Coolify, GlitchTip + Uptime Kuma + Sentry spans + chaos tests opérationnels.
 >
