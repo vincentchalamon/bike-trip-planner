@@ -69,7 +69,14 @@ Invalide toutes les sessions en cours (refresh tokens DB inclus, car la vérific
    docker compose exec php bin/console lexik:jwt:generate-keypair --overwrite
    ```
 
-   Cela écrit `config/jwt/private.pem` et `config/jwt/public.pem`. Les chemins runtime (`/etc/bike-trip-planner/jwt/*.pem`) sont **montés depuis l'hôte** : copier explicitement les nouveaux PEM vers `/etc/bike-trip-planner/jwt/` sur la VM.
+   Cela écrit les PEM dans `/app/config/jwt/` (espace de travail du container). Les chemins runtime (`/etc/bike-trip-planner/jwt/*.pem`) sont **montés depuis l'hôte** ; extraire les fichiers générés :
+
+   ```bash
+   docker cp php:/app/config/jwt/private.pem /etc/bike-trip-planner/jwt/private.pem
+   docker cp php:/app/config/jwt/public.pem  /etc/bike-trip-planner/jwt/public.pem
+   chmod 600 /etc/bike-trip-planner/jwt/private.pem
+   ```
+
 2. Mettre à jour `JWT_PASSPHRASE` dans Coolify (utiliser la passphrase saisie lors de la regen).
 3. Redéployer la stack pour que `php` et `worker` rechargent les secrets Docker.
 4. Communiquer aux testeurs : "reconnexion magic link nécessaire".
