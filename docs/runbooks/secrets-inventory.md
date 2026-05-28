@@ -52,7 +52,7 @@ Pour la rotation : voir [secrets-rotation.md](secrets-rotation.md).
 
 En cas de bootstrap depuis zéro (VM perdue, Coolify réinstallé) :
 
-1. Récupérer la clé privée `age` depuis **Bitwarden vault** (item `bike-trip-planner / age private key`).
+1. Récupérer la clé privée `age` depuis **Bitwarden vault** : item canonique `bike-trip-planner / age private key` (la rotation conserve toujours ce nom pour la clé courante et renomme l'ancienne en `... legacy YYYYMMDD`, voir [secrets-rotation.md](secrets-rotation.md)).
 2. Restaurer le bundle envs depuis B2 via `disaster-recovery.md` (procédure générique §1).
 3. Réimporter les envs dans Coolify (UI ou `coolify` CLI).
 4. Pour les CI secrets : régénérer depuis le provider concerné (Backblaze, Resend, Anthropic…) ; ces secrets ne sont **pas** dans le backup bundle (ils vivent dans GitHub).

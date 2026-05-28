@@ -7,7 +7,7 @@ L'inventaire complet des secrets est dans [secrets-inventory.md](secrets-invento
 ## Symptômes (déclencheurs de rotation)
 
 - Suspicion de fuite (commit accidentel, log exposé, screenshot partagé, poste compromis)
-- Alerte GitHub Secret Scanning (`mcp__plugin_github_github__run_secret_scanning` ou notification automatique)
+- Alerte GitHub Secret Scanning (notification automatique GitHub ou `gh api repos/vincentchalamon/bike-trip-planner/secret-scanning/alerts`)
 - Incident `severity:high` impliquant le service ou l'opérateur détenant la clé
 - Échéance calendaire (cf. matrice ci-dessous)
 
@@ -36,7 +36,7 @@ Pour tout secret sauf cas spécifiques (cf. section suivante) :
 2. **Générer une nouvelle valeur** côté provider, scope minimal (ex. B2 : limiter au bucket `btp-backups`).
 3. **Mettre à jour** la localisation source listée dans [secrets-inventory.md](secrets-inventory.md) :
    - Coolify env → UI ou `coolify env set`
-   - GitHub secret → MCP `mcp__plugin_github_github__*` ou UI repo settings
+   - GitHub secret → `gh secret set <NAME>` ou UI repo settings
 4. **Redéployer** si runtime secret : tag `vX.Y.Z+1-rotation` ou re-trigger `deploy.yml` manuellement.
 5. **Vérifier** : `curl https://<host>/api/healthz` + `curl https://<host>/api/health` verts ; pour CI secret, déclencher le workflow concerné.
 6. **Tracer** dans un commentaire de l'issue d'incident liée (`incident-template.md`) : qui, quand, quel secret, raison.
@@ -53,7 +53,7 @@ La rotation **ne re-chiffre pas** l'historique des backups : trop coûteux, et l
    age-keygen -o age-key-$(date +%Y%m%d).txt
    ```
 
-2. Stocker la **nouvelle clé privée** dans **Bitwarden vault** (nouvel item `bike-trip-planner / age private key YYYYMMDD`). **Conserver les anciennes clés** dans des items distincts marqués `legacy` — nécessaires pour restaurer les dumps antérieurs.
+2. Dans **Bitwarden vault** : **renommer l'item courant** `bike-trip-planner / age private key` en `bike-trip-planner / age private key legacy YYYYMMDD` (date de la dernière utilisation comme clé courante). **Créer un nouvel item** `bike-trip-planner / age private key` (nom canonique conservé) contenant la nouvelle clé privée. Le bootstrap DR cherche toujours le nom canonique ; les items `legacy *` ne servent qu'à restaurer les dumps antérieurs et doivent être conservés indéfiniment.
 3. Mettre à jour `AGE_RECIPIENT` dans Coolify (env du service `backup`) avec la nouvelle clé publique.
 4. Mettre à jour le repo si la clé publique y est référencée (`compose.prod.yaml` par défaut env, ADR-033).
 5. Forcer un backup : `make backup-now`. Confirmer via `rclone ls b2:btp-backups | tail -1` que le dernier dump est bien plus récent que la rotation.
