@@ -51,6 +51,7 @@ final class ProvisionCommandTest extends TestCase
                 unlink($entry);
             }
         }
+
         rmdir($dir);
     }
 
@@ -88,7 +89,7 @@ final class ProvisionCommandTest extends TestCase
         self::assertStringContainsString('Done!', $output);
 
         self::assertTrue(is_file($this->selectionFile));
-        self::assertSame(['nord-pas-de-calais'], (new RegionSelectionStore($this->selectionFile))->load());
+        self::assertSame(['nord-pas-de-calais'], new RegionSelectionStore($this->selectionFile)->load());
     }
 
     #[Test]
@@ -105,7 +106,7 @@ final class ProvisionCommandTest extends TestCase
     #[Test]
     public function existingSelectionAndNonInteractiveRunsSilentForcedUpdate(): void
     {
-        (new RegionSelectionStore($this->selectionFile))->save(['bretagne']);
+        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
 
         // Pre-existing PBF that should be re-downloaded (force = true).
         mkdir($this->regionsDir, 0o755, true);
@@ -125,7 +126,7 @@ final class ProvisionCommandTest extends TestCase
     #[Test]
     public function existingSelectionAndInteractiveShowsMenuWithUpdateReconfigureCancel(): void
     {
-        (new RegionSelectionStore($this->selectionFile))->save(['bretagne']);
+        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
 
         $tester = $this->buildTester();
         $tester->setInputs(['cancel']);
@@ -143,7 +144,7 @@ final class ProvisionCommandTest extends TestCase
     #[Test]
     public function existingSelectionInteractiveUpdateChoiceRunsForcedDownload(): void
     {
-        (new RegionSelectionStore($this->selectionFile))->save(['alsace']);
+        new RegionSelectionStore($this->selectionFile)->save(['alsace']);
 
         mkdir($this->regionsDir, 0o755, true);
         $pbfPath = $this->regionsDir.'/alsace-latest.osm.pbf';

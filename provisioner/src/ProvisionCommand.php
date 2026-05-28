@@ -66,13 +66,13 @@ final class ProvisionCommand extends Command
         }
 
         if ($hasSelection) {
-            return $this->runUpdateFlow($io, $input, $output, $dryRun, $interactive);
+            return $this->runUpdateFlow($io, $dryRun, $interactive);
         }
 
-        return $this->runInstallFlow($io, $input, $output, $dryRun);
+        return $this->runInstallFlow($io, $dryRun);
     }
 
-    private function runInstallFlow(SymfonyStyle $io, InputInterface $input, OutputInterface $output, bool $dryRun): int
+    private function runInstallFlow(SymfonyStyle $io, bool $dryRun): int
     {
         $allRegions = GeofabrikRegionRegistry::all();
         $regionNames = array_keys($allRegions);
@@ -166,14 +166,14 @@ final class ProvisionCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function runUpdateFlow(SymfonyStyle $io, InputInterface $input, OutputInterface $output, bool $dryRun, bool $interactive): int
+    private function runUpdateFlow(SymfonyStyle $io, bool $dryRun, bool $interactive): int
     {
         $slugs = $this->selectionStore->load();
 
         if ([] === $slugs) {
             $io->warning('Selection file exists but is empty or invalid. Falling back to install flow.');
 
-            return $this->runInstallFlow($io, $input, $output, $dryRun);
+            return $this->runInstallFlow($io, $dryRun);
         }
 
         if (!$interactive) {
@@ -188,7 +188,7 @@ final class ProvisionCommand extends Command
 
         return match ($choice) {
             'update' => $this->runSilentUpdate($io, $slugs, $dryRun),
-            'reconfigure' => $this->runInstallFlow($io, $input, $output, $dryRun),
+            'reconfigure' => $this->runInstallFlow($io, $dryRun),
             default => Command::SUCCESS,
         };
     }

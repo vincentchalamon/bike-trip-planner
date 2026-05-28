@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Provisioner;
 
-final class RegionSelectionStore
+final readonly class RegionSelectionStore
 {
-    public function __construct(private readonly string $path)
+    public function __construct(private string $path)
     {
     }
 

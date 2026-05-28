@@ -26,6 +26,7 @@ final class RegionSelectionStoreTest extends TestCase
         if (is_file($this->path)) {
             unlink($this->path);
         }
+
         if (is_dir($this->tmpDir)) {
             rmdir($this->tmpDir);
         }
@@ -91,7 +92,7 @@ final class RegionSelectionStoreTest extends TestCase
         $store->save(['alsace']);
 
         self::assertTrue(is_file($nested));
-        self::assertSame(['alsace'], (new RegionSelectionStore($nested))->load());
+        self::assertSame(['alsace'], new RegionSelectionStore($nested)->load());
 
         unlink($nested);
         rmdir($this->tmpDir.'/nested/dir');
