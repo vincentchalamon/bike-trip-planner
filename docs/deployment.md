@@ -20,6 +20,7 @@ Migrations are executed at container boot (see [ADR-032](adr/adr-032-migrations-
 | `SENTRY_URL` | source-map upload | Base URL of the self-hosted GlitchTip instance (e.g. `https://errors.biketrip.mooo.com/`). |
 | `SENTRY_ORG` | source-map upload | GlitchTip organisation slug. |
 | `SENTRY_PROJECT` | source-map upload | GlitchTip PWA project slug. |
+| `NEXT_PUBLIC_SENTRY_DSN` | image build + source-map upload | Sentry/GlitchTip client DSN inlined into the PWA bundle at build time. Without it, `Sentry.init` runs with an undefined DSN and client-side error capture is silently disabled in production. |
 | `COOLIFY_WEBHOOK_URL` | deploy trigger | Coolify deploy webhook URL for the production app. |
 | `COOLIFY_DEPLOY_SECRET` | deploy trigger | Bearer token sent in `Authorization` to authenticate the webhook. |
 | `INCIDENT_DISPATCH_TOKEN` | smoke-test failure | Fine-grained PAT (`Contents: write`, `Issues: write`) used to trigger `repository_dispatch` (see P1.3 / ADR-031). Rotate every 90 days. |

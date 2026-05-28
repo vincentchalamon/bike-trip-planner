@@ -203,8 +203,10 @@ jobs:
             if curl -fsS --max-time 10 "${HEALTH_URL}/api/healthz"; then
               exit 0
             fi
-            echo "Attempt ${attempt} failed, retrying in 30s..."
-            sleep 30
+            if [ "${attempt}" -lt 3 ]; then
+              echo "Attempt ${attempt} failed, retrying in 30s..."
+              sleep 30
+            fi
           done
           exit 1
 

@@ -77,4 +77,4 @@ A detailed playbook lives in `docs/runbooks/release-rollback.md` (created as par
 
 ### Neutral
 
-- Workers (`messenger:consume`) share the same image but use the default `docker-entrypoint`; they do not run migrations, only the `php` service does. This is fine since workers wait for `php` to be healthy via `depends_on`.
+- Workers (`messenger:consume`) share the same image and the same `entrypoint.sh`; they skip migrations because `compose.prod.yaml` sets `MIGRATIONS_ON_BOOT=false` on the worker service. Only the `php` service runs them, and workers wait for it to be healthy via `depends_on`.
