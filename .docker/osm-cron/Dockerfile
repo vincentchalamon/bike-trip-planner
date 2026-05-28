@@ -27,4 +27,7 @@ RUN chmod +x /usr/local/bin/run-update.sh
 ENV OSM_CRON_SCHEDULE="0 3 * * *"
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["sh", "-c", "echo \"${OSM_CRON_SCHEDULE} /usr/local/bin/run-update.sh\" > /etc/supercronic/crontab && exec supercronic /etc/supercronic/crontab"]
+# Strip any newline / carriage return from OSM_CRON_SCHEDULE before writing it
+# to the crontab, otherwise a malicious value could inject an additional cron
+# entry. Use printf '%s' to treat the env var as literal data.
+CMD ["sh", "-c", "printf '%s /usr/local/bin/run-update.sh\\n' \"$(printf '%s' \"${OSM_CRON_SCHEDULE}\" | tr -d '\\n\\r')\" > /etc/supercronic/crontab && exec supercronic /etc/supercronic/crontab"]
