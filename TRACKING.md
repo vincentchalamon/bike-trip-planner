@@ -843,7 +843,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 
 ## Sprint 38 — Performance & Resilience Deep Dive
 
-Suite à Sprint 35 (recette + audits standards), Sprint 38 industrialise l'analyse de performance avancée : micro-benchs PHP, load testing scriptable, profiling à la demande, observabilité applicative ciblée, audit infrastructure, résilience aux pannes, et empreinte carbone publiée. Tests menés en iso-prod sur la VM Oracle pré-ouverture, avec validation device physique (Samsung Galaxy S20 FE). Voir le plan détaillé `/home/vincent/.claude/plans/quelle-solution-d-analyse-des-zippy-hoare.md`.
+Suite à Sprint 35 (recette + audits standards), Sprint 38 industrialise l'analyse de performance avancée : micro-benchs PHP, load testing scriptable, profiling à la demande, observabilité applicative ciblée, audit infrastructure, résilience aux pannes, et empreinte carbone publiée. Tests menés en iso-prod sur la VM Oracle pré-ouverture, avec validation device physique (Samsung Galaxy S20 FE).
 
 > **Prérequis :** Sprint 37 (Déploiement) terminé, app déployée iso-prod sur Oracle + Coolify, GlitchTip + Uptime Kuma opérationnels (ADR-031).
 
