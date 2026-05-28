@@ -55,8 +55,8 @@ final readonly class RegionSelectionStore
     public function save(array $slugs): void
     {
         $dir = \dirname($this->path);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0o755, true);
+        if (!is_dir($dir) && !mkdir($dir, 0o755, true) && !is_dir($dir)) {
+            throw new \RuntimeException(\sprintf('Cannot create directory for region selection: %s', $dir));
         }
 
         $payload = json_encode(

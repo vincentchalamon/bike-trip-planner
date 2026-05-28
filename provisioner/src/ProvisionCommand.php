@@ -241,8 +241,10 @@ final class ProvisionCommand extends Command
      */
     private function downloadAndMerge(SymfonyStyle $io, array $slugs, bool $force): int
     {
-        if (!is_dir($this->regionsDir)) {
-            mkdir($this->regionsDir, 0o755, true);
+        if (!is_dir($this->regionsDir) && !mkdir($this->regionsDir, 0o755, true) && !is_dir($this->regionsDir)) {
+            $io->error(\sprintf('Cannot create regions directory: %s', $this->regionsDir));
+
+            return Command::FAILURE;
         }
 
         $toDownload = [];
