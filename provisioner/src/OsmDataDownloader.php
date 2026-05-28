@@ -55,9 +55,8 @@ final readonly class OsmDataDownloader
 
         $targetPath = $this->targetPath($slug);
         // Always write through a .tmp + atomic rename so a transport failure
-        // can never destroy an existing PBF at $targetPath. The behaviour
-        // difference for $forceOverwrite is in the caller (which skips
-        // download entirely when the file already exists and force is false).
+        // can never corrupt an existing PBF at $targetPath. The caller controls
+        // whether to skip already-present files via file_exists() before calling download().
         $writePath = $targetPath.'.tmp';
         $url = GeofabrikRegionRegistry::downloadUrl($slug);
 

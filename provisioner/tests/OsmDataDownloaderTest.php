@@ -49,7 +49,7 @@ final class OsmDataDownloaderTest extends TestCase
     }
 
     #[Test]
-    public function downloadInstallModeWritesDirectlyToFinalPath(): void
+    public function downloadAlwaysWritesThroughTmpThenAtomicRenamesToFinalPath(): void
     {
         $httpClient = new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes'));
         $downloader = new OsmDataDownloader($this->regionsDir, $httpClient);
@@ -76,7 +76,7 @@ final class OsmDataDownloaderTest extends TestCase
     }
 
     #[Test]
-    public function downloadForceOverwriteWritesToTempThenAtomicRenames(): void
+    public function downloadOverwritesExistingFileAtomicallyViaTmp(): void
     {
         mkdir($this->regionsDir, 0o755, true);
         $finalPath = $this->regionsDir.'/bretagne-latest.osm.pbf';
