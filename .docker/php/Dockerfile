@@ -82,10 +82,16 @@ FROM frankenphp_base AS frankenphp_prod
 ARG COMMIT_SHA=unknown
 ENV APP_ENV=prod
 ENV APP_COMMIT=${COMMIT_SHA}
+# Default to running Doctrine migrations at boot in prod (see ADR-032).
+ENV MIGRATIONS_ON_BOOT=true
 
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
 COPY --link .docker/php/conf.d/20-app.prod.ini $PHP_INI_DIR/conf.d/zz-app.prod.ini
+COPY --link --chmod=755 .docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["entrypoint.sh"]
+CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile" ]
 
 # prevent the reinstallation of vendors at every changes in the source code
 COPY --link api/composer.* api/symfony.* ./

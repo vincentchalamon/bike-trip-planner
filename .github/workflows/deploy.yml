@@ -1,0 +1,237 @@
+name: Deploy
+
+on:
+  # Deploy only on a version tag: a tag marks a deliberate stable release and a
+  # clear rollback point, and avoids a slow QEMU arm64 build on every main push.
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: vincentchalamon/bike-trip-planner
+  HEALTH_URL: https://biketrip.mooo.com
+
+jobs:
+  build-images:
+    name: Build & push ${{ matrix.service }} image
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: php
+            dockerfile: .docker/php/Dockerfile
+            target: frankenphp_prod
+          - service: pwa
+            dockerfile: .docker/pwa/Dockerfile
+            target: prod
+          - service: provisioner
+            dockerfile: .docker/provisioner/Dockerfile
+            target: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: tags
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          SERVICE: ${{ matrix.service }}
+        run: |
+          IMAGE="${REGISTRY}/${IMAGE_OWNER}-${SERVICE}"
+          TAGS="${IMAGE}:${SHA}"
+          if [ "${REF_TYPE}" = "tag" ]; then
+            TAGS="${TAGS},${IMAGE}:${REF_NAME}"
+          fi
+          {
+            echo "tags=${TAGS}"
+            echo "image=${IMAGE}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            COMMIT_SHA=${{ github.sha }}
+            NEXT_PUBLIC_APP_RELEASE=${{ github.sha }}
+            NEXT_PUBLIC_APP_ENV=production
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          # SENTRY_AUTH_TOKEN is intentionally NOT mounted here. Without it
+          # withSentryConfig is a no-op, so the deployed image never emits the
+          # `.map` files (deleteSourcemapsAfterUpload only deletes *after* a
+          # successful upload, which needs org/project/url absent from this
+          # build). Source-map upload to GlitchTip happens in the dedicated
+          # `upload-sourcemaps` job, which builds with all SENTRY_* present.
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max
+          provenance: false
+
+      # Keep the registry tidy: retain the 10 most recent versions of each
+      # image (enough rollback targets) and prune the rest. GHCR storage is
+      # free for this public repo, so this is hygiene, not a cost control.
+      - name: Prune old image versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: bike-trip-planner-${{ matrix.service }}
+          package-type: container
+          min-versions-to-keep: 10
+
+  upload-sourcemaps:
+    name: Upload PWA source maps to GlitchTip
+    runs-on: ubuntu-latest
+    needs: build-images
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_URL: ${{ secrets.SENTRY_URL }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      SHA: ${{ github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Skip when Sentry/GlitchTip is not configured
+        id: gate
+        run: |
+          if [ -z "${SENTRY_AUTH_TOKEN}" ] || [ -z "${SENTRY_URL}" ] || [ -z "${SENTRY_ORG}" ] || [ -z "${SENTRY_PROJECT}" ]; then
+            echo "Sentry/GlitchTip secrets missing — skipping source map upload."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: pwa/package-lock.json
+
+      - name: Install PWA dependencies
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: pwa
+        run: npm ci
+
+      - name: Build PWA and upload source maps via withSentryConfig
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: pwa
+        # withSentryConfig creates the release and uploads the source maps during
+        # the build itself (all four SENTRY_* vars are present in this job's env),
+        # then deletes the .map files (deleteSourcemapsAfterUpload). A separate
+        # `@sentry/cli releases files upload-sourcemaps` step would find nothing —
+        # so it is intentionally omitted; the plugin owns the upload.
+        #
+        # These NEXT_PUBLIC_* values MUST mirror the Docker image build args
+        # exactly — any divergence changes the inlined config and the emitted
+        # chunk hashes, so the uploaded maps would no longer match the deployed
+        # bundle and symbolication would silently fail.
+        env:
+          NEXT_PUBLIC_APP_RELEASE: ${{ github.sha }}
+          NEXT_PUBLIC_APP_ENV: production
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+        run: npm run build
+
+  trigger-coolify:
+    name: Trigger Coolify deploy webhook
+    runs-on: ubuntu-latest
+    # Source-map upload is a diagnostic aid, not a deploy gate: GlitchTip shares
+    # the Oracle VM and is most likely degraded during a heavy deploy, so a
+    # transient @sentry/cli failure must not block shipping the new images.
+    needs: build-images
+    steps:
+      - name: POST to Coolify webhook
+        env:
+          WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
+          DEPLOY_SECRET: ${{ secrets.COOLIFY_DEPLOY_SECRET }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref }}
+        run: |
+          if [ -z "${WEBHOOK_URL}" ]; then
+            echo "COOLIFY_WEBHOOK_URL secret not configured — skipping deploy trigger."
+            exit 0
+          fi
+          curl -fsS -X POST "${WEBHOOK_URL}" \
+            -H "Authorization: Bearer ${DEPLOY_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d "{\"sha\":\"${SHA}\",\"ref\":\"${REF}\"}"
+
+  smoke-test:
+    name: Smoke test post-deploy
+    runs-on: ubuntu-latest
+    needs: trigger-coolify
+    if: success()
+    steps:
+      - name: Wait for Coolify to roll the new image
+        run: sleep 60
+
+      - name: Probe /api/healthz with retry
+        run: |
+          set +e
+          for attempt in 1 2 3; do
+            if curl -fsS --max-time 10 "${HEALTH_URL}/api/healthz"; then
+              exit 0
+            fi
+            if [ "${attempt}" -lt 3 ]; then
+              echo "Attempt ${attempt} failed, retrying in 30s..."
+              sleep 30
+            fi
+          done
+          exit 1
+
+      - name: Probe /api/health and assert overall status
+        run: |
+          response=$(curl -fsS --max-time 10 "${HEALTH_URL}/api/health")
+          echo "$response"
+          # Trust the controller's own readiness verdict (its $required list
+          # excludes optional deps like ollama), instead of asserting every
+          # entry in .deps which would false-positive on an optional degradation.
+          echo "$response" | jq -e '.status == "ok"'
+
+      - name: Open incident on smoke-test failure
+        if: failure()
+        env:
+          INCIDENT_TOKEN: ${{ secrets.INCIDENT_DISPATCH_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ -z "${INCIDENT_TOKEN}" ]; then
+            echo "INCIDENT_DISPATCH_TOKEN not configured — cannot raise incident."
+            exit 1
+          fi
+          curl -fsS -X POST \
+            "https://api.github.com/repos/${REPO}/dispatches" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${INCIDENT_TOKEN}" \
+            -d "{\"event_type\":\"uptime_alert\",\"client_payload\":{\"source\":\"deploy-smoke\",\"sha\":\"${SHA}\",\"status\":\"down\"}}"
