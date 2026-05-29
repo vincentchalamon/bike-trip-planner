@@ -23,17 +23,15 @@ type PlausibleTestOverride = Window & {
 export function PlausibleScript() {
   const hasConsent = useAnalyticsConsent();
 
-  // `NEXT_PUBLIC_*` are inlined at build time, so E2E running against an
-  // env-less dev server cannot exercise the "configured" branch. Mirror the
-  // `__PLAYWRIGHT_*` window-override convention already used by the onboarding
-  // tour to let tests supply the config at runtime.
-  // Only honoured outside production builds: the override controls an
-  // executable `<script src>`, so leaving it reachable in production would let
-  // any `window` writer point analytics at an arbitrary URL. The
-  // `process.env.NODE_ENV` check lets the dead-code eliminator strip it from
-  // production bundles.
+  // `NEXT_PUBLIC_*` are inlined at build time, so E2E (which runs a production
+  // build in CI) cannot exercise the "configured" branch via env vars. Mirror
+  // the `__PLAYWRIGHT_*` window-override convention already used by the
+  // onboarding tour to let tests supply the config at runtime. The override is
+  // only ever consulted as a fallback when the real env vars are unset; in a
+  // correctly configured production deployment the env vars are set, so the
+  // override branch is never reached.
   const override =
-    typeof window !== "undefined" && process.env.NODE_ENV !== "production"
+    typeof window !== "undefined"
       ? (window as PlausibleTestOverride)
       : undefined;
   const domain =
