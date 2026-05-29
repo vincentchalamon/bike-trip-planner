@@ -25,8 +25,9 @@ List the **concrete** items that would be removed, with their PR/merge status:
 ## Step 3 — Clean up (plain git, only after confirmation)
 
 For each branch whose PR is **merged or closed**:
-- `git worktree remove <path>` then `git worktree prune`. If removal fails (dirty worktree), **flag it and skip** rather than force.
+- Worktrees created via `EnterWorktree` are locked. Run `git worktree unlock <path>` then `git worktree remove <path>` and finally `git worktree prune`. If the remove still fails because a sub-tree contains files written by Docker as root (typically `.phpunit.cache/`, `node_modules/.cache/`), **flag the paths to the user and stop** — do not try `sudo`, do not force. The user will clear them by hand.
 - `git branch -d feature/<n>` — use **`-d`, not `-D`**. If git refuses (unmerged), **flag it and skip** rather than force-delete.
+- Also clean the skeleton branches `worktree-agent-<id>` that `EnterWorktree` leaves behind: `git branch -d worktree-agent-<id>`.
 
 Worktrees live under the gitignored `.claude/worktrees/`, so these removals are purely local.
 

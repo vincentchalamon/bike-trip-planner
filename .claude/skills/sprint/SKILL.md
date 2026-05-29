@@ -49,12 +49,19 @@ You are implementing GitHub issue #<number>: <title>
 1. Read CLAUDE.md to understand the project architecture and conventions
 2. Create branch `feature/<issue-number>` from `<base-branch>`
    - Base branch is `main` unless this issue depends on another, then use `feature/<dep-number>`
-3. Implement the solution following CLAUDE.md rules (architecture, SOLID, patterns)
-4. Commit your changes using Conventional Commits format
-5. **IMPORTANT: Do NOT run any `make` commands** — no `make qa`, `make test`, `make typegen`, `make phpunit`, `make phpstan`, etc. The main agent handles QA/tests later.
-6. If you modify backend DTOs (api/src/ApiResource/), include "DTO_CHANGED" in your final message
-7. If you add new dependencies to composer.json or package.json, include "DEPS_CHANGED" in your final message
-8. Focus only on writing correct, well-structured code and committing it
+3. Bootstrap deps in the worktree by hard-linking from the main repo (the worktree starts with empty vendor/ and node_modules/; reinstalling per worktree is expensive and Docker compose spins up a separate project per worktree path):
+   ```bash
+   MAIN=$(git worktree list | awk 'NR==1{print $1}')
+   for p in api/vendor api/vendor-bin provisioner/vendor provisioner/vendor-bin pwa/node_modules; do
+     [ -d "$MAIN/$p" ] && rsync -a --link-dest="$MAIN/$p/" "$MAIN/$p/" "$p/"
+   done
+   ```
+4. Implement the solution following CLAUDE.md rules (architecture, SOLID, patterns)
+5. Run `make qa` and commit autofixes (PHP-CS-Fixer, Rector, Prettier auto-apply). Repeat until `make qa` exits 0 with no working-tree diff. PHPStan / TypeScript / ESLint errors must be fixed by hand. **Do NOT run `make test` / `make typegen` / `make install`** — the main agent handles those during Phase 2 (Docker container spin-up is shared there).
+6. Commit your changes using Conventional Commits format (final commit must include any QA autofixes — never leave a dirty worktree)
+7. If you modify backend DTOs (api/src/ApiResource/), include "DTO_CHANGED" in your final message
+8. If you add new dependencies to composer.json or package.json, include "DEPS_CHANGED" in your final message
+9. Focus only on writing correct, well-structured code and committing it
 ```
 
 Use `isolation: "worktree"` for each agent.
@@ -69,10 +76,10 @@ Track results: for each issue, record SUCCESS (with worktree branch), DTO_CHANGE
 
 For each successfully coded branch, **in dependency order**:
 
-1. `git checkout feature/<issue-number>`
+1. `cd` into the agent's worktree (or `git checkout feature/<issue-number>` if working from a shared one)
 2. If DEPS_CHANGED: `make install`
 3. If DTO_CHANGED: `make typegen`
-4. Run `make qa` — if it fails, read errors, fix, commit, retry (up to 3 attempts)
+4. Run `make qa` — Phase 1 already ran this in the agent, so this is the safety net. If it fails, read errors, fix, commit, retry (up to 3 attempts)
 5. Run `make test` — if it fails, read errors, fix, commit, retry (up to 3 attempts)
 6. If QA/tests still fail after 3 attempts, mark as **FAILED** and continue to the next branch
 
@@ -99,6 +106,7 @@ Each cycle:
 
    Address every **actionable** point, commit, push, then reply to / resolve the corresponding threads. List any comment you deliberately did not action, with the reason.
 3. **Conflicts** — `gh pr view <pr> --json mergeable,mergeStateStatus`. If `CONFLICTING`: rebase onto the base branch and resolve **conservatively**. If the resolution is ambiguous or risks discarding work, **stop and flag it** — do not force a resolution.
+4. **Parent moved (stacked PR)** — if the PR's base is `feature/<n>` and that branch advanced on origin since the last sync (compare local merge-base vs `origin/feature/<n>`), rebase onto it: `git fetch origin feature/<n> && git rebase origin/feature/<n>`, then `git push --force-with-lease`. **Whenever you push new commits to a parent branch (Phase 4 cycle on that PR), immediately re-rebase every child PR onto it** to keep the stack consistent — the GitHub UI does not do this for you and the stale child will hit a phantom conflict at merge time.
 
 **Termination (READY)** when all hold: CI green **AND** `mergeable` **AND** not draft **AND** `claude-code-review.yml` has completed (`gh run view --workflow=claude-code-review.yml` shows `completed`) with **no new blocking comment** (Critical/High). Wait for that workflow to finish before evaluating its output — after a push it is triggered asynchronously and may still be `pending`/`in_progress`.
 
@@ -112,7 +120,7 @@ For each issue, update the TRACKING.md row:
 - FAILED: set status to "Échoué"
 - BLOCKED: set status to "Bloqué"
 
-Commit and push the TRACKING.md update.
+Commit and push the TRACKING.md update **on a dedicated branch** (e.g. `chore/sprint-<n>-tracking`) — never on a worktree branch and never directly to main. From the main repo (not a worktree): `git switch main && git pull --ff-only && git switch -c chore/sprint-<n>-tracking`, edit, commit, push, open PR.
 
 ## Step 8 — Final report
 
