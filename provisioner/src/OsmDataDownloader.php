@@ -7,6 +7,7 @@ namespace Provisioner;
 use Provisioner\Exception\DownloadFailedException;
 use Provisioner\Exception\MergeFailedException;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -27,7 +28,7 @@ final readonly class OsmDataDownloader
         private string $regionsDir,
         ?HttpClientInterface $httpClient = null,
         ?\Closure $processFactory = null,
-        private int $mergeTimeoutSeconds = 600,
+        private float $mergeTimeoutSeconds = 600.0,
     ) {
         $this->httpClient = $httpClient ?? HttpClient::create(['max_redirects' => 2]);
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
@@ -118,8 +119,12 @@ final readonly class OsmDataDownloader
         );
 
         $process = ($this->processFactory)($command);
-        $process->setTimeout((float) $this->mergeTimeoutSeconds);
-        $process->run();
+        $process->setTimeout($this->mergeTimeoutSeconds);
+        try {
+            $process->run();
+        } catch (ProcessTimedOutException $processTimedOutException) {
+            throw new MergeFailedException(\sprintf('osmium merge timed out after %.1fs', $this->mergeTimeoutSeconds), 0, $processTimedOutException);
+        }
 
         if (!$process->isSuccessful()) {
             throw new MergeFailedException(\sprintf('osmium merge failed (exit %s): %s', (string) $process->getExitCode(), $process->getErrorOutput()));

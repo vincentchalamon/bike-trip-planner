@@ -200,6 +200,25 @@ final class OsmDataDownloaderTest extends TestCase
     }
 
     #[Test]
+    public function mergeTimeoutRaisesMergeFailedException(): void
+    {
+        $factory = static fn (array $command): Process => new Process(['sleep', '5']);
+
+        $downloader = new OsmDataDownloader(
+            regionsDir: $this->regionsDir,
+            processFactory: $factory,
+            mergeTimeoutSeconds: 0.05,
+        );
+
+        try {
+            $downloader->merge(['/a.osm.pbf'], $this->tmpDir.'/merged.osm.pbf');
+            self::fail('Expected MergeFailedException');
+        } catch (MergeFailedException $mergeFailedException) {
+            self::assertStringContainsString('timed out', $mergeFailedException->getMessage());
+        }
+    }
+
+    #[Test]
     public function mergeWithEmptyListThrows(): void
     {
         $downloader = new OsmDataDownloader($this->regionsDir);
