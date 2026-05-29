@@ -25,7 +25,47 @@ interface LegalPageProps {
   testIdPrefix: string;
 }
 
-export function LegalPage({
+/** Splits text on http(s) URLs and email addresses, rendering each as an anchor. */
+function linkify(text: string) {
+  const pattern = /(https?:\/\/[^\s]+|[\w.+-]+@[\w-]+\.[\w.-]+)/g;
+  return text.split(pattern).map((part, index) => {
+    if (/^https?:\/\//.test(part)) {
+      const href = part.replace(/[.,;:)]+$/, "");
+      const trailing = part.slice(href.length);
+      return (
+        <span key={index}>
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand underline underline-offset-2 hover:no-underline"
+          >
+            {href}
+          </a>
+          {trailing}
+        </span>
+      );
+    }
+    if (/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(part)) {
+      const address = part.replace(/[.,;:]+$/, "");
+      const trailing = part.slice(address.length);
+      return (
+        <span key={index}>
+          <a
+            href={`mailto:${address}`}
+            className="text-brand underline underline-offset-2 hover:no-underline"
+          >
+            {address}
+          </a>
+          {trailing}
+        </span>
+      );
+    }
+    return part;
+  });
+}
+
+export function LegalPageLayout({
   title,
   intro,
   sections,
@@ -94,7 +134,7 @@ export function LegalPage({
                     key={index}
                     className="text-sm text-muted-foreground leading-relaxed"
                   >
-                    {paragraph}
+                    {linkify(paragraph)}
                   </p>
                 ))}
               </div>

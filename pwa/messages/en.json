@@ -1008,7 +1008,7 @@
       "contact": {
         "title": "Contact",
         "paragraphs": [
-          "For any question about the site or to exercise your rights, contact us at: contact@bike-trip-planner.example.",
+          "For any question about the site or to exercise your rights, contact us at: contact@bike-trip-planner.app.",
           "You can also open an issue on the project's GitHub repository."
         ]
       },
@@ -1033,7 +1033,7 @@
         "title": "Data controller",
         "paragraphs": [
           "The data controller is the publisher of Bike Trip Planner (see the legal notice).",
-          "For any question about your personal data, contact us at: contact@bike-trip-planner.example."
+          "For any question about your personal data, contact us at: contact@bike-trip-planner.app."
         ]
       },
       "basis": {
@@ -1071,7 +1071,7 @@
         "title": "Your rights",
         "paragraphs": [
           "In accordance with the GDPR, you have the right of access, rectification, erasure, restriction, objection and portability of your data.",
-          "To exercise these rights, contact us at: contact@bike-trip-planner.example. We respond within one month.",
+          "To exercise these rights, contact us at: contact@bike-trip-planner.app. We respond within one month.",
           "You also have the right to lodge a complaint with your supervisory authority (in France, the CNIL — www.cnil.fr)."
         ]
       },
@@ -1096,7 +1096,7 @@
       "contact": {
         "title": "Contact",
         "paragraphs": [
-          "For any question about this privacy policy, write to us at: contact@bike-trip-planner.example.",
+          "For any question about this privacy policy, write to us at: contact@bike-trip-planner.app.",
           "This policy may be updated; the last-updated date is shown at the top of this page."
         ]
       }

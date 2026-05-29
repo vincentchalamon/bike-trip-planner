@@ -1008,7 +1008,7 @@
       "contact": {
         "title": "Contact",
         "paragraphs": [
-          "Pour toute question relative au site ou pour exercer vos droits, vous pouvez nous contacter à l'adresse : contact@bike-trip-planner.example.",
+          "Pour toute question relative au site ou pour exercer vos droits, vous pouvez nous contacter à l'adresse : contact@bike-trip-planner.app.",
           "Vous pouvez également ouvrir une issue sur le dépôt GitHub du projet."
         ]
       },
@@ -1033,7 +1033,7 @@
         "title": "Responsable du traitement",
         "paragraphs": [
           "Le responsable du traitement des données est l'éditeur de Bike Trip Planner (voir les mentions légales).",
-          "Pour toute question relative à vos données personnelles, contactez-nous à : contact@bike-trip-planner.example."
+          "Pour toute question relative à vos données personnelles, contactez-nous à : contact@bike-trip-planner.app."
         ]
       },
       "basis": {
@@ -1071,7 +1071,7 @@
         "title": "Vos droits",
         "paragraphs": [
           "Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de vos données.",
-          "Pour exercer ces droits, contactez-nous à : contact@bike-trip-planner.example. Nous répondons dans un délai d'un mois.",
+          "Pour exercer ces droits, contactez-nous à : contact@bike-trip-planner.app. Nous répondons dans un délai d'un mois.",
           "Vous avez également le droit d'introduire une réclamation auprès de la CNIL (www.cnil.fr)."
         ]
       },
@@ -1096,7 +1096,7 @@
       "contact": {
         "title": "Contact",
         "paragraphs": [
-          "Pour toute question relative à cette politique de confidentialité, écrivez-nous à : contact@bike-trip-planner.example.",
+          "Pour toute question relative à cette politique de confidentialité, écrivez-nous à : contact@bike-trip-planner.app.",
           "Cette politique peut être mise à jour ; la date de dernière mise à jour figure en haut de cette page."
         ]
       }
