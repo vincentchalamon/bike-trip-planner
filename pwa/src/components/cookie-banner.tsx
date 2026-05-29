@@ -32,19 +32,8 @@ export function CookieBanner() {
     setModalOpen(false);
   };
 
-  // The modal can still be reopened from /privacy in the future, but the banner
-  // itself only renders until a decision is recorded.
   if (!shouldShowBanner) {
-    return modalOpen ? (
-      <CookieModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        initialAnalytics={consent?.analytics ?? false}
-        onSave={handleSave}
-        onAcceptAll={handleAcceptAll}
-        onRejectAll={handleRejectAll}
-      />
-    ) : null;
+    return null;
   }
 
   return (
