@@ -4,7 +4,7 @@
 # Uses supercronic (cron designed for containers, logs to stdout) and the
 # official Docker CLI binary to orchestrate sibling containers via the
 # host's Docker socket (bind-mounted by compose).
-FROM docker:28-cli
+FROM docker:29-cli
 
 ARG SUPERCRONIC_VERSION=v0.2.46
 ARG SUPERCRONIC_SHA256SUM=5adff01c5a797663948e656d2b61d10932369ee437eb5cb54fa872b2960f222b
