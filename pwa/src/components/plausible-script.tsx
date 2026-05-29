@@ -1,6 +1,7 @@
 "use client";
 
 import Script from "next/script";
+import { useEffect, useRef } from "react";
 import { useAnalyticsConsent } from "@/hooks/use-analytics-consent";
 
 /**
@@ -26,8 +27,13 @@ export function PlausibleScript() {
   // env-less dev server cannot exercise the "configured" branch. Mirror the
   // `__PLAYWRIGHT_*` window-override convention already used by the onboarding
   // tour to let tests supply the config at runtime.
+  // Only honoured outside production builds: the override controls an
+  // executable `<script src>`, so leaving it reachable in production would let
+  // any `window` writer point analytics at an arbitrary URL. The
+  // `process.env.NODE_ENV` check lets the dead-code eliminator strip it from
+  // production bundles.
   const override =
-    typeof window !== "undefined"
+    typeof window !== "undefined" && process.env.NODE_ENV !== "production"
       ? (window as PlausibleTestOverride)
       : undefined;
   const domain =
@@ -36,6 +42,23 @@ export function PlausibleScript() {
   const src =
     process.env.NEXT_PUBLIC_PLAUSIBLE_SRC ??
     override?.__PLAYWRIGHT_PLAUSIBLE_SRC;
+
+  // `<Script>` injects a real `<script>` into the document head; unmounting it
+  // (e.g. when consent is revoked via the cookie banner in #385) leaves both the
+  // DOM node and Plausible's runtime state in place, so tracking would continue
+  // until the next reload. Tear both down explicitly when consent drops.
+  const wasInjected = useRef(false);
+  useEffect(() => {
+    const shouldInject = Boolean(domain && src && hasConsent);
+    if (shouldInject) {
+      wasInjected.current = true;
+      return;
+    }
+    if (!wasInjected.current) return;
+    wasInjected.current = false;
+    document.getElementById("plausible-analytics")?.remove();
+    delete (window as Window & { plausible?: unknown }).plausible;
+  }, [domain, src, hasConsent]);
 
   if (!domain || !src || !hasConsent) {
     return null;

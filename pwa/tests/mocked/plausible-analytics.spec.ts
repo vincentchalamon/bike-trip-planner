@@ -72,6 +72,36 @@ test.describe("Plausible analytics", () => {
     await expect(script).toHaveAttribute("src", PLAUSIBLE_SRC);
   });
 
+  test("unloads the script when consent is revoked after injection", async ({
+    page,
+  }) => {
+    await presetPlausibleEnv(page);
+    await grantAnalyticsConsent(page);
+    await mockAllApis(page);
+
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    await expect(
+      page.locator('script[data-testid="plausible-script"]'),
+    ).toHaveCount(1);
+
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "cookie-consent",
+        JSON.stringify({ analytics: false }),
+      );
+      window.dispatchEvent(new Event("cookie-consent-change"));
+    });
+
+    await expect(
+      page.locator('script[data-testid="plausible-script"]'),
+    ).toHaveCount(0);
+    await expect
+      .poll(() => page.evaluate(() => "plausible" in window))
+      .toBe(false);
+  });
+
   test("does not inject the script when consent is granted but env is unset", async ({
     page,
   }) => {
