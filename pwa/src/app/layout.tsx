@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { OnboardingTour } from "@/components/onboarding-tour";
 import { AuthGuard } from "@/components/auth-guard";
 import { PlausibleScript } from "@/components/plausible-script";
+import { CookieBanner } from "@/components/cookie-banner";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -77,6 +78,7 @@ export default async function RootLayout({
               <OnboardingTour />
             </AuthGuard>
             <Toaster richColors position="top-right" />
+            <CookieBanner />
           </ThemeProvider>
         </NextIntlClientProvider>
         <PlausibleScript />

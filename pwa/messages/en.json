@@ -1101,5 +1101,28 @@
         ]
       }
     }
+  },
+  "cookies": {
+    "acceptAll": "Accept all",
+    "rejectAll": "Reject all",
+    "privacyLink": "Learn more about our privacy policy",
+    "banner": {
+      "ariaLabel": "Cookie consent",
+      "message": "We use cookies to measure site traffic. You can accept, reject or customize your choices.",
+      "customize": "Customize"
+    },
+    "modal": {
+      "title": "Cookie preferences",
+      "description": "Choose which cookie categories you allow. You can change these choices at any time.",
+      "save": "Save my preferences",
+      "technical": {
+        "title": "Technical cookies",
+        "description": "Required for the site to work. Always enabled."
+      },
+      "analytics": {
+        "title": "Analytics",
+        "description": "Anonymous traffic statistics via Plausible."
+      }
+    }
   }
 }

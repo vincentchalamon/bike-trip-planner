@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-const CONSENT_STORAGE_KEY = "cookie-consent";
+/** localStorage key holding the cookie-consent decision (`{ analytics: boolean }`). */
+export const CONSENT_STORAGE_KEY = "cookie-consent";
 
 /** Custom event dispatched when the cookie-consent value changes (same tab). */
 export const CONSENT_CHANGE_EVENT = "cookie-consent-change";
