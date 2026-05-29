@@ -12,7 +12,7 @@ test.describe("Keyboard shortcuts", () => {
     // Defocus the magic-link input so the shortcut handler isn't suppressed
     await mockedPage.locator("body").click();
     await mockedPage.keyboard.press("?");
-    await expect(mockedPage.getByTestId("keyboard-help-modal")).toBeVisible();
+    await expect(mockedPage.getByTestId("help-modal")).toBeVisible();
   });
 
   test("? key closes the help modal when already open", async ({
@@ -25,12 +25,10 @@ test.describe("Keyboard shortcuts", () => {
     await mockedPage.locator("body").click();
     // Open
     await mockedPage.keyboard.press("?");
-    await expect(mockedPage.getByTestId("keyboard-help-modal")).toBeVisible();
+    await expect(mockedPage.getByTestId("help-modal")).toBeVisible();
     // Close
     await mockedPage.keyboard.press("?");
-    await expect(
-      mockedPage.getByTestId("keyboard-help-modal"),
-    ).not.toBeVisible();
+    await expect(mockedPage.getByTestId("help-modal")).not.toBeVisible();
   });
 
   test("Escape closes the help modal when open", async ({
@@ -42,11 +40,9 @@ test.describe("Keyboard shortcuts", () => {
     await injectEvent(routeParsedEvent());
     await mockedPage.locator("body").click();
     await mockedPage.keyboard.press("?");
-    await expect(mockedPage.getByTestId("keyboard-help-modal")).toBeVisible();
+    await expect(mockedPage.getByTestId("help-modal")).toBeVisible();
     await mockedPage.keyboard.press("Escape");
-    await expect(
-      mockedPage.getByTestId("keyboard-help-modal"),
-    ).not.toBeVisible();
+    await expect(mockedPage.getByTestId("help-modal")).not.toBeVisible();
   });
 
   test("Escape closes the config panel when open and help modal is not open", async ({
@@ -146,9 +142,7 @@ test.describe("Keyboard shortcuts", () => {
     await magicLinkInput.focus();
     // Press ? — should NOT open the help modal
     await mockedPage.keyboard.press("?");
-    await expect(
-      mockedPage.getByTestId("keyboard-help-modal"),
-    ).not.toBeVisible();
+    await expect(mockedPage.getByTestId("help-modal")).not.toBeVisible();
   });
 
   test("shortcuts are suppressed when focus is inside a <select>", async ({
@@ -166,8 +160,6 @@ test.describe("Keyboard shortcuts", () => {
     });
     await mockedPage.locator("#__test_select").focus();
     await mockedPage.keyboard.press("?");
-    await expect(
-      mockedPage.getByTestId("keyboard-help-modal"),
-    ).not.toBeVisible();
+    await expect(mockedPage.getByTestId("help-modal")).not.toBeVisible();
   });
 });

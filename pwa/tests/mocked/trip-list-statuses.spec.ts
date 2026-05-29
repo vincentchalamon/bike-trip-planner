@@ -200,7 +200,7 @@ test.describe("mes voyages header link", () => {
     await page.waitForLoadState("networkidle");
 
     // The "Mes voyages" link is shown in the TripPlanner header when authenticated and no trip open
-    const myTripsLink = page.getByTestId("my-trips-link");
+    const myTripsLink = page.getByTestId("nav-my-trips");
     await expect(myTripsLink).toBeVisible({ timeout: 5000 });
   });
 
@@ -220,7 +220,7 @@ test.describe("mes voyages header link", () => {
     await page.waitForLoadState("networkidle");
 
     // Unauthenticated users see the landing page — no "Mes voyages" link
-    const myTripsLink = page.getByTestId("my-trips-link");
+    const myTripsLink = page.getByTestId("nav-my-trips");
     await expect(myTripsLink).not.toBeVisible({ timeout: 3000 });
   });
 });

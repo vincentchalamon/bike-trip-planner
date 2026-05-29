@@ -11,15 +11,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  Settings,
-  HelpCircle,
-  Loader2,
-  X,
-  Share2,
-  Map,
-  User,
-} from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { CardSelection } from "@/components/card-selection";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
 import { TripLockedBanner } from "@/components/trip-locked-banner";
@@ -28,17 +20,16 @@ import { ProcessingProgress } from "@/components/processing-progress";
 import { TripSummary } from "@/components/trip-summary";
 import { TripAiOverview } from "@/components/trip-ai-overview";
 import { TripHeader } from "@/components/trip-header";
-import { TripDownloads } from "@/components/trip-downloads";
 import { AiBubble } from "@/components/ai-bubble";
 import { StageProgressBar } from "@/components/stage-progress-bar";
 import { RoadbookMasterDetail } from "@/components/Timeline";
 import { ConfigPanel } from "@/components/config-panel";
-import { KeyboardHelpModal } from "@/components/keyboard-help-modal";
+import { HelpModal } from "@/components/help-modal";
+import { TopBar } from "@/components/top-bar";
 import { ShareModal } from "@/components/share-modal";
 import { MapPanel } from "@/components/Map";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { Button } from "@/components/ui/button";
-import { UndoRedoButtons } from "@/components/undo-redo-buttons";
 import { Stepper } from "@/components/stepper";
 import { InlineRecomputationBar } from "@/components/inline-recomputation-bar";
 import { ModificationQueue } from "@/components/modification-queue";
@@ -134,7 +125,6 @@ export function TripPlanner({
   useLinkParam(handleMagicLink);
 
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
-  const setHelpModalOpen = useUiStore((s) => s.setHelpModalOpen);
   const focusedMapStageIndex = useUiStore((s) => s.focusedMapStageIndex);
   const setFocusedMapStageIndex = useUiStore((s) => s.setFocusedMapStageIndex);
   const viewMode = useUiStore((s) => s.viewMode);
@@ -418,84 +408,20 @@ export function TripPlanner({
     useUiStore.getState().setAnalysisPhaseActive(false);
   }, [clearTrip]);
 
-  const tNav = useTranslations("navigation");
-
-  // Action buttons shared across all states
-  const actionButtons = (
-    <div className="flex items-center gap-1">
-      {/* "Mes voyages" link — visible only when authenticated and no trip is open */}
-      {!trip && (
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-          className="h-9 gap-1 cursor-pointer"
-          data-testid="my-trips-link"
-        >
-          <Link href="/trips">
-            <Map className="h-4 w-4" />
-            <span className="hidden sm:inline">{tNav("myTrips")}</span>
-          </Link>
-        </Button>
-      )}
-      {trip && <TripDownloads tripId={trip.id} tripTitle={trip.title} />}
-      {trip && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 cursor-pointer"
-          onClick={() => setShareModalOpen(true)}
-          title={t("share.title")}
-          aria-label={t("share.title")}
-          data-testid="share-button"
-        >
-          <Share2 className="h-4 w-4" />
-        </Button>
-      )}
-      <UndoRedoButtons />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-9 w-9 cursor-pointer"
-        onClick={() => setHelpModalOpen(true)}
-        title={t("keyboardHelp.openButton")}
-        aria-label={t("keyboardHelp.openButton")}
-        data-testid="help-button"
-      >
-        <HelpCircle className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-9 w-9 cursor-pointer"
-        onClick={() => setConfigPanelOpen(true)}
-        title={t("config.open")}
-        aria-label={t("config.open")}
-        data-testid="config-open-button"
-      >
-        <Settings className="h-4 w-4" />
-      </Button>
-      <Button
-        asChild
-        variant="ghost"
-        size="icon"
-        className="h-9 w-9 cursor-pointer"
-        title={tNav("accountSettings")}
-        aria-label={tNav("accountSettings")}
-        data-testid="account-settings-link"
-      >
-        <Link href="/account/settings">
-          <User className="h-4 w-4" />
-        </Link>
-      </Button>
-    </div>
-  );
-
   return (
     <GpxDropZone
       onDrop={handleGpxUpload}
       disabled={isProcessing || !!trip || !isOnline}
     >
+      {/* Desktop top bar (#384) — brand, nav tabs, undo/redo + share + config
+          (trip detail only), help, language, theme, profile. */}
+      <TopBar
+        onShare={() => setShareModalOpen(true)}
+        onOpenConfig={() => setConfigPanelOpen(true)}
+        tripId={trip?.id}
+        tripTitle={trip?.title}
+      />
+
       <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative overflow-x-clip">
         {/* Skip link */}
         <a
@@ -527,7 +453,6 @@ export function TripPlanner({
               onUploadFile={handleGpxUpload}
               disabled={!isOnline}
             />
-            {actionButtons}
             <RecentTrips />
             <SavedTripsSection />
             <footer className="mt-4 text-center space-y-2">
@@ -551,7 +476,6 @@ export function TripPlanner({
         {isLoading && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
             <Loader2 className="h-10 w-10 text-brand animate-spin" />
-            {actionButtons}
           </div>
         )}
 
@@ -671,17 +595,14 @@ export function TripPlanner({
               <X className="h-4 w-4" />
             </Button>
 
-            {/* Top bar: title on first row, action buttons on second row */}
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-2 gap-y-2">
-              <div className="basis-full min-w-0 text-center md:text-left">
-                <TripHeader
-                  title={trip.title}
-                  onTitleChange={handleTitleChange}
-                  showTitleSuggestion={totalDistance !== null}
-                  isTitleLoading={isProcessing && totalDistance === null}
-                />
-              </div>
-              {actionButtons}
+            {/* Trip title — actions now live in the global top bar (#384) */}
+            <div className="min-w-0 text-center md:text-left">
+              <TripHeader
+                title={trip.title}
+                onTitleChange={handleTitleChange}
+                showTitleSuggestion={totalDistance !== null}
+                isTitleLoading={isProcessing && totalDistance === null}
+              />
             </div>
 
             {/* Locked banner */}
@@ -882,8 +803,8 @@ export function TripPlanner({
           onShare={handleShareTrip}
         />
 
-        {/* Keyboard shortcuts help modal */}
-        <KeyboardHelpModal />
+        {/* Unified help modal (shortcuts + FAQ) */}
+        <HelpModal />
 
         {/* Floating AI assistant — visible on Acte 1.5 (Aperçu) and Acte 3
             (Mon voyage), hidden during Acte 2 thanks to the internal

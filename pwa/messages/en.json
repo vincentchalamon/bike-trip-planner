@@ -900,8 +900,19 @@
     "ctaCreateTrip": "Create a trip"
   },
   "navigation": {
+    "brand": "Bike Trip Planner",
+    "brandHome": "Bike Trip Planner — home",
+    "primary": "Primary navigation",
+    "newTrip": "New trip",
     "myTrips": "My trips",
     "accountSettings": "My account"
+  },
+  "help": {
+    "title": "Help",
+    "description": "Keyboard shortcuts and frequently asked questions.",
+    "openButton": "Help",
+    "tabShortcuts": "Keyboard shortcuts",
+    "tabFaq": "FAQ"
   },
   "accountSettings": {
     "title": "My account",

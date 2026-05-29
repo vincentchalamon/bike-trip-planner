@@ -157,8 +157,8 @@ test.describe("CTA navigation", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByTestId("my-trips-link")).toBeVisible();
-    await expect(page.getByTestId("my-trips-link")).toHaveAttribute(
+    await expect(page.getByTestId("nav-my-trips")).toBeVisible();
+    await expect(page.getByTestId("nav-my-trips")).toHaveAttribute(
       "href",
       "/trips",
     );
