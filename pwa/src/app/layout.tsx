@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { OnboardingTour } from "@/components/onboarding-tour";
 import { AuthGuard } from "@/components/auth-guard";
+import { PlausibleScript } from "@/components/plausible-script";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -78,6 +79,7 @@ export default async function RootLayout({
             <Toaster richColors position="top-right" />
           </ThemeProvider>
         </NextIntlClientProvider>
+        <PlausibleScript />
       </body>
     </html>
   );
