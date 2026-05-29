@@ -11,7 +11,15 @@ import {
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Settings, HelpCircle, Loader2, X, Share2, Map } from "lucide-react";
+import {
+  Settings,
+  HelpCircle,
+  Loader2,
+  X,
+  Share2,
+  Map,
+  User,
+} from "lucide-react";
 import { CardSelection } from "@/components/card-selection";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
 import { TripLockedBanner } from "@/components/trip-locked-banner";
@@ -466,6 +474,19 @@ export function TripPlanner({
         data-testid="config-open-button"
       >
         <Settings className="h-4 w-4" />
+      </Button>
+      <Button
+        asChild
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9 cursor-pointer"
+        title={tNav("accountSettings")}
+        aria-label={tNav("accountSettings")}
+        data-testid="account-settings-link"
+      >
+        <Link href="/account/settings">
+          <User className="h-4 w-4" />
+        </Link>
       </Button>
     </div>
   );
