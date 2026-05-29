@@ -1,6 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import { mockAllApis } from "../fixtures/api-mocks";
 
+// This suite asserts the banner's own behaviour, so it must start with no
+// recorded consent — opt out of the global seeded storageState.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 const PLAUSIBLE_DOMAIN = "biketripplanner.test";
 const PLAUSIBLE_SRC = "https://plausible.test/js/script.js";
 

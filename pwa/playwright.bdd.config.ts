@@ -42,6 +42,9 @@ export default defineConfig({
     locale: "fr-FR",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    // Seed a recorded cookie-consent decision so the bottom consent banner
+    // does not overlay the viewport and intercept clicks during the recette.
+    storageState: "tests/fixtures/consent-storage-state.json",
   },
   projects: process.env.CI
     ? [

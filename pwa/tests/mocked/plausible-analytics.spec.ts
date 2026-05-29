@@ -1,6 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { mockAllApis } from "../fixtures/api-mocks";
 
+// Each case controls analytics consent explicitly via addInitScript, so start
+// from a clean slate — opt out of the global seeded storageState.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 const PLAUSIBLE_DOMAIN = "biketripplanner.test";
 const PLAUSIBLE_SRC = "https://plausible.test/js/script.js";
 
