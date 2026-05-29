@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Account;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\ApiResource\TripRequest;
+use App\Entity\Stage;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -53,6 +54,21 @@ final class AccountExportTest extends ApiTestCase
 
         $em->persist($trip);
 
+        $stage = new Stage($trip);
+        $stage->setPosition(0);
+        $stage->setDayNumber(1);
+        $stage->setLabel('Day 1');
+        $stage->setDistance(65.0);
+        $stage->setElevation(800.0);
+        $stage->setStartLat(48.8566);
+        $stage->setStartLon(2.3522);
+        $stage->setEndLat(48.85);
+        $stage->setEndLon(2.36);
+
+        $trip->addStage($stage);
+
+        $em->persist($stage);
+
         $em->flush();
 
         /** @var JWTTokenManagerInterface $jwtManager */
@@ -86,6 +102,13 @@ final class AccountExportTest extends ApiTestCase
         $this->assertSame(0.85, $trip['preferences']['fatigueFactor']);
         $this->assertEqualsWithDelta(70.0, $trip['preferences']['maxDistancePerDay'], 0.001);
         $this->assertArrayHasKey('enabledAccommodationTypes', $trip['preferences']);
+
+        $this->assertCount(1, $trip['stages']);
+        $stage = $trip['stages'][0];
+        $this->assertSame(1, $stage['dayNumber']);
+        $this->assertSame('Day 1', $stage['label']);
+        $this->assertEqualsWithDelta(65.0, $stage['distance'], 0.001);
+        $this->assertEqualsWithDelta(800.0, $stage['elevation'], 0.001);
     }
 
     #[Test]

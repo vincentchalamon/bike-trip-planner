@@ -37,8 +37,9 @@ final readonly class AccountExportProvider implements ProviderInterface
 
         /** @var list<TripRequest> $trips */
         $trips = $this->entityManager->createQueryBuilder()
-            ->select('t')
+            ->select('t', 's')
             ->from(TripRequest::class, 't')
+            ->leftJoin('t.stages', 's')
             ->where('t.user = :user')
             ->setParameter('user', $user)
             ->orderBy('t.createdAt', 'ASC')
