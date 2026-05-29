@@ -936,8 +936,8 @@
       "deleteAccount": "Delete my account",
       "dialogTitle": "Delete your account?",
       "dialogDescription": "This action is permanent. All your trips and preferences will be deleted and cannot be recovered.",
-      "confirmLabel": "Type \"SUPPRIMER\" to confirm",
-      "keyword": "SUPPRIMER",
+      "confirmLabel": "Type \"DELETE\" to confirm",
+      "keyword": "DELETE",
       "deleteFailed": "Could not delete your account."
     },
     "logout": {

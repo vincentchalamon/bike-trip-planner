@@ -132,6 +132,58 @@ test.describe("Account settings", () => {
     await page.waitForURL("/", { timeout: 5000 });
   });
 
+  test("delete account keeps dialog open and shows error toast on failure", async ({
+    page,
+  }) => {
+    await mockAuthenticated(page);
+
+    let deleteCalled = false;
+    await page.route("**/users/me", (route, request) => {
+      if (request.method() !== "DELETE") return route.fallback();
+      deleteCalled = true;
+      return route.fulfill({ status: 500, body: "" });
+    });
+
+    await page.goto("/account/settings");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByTestId("delete-account-button").click();
+    const dialog = page.getByTestId("delete-account-dialog");
+    await expect(dialog).toBeVisible();
+
+    await page
+      .getByTestId("delete-account-dialog-keyword-input")
+      .fill("SUPPRIMER");
+    const confirm = page.getByTestId("delete-account-dialog-confirm");
+    await expect(confirm).toBeEnabled();
+    await confirm.click();
+
+    await expect.poll(() => deleteCalled).toBe(true);
+    // The fix: dialog must stay open so the user can retry without retyping.
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(/\/account\/settings$/);
+  });
+
+  test("export button re-enables after a server error", async ({ page }) => {
+    await mockAuthenticated(page);
+
+    let exportCalled = false;
+    await page.route("**/users/me/export", (route, request) => {
+      if (request.method() !== "GET") return route.fallback();
+      exportCalled = true;
+      return route.fulfill({ status: 500, body: "" });
+    });
+
+    await page.goto("/account/settings");
+    await page.waitForLoadState("networkidle");
+
+    const button = page.getByTestId("export-data-button");
+    await button.click();
+    await expect.poll(() => exportCalled).toBe(true);
+    // The button must re-enable after the failure so the user can retry.
+    await expect(button).toBeEnabled();
+  });
+
   test("logout button logs out and redirects home", async ({ page }) => {
     await mockAuthenticated(page);
 

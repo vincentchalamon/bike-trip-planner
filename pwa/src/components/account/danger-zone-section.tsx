@@ -38,12 +38,12 @@ export function DangerZoneSection() {
         return;
       }
       await logout();
+      setOpen(false);
       router.replace("/");
     } catch {
       toast.error(t("deleteFailed"));
     } finally {
       setIsDeleting(false);
-      setOpen(false);
     }
   }
 

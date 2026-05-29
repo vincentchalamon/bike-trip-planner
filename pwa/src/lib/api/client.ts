@@ -745,7 +745,7 @@ export async function downloadStageFile(
  */
 export async function downloadAccountExport(): Promise<void> {
   const res = await apiFetch(`${API_URL}/users/me/export`, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/ld+json" },
   });
   if (!res.ok) throw new Error(`Export failed with status ${res.status}`);
   const blob = await res.blob();
