@@ -32,7 +32,7 @@ git fetch origin && git worktree add -b feature/<issue-number> .claude/worktrees
 The worktree starts with empty `vendor/` and `node_modules/`. Running `make install` per worktree is slow (≈30s composer + ≈25s npm) and Docker compose spins up a separate project per worktree path, so each tool invocation re-installs apk packages. Hard-link the existing deps from the main repo instead:
 
 ```bash
-MAIN=/home/vincent/Sites/bike-trip-planner
+MAIN=$(git worktree list | awk 'NR==1{print $1}')
 for p in api/vendor api/vendor-bin provisioner/vendor provisioner/vendor-bin pwa/node_modules; do
   [ -d "$MAIN/$p" ] && rsync -a --link-dest="$MAIN/$p/" "$MAIN/$p/" "$p/"
 done
