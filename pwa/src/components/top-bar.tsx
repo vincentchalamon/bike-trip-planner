@@ -134,7 +134,7 @@ export function TopBar({
         {isTripDetail && <UndoRedoButtons />}
 
         {/* 4. Share — trip detail only */}
-        {isTripDetail && (
+        {isTripDetail && onShare && (
           <Button
             variant="ghost"
             size="icon"

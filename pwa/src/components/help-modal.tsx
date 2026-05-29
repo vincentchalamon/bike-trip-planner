@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HelpCircle, Keyboard, MessageCircleQuestion } from "lucide-react";
 import {
@@ -38,6 +38,20 @@ export function HelpModal() {
   const isOpen = useUiStore((s) => s.isHelpModalOpen);
   const setHelpModalOpen = useUiStore((s) => s.setHelpModalOpen);
   const [activeTab, setActiveTab] = useState<HelpTab>("shortcuts");
+  const tabRefs = useRef<Record<HelpTab, HTMLButtonElement | null>>({
+    shortcuts: null,
+    faq: null,
+  });
+
+  function handleTabKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") {
+      return;
+    }
+    e.preventDefault();
+    const next: HelpTab = activeTab === "shortcuts" ? "faq" : "shortcuts";
+    setActiveTab(next);
+    tabRefs.current[next]?.focus();
+  }
 
   const faqCategories: FaqCategory[] = [
     {
@@ -88,6 +102,7 @@ export function HelpModal() {
           role="tablist"
           aria-label={t("title")}
           className="flex gap-1 rounded-lg bg-muted p-1"
+          onKeyDown={handleTabKeyDown}
         >
           <TabButton
             id="shortcuts"
@@ -95,6 +110,9 @@ export function HelpModal() {
             icon={Keyboard}
             isActive={activeTab === "shortcuts"}
             onClick={() => setActiveTab("shortcuts")}
+            ref={(el) => {
+              tabRefs.current.shortcuts = el;
+            }}
           />
           <TabButton
             id="faq"
@@ -102,6 +120,9 @@ export function HelpModal() {
             icon={MessageCircleQuestion}
             isActive={activeTab === "faq"}
             onClick={() => setActiveTab("faq")}
+            ref={(el) => {
+              tabRefs.current.faq = el;
+            }}
           />
         </div>
 
@@ -183,6 +204,7 @@ interface TabButtonProps {
   icon: typeof Keyboard;
   isActive: boolean;
   onClick: () => void;
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
 function TabButton({
@@ -191,14 +213,17 @@ function TabButton({
   icon: Icon,
   isActive,
   onClick,
+  ref,
 }: TabButtonProps) {
   return (
     <button
+      ref={ref}
       type="button"
       role="tab"
       id={`help-tab-${id}`}
       aria-selected={isActive}
       aria-controls={`help-tabpanel-${id}`}
+      tabIndex={isActive ? 0 : -1}
       onClick={onClick}
       data-testid={`help-tab-${id}`}
       className={cn(
