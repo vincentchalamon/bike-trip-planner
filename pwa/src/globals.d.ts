@@ -7,5 +7,13 @@ declare global {
     __zustand_ui_store?: typeof useUiStore;
     /** Exposed in non-production environments only (NODE_ENV !== 'production'). */
     __zustand_trip_store?: typeof useTripStore;
+    /**
+     * Plausible analytics event tracker, injected by {@link PlausibleScript}
+     * once analytics consent is granted. Absent otherwise.
+     */
+    plausible?: (
+      event: string,
+      options?: { props?: Record<string, string | number | boolean> },
+    ) => void;
   }
 }

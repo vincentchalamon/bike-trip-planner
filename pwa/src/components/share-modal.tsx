@@ -45,6 +45,7 @@ import {
   createTripShare,
   revokeTripShare,
 } from "@/lib/api/client";
+import { trackEvent } from "@/lib/plausible";
 import type { StageData } from "@/lib/validation/schemas";
 
 interface ShareModalProps {
@@ -186,6 +187,7 @@ export function ShareModal({
       const result = await createTripShare(tripId);
       if (result) {
         setShareUrl(buildShareUrl(result.shortCode ?? ""));
+        trackEvent("trip_shared");
       } else {
         toast.error(t("linkCreateFailed"));
       }

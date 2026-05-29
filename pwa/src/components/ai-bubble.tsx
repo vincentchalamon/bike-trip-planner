@@ -9,6 +9,7 @@ import { useTripStore } from "@/store/trip-store";
 import { AiChatPanel } from "@/components/ai-chat-panel";
 import { ChatOfflineBadge } from "@/components/chat/ChatOfflineBadge";
 import { useOnlineStatus } from "@/hooks/use-online-status";
+import { trackEvent } from "@/lib/plausible";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,13 +48,19 @@ export function AiBubble() {
     setCurrentContext({ currentStage: activeDayNumber ?? null });
   }, [activeDayNumber, setCurrentContext]);
 
+  // Track only the open transition so closing the panel does not emit an event.
+  const handleToggle = () => {
+    if (!isBubbleOpen) trackEvent("ai_chat_opened");
+    toggleBubble();
+  };
+
   if (!trip || isAnalysisPhaseActive) return null;
 
   return (
     <>
       <button
         type="button"
-        onClick={isOnline ? toggleBubble : undefined}
+        onClick={isOnline ? handleToggle : undefined}
         aria-disabled={!isOnline}
         aria-label={isBubbleOpen ? t("closeAria") : t("openAria")}
         aria-expanded={isBubbleOpen}
