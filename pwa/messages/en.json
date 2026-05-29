@@ -985,12 +985,121 @@
   },
   "legal": {
     "title": "Legal notice",
-    "comingSoon": "This page will be available soon.",
-    "backToHome": "Back to home"
+    "intro": "Legal information about the publisher and host of Bike Trip Planner.",
+    "lastUpdated": "Last updated: 29 May 2026",
+    "tocLabel": "Contents",
+    "backToHome": "Back to home",
+    "sections": {
+      "publisher": {
+        "title": "Publisher",
+        "paragraphs": [
+          "Bike Trip Planner is an open-source project published by Vincent Chalamon.",
+          "The source code is available on GitHub under an open-source license: https://github.com/vincentchalamon/bike-trip-planner",
+          "Publication director: Vincent Chalamon."
+        ]
+      },
+      "host": {
+        "title": "Host",
+        "paragraphs": [
+          "The application is hosted on cloud infrastructure located within the European Union.",
+          "The exact details of the host can be provided on request at the contact address below."
+        ]
+      },
+      "contact": {
+        "title": "Contact",
+        "paragraphs": [
+          "For any question about the site or to exercise your rights, contact us at: contact@bike-trip-planner.example.",
+          "You can also open an issue on the project's GitHub repository."
+        ]
+      },
+      "intellectualProperty": {
+        "title": "Intellectual property",
+        "paragraphs": [
+          "The Bike Trip Planner source code is distributed under an open-source license; the usage and redistribution terms are available in the GitHub repository.",
+          "Route and mapping data come from third-party sources (OpenStreetMap, DataTourisme, Wikidata, data.gouv.fr) and remain subject to their respective licenses, credited within the application.",
+          "Third-party trademarks, logos and content (Komoot, Strava, RideWithGPS, Garmin, Wahoo) remain the property of their respective owners."
+        ]
+      }
+    }
   },
   "privacy": {
     "title": "Privacy policy",
-    "comingSoon": "This page will be available soon.",
-    "backToHome": "Back to home"
+    "intro": "How Bike Trip Planner collects, uses and protects your personal data, in accordance with the GDPR.",
+    "lastUpdated": "Last updated: 29 May 2026",
+    "tocLabel": "Contents",
+    "backToHome": "Back to home",
+    "sections": {
+      "controller": {
+        "title": "Data controller",
+        "paragraphs": [
+          "The data controller is the publisher of Bike Trip Planner (see the legal notice).",
+          "For any question about your personal data, contact us at: contact@bike-trip-planner.example."
+        ]
+      },
+      "basis": {
+        "title": "Legal basis",
+        "paragraphs": [
+          "Processing of your email address is based on the performance of the service you request (magic-link sign-in and account management), under Article 6(1)(b) GDPR.",
+          "Anonymous audience measurement is based on our legitimate interest in improving the service, without prejudice to your rights and freedoms (Article 6(1)(f) GDPR)."
+        ]
+      },
+      "purposes": {
+        "title": "Purposes",
+        "paragraphs": [
+          "Your data is used to authenticate you, save and restore your trips, and compute route analyses (pacing, alerts, accommodation, weather).",
+          "Anonymous audience measurement is used solely to understand overall usage of the service and improve its usability."
+        ]
+      },
+      "data": {
+        "title": "Data collected",
+        "paragraphs": [
+          "Account: your email address, required for magic-link sign-in.",
+          "Trips: your trip configuration (title, dates, rider profile, stages, selected accommodation) is stored so you can access it from any device.",
+          "Route data: imported raw GPS points are cached temporarily (Redis) and then deleted automatically.",
+          "No sensitive data is collected, and no data is sold to third parties."
+        ]
+      },
+      "retention": {
+        "title": "Retention period",
+        "paragraphs": [
+          "Your account and trips are kept for as long as your account is active. You may request their deletion at any time.",
+          "Raw cached route data is kept for a maximum of 24 hours.",
+          "Anonymous audience measurement data is aggregated and cannot be used to re-identify you."
+        ]
+      },
+      "rights": {
+        "title": "Your rights",
+        "paragraphs": [
+          "In accordance with the GDPR, you have the right of access, rectification, erasure, restriction, objection and portability of your data.",
+          "To exercise these rights, contact us at: contact@bike-trip-planner.example. We respond within one month.",
+          "You also have the right to lodge a complaint with your supervisory authority (in France, the CNIL — www.cnil.fr)."
+        ]
+      },
+      "processors": {
+        "title": "Processors",
+        "paragraphs": [
+          "Infrastructure hosting: cloud provider located within the European Union.",
+          "Sending sign-in emails: a transactional email delivery provider.",
+          "Open-data sources queried for analysis (OpenStreetMap, weather forecasts): no identifying personal data is transmitted to them."
+        ]
+      },
+      "analytics": {
+        "title": "Audience measurement (Plausible)",
+        "paragraphs": [
+          "We use Plausible Analytics, a privacy-friendly audience measurement solution, self-hosted on our own infrastructure within the European Union.",
+          "Plausible sets no cookies and uses no fingerprinting techniques. No data is shared with third parties for advertising purposes.",
+          "IP addresses and user agents (browser) are anonymised and never stored; no data can be used to identify you or track you across sites.",
+          "Purpose: to understand, in aggregate, which pages are visited and overall usage in order to improve the service. Retention: aggregated statistics only, no individual data.",
+          "No consent banner is required because no personal data is collected; you nevertheless retain the objection rights described above."
+        ]
+      },
+      "contact": {
+        "title": "Contact",
+        "paragraphs": [
+          "For any question about this privacy policy, write to us at: contact@bike-trip-planner.example.",
+          "This policy may be updated; the last-updated date is shown at the top of this page."
+        ]
+      }
+    }
   }
 }

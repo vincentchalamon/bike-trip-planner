@@ -985,12 +985,121 @@
   },
   "legal": {
     "title": "Mentions légales",
-    "comingSoon": "Cette page sera disponible prochainement.",
-    "backToHome": "Retour à l'accueil"
+    "intro": "Informations légales relatives à l'éditeur et à l'hébergeur de Bike Trip Planner.",
+    "lastUpdated": "Dernière mise à jour : 29 mai 2026",
+    "tocLabel": "Sommaire",
+    "backToHome": "Retour à l'accueil",
+    "sections": {
+      "publisher": {
+        "title": "Éditeur",
+        "paragraphs": [
+          "Bike Trip Planner est un projet open-source édité par Vincent Chalamon.",
+          "Le code source est publié sur GitHub sous licence libre : https://github.com/vincentchalamon/bike-trip-planner",
+          "Directeur de la publication : Vincent Chalamon."
+        ]
+      },
+      "host": {
+        "title": "Hébergeur",
+        "paragraphs": [
+          "L'application est hébergée sur une infrastructure cloud située dans l'Union européenne.",
+          "Les coordonnées exactes de l'hébergeur peuvent être communiquées sur demande à l'adresse de contact ci-dessous."
+        ]
+      },
+      "contact": {
+        "title": "Contact",
+        "paragraphs": [
+          "Pour toute question relative au site ou pour exercer vos droits, vous pouvez nous contacter à l'adresse : contact@bike-trip-planner.example.",
+          "Vous pouvez également ouvrir une issue sur le dépôt GitHub du projet."
+        ]
+      },
+      "intellectualProperty": {
+        "title": "Propriété intellectuelle",
+        "paragraphs": [
+          "Le code source de Bike Trip Planner est distribué sous licence open-source ; les conditions d'utilisation et de redistribution figurent dans le dépôt GitHub.",
+          "Les données d'itinéraire et cartographiques proviennent de sources tierces (OpenStreetMap, DataTourisme, Wikidata, data.gouv.fr) et restent soumises à leurs licences respectives, créditées sur l'application.",
+          "Les marques, logos et contenus appartenant à des tiers (Komoot, Strava, RideWithGPS, Garmin, Wahoo) demeurent la propriété de leurs détenteurs respectifs."
+        ]
+      }
+    }
   },
   "privacy": {
     "title": "Politique de confidentialité",
-    "comingSoon": "Cette page sera disponible prochainement.",
-    "backToHome": "Retour à l'accueil"
+    "intro": "Comment Bike Trip Planner collecte, utilise et protège vos données personnelles, conformément au RGPD.",
+    "lastUpdated": "Dernière mise à jour : 29 mai 2026",
+    "tocLabel": "Sommaire",
+    "backToHome": "Retour à l'accueil",
+    "sections": {
+      "controller": {
+        "title": "Responsable du traitement",
+        "paragraphs": [
+          "Le responsable du traitement des données est l'éditeur de Bike Trip Planner (voir les mentions légales).",
+          "Pour toute question relative à vos données personnelles, contactez-nous à : contact@bike-trip-planner.example."
+        ]
+      },
+      "basis": {
+        "title": "Base légale",
+        "paragraphs": [
+          "Le traitement de votre adresse email repose sur l'exécution du service que vous demandez (connexion par lien magique et gestion de votre compte), au sens de l'article 6.1.b du RGPD.",
+          "La mesure d'audience anonyme repose sur notre intérêt légitime à améliorer le service, sans préjudice pour vos droits et libertés (article 6.1.f du RGPD)."
+        ]
+      },
+      "purposes": {
+        "title": "Finalités",
+        "paragraphs": [
+          "Vos données sont utilisées pour vous authentifier, sauvegarder et restituer vos voyages, et calculer les analyses d'itinéraire (pacing, alertes, hébergements, météo).",
+          "La mesure d'audience anonyme sert uniquement à comprendre l'usage global du service et à en améliorer l'ergonomie."
+        ]
+      },
+      "data": {
+        "title": "Données collectées",
+        "paragraphs": [
+          "Compte : votre adresse email, nécessaire à la connexion par lien magique.",
+          "Voyages : la configuration de vos voyages (titre, dates, profil cycliste, étapes, hébergements sélectionnés) est conservée pour vous permettre d'y accéder depuis n'importe quel appareil.",
+          "Données de tracé : les points GPS bruts importés sont conservés temporairement en cache (Redis) puis supprimés automatiquement.",
+          "Aucune donnée sensible n'est collectée, et aucune donnée n'est revendue à des tiers."
+        ]
+      },
+      "retention": {
+        "title": "Durée de conservation",
+        "paragraphs": [
+          "Votre compte et vos voyages sont conservés tant que votre compte est actif. Vous pouvez demander leur suppression à tout moment.",
+          "Les données de tracé brutes en cache sont conservées au maximum 24 heures.",
+          "Les données de mesure d'audience anonyme sont agrégées et ne permettent pas de vous réidentifier."
+        ]
+      },
+      "rights": {
+        "title": "Vos droits",
+        "paragraphs": [
+          "Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de vos données.",
+          "Pour exercer ces droits, contactez-nous à : contact@bike-trip-planner.example. Nous répondons dans un délai d'un mois.",
+          "Vous avez également le droit d'introduire une réclamation auprès de la CNIL (www.cnil.fr)."
+        ]
+      },
+      "processors": {
+        "title": "Sous-traitants",
+        "paragraphs": [
+          "Hébergement de l'infrastructure : prestataire cloud situé dans l'Union européenne.",
+          "Envoi des emails de connexion : prestataire d'envoi d'emails transactionnels.",
+          "Sources de données ouvertes interrogées pour l'analyse (OpenStreetMap, prévisions météo) : aucune donnée personnelle identifiante ne leur est transmise."
+        ]
+      },
+      "analytics": {
+        "title": "Mesure d'audience (Plausible)",
+        "paragraphs": [
+          "Nous utilisons Plausible Analytics, une solution de mesure d'audience respectueuse de la vie privée, auto-hébergée sur notre propre infrastructure dans l'Union européenne.",
+          "Plausible ne dépose aucun cookie et n'utilise aucune technique d'empreinte numérique (fingerprinting). Aucune donnée n'est partagée avec des tiers à des fins publicitaires.",
+          "Les adresses IP et les agents utilisateur (navigateur) sont anonymisés et ne sont jamais stockés ; aucune donnée ne permet de vous identifier ou de vous suivre entre les sites.",
+          "Finalité : comprendre de façon agrégée les pages consultées et l'usage global afin d'améliorer le service. Rétention : statistiques agrégées uniquement, aucune donnée individuelle.",
+          "Aucune bannière de consentement n'est requise car aucune donnée personnelle n'est collectée ; vous conservez néanmoins vos droits d'opposition décrits ci-dessus."
+        ]
+      },
+      "contact": {
+        "title": "Contact",
+        "paragraphs": [
+          "Pour toute question relative à cette politique de confidentialité, écrivez-nous à : contact@bike-trip-planner.example.",
+          "Cette politique peut être mise à jour ; la date de dernière mise à jour figure en haut de cette page."
+        ]
+      }
+    }
   }
 }
