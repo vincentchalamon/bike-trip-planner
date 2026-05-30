@@ -642,6 +642,34 @@ Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes,
 
 ---
 
+## Sprint 34.5 — Right-sizing beta Free Tier (profil <10 users)
+
+Ajustement de l'infrastructure pour démarrer une **beta restreinte (<10 users)** sur Oracle Cloud Free Tier (24 GB / 4 cœurs ARM) à coût 0 €, **avant** le déploiement complet du sprint 37. Right-sizing du LLM (un seul `llama3.2:3b` on-demand au lieu de 8B+3B résidents), isolement de l'inférence (transport `llm` dédié), observabilité externalisée (Sentry SaaS + UptimeRobot au lieu de GlitchTip/Uptime Kuma auto-hébergés), analytics différée (gating env déjà en place via #552/#553), filets mémoire, et OSM **France entière** en build local mensuel. Couture endpoint LLM (#564) pour préparer le 8B dédié / la migration GCP. Voir ADR-035 (#570) et le plan d'analyse de capacité.
+
+| Ordre | ID                                                                      | Titre                                                                              | Effort | PRs | Dépend de   |
+|-------|-------------------------------------------------------------------------|------------------------------------------------------------------------------------|--------|-----|-------------|
+| 1     | [#563](https://github.com/vincentchalamon/bike-trip-planner/issues/563) | Profil beta — modèle 3B unique (analyse + chat) + Ollama on-demand                 | S      |     | —           |
+| 2     | [#564](https://github.com/vincentchalamon/bike-trip-planner/issues/564) | Couture endpoint analyse/chat (`OLLAMA_ANALYSIS_URL` / `OLLAMA_CHAT_URL`)           | M      |     | —           |
+| 3     | [#565](https://github.com/vincentchalamon/bike-trip-planner/issues/565) | Transport `llm` dédié + `worker-llm` (split async/llm)                              | M      |     | —           |
+| 4     | [#566](https://github.com/vincentchalamon/bike-trip-planner/issues/566) | Limites mémoire conteneurs + Redis maxmemory (noeviction) + Postgres borné         | S      |     | #565        |
+| 5     | [#567](https://github.com/vincentchalamon/bike-trip-planner/issues/567) | Beta sans analytics — gating env + différer le serveur + doc réactivation          | S      |     | #552, #553  |
+| 6     | [#568](https://github.com/vincentchalamon/bike-trip-planner/issues/568) | Observabilité beta SaaS — Sentry + UptimeRobot                                      | S      |     | —           |
+| 7     | [#569](https://github.com/vincentchalamon/bike-trip-planner/issues/569) | OSM France entière — build local mensuel + runbook + désactiver osm-cron nightly   | M      |     | —           |
+| 8     | [#570](https://github.com/vincentchalamon/bike-trip-planner/issues/570) | ADR-035 right-sizing Free Tier + correction budget ADR-019                         | S      |     | —           |
+
+### Recette Sprint 34.5
+
+- **Checklist manuelle :**
+  - [ ] `docker stats` iso-prod : baseline ~6-7 GB, pic ~9 GB pendant une analyse (Ollama ~0 au repos, ~2,3 GB en analyse)
+  - [ ] `/api/healthz` vert ; `worker-llm` consomme `llm`, les `worker` consomment `async`
+  - [ ] 5-10 imports rapprochés → API/SSR réactifs, pas d'OOM-kill (`dmesg`), files Messenger se vident
+  - [ ] `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` vide → 0 requête analytics, 0 cookie
+  - [ ] Erreur backend/front visible dans Sentry SaaS ; monitor UptimeRobot vert sur `/api/healthz`
+  - [ ] Tuiles OSM France servies (`/route` OK) ; runbook `docs/runbooks/osm-france-refresh.md` rejouable
+  - [ ] `make qa` green
+
+---
+
 ## Sprint 35 — Recette complète & Audit
 
 Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 33, hors sprint 34 RGPD/parcours compte qui a sa propre recette) et audit complet : performance, sécurité, accessibilité, SEO, qualité de code, couverture de tests. Deux phases : **audit** (cartographier les problèmes) puis **corrections** (fixer par lots thématiques).
@@ -984,9 +1012,10 @@ Sprint dédié à la résilience de la donnée en production. ADR-032 (Migration
 | 32        | Chat in-ride : POI + détour              | 8       | ~8           |
 | 33        | OSM Data Refresh quotidien               | 4       | ~4           |
 | 34        | Analytics Plausible + RGPD + parcours compte | 10    | ~10          |
+| 34.5      | Right-sizing beta Free Tier              | 8       | ~8           |
 | 35        | Recette complète & Audit                 | 36      | ~12          |
 | 36        | Garmin Connect                           | 1       | 3            |
 | 37        | Déploiement (incl. Ollama prod)          | 8       | ~8           |
 | 38        | Performance & Resilience Deep Dive       | 18      | ~12          |
 | 39        | Backup & Disaster Recovery               | 9       | ~9           |
-| **Total** |                                          | **223** | **~227**     |
+| **Total** |                                          | **231** | **~235**     |
