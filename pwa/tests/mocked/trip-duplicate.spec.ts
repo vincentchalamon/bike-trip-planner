@@ -4,15 +4,13 @@ import { getTripId } from "../fixtures/api-mocks";
 const NEW_TRIP_ID = "duplicate-trip-uuid-9999";
 
 test.describe("Trip duplication", () => {
-  test("duplicate button is disabled before trip is loaded", async ({
+  test("config panel (and duplicate action) is not reachable before a trip is loaded", async ({
     mockedPage,
   }) => {
-    await mockedPage
-      .getByRole("button", { name: "Ouvrir les paramètres" })
-      .click();
-    await expect(
-      mockedPage.getByTestId("duplicate-trip-button"),
-    ).toBeDisabled();
+    // Since #384 the config gear lives in the top bar and only renders on a
+    // trip detail route. On the welcome screen there is no way to open the
+    // panel, so the duplicate action it hosts is unreachable.
+    await expect(mockedPage.getByTestId("config-open-button")).toHaveCount(0);
   });
 
   test("duplicate button navigates to new trip on success", async ({

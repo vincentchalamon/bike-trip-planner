@@ -55,7 +55,11 @@ test.describe("Desktop top bar", () => {
     await injectEvent(routeParsedEvent());
 
     await mockedPage.getByTestId("share-button").click();
-    await expect(mockedPage.getByTestId("share-modal")).toBeVisible();
+    // The share API GET is unmocked here, so the modal settles on the
+    // "create share link" state — its presence proves the modal is open.
+    await expect(
+      mockedPage.getByTestId("share-create-link-button"),
+    ).toBeVisible({ timeout: 5000 });
   });
 
   test("language pills toggle the active locale", async ({ mockedPage }) => {

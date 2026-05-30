@@ -6,10 +6,13 @@ import {
 import { stageUpdatedEvent } from "../fixtures/mock-data";
 
 test.describe("Undo/Redo", () => {
-  test("undo and redo buttons are disabled on fresh page load", async ({
+  test("undo and redo buttons are disabled on a freshly loaded trip", async ({
+    submitUrl,
     mockedPage,
   }) => {
-    // Before any trip is loaded the history stacks are empty
+    // The undo/redo controls only render on a trip detail route (#384).
+    // Right after loading a trip the history stacks are still empty.
+    await submitUrl();
     await expect(mockedPage.getByTestId("undo-button")).toBeDisabled();
     await expect(mockedPage.getByTestId("redo-button")).toBeDisabled();
   });
