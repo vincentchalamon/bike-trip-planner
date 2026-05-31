@@ -48,6 +48,10 @@ For each branch whose PR is **merged or closed**, in this order:
 
 2. **Remove the worktree.** Worktrees created via `EnterWorktree` are locked: `git worktree unlock <path>` then `git worktree remove <path>`, finally `git worktree prune`. If the remove fails with **Permission denied** because a sub-tree holds files written by Docker as root (typically `pwa/test-results/`, `recette-report/`, `.features-gen/`, `.phpunit.cache/`, `node_modules/.cache/`), do **not** use `sudo` and do **not** `chown`/`rm` on the host (the agent has neither permission). Delete them from inside a throwaway **root** container that bind-mounts the worktrees parent — a root container can remove root-owned files:
    ```bash
+   # Safety: assert <worktree-basename> is non-empty and contains no path
+   # separator before running — an empty value expands to `rm -rf /wt/` and
+   # wipes every worktree in the mount. For agent-<hex> names this is always
+   # safe; double-check if the worktree was created with a custom path.
    docker run --rm -v <abs-path>/.claude/worktrees:/wt alpine rm -rf /wt/<worktree-basename>
    git worktree prune
    ```

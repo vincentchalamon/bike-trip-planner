@@ -110,9 +110,10 @@ Each cycle:
 5. **Parent merged (squash) — child retargeted to `main`** — when a parent PR is **squash-merged** and its branch deleted, GitHub retargets the child PR onto `main`, but the child branch still carries the parent's pre-squash commits, so a plain `git rebase origin/main` conflicts and `mergeable` shows `CONFLICTING`. Do **not** rebase onto `main` directly. Instead replay only the child's own commits with `--onto`, dropping the now-merged parent commits:
    ```bash
    git fetch origin
-   # <last-parent-commit> = the child's branch point off the parent, i.e. the
-   # last commit in `git log origin/main..feature/<child>` that belongs to the
-   # parent (everything above it is the child's own work to keep).
+   # <last-parent-commit> = the tip of the former parent branch before squash,
+   # i.e. the most-recent (top-most) commit in
+   # `git log origin/main..feature/<child>` that belongs to the parent.
+   # Everything above it in the log is the child's own work to replay.
    git rebase --onto origin/main <last-parent-commit> feature/<child>
    git push --force-with-lease
    ```
