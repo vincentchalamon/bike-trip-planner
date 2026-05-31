@@ -8,6 +8,14 @@ export interface LegalSection {
   paragraphs: string[];
 }
 
+/** Validates a `t.raw()` value as an array of strings, throwing on mismatch. */
+export function asParagraphs(raw: unknown, key: string): string[] {
+  if (!Array.isArray(raw) || !raw.every((item) => typeof item === "string")) {
+    throw new Error(`Translation "${key}" must be an array of strings`);
+  }
+  return raw;
+}
+
 interface LegalPageProps {
   /** Main page heading. */
   title: string;

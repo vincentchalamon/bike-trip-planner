@@ -1,13 +1,10 @@
 import { getTranslations } from "next-intl/server";
-import { LegalPageLayout, type LegalSection } from "@/components/legal-page";
+import {
+  LegalPageLayout,
+  type LegalSection,
+  asParagraphs,
+} from "@/components/legal-page";
 import { LandingFooter } from "@/components/landing/footer";
-
-function asParagraphs(raw: unknown, key: string): string[] {
-  if (!Array.isArray(raw) || !raw.every((item) => typeof item === "string")) {
-    throw new Error(`Translation "${key}" must be an array of strings`);
-  }
-  return raw;
-}
 
 const SECTION_IDS = [
   "controller",
