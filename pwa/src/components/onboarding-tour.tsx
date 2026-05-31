@@ -17,9 +17,10 @@ import { useOnboarding } from "@/hooks/use-onboarding";
  *   3. Configure the rider profile (pacing / fatigue)
  *   4. Read stages in the timeline (shown after a trip loads)
  *
- * Steps 1–3 target elements that are always in the DOM. Step 4 is a
- * centred modal (no DOM target) that describes the timeline, since no
- * trip data is loaded yet on a first visit.
+ * Steps 1–2 target elements that are always in the DOM. Steps 3–4 are
+ * centred modals (no DOM target): step 3 describes the rider profile
+ * (the settings gear only appears once a trip is open), step 4 the
+ * timeline, since no trip data is loaded yet on a first visit.
  *
  * The tour is dismissed by finishing, pressing Escape, or clicking the
  * overlay. In all cases `markOnboardingDone()` is called so the tour
@@ -77,13 +78,13 @@ export function OnboardingTour() {
           },
         },
         {
-          // Step 3 — configure pacing via the settings button
-          element: "[data-testid='config-open-button']",
+          // Step 3 — configure pacing. The settings gear now lives in the
+          // top bar and only appears once a trip is open (#384), so on the
+          // welcome screen this step is a centred modal with no DOM target.
           popover: {
             title: t("step3Title"),
             description: t.raw("step3Description"),
-            side: "bottom",
-            align: "end",
+            side: "over",
           },
         },
         {

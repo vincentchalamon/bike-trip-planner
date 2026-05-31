@@ -164,18 +164,23 @@ test.describe("Pacing settings", () => {
     submitUrl,
     injectEvent,
   }) => {
-    // Open config panel from welcome screen and select Débutant preset
-    await mockedPage.getByTestId("config-open-button").click();
-    await expect(
-      mockedPage.getByRole("dialog", { name: "Paramètres" }),
-    ).toBeInViewport();
+    // The config gear only renders on a trip detail route (#384), so load a
+    // trip first, then open the panel and select the Débutant preset.
+    await submitUrl();
+    await injectEvent(routeParsedEvent());
+    await openConfigPanel(mockedPage);
     await mockedPage
       .getByRole("button", { name: "Appliquer le profil Débutant" })
       .click();
     // Close config panel
     await mockedPage.keyboard.press("Escape");
 
-    // Submit a URL — this calls clearTrip() internally
+    // Close the trip — client-side navigation back to "/" calls clearTrip(),
+    // which must preserve the user-configured pacing settings.
+    await mockedPage.getByTestId("close-trip-button").click();
+    await mockedPage.waitForURL((url) => !url.pathname.startsWith("/trips"));
+
+    // Submit a new URL — the new trip inherits the preserved pacing settings.
     await submitUrl();
     await injectEvent(routeParsedEvent());
 

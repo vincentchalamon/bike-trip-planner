@@ -14,6 +14,13 @@ const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: "English",
 };
 
+// Compact pill labels shown on narrow screens to keep the top bar within the
+// viewport. The accessible name keeps the full language name (see aria-label).
+const LOCALE_SHORT_LABELS: Record<SupportedLocale, string> = {
+  fr: "FR",
+  en: "EN",
+};
+
 export function LocaleSwitcher() {
   const t = useTranslations("config");
   const currentLocale = useLocale();
@@ -37,7 +44,7 @@ export function LocaleSwitcher() {
     >
       <Languages
         className={cn(
-          "h-4 w-4 text-muted-foreground shrink-0",
+          "hidden sm:block h-4 w-4 text-muted-foreground shrink-0",
           isPending && "animate-spin",
         )}
       />
@@ -61,7 +68,8 @@ export function LocaleSwitcher() {
               aria-pressed={isActive}
               data-testid={`locale-switch-${locale}`}
             >
-              {LOCALE_LABELS[locale]}
+              <span className="sm:hidden">{LOCALE_SHORT_LABELS[locale]}</span>
+              <span className="hidden sm:inline">{LOCALE_LABELS[locale]}</span>
             </Button>
           );
         })}

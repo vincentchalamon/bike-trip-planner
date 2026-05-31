@@ -7,8 +7,6 @@ import { X, Copy, Share2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { LocaleSwitcher } from "@/components/locale-switcher";
 import { PacingSettings } from "@/components/pacing-settings";
 import { DateRangePicker } from "@/components/date-range-picker";
 import { useUiStore } from "@/store/ui-store";
@@ -298,34 +296,6 @@ export function ConfigPanel({
                 })}
               </div>
             </fieldset>
-          </section>
-
-          <Separator />
-
-          {/* Theme */}
-          <section aria-labelledby="config-theme-heading">
-            <h3 id="config-theme-heading" className="text-sm font-medium mb-3">
-              {t("themeTitle")}
-            </h3>
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <span className="text-sm text-muted-foreground">
-                {t("themeDescription")}
-              </span>
-            </div>
-          </section>
-
-          <Separator />
-
-          {/* Language */}
-          <section aria-labelledby="config-language-heading">
-            <h3
-              id="config-language-heading"
-              className="text-sm font-medium mb-3"
-            >
-              {t("languageTitle")}
-            </h3>
-            <LocaleSwitcher />
           </section>
 
           <Separator />

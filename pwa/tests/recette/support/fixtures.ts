@@ -26,11 +26,15 @@ export const test = base.extend<RecetteFixtures>({
     clearCurrentRecettePage();
     resetAccommodationScanRequest();
     const locale = testInfo.file.includes(".en.feature.") ? "en" : "fr";
+    // Anchor the locale cookie to the project's baseURL so it is sent to the
+    // server actually under test. Defaults to https://localhost (CI); an
+    // isolated dev server can be targeted via PLAYWRIGHT_BASE_URL.
+    const cookieUrl = testInfo.project.use.baseURL ?? "https://localhost";
     await page.context().addCookies([
       {
         name: "locale",
         value: locale,
-        url: "https://localhost",
+        url: cookieUrl,
       },
     ]);
     await mockAllApis(page);

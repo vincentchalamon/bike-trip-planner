@@ -900,8 +900,19 @@
     "ctaCreateTrip": "Créer un itinéraire"
   },
   "navigation": {
+    "brand": "Bike Trip Planner",
+    "brandHome": "Bike Trip Planner — accueil",
+    "primary": "Navigation principale",
+    "newTrip": "Nouveau voyage",
     "myTrips": "Mes voyages",
     "accountSettings": "Mon compte"
+  },
+  "help": {
+    "title": "Aide",
+    "description": "Raccourcis clavier et questions fréquentes.",
+    "openButton": "Aide",
+    "tabShortcuts": "Raccourcis clavier",
+    "tabFaq": "FAQ"
   },
   "accountSettings": {
     "title": "Mon compte",

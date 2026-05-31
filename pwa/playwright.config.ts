@@ -12,7 +12,7 @@ export default defineConfig({
     ? [["github"], ["json", { outputFile: "playwright-report.json" }]]
     : "line",
   use: {
-    baseURL: "https://localhost",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "https://localhost",
     ignoreHTTPSErrors: true,
     locale: "fr-FR",
     trace: "on-first-retry",
