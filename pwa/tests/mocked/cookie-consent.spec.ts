@@ -172,4 +172,27 @@ test.describe("Cookie granularity modal", () => {
     await page.getByTestId("cookie-modal-privacy-link").click();
     await expect(page).toHaveURL("/privacy");
   });
+
+  test("unsaved toggle is discarded when modal is dismissed and reopened", async ({
+    page,
+  }) => {
+    await mockAllApis(page);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    // Open modal and toggle analytics ON without saving.
+    await page.getByTestId("cookie-customize").click();
+    await expect(page.getByTestId("cookie-toggle-analytics")).not.toBeChecked();
+    await page.getByTestId("cookie-toggle-analytics").click();
+    await expect(page.getByTestId("cookie-toggle-analytics")).toBeChecked();
+
+    // Dismiss without recording any consent.
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("cookie-modal")).toHaveCount(0);
+    expect(await readStoredConsent(page)).toBeNull();
+
+    // Reopen — switch must be back to its initial (false) state.
+    await page.getByTestId("cookie-customize").click();
+    await expect(page.getByTestId("cookie-toggle-analytics")).not.toBeChecked();
+  });
 });
