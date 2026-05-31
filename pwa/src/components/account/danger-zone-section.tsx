@@ -37,13 +37,19 @@ export function DangerZoneSection() {
         toast.error(t("deleteFailed"));
         return;
       }
-      await logout();
-      setOpen(false);
-      router.replace("/");
     } catch {
       toast.error(t("deleteFailed"));
+      return;
     } finally {
       setIsDeleting(false);
+    }
+    // Account deleted — log out and redirect regardless of whether the logout
+    // API call succeeds, so a logout failure never masks a successful delete.
+    try {
+      await logout();
+    } finally {
+      setOpen(false);
+      router.replace("/");
     }
   }
 
