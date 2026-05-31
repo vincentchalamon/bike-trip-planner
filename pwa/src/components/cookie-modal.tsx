@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,13 @@ export function CookieModal({
 }: CookieModalProps) {
   const t = useTranslations("cookies");
   const [analytics, setAnalytics] = useState(initialAnalytics);
+
+  // The modal stays mounted across open/close cycles, so reset the switch to
+  // the recorded consent whenever it reopens — otherwise an unsaved toggle
+  // dismissed via "×" would leak into the next open.
+  useEffect(() => {
+    if (open) setAnalytics(initialAnalytics);
+  }, [open, initialAnalytics]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
