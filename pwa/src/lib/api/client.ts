@@ -737,6 +737,35 @@ export async function downloadStageFile(
 }
 
 /**
+ * GDPR right to portability (#549, #383): download the authenticated user's
+ * full data archive (`GET /users/me/export`) as a JSON file and trigger a
+ * browser save dialog.
+ *
+ * @throws {Error} When the server responds with a non-2xx status.
+ */
+export async function downloadAccountExport(): Promise<void> {
+  const res = await apiFetch(`${API_URL}/users/me/export`, {
+    headers: { Accept: "application/ld+json" },
+  });
+  if (!res.ok) throw new Error(`Export failed with status ${res.status}`);
+  const blob = await res.blob();
+  const today = new Date().toISOString().slice(0, 10);
+  triggerBlobDownload(blob, `bike-trip-planner-export-${today}.json`);
+}
+
+/**
+ * GDPR right to erasure (#549, #383): permanently delete the authenticated
+ * user's account (`DELETE /users/me`). The backend anonymises the account,
+ * purges trips and preferences, and revokes refresh tokens.
+ *
+ * @returns true on HTTP 204, false otherwise.
+ */
+export async function deleteAccount(): Promise<boolean> {
+  const { response } = await apiClient.DELETE("/users/me");
+  return response.ok;
+}
+
+/**
  * Build the frontend share URL from a short code.
  */
 export function buildShareUrl(shortCode: string): string {

@@ -900,7 +900,52 @@
     "ctaCreateTrip": "Créer un itinéraire"
   },
   "navigation": {
-    "myTrips": "Mes voyages"
+    "myTrips": "Mes voyages",
+    "accountSettings": "Mon compte"
+  },
+  "accountSettings": {
+    "title": "Mon compte",
+    "subtitle": "Gérez votre compte, vos préférences et vos données.",
+    "account": {
+      "title": "Mon compte",
+      "description": "Adresse e-mail associée à votre compte.",
+      "emailLabel": "Adresse e-mail",
+      "changeEmail": "Modifier via magic link",
+      "changeEmailSent": "Un lien de modification vous a été envoyé par e-mail.",
+      "changeEmailFailed": "Impossible d'envoyer le lien de modification."
+    },
+    "preferences": {
+      "title": "Préférences",
+      "description": "Personnalisez la langue et l'apparence de l'application.",
+      "languageLabel": "Langue",
+      "themeLabel": "Thème",
+      "themeLight": "Clair",
+      "themeDark": "Sombre",
+      "themeSystem": "Auto"
+    },
+    "data": {
+      "title": "Mes données",
+      "description": "Téléchargez une archive de vos données personnelles (RGPD).",
+      "download": "Télécharger mes données (JSON)",
+      "downloading": "Téléchargement...",
+      "downloadFailed": "Impossible de télécharger vos données."
+    },
+    "danger": {
+      "title": "Zone de danger",
+      "description": "La suppression de votre compte est définitive et irréversible.",
+      "deleteAccount": "Supprimer mon compte",
+      "dialogTitle": "Supprimer votre compte ?",
+      "dialogDescription": "Cette action est définitive. Tous vos voyages et préférences seront supprimés et ne pourront pas être récupérés.",
+      "confirmLabel": "Tapez « SUPPRIMER » pour confirmer",
+      "keyword": "SUPPRIMER",
+      "deleteFailed": "Impossible de supprimer votre compte."
+    },
+    "logout": {
+      "title": "Déconnexion",
+      "description": "Vous serez déconnecté de cet appareil.",
+      "button": "Se déconnecter",
+      "logoutFailed": "Échec de la déconnexion. Veuillez réessayer."
+    }
   },
   "errorPages": {
     "notFound": {

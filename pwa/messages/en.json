@@ -900,7 +900,52 @@
     "ctaCreateTrip": "Create a trip"
   },
   "navigation": {
-    "myTrips": "My trips"
+    "myTrips": "My trips",
+    "accountSettings": "My account"
+  },
+  "accountSettings": {
+    "title": "My account",
+    "subtitle": "Manage your account, preferences and data.",
+    "account": {
+      "title": "My account",
+      "description": "Email address linked to your account.",
+      "emailLabel": "Email address",
+      "changeEmail": "Change via magic link",
+      "changeEmailSent": "A change link has been sent to your email.",
+      "changeEmailFailed": "Could not send the change link."
+    },
+    "preferences": {
+      "title": "Preferences",
+      "description": "Customise the language and appearance of the app.",
+      "languageLabel": "Language",
+      "themeLabel": "Theme",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "themeSystem": "Auto"
+    },
+    "data": {
+      "title": "My data",
+      "description": "Download an archive of your personal data (GDPR).",
+      "download": "Download my data (JSON)",
+      "downloading": "Downloading...",
+      "downloadFailed": "Could not download your data."
+    },
+    "danger": {
+      "title": "Danger zone",
+      "description": "Deleting your account is permanent and cannot be undone.",
+      "deleteAccount": "Delete my account",
+      "dialogTitle": "Delete your account?",
+      "dialogDescription": "This action is permanent. All your trips and preferences will be deleted and cannot be recovered.",
+      "confirmLabel": "Type \"DELETE\" to confirm",
+      "keyword": "DELETE",
+      "deleteFailed": "Could not delete your account."
+    },
+    "logout": {
+      "title": "Log out",
+      "description": "You will be logged out of this device.",
+      "button": "Log out",
+      "logoutFailed": "Logout failed. Please try again."
+    }
   },
   "errorPages": {
     "notFound": {
