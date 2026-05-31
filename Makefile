@@ -107,7 +107,7 @@ screenshots: ## Regenerate README + landing screenshots (run after UI changes; r
 		--mount type=volume,src=playwright_node_modules,dst=/repo/pwa/node_modules \
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.60.0-noble \
-		/bin/sh -c 'npm install; npx playwright test tests/screenshots/capture.spec.ts'
+		/bin/sh -c 'npm install; npx playwright test --config playwright.screenshots.config.ts'
 
 test-recette: ## Run Playwright BDD recette scenarios (Gherkin)
 	@docker run --network host \

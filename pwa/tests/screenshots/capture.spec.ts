@@ -39,9 +39,9 @@ const CLIP_16_9 = { x: 0, y: 0, width: 1440, height: 810 } as const;
 const JPEG_QUALITY = 82;
 
 /** Let map tiles and lazily-rendered panels settle before capturing. */
-async function settle(page: Page): Promise<void> {
+async function settle(page: Page, ms = 1500): Promise<void> {
   await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(ms);
 }
 
 test.beforeAll(() => {
@@ -60,7 +60,8 @@ test.describe("desktop", () => {
     const toggle = mockedPage.getByTestId("view-mode-toggle");
     await toggle.getByTestId("view-mode-split").click();
     await mockedPage.getByTestId("split-view-container").waitFor();
-    await settle(mockedPage);
+    // Toggling to split re-mounts the map; give the CARTO tiles time to paint.
+    await settle(mockedPage, 5000);
 
     await mockedPage.screenshot({
       path: path.join(README_DIR, "desktop-split-view.png"),
