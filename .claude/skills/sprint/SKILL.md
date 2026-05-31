@@ -107,6 +107,17 @@ Each cycle:
    Address every **actionable** point, commit, push, then reply to / resolve the corresponding threads. List any comment you deliberately did not action, with the reason.
 3. **Conflicts** — `gh pr view <pr> --json mergeable,mergeStateStatus`. If `CONFLICTING`: rebase onto the base branch and resolve **conservatively**. If the resolution is ambiguous or risks discarding work, **stop and flag it** — do not force a resolution.
 4. **Parent moved (stacked PR)** — if the PR's base is `feature/<n>` and that branch advanced on origin since the last sync (compare local merge-base vs `origin/feature/<n>`), rebase onto it: `git fetch origin feature/<n> && git rebase origin/feature/<n>`, then `git push --force-with-lease`. **Whenever you push new commits to a parent branch (Phase 4 cycle on that PR), immediately re-rebase every child PR onto it** to keep the stack consistent — the GitHub UI does not do this for you and the stale child will hit a phantom conflict at merge time.
+5. **Parent merged (squash) — child retargeted to `main`** — when a parent PR is **squash-merged** and its branch deleted, GitHub retargets the child PR onto `main`, but the child branch still carries the parent's pre-squash commits, so a plain `git rebase origin/main` conflicts and `mergeable` shows `CONFLICTING`. Do **not** rebase onto `main` directly. Instead replay only the child's own commits with `--onto`, dropping the now-merged parent commits:
+   ```bash
+   git fetch origin
+   # <last-parent-commit> = the tip of the former parent branch before squash,
+   # i.e. the most-recent (top-most) commit in
+   # `git log origin/main..feature/<child>` that belongs to the parent.
+   # Everything above it in the log is the child's own work to replay.
+   git rebase --onto origin/main <last-parent-commit> feature/<child>
+   git push --force-with-lease
+   ```
+   Verify afterwards that `git log origin/main..HEAD` lists **only** the child's commits. For a 3-deep stack (A→B→C), do this bottom-up as each parent merges.
 
 **Termination (READY)** when all hold: CI green **AND** `mergeable` **AND** not draft **AND** `claude-code-review.yml` has completed (`gh run view --workflow=claude-code-review.yml` shows `completed`) with **no new blocking comment** (Critical/High). Wait for that workflow to finish before evaluating its output — after a push it is triggered asynchronously and may still be `pending`/`in_progress`.
 
