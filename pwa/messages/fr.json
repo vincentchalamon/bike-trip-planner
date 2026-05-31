@@ -943,7 +943,8 @@
     "logout": {
       "title": "Déconnexion",
       "description": "Vous serez déconnecté de cet appareil.",
-      "button": "Se déconnecter"
+      "button": "Se déconnecter",
+      "logoutFailed": "Échec de la déconnexion. Veuillez réessayer."
     }
   },
   "errorPages": {

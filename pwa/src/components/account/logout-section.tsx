@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/sonner";
 import { useAuthStore } from "@/store/auth-store";
 
 /**
@@ -28,6 +29,8 @@ export function LogoutSection() {
     try {
       await logout();
       router.replace("/");
+    } catch {
+      toast.error(t("logoutFailed"));
     } finally {
       setIsLoggingOut(false);
     }

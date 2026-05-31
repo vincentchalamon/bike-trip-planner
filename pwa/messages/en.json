@@ -943,7 +943,8 @@
     "logout": {
       "title": "Log out",
       "description": "You will be logged out of this device.",
-      "button": "Log out"
+      "button": "Log out",
+      "logoutFailed": "Logout failed. Please try again."
     }
   },
   "errorPages": {
