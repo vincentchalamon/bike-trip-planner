@@ -3,6 +3,7 @@
 import { Sparkles, Shuffle, Compass, X, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { trackEvent } from "@/lib/plausible";
 import type { AlertActionData } from "@/lib/validation/schemas";
 
 /**
@@ -51,7 +52,10 @@ export function AlertActionButton({
       type="button"
       variant="outline"
       size="xs"
-      onClick={onClick}
+      onClick={() => {
+        trackEvent("alert_action_clicked", { kind: action.kind });
+        onClick();
+      }}
       disabled={disabled}
       aria-label={ariaLabel ?? action.label}
       data-testid="alert-action-button"

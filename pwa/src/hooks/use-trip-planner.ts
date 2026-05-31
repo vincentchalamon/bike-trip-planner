@@ -26,6 +26,7 @@ import {
   type TripChatResponseBody,
 } from "@/lib/api/client";
 import { getRandomTripName } from "@/lib/trip-utils";
+import { trackEvent, type PlausibleEvent } from "@/lib/plausible";
 import {
   MAX_ACCOMMODATION_RADIUS_KM,
   ACCOMMODATION_RADIUS_STEP_KM,
@@ -33,6 +34,14 @@ import {
 } from "@/lib/accommodation-constants";
 import type { AccommodationData, StageData } from "@/lib/validation/schemas";
 import type { AccommodationType } from "@/lib/accommodation-types";
+
+/** Map a source URL to its Plausible import event (null if unrecognised). */
+export function importEventForUrl(url: string): PlausibleEvent | null {
+  if (/komoot\.com\//.test(url)) return "import_komoot";
+  if (/strava\.com\//.test(url)) return "import_strava";
+  if (/ridewithgps\.com\//.test(url)) return "import_rwgps";
+  return null;
+}
 
 /** Read current pacing + config state from the store without subscribing. */
 function getPacingState() {
@@ -188,6 +197,9 @@ export function useTripPlanner() {
         title: getRandomTripName(),
         sourceUrl,
       });
+      const importEvent = importEventForUrl(sourceUrl);
+      if (importEvent) trackEvent(importEvent);
+      trackEvent("trip_created", { source: importEvent ?? "url" });
       router.push(`/trips/${data.id ?? ""}`);
     } catch (err) {
       if (isNetworkError(err)) {
@@ -235,6 +247,8 @@ export function useTripPlanner() {
         sourceType: "gpx_upload",
         title: data.title ?? null,
       });
+      trackEvent("import_gpx");
+      trackEvent("trip_created", { source: "gpx" });
     } catch (err) {
       if (isNetworkError(err)) {
         toast.error(t("errors.networkError"));
@@ -936,6 +950,7 @@ export function useTripPlanner() {
         const affectedIndices = [stageIndex];
         if (nextStageIndex !== null) affectedIndices.push(nextStageIndex);
         actions.startStageRecomputation(affectedIndices);
+        trackEvent("accommodation_selected", { type: acc.type });
       }
     } catch {
       toast.error(t("errors.failedSelectAccommodation"));
