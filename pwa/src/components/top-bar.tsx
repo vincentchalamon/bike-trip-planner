@@ -144,8 +144,9 @@ export function TopBar({
           </div>
         )}
 
-        {/* 4. Share — only when a trip is loaded */}
-        {showTripActions && onShare && (
+        {/* 4. Share — only once the trip is actually loaded (tripId present),
+            not merely when the /trips/[id] route resolves. */}
+        {showTripActions && onShare && tripId && (
           <Button
             variant="ghost"
             size="icon"
