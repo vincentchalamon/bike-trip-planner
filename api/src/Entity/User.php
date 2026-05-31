@@ -27,6 +27,9 @@ class User implements UserInterface
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $deletedAt = null;
+
     #[ORM\Column(length: 5, options: ['default' => 'fr'])]
     private string $locale = 'fr';
 
@@ -82,6 +85,29 @@ class User implements UserInterface
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getDeletedAt(): ?\DateTimeImmutable
+    {
+        return $this->deletedAt;
+    }
+
+    public function isDeleted(): bool
+    {
+        return $this->deletedAt instanceof \DateTimeImmutable;
+    }
+
+    /**
+     * Irreversibly anonymises the account: soft-deletes it and replaces the
+     * email PII with a non-resolvable placeholder. The roles are dropped so a
+     * lingering JWT no longer grants elevated access.
+     */
+    public function anonymize(): void
+    {
+        $this->deletedAt = new \DateTimeImmutable();
+        $this->email = \sprintf('deleted-%s@deleted.invalid', $this->id->toRfc4122());
+        $this->roles = [];
+        $this->locale = 'fr';
     }
 
     public function getLocale(): string
