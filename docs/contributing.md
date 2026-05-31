@@ -39,6 +39,7 @@ make php-shell    # Enter the PHP container
 make pwa-shell    # Enter the Node container
 make qa           # Run the full QA pipeline
 make test         # Run QA + PHPUnit + Playwright
+make screenshots  # Regenerate README + landing screenshots (after UI changes)
 ```
 
 See `make help` for the full list of available targets.
@@ -146,6 +147,17 @@ make typegen
 
 TypeScript compilation will fail until types are regenerated — this is intentional. The type contract (see [ADR-002](adr/adr-002-interface-contract-and-strict-typing.md)) enforces frontend/backend consistency at compile time.
 
+### 5. Regenerating documentation screenshots
+
+The README and landing-page screenshots are produced by a committed Playwright capture script (`pwa/tests/screenshots/capture.spec.ts`) that drives the mocked harness — no real backend needed. It is excluded from the normal E2E run; regenerate on demand after a UI change:
+
+```bash
+make start-dev      # the script captures against https://localhost
+make screenshots
+```
+
+Outputs land in `docs/assets/screenshots/` (README) and `pwa/public/images/` (landing carousel). Review the generated images by eye before committing.
+
 ---
 
 ## Code quality standards
@@ -163,7 +175,7 @@ TypeScript compilation will fail until types are regenerated — this is intenti
 
 - State Providers and Processors, never controllers with repositories (stateless backend)
 - DTOs use `Request`/`Response` suffixes (`TripRequest`, `TripResponse`)
-- New alert rules implement `StageAnalyzerInterface` and are tagged with `#[AutoconfigureTag('app.stage_analyzer')]`; no other registration needed
+- New alert rules implement `StageAnalyzerInterface` and are tagged with `#[AutoconfigureTag('app.stage_analyzer')]`; no other registration needed. When you add, change, or remove a rule, also update the [README alert-engine table](../README.md#alert-engine) **and** `ALERT_RULE_MAP` in `api/tests/Unit/AlertDocumentationTest.php` — that test fails otherwise
 - HTTP clients must be scoped to a base URI — never allow free-form URL fetching (SSRF prevention)
 
 ### TypeScript / Frontend

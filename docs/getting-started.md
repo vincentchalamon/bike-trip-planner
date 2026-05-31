@@ -60,6 +60,8 @@ This boots multiple services:
 
 The application is ready when all services are healthy.
 
+> **Accounts & AI:** sign-in is passwordless — you receive a magic link by email. The optional AI features (per-stage and whole-trip summaries, chat assistant) require the `ollama` service; when it is unavailable, AI summaries are simply hidden and all alerts remain available.
+
 ---
 
 ## Verify the installation

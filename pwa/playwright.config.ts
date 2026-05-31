@@ -4,6 +4,9 @@ const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: "./tests",
+  // The documentation screenshot capture (tests/screenshots/) writes image files
+  // and is not an assertion suite; it is run on demand via `make screenshots`.
+  testIgnore: ["**/screenshots/**"],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

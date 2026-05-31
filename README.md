@@ -50,7 +50,11 @@
 
 **Real-time processing** — Async workers compute your trip in parallel; live status updates stream to the browser via Mercure SSE. No page reload needed.
 
+**AI trip analysis (optional)** — A self-hosted LLaMA model (via Ollama) writes per-stage and whole-trip summaries and powers a context-aware chat assistant, including an in-ride mode that surfaces nearby points of interest. It degrades gracefully: when the model is unavailable, alerts stay fully visible.
+
 **Multi-format export** — Export enriched GPX files with waypoints for accommodation, water points, and POIs — ready for your GPS device. Download per-stage FIT files for Garmin, or generate a text roadbook summary.
+
+**Your account, your data** — Passwordless magic-link sign-in. Export all your data as JSON or irreversibly delete your account at any time. Privacy-friendly, cookieless analytics (self-hosted Plausible) — no third-party trackers.
 
 ---
 
@@ -180,12 +184,15 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 
 | Document | Description |
 |---|---|
+| [Documentation index](docs/README.md) | Find docs by what you need: learn, do, look up, understand |
 | [Getting Started](docs/getting-started.md) | Requirements, installation, and local setup |
 | [Contributing](docs/contributing.md) | Development workflow, standards, and tooling |
 | [Deployment](docs/deployment.md) | CI/CD pipeline, required secrets, rollback procedure |
 | [Architecture Decisions](docs/adr/) | 34 ADRs explaining every major technical choice |
 | [Runbooks](docs/runbooks/) | On-call playbooks: workers, DB, Redis, Mercure, Ollama, releases |
 | [Claude Code Tooling](docs/claude-code-tooling.md) | MCP servers, hooks, and skills for AI-assisted development |
+| [Architecture](docs/architecture.md) | System overview and the reasoning behind the ADRs |
+| [Legal & Licensing](docs/legal-and-licensing.md) | Project licence, data attribution, and GDPR posture |
 
 ---
 

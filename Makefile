@@ -101,6 +101,14 @@ test-e2e: ## Run Playwright End-to-End tests
 
 playwright: test-e2e ## Alias for "test-e2e"
 
+screenshots: ## Regenerate README + landing screenshots (run after UI changes; requires make start-dev)
+	@docker run --network host \
+		-w /repo/pwa -v $(CURDIR):/repo \
+		--mount type=volume,src=playwright_node_modules,dst=/repo/pwa/node_modules \
+		--rm --ipc=host \
+		mcr.microsoft.com/playwright:v1.60.0-noble \
+		/bin/sh -c 'npm install; npx playwright test tests/screenshots/capture.spec.ts'
+
 test-recette: ## Run Playwright BDD recette scenarios (Gherkin)
 	@docker run --network host \
 		-w /app -v $(CURDIR)/pwa:/app \
