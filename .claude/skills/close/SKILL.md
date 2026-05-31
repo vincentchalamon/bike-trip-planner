@@ -38,10 +38,24 @@ List the **concrete** items that would be removed, with their PR/merge status:
 
 ## Step 4 — Clean up (plain git, only after confirmation)
 
-For each branch whose PR is **merged or closed**:
-- Worktrees created via `EnterWorktree` are locked. Run `git worktree unlock <path>` then `git worktree remove <path>` and finally `git worktree prune`. If the remove still fails because a sub-tree contains files written by Docker as root (typically `.phpunit.cache/`, `node_modules/.cache/`), **flag the paths to the user and stop** — do not try `sudo`, do not force. The user will clear them by hand.
-- `git branch -d <branch>` — use **`-d`, not `-D`**. If git refuses (unmerged), **flag it and skip** rather than force-delete.
-- Also clean the skeleton branches `worktree-agent-<id>` that `EnterWorktree` leaves behind: `git branch -d worktree-agent-<id>`.
+For each branch whose PR is **merged or closed**, in this order:
+
+1. **Tear down the worktree's Docker stack.** Each worktree runs its own `docker compose up` under a project named after the worktree directory basename (e.g. `agent-a3008e9ca9369931a`), spinning up a full stack (caddy/php/pwa/database/redis/mercure/ollama/valhalla/…) with its own containers, **named volumes**, and network. These accumulate and overload the machine if left behind. Remove the project (no compose file needed — `-p` is enough):
+   ```bash
+   docker compose -p <worktree-basename> down --volumes --remove-orphans
+   ```
+   The project name is the worktree dir basename as Docker sanitizes it (lowercased, non-alphanumeric stripped); for `agent-<hex>` worktrees it is the basename verbatim. This only touches that worktree's project — never the main stack or other worktrees.
+
+2. **Remove the worktree.** Worktrees created via `EnterWorktree` are locked: `git worktree unlock <path>` then `git worktree remove <path>`, finally `git worktree prune`. If the remove fails with **Permission denied** because a sub-tree holds files written by Docker as root (typically `pwa/test-results/`, `recette-report/`, `.features-gen/`, `.phpunit.cache/`, `node_modules/.cache/`), do **not** use `sudo` and do **not** `chown`/`rm` on the host (the agent has neither permission). Delete them from inside a throwaway **root** container that bind-mounts the worktrees parent — a root container can remove root-owned files:
+   ```bash
+   docker run --rm -v <abs-path>/.claude/worktrees:/wt alpine rm -rf /wt/<worktree-basename>
+   git worktree prune
+   ```
+   If Docker itself is unavailable (e.g. the user is mid-cleanup), flag the path and skip — never `sudo`.
+
+3. **Delete the branch.** `git branch -d <branch>` — use **`-d`, not `-D`**. If git refuses (unmerged — common with squash-merged PRs whose tip is not an ancestor of `main`), confirm the PR is merged on GitHub (`gh pr view`), then it is safe; flag it and let the user `-D`, or skip. Never force-delete blindly.
+
+4. **Skeletons.** Also clean the `worktree-agent-<id>` branches that `EnterWorktree` leaves behind: `git branch -d worktree-agent-<id>`.
 
 Worktrees live under the gitignored `.claude/worktrees/`, so these removals are purely local.
 
