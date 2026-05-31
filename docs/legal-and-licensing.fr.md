@@ -54,10 +54,9 @@ Le texte autoritaire est la page `/privacy` de l'application. Points clés, tels
   connexion). Les sources open-data (OSM, météo) ne reçoivent aucune donnée personnelle
   identifiante.
 - **Analytics :** **Plausible** auto-hébergé (UE) — sans cookie, sans fingerprinting, IP et
-  User-Agent anonymisés, pas de suivi inter-sites. Voir
-  [ADR-034](adr/adr-034-usage-analytics-plausible.md). Dans le build actuel, le script est
-  conditionné à la configuration d'environnement **et** à un indicateur de consentement analytics
-  (`useAnalyticsConsent`) ; l'UI de la bannière de consentement est suivie dans #385.
+  User-Agent anonymisés, pas de suivi inter-sites. Le script est chargé selon la seule
+  configuration d'environnement ; aucune bannière de consentement n'est requise (intérêt
+  légitime, #572). Voir [ADR-034](adr/adr-034-usage-analytics-plausible.md).
 - **Suivi des erreurs :** **GlitchTip** auto-hébergé (compatible Sentry). Voir [ADR-031](adr/adr-031-error-tracking-strategy.md).
 
 > L'adresse de contact (`contact@bike-trip-planner.app`) et la mention « détails de l'hébergeur

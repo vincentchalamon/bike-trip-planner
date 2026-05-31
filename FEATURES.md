@@ -268,7 +268,7 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Vérification accès (`/access-requests/verify`) | Page de confirmation post-email |
 | ✅ | Suppression / anonymisation (RGPD) | `DELETE /users/me` : anonymise l'email + purge des voyages (cascade) + révoque les refresh tokens. Sprint 34 #549 |
 | ✅ | Export des données (RGPD) | `GET /users/me/export` : archive JSON (profil + voyages + préférences). Sprint 34 #549 |
-| 🚧 | Page `/account/settings` | Compte, préférences, export RGPD, zone de danger. Sprint 34 #383 (PR #558) |
+| ✅ | Page `/account/settings` | Compte, préférences, export RGPD, zone de danger. Sprint 34 #383 |
 
 ---
 
@@ -299,7 +299,7 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Modale d'aide raccourcis | Bouton « ? » dans la top bar |
 | ✅ | Bandeau voyage verrouillé | Affiché sur trips en lecture seule |
 | ✅ | Batch mode (ModificationQueue) | Accumulation modifs + recalcul unique. Sprint 24 #327 |
-| 🚧 | Refonte top bar + aide unifiée | Top bar desktop redessinée, modale d'aide unifiée (raccourcis + FAQ). Sprint 34 #384 (PR #559) |
+| ✅ | Refonte top bar + aide unifiée | Top bar desktop redessinée, modale d'aide unifiée (raccourcis + FAQ). Sprint 34 #384 |
 
 ### Onboarding & aide
 
@@ -396,9 +396,8 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Mentions légales `/legal` | Éditeur, hébergeur, contact, propriété intellectuelle. Sprint 34 |
 | ✅ | Suppression / anonymisation compte | `DELETE /users/me` (cf. §7). Sprint 34 #549 |
 | ✅ | Export des données | `GET /users/me/export` (cf. §7). Sprint 34 #549 |
-| ✅ | Analytics Plausible auto-hébergé | Script chargé conditionnellement (variables d'env + consentement), events custom typés (`trackEvent`). ADR-034. Sprint 34 #557 |
+| ✅ | Analytics Plausible auto-hébergé | Script chargé selon la seule configuration d'environnement — sans cookie, sans bannière de consentement (intérêt légitime). Events custom typés (`trackEvent`). ADR-034. Sprint 34 #557 #572 |
 | ✅ | Events d'usage | `import_komoot/strava/rwgps/gpx`, `trip_created`, `trip_shared`, `accommodation_selected`, `alert_action_clicked`, `ai_chat_opened`. Sprint 34 #561 |
-| 🚧 | Bannière de consentement cookies | Hook `useAnalyticsConsent` en place ; câblage de l'UI. Sprint 34 #385 |
 | 📅 | Service Plausible CE (Docker) | PostgreSQL + ClickHouse auto-hébergés, sous-domaine dédié. ADR-034 |
 
 > Pas de Google Analytics ni Posthog. Analytics produit : **Plausible Community Edition** auto-hébergé, sans cookie ni PII (IP et User-Agent anonymisés) — voir [ADR-034](docs/adr/adr-034-usage-analytics-plausible.md). Suivi des erreurs : **GlitchTip** auto-hébergé, compatible Sentry — voir [ADR-031](docs/adr/adr-031-error-tracking-strategy.md). L'implémentation native `UsageEvent` initialement envisagée a été abandonnée au profit de Plausible.

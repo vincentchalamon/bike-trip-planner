@@ -49,9 +49,9 @@ Authoritative text lives on the in-app `/privacy` page. Key points, as implement
 - **Processors:** EU cloud hosting; a transactional email provider (magic-link emails). Open-data
   sources (OSM, weather) receive no identifying personal data.
 - **Analytics:** self-hosted **Plausible** (EU) — cookieless, no fingerprinting, IP and
-  User-Agent anonymised, no cross-site tracking. See [ADR-034](adr/adr-034-usage-analytics-plausible.md).
-  In the current build the script is gated on environment configuration **and** an
-  analytics-consent flag (`useAnalyticsConsent`); the consent-banner UI is tracked in #385.
+  User-Agent anonymised, no cross-site tracking. The script is loaded on environment
+  configuration alone; no consent banner is required (legitimate interest, #572). See
+  [ADR-034](adr/adr-034-usage-analytics-plausible.md).
 - **Error tracking:** self-hosted **GlitchTip** (Sentry-compatible). See [ADR-031](adr/adr-031-error-tracking-strategy.md).
 
 > The contact address (`contact@bike-trip-planner.app`) and the "host details on request" line
