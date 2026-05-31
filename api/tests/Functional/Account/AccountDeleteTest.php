@@ -141,6 +141,22 @@ final class AccountDeleteTest extends ApiTestCase
     }
 
     #[Test]
+    public function deleteAccountClearsRefreshTokenCookie(): void
+    {
+        $fixtures = $this->createUserWithTrip('cookie@example.com');
+
+        $response = self::createClient()->request('DELETE', '/users/me', [
+            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+        ]);
+        $this->assertResponseStatusCodeSame(204);
+
+        $setCookie = $response->getHeaders(false)['set-cookie'][0] ?? '';
+        $this->assertStringContainsString('refresh_token=', $setCookie);
+        // Cookie must be cleared: Symfony stamps a past expiry and Max-Age=0.
+        $this->assertMatchesRegularExpression('/Max-Age=0|expires=Thu, 01-Jan-1970/i', $setCookie);
+    }
+
+    #[Test]
     public function deleteAccountWithoutAuthenticationReturns401(): void
     {
         self::createClient()->request('DELETE', '/users/me');

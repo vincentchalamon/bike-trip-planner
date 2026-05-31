@@ -46,8 +46,10 @@ final readonly class AccountExportProvider implements ProviderInterface
             ->getQuery()
             ->getResult();
 
+        $now = new \DateTimeImmutable();
+
         $data = [
-            'exportedAt' => new \DateTimeImmutable()->format(\DateTimeInterface::ATOM),
+            'exportedAt' => $now->format(\DateTimeInterface::ATOM),
             'profile' => [
                 'id' => $user->getId()->toRfc4122(),
                 'email' => $user->getEmail(),
@@ -63,7 +65,7 @@ final readonly class AccountExportProvider implements ProviderInterface
             'Content-Disposition',
             $response->headers->makeDisposition(
                 ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-                \sprintf('bike-trip-planner-export-%s.json', new \DateTimeImmutable()->format('Y-m-d')),
+                \sprintf('bike-trip-planner-export-%s.json', $now->format('Y-m-d')),
             ),
         );
 
