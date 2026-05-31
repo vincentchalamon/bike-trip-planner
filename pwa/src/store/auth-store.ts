@@ -105,22 +105,30 @@ export const useAuthStore = create<AuthState>()(
 
     logout: async () => {
       const { accessToken } = get();
+      let serverLogoutFailed = false;
       try {
-        await fetch(`${API_URL}/auth/logout`, {
+        const res = await fetch(`${API_URL}/auth/logout`, {
           method: "POST",
           headers: {
             ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
           },
           credentials: "include",
         });
+        serverLogoutFailed = !res.ok;
       } catch {
-        // Ignore network errors during logout — clear local state regardless
+        serverLogoutFailed = true;
       }
+      // Clear local state regardless — the session is gone on this device.
       set((state) => {
         state.accessToken = null;
         state.user = null;
         state.isAuthenticated = false;
       });
+      // Surface a server-side failure so callers can warn the user the remote
+      // session may not have been revoked (e.g. keep them on the page).
+      if (serverLogoutFailed) {
+        throw new Error("Server-side logout failed");
+      }
     },
 
     silentRefresh: (): Promise<boolean> => {

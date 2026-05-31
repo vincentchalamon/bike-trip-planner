@@ -201,4 +201,26 @@ test.describe("Account settings", () => {
     await expect.poll(() => logoutCalled).toBe(true);
     await page.waitForURL("/", { timeout: 5000 });
   });
+
+  test("logout button shows error toast and re-enables on failure", async ({
+    page,
+  }) => {
+    await mockAuthenticated(page);
+
+    await page.route("**/auth/logout", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      return route.fulfill({ status: 500, body: "" });
+    });
+
+    await page.goto("/account/settings");
+    await page.waitForLoadState("networkidle");
+
+    const button = page.getByTestId("logout-button");
+    await button.click();
+
+    // Button must re-enable after the failure so the user can retry.
+    await expect(button).toBeEnabled();
+    // URL must not change — user stays on the settings page.
+    await expect(page).toHaveURL(/\/account\/settings$/);
+  });
 });

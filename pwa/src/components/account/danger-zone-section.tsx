@@ -47,6 +47,8 @@ export function DangerZoneSection() {
     // API call succeeds, so a logout failure never masks a successful delete.
     try {
       await logout();
+    } catch {
+      // Account is already gone; a failed server logout must not block the redirect.
     } finally {
       setOpen(false);
       router.replace("/");
