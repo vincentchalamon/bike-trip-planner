@@ -36,7 +36,7 @@ import type { AccommodationData, StageData } from "@/lib/validation/schemas";
 import type { AccommodationType } from "@/lib/accommodation-types";
 
 /** Map a source URL to its Plausible import event (null if unrecognised). */
-function importEventForUrl(url: string): PlausibleEvent | null {
+export function importEventForUrl(url: string): PlausibleEvent | null {
   if (/komoot\.com\//.test(url)) return "import_komoot";
   if (/strava\.com\//.test(url)) return "import_strava";
   if (/ridewithgps\.com\//.test(url)) return "import_rwgps";
