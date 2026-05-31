@@ -19,12 +19,6 @@ async function presetPlausibleEnv(page: Parameters<typeof mockAllApis>[0]) {
   );
 }
 
-async function grantAnalyticsConsent(page: Parameters<typeof mockAllApis>[0]) {
-  await page.addInitScript(() => {
-    localStorage.setItem("cookie-consent", JSON.stringify({ analytics: true }));
-  });
-}
-
 /** Fails the test if any request hits the Plausible host. */
 async function failOnPlausibleRequest(page: Parameters<typeof mockAllApis>[0]) {
   await page.route("https://plausible.test/**", (route) => {
@@ -32,36 +26,11 @@ async function failOnPlausibleRequest(page: Parameters<typeof mockAllApis>[0]) {
   });
 }
 
+// Plausible is cookieless and stores no personal data, so it loads on env
+// configuration alone — no consent gating (see /privacy and ADR-034).
 test.describe("Plausible analytics", () => {
-  test("does not load without analytics consent", async ({ page }) => {
+  test("injects the script when the env is configured", async ({ page }) => {
     await presetPlausibleEnv(page);
-    await failOnPlausibleRequest(page);
-    await mockAllApis(page);
-
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    await expect(page.getByTestId("plausible-script")).toHaveCount(0);
-  });
-
-  test("does not load when env is configured but consent absent", async ({
-    page,
-  }) => {
-    // Default state: no cookie-consent entry in localStorage.
-    await presetPlausibleEnv(page);
-    await mockAllApis(page);
-
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    await expect(page.getByTestId("plausible-script")).toHaveCount(0);
-  });
-
-  test("injects the script when consent is granted and env is set", async ({
-    page,
-  }) => {
-    await presetPlausibleEnv(page);
-    await grantAnalyticsConsent(page);
     await mockAllApis(page);
 
     await page.goto("/");
@@ -72,48 +41,14 @@ test.describe("Plausible analytics", () => {
     await expect(script).toHaveAttribute("src", PLAUSIBLE_SRC);
   });
 
-  test("unloads the script when consent is revoked after injection", async ({
-    page,
-  }) => {
-    await presetPlausibleEnv(page);
-    await grantAnalyticsConsent(page);
+  test("does not load when the env is unset", async ({ page }) => {
+    // No presetPlausibleEnv: domain/src unresolved -> dormant (e.g. beta).
+    await failOnPlausibleRequest(page);
     await mockAllApis(page);
 
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    await expect(
-      page.locator('script[data-testid="plausible-script"]'),
-    ).toHaveCount(1);
-
-    await page.evaluate(() => {
-      localStorage.setItem(
-        "cookie-consent",
-        JSON.stringify({ analytics: false }),
-      );
-      window.dispatchEvent(new Event("cookie-consent-change"));
-    });
-
-    await expect(
-      page.locator('script[data-testid="plausible-script"]'),
-    ).toHaveCount(0);
-    await expect
-      .poll(() => page.evaluate(() => "plausible" in window))
-      .toBe(false);
-  });
-
-  test("does not inject the script when consent is granted but env is unset", async ({
-    page,
-  }) => {
-    // No presetPlausibleEnv: domain/src unresolved -> no-op even with consent.
-    await grantAnalyticsConsent(page);
-    await mockAllApis(page);
-
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    await expect(
-      page.locator('script[data-testid="plausible-script"]'),
-    ).toHaveCount(0);
+    await expect(page.getByTestId("plausible-script")).toHaveCount(0);
   });
 });
