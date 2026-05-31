@@ -52,9 +52,14 @@ export function TopBar({
   const setHelpModalOpen = useUiStore((s) => s.setHelpModalOpen);
   const email = useAuthStore((s) => s.user?.email ?? "");
 
-  // Undo/Redo + Share are only meaningful while editing a persisted trip,
-  // i.e. on /trips/[id]. The /trips list and /trips/new wizard are excluded.
-  const isTripDetail = /^\/trips\/[^/]+$/.test(pathname ?? "");
+  // Undo/Redo + Share + config are only meaningful while a trip is loaded.
+  // A trip lives at /trips/[id] but is also loaded in-place on the home page
+  // when the user opens a saved trip card (no route change). We therefore key
+  // these controls off the loaded trip (`tripId`) rather than the path. The
+  // /trips list and /trips/new wizard are explicitly excluded.
+  const isTripDetailRoute = /^\/trips\/[^/]+$/.test(pathname ?? "");
+  const isWizard = pathname === "/trips/new";
+  const showTripActions = (isTripDetailRoute || !!tripId) && !isWizard;
 
   const initial = email.trim().charAt(0).toUpperCase() || "?";
 
@@ -67,7 +72,7 @@ export function TopBar({
       data-testid="top-bar"
       className="w-full border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60"
     >
-      <div className="max-w-[1200px] mx-auto flex items-center gap-2 px-4 md:px-6 h-14">
+      <div className="max-w-[1200px] mx-auto flex items-center gap-1 sm:gap-2 px-2 sm:px-4 md:px-6 h-14">
         {/* 1. Brand */}
         <Link
           href="/"
@@ -79,9 +84,10 @@ export function TopBar({
           <span className="hidden sm:inline">{tNav("brand")}</span>
         </Link>
 
-        {/* 2. Navigation tabs */}
+        {/* 2. Navigation tabs — hidden on the smallest screens to keep the bar
+            within the viewport; the brand logo still links back home. */}
         <nav
-          className="flex items-center gap-1 ml-2"
+          className="hidden sm:flex items-center gap-1 ml-2"
           aria-label={tNav("primary")}
         >
           <Button
@@ -125,16 +131,21 @@ export function TopBar({
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Global GPX/FIT download — trip detail only */}
-        {isTripDetail && tripId && (
+        {/* Global GPX/FIT download — only when a trip is loaded */}
+        {showTripActions && tripId && (
           <TripDownloads tripId={tripId} tripTitle={tripTitle ?? ""} />
         )}
 
-        {/* 3. Undo / Redo — trip detail only */}
-        {isTripDetail && <UndoRedoButtons />}
+        {/* 3. Undo / Redo — only when a trip is loaded. Hidden on small
+            screens to keep the bar within the viewport (shortcuts still work). */}
+        {showTripActions && (
+          <div className="hidden sm:flex">
+            <UndoRedoButtons />
+          </div>
+        )}
 
-        {/* 4. Share — trip detail only */}
-        {isTripDetail && onShare && (
+        {/* 4. Share — only when a trip is loaded */}
+        {showTripActions && onShare && (
           <Button
             variant="ghost"
             size="icon"
@@ -148,8 +159,8 @@ export function TopBar({
           </Button>
         )}
 
-        {/* Config gear — trip detail only (opens the settings drawer) */}
-        {isTripDetail && onOpenConfig && (
+        {/* Config gear — only when a trip is loaded (opens the settings drawer) */}
+        {showTripActions && onOpenConfig && (
           <Button
             variant="ghost"
             size="icon"

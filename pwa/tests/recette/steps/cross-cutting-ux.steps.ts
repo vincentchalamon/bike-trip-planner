@@ -11,6 +11,24 @@ async function clickLocaleSwitch(
   });
 }
 
+// The theme toggle (#384) is a permanent control in the top bar that cycles
+// light → dark → system on each click. Drive it until `data-theme-state`
+// matches the requested theme (max one full cycle).
+async function setTheme(
+  page: import("@playwright/test").Page,
+  target: "light" | "dark",
+): Promise<void> {
+  const toggle = page.getByTestId("theme-toggle");
+  await expect(toggle).toBeVisible({ timeout: 5000 });
+  for (let i = 0; i < 3; i++) {
+    if ((await toggle.getAttribute("data-theme-state")) === target) return;
+    await toggle.click();
+  }
+  await expect(toggle).toHaveAttribute("data-theme-state", target, {
+    timeout: 5000,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Cross-cutting UX — FR + EN
 // ---------------------------------------------------------------------------
@@ -40,29 +58,18 @@ Given(
   },
 );
 
-Given("l'interface est en anglais", async ({ createFullTrip, mockedPage }) => {
-  await createFullTrip();
-  await mockedPage.getByTestId("config-open-button").click();
-  await expect(
-    mockedPage.getByRole("dialog", { name: /param|settings/i }),
-  ).toBeInViewport();
-  await mockedPage.getByTestId("locale-switch-en").click();
-  await mockedPage.keyboard.press("Escape");
+Given("l'interface est en anglais", async ({ mockedPage }) => {
+  // The locale switcher lives permanently in the top bar (#384).
+  await clickLocaleSwitch(mockedPage, "en");
+  await expect(mockedPage.getByTestId("locale-switch-en")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+    { timeout: 5000 },
+  );
 });
 
-Given("le thème sombre est activé", async ({ createFullTrip, mockedPage }) => {
-  await createFullTrip();
-  await mockedPage.getByTestId("config-open-button").click();
-  await expect(
-    mockedPage.getByRole("dialog", { name: /param|settings/i }),
-  ).toBeInViewport();
-  const themeToggle = mockedPage.getByRole("button", {
-    name: /sombre|dark|thème|theme/i,
-  });
-  if (await themeToggle.isVisible().catch(() => false)) {
-    await themeToggle.click();
-  }
-  await mockedPage.keyboard.press("Escape");
+Given("le thème sombre est activé", async ({ mockedPage }) => {
+  await setTheme(mockedPage, "dark");
 });
 
 Given("je suis un nouvel utilisateur", async ({ mockedPage }) => {
@@ -108,29 +115,18 @@ Given(
   },
 );
 
-Given("the interface is in English", async ({ createFullTrip, mockedPage }) => {
-  await createFullTrip();
-  await mockedPage.getByTestId("config-open-button").click();
-  await expect(
-    mockedPage.getByRole("dialog", { name: /param|settings/i }),
-  ).toBeInViewport();
+Given("the interface is in English", async ({ mockedPage }) => {
+  // The locale switcher lives permanently in the top bar (#384).
   await clickLocaleSwitch(mockedPage, "en");
-  await mockedPage.keyboard.press("Escape");
+  await expect(mockedPage.getByTestId("locale-switch-en")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+    { timeout: 5000 },
+  );
 });
 
-Given("dark theme is enabled", async ({ createFullTrip, mockedPage }) => {
-  await createFullTrip();
-  await mockedPage.getByTestId("config-open-button").click();
-  await expect(
-    mockedPage.getByRole("dialog", { name: /param|settings/i }),
-  ).toBeInViewport();
-  const themeToggle = mockedPage.getByRole("button", {
-    name: /sombre|dark|thème|theme/i,
-  });
-  if (await themeToggle.isVisible().catch(() => false)) {
-    await themeToggle.click();
-  }
-  await mockedPage.keyboard.press("Escape");
+Given("dark theme is enabled", async ({ mockedPage }) => {
+  await setTheme(mockedPage, "dark");
 });
 
 Given("I am a new user", async ({ mockedPage }) => {
@@ -166,56 +162,20 @@ When("j'appuie sur Ctrl+Y", async ({ mockedPage }) => {
 
 When(
   "je change la langue vers {string}",
-  async ({ createFullTrip, mockedPage }, lang: string) => {
-    // Ensure we're on a trip page where the config button is visible
-    const configBtn = mockedPage.getByTestId("config-open-button");
-    if (!(await configBtn.isVisible().catch(() => false))) {
-      await createFullTrip();
-    }
-    await configBtn.click();
-    await expect(
-      mockedPage.getByRole("dialog", { name: /param|settings/i }),
-    ).toBeInViewport();
+  async ({ mockedPage }, lang: string) => {
+    // The language pills are always present in the top bar (#384).
     const localeCode = lang.toLowerCase().includes("english") ? "en" : "fr";
     await clickLocaleSwitch(mockedPage, localeCode as "fr" | "en");
   },
 );
 
-When(
-  "je bascule vers le thème sombre",
-  async ({ createFullTrip, mockedPage }) => {
-    const configBtn = mockedPage.getByTestId("config-open-button");
-    if (!(await configBtn.isVisible().catch(() => false))) {
-      await createFullTrip();
-    }
-    await configBtn.click();
-    await expect(
-      mockedPage.getByRole("dialog", { name: /param|settings/i }),
-    ).toBeInViewport();
-    const themeToggle = mockedPage.getByRole("button", {
-      name: /sombre|dark|thème|theme/i,
-    });
-    await themeToggle.click();
-  },
-);
+When("je bascule vers le thème sombre", async ({ mockedPage }) => {
+  await setTheme(mockedPage, "dark");
+});
 
-When(
-  "je bascule vers le thème clair",
-  async ({ createFullTrip, mockedPage }) => {
-    const configBtn = mockedPage.getByTestId("config-open-button");
-    if (!(await configBtn.isVisible().catch(() => false))) {
-      await createFullTrip();
-    }
-    await configBtn.click();
-    await expect(
-      mockedPage.getByRole("dialog", { name: /param|settings/i }),
-    ).toBeInViewport();
-    const themeToggle = mockedPage.getByRole("button", {
-      name: /sombre|dark|thème|theme/i,
-    });
-    await themeToggle.click();
-  },
-);
+When("je bascule vers le thème clair", async ({ mockedPage }) => {
+  await setTheme(mockedPage, "light");
+});
 
 When("je le ferme", async ({ $test }) => {
   // Depends on onboarding guide having a close button
@@ -272,48 +232,19 @@ When("I press Ctrl+Y", async ({ mockedPage }) => {
 
 When(
   "I change the language to {string}",
-  async ({ createFullTrip, mockedPage }, lang: string) => {
-    const configBtn = mockedPage.getByTestId("config-open-button");
-    if (!(await configBtn.isVisible().catch(() => false))) {
-      await createFullTrip();
-    }
-    await configBtn.click();
-    await expect(
-      mockedPage.getByRole("dialog", { name: /param|settings/i }),
-    ).toBeInViewport();
+  async ({ mockedPage }, lang: string) => {
+    // The language pills are always present in the top bar (#384).
     const localeCode = lang.toLowerCase().includes("english") ? "en" : "fr";
     await clickLocaleSwitch(mockedPage, localeCode as "fr" | "en");
   },
 );
 
-When("I toggle to dark theme", async ({ createFullTrip, mockedPage }) => {
-  const configBtn = mockedPage.getByTestId("config-open-button");
-  if (!(await configBtn.isVisible().catch(() => false))) {
-    await createFullTrip();
-  }
-  await configBtn.click();
-  await expect(
-    mockedPage.getByRole("dialog", { name: /param|settings/i }),
-  ).toBeInViewport();
-  const themeToggle = mockedPage.getByRole("button", {
-    name: /sombre|dark|thème|theme/i,
-  });
-  await themeToggle.click();
+When("I toggle to dark theme", async ({ mockedPage }) => {
+  await setTheme(mockedPage, "dark");
 });
 
-When("I toggle to light theme", async ({ createFullTrip, mockedPage }) => {
-  const configBtn = mockedPage.getByTestId("config-open-button");
-  if (!(await configBtn.isVisible().catch(() => false))) {
-    await createFullTrip();
-  }
-  await configBtn.click();
-  await expect(
-    mockedPage.getByRole("dialog", { name: /param|settings/i }),
-  ).toBeInViewport();
-  const themeToggle = mockedPage.getByRole("button", {
-    name: /sombre|dark|thème|theme/i,
-  });
-  await themeToggle.click();
+When("I toggle to light theme", async ({ mockedPage }) => {
+  await setTheme(mockedPage, "light");
 });
 
 When("I close it", async ({ $test }) => {
