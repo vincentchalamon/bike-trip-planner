@@ -1,48 +1,117 @@
-# Bike Trip Planner
+<h1 align="center">Bike Trip Planner</h1>
 
-*[English version](README.md)*
+<p align="center">
+  <strong>Planifiez vos aventures bikepacking en toute confiance.</strong>
+</p>
 
-Un planificateur de voyages bikepacking local-first. Collez une URL Komoot, Strava ou RideWithGPS (ou importez un fichier GPX) et obtenez un roadbook jour par jour avec rythme, alertes d'élévation et suggestions d'hébergement — le tout sans compte ni stockage cloud.
+<p align="center">
+  Collez une URL Komoot ou importez un fichier GPX, et obtenez un roadbook structuré<br />
+  jour par jour avec rythme intelligent, alertes de sécurité et suggestions d'hébergement.
+</p>
+
+<p align="center">
+  <em><a href="README.md">English version</a></em>
+</p>
+
+<p align="center">
+  <a href="https://github.com/vincentchalamon/bike-trip-planner/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="Licence" /></a>
+  <img src="https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white" alt="PHP 8.5" />
+  <img src="https://img.shields.io/badge/Symfony-8-000000?logo=symfony&logoColor=white" alt="Symfony 8" />
+  <img src="https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/API%20Platform-4.3-38B2AC?logo=api-platform&logoColor=white" alt="API Platform 4.3" />
+  <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker" />
+</p>
+
+---
+
+## Captures d'écran
+
+> **Desktop** — Vue divisée avec timeline jour par jour, alertes contextuelles et carte interactive.
+
+![Desktop - Vue divisée](docs/assets/screenshots/desktop-split-view.png)
+
+> **Mobile** — Timeline responsive avec météo, badge de difficulté et points de ravitaillement.
+
+<p align="center">
+  <img src="docs/assets/screenshots/mobile-timeline.png" alt="Mobile - Timeline" width="300" />
+</p>
 
 ---
 
 ## Fonctionnalités
 
-### Ingestion de routes
+**Importez votre itinéraire en quelques secondes** — Collez un lien Komoot, Strava ou RideWithGPS, ou importez directement un fichier GPX. Le backend récupère, analyse et traite tout de manière asynchrone.
 
-- **Magic Link** — Collez une URL de tour/collection Komoot, de route Strava ou RideWithGPS ; le backend récupère la route, analyse les données d'élévation et calcule un plan de voyage complet de manière asynchrone.
-- **Import GPX** — Glissez-déposez ou sélectionnez un fichier GPX directement (jusqu'à 15 Mo). Le fichier est analysé en streaming avec une consommation mémoire constante.
-- **Lien partageable** — Un paramètre `?link=` dans l'URL crée automatiquement un voyage à partir de n'importe quelle URL supportée, permettant de partager un lien direct vers un plan de voyage.
+**Moteur de rythme intelligent** — Répartit automatiquement la distance sur les jours en tenant compte de la fatigue cumulée et du dénivelé. Objectifs journaliers configurables avec un plancher de sécurité.
 
-### Planification du voyage
+**20+ alertes de sécurité et de confort** — Un moteur de règles analyse chaque étape : pentes raides, trafic dangereux, vent de face, qualité de surface, autonomie e-bike, coucher de soleil, ravitaillement, et plus — avec trois niveaux de sévérité (critical, warning, nudge).
 
-- **Moteur de rythme** — Répartit la distance sur les jours en tenant compte de la fatigue cumulative et du gain d'élévation, avec une distance maximale par jour, un facteur de fatigue, une pénalité d'élévation et une vitesse moyenne configurables.
-- **Mode e-bike** — Mode dédié qui ajuste les calculs d'autonomie pour les vélos électriques (autonomie effective = 80 km moins élévation/25).
-- **Sélecteur de dates** — Définissez les dates de départ et de retour pour activer les alertes calendaires (jours fériés, dimanches) et les prévisions météo.
-- **Heure de départ** — Configurez l'heure de départ quotidienne pour activer les alertes d'arrivée au coucher du soleil.
-- **Insertion de jours de repos** — Ajoutez des jours de repos entre les étapes ; une alerte vous rappelle tous les N jours consécutifs de vélo.
-- **Édition des étapes** — Divisez, fusionnez, ajoutez ou supprimez des étapes. Renommez les lieux de départ et d'arrivée via l'édition en ligne avec géocodage. Ajustez les distances des étapes avec un éditeur visuel.
-- **Annuler/rétablir** — Historique complet d'annulation/rétablissement pour toutes les modifications de voyage (Ctrl+Z / Ctrl+Y).
+**Recherche d'hébergements** — Détecte bivouacs, refuges et gîtes à proximité de chaque fin d'étape via OpenStreetMap, avec une estimation de prix heuristique.
 
-### Carte interactive
+**Points d'intérêt culturels** — Repère musées, monuments, châteaux, points de vue et autres attractions le long de l'itinéraire, avec une action « ajouter à l'itinéraire ».
 
-- **Visualisation de la route** — Carte interactive MapLibre GL affichant la route complète avec des étapes codées par couleur.
-- **Profil d'élévation** — Graphique d'élévation synchronisé avec un référencement croisé au survol entre la carte et le profil.
-- **Marqueurs d'étapes** — Cliquez sur une étape sur la carte ou la timeline pour la mettre en focus ; cliquez à nouveau pour revenir à la vue globale.
-- **Modes d'affichage** — Trois dispositions : timeline seule, carte seule, ou divisé (timeline + carte côte à côte). Par défaut en timeline sur mobile, divisé sur desktop.
+**Traitement temps réel** — Des workers asynchrones calculent votre voyage en parallèle ; les mises à jour de statut sont poussées vers le navigateur via Mercure SSE. Aucun rechargement de page.
 
-### Météo et environnement
+**Analyse IA (optionnelle)** — Un modèle LLaMA auto-hébergé (via Ollama) rédige un résumé par étape et pour l'ensemble du voyage, et alimente un assistant conversationnel context-aware — y compris un mode « in-ride » qui repère les points d'intérêt à proximité. Dégradation gracieuse : sans le modèle, les alertes restent affichées.
 
-- **Prévisions météo** — Intégration Open-Meteo fournissant température, précipitations, vitesse du vent et conditions météo par étape.
-- **Indice de confort** — Score combiné (0-100) de température, vent, humidité et pluie pour chaque étape.
-- **Vent relatif** — Calcul du vent de face/arrière/latéral basé sur le cap de l'étape et la direction du vent.
+**Export multi-format** — Exportez des fichiers GPX enrichis de waypoints (hébergements, points d'eau, POI), prêts pour votre GPS. Téléchargez les fichiers FIT par étape pour Garmin, ou générez un résumé texte du roadbook.
 
-### Moteur d'alertes
+**Votre compte, vos données** — Connexion sans mot de passe par magic link. Exportez toutes vos données en JSON ou supprimez votre compte (anonymisation irréversible) à tout moment. Analytics respectueux de la vie privée, sans cookie (Plausible auto-hébergé) — aucun traceur tiers.
+
+---
+
+## Sources de routes supportées
+
+| Plateforme | Formats d'URL supportés |
+|---|---|
+| **Komoot** | `komoot.com/[xx-xx/]tour/123` et `komoot.com/[xx-xx/]collection/123` |
+| **Strava** | `strava.com/routes/123` |
+| **RideWithGPS** | `ridewithgps.com/routes/123` |
+| **Import GPX** | Upload direct (jusqu'à 30 Mo) |
+
+---
+
+## Tags d'hébergement OSM supportés
+
+| Type logique | Requête OSM | Tarif heuristique |
+|---|---|---|
+| `hotel` | `tourism=hotel` | 50–120 € |
+| `motel` | `tourism=motel` | 45–90 € |
+| `guest_house` | `tourism=guest_house` | 40–80 € |
+| `chalet` | `tourism=chalet` | 30–70 € |
+| `hostel` | `tourism=hostel` | 20–35 € |
+| `alpine_hut` | `tourism=alpine_hut` | 25–45 € |
+| `camp_site` | `tourism=camp_site` | 8–25 € (8–15 € si `backpack=yes` ou `tents=yes`) |
+| `wilderness_hut` | `tourism=wilderness_hut` | gratuit / donation (0–10 €) |
+| `shelter` | `amenity=shelter` + `shelter_type~basic_hut\|weather_shelter\|lean_to` | gratuit (0 €) |
+
+---
+
+## Démarrage rapide
+
+```bash
+git clone https://github.com/vincentchalamon/bike-trip-planner.git
+cd bike-trip-planner
+make start-dev
+```
+
+L'application est disponible sur :
+
+- **<https://localhost>** — Application web
+- **<https://localhost/docs>** — Documentation de l'API (Swagger UI)
+
+Voir [Démarrage rapide](docs/getting-started.fr.md) pour les prérequis et la configuration détaillée.
+
+---
+
+## Moteur d'alertes
 
 Le backend exécute un pipeline d'analyseurs sur chaque étape. Trois niveaux de sévérité :
 
-| Niveau | Couleur | Description |
-|--------|---------|-------------|
+| Niveau | Badge | Description |
+|--------|-------|-------------|
 | `critical` | Rouge | Problème bloquant nécessitant une attention immédiate |
 | `warning` | Orange | Problème significatif à surveiller |
 | `nudge` | Bleu | Suggestion informative |
@@ -62,7 +131,6 @@ Les règles sont exécutées par ordre de priorité (inférieur = plus prioritai
 | **Trafic** | 20 | nudge | Route secondaire, limite <= 50 km/h |
 | **Autonomie e-bike** | 20 | warning | Distance du jour > autonomie effective (80 km - élévation / 25) |
 | **Coucher de soleil** | 20 | warning | Heure d'arrivée estimée dépasse la fin du crépuscule civil au point d'arrivée |
-| **Jour de repos** | 100 | nudge | Tous les N jours consécutifs de vélo sans jour de repos (défaut : tous les 3 jours) |
 | **Calendrier** | — | nudge | L'étape tombe un jour férié français |
 | **Calendrier** | — | nudge | L'étape tombe un dimanche (commerces potentiellement fermés) |
 | **Vent** | — | warning | Vent de face >= 25 km/h sur >= 60 % des étapes avec données météo |
@@ -71,34 +139,17 @@ Les règles sont exécutées par ordre de priorité (inférieur = plus prioritai
 | **Ateliers vélo** | — | nudge | L'atelier à proximité vend des vélos mais n'offre pas de service de réparation |
 | **Ravitaillement** | — | nudge | Étape >= 40 km sans POI de ravitaillement/alimentation le long de la route |
 | **Ravitaillement** | — | warning | Tous les POI de ravitaillement de l'étape sont fermés à l'heure de passage estimée |
-| **Hébergement** | — | warning | Tous les hébergements détectés sur l'étape sont probablement fermés en raison de la saisonnalité |
+| **Hébergement** | — | warning | Tous les hébergements détectés sur l'étape sont probablement fermés (saisonnalité) |
 | **Points d'eau** | — | nudge | Tronçon > 30 km sans source d'eau potable détectée |
-| **POI culturels** | — | nudge | Musée, monument, château, église, point de vue ou attraction à moins de 500 m de la route — inclut une action "ajouter à l'itinéraire" déclenchant un recalcul de route |
+| **Jour de repos** | 100 | nudge | Tous les N jours consécutifs de vélo sans jour de repos (défaut : tous les 3 jours) |
+| **POI culturels** | — | nudge | Musée, monument, château, église, point de vue ou attraction à moins de 500 m — enrichi (horaires, prix, description) quand la source est DataTourisme |
+| **Gare** | — | nudge | Aucune gare ferroviaire dans 10 km d'un point d'étape (évacuation d'urgence) |
+| **Services de santé** | — | nudge | Aucune pharmacie, hôpital ou clinique dans 15 km d'une étape |
+| **Passage de frontière** | — | nudge | La route franchit une frontière internationale (changement de pays détecté via Overpass `is_in`) |
 
-**Règles terrain** (Continuité, Élévation, Pente raide, Surface, Trafic, Autonomie e-bike, Coucher de soleil, Jour de repos) implémentent `StageAnalyzerInterface` et sont auto-découvertes via `#[AutoconfigureTag('app.stage_analyzer')]`. Les règles avec une priorité `—` (Calendrier, Vent + Confort, Ateliers vélo, Ravitaillement, Hébergement, Points d'eau, POI culturels) sont des handlers de messages Symfony asynchrones séparés ; Confort est co-localisé avec Vent dans `AnalyzeWindHandler`.
+**Règles terrain** (Continuité, Élévation, Pente raide, Surface, Trafic, Autonomie e-bike, Coucher de soleil, Jour de repos) implémentent `StageAnalyzerInterface` et sont auto-découvertes via `#[AutoconfigureTag('app.stage_analyzer')]`. Les règles avec une priorité `—` (Calendrier, Vent + Confort, Ateliers vélo, Ravitaillement, Hébergement, Points d'eau, POI culturels, Gare, Services de santé, Passage de frontière) sont des handlers de messages Symfony asynchrones séparés ; Confort est co-localisé avec Vent dans `AnalyzeWindHandler`.
 
-### Points d'intérêt
-
-- **Scanner d'hébergements** — Interroge OpenStreetMap Overpass pour trouver des bivouacs, refuges et gîtes à proximité de chaque fin d'étape, avec un prix heuristique. Filtrage des hébergements par type.
-- **Timeline de ravitaillement** — Timeline visuelle montrant les points d'eau et de ravitaillement le long de chaque étape, avec clustering pour la lisibilité.
-- **Ateliers vélo** — Détection des ateliers de réparation à proximité du milieu de chaque étape.
-- **POI culturels** — Musées, monuments, châteaux, églises, points de vue et attractions à proximité de la route avec une action "ajouter à l'itinéraire".
-
-### Exports
-
-- **Export GPX** — Téléchargez chaque étape en fichier GPX individuel avec des waypoints enrichis (POI, points d'eau, ravitaillement, hébergements).
-- **Export FIT** — Téléchargez chaque étape en fichier FIT compatible Garmin avec des points de parcours.
-- **GPX voyage complet** — Téléchargez l'ensemble du voyage en un seul fichier GPX.
-- **Export texte** — Résumé en texte brut du voyage complet (étapes, distances, élévations, hébergements), prêt à copier-coller.
-
-### Expérience utilisateur
-
-- **Visite guidée** — Tour guidé en 4 étapes lors de la première visite via driver.js, présentant le workflow principal.
-- **Raccourcis clavier** — Naviguer entre les étapes (J/K), annuler/rétablir (Ctrl+Z/Y), afficher l'aide (?), fermer les panneaux (Esc).
-- **Mode sombre** — Bascule de thème avec détection de la préférence système.
-- **Internationalisation** — Interface complète en français et en anglais via next-intl.
-- **Design responsive** — Mobile-first avec mode d'affichage adaptatif (timeline/carte/divisé).
-- **Navigation par balayage** — Balayage entre les étapes sur les appareils mobiles.
+> Table de référence à jour et canonique : [README.md](README.md#alert-engine) (EN). Cette version FR est une traduction de confort.
 
 ---
 
@@ -106,15 +157,15 @@ Les règles sont exécutées par ordre de priorité (inférieur = plus prioritai
 
 <!-- markdownlint-disable MD040 -->
 ```
-Navigateur (Next.js 16)        Backend PHP (API Platform 4.2)
+Navigateur (Next.js 16)        Backend PHP (API Platform 4.3)
   Zustand + Immer (en mémoire)   Calcul sans état
   Validation Zod                 Parsing GPX + moteur de rythme
   openapi-fetch (typé)           APIs OSM Overpass + météo
   Mercure SSE (temps réel) <--   Workers asynchrones (Symfony Messenger)
-                                 Cache Redis + publisher Mercure
+                                 PostgreSQL + Redis + publisher Mercure
 ```
 
-Le frontend envoie une requête de voyage via REST ; le backend la traite de manière asynchrone sur plusieurs workers et pousse les mises à jour de statut via Mercure SSE. Pas de base de données — cache Redis pour l'état transitoire, cache filesystem pour les réponses d'API externes.
+Le frontend envoie une requête de voyage via REST ; le backend la traite de manière asynchrone sur plusieurs workers et pousse les mises à jour de statut via Mercure SSE. PostgreSQL 18 (Doctrine ORM) persiste la configuration des voyages et les étapes ; Redis gère l'état de calcul transitoire, le transport Messenger et les caches d'API externes.
 
 La sécurité des types est appliquée de bout en bout : les DTO PHP définissent le schéma -> API Platform exporte une spec OpenAPI -> `npm run typegen` génère les types TypeScript -> `openapi-fetch` fournit des appels API typés. Un changement de schéma côté backend provoque intentionnellement une erreur de compilation TypeScript.
 
@@ -124,15 +175,17 @@ La sécurité des types est appliquée de bout en bout : les DTO PHP définissen
 
 | Couche | Technologie |
 |--------|-------------|
-| Backend | PHP 8.5, Symfony 8, API Platform 4.2, Caddy |
+| Backend | PHP 8.5, Symfony 8, API Platform 4.3, Caddy |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript (strict) |
 | État | Zustand + Immer (en mémoire), Mercure SSE (temps réel) |
 | Carte | MapLibre GL |
 | Style | Tailwind CSS, shadcn/ui |
-| Tests | PHPUnit 13 (backend), Playwright 1.58 (E2E) |
+| Persistance | PostgreSQL 18 (Doctrine ORM), Redis (transitoire + caches) |
+| IA | Ollama (LLaMA), `symfony/ai` |
+| Tests | PHPUnit 13 (backend), Playwright 1.60 (E2E) |
 | Qualité | PHPStan niveau 9, PHP-CS-Fixer, Rector, ESLint, Prettier |
 | Asynchrone | Symfony Messenger, transport Redis, 5 workers |
-| Runtime | Docker (Caddy, Mercure, Redis, Node) |
+| Runtime | Docker (Caddy, Mercure, Redis, PostgreSQL, Node, Ollama) |
 
 ---
 
@@ -140,36 +193,40 @@ La sécurité des types est appliquée de bout en bout : les DTO PHP définissen
 
 | Document | Description |
 |----------|-------------|
+| [Index de la documentation](docs/README.fr.md) | Trouver la doc selon le besoin |
 | [Démarrage rapide](docs/getting-started.fr.md) | Prérequis, installation et configuration locale |
 | [Contribuer](docs/contributing.fr.md) | Workflow de développement, standards et outillage |
-| [Décisions d'architecture](docs/adr/) | ADR expliquant chaque choix technique majeur |
+| [Déploiement](docs/deployment.md) | CI/CD, secrets, rollback (EN) |
+| [Décisions d'architecture](docs/adr/) | ADR expliquant chaque choix technique majeur (EN) |
+| [Architecture](docs/architecture.md) | Vue d'ensemble du système (EN) |
+| [Légal & licences](docs/legal-and-licensing.fr.md) | Licence, attribution des données, RGPD |
 | [Outillage Claude Code](docs/claude-code-tooling.fr.md) | Serveurs MCP, hooks et skills pour le développement assisté par IA |
 
 ---
 
-## Démarrage rapide
+## Sources de données externes
 
-```bash
-git clone https://github.com/vincentchalamon/bike-trip-planner.git
-cd bike-trip-planner
-make start-dev
-```
+| Source | Rôle | Licence | Couverture | Prérequis |
+|--------|------|---------|------------|-----------|
+| **OpenStreetMap** | Principale : routes, infra cyclable, eau, ateliers, ravitaillement, POI et hébergements de base | [ODbL](https://opendatacommons.org/licenses/odbl/) | Mondiale | Aucun |
+| **DataTourisme** | Complémentaire : hébergements et POI culturels enrichis ; exclusif : événements datés | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | France | `DATATOURISME_API_KEY` |
+| **Wikidata** | Enrichissement transverse : descriptions multilingues, images, liens Wikipedia via Q-IDs | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | Europe | Aucun |
+| **data.gouv.fr** | Marchés forains hebdomadaires (import hors ligne) | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | France | `make markets-import` |
+| **Open-Meteo** | Prévisions météo | [CC-BY](https://creativecommons.org/licenses/by/4.0/) | Mondiale | Aucun |
 
-L'application est disponible sur `https://localhost` (PWA) et `https://localhost/docs` (API).
-
-Voir [Démarrage rapide](docs/getting-started.fr.md) pour les prérequis et la configuration détaillée.
+Détails de configuration (clés API, provisioning OSM via Valhalla, refresh nocturne `osm-cron`) : voir [README.md](README.md#external-data-sources) (EN) et [docs/deployment.md](docs/deployment.md). Attribution OSM obligatoire : « © les contributeurs OpenStreetMap ».
 
 ---
 
-## Sources de routes supportées
+## Contribuer
 
-| Source | Format d'URL |
-|--------|--------------|
-| Tour Komoot | `https://www.komoot.com/[xx-xx/]tour/<id>` |
-| Collection Komoot | `https://www.komoot.com/[xx-xx/]collection/<id>` |
-| Route Strava | `https://www.strava.com/routes/<id>` |
-| Route RideWithGPS | `https://ridewithgps.com/routes/<id>` |
-| Import de fichier GPX | Glisser-déposer ou sélecteur de fichiers (jusqu'à 15 Mo) |
+Les contributions sont les bienvenues ! Merci de lire le [guide de contribution](docs/contributing.fr.md) avant de soumettre une pull request.
+
+```bash
+make start-dev    # Démarre l'environnement Docker
+make qa           # Suite QA complète (lint, analyse statique, formatage)
+make test         # Tous les tests (QA + PHPUnit + Playwright)
+```
 
 ---
 

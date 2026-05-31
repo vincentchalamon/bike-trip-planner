@@ -3,6 +3,8 @@
 **Stack :** Next.js, Symfony/API Platform, Ollama (LLaMA 3.2 3B & 3.1 8B), Valhalla, Photon.
 **Infra :** Oracle Cloud Free Tier (4 OCPUs ARM, 24GB RAM).
 
+> **Statut :** l'analyse IA (par étape + vue d'ensemble, LLaMA 8B) et l'assistant conversationnel (LLaMA 3B, dont le mode in-ride POI) sont livrés — voir [ADR-028](adr/adr-028-ollama-llama-integration.md) et [ADR-030](adr/adr-030-symfony-ai-adoption.md). La génération d'itinéraire à partir d'un prompt texte (le flux « Brief de Mission » ci-dessous) est une cible non encore implémentée (#67). Ce document décrit l'architecture visée et son raisonnement.
+
 ---
 
 ## 1. Optimisations de l'Infrastructure

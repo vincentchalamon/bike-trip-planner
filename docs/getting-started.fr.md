@@ -60,6 +60,8 @@ Cela démarre plusieurs services :
 
 L'application est prête lorsque tous les services sont sains.
 
+> **Comptes & IA :** la connexion est sans mot de passe — vous recevez un magic link par email. Les fonctionnalités IA optionnelles (résumés par étape et global, assistant conversationnel) nécessitent le service `ollama` ; lorsqu'il est indisponible, les résumés IA sont simplement masqués et toutes les alertes restent disponibles.
+
 ---
 
 ## Vérifier l'installation

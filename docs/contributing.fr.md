@@ -39,6 +39,7 @@ make php-shell    # Entrer dans le conteneur PHP
 make pwa-shell    # Entrer dans le conteneur Node
 make qa           # Lancer le pipeline QA complet
 make test         # Lancer QA + PHPUnit + Playwright
+make screenshots  # Régénérer les captures README + landing (après un changement d'UI)
 ```
 
 Consultez `make help` pour la liste complète des cibles disponibles.
@@ -146,6 +147,17 @@ make typegen
 
 La compilation TypeScript échouera tant que les types ne sont pas régénérés — c'est intentionnel. Le contrat de types (voir [ADR-002](adr/adr-002-interface-contract-and-strict-typing.md)) impose la cohérence frontend/backend au moment de la compilation.
 
+### 5. Régénérer les captures d'écran de la documentation
+
+Les captures du README et de la landing sont produites par un script Playwright commité (`pwa/tests/screenshots/capture.spec.ts`) qui pilote le harness mocké — aucun backend réel requis. Il est exclu du run E2E normal ; régénérez à la demande après un changement d'UI :
+
+```bash
+make start-dev      # le script capture sur https://localhost
+make screenshots
+```
+
+Les fichiers sont écrits dans `docs/assets/screenshots/` (README) et `pwa/public/images/` (carrousel de la landing). Vérifiez les images générées à l'œil avant de committer.
+
 ---
 
 ## Standards de qualité du code
@@ -163,7 +175,7 @@ La compilation TypeScript échouera tant que les types ne sont pas régénérés
 
 - State Providers et Processors, jamais de controllers avec repositories (backend sans état)
 - Les DTO utilisent les suffixes `Request`/`Response` (`TripRequest`, `TripResponse`)
-- Les nouvelles règles d'alerte implémentent `StageAnalyzerInterface` et sont taguées avec `#[AutoconfigureTag('app.stage_analyzer')]` ; aucune autre inscription nécessaire
+- Les nouvelles règles d'alerte implémentent `StageAnalyzerInterface` et sont taguées avec `#[AutoconfigureTag('app.stage_analyzer')]` ; aucune autre inscription nécessaire. Quand vous ajoutez, modifiez ou supprimez une règle, mettez aussi à jour la [table du moteur d'alertes du README](../README.md#alert-engine) **et** `ALERT_RULE_MAP` dans `api/tests/Unit/AlertDocumentationTest.php` — sinon ce test échoue
 - Les clients HTTP doivent être scopés à une URI de base — jamais de récupération d'URL libre (prévention SSRF)
 
 ### TypeScript / Frontend

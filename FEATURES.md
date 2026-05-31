@@ -34,9 +34,9 @@ Inventaire complet des fonctionnalités de **Bike Trip Planner** — livrées et
 | ✅ | **Acte 1 — Préparation** | Card Selection Lien/GPX/IA. Sprint 22 |
 | ✅ | **Acte 1.5 — Aperçu** | Écran de prévisualisation avant analyse (stats, map, stages, météo), 3 CTAs. Sprint 22 |
 | ✅ | **Acte 2 — Analyse** | Écran SSE avec progression (Messenger + 5 workers async) |
-| 📅 | **Acte 2 — Progression narrative par catégorie** | Étapes nommées selon `ComputationName` (ROUTE, STAGES, OSM_SCAN, POIS, WEATHER…). Sprint 23 |
+| ✅ | **Acte 2 — Progression narrative par catégorie** | Étapes nommées selon `ComputationName` (ROUTE, STAGES, OSM_SCAN, POIS, WEATHER…). Sprint 23 |
 | ✅ | **Acte 3 — Mon voyage** | Roadbook complet avec carte, timeline, détail par étape |
-| 📅 | **Acte 3 — Alertes repliables** | Regroupement par sévérité avec compteurs. Sprint 23 |
+| ✅ | **Acte 3 — Alertes repliables** | Regroupement par sévérité avec compteurs. Sprint 23 |
 | ✅ | Composant Stepper | Navigation visuelle 4 étapes desktop + mobile. Sprint 21 |
 
 ### Configuration cyclo
@@ -54,7 +54,7 @@ Inventaire complet des fonctionnalités de **Bike Trip Planner** — livrées et
 | ✅ | Insertion jours de repos | Décale les dates des étapes suivantes. Sprint 4 |
 | ✅ | Dates de voyage | Picker start/end, influence météo et événements |
 | ✅ | Panneau de configuration latéral | Drawer accessible depuis le roadbook. Sprint 4 |
-| 📅 | Affinage par IA (prompt texte) | Text area pour demander ajustements (LLaMA). Sprint 27 |
+| ✅ | Affinage par IA (prompt texte) | Text area pour demander ajustements (LLaMA). Sprint 27 |
 
 ---
 
@@ -168,8 +168,8 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Supply Timeline (eau + ravitaillement) | Frise horizontale avec clusters. Sprint 7 #34 |
 | ✅ | Events panel | Fêtes, jours fériés, festivals datés |
 | ✅ | Téléchargements par étape | GPX, GeoJSON, texte |
-| 📅 | Export FIT par étape | Format Garmin natif. Sprint 31 |
-| 📅 | Résumé IA par étape | 1-2 phrases LLaMA 8B passe 1. Sprint 27 |
+| ✅ | Export FIT par étape | Format Garmin natif (`FitEncoder`/`FitNormalizer`). Sprint 31 |
+| ✅ | Résumé IA par étape | Narratif + insights + suggestions, LLaMA 8B passe 1 (`StageAiSummary`). Sprint 27 #306 |
 | 📅 | Shimmer/skeleton recalcul | État visuel pendant recomputation. Sprint 24 |
 | 📅 | Diff post-recalcul | Surbrillance des changements. Sprint 24 |
 
@@ -243,7 +243,7 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Téléchargement GeoJSON | Par étape |
 | ✅ | Budget récapitulatif | Fourchette min/max (hébergement + repas). Sprint 6 #59 |
 | ✅ | Infographie PNG | Export image pour partage social. Sprint 14 #42 |
-| 📅 | Export FIT natif | Par étape + global. Sprint 31 |
+| ✅ | Export FIT natif | Par étape, points de parcours Garmin. Sprint 31 |
 
 ### Partage
 
@@ -266,8 +266,9 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Sécurisation Mercure | Isolation SSE par utilisateur. Sprint 13 #78 |
 | ✅ | Système d'accès anticipé | Form email + token HMAC + throttling. Sprint 19 #287 #288 |
 | ✅ | Vérification accès (`/access-requests/verify`) | Page de confirmation post-email |
-| 📅 | Page `/account/settings` | Gestion compte + danger zone (suppression). Sprint 29 |
-| 📅 | Suppression / anonymisation de compte | Soft-delete + purge events. Sprint 29 |
+| ✅ | Suppression / anonymisation (RGPD) | `DELETE /users/me` : anonymise l'email + purge des voyages (cascade) + révoque les refresh tokens. Sprint 34 #549 |
+| ✅ | Export des données (RGPD) | `GET /users/me/export` : archive JSON (profil + voyages + préférences). Sprint 34 #549 |
+| ✅ | Page `/account/settings` | Compte, préférences, export RGPD, zone de danger. Sprint 34 #383 |
 
 ---
 
@@ -297,7 +298,8 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Raccourcis clavier | Ctrl+Z, Ctrl+Y, etc. Sprint 8 #33 |
 | ✅ | Modale d'aide raccourcis | Bouton « ? » dans la top bar |
 | ✅ | Bandeau voyage verrouillé | Affiché sur trips en lecture seule |
-| 📅 | Batch mode (ModificationQueue) | Accumulation modifs + recalcul unique. Sprint 24 #327 |
+| ✅ | Batch mode (ModificationQueue) | Accumulation modifs + recalcul unique. Sprint 24 #327 |
+| ✅ | Refonte top bar + aide unifiée | Top bar desktop redessinée, modale d'aide unifiée (raccourcis + FAQ). Sprint 34 #384 |
 
 ### Onboarding & aide
 
@@ -342,60 +344,63 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 
 ---
 
-## 11. Intelligence artificielle (planifié)
+## 11. Intelligence artificielle
+
+> Pile IA auto-hébergée via Ollama (`symfony/ai`, ADR-028 / ADR-030). Dégradation gracieuse : sans Ollama, les résumés IA sont masqués et les alertes restent affichées.
 
 ### Fondations backend
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| 📅 | Service OllamaClient PHP | Client HTTP vers Ollama. Sprint 25 #298 |
-| 📅 | Gate mechanism | Blocage/déblocage dans ComputationTracker. Sprint 25 #299 |
-| 📅 | System prompts cyclotourisme versionnés | Template FR/EN LLaMA 8B. Sprint 25 #300 |
-| 📅 | Docker Ollama | Container dédié |
+| ✅ | Service OllamaClient PHP | Client HTTP vers Ollama (`Llm/OllamaClient`). Sprint 25 #298 |
+| ✅ | Gate mechanism | Blocage/déblocage dans ComputationTracker (`LlmAnalysisTracker`). Sprint 25 #299 |
+| ✅ | System prompts cyclotourisme versionnés | Template FR/EN LLaMA 8B. Sprint 25 #300 |
+| ✅ | Docker Ollama | Container dédié. ADR-028 |
+| ✅ | Adoption `symfony/ai` | Platform Ollama (tool-calling désactivé sur le 3B). ADR-030 |
 
 ### Analyse 2 passes (LLaMA 8B)
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| 📅 | Passe 1 — analyse par étape | Message Messenger parallélisable. Sprint 26 #301 |
-| 📅 | Passe 2 — vue d'ensemble du trip | Résumé global. Sprint 26 #302 |
-| 📅 | Pipeline gate → LLaMA → TRIP_READY | Orchestration Mercure. Sprint 26 #303 |
-| 📅 | Fallback gracieux sans Ollama | Dégradation propre. Sprint 26 #304 |
+| ✅ | Passe 1 — analyse par étape | Message Messenger parallélisable (`AnalyzeStageWithLlmHandler`). Sprint 26 #301 |
+| ✅ | Passe 2 — vue d'ensemble du trip | Résumé global (`AnalyzeTripOverviewWithLlmHandler`). Sprint 26 #302 |
+| ✅ | Pipeline gate → LLaMA → TRIP_READY | Orchestration Mercure. Sprint 26 #303 |
+| ✅ | Fallback gracieux sans Ollama | Dégradation propre (`OllamaUnavailableException`). Sprint 26 #304 |
 
 ### Frontend IA
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| 📅 | Résumé IA global dans Mon voyage | Passe 2 LLaMA 8B. Sprint 27 #305 |
-| 📅 | Résumé IA par étape + layout hybride | Résumé + alertes repliables. Sprint 27 #306 |
-| 📅 | Bandeau « Actualiser l'analyse IA » | Si différé ou désactivé. Sprint 27 #307 |
-| 📅 | Fallback frontend sans LLaMA | Alertes dépliées, résumé masqué. Sprint 27 #308 |
+| ✅ | Résumé IA global dans Mon voyage | Passe 2 LLaMA 8B (`TripAiOverview`). Sprint 27 #305 |
+| ✅ | Résumé IA par étape + layout hybride | Résumé + alertes repliables (`StageAiSummary`). Sprint 27 #306 |
+| ✅ | Bandeau « Actualiser l'analyse IA » | Si différé ou désactivé. Sprint 27 #307 |
+| ✅ | Fallback frontend sans LLaMA | Alertes dépliées, résumé masqué. Sprint 27 #308 |
 
 ### Bulle IA conversationnelle (LLaMA 3B)
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| 📅 | Endpoint chat IA | LLaMA 3B context-aware. Sprint 28 #309 |
-| 📅 | Composant AiBubble | Bulle flottante + panneau chat. Sprint 28 #310 |
-| 📅 | Intégration ↔ recomputation inline | `skipAiAnalysis` flag. Sprint 28 #311 |
-| 📅 | Génération d'itinéraire par IA | À partir de prompt texte. Hors sprint #67 |
+| ✅ | Endpoint chat IA | LLaMA 3B context-aware. Sprint 28 #309 |
+| ✅ | Composant AiBubble | Bulle flottante + panneau chat. Sprint 28 #310 |
+| ✅ | Intégration ↔ recomputation inline | `skipAiAnalysis` flag. Sprint 28 #311 |
+| ✅ | Chat in-ride (POI à proximité) | Détection d'intention + calcul de détour avec géolocalisation (`InRide/*`), historique persisté (`TripChatMessage`). Sprint 32 |
+| 📅 | Génération d'itinéraire par IA | À partir d'un prompt texte. Hors sprint #67 |
 
 ---
 
-## 12. Analytics & RGPD (planifié)
+## 12. Analytics & confidentialité (RGPD)
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| 📅 | Page `/privacy` | Base légale, conservation 13 mois, droits utilisateurs. Sprint 29 |
-| 📅 | Mentions légales `/legal` | Éditeur, hébergeur, contact. Sprint 29 |
-| 📅 | Endpoint anonymisation / suppression user | Soft-delete + purge events. Sprint 29 |
-| 📅 | Entité `UsageEvent` partitionnée | Mensuel, purge 13 mois. Sprint 29 |
-| 📅 | Endpoint `POST /events` | Batch via `sendBeacon`. Sprint 29 |
-| 📅 | Hook `useUsageTracker()` | Frontend PWA. Sprint 29 |
-| 📅 | Vue matérialisée `usage_daily_summary` | Refresh cron quotidien. Sprint 29 |
-| 📅 | Mini-bannière cookies techniques | Information non-intrusive. Sprint 29 |
+| ✅ | Politique de confidentialité `/privacy` | Responsable, base légale, finalités, conservation, droits, sous-traitants, contact (sommaire ancré). Sprint 34 #552 |
+| ✅ | Mentions légales `/legal` | Éditeur, hébergeur, contact, propriété intellectuelle. Sprint 34 |
+| ✅ | Suppression / anonymisation compte | `DELETE /users/me` (cf. §7). Sprint 34 #549 |
+| ✅ | Export des données | `GET /users/me/export` (cf. §7). Sprint 34 #549 |
+| ✅ | Analytics Plausible auto-hébergé | Script chargé selon la seule configuration d'environnement — sans cookie, sans bannière de consentement (intérêt légitime). Events custom typés (`trackEvent`). ADR-034. Sprint 34 #557 #572 |
+| ✅ | Events d'usage | `import_komoot/strava/rwgps/gpx`, `trip_created`, `trip_shared`, `accommodation_selected`, `alert_action_clicked`, `ai_chat_opened`. Sprint 34 #561 |
+| 📅 | Service Plausible CE (Docker) | PostgreSQL + ClickHouse auto-hébergés, sous-domaine dédié. ADR-034 |
 
-> Aucun outil tiers (pas de Google Analytics, Posthog, Sentry). Implémentation native Symfony + Doctrine + PostgreSQL partitionné. Anonymisation totale.
+> Pas de Google Analytics ni Posthog. Analytics produit : **Plausible Community Edition** auto-hébergé, sans cookie ni PII (IP et User-Agent anonymisés) — voir [ADR-034](docs/adr/adr-034-usage-analytics-plausible.md). Suivi des erreurs : **GlitchTip** auto-hébergé, compatible Sentry — voir [ADR-031](docs/adr/adr-031-error-tracking-strategy.md). L'implémentation native `UsageEvent` initialement envisagée a été abandonnée au profit de Plausible.
 
 ---
 
@@ -440,7 +445,7 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Memory limit PHP 128 MB | Protection OOM |
 | 📅 | Headers sécurité Caddy | CSP, HSTS, X-Frame-Options. Sprint 30 |
 | 📅 | Audit isolation Mercure | Sprint 30 |
-| 📅 | Audit rate limiting | Magic link, trip create, scrape. Sprint 30 |
+| ✅ | Rate limiting | Magic link, trip create, chat, scrape (`config/packages/rate_limiter.php`). Sprint 30 |
 
 ### Tests
 
@@ -452,37 +457,43 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Rector | Refactoring automatique |
 | ✅ | ESLint + Prettier | Frontend |
 | ✅ | TypeScript strict | Typage fort |
-| ✅ | Playwright 1.58 | Tests E2E (mocked + intégration) |
+| ✅ | Playwright 1.60 | Tests E2E (mocked + intégration) |
 | ✅ | Recette par sprint | `tests/recette/sprint-NN.spec.ts` |
-| 📅 | Recette globale Gherkin FR + EN | 32 fichiers `.feature`. Sprint 16 #240 |
-| 📅 | playwright-bdd | Automatisation Gherkin. Sprint 16 #246 |
+| ✅ | Recette globale Gherkin FR + EN | 30 fichiers `.feature`. Sprint 16 #240 |
+| ✅ | playwright-bdd | Automatisation Gherkin (`make test-recette`). Sprint 16 #246 |
 | 📅 | axe-core Playwright | Accessibilité. Sprint 30 |
 | 📅 | Lighthouse CI | Performance. Sprint 30 |
 | 📅 | Script i18n-check | Complétude FR/EN. Sprint 30 |
 | 📅 | Visual regression screenshots | 36 baselines Playwright. Sprint 30 |
 
-### Déploiement (planifié)
+### Déploiement & observabilité
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| 📅 | CI/CD pipeline production | Sprint 32 |
-| 📅 | Oracle Cloud (OCI) Always Free | Sprint 32 |
-| 📅 | Coolify | Sprint 32 |
-| 📅 | DNS FreeDNS | Sprint 32 |
-| 📅 | Docker prod (PostgreSQL, Redis, Mercure, Caddy) | Sprint 32 |
-| 📅 | Monitoring & healthchecks | Sprint 32 |
+| ✅ | CI/CD production | Workflow `deploy.yml` : build/push images GHCR, upload source maps, trigger Coolify, smoke test. ADR-019 |
+| ✅ | Oracle Cloud (OCI) Always Free | VM hôte de production. ADR-019 |
+| ✅ | Coolify | Orchestration des déploiements via webhook. ADR-019 |
+| ✅ | Docker prod | `compose.prod.yaml` (PostgreSQL, Redis, Mercure, Caddy, Ollama, Valhalla, osm-cron) |
+| ✅ | Healthchecks | `GET /api/healthz` (liveness) + `GET /api/health` (readiness). Sprint 30 #497 |
+| ✅ | Suivi des erreurs GlitchTip | Auto-hébergé, SDK Sentry (backend + PWA). ADR-031. Sprint 30 #500 #495 |
+| ✅ | Monitoring uptime | Uptime Kuma auto-hébergé + UptimeRobot externe, alertes → incidents GitHub. Sprint 30 #499 #502 |
+| ✅ | Refresh OSM nocturne | `osm-cron` (supercronic) re-télécharge les extraits Geofabrik + restart Valhalla. ADR-033. Sprint 33 |
+| ✅ | Migrations & rollback | Stratégie documentée. ADR-032 |
 | 📅 | Feature-deploy (preview par PR) | Sprint 32 #312 |
 
 ---
 
 ## Ressources
 
+- [docs/README.md](docs/README.md) — index de la documentation (par besoin)
 - [README.md](README.md) — présentation produit (EN)
 - [README.fr.md](README.fr.md) — présentation produit (FR)
-- [TRACKING.md](TRACKING.md) — roadmap détaillée par sprint (165 tickets, ~176 PRs)
-- [docs/adr/](docs/adr/) — Architecture Decision Records (26 ADRs)
+- [TRACKING.md](TRACKING.md) — roadmap détaillée par sprint
+- [docs/architecture.md](docs/architecture.md) — vue d'ensemble du système
+- [docs/adr/](docs/adr/) — Architecture Decision Records
 - [docs/getting-started.md](docs/getting-started.md) — démarrage rapide
 - [docs/contributing.md](docs/contributing.md) — guide de contribution
+- [docs/legal-and-licensing.md](docs/legal-and-licensing.md) — licence, attribution des données, RGPD
 
 ---
 
