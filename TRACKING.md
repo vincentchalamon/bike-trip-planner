@@ -617,12 +617,12 @@ Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes,
 | 2     | [#549](https://github.com/vincentchalamon/bike-trip-planner/issues/549) | Anonymisation/suppression user (soft-delete trips + préférences) + export données JSON ; events Plausible non liés à l'user | M      | [#555](https://github.com/vincentchalamon/bike-trip-planner/pull/555) | —         |
 | 3     | [#548](https://github.com/vincentchalamon/bike-trip-planner/issues/548) | ADR-034 : décision Plausible auto-hébergé (justification RGPD, custom events)                                    | S      | [#554](https://github.com/vincentchalamon/bike-trip-planner/pull/554) | —         |
 | 4     | [#551](https://github.com/vincentchalamon/bike-trip-planner/issues/551) | Setup Plausible auto-hébergé Docker + domaine + DNS — **tâche manuelle (ops)**                                   | M      |     | #548      |
-| 5     | [#552](https://github.com/vincentchalamon/bike-trip-planner/issues/552) | Intégration script Plausible dans `<head>` Next.js (data-domain, chargement conditionnel après consentement)     | S      | [#557](https://github.com/vincentchalamon/bike-trip-planner/pull/557) | #551      |
+| 5     | [#552](https://github.com/vincentchalamon/bike-trip-planner/issues/552) | Intégration script Plausible dans `<head>` Next.js (data-domain, chargement conditionnel à la config env `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` — pas de consentement, cf. ADR-034) | S      | [#557](https://github.com/vincentchalamon/bike-trip-planner/pull/557) | #551      |
 | 6     | [#553](https://github.com/vincentchalamon/bike-trip-planner/issues/553) | Custom events Plausible — sources & plateformes (`import_komoot`, `import_strava`, `import_rwgps`, `import_gpx`) | S      | [#561](https://github.com/vincentchalamon/bike-trip-planner/pull/561) | #552      |
 | 7     | [#553](https://github.com/vincentchalamon/bike-trip-planner/issues/553) | Custom events Plausible — valeur features & rétention/UX (`trip_created`, `trip_shared`, `accommodation_selected`, `alert_action_clicked`, `ai_chat_opened`…) — _fusionné dans #553_ | M      | [#561](https://github.com/vincentchalamon/bike-trip-planner/pull/561) | #552      |
 | 8     | [#383](https://github.com/vincentchalamon/bike-trip-planner/issues/383) | Page `/account/settings` (Mon compte / Préférences / RGPD download / Zone de danger / Déconnexion)               | L      | [#558](https://github.com/vincentchalamon/bike-trip-planner/pull/558) | #550, #549 |
 | 9     | [#384](https://github.com/vincentchalamon/bike-trip-planner/issues/384) | Refonte top bar desktop (logo + tabs + undo/redo + Partager + ? aide unifiée + pills FR\|EN + thème + profil)    | L      | [#559](https://github.com/vincentchalamon/bike-trip-planner/pull/559) | #383       |
-| 10    | [#385](https://github.com/vincentchalamon/bike-trip-planner/issues/385) | Bannière cookies bas d'écran + modale granularité (Tout accepter / refuser / Personnaliser) — gating Plausible    | M      | [#560](https://github.com/vincentchalamon/bike-trip-planner/pull/560) | #550, #552 |
+| 10    | [#385](https://github.com/vincentchalamon/bike-trip-planner/issues/385) | ~~Bannière cookies + modale granularité~~ — **abandonné** : Plausible cookieless/sans PII, aucun consentement requis (cf. ADR-034) ; gating par env uniquement | M      | [#560](https://github.com/vincentchalamon/bike-trip-planner/pull/560) (fermée) | #550, #552 |
 
 ### Recette Sprint 34
 
@@ -630,14 +630,13 @@ Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes,
   - [ ] Page `/privacy` accessible et complète (base légale, conservation, droits utilisateurs, mention Plausible)
   - [ ] Mentions légales `/legal` accessibles
   - [ ] Page `/account/settings` accessible via le bouton profil de la top bar
-  - [ ] Bannière cookies bas d'écran fonctionnelle (Tout accepter / refuser / Personnaliser)
-  - [ ] **« Tout refuser »** → script Plausible **non chargé** (vérifier DevTools `Network` : aucune requête vers `plausible.io` / domaine auto-hébergé)
-  - [ ] **« Tout accepter »** → script Plausible chargé, page view trackée dans le dashboard Plausible
+  - [ ] Aucune bannière de consentement (Plausible cookieless/sans PII — aucun consentement requis, cf. ADR-034)
+  - [ ] Script Plausible chargé **uniquement si `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` est défini** ; dormant sinon (beta sans analytics) — vérifier DevTools `Network`
+  - [ ] Lorsque configuré : page view trackée dans le dashboard Plausible
   - [ ] Custom events visibles dans le dashboard Plausible (sources d'import, trip_created, trip_shared, etc.)
   - [ ] Aucun cookie posé par Plausible (vérifier `document.cookie`)
   - [ ] Aucune IP, User-Agent brut ou coordonnées GPS dans les events Plausible (Plausible anonymise nativement)
   - [ ] Suppression de compte → trips et préférences purgés ; events Plausible historiques restent (anonymes par construction)
-  - [ ] Dismiss persistant de la bannière cookies (stocké localement, pas re-affiché à la session suivante)
   - [ ] Documentation Plausible dans `/privacy` mentionne : cloud/auto-hébergé, finalités, rétention, droits
 
 ---
