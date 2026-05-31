@@ -15,14 +15,14 @@ The replacement must:
 
 1. Collect page views and custom interaction events.
 2. Never store PII or use browser fingerprinting (RGPD / GDPR constraints are strict).
-3. Load only after explicit analytics consent (privacy-by-default), gated by the cookie banner, even though Plausible is cookieless and would not legally require it.
+3. Require no consent banner: Plausible is cookieless and stores no PII, so loading is gated solely on environment configuration (lawful basis: legitimate interest, RGPD art. 6(1)(f)).
 4. Integrate with the existing Docker Compose self-hosted deployment on Oracle Cloud + Coolify (ADR-019).
 5. Have zero recurring licence cost.
 
 ## Decision Drivers
 
 - **Data sovereignty:** user interaction data must not leave the self-hosted infrastructure.
-- **RGPD compliance by design:** no cookies, no browser fingerprint, anonymised IP and User-Agent. A consent banner is not legally required under RGPD recital 47 / ePrivacy Directive, but the project gates loading on explicit consent anyway (privacy-by-default, single consent UX).
+- **RGPD compliance by design:** no cookies, no browser fingerprint, anonymised IP and User-Agent. A consent banner is not legally required: ePrivacy art. 5(3) / art. 82 LIL is not triggered (nothing is stored on or read from the device), and the processing rests on legitimate interest (RGPD art. 6(1)(f)). Loading is therefore gated solely on environment configuration; no cookie banner is shown.
 - **Cost:** cloud SaaS plans add a recurring invoice to a project with a zero-budget ops model.
 - **Operational fit:** the deployment already runs Docker Compose on a single Oracle VM; a new Compose service is the natural unit of integration.
 - **Licence:** must be open source with a permissive enough licence for self-hosting (AGPL-3.0 is acceptable; it only requires source disclosure if the software itself is distributed, which self-hosting is not).
@@ -54,7 +54,7 @@ New Coolify service stack under `.docker/plausible/docker-compose.yml`:
 All three containers live on an isolated Docker network; only `plausible` is published.
 TLS terminated by the Coolify-managed Traefik (Let's Encrypt).
 
-The PWA injects the `plausible/analytics` script via a `<Script>` tag in the root layout, conditionally — only after the visitor has granted analytics consent (see Consent Gating Strategy below). The script is served from the same subdomain (`stats.biketrip.mooo.com/js/script.js`) to avoid ad-blocker false positives on common public Plausible CDN hostnames.
+The PWA injects the `plausible/analytics` script via a `<Script>` tag in the root layout, conditionally — only when the Plausible env vars are configured (see Loading Strategy below). The script is served from the same subdomain (`stats.biketrip.mooo.com/js/script.js`) to avoid ad-blocker false positives on common public Plausible CDN hostnames.
 
 ### RGPD / Privacy Posture
 
@@ -64,7 +64,7 @@ Plausible CE does not set any cookie and does not use browser fingerprinting. Th
 - **User-Agent:** parsed to `{browser}/{version}` and `{os}/{version}`; the full string is discarded.
 - Events carry no `userId`, no session ID, and no cross-visit identifier.
 
-Consequence: under RGPD, no cookie consent banner is legally required — Plausible's privacy model is explicitly designed for compliance without a consent mechanism ([their compliance page](https://plausible.io/data-policy)). The project nonetheless gates loading on explicit consent (see below) as a privacy-by-default posture and to expose a single, unified consent UX for any future trackers.
+Consequence: under RGPD, no cookie consent banner is legally required — Plausible's privacy model is explicitly designed for compliance without a consent mechanism ([their compliance page](https://plausible.io/data-policy)), and this aligns with the CNIL audience-measurement framework (anonymous statistics only, no cross-site tracking, EU self-hosted, disclosure in the privacy policy). Loading is therefore gated solely on environment configuration (see Loading Strategy below); a consent banner would contradict this posture and add needless friction. Users retain a documented right to object on the `/privacy` page.
 
 ### Custom Events
 
@@ -91,15 +91,17 @@ Beyond automatic pageview tracking, the following custom events are instrumented
 
 Events are fired via `plausible()` from the frontend using the Plausible custom event API. No backend instrumentation is needed; all events are browser-side.
 
-### Consent Gating Strategy
+### Loading Strategy
 
-Although Plausible requires no consent under RGPD, the project adopts a **privacy-by-default** posture: the script is **loaded conditionally, only after the visitor grants analytics consent**. This is implemented across the sprint as follows:
+Because Plausible requires no consent (cookieless, no PII — see above), the script is **loaded solely on environment configuration**, with no consent banner:
 
-- A bottom cookie banner + granularity modal (issue #385) records the decision in the `cookie-consent` localStorage key (`{ analytics: boolean }`); technical cookies are always-on, analytics is opt-in.
-- The `<Script>` tag (issue #552) reads that consent and only injects when `analytics === true` and the `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` / `NEXT_PUBLIC_PLAUSIBLE_SRC` env vars are set. Before consent — or on "reject all" — no request is ever made to the Plausible host, and a previously injected script is unloaded on revocation.
+- The `<Script>` tag (issue #552) injects only when both `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` and `NEXT_PUBLIC_PLAUSIBLE_SRC` are set. When they are unset, nothing is rendered and no request is ever made to the Plausible host.
 - Custom events (issue #553) are fired through a `trackEvent` helper that is a no-op when the script is absent, so they inherit the same gate.
+- Browser-level Do Not Track (DNT) is honoured natively client-side by Plausible.
 
-This also honours browser-level Do Not Track (DNT), which Plausible suppresses client-side natively. The single consent UX generalises to any future tracker should one be added.
+A cookie consent banner was initially scoped (issue #385) but dropped: it would gate a tool that legally needs no consent, contradict the privacy policy, and reduce data accuracy for no compliance benefit.
+
+**Beta posture (Sprint 34.5, issue #567):** the env-only gate also serves as the analytics kill-switch. During the restricted beta the env vars are left unset, so the analytics code ships but stays dormant (no requests). Reactivation is a deploy-time concern: set the two env vars once the Plausible service is provisioned.
 
 ## Alternatives Considered
 
@@ -149,7 +151,7 @@ Widely used, free SaaS, with powerful funnel and retention analysis.
 ### Positive
 
 - Zero recurring licence cost.
-- RGPD compliance by design: no cookies, no fingerprinting; a banner is not legally required, yet loading is gated on explicit consent for a privacy-by-default posture.
+- RGPD compliance by design: no cookies, no fingerprinting; no consent banner is required (legitimate interest), so loading is gated solely on environment configuration — no friction, no consent-decline data loss.
 - Data stays on our infrastructure; no third-party data processor in the chain.
 - Out-of-the-box dashboard with pageviews, referrers, countries, devices, custom events, funnels.
 - Custom event API is simple: one `plausible('event_name')` call per interaction.
