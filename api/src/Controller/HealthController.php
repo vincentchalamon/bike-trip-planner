@@ -31,8 +31,10 @@ final readonly class HealthController
         private Connection $connection,
         #[Autowire(service: 'routing.client')]
         private HttpClientInterface $valhallaClient,
-        #[Autowire(service: 'ollama.client')]
-        private HttpClientInterface $ollamaClient,
+        #[Autowire(service: 'ollama_chat.client')]
+        private HttpClientInterface $ollamaChatClient,
+        #[Autowire(service: 'ollama_analysis.client')]
+        private HttpClientInterface $ollamaAnalysisClient,
         #[Autowire(service: 'mercure.health.client')]
         private HttpClientInterface $mercureClient,
         #[Autowire(service: 'limiter.health_liveness')]
@@ -74,7 +76,8 @@ final readonly class HealthController
         $pending = [
             'mercure' => $this->startHttpCheck('HEAD', '?topic=health', $this->mercureClient),
             'valhalla' => $this->startHttpCheck('GET', '/status', $this->valhallaClient),
-            'ollama' => $this->startHttpCheck('GET', '/api/tags', $this->ollamaClient),
+            'ollama_chat' => $this->startHttpCheck('GET', '/api/tags', $this->ollamaChatClient),
+            'ollama_analysis' => $this->startHttpCheck('GET', '/api/tags', $this->ollamaAnalysisClient),
         ];
 
         foreach ($pending as $name => $pair) {

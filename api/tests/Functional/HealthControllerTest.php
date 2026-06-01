@@ -78,7 +78,7 @@ final class HealthControllerTest extends ApiTestCase
         $data = $response->toArray();
         $this->assertSame('ok', $data['status']);
         $this->assertArrayHasKey('deps', $data);
-        foreach (['postgres', 'redis', 'mercure', 'valhalla', 'ollama'] as $dep) {
+        foreach (['postgres', 'redis', 'mercure', 'valhalla', 'ollama_chat', 'ollama_analysis'] as $dep) {
             $this->assertArrayHasKey($dep, $data['deps'], \sprintf('Missing dep %s', $dep));
             $this->assertArrayHasKey('status', $data['deps'][$dep]);
             $this->assertArrayHasKey('latency_ms', $data['deps'][$dep]);
@@ -198,17 +198,39 @@ final class HealthControllerTest extends ApiTestCase
         $this->assertResponseStatusCodeSame(200);
         $data = $response->toArray();
         $this->assertSame('ok', $data['status']);
-        $this->assertSame('down', $data['deps']['ollama']['status']);
+        $this->assertSame('down', $data['deps']['ollama_chat']['status']);
+    }
+
+    #[Test]
+    public function readinessReturns200WhenOllamaAnalysisIsDown(): void
+    {
+        // The analysis client is also excluded from $required; an analysis-only
+        // outage surfaces in deps.ollama_analysis but must not flip the aggregate.
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+            ollamaAnalysis: new MockResponse('error', ['http_code' => 503]),
+        );
+
+        $response = $this->client->request('GET', '/api/health');
+
+        $this->assertResponseStatusCodeSame(200);
+        $data = $response->toArray();
+        $this->assertSame('ok', $data['status']);
+        $this->assertSame('down', $data['deps']['ollama_analysis']['status']);
     }
 
     private function mockHealthHttpClients(
         MockResponse $valhalla,
         MockResponse $ollama,
         MockResponse $mercure,
+        ?MockResponse $ollamaAnalysis = null,
     ): void {
         $container = self::getContainer();
         $container->set('routing.client', new MockHttpClient($valhalla));
-        $container->set('ollama.client', new MockHttpClient($ollama));
+        $container->set('ollama_chat.client', new MockHttpClient($ollama));
+        $container->set('ollama_analysis.client', new MockHttpClient($ollamaAnalysis ?? new MockResponse('{"models":[]}', ['http_code' => 200])));
         $container->set('mercure.health.client', new MockHttpClient($mercure));
     }
 }
