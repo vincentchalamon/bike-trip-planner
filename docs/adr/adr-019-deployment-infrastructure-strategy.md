@@ -3,6 +3,9 @@
 - **Status:** Proposed
 - **Date:** 2026-03-04
 - **Depends on:** ADR-016 (performance optimization), ADR-017 (Valhalla + Overpass), ADR-018 (Garmin export)
+- **Amended by:** [ADR-039](adr-039-beta-right-sizing-free-tier.md) (beta right-sizing + corrected budget)
+
+> **Budget correction (2026-06-01).** The RAM budget below was wrong: it counts a local Overpass server that was since removed (ADR-025, public API instead), and it omits the host OS + Docker daemon, the self-hosted observability/analytics stacks (GlitchTip ADR-031, Plausible/ClickHouse ADR-034) and Uptime Kuma, while under-counting Coolify. The "~9.5 GB margin" was illusory: a full self-hosted stack with both LLaMA models resident lands around **17-18 GB**, not 14.5 GB. More importantly, the binding constraint is **CPU** (CPU-only LLaMA inference on 4 cores), not RAM. The corrected RAM/CPU/disk budget and the deployed beta profile (single 3B on demand, split `async`/`llm` workers, SaaS observability, deferred analytics, France-only OSM) are formalised in [ADR-039](adr-039-beta-right-sizing-free-tier.md).
 
 ## Context and Problem Statement
 
@@ -27,11 +30,11 @@ Le projet est aujourd'hui exclusivement développé en local via Docker Compose.
 | Workers (×5) | Traitement async | ~1.5 GB |
 | PostgreSQL | Persistance (planifié) | ~200 MB |
 | Valhalla (ADR-017) | Routing engine | ~1-2 GB |
-| Overpass (ADR-017) | POI discovery | ~2-3 GB |
+| ~~Overpass (ADR-017)~~ | ~~POI discovery~~ — retiré (ADR-025), API publique | ~~2-3 GB~~ |
 | **Ollama (ADR-028)** | **Inférence LLaMA 8B + 3B** | **~6-8 GB** |
-| **Total** | | **~12-17 GB RAM** |
+| **Total** | | voir budget corrigé (ADR-039) |
 
-Stockage disque : ~6 GB (PBF Geofabrik + tiles Valhalla + base Overpass) + ~10 GB (modèles Ollama llama3.1:8b + llama3.2:3b).
+Stockage disque : ~6 GB (PBF Geofabrik France + tiles Valhalla) + ~10 GB (modèles Ollama llama3.1:8b + llama3.2:3b). Le budget RAM/CPU/disque corrigé est dans [ADR-039](adr-039-beta-right-sizing-free-tier.md) ; cette table conserve l'estimation initiale (avant retrait d'Overpass) pour mémoire.
 
 ### Contraintes
 
@@ -263,24 +266,30 @@ C'est la seule infrastructure gratuite offrant suffisamment de ressources (24 GB
                             └──────────┘  └──────────┘
 
                         ┌─────────────────────────────────────┐
-                        │         Estimation RAM totale         │
+                        │  Estimation RAM (CORRIGÉE — ADR-039) │
+                        │  Full self-hosted, both models hot   │
                         │                                       │
-                        │  Coolify + Traefik        ~550 MB    │
+                        │  OS + Docker daemon       ~800 MB    │
+                        │  Coolify + Traefik        ~700 MB    │
                         │  Next.js                  ~600 MB    │
-                        │  PHP (API)                ~500 MB    │
-                        │  Mercure                   ~50 MB    │
-                        │  Redis                    ~100 MB    │
-                        │  PostgreSQL               ~200 MB    │
-                        │  Workers (×5)            ~1500 MB    │
+                        │  PHP (FrankenPHP, API+SSE) ~600 MB   │
+                        │  Redis                    ~150 MB    │
+                        │  PostgreSQL               ~250 MB    │
+                        │  Workers async + llm     ~1000 MB    │
                         │  Valhalla                ~1500 MB    │
-                        │  Overpass                ~2500 MB    │
                         │  Ollama (LLaMA 8B+3B)    ~7000 MB    │
+                        │  GlitchTip (ADR-031)     ~1000 MB    │
+                        │  Plausible + ClickHouse  ~2000 MB    │
+                        │  Uptime Kuma              ~150 MB    │
                         │  ─────────────────────────────────   │
-                        │  Total                  ~14.5 GB     │
+                        │  Total full self-hosted ~17-18 GB    │
                         │  Disponible              24.0 GB     │
-                        │  Marge                    ~9.5 GB    │
+                        │  Marge réelle            ~6-7 GB     │
+                        │  Facteur limitant = CPU (4 cœurs)    │
                         └─────────────────────────────────────┘
 ```
+
+Overpass local est retiré (ADR-025) : POI via l'API publique. La marge "~9.5 GB" du premier brouillon était fausse (cf. note de correction en tête). Le profil réellement déployé en beta (<10 users, modèle 3B unique à la demande, workers `async`/`llm` séparés, observabilité SaaS, analytics différée) tient autour de ~9-9.5 GB et est détaillé dans [ADR-039](adr-039-beta-right-sizing-free-tier.md).
 
 ### Stratégie de déploiement progressive
 
@@ -306,7 +315,7 @@ C'est la seule infrastructure gratuite offrant suffisamment de ressources (24 GB
 - **Fiabilité Oracle** : Oracle peut réclamer les instances inactives. Le free tier peut évoluer sans préavis
 - **Pas de sous-domaine natif** : nécessite un domaine externe (achat ou FreeDNS)
 - **Authentification obligatoire** : le déploiement public impose d'implémenter une couche d'authentification complète (inscription, connexion, sessions, isolation des données) avant la mise en ligne — effort significatif non encore planifié
-- **Ollama = dépendance dure** : l'inférence LLaMA est non-skippable (cf. ADR-028 et issue #375 arbitrage v2 « IA toujours active »). Ollama doit être opérationnel avec les deux modèles (`llama3.1:8b`, `llama3.2:3b`) chargés avant que l'application soit considérée disponible. La marge RAM restante (~9.5 GB) reste confortable sur une VM 24 GB. Le healthcheck Coolify doit inclure un ping Ollama (`GET /api/health`) en plus des healthchecks applicatifs existants.
+- **Ollama = dépendance dure** : l'inférence LLaMA est non-skippable (cf. ADR-028 et issue #375 arbitrage v2 « IA toujours active »). Ollama doit être opérationnel avant que l'application soit considérée disponible. En beta, seul `llama3.2:3b` est chargé à la demande (ADR-039) ; le profil full self-hosted avec les deux modèles résidents (`llama3.1:8b`, `llama3.2:3b`) tient en RAM (~6-7 GB de marge sur 24 GB) mais sature les 4 cœurs CPU — c'est le facteur limitant réel, pas la RAM. Le healthcheck Coolify doit inclure un ping Ollama (`GET /api/health`) en plus des healthchecks applicatifs existants.
 
 ### Neutral
 
