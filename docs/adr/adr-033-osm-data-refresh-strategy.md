@@ -1,6 +1,6 @@
 # ADR-033: OSM Data Refresh Strategy — Nightly Re-Download via `osm-cron`
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-036](adr-036-manual-osm-data-refresh.md) (OSM data is now refreshed manually; `osm-cron` removed)
 - **Date:** 2026-05-28
 - **Depends on:** ADR-017 (Valhalla Routing Engine), ADR-020 (Dynamic Overpass Region Provisioning), ADR-025 (Removal of Self-Hosted Overpass)
 - **Related:** Sprint 33, Issues #477 (unified `provision` command), #479 (`osm-cron` Compose service)

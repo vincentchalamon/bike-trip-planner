@@ -211,9 +211,9 @@ All geographic and infrastructure data is sourced from [OpenStreetMap](https://w
 
 **Licence:** [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — attribution required: "© OpenStreetMap contributors".
 
-#### OSM provisioning and nightly refresh
+#### OSM provisioning and refresh
 
-The Valhalla routing engine consumes Geofabrik PBF extracts mounted at `/data` inside the `valhalla` container. Two flows manage this data — see [ADR-020](docs/adr/adr-020-dynamic-overpass-region-provisioning.md) and [ADR-033](docs/adr/adr-033-osm-data-refresh-strategy.md) for the full rationale.
+The Valhalla routing engine consumes Geofabrik PBF extracts mounted at `/data` inside the `valhalla` container — see [ADR-020](docs/adr/adr-020-dynamic-overpass-region-provisioning.md) and [ADR-036](docs/adr/adr-036-manual-osm-data-refresh.md) for the full rationale.
 
 **Bootstrap (first install or adding regions):**
 
@@ -223,29 +223,16 @@ make provision
 
 This runs the unified `provision` command inside the `provisioner` container (Compose profile `provisioning`). It downloads the configured Geofabrik regions, writes them atomically to the shared `/data` volume, and updates `/data/regions.json`. Re-running the same command later updates existing regions instead of re-installing them — the install vs update mode is detected from the presence of `/data/regions.json` and the `--no-interaction` flag.
 
-**Automatic nightly refresh:**
+**Refresh (manual):**
 
-The `osm-cron` Compose service (profile `routing`) runs `supercronic` and triggers a full re-download every night, then restarts Valhalla so the new tiles are loaded.
+OSM data is refreshed manually — there is no scheduled job. Re-download the configured Geofabrik extracts and reload them into Valhalla on whatever cadence suits the deployment:
 
-| Env var | Default | Description |
-|---|---|---|
-| `OSM_CRON_SCHEDULE` | `0 3 * * *` | Cron expression in UTC. Set to empty to disable the automatic refresh entirely. |
+```bash
+make provision-update            # re-download the configured regions (non-interactive)
+docker compose restart valhalla  # rebuild routing tiles from the new PBF
+```
 
-To disable the nightly refresh while keeping Valhalla running, do not enable the `routing` profile's `osm-cron` service (or set `OSM_CRON_SCHEDULE=` and rebuild).
-
-**Security caveat — Docker socket exposure:**
-
-The `osm-cron` container mounts `/var/run/docker.sock` so it can issue a `docker restart valhalla` after each refresh. **Mounting the Docker socket is functionally equivalent to giving the container root on the host:** a process inside `osm-cron` can start a privileged container, escape to the host filesystem, or stop and recreate any sibling container.
-
-This is the same trade-off accepted by every Docker-native scheduler (Ofelia, Watchtower, ouroboros, `docker-gen`). It is acceptable on a single-tenant production host where the Docker daemon is already implicitly trusted.
-
-**Do not enable `osm-cron` on:**
-
-- Untrusted hosts (shared developer workstations, multi-user VMs).
-- Multi-tenant Docker daemons (any host where containers from different trust domains share the same daemon).
-- Hosts where Docker daemon access is treated as a privilege to be audited.
-
-On such hosts, either disable the service (omit the `routing` profile or set `OSM_CRON_SCHEDULE=`) and refresh manually via `make provision`, or front the socket with [`tecnativa/docker-socket-proxy`](https://github.com/Tecnativa/docker-socket-proxy) scoped to `POST /containers/{id}/restart` only.
+See [ADR-036](docs/adr/adr-036-manual-osm-data-refresh.md) for why the automated nightly job (`osm-cron`) was dropped.
 
 ### DataTourisme
 

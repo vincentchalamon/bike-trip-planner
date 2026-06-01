@@ -33,7 +33,7 @@ When the Sentry/GlitchTip secrets are missing, the `upload-sourcemaps` job is sk
 - **Error tracking** — self-hosted GlitchTip (Sentry-compatible) receives backend and PWA errors. See [ADR-031](adr/adr-031-error-tracking-strategy.md) and [.docker/glitchtip](../.docker/glitchtip/README.md).
 - **Uptime** — self-hosted Uptime Kuma plus external UptimeRobot watch the public endpoints. See [runbooks/uptime-monitoring.md](runbooks/uptime-monitoring.md) and [.docker/uptime-kuma](../.docker/uptime-kuma/README.md).
 - **Incidents** — uptime/error alerts raise a `repository_dispatch` consumed by `.github/workflows/incident-create.yml`, which opens a triaged incident issue. On-call playbooks live in [runbooks/](runbooks/).
-- **OSM data** — the `osm-cron` service re-downloads routing extracts nightly and restarts Valhalla. See [ADR-033](adr/adr-033-osm-data-refresh-strategy.md).
+- **OSM data** — routing extracts are refreshed manually (`make provision-update` then restart Valhalla); there is no scheduled job. See [ADR-036](adr/adr-036-manual-osm-data-refresh.md).
 
 ## Rollback
 
