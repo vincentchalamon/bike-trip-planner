@@ -58,6 +58,7 @@ You are implementing GitHub issue #<number>: <title>
    ```
 4. Implement the solution following CLAUDE.md rules (architecture, SOLID, patterns)
 5. Run `make qa` and commit autofixes (PHP-CS-Fixer, Rector, Prettier auto-apply). Repeat until `make qa` exits 0 with no working-tree diff. PHPStan / TypeScript / ESLint errors must be fixed by hand. **Do NOT run `make test` / `make typegen` / `make install`** — the main agent handles those during Phase 2 (Docker container spin-up is shared there).
+   - **If `make qa` can't run fully** (e.g. the frontend leg is broken by a stale `node_modules` and you commit with `--no-verify`), still run `make rector` and `make php-cs-fixer` on their own first. Their rules are deterministic and PHP-only, so they pass locally even when the JS toolchain is unavailable — and a skipped Rector autofix fails CI in dry-run mode, costing a round-trip (observed Sprint 34.5: #580 PHP 8.4 `new` without parentheses, #585 `NewlineAfterStatementRector`).
 6. Commit your changes using Conventional Commits format (final commit must include any QA autofixes — never leave a dirty worktree)
 7. If you modify backend DTOs (api/src/ApiResource/), include "DTO_CHANGED" in your final message
 8. If you add new dependencies to composer.json or package.json, include "DEPS_CHANGED" in your final message

@@ -25,7 +25,7 @@ make php-shell          # Bash inside PHP container
 make pwa-shell          # Bash inside Node container
 ```
 
-**Compose layout:** `compose.yaml` is the iso-prod base (read as-is by CI and Coolify); `compose.dev.yaml` layers the dev overrides and is auto-loaded in dev via the Makefile (`COMPOSE_FILE`). Dev and prod run the same FrankenPHP image with Caddy + Mercure embedded — see [ADR-037](docs/adr/adr-037-docker-dev-prod-convergence.md). `make start-dev` runs dev; `make start` / `make build` target prod.
+**Compose layout:** `compose.yaml` is the iso-prod base (read as-is by CI and Coolify); `compose.dev.yaml` layers the dev overrides and is auto-loaded in dev via the Makefile (`COMPOSE_FILE`). Dev and prod run the same FrankenPHP image with Caddy + Mercure embedded — see [ADR-037](docs/adr/adr-037-docker-dev-prod-convergence.md). `make start-dev` runs dev; `make start` / `make build` target prod. **Gotcha:** there is no `compose.prod.yaml` — issues or docs written before ADR-037 may still reference it; the prod/iso-prod stack now lives in `compose.yaml`.
 
 Running specific tools inside containers:
 
