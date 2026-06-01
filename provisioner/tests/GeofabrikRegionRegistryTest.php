@@ -62,7 +62,13 @@ final class GeofabrikRegionRegistryTest extends TestCase
     {
         foreach (GeofabrikRegionRegistry::all() as $name => $data) {
             $url = GeofabrikRegionRegistry::downloadUrl($data['slug']);
-            self::assertStringStartsWith('https://download.geofabrik.de/europe/france', $url, $name);
+            if ('france' === $data['slug']) {
+                // Whole-France extract lives one level up, not under /france/.
+                self::assertStringContainsString('/europe/france-latest.osm.pbf', $url, $name);
+            } else {
+                self::assertStringStartsWith('https://download.geofabrik.de/europe/france/', $url, $name);
+            }
+
             self::assertStringEndsWith('-latest.osm.pbf', $url, $name);
         }
     }
