@@ -2,7 +2,7 @@
 
 Single source of truth for every secret used by the production stack. Updated as part of any PR that introduces or removes a secret (see PR template checklist).
 
-Centralisation **documentaire** uniquement : aucun SaaS de gestion de secrets (Bitwarden Secrets Manager, Doppler, Vault…) n'est utilisé. Coolify reste le runtime store ; le bundle envs + PEM est sauvegardé chiffré (`age`) vers B2 par le job de backup (ADR-033, hors scope ici).
+Centralisation **documentaire** uniquement : aucun SaaS de gestion de secrets (Bitwarden Secrets Manager, Doppler, Vault…) n'est utilisé. Coolify reste le runtime store ; le bundle envs + PEM est sauvegardé chiffré (`age`) vers B2 par le job de backup (Sprint 39 Backup & DR — ADR-038, #527 ; hors scope ici).
 
 Pour la rotation : voir [secrets-rotation.md](secrets-rotation.md).
 
@@ -10,7 +10,7 @@ Pour la rotation : voir [secrets-rotation.md](secrets-rotation.md).
 
 - **Localisation source** = système qui détient la valeur de référence. Si elle est perdue ailleurs, on la récupère ici.
 - **Bitwarden vault** désigne le Bitwarden Password Manager personnel (plan Free), pas Bitwarden Secrets Manager.
-- **Backup bundle** = inclus dans le tar chiffré `age` produit par le service `backup` (ADR-033, PR #4 de `mossy-castle`).
+- **Backup bundle** = inclus dans le tar chiffré `age` produit par le service `backup` (Sprint 39, #530).
 
 ## Runtime secrets (consommés par la stack en prod)
 
@@ -27,12 +27,12 @@ Pour la rotation : voir [secrets-rotation.md](secrets-rotation.md).
 | `DATATOURISME_API_KEY` | API key | Coolify env | `worker` (multi-source) | Oui | On-compromise | ADR-026 |
 | `SENTRY_DSN` | DSN GlitchTip (public côté projet, technique côté ingestion) | Coolify env | `php`, `worker`, `pwa` (SSR) | Oui | On-compromise (projet GlitchTip recréé) | ADR-031 |
 | `NEXT_PUBLIC_SENTRY_DSN` | Idem, exposé au bundle client | Coolify env (build arg) | `pwa` (client) | Oui | Idem `SENTRY_DSN` | ADR-031 |
-| `AGE_RECIPIENT` | Clé publique `age` | Coolify env du service `backup` (clé publique committable) | `backup` (chiffrement dumps) | N/A (publique) | On-compromise — clé privée seule sensible | ADR-033 |
-| Clé privée `age` correspondante | Clé privée `age` | **Bitwarden vault** (hors VM) | Opérateur lors d'un restore | N/A (jamais en prod) | On-compromise | ADR-033 |
-| `B2_ACCOUNT_ID` / `B2_APPLICATION_KEY` | Application key Backblaze | Coolify env du service `backup` | `backup` (rclone) | Oui | **Annuelle** + on-compromise | ADR-033 |
-| `OCI_*` (S3 endpoint creds Object Storage) | Customer Secret Key | Coolify env du service `backup` | `backup` (rclone) | Oui | Annuelle + on-compromise | ADR-033 |
+| `AGE_RECIPIENT` | Clé publique `age` | Coolify env du service `backup` (clé publique committable) | `backup` (chiffrement dumps) | N/A (publique) | On-compromise — clé privée seule sensible | ADR-038 (#527) |
+| Clé privée `age` correspondante | Clé privée `age` | **Bitwarden vault** (hors VM) | Opérateur lors d'un restore | N/A (jamais en prod) | On-compromise | ADR-038 (#527) |
+| `B2_ACCOUNT_ID` / `B2_APPLICATION_KEY` | Application key Backblaze | Coolify env du service `backup` | `backup` (rclone) | Oui | **Annuelle** + on-compromise | ADR-038 (#527) |
+| `OCI_*` (S3 endpoint creds Object Storage) | Customer Secret Key | Coolify env du service `backup` | `backup` (rclone) | Oui | Annuelle + on-compromise | ADR-038 (#527) |
 
-> Les entrées `AGE_RECIPIENT`, `B2_*`, `OCI_*`, `backup` sont introduites par les PR de `mossy-castle` (Sprint 38). Elles sont listées ici par anticipation pour que l'inventaire soit complet dès le merge de ce runbook + d'`adr-033`.
+> Les entrées `AGE_RECIPIENT`, `B2_*`, `OCI_*` et le service `backup` sont introduites par le Sprint 39 (Backup & DR, #528-#530). Elles sont listées ici par anticipation ; leur ADR de référence (Backup & DR, ADR-038 — #527) reste à créer.
 
 ## CI/CD secrets (consommés par GitHub Actions)
 
@@ -53,7 +53,7 @@ Pour la rotation : voir [secrets-rotation.md](secrets-rotation.md).
 En cas de bootstrap depuis zéro (VM perdue, Coolify réinstallé) :
 
 1. Récupérer la clé privée `age` depuis **Bitwarden vault** : item canonique `bike-trip-planner / age private key` (la rotation conserve toujours ce nom pour la clé courante et renomme l'ancienne en `... legacy YYYYMMDD`, voir [secrets-rotation.md](secrets-rotation.md)).
-2. Restaurer le bundle envs depuis B2 via `disaster-recovery.md` (procédure générique §1).
+2. Restaurer le bundle envs depuis B2 via le runbook `disaster-recovery.md` (à créer en Sprint 39, #532).
 3. Réimporter les envs dans Coolify (UI ou `coolify` CLI).
 4. Pour les CI secrets : régénérer depuis le provider concerné (Backblaze, Resend, Anthropic…) ; ces secrets ne sont **pas** dans le backup bundle (ils vivent dans GitHub).
 
