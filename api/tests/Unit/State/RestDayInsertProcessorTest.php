@@ -251,7 +251,9 @@ final class RestDayInsertProcessorTest extends TestCase
         $stage0 = new Stage(tripId: 'trip-1', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $coord, endPoint: $coord);
 
         $tripRequest = new TripRequest();
-        $tripRequest->startDate = new \DateTimeImmutable('2026-06-01');
+        // Relative future date so the trip is never locked (startDate <= today),
+        // otherwise this test becomes a time bomb once the hard-coded day passes.
+        $tripRequest->startDate = new \DateTimeImmutable('+1 month');
 
         $this->tripStateManager->method('getStages')->willReturn([$stage0]);
         $this->tripStateManager->method('getRequest')->willReturn($tripRequest);
