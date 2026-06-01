@@ -22,6 +22,7 @@ Every runbook follows the same four sections:
 | [mercure-disconnected.md](mercure-disconnected.md) | SSE clients cannot reconnect |
 | [ollama-down.md](ollama-down.md) | LLM dependency unreachable (hard dep per ADR-028) |
 | [valhalla-overpass-rebuild.md](valhalla-overpass-rebuild.md) | Routing tiles or POI cache rebuild |
+| [osm-france-refresh.md](osm-france-refresh.md) | Monthly France-wide OSM build + tile upload |
 | [oracle-vm-reclaimed.md](oracle-vm-reclaimed.md) | Oracle Always Free instance reclaimed |
 | [incident-template.md](incident-template.md) | Post-mortem template |
 | [release-rollback.md](release-rollback.md) | Roll back a bad deploy via Coolify |
