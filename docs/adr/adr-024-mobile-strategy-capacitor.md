@@ -144,7 +144,7 @@ CORS_ALLOW_ORIGIN='^(https?|capacitor)://(localhost|127\.0\.0\.1)(:[0-9]+)?$'
 CORS_ALLOW_ORIGIN='^(https://example\.com|capacitor://localhost)$'
 ```
 
-**2. Mercure SSE (`compose.prod.yaml`):**
+**2. Mercure SSE (`compose.yaml`):**
 
 `MERCURE_EXTRA_DIRECTIVES` must also allow `capacitor://localhost`, since SSE subscriptions for real-time trip computation events originate from the WebView:
 

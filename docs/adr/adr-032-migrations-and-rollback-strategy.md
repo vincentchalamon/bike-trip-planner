@@ -31,7 +31,7 @@ bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 
 …before exec'ing the underlying `docker-php-entrypoint` and the FrankenPHP CMD.
 
-Execution is gated by the environment variable `MIGRATIONS_ON_BOOT` (default: `true` in `compose.prod.yaml` and in the Dockerfile `ENV`). Setting it to `false` skips auto-migration, useful when:
+Execution is gated by the environment variable `MIGRATIONS_ON_BOOT` (default: `true` in `compose.yaml` and in the Dockerfile `ENV`). Setting it to `false` skips auto-migration, useful when:
 
 - A migration is suspected to be problematic and we want to deploy code without touching the schema.
 - We want to run a long migration manually in a controlled shell session.
@@ -77,4 +77,4 @@ A detailed playbook lives in `docs/runbooks/release-rollback.md` (created as par
 
 ### Neutral
 
-- Workers (`messenger:consume`) share the same image and the same `entrypoint.sh`; they skip migrations because `compose.prod.yaml` sets `MIGRATIONS_ON_BOOT=false` on the worker service. Only the `php` service runs them, and workers wait for it to be healthy via `depends_on`.
+- Workers (`messenger:consume`) share the same image and the same `entrypoint.sh`; they skip migrations because `compose.yaml` sets `MIGRATIONS_ON_BOOT=false` on the worker service. Only the `php` service runs them, and workers wait for it to be healthy via `depends_on`.
