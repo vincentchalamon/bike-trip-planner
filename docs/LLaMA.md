@@ -5,6 +5,8 @@
 
 > **Statut :** l'analyse IA (par étape + vue d'ensemble, LLaMA 8B) et l'assistant conversationnel (LLaMA 3B, dont le mode in-ride POI) sont livrés — voir [ADR-028](adr/adr-028-ollama-llama-integration.md) et [ADR-030](adr/adr-030-symfony-ai-adoption.md). La génération d'itinéraire à partir d'un prompt texte (le flux « Brief de Mission » ci-dessous) est une cible non encore implémentée (#67). Ce document décrit l'architecture visée et son raisonnement.
 
+> **Profil beta (3B unique) — [ADR-039](adr/adr-039-beta-right-sizing-free-tier.md).** Sur le free tier Oracle, le facteur limitant est le **CPU** (inférence CPU-only sur 4 cœurs), pas la RAM. En beta (<10 users), seul **`llama3.2:3b`** est chargé, **à la demande** (pas de pinning des deux modèles). Le 8B (analyse) n'est pas résident : l'analyse d'étape utilise le 3B ou est différée. Le travail LLM est sérialisé sur un worker Messenger dédié (`llm`, 1 réplique), séparé des workers `async` I/O-bound. Le 8B résident et l'inférence GPU sont réintroduits lors de la migration GCP (cf. ADR-039). L'architecture multi-modèles décrite ci-dessous reste la cible post-beta.
+
 ---
 
 ## 1. Optimisations de l'Infrastructure
