@@ -25,6 +25,12 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    # Memory budget for the beta profile on a single 24 GB VM (#566). Ollama
+    # inference lives in a separate Coolify resource, so it is not counted here.
+    deploy:
+      resources:
+        limits:
+          memory: 768M
     depends_on:
       database:
         condition: service_healthy
@@ -109,8 +115,13 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    # Per-replica memory limit (#566). With 2 replicas the async workers cap at
+    # ~1 GB total, matching the ADR-019 RAM estimate for async processing.
     deploy:
       replicas: ${WORKER_REPLICAS:-2}
+      resources:
+        limits:
+          memory: 512M
     depends_on:
       database:
         condition: service_healthy
@@ -175,8 +186,14 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    # Highest worker limit (#566): the LLM worker buffers prompt/response
+    # payloads, but the heavy inference runs in the separate Ollama resource,
+    # so the worker itself stays modest.
     deploy:
       replicas: ${WORKER_LLM_REPLICAS:-1}
+      resources:
+        limits:
+          memory: 768M
     depends_on:
       database:
         condition: service_healthy
@@ -251,6 +268,11 @@ services:
       secrets:
         - sentry_auth_token
     restart: unless-stopped
+    # Next.js standalone server memory budget (#566).
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     depends_on:
       - php # Mercure dependency
     tty: true
@@ -284,6 +306,11 @@ services:
     image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
     restart: unless-stopped
     profiles: ["routing"]
+    # Routing engine: tiles + elevation kept in memory (#566, ADR-019 ~1-2 GB).
+    deploy:
+      resources:
+        limits:
+          memory: 2G
     volumes:
       - .docker/osm/data/default.osm.pbf:/custom_files/default.osm.pbf
       - valhalla-tiles:/custom_files
@@ -307,6 +334,23 @@ services:
   database:
     image: postgres:18-alpine
     restart: unless-stopped
+    # Modest tuning for the beta profile (#566): max_connections covers php +
+    # 2 async workers + 1 llm worker + provisioner with headroom; shared_buffers
+    # stays well inside the 1 GB limit below. effective_cache_size tells the
+    # planner how much OS cache to assume (container_limit - shared_buffers -
+    # overhead), not an allocation — keeps cost estimates realistic at 1 GB.
+    command:
+      - postgres
+      - -c
+      - max_connections=50
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=768MB
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     environment:
       POSTGRES_DB: "${DATABASE_NAME:-bike_trip_planner}"
       POSTGRES_USER: "${DATABASE_USERNAME:-app}"
@@ -323,6 +367,22 @@ services:
   redis:
     image: redis:8-alpine
     restart: unless-stopped
+    # volatile-lru protects the Messenger queue (its list keys carry no TTL, so
+    # they are never evicted) while letting the TTL-bearing OSM/weather caches be
+    # evicted under pressure — so enqueue (LPUSH) writes keep succeeding instead of
+    # failing with OOM as they would under noeviction. maxmemory sits below the
+    # container limit to leave room for Redis overhead.
+    # See docs/runbooks/redis-out-of-memory.md and issue #566.
+    command:
+      - redis-server
+      - --maxmemory
+      - 384mb
+      - --maxmemory-policy
+      - volatile-lru
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       interval: 10s
@@ -339,6 +399,11 @@ services:
       - .docker/osm/data:/data
     restart: "no"
     profiles: ["provisioning"]
+    # One-shot OSM extract job; osmium needs headroom to parse the PBF (#566).
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
 volumes:
   caddy_data: ~
