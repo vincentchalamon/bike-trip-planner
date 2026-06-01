@@ -1,12 +1,23 @@
 # Runbook — Uptime monitoring
 
-Two-layer uptime monitoring for Bike Trip Planner production:
+> **Beta posture (Sprint 34.5, issue #568):** during the restricted beta we run
+> **only the external UptimeRobot monitor** on `/api/healthz`. The self-hosted
+> Uptime Kuma stack (`.docker/uptime-kuma/`) is **not deployed** — its files
+> stay in the repository for reversibility but no container runs on the VM. The
+> single off-host probe on `/api/healthz` (which transitively pings Ollama via
+> the readiness chain) is enough to detect a host-level outage and raise an
+> incident. Re-enable Uptime Kuma later by deploying the stack and restoring the
+> "Self-hosted" layer below. See [ADR-031](../adr/adr-031-error-tracking-strategy.md)
+> for the parallel Sentry-SaaS beta posture.
+
+Target (post-beta) two-layer uptime monitoring for Bike Trip Planner production:
 
 1. **Self-hosted (Uptime Kuma)** on the Coolify VM — sub-minute detection,
    rich monitor types, public status page. Configuration documented in
    [`.docker/uptime-kuma/README.md`](../../.docker/uptime-kuma/README.md).
+   **Not deployed in beta** (see banner above).
 2. **External (UptimeRobot)** — single off-host probe that survives a full VM
-   outage. This document covers (2).
+   outage. **This is the only active layer in beta.** This document covers (2).
 
 ## Why two layers?
 

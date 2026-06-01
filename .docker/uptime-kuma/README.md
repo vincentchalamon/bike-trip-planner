@@ -1,5 +1,12 @@
 # Uptime Kuma — self-hosted monitoring
 
+> **Beta posture (Sprint 34.5, issue #568):** this stack is **not deployed**
+> during the restricted beta. Availability is monitored solely by the external
+> **UptimeRobot** probe on `/api/healthz` (see
+> [`docs/runbooks/uptime-monitoring.md`](../../docs/runbooks/uptime-monitoring.md)).
+> These files are kept for reversibility: deploy the stack below to restore the
+> self-hosted primary layer post-beta.
+
 Uptime Kuma is the **primary** uptime monitor for Bike Trip Planner. It runs on
 the same Coolify host as the application (Oracle Cloud Always Free VM, see
 [ADR-019](../../docs/adr/0019-hosting-coolify-oracle-cloud.md)) and provides

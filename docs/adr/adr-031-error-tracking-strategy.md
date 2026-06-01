@@ -96,6 +96,20 @@ GlitchTip default retention is 30 days for events; we keep it as is. Aggregated 
 
 - Sentry SDKs are widely used; both LLMs and human developers recognize the patterns. Lock-in is low because GlitchTip implements the public Sentry wire protocol — migrating to another compatible backend is a DSN change.
 
+## Beta posture (Sprint 34.5, issue #568)
+
+For the restricted beta we **do not deploy** the self-hosted GlitchTip stack. Standing up four extra containers (~500 MB RAM, dedicated PostgreSQL + Redis) on the Oracle VM is not justified while traffic is low and the stack is still being stabilised.
+
+Instead, the SDKs (already wired — `sentry/sentry-symfony`, `@sentry/nextjs`) point at **Sentry SaaS free tier** (`sentry.io`, < 5k events/month):
+
+- Set `SENTRY_DSN` (backend, used by `php` + `worker`) and `NEXT_PUBLIC_SENTRY_DSN` (PWA, build arg + SSR) to the Sentry-issued project DSN.
+- The free tier event cap (5k/month) is ample for beta volume; the `before_send` / `beforeSend` filters (404/405/validation, offline, chunk-load, Mercure reconnect) keep noise well under the cap.
+- Source-map upload still works: point `SENTRY_URL`/`SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN` at the Sentry SaaS org instead of the GlitchTip instance.
+
+This intentionally relaxes decision driver #1 (self-hosting) and reverses considered-alternative #1 (Sentry SaaS was originally rejected on principle). The trade-off is explicit and **fully reversible**: GlitchTip is the standing target architecture; the wire protocol is identical, so switching back is a DSN/`SENTRY_URL` change once the GlitchTip stack is deployed. `.docker/glitchtip/` is kept in the repository (not deleted) precisely so the self-hosted topology can be restored without rework.
+
+PII posture is unchanged: `sendDefaultPii: false`, only whitelisted tags and `user.id` (UUID v7) leave the SDK, so no user data is exfiltrated to the SaaS beyond stack traces and those tags.
+
 ## Implementation Notes
 
 - The SentryBundle is registered only in the `prod` environment (see `api/config/bundles.php`) so dev and test never make outbound calls.

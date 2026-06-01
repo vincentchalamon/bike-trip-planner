@@ -30,8 +30,8 @@ When the Sentry/GlitchTip secrets are missing, the `upload-sourcemaps` job is sk
 ## Monitoring & observability
 
 - **Health endpoints** — `GET /api/healthz` (liveness) and `GET /api/health` (readiness); the smoke-test job and the uptime monitors probe these.
-- **Error tracking** — self-hosted GlitchTip (Sentry-compatible) receives backend and PWA errors. See [ADR-031](adr/adr-031-error-tracking-strategy.md) and [.docker/glitchtip](../.docker/glitchtip/README.md).
-- **Uptime** — self-hosted Uptime Kuma plus external UptimeRobot watch the public endpoints. See [runbooks/uptime-monitoring.md](runbooks/uptime-monitoring.md) and [.docker/uptime-kuma](../.docker/uptime-kuma/README.md).
+- **Error tracking** — Sentry SDKs (`sentry/sentry-symfony`, `@sentry/nextjs`) capture backend and PWA errors. **Beta (Sprint 34.5):** the DSNs point at **Sentry SaaS free tier**; the self-hosted GlitchTip stack (`.docker/glitchtip/`) is kept in-repo but not deployed. Reversible by switching `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_URL` back to the GlitchTip instance. See [ADR-031](adr/adr-031-error-tracking-strategy.md) and [.docker/glitchtip](../.docker/glitchtip/README.md).
+- **Uptime** — **Beta (Sprint 34.5):** only the external **UptimeRobot** probe on `/api/healthz` is active; self-hosted Uptime Kuma (`.docker/uptime-kuma/`) is kept in-repo but not deployed. See [runbooks/uptime-monitoring.md](runbooks/uptime-monitoring.md) and [.docker/uptime-kuma](../.docker/uptime-kuma/README.md).
 - **Incidents** — uptime/error alerts raise a `repository_dispatch` consumed by `.github/workflows/incident-create.yml`, which opens a triaged incident issue. On-call playbooks live in [runbooks/](runbooks/).
 - **OSM data** — routing extracts are refreshed manually (`make provision-update` then restart Valhalla); there is no scheduled job. See [ADR-036](adr/adr-036-manual-osm-data-refresh.md).
 
