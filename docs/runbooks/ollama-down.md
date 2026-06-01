@@ -22,12 +22,13 @@ Probe the API directly:
 docker compose exec php curl -sS http://ollama:11434/api/tags | jq '.models[].name'
 ```
 
-Expected models per ADR-028:
+Expected models (beta profile, issue #563 — single 3B for analysis + chat):
 
-- `llama3.1:8b` (analysis pass, `num_ctx: 8192`, 60 s timeout)
-- `llama3.2:3b` (dialogue pass, 10 s timeout)
+- `llama3.2:3b` (analysis passes — stage + overview, `num_ctx: 8192`, 60 s timeout; and dialogue pass, 10 s timeout)
 
-Check RAM pressure on the VM (Ollama is the largest single consumer, ~6-8 GB):
+8B (`llama3.1:8b`) is reactivable per pass via `OLLAMA_STAGE_MODEL` / `OLLAMA_OVERVIEW_MODEL`.
+
+Check RAM pressure on the VM (Ollama loads on demand with `OLLAMA_KEEP_ALIVE=5m` — ~0 GB idle, ~2.3 GB during a 3B analysis):
 
 ```bash
 free -h
@@ -44,14 +45,13 @@ docker stats --no-stream ollama
 
    Wait for the healthcheck (`ollama list`) to go green before retrying any failed message.
 
-2. **Re-pull missing models** (if `/api/tags` returned an empty or partial list):
+2. **Re-pull the missing model** (if `/api/tags` returned an empty list):
 
    ```bash
-   docker compose exec ollama ollama pull llama3.1:8b
    docker compose exec ollama ollama pull llama3.2:3b
    ```
 
-   Operators on resource-constrained hardware may substitute `llama3.2:1b` / `llama3.1:8b-q4_K_M` per ADR-028 — never disable the LLM tier.
+   Operators on resource-constrained hardware may substitute `llama3.2:1b` per ADR-028 — never disable the LLM tier. Re-pull `llama3.1:8b` only if it was reactivated via `OLLAMA_STAGE_MODEL` / `OLLAMA_OVERVIEW_MODEL`.
 
 3. **Replay failed Messenger messages** once Ollama is healthy:
 
@@ -66,7 +66,7 @@ docker stats --no-stream ollama
 
 ## Post-action
 
-- `curl http://ollama:11434/api/tags` lists both expected models.
+- `curl http://ollama:11434/api/tags` lists `llama3.2:3b` (it appears once probed/loaded on demand).
 - `/api/health` shows `deps.ollama.status: "ok"` for two consecutive probes.
 - Replay successful — `failed` transport empty.
 - If a model was re-pulled, note the size and time in the incident issue (network bandwidth cost on Oracle).

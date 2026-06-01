@@ -118,6 +118,14 @@ services:
     restart: unless-stopped
     expose:
       - 11434
+    environment:
+      # Beta profile (issue #563): right-size for Oracle ARM (24GB/4c, <10 users).
+      # One resident model at a time, two parallel slots for chat <-> analysis
+      # coexistence, 5m keep_alive so models unload at rest (~0GB idle, ~2.3GB
+      # during a 3B analysis). Cold-start (~3-8s) is invisible behind async phase 2.
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: "2"
+      OLLAMA_KEEP_ALIVE: "5m"
     volumes:
       - ollama-data:/root/.ollama
     healthcheck:
