@@ -73,8 +73,10 @@ gracefully when Ollama is unreachable. See
 ## Deployment & operations
 
 Production runs as Docker Compose on an Oracle Cloud VM, orchestrated by Coolify and shipped by
-the `deploy.yml` workflow. Errors flow to self-hosted GlitchTip; uptime is watched by Uptime Kuma
-and UptimeRobot. See [Deployment](deployment.md) and the [runbooks](runbooks/).
+the `deploy.yml` workflow. Errors flow through the Sentry SDKs and uptime is probed externally; in
+beta (Sprint 34.5) these point at Sentry SaaS and UptimeRobot, with the self-hosted GlitchTip and
+Uptime Kuma stacks kept in-repo but not deployed (reversible — see ADR-031). See
+[Deployment](deployment.md) and the [runbooks](runbooks/).
 
 ## ADR index by theme
 

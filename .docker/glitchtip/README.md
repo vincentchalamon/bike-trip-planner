@@ -2,6 +2,8 @@
 
 Production-grade error tracker for Bike Trip Planner. See [ADR-031](../../docs/adr/adr-031-error-tracking-strategy.md) for the rationale.
 
+> **Beta posture (Sprint 34.5, issue #568):** this stack is **not deployed** during the restricted beta. The Sentry SDKs point at **Sentry SaaS free tier** instead (set `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` to the SaaS DSN). These files are kept for reversibility: deploy the stack below and switch the DSN/`SENTRY_URL` back to `errors.biketrip.mooo.com` to restore self-hosting. See the "Beta posture" section in ADR-031.
+
 ## Architecture
 
 Four containers on an isolated Docker network:

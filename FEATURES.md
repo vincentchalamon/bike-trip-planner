@@ -400,7 +400,7 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Events d'usage | `import_komoot/strava/rwgps/gpx`, `trip_created`, `trip_shared`, `accommodation_selected`, `alert_action_clicked`, `ai_chat_opened`. Sprint 34 #561 |
 | 📅 | Service Plausible CE (Docker) | PostgreSQL + ClickHouse auto-hébergés, sous-domaine dédié. ADR-034 |
 
-> Pas de Google Analytics ni Posthog. Analytics produit : **Plausible Community Edition** auto-hébergé, sans cookie ni PII (IP et User-Agent anonymisés) — voir [ADR-034](docs/adr/adr-034-usage-analytics-plausible.md). Suivi des erreurs : **GlitchTip** auto-hébergé, compatible Sentry — voir [ADR-031](docs/adr/adr-031-error-tracking-strategy.md). L'implémentation native `UsageEvent` initialement envisagée a été abandonnée au profit de Plausible.
+> Pas de Google Analytics ni Posthog. Analytics produit : **Plausible Community Edition** auto-hébergé, sans cookie ni PII (IP et User-Agent anonymisés) — voir [ADR-034](docs/adr/adr-034-usage-analytics-plausible.md). Suivi des erreurs : SDK **Sentry** (backend + PWA), compatible GlitchTip — en beta (Sprint 34.5) pointé sur **Sentry SaaS free**, GlitchTip auto-hébergé conservé mais non déployé (réversible) — voir [ADR-031](docs/adr/adr-031-error-tracking-strategy.md). L'implémentation native `UsageEvent` initialement envisagée a été abandonnée au profit de Plausible.
 
 ---
 
@@ -475,8 +475,8 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Coolify | Orchestration des déploiements via webhook. ADR-019 |
 | ✅ | Docker prod | `compose.yaml` (FrankenPHP edge : Caddy + Mercure embarqués, PostgreSQL, Redis, Valhalla) ; dev iso-prod via `compose.dev.yaml`. ADR-037 |
 | ✅ | Healthchecks | `GET /api/healthz` (liveness) + `GET /api/health` (readiness). Sprint 30 #497 |
-| ✅ | Suivi des erreurs GlitchTip | Auto-hébergé, SDK Sentry (backend + PWA). ADR-031. Sprint 30 #500 #495 |
-| ✅ | Monitoring uptime | Uptime Kuma auto-hébergé + UptimeRobot externe, alertes → incidents GitHub. Sprint 30 #499 #502 |
+| ✅ | Suivi des erreurs | SDK Sentry (backend + PWA). **Beta (Sprint 34.5 #568) : Sentry SaaS free**, GlitchTip auto-hébergé conservé mais non déployé — réversible. ADR-031. Sprint 30 #500 #495 |
+| ✅ | Monitoring uptime | **Beta (Sprint 34.5 #568) : UptimeRobot externe seul** sur `/api/healthz` ; Uptime Kuma auto-hébergé conservé mais non déployé. Alertes → incidents GitHub. Sprint 30 #499 #502 |
 | ✅ | Refresh OSM manuel | `make provision-update` + `docker compose restart valhalla`. ADR-036 (supersède ADR-033) |
 | ✅ | Migrations & rollback | Stratégie documentée. ADR-032 |
 | 📅 | Feature-deploy (preview par PR) | Sprint 32 #312 |
