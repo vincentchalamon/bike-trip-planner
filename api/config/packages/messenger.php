@@ -50,6 +50,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 ],
                 'llm' => [
                     'dsn' => '%env(MESSENGER_TRANSPORT_DSN)%',
+                    // Own Redis stream so `messenger:consume llm` and `messenger:consume async`
+                    // don't compete in the same consumer group (which would let fast async jobs
+                    // land on the LLM worker and vice versa, defeating head-of-line isolation).
+                    // Shares the same Redis host/credentials — no new env var needed.
+                    'options' => ['stream' => 'messages-llm'],
                     'retry_strategy' => [
                         'max_retries' => 3,
                         'delay' => 1000,
