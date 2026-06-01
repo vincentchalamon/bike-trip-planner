@@ -41,14 +41,32 @@ test.describe("Plausible analytics", () => {
     await expect(script).toHaveAttribute("src", PLAUSIBLE_SRC);
   });
 
-  test("does not load when the env is unset", async ({ page }) => {
-    // No presetPlausibleEnv: domain/src unresolved -> dormant (e.g. beta).
+  // Confirms the beta kill-switch (issue #567): an empty env leaves zero
+  // analytics footprint — no script, no cookie. Supersedes the narrower
+  // "does not load" case (same setup, strict superset of the script assertion).
+  test("leaves no analytics footprint when the env is unset", async ({
+    page,
+  }) => {
     await failOnPlausibleRequest(page);
     await mockAllApis(page);
 
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
+    // No Plausible script injected.
     await expect(page.getByTestId("plausible-script")).toHaveCount(0);
+
+    // window.plausible is undefined — confirms the precondition for trackEvent
+    // being a no-op (its no-throw behaviour is exercised directly in plausible.test.ts).
+    const tracked = await page.evaluate(() => {
+      const w = window as Window & { plausible?: unknown };
+      return typeof w.plausible;
+    });
+    expect(tracked).toBe("undefined");
+
+    // No Plausible cookie set (Plausible is cookieless by design); scoped to the
+    // analytics domain so unrelated cookies (locale/theme/auth) can't break this test.
+    const cookies = await page.context().cookies();
+    expect(cookies.filter((c) => c.domain.includes("plausible"))).toHaveLength(0);
   });
 });
