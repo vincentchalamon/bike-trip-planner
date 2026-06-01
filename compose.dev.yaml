@@ -25,6 +25,9 @@ services:
       MAILER_DSN: smtp://mailcatcher:1025
       WIKIDATA_USER_AGENT: "${WIKIDATA_USER_AGENT:-BikeTripPlanner/1.0 (contact@example.org)}"
       OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      # Split analysis vs chat endpoints (issue #564); both default to OLLAMA_BASE_URL.
+      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
       OLLAMA_ENABLED: "${OLLAMA_ENABLED:-0}"
       LOCK_DSN: redis://redis:6379
       # See https://xdebug.org/docs/all_settings#mode
@@ -65,6 +68,9 @@ services:
       MAILER_DSN: smtp://mailcatcher:1025
       WIKIDATA_USER_AGENT: "${WIKIDATA_USER_AGENT:-BikeTripPlanner/1.0 (contact@example.org)}"
       OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      # Split analysis vs chat endpoints (issue #564); both default to OLLAMA_BASE_URL.
+      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
       OLLAMA_ENABLED: "${OLLAMA_ENABLED:-0}"
       LOCK_DSN: redis://redis:6379
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"

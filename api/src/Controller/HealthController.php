@@ -31,7 +31,7 @@ final readonly class HealthController
         private Connection $connection,
         #[Autowire(service: 'routing.client')]
         private HttpClientInterface $valhallaClient,
-        #[Autowire(service: 'ollama.client')]
+        #[Autowire(service: 'ollama_chat.client')]
         private HttpClientInterface $ollamaClient,
         #[Autowire(service: 'mercure.health.client')]
         private HttpClientInterface $mercureClient,

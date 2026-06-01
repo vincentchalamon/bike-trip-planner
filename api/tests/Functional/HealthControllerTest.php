@@ -208,7 +208,7 @@ final class HealthControllerTest extends ApiTestCase
     ): void {
         $container = self::getContainer();
         $container->set('routing.client', new MockHttpClient($valhalla));
-        $container->set('ollama.client', new MockHttpClient($ollama));
+        $container->set('ollama_chat.client', new MockHttpClient($ollama));
         $container->set('mercure.health.client', new MockHttpClient($mercure));
     }
 }
