@@ -214,7 +214,7 @@ La sécurité des types est appliquée de bout en bout : les DTO PHP définissen
 | **data.gouv.fr** | Marchés forains hebdomadaires (import hors ligne) | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | France | `make markets-import` |
 | **Open-Meteo** | Prévisions météo | [CC-BY](https://creativecommons.org/licenses/by/4.0/) | Mondiale | Aucun |
 
-Détails de configuration (clés API, provisioning OSM via Valhalla, refresh nocturne `osm-cron`) : voir [README.md](README.md#external-data-sources) (EN) et [docs/deployment.md](docs/deployment.md). Attribution OSM obligatoire : « © les contributeurs OpenStreetMap ».
+Détails de configuration (clés API, provisioning OSM via Valhalla, refresh manuel) : voir [README.md](README.md#external-data-sources) (EN) et [docs/deployment.md](docs/deployment.md). Attribution OSM obligatoire : « © les contributeurs OpenStreetMap ».
 
 ---
 

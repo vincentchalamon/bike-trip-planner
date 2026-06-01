@@ -131,7 +131,7 @@ test: qa test-php test-e2e openapi-lint security-check ## Run full test suite (R
 provision: ensure-default-pbf ## Provision OSM regions interactively
 	@docker compose --profile provisioning run --rm provisioner
 
-provision-update: ## Trigger a non-interactive provisioner update (manual osm-cron debug)
+provision-update: ## Trigger a non-interactive provisioner update (re-download OSM regions)
 	@docker compose --profile provisioning run --rm provisioner --no-interaction
 
 ## --- 🗄️ Database ---
