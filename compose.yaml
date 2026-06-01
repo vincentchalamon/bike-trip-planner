@@ -110,7 +110,7 @@ services:
     tmpfs:
       - /tmp
     deploy:
-      replicas: ${WORKER_REPLICAS:-5}
+      replicas: ${WORKER_REPLICAS:-2}
     depends_on:
       database:
         condition: service_healthy
@@ -154,7 +154,73 @@ services:
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
       - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini:ro
     healthcheck:
-      test: pgrep -f messenger:consume || exit 1
+      test: pgrep -f 'messenger:consume async' || exit 1
+      start_period: 30s
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Dedicated worker for slow LLM inference jobs. A single replica caps
+  # concurrent inferences at one (4 ARM cores can't run several in parallel
+  # without thrashing) and keeps the `async` workers free of head-of-line
+  # blocking by fast enrichment jobs. See issue #565.
+  worker-llm:
+    image: ${PHP_IMAGE:-bike-trip-planner-php:ci}
+    build:
+      context: ./
+      dockerfile: .docker/php/Dockerfile
+      target: frankenphp_prod
+    command: bin/console messenger:consume llm --time-limit=3600 -vv
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    deploy:
+      replicas: ${WORKER_LLM_REPLICAS:-1}
+    depends_on:
+      database:
+        condition: service_healthy
+      php:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      valhalla:
+        condition: service_healthy
+        required: false
+    environment:
+      APP_ENV: prod
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
+      MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
+      MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
+      MESSENGER_FAILED_DSN: redis://redis:6379/failed
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      JWT_SECRET_KEY: /run/secrets/jwt_private_key
+      JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
+      JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
+      FRONTEND_URL: "${FRONTEND_URL}"
+      MAILER_DSN: "${MAILER_DSN}"
+      DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
+      DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
+      # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+      APP_RELEASE: "${APP_RELEASE:-}"
+      # Workers must not run migrations — only the php service does (see ADR-032).
+      MIGRATIONS_ON_BOOT: "false"
+    secrets:
+      - jwt_private_key
+      - jwt_public_key
+    volumes:
+      - php_var:/app/var
+      # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
+      # and our date.timezone=UTC override takes effect.
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
+      - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini:ro
+    healthcheck:
+      test: pgrep -f 'messenger:consume llm' || exit 1
       start_period: 30s
       interval: 10s
       timeout: 3s
