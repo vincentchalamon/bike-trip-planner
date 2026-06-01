@@ -1,6 +1,6 @@
 # ADR-034: Usage Analytics — Plausible Community Edition Self-Hosted
 
-- **Status:** Accepted
+- **Status:** Accepted — reactivation engine under review (see [§Reactivating Analytics After the Beta](#reactivating-analytics-after-the-beta))
 - **Date:** 2026-05-29
 - **Depends on:** ADR-019 (Production Hosting on Oracle Cloud + Coolify), ADR-022 (Persistent Storage Strategy)
 - **Related:** Sprint 34, Epic #370, Arbitrage #375 v3
