@@ -1,6 +1,6 @@
 # ADR-039: Beta Right-Sizing on the Oracle Free Tier + Corrected RAM/CPU/Disk Budget
 
-- **Status:** Accepted
+- **Status:** Proposed — flips to Accepted once the implementing PRs land (#563 merged; #564-#569 open in Sprint 34.5)
 - **Date:** 2026-06-01
 - **Depends on:** ADR-019 (Deployment Infrastructure), ADR-028 (Ollama/LLaMA integration), ADR-031 (Error tracking), ADR-034 (Usage analytics), ADR-037 (Dev/Prod Docker convergence)
 - **Amends:** ADR-019 (RAM budget correction)
