@@ -647,14 +647,14 @@ Ajustement de l'infrastructure pour démarrer une **beta restreinte (<10 users)*
 
 | Ordre | ID                                                                      | Titre                                                                              | Effort | PRs | Dépend de   |
 |-------|-------------------------------------------------------------------------|------------------------------------------------------------------------------------|--------|-----|-------------|
-| 1     | [#563](https://github.com/vincentchalamon/bike-trip-planner/issues/563) | Profil beta — modèle 3B unique (analyse + chat) + Ollama on-demand                 | S      |     | —           |
-| 2     | [#564](https://github.com/vincentchalamon/bike-trip-planner/issues/564) | Couture endpoint analyse/chat (`OLLAMA_ANALYSIS_URL` / `OLLAMA_CHAT_URL`)           | M      |     | —           |
-| 3     | [#565](https://github.com/vincentchalamon/bike-trip-planner/issues/565) | Transport `llm` dédié + `worker-llm` (split async/llm)                              | M      |     | —           |
-| 4     | [#566](https://github.com/vincentchalamon/bike-trip-planner/issues/566) | Limites mémoire conteneurs + Redis maxmemory (noeviction) + Postgres borné         | S      |     | #565        |
-| 5     | [#567](https://github.com/vincentchalamon/bike-trip-planner/issues/567) | Beta sans analytics — gating env + différer le serveur + doc réactivation          | S      |     | #552, #553  |
-| 6     | [#568](https://github.com/vincentchalamon/bike-trip-planner/issues/568) | Observabilité beta SaaS — Sentry + UptimeRobot                                      | S      |     | —           |
-| 7     | [#569](https://github.com/vincentchalamon/bike-trip-planner/issues/569) | OSM France entière — build local mensuel + runbook + désactiver osm-cron nightly   | M      | [#575](https://github.com/vincentchalamon/bike-trip-planner/pull/575) (partiel) | —           |
-| 8     | [#570](https://github.com/vincentchalamon/bike-trip-planner/issues/570) | ADR-035 right-sizing Free Tier + correction budget ADR-019                         | S      |     | —           |
+| 1     | [#563](https://github.com/vincentchalamon/bike-trip-planner/issues/563) | Profil beta — modèle 3B unique (analyse + chat) + Ollama on-demand                 | S      | [#579](https://github.com/vincentchalamon/bike-trip-planner/pull/579) ✅ mergée | —           |
+| 2     | [#564](https://github.com/vincentchalamon/bike-trip-planner/issues/564) | Couture endpoint analyse/chat (`OLLAMA_ANALYSIS_URL` / `OLLAMA_CHAT_URL`)           | M      | [#580](https://github.com/vincentchalamon/bike-trip-planner/pull/580) 🚧 | —           |
+| 3     | [#565](https://github.com/vincentchalamon/bike-trip-planner/issues/565) | Transport `llm` dédié + `worker-llm` (split async/llm)                              | M      | [#581](https://github.com/vincentchalamon/bike-trip-planner/pull/581) 🚧 | —           |
+| 4     | [#566](https://github.com/vincentchalamon/bike-trip-planner/issues/566) | Limites mémoire conteneurs + Redis maxmemory (noeviction) + Postgres borné         | S      | [#582](https://github.com/vincentchalamon/bike-trip-planner/pull/582) 🚧 (base #581) | #565        |
+| 5     | [#567](https://github.com/vincentchalamon/bike-trip-planner/issues/567) | Beta sans analytics — gating env + différer le serveur + doc réactivation          | S      | [#583](https://github.com/vincentchalamon/bike-trip-planner/pull/583) 🚧 | #552, #553  |
+| 6     | [#568](https://github.com/vincentchalamon/bike-trip-planner/issues/568) | Observabilité beta SaaS — Sentry + UptimeRobot                                      | S      | [#584](https://github.com/vincentchalamon/bike-trip-planner/pull/584) 🚧 | —           |
+| 7     | [#569](https://github.com/vincentchalamon/bike-trip-planner/issues/569) | OSM France entière — build local mensuel + runbook + désactiver osm-cron nightly   | M      | [#575](https://github.com/vincentchalamon/bike-trip-planner/pull/575) (partiel) + [#585](https://github.com/vincentchalamon/bike-trip-planner/pull/585) 🚧 | —           |
+| 8     | [#570](https://github.com/vincentchalamon/bike-trip-planner/issues/570) | ADR-035 right-sizing Free Tier + correction budget ADR-019                         | S      | [#586](https://github.com/vincentchalamon/bike-trip-planner/pull/586) 🚧 (ADR-039) | —           |
 
 ### Recette Sprint 34.5
 
