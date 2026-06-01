@@ -55,7 +55,7 @@ La rotation **ne re-chiffre pas** l'historique des backups : trop coûteux, et l
 
 2. Dans **Bitwarden vault** : **renommer l'item courant** `bike-trip-planner / age private key` en `bike-trip-planner / age private key legacy YYYYMMDD` (date de la dernière utilisation comme clé courante). **Créer un nouvel item** `bike-trip-planner / age private key` (nom canonique conservé) contenant la nouvelle clé privée. Le bootstrap DR cherche toujours le nom canonique ; les items `legacy *` ne servent qu'à restaurer les dumps antérieurs et doivent être conservés indéfiniment.
 3. Mettre à jour `AGE_RECIPIENT` dans Coolify (env du service `backup`) avec la nouvelle clé publique.
-4. Mettre à jour le repo si la clé publique y est référencée (`compose.yaml` par défaut env, ADR-033).
+4. Mettre à jour le repo si la clé publique y est référencée (`compose.yaml` par défaut env, ADR-038 — #527).
 5. Forcer un backup : `make backup-now`. Confirmer via `rclone ls b2:btp-backups | tail -1` que le dernier dump est bien plus récent que la rotation.
 6. **Ne pas supprimer** les anciens dumps avant leur expiration GFS naturelle.
 
