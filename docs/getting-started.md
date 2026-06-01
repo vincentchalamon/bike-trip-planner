@@ -48,10 +48,9 @@ This boots multiple services:
 
 | Service    | URL                      | Description                                        |
 |------------|--------------------------|----------------------------------------------------|
-| `php`      | `https://localhost/docs` | API Platform backend (FrankenPHP with built-in Caddy) |
+| `php`      | `https://localhost/docs` | API Platform backend (FrankenPHP: Caddy reverse-proxy + embedded Mercure hub) |
 | `pwa`      | `https://localhost`      | Next.js frontend                                   |
 | `worker`   | Internal only            | Async messages worker (×5)                         |
-| `mercure`  | Internal only            | Server-push microservice                           |
 | `redis`    | Internal only            | Cache and Messenger transport                      |
 | `database` | Internal only            | PostgreSQL 18 persistent storage                   |
 | `valhalla` | Internal only            | Valhalla routing engine                            |
@@ -100,7 +99,7 @@ Another process is using the default HTTPS port. Either stop it or override the 
 # Find the conflicting process
 sudo lsof -i :443
 
-# Or configure a different port in compose.override.yaml
+# Or set HTTP_PORT / HTTPS_PORT in your .env
 ```
 
 ### Self-signed certificate errors in the browser

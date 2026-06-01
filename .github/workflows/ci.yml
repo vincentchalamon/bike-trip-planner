@@ -279,7 +279,7 @@ jobs:
     name: Playwright
     runs-on: ubuntu-latest
     env:
-      COMPOSE_FILE: compose.prod.yaml
+      COMPOSE_FILE: compose.yaml
       WORKER_REPLICAS: 1
       JWT_PASSPHRASE: "ci-test-passphrase"
       FRONTEND_URL: "https://localhost"
@@ -301,7 +301,7 @@ jobs:
         with:
           load: true
           files: |
-            compose.prod.yaml
+            compose.yaml
           set: |
             *.platform=linux/amd64
             php.cache-from=type=gha,scope=php
@@ -340,7 +340,7 @@ jobs:
     name: Playwright BDD Recette
     runs-on: ubuntu-latest
     env:
-      COMPOSE_FILE: compose.prod.yaml
+      COMPOSE_FILE: compose.yaml
       WORKER_REPLICAS: 1
       JWT_PASSPHRASE: "ci-test-passphrase"
       FRONTEND_URL: "https://localhost"
@@ -362,7 +362,7 @@ jobs:
         with:
           load: true
           files: |
-            compose.prod.yaml
+            compose.yaml
           set: |
             *.platform=linux/amd64
             php.cache-from=type=gha,scope=php

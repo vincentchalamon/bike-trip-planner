@@ -473,7 +473,7 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | CI/CD production | Workflow `deploy.yml` : build/push images GHCR, upload source maps, trigger Coolify, smoke test. ADR-019 |
 | ✅ | Oracle Cloud (OCI) Always Free | VM hôte de production. ADR-019 |
 | ✅ | Coolify | Orchestration des déploiements via webhook. ADR-019 |
-| ✅ | Docker prod | `compose.prod.yaml` (PostgreSQL, Redis, Mercure, Caddy, Ollama, Valhalla) |
+| ✅ | Docker prod | `compose.yaml` (FrankenPHP edge : Caddy + Mercure embarqués, PostgreSQL, Redis, Valhalla) ; dev iso-prod via `compose.dev.yaml`. ADR-037 |
 | ✅ | Healthchecks | `GET /api/healthz` (liveness) + `GET /api/health` (readiness). Sprint 30 #497 |
 | ✅ | Suivi des erreurs GlitchTip | Auto-hébergé, SDK Sentry (backend + PWA). ADR-031. Sprint 30 #500 #495 |
 | ✅ | Monitoring uptime | Uptime Kuma auto-hébergé + UptimeRobot externe, alertes → incidents GitHub. Sprint 30 #499 #502 |

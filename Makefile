@@ -1,6 +1,11 @@
 .DEFAULT_GOAL := help
 .PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision provision-update coverage coverage-ci migration migrate db-create fixtures
 
+# Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
+# explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
+# overrides never leak into a production invocation.
+export COMPOSE_FILE ?= compose.yaml:compose.dev.yaml
+
 help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
@@ -14,17 +19,17 @@ ensure-default-pbf: ## Ensure default.osm.pbf exists (copies Lille stub if missi
 	@test -f .docker/osm/data/default.osm.pbf || cp .docker/osm/lille-stub.osm.pbf .docker/osm/data/default.osm.pbf
 
 start-dev: ensure-default-pbf ## Start the Docker environment (Detached) in development mode
-	@docker compose up --wait
+	@COMPOSE_PROFILES=routing docker compose up --wait
 
 build: build-prod ## Alias for build-prod
 
 build-prod: ## Build the Docker environment in production mode
-	@docker compose -f compose.prod.yaml build
+	@docker compose -f compose.yaml build
 
 start: start-prod ## Alias for start-prod
 
 start-prod: ensure-default-pbf ## Start the Docker environment (Detached) in production mode
-	@docker compose -f compose.prod.yaml up --wait
+	@docker compose -f compose.yaml up --wait
 
 stop: ## Stop the Docker environment
 	@docker compose stop

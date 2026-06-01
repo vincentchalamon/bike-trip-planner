@@ -80,7 +80,7 @@ docker compose exec redis redis-cli --scan --pattern 'in_ride_poi:*' | wc -l
    docker compose exec redis redis-cli CONFIG SET maxmemory-policy allkeys-lru
    ```
 
-   Persist the change in `compose.prod.yaml` (Redis `command:`) — `CONFIG SET` does not survive a restart.
+   Persist the change in `compose.yaml` (Redis `command:`) — `CONFIG SET` does not survive a restart.
 
 5. **Raise `maxmemory`** as a stopgap if the VM has free RAM:
 
@@ -88,14 +88,14 @@ docker compose exec redis redis-cli --scan --pattern 'in_ride_poi:*' | wc -l
    docker compose exec redis redis-cli CONFIG SET maxmemory 512mb
    ```
 
-   Then update `compose.prod.yaml` and redeploy via Coolify so the change is persisted.
+   Then update `compose.yaml` and redeploy via Coolify so the change is persisted.
 
 ## Post-action
 
 - `redis-cli INFO memory` → `used_memory_peak_perc` back under 70 %.
 - `/api/health` green for two consecutive Uptime Kuma probes.
 - File a follow-up issue if the same bucket reappeared (likely a TTL leak in an HTTP client cache key).
-- Confirm `compose.prod.yaml` and infra ADR reflect any persisted `maxmemory` / policy change.
+- Confirm `compose.yaml` and infra ADR reflect any persisted `maxmemory` / policy change.
 
 ## References
 

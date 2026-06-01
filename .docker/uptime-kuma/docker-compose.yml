@@ -1,6 +1,6 @@
 # Uptime Kuma — self-hosted monitoring
 #
-# Deployed separately from compose.prod.yaml via Coolify (one-click app or
+# Deployed separately from compose.yaml via Coolify (one-click app or
 # custom service). This file documents the canonical configuration and can
 # be imported as a "Docker Compose" resource in the Coolify UI.
 #

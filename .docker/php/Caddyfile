@@ -32,6 +32,18 @@
         max_size 30MB
     }
 
+    # Correlation ID (#485): default to a generated UUID, and trust an inbound
+    # X-Request-Id only when it matches the safe charset (mirrors
+    # App\EventListener\RequestIdListener::isSafe), then forward that bounded
+    # value upstream. The value cannot be attacker-controlled (length/charset
+    # bounded, no header smuggling). The response header is set by the PHP
+    # listener alone (single source of truth, also covers traffic that bypasses
+    # the edge: ApiTestCase, internal sub-requests, workers).
+    vars correlation_id {http.request.uuid}
+    @valid_request_id header_regexp X-Request-Id ^[A-Za-z0-9_-]{8,128}$
+    vars @valid_request_id correlation_id {http.request.header.X-Request-Id}
+    request_header X-Request-Id "{vars.correlation_id}"
+
     mercure {
         # Transport to use (default to Bolt)
         transport bolt {
