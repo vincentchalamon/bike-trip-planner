@@ -51,4 +51,31 @@ test.describe("Plausible analytics", () => {
 
     await expect(page.getByTestId("plausible-script")).toHaveCount(0);
   });
+
+  // Confirms the beta kill-switch (issue #567): an empty env leaves zero
+  // analytics footprint — no script, no cookie, and trackEvent is a no-op.
+  test("leaves no analytics footprint when the env is unset", async ({
+    page,
+  }) => {
+    await failOnPlausibleRequest(page);
+    await mockAllApis(page);
+
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    // No Plausible script injected.
+    await expect(page.getByTestId("plausible-script")).toHaveCount(0);
+
+    // window.plausible is never defined, so trackEvent stays a no-op
+    // (and does not throw).
+    const tracked = await page.evaluate(() => {
+      const w = window as Window & { plausible?: unknown };
+      return typeof w.plausible;
+    });
+    expect(tracked).toBe("undefined");
+
+    // No cookie set at all (Plausible is cookieless, and dormant here anyway).
+    const cookies = await page.context().cookies();
+    expect(cookies).toHaveLength(0);
+  });
 });

@@ -33,13 +33,13 @@ Adopt **Plausible Analytics Community Edition (CE)** running as a self-hosted Do
 
 ### Why Self-Hosted Instead of `plausible.io` Cloud
 
-| Dimension | Plausible Cloud | Plausible CE Self-Hosted |
-|---|---|---|
-| Data location | Plausible EU servers | Our own VM, our own PostgreSQL + ClickHouse |
-| Monthly cost | $9/mo (100k pageviews) | $0 (licence) + marginal VM resources |
-| RGPD data-processor agreement | Required (DPA with Plausible) | Not required (single-controller) |
-| Control over retention | Via dashboard setting | Full — `clickhouse` TTL configurable |
-| Upgrade cadence | Automatic | Manual (pinned image digest) |
+| Dimension                     | Plausible Cloud               | Plausible CE Self-Hosted                    |
+| ----------------------------- | ----------------------------- | ------------------------------------------- |
+| Data location                 | Plausible EU servers          | Our own VM, our own PostgreSQL + ClickHouse |
+| Monthly cost                  | $9/mo (100k pageviews)        | $0 (licence) + marginal VM resources        |
+| RGPD data-processor agreement | Required (DPA with Plausible) | Not required (single-controller)            |
+| Control over retention        | Via dashboard setting         | Full — `clickhouse` TTL configurable        |
+| Upgrade cadence               | Automatic                     | Manual (pinned image digest)                |
 
 Self-hosting is the correct choice: data sovereignty, zero recurring cost, and no third-party data processor in the RGPD chain.
 
@@ -72,22 +72,22 @@ Beyond automatic pageview tracking, the following custom events are instrumented
 
 **Import source events** (sent when a user successfully imports a route):
 
-| Event name | Description |
-|---|---|
+| Event name      | Description                        |
+| --------------- | ---------------------------------- |
 | `import_komoot` | Komoot tour or collection imported |
-| `import_strava` | Strava route imported |
-| `import_rwgps` | RideWithGPS route imported |
-| `import_gpx` | GPX file uploaded |
+| `import_strava` | Strava route imported              |
+| `import_rwgps`  | RideWithGPS route imported         |
+| `import_gpx`    | GPX file uploaded                  |
 
 **Feature and retention events** (sent on meaningful interactions):
 
-| Event name | Description |
-|---|---|
-| `trip_created` | A new trip is saved for the first time |
-| `trip_shared` | A trip share link is generated |
-| `accommodation_selected` | User saves an accommodation suggestion |
-| `alert_action_clicked` | User acts on an alert nudge (dismiss / resolve) |
-| `ai_chat_opened` | AI assistant chat panel is opened |
+| Event name               | Description                                     |
+| ------------------------ | ----------------------------------------------- |
+| `trip_created`           | A new trip is saved for the first time          |
+| `trip_shared`            | A trip share link is generated                  |
+| `accommodation_selected` | User saves an accommodation suggestion          |
+| `alert_action_clicked`   | User acts on an alert nudge (dismiss / resolve) |
+| `ai_chat_opened`         | AI assistant chat panel is opened               |
 
 Events are fired via `plausible()` from the frontend using the Plausible custom event API. No backend instrumentation is needed; all events are browser-side.
 
@@ -101,7 +101,31 @@ Because Plausible requires no consent (cookieless, no PII — see above), the sc
 
 A cookie consent banner was initially scoped (issue #385) but dropped: it would gate a tool that legally needs no consent, contradict the privacy policy, and reduce data accuracy for no compliance benefit.
 
-**Beta posture (Sprint 34.5, issue #567):** the env-only gate also serves as the analytics kill-switch. During the restricted beta the env vars are left unset, so the analytics code ships but stays dormant (no requests). Reactivation is a deploy-time concern: set the two env vars once the Plausible service is provisioned.
+**Beta posture (Sprint 34.5, issue #567):** the env-only gate also serves as the analytics kill-switch. During the restricted beta the env vars are left unset, so the analytics code ships but stays dormant — **zero analytics footprint** (no script injected, no request to the analytics host, no cookie, and `trackEvent` is a no-op). This is asserted end-to-end in `pwa/tests/mocked/plausible-analytics.spec.ts` (env-unset case) and at the unit level in `pwa/src/lib/plausible.test.ts`. The analytics **server is deliberately not deployed** during the beta (issue #551 deferred): at <10 users the data is meaningless and the ClickHouse footprint (~2-4 GB RAM) is not justified.
+
+### Reactivating Analytics After the Beta
+
+Reactivation is a deploy-time concern; the frontend needs no code change. Two steps:
+
+1. **Provision an analytics server** (see arbitrage below).
+2. **Set the two PWA env vars** at build time: `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (the site domain registered in the analytics dashboard) and `NEXT_PUBLIC_PLAUSIBLE_SRC` (the tracker script URL). Once both are set, the `<Script>` tag injects automatically and `trackEvent` starts emitting custom events. Leaving either unset returns to the dormant state.
+
+#### Recommended Engine at Reactivation: Umami (revisit vs. Plausible CE)
+
+ADR-034 selected Plausible CE on the assumption of a self-hosted server bearing PostgreSQL **and** ClickHouse. At beta exit (target <50 users), the ClickHouse footprint dominates the cost (~1 GB RAM idle, multi-GB disk) for a traffic volume that does not need columnar event storage. For this scale, prefer **[Umami](https://umami.is/)**:
+
+| Dimension     | Plausible CE                  | Umami                                           |
+| ------------- | ----------------------------- | ----------------------------------------------- |
+| Datastore     | PostgreSQL + **ClickHouse**   | PostgreSQL **only** (or MySQL)                  |
+| Footprint     | ~1 GB RAM idle (ClickHouse)   | ~150 MB RAM                                     |
+| RGPD posture  | Cookieless, no PII, no banner | Cookieless, no PII, no banner                   |
+| Custom events | `plausible('event')` API      | `umami.track('event')` API                      |
+| Licence       | AGPL-3.0                      | MIT                                             |
+| Self-hosting  | Docker Compose                | Docker Compose (reuses the existing PostgreSQL) |
+
+Umami reuses the stack's existing PostgreSQL (no second engine), keeping the Oracle VM memory budget (GlitchTip, Valhalla, Ollama, app stack) intact. It is cookieless and PII-free, so the RGPD posture and the no-consent-banner rationale above hold unchanged.
+
+Migration cost is small and confined to the frontend tracker, because the gating contract is engine-agnostic: the `PlausibleScript` component and the `trackEvent` helper would be renamed/retargeted to Umami's `umami.track()` API, but the env-gated load pattern and the custom-event list (the two tables above) carry over as-is. **This arbitrage is to be confirmed when analytics is reactivated**; until then both the env vars stay unset and no server is deployed.
 
 ## Alternatives Considered
 
