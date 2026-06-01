@@ -95,6 +95,9 @@ services:
       - ./pwa:/srv/app
       - pwa_node_modules:/srv/app/node_modules
       - pwa_next:/srv/app/.next
+    # First boot runs `npm install` (empty node_modules volume) before serving.
+    healthcheck:
+      start_period: 120s
 
   mailcatcher:
     image: schickling/mailcatcher
@@ -124,6 +127,16 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+
+  # Dev provisioner: build the `dev` target with the working tree mounted, so
+  # `make provision` and the provisioner QA targets run against live code
+  # (the prod base bakes the sources into the image instead).
+  provisioner:
+    build:
+      target: dev
+    volumes: !override
+      - .docker/osm/data:/data
+      - ./provisioner:/app
 
 volumes:
   ollama-data: ~
