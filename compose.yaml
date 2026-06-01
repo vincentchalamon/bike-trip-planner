@@ -1,18 +1,78 @@
+# Uptime monitoring (Uptime Kuma) is deployed as a separate Coolify resource,
+# not embedded in this stack. See .docker/uptime-kuma/README.md for the
+# installation procedure and the external UptimeRobot safety net is documented
+# in docs/runbooks/uptime-monitoring.md.
+
+secrets:
+  jwt_private_key:
+    file: ${JWT_PRIVATE_KEY_PATH:-/etc/bike-trip-planner/jwt/private.pem}
+  jwt_public_key:
+    file: ${JWT_PUBLIC_KEY_PATH:-/etc/bike-trip-planner/jwt/public.pem}
+  # Build-time only: consumed by the pwa image build for source-map upload.
+  sentry_auth_token:
+    environment: SENTRY_AUTH_TOKEN
+
 services:
-  caddy:
-    image: caddy:2-alpine
+  php:
+    image: ${PHP_IMAGE:-bike-trip-planner-php:ci}
+    build:
+      context: ./
+      dockerfile: .docker/php/Dockerfile
+      target: frankenphp_prod
+      args:
+        COMMIT_SHA: ${COMMIT_SHA:-unknown}
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
     depends_on:
-      - mercure
-      - php
-      - pwa
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
+      APP_ENV: prod
       CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
       CADDY_EXTRA_CONFIG: ${CADDY_EXTRA_CONFIG:-}
-      SERVER_NAME: ${SERVER_NAME:-localhost}
-      MERCURE_UPSTREAM: mercure:80
+      # Serve HTTPS (self-signed for localhost) for browsers on :443,
+      # and plain HTTP on :80 for internal Docker services (workers -> Mercure).
+      # http://php is restricted to the Docker service hostname only.
+      SERVER_NAME: ${SERVER_NAME:-localhost}, http://php
       PWA_UPSTREAM: pwa:3000
-      PHP_UPSTREAM: php:8000
+      MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      MERCURE_EXTRA_DIRECTIVES: "cors_origins ${FRONTEND_URL:-https://localhost}"
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
+      MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
+      MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
+      MESSENGER_FAILED_DSN: redis://redis:6379/failed
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      JWT_SECRET_KEY: /run/secrets/jwt_private_key
+      JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
+      JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
+      FRONTEND_URL: "${FRONTEND_URL}"
+      MAILER_DSN: "${MAILER_DSN}"
+      DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
+      DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
+      # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+      APP_RELEASE: "${APP_RELEASE:-}"
+      # APP_COMMIT is baked into the image at build time (ARG COMMIT_SHA →
+      # ENV APP_COMMIT in .docker/php/Dockerfile). Do NOT set it here: a compose
+      # `environment:` entry overrides the image ENV, and COMMIT_SHA is a CI
+      # build-time concept absent from the Coolify runtime, so it would collapse
+      # to "unknown" and /api/healthz would lose the deployed git SHA.
+      # Doctrine migrations executed at container boot via entrypoint.sh (ADR-032).
+      # Set to "false" if a migration is suspected to be problematic — then run migrations manually.
+      MIGRATIONS_ON_BOOT: "${MIGRATIONS_ON_BOOT:-true}"
+    secrets:
+      - jwt_private_key
+      - jwt_public_key
+    tty: true
     ports:
       - target: 80
         published: ${HTTP_PORT:-80}
@@ -24,147 +84,130 @@ services:
         published: ${HTTPS_PORT:-443}
         protocol: udp
     volumes:
-      - .docker/caddy/Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
-
-  php:
-    image: esoledad/php:8.5
-    working_dir: /app
-    entrypoint: /usr/local/bin/docker/docker-entrypoint.sh
-    command: symfony server:start --allow-all-ip --no-tls
-    expose:
-      - 8000
-    user: root
-    restart: unless-stopped
-    depends_on:
-      database:
-        condition: service_healthy
-      mercure:
-        condition: service_started
-      redis:
-        condition: service_started
-      ollama:
-        condition: service_healthy
-        required: false
-    environment:
-      APP_ENV: dev
-      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
-      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
-      MERCURE_URL: http://mercure/.well-known/mercure
-      MERCURE_PUBLIC_URL: https://${SERVER_NAME:-localhost}/.well-known/mercure
-      MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
-      MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
-      MESSENGER_FAILED_DSN: redis://redis:6379/failed
-      REDIS_URL: redis://redis:6379
-      LOCK_DSN: redis://redis:6379
-      DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
-      DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
-      DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
-      WIKIDATA_USER_AGENT: "${WIKIDATA_USER_AGENT:-BikeTripPlanner/1.0 (contact@example.org)}"
-      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-0}"
-      # See https://xdebug.org/docs/all_settings#mode
-      XDEBUG_MODE: "${XDEBUG_MODE:-off}"
-    extra_hosts:
-      # Ensure that host.docker.internal is correctly defined on Linux
-      - host.docker.internal:host-gateway
-    tty: true
-    volumes:
-      - .docker/php/:/usr/local/bin/docker
+      - php_var:/app/var
       # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
       # and our date.timezone=UTC override takes effect.
-      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini
-      - .docker/php/conf.d/20-app.dev.ini:/usr/local/etc/php/conf.d/zz-app.dev.ini
-      - ./api/:/app
-      - ./README.md:/README.md:ro
-      - /app/var
-      # If you develop on Mac or Windows you can remove the vendor/ directory
-      #  from the bind-mount for better performance by enabling the next line:
-      #- /app/vendor
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
+      - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini:ro
     healthcheck:
-      test: [ "CMD-SHELL", "symfony server:status | grep -q 'Listening'" ]
-      start_period: 10s
+      test: curl -fsS http://php/api/healthz || exit 1
+      start_period: 30s
       interval: 10s
       timeout: 3s
       retries: 3
 
   worker:
-    image: esoledad/php:8.5
-    working_dir: /app
-    entrypoint: /usr/local/bin/docker/docker-entrypoint.sh
+    image: ${PHP_IMAGE:-bike-trip-planner-php:ci}
+    build:
+      context: ./
+      dockerfile: .docker/php/Dockerfile
+      target: frankenphp_prod
     command: bin/console messenger:consume async --time-limit=3600 -vv
-    user: root
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
     deploy:
       replicas: ${WORKER_REPLICAS:-5}
     depends_on:
       database:
         condition: service_healthy
-      mercure:
-        condition: service_started
       php:
-        condition: service_started
+        condition: service_healthy
       redis:
-        condition: service_started
-      ollama:
+        condition: service_healthy
+      valhalla:
         condition: service_healthy
         required: false
-      valhalla:
-        condition: service_started
     environment:
-      APP_ENV: dev
+      APP_ENV: prod
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS:-^${SERVER_NAME:-localhost}|php$$}
-      MERCURE_URL: http://mercure/.well-known/mercure
-      MERCURE_PUBLIC_URL: https://${SERVER_NAME:-localhost}/.well-known/mercure
+      MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
-      LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      JWT_SECRET_KEY: /run/secrets/jwt_private_key
+      JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
+      JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
+      FRONTEND_URL: "${FRONTEND_URL}"
+      MAILER_DSN: "${MAILER_DSN}"
       DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
       DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
-      WIKIDATA_USER_AGENT: "${WIKIDATA_USER_AGENT:-BikeTripPlanner/1.0 (contact@example.org)}"
-      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-0}"
-      # See https://xdebug.org/docs/all_settings#mode
-      XDEBUG_MODE: "${XDEBUG_MODE:-off}"
-    extra_hosts:
-      # Ensure that host.docker.internal is correctly defined on Linux
-      - host.docker.internal:host-gateway
+      # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+      APP_RELEASE: "${APP_RELEASE:-}"
+      # Workers must not run migrations — only the php service does (see ADR-032).
+      MIGRATIONS_ON_BOOT: "false"
+    secrets:
+      - jwt_private_key
+      - jwt_public_key
     volumes:
-      - .docker/php/:/usr/local/bin/docker
+      - php_var:/app/var
       # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
       # and our date.timezone=UTC override takes effect.
-      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini
-      - .docker/php/conf.d/20-app.dev.ini:/usr/local/etc/php/conf.d/zz-app.dev.ini
-      - ./api/:/app
-      - /app/var
-      # If you develop on Mac or Windows you can remove the vendor/ directory
-      #  from the bind-mount for better performance by enabling the next line:
-      #- /app/vendor
+      - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
+      - .docker/php/conf.d/20-app.prod.ini:/usr/local/etc/php/conf.d/zz-app.prod.ini:ro
+    healthcheck:
+      test: pgrep -f messenger:consume || exit 1
+      start_period: 30s
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
   pwa:
-    image: node:25-alpine
-    working_dir: /app
-    entrypoint: /usr/local/bin/docker/docker-entrypoint.sh
-    command: npm run dev
-    expose:
-      - 3000
-    user: root
+    image: ${PWA_IMAGE:-bike-trip-planner-pwa:ci}
+    build:
+      context: ./
+      dockerfile: .docker/pwa/Dockerfile
+      target: prod
+      args:
+        # NEXT_PUBLIC_* are inlined into the client bundle at build time, so
+        # they must be supplied to `next build` (not just at runtime), otherwise
+        # client-side Sentry runs with an undefined DSN and the release tag
+        # won't match the uploaded source maps.
+        NEXT_PUBLIC_APP_RELEASE: "${APP_RELEASE:-}"
+        NEXT_PUBLIC_APP_ENV: "${APP_ENV:-prod}"
+        NEXT_PUBLIC_SENTRY_DSN: "${NEXT_PUBLIC_SENTRY_DSN:-}"
+        # Plausible analytics (self-hosted). Leave both empty to disable: the
+        # script is then never injected and no request hits the Plausible host.
+        # DOMAIN is the site id registered in Plausible; SRC is the full URL of
+        # the self-hosted tracker script (e.g. https://analytics.example/js/script.js).
+        NEXT_PUBLIC_PLAUSIBLE_DOMAIN: "${NEXT_PUBLIC_PLAUSIBLE_DOMAIN:-}"
+        NEXT_PUBLIC_PLAUSIBLE_SRC: "${NEXT_PUBLIC_PLAUSIBLE_SRC:-}"
+      # SENTRY_AUTH_TOKEN (source-map upload) is a real secret: passed as a
+      # BuildKit secret so it never lands in an image layer or the build cache.
+      secrets:
+        - sentry_auth_token
     restart: unless-stopped
     depends_on:
-      - mercure
+      - php # Mercure dependency
     tty: true
     environment:
-      NODE_ENV: development
-      # Development usage only
-      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      NODE_ENV: production
+      # Server-side Sentry reads APP_ENV ?? NODE_ENV; without APP_ENV here it
+      # would tag SSR/API events "production" while the client bundle (baked
+      # NEXT_PUBLIC_APP_ENV) tags "prod" — two distinct Sentry environments.
+      # Keep this aligned with the NEXT_PUBLIC_APP_ENV build arg above.
+      APP_ENV: "${APP_ENV:-prod}"
+      # Error tracking (P1.1 / ADR-031). Leave empty to disable.
+      NEXT_PUBLIC_SENTRY_DSN: "${NEXT_PUBLIC_SENTRY_DSN:-}"
+      NEXT_PUBLIC_APP_RELEASE: "${APP_RELEASE:-}"
+      NEXT_PUBLIC_APP_ENV: "${APP_ENV:-prod}"
+      # Plausible analytics (self-hosted). Leave empty to disable. Loaded only
+      # after the user grants analytics consent (cookie banner, #385).
+      NEXT_PUBLIC_PLAUSIBLE_DOMAIN: "${NEXT_PUBLIC_PLAUSIBLE_DOMAIN:-}"
+      NEXT_PUBLIC_PLAUSIBLE_SRC: "${NEXT_PUBLIC_PLAUSIBLE_SRC:-}"
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+      APP_RELEASE: "${APP_RELEASE:-}"
     volumes:
       - ./pwa/:/app
-      - .docker/pwa/:/usr/local/bin/docker
+      - .docker/pwa/:/app/docker/pwa
       - pwa_node_modules:/app/node_modules
       - pwa_next:/app/.next
     healthcheck:
@@ -177,6 +220,7 @@ services:
   valhalla:
     image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
     restart: unless-stopped
+    profiles: ["routing"]
     volumes:
       - .docker/osm/data/default.osm.pbf:/custom_files/default.osm.pbf
       - valhalla-tiles:/custom_files
@@ -214,73 +258,25 @@ services:
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       interval: 10s
-      timeout: 3s
-      retries: 3
       start_period: 10s
-
-  mercure:
-    image: dunglas/mercure
-    restart: unless-stopped
-    environment:
-      # Force HTTP-only for internal Docker communication (Caddy handles external TLS)
-      SERVER_NAME: ":80"
-      MERCURE_PUBLISHER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
-      MERCURE_SUBSCRIBER_JWT_KEY: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
-      MERCURE_EXTRA_DIRECTIVES: |-
-        cors_origins *
-        demo
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost/healthz"]
-      interval: 10s
       timeout: 3s
-      retries: 3
-      start_period: 10s
-
-  mailcatcher:
-    image: schickling/mailcatcher
-    restart: unless-stopped
-    ports:
-      - target: 1080
-        published: ${MAILCATCHER_PORT:-1080}
-        protocol: tcp
-    healthcheck:
-      test: ["CMD-SHELL", "ruby -e \"require 'net/http'; Net::HTTP.get(URI('http://localhost:1080'))\" || exit 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-
-  ollama:
-    image: ollama/ollama:latest
-    restart: unless-stopped
-    expose:
-      - 11434
-    volumes:
-      - ollama-data:/root/.ollama
-    healthcheck:
-      # /api/tags is the lightest endpoint exposed by Ollama (lists local models).
-      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      retries: 5
 
   provisioner:
     build:
       context: ./
       dockerfile: .docker/provisioner/Dockerfile
-      target: dev
+      target: prod
     volumes:
       - .docker/osm/data:/data
-      - ./provisioner:/app
     restart: "no"
     profiles: ["provisioning"]
 
 volumes:
   caddy_data: ~
   caddy_config: ~
+  php_var: ~
   database_data: ~
   valhalla-tiles: ~
   pwa_node_modules: ~
   pwa_next: ~
-  ollama-data: ~

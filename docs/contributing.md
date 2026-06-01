@@ -18,13 +18,11 @@ This boots multiple services in development mode:
 
 | Service       | URL                                         | Description                          |
 |---------------|---------------------------------------------|--------------------------------------|
-| `php`         | `https://localhost/docs`                    | API Platform backend                 |
+| `php`         | `https://localhost/docs`                    | API Platform backend (FrankenPHP: Caddy reverse-proxy + Mercure hub; demo UI at `/.well-known/mercure/ui/`) |
 | `pwa`         | `https://localhost`                         | Next.js frontend                     |
 | `worker`      | Internal only                               | Async messages worker (×5)           |
-| `mercure`     | `https://localhost/.well-known/mercure/ui/` | Server-push microservice             |
 | `redis`       | Internal only                               | Cache and Messenger transport        |
 | `database`    | Internal only                               | PostgreSQL 18 persistent storage     |
-| `caddy`       | Internal only                               | Web server and reverse proxy         |
 | `valhalla`    | Internal only                               | Valhalla routing engine              |
 | `mailcatcher` | `http://localhost:1080`                     | Email catcher (development only)     |
 

@@ -15,8 +15,8 @@ use Symfony\Component\Uid\Uuid;
  * Reads (or mints) the `X-Request-Id` correlation header on each HTTP request
  * and ensures it is exposed on the outgoing response.
  *
- * Caddy already injects an `X-Request-Id` upstream in production (see
- * `.docker/caddy/Caddyfile`), but the listener also acts as a safety net for
+ * Caddy already injects an `X-Request-Id` upstream (see
+ * `.docker/php/Caddyfile`), but the listener also acts as a safety net for
  * traffic that bypasses Caddy (PHPUnit `ApiTestCase`, internal sub-requests,
  * worker-triggered HTTP calls, etc.) so every request carries a stable ID for
  * Monolog/Mercure/Messenger tracing.

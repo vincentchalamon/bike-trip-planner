@@ -32,6 +32,16 @@
         max_size 30MB
     }
 
+    # Correlation ID: forward an inbound X-Request-Id untouched, otherwise
+    # generate one from Caddy's per-request UUID placeholder. The header is
+    # injected upstream (so Symfony / Messenger / Mercure see it) and echoed
+    # back to the client (so the PWA can attach it to toasts). See issue #485.
+    vars correlation_id {http.request.header.X-Request-Id}
+    @no_request_id vars correlation_id ""
+    vars @no_request_id correlation_id {http.request.uuid}
+    request_header X-Request-Id "{vars.correlation_id}"
+    header X-Request-Id "{vars.correlation_id}"
+
     mercure {
         # Transport to use (default to Bolt)
         transport bolt {

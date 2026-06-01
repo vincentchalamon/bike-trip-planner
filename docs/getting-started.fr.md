@@ -48,10 +48,9 @@ Cela démarre plusieurs services :
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| `php` | `https://localhost/docs` | Backend API Platform (FrankenPHP avec Caddy intégré) |
+| `php` | `https://localhost/docs` | Backend API Platform (FrankenPHP : reverse-proxy Caddy + hub Mercure intégré) |
 | `pwa` | `https://localhost` | Frontend Next.js |
 | `worker` | Interne uniquement | Worker de messages asynchrones (×5) |
-| `mercure` | Interne uniquement | Microservice de push serveur |
 | `redis` | Interne uniquement | Cache et transport Messenger |
 | `database` | Interne uniquement | Stockage persistant PostgreSQL 18 |
 | `valhalla` | Interne uniquement | Moteur de routage Valhalla |
@@ -100,7 +99,7 @@ Un autre processus utilise le port HTTPS par défaut. Arrêtez-le ou surchargez 
 # Trouver le processus en conflit
 sudo lsof -i :443
 
-# Ou configurer un port différent dans compose.override.yaml
+# Ou définir HTTP_PORT / HTTPS_PORT dans votre .env
 ```
 
 ### Erreurs de certificat auto-signé dans le navigateur
