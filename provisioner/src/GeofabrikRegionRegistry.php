@@ -12,6 +12,7 @@ final class GeofabrikRegionRegistry
     public static function all(): array
     {
         return [
+            'France (entiere)' => ['slug' => 'france', 'size' => '4400 MB'],
             'Alsace' => ['slug' => 'alsace', 'size' => '122 MB'],
             'Aquitaine' => ['slug' => 'aquitaine', 'size' => '276 MB'],
             'Auvergne' => ['slug' => 'auvergne', 'size' => '141 MB'],
@@ -44,6 +45,11 @@ final class GeofabrikRegionRegistry
 
     public static function downloadUrl(string $slug): string
     {
+        // The whole-France extract lives one level above the per-region directory.
+        if ('france' === $slug) {
+            return 'https://download.geofabrik.de/europe/france-latest.osm.pbf';
+        }
+
         return \sprintf(
             'https://download.geofabrik.de/europe/france/%s-latest.osm.pbf',
             $slug,

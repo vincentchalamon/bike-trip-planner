@@ -11,9 +11,24 @@ use Provisioner\GeofabrikRegionRegistry;
 final class GeofabrikRegionRegistryTest extends TestCase
 {
     #[Test]
-    public function allReturns27Regions(): void
+    public function allReturns28Regions(): void
     {
-        self::assertCount(27, GeofabrikRegionRegistry::all());
+        self::assertCount(28, GeofabrikRegionRegistry::all());
+    }
+
+    #[Test]
+    public function allIncludesWholeFrance(): void
+    {
+        self::assertArrayHasKey('France (entiere)', GeofabrikRegionRegistry::all());
+    }
+
+    #[Test]
+    public function downloadUrlForWholeFranceUsesTopLevelExtract(): void
+    {
+        self::assertSame(
+            'https://download.geofabrik.de/europe/france-latest.osm.pbf',
+            GeofabrikRegionRegistry::downloadUrl('france'),
+        );
     }
 
     #[Test]
@@ -47,7 +62,13 @@ final class GeofabrikRegionRegistryTest extends TestCase
     {
         foreach (GeofabrikRegionRegistry::all() as $name => $data) {
             $url = GeofabrikRegionRegistry::downloadUrl($data['slug']);
-            self::assertStringStartsWith('https://download.geofabrik.de/europe/france/', $url, $name);
+            if ('france' === $data['slug']) {
+                // Whole-France extract lives one level up, not under /france/.
+                self::assertStringContainsString('/europe/france-latest.osm.pbf', $url, $name);
+            } else {
+                self::assertStringStartsWith('https://download.geofabrik.de/europe/france/', $url, $name);
+            }
+
             self::assertStringEndsWith('-latest.osm.pbf', $url, $name);
         }
     }

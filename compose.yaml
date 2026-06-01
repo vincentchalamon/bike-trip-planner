@@ -297,7 +297,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 600s
+      # France-wide dataset: a cold tile build (no pre-populated valhalla-tiles
+      # volume) runs for hours. Pre-built monthly uploads make restarts fast
+      # (mmap of existing tiles), but the start_period must cover the worst case
+      # so the container is not flapped unhealthy mid-build.
+      # See docs/runbooks/osm-france-refresh.md and ADR-036.
+      start_period: 3600s
 
   database:
     image: postgres:18-alpine
