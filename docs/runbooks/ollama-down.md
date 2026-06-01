@@ -6,7 +6,7 @@ Ollama is a **hard runtime dependency** per ADR-028 — there is no graceful fal
 
 - Trip creation blocks on the brief intake step (PWA wizard hangs on "Analyzing your brief…")
 - PHP logs: `OllamaClient`: timeout, `ConnectException`, or schema validation rejection followed by dead-letter
-- `/api/health` returns HTTP **200** with `deps.ollama.status: "down"` in the body — Ollama is probed but excluded from the required set (`HealthController::$required`), so it does **not** flip the aggregate HTTP status to 503
+- `/api/health` returns HTTP **200** with `deps.ollama_chat.status: "down"` (and `deps.ollama_analysis.status` for the analysis endpoint — same service in beta, distinct once `OLLAMA_ANALYSIS_URL` diverges) in the body — Ollama is probed but excluded from the required set (`HealthController::$required`), so it does **not** flip the aggregate HTTP status to 503
 - Messenger `failed` transport grows with `AnalyzeStageMessage` / brief-intake messages
 
 ## Diagnostic
@@ -62,12 +62,12 @@ docker stats --no-stream ollama
 
 4. **If the OS killed Ollama for OOM**, free RAM before restarting (see `redis-out-of-memory.md` for Redis pressure) and consider lowering Valhalla or worker count temporarily.
 
-5. **As a deployment-level mitigation**, note that `/api/health` stays HTTP 200 on an Ollama-only outage, so Coolify's probe will **not** trip. To gate routing on the LLM tier (maintenance page rather than a half-broken flow), watch `deps.ollama.status` explicitly via Uptime Kuma rather than the aggregate HTTP status.
+5. **As a deployment-level mitigation**, note that `/api/health` stays HTTP 200 on an Ollama-only outage, so Coolify's probe will **not** trip. To gate routing on the LLM tier (maintenance page rather than a half-broken flow), watch `deps.ollama_chat.status` explicitly via Uptime Kuma rather than the aggregate HTTP status.
 
 ## Post-action
 
 - `curl http://ollama:11434/api/tags` lists `llama3.2:3b` (it appears once probed/loaded on demand).
-- `/api/health` shows `deps.ollama.status: "ok"` for two consecutive probes.
+- `/api/health` shows `deps.ollama_chat.status: "ok"` for two consecutive probes.
 - Replay successful — `failed` transport empty.
 - If a model was re-pulled, note the size and time in the incident issue (network bandwidth cost on Oracle).
 - If this is the second occurrence in 7 d, open an issue to investigate persistent memory growth in Ollama.
