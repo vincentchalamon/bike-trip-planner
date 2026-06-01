@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Message\AllEnrichmentsCompleted;
 use App\Message\AnalyzeStageWithLlmMessage;
 use App\Message\AnalyzeTerrain;
+use App\Message\AnalyzeTripOverviewWithLlmMessage;
 use App\Message\AnalyzeWind;
 use App\Message\CheckBikeShops;
 use App\Message\CheckBorderCrossing;
@@ -47,6 +48,14 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'multiplier' => 2,
                     ],
                 ],
+                'llm' => [
+                    'dsn' => '%env(MESSENGER_TRANSPORT_DSN)%',
+                    'retry_strategy' => [
+                        'max_retries' => 3,
+                        'delay' => 1000,
+                        'multiplier' => 2,
+                    ],
+                ],
                 'failed' => '%env(MESSENGER_FAILED_DSN)%',
             ],
             'routing' => [
@@ -69,7 +78,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 RecalculateStages::class => 'async',
                 ScanEvents::class => 'async',
                 AllEnrichmentsCompleted::class => 'async',
-                AnalyzeStageWithLlmMessage::class => 'async',
+                AnalyzeStageWithLlmMessage::class => 'llm',
+                AnalyzeTripOverviewWithLlmMessage::class => 'llm',
             ],
         ],
     ]);

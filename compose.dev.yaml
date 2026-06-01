@@ -83,6 +83,34 @@ services:
       - ./api:/app
       - /app/var
 
+  worker-llm:
+    image: bike-trip-planner-php:dev
+    build:
+      target: frankenphp_dev
+    read_only: false
+    environment:
+      APP_ENV: dev
+      MAILER_DSN: smtp://mailcatcher:1025
+      WIKIDATA_USER_AGENT: "${WIKIDATA_USER_AGENT:-BikeTripPlanner/1.0 (contact@example.org)}"
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-0}"
+      LOCK_DSN: redis://redis:6379
+      XDEBUG_MODE: "${XDEBUG_MODE:-off}"
+      JWT_SECRET_KEY: /app/config/jwt/private.pem
+      JWT_PUBLIC_KEY: /app/config/jwt/public.pem
+      JWT_PASSPHRASE: ""
+      FRONTEND_URL: "https://${SERVER_NAME:-localhost}"
+    secrets: !reset null
+    depends_on:
+      ollama:
+        condition: service_healthy
+        required: false
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes: !override
+      - ./api:/app
+      - /app/var
+
   pwa:
     image: bike-trip-planner-pwa:dev
     build:
