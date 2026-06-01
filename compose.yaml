@@ -205,11 +205,8 @@ services:
       NEXT_PUBLIC_PLAUSIBLE_SRC: "${NEXT_PUBLIC_PLAUSIBLE_SRC:-}"
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
-    volumes:
-      - ./pwa/:/app
-      - .docker/pwa/:/app/docker/pwa
-      - pwa_node_modules:/app/node_modules
-      - pwa_next:/app/.next
+    # No volumes: the prod pwa is a self-contained Next.js standalone build
+    # (WORKDIR /srv/app). Dev mounts the sources at /srv/app via compose.dev.yaml.
     healthcheck:
       test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1" ]
       start_period: 10s
