@@ -140,3 +140,6 @@ services:
 
 volumes:
   ollama-data: ~
+  # Dev-only: the pwa source mounts live in this file's pwa override.
+  pwa_node_modules: ~
+  pwa_next: ~

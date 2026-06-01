@@ -275,5 +275,3 @@ volumes:
   php_var: ~
   database_data: ~
   valhalla-tiles: ~
-  pwa_node_modules: ~
-  pwa_next: ~
