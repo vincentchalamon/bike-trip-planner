@@ -54,6 +54,8 @@ Run `make qa` from the worktree **before pushing**. PHP-CS-Fixer, Rector and Pre
 
 Skipping this and pushing raw code wastes a CI round-trip per autofixable issue (observed in Sprint 33: PR #538 went red three times in a row on `php-cs-fixer` because the agent never ran QA locally).
 
+If `make qa` can't run fully (e.g. the frontend leg is broken by a stale `node_modules`), still run `make rector` and `make php-cs-fixer` on their own before pushing — they are deterministic and PHP-only, and a skipped Rector autofix fails CI in dry-run mode (observed Sprint 34.5: #580 PHP 8.4 `new` without parentheses, #585 `NewlineAfterStatementRector`).
+
 ## Step 8 -- Run tests
 
 Run `make test`. Fix any failures until the suite passes.
