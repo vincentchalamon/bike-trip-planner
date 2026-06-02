@@ -1,3 +1,5 @@
+import type { components } from "@/lib/api/schema";
+
 export interface CoordinatePayload {
   lat: number;
   lon: number;
@@ -20,25 +22,12 @@ export interface StagePayload {
  * Per-stage AI analysis produced by the LLaMA pass 1 (issue #301 backend).
  *
  * Carried in each {@link EnrichedStagePayload} on the `trip_ready` Mercure
- * event. Mirrors the backend {@link StageAiAnalysis} DTO. Null/absent when
- * the AI pipeline is disabled, has failed, or has not yet completed.
- *
- * TODO(#450): wire via typegen once backend Stage DTO exposes aiAnalysis in OpenAPI.
+ * event. Derived from the OpenAPI-generated `StageAiAnalysis` schema so a
+ * backend field rename/addition surfaces as a PWA compile error. Null/absent
+ * when the AI pipeline is disabled, has failed, or has not yet completed.
  */
-export interface StageAiAnalysisPayload {
-  /** Short narrative paragraph (~80 words) summarising the stage. */
-  narrative: string;
-  /** Non-obvious facts the rider should know. */
-  insights: string[];
-  /** Actionable recommendations for the rider. */
-  suggestions: string[];
-  /** LLM model identifier (e.g. `"llama3.1:8b"`). */
-  model: string;
-  /** System prompt revision — bumps trigger client-side staleness checks. */
-  promptVersion: number;
-  /** RFC3339 timestamp when the analysis was generated. */
-  generatedAt: string;
-}
+export type StageAiAnalysisPayload =
+  components["schemas"]["StageAiAnalysis.jsonld"];
 
 /**
  * Fully enriched stage payload carried by Mode 1 `trip_ready` and Mode 2
@@ -158,29 +147,15 @@ export interface SupplyMarker {
 /**
  * Trip-level AI overview produced by the LLaMA pass 2 (issue #302 backend).
  *
- * Carried by the terminal `trip_ready` Mercure event. Mirrors the backend
- * `TripAiOverview` DTO (`api/src/Llm/Dto/TripAiOverview.php`) and the
- * OpenAPI-generated `components["schemas"]["TripAiOverview"]`.
+ * Carried by the terminal `trip_ready` Mercure event. Derived from the
+ * OpenAPI-generated `components["schemas"]["TripAiOverview"]` (backed by
+ * `api/src/Llm/Dto/TripAiOverview.php`) so a backend field rename/addition
+ * surfaces as a PWA compile error.
  *
  * Null/absent when the AI pipeline is disabled, has failed, or has not yet
  * completed — consumers must treat the entire overview as optional.
  */
-export interface TripAiOverviewPayload {
-  /** Narrative paragraph (≈120 words) summarising the trip as a whole. */
-  narrative: string;
-  /** Cross-stage patterns the rider should be aware of (fatigue, weather…). */
-  patterns: string[];
-  /** Trip-level actionable recommendations. */
-  recommendations: string[];
-  /** Trip-level alerts spanning multiple stages (warnings flagged from patterns). */
-  crossStageAlerts: string[];
-  /** LLM model identifier (e.g. `"llama3.1:8b"`). */
-  model: string;
-  /** System prompt revision — bumps trigger client-side staleness checks. */
-  promptVersion: number;
-  /** RFC3339 timestamp when the overview was generated. */
-  generatedAt: string;
-}
+export type TripAiOverviewPayload = components["schemas"]["TripAiOverview"];
 
 export type MercureEvent =
   | {

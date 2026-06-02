@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Bot, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { AlertBadge } from "@/components/alert-badge";
 import { AlertList, SEVERITY_ORDER } from "@/components/alert-list";
+import { DiffHighlight } from "@/components/diff-highlight";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,7 @@ export function StageAiSummary({
   onAddPoiWaypoint,
 }: StageAiSummaryProps) {
   const t = useTranslations("stageAiSummary");
+  const tStage = useTranslations("stage");
   const analysis = useStageAiAnalysis(stageIndex);
   const queueModification = useTripStore((s) => s.queueModification);
   const [alertsExpanded, setAlertsExpanded] = useState(false);
@@ -143,65 +145,71 @@ export function StageAiSummary({
       </Card>
 
       {sortedAlerts.length > 0 && (
-        <div data-testid="stage-ai-summary-alerts">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between gap-2 py-1 text-sm font-medium text-foreground hover:text-foreground/80 transition-colors"
-            onClick={() => setAlertsExpanded((prev) => !prev)}
-            aria-expanded={alertsExpanded}
-            aria-controls={alertsId}
-            data-testid="stage-ai-summary-alerts-toggle"
-          >
-            <span data-testid="stage-ai-summary-alerts-count">
-              {t("alertsTitle", { count: sortedAlerts.length })}
-            </span>
-            {alertsExpanded ? (
-              <ChevronUp
-                className="h-4 w-4 shrink-0 text-muted-foreground"
-                aria-hidden="true"
-              />
-            ) : (
-              <ChevronDown
-                className="h-4 w-4 shrink-0 text-muted-foreground"
-                aria-hidden="true"
-              />
-            )}
-          </button>
-
-          <div id={alertsId} className="mt-2">
-            {alertsExpanded ? (
-              <div data-testid="stage-ai-summary-alerts-full">
-                <AlertList
-                  alerts={sortedAlerts}
-                  onAddPoiWaypoint={onAddPoiWaypoint}
+        <DiffHighlight
+          stageIndex={stageIndex}
+          field="alerts_added"
+          changeLabel={tStage("diffAlertsAdded")}
+        >
+          <div data-testid="stage-ai-summary-alerts">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-2 py-1 text-sm font-medium text-foreground hover:text-foreground/80 transition-colors"
+              onClick={() => setAlertsExpanded((prev) => !prev)}
+              aria-expanded={alertsExpanded}
+              aria-controls={alertsId}
+              data-testid="stage-ai-summary-alerts-toggle"
+            >
+              <span data-testid="stage-ai-summary-alerts-count">
+                {t("alertsTitle", { count: sortedAlerts.length })}
+              </span>
+              {alertsExpanded ? (
+                <ChevronUp
+                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
                 />
-              </div>
-            ) : (
-              <div
-                className={cn("flex flex-col gap-2")}
-                data-testid="stage-ai-summary-alerts-preview"
-              >
-                {previewAlerts.map((alert, idx) => (
-                  <AlertBadge
-                    key={`${alert.type}-${alert.message}-${idx}`}
-                    type={alert.type}
-                    message={alert.message}
+              ) : (
+                <ChevronDown
+                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+
+            <div id={alertsId} className="mt-2">
+              {alertsExpanded ? (
+                <div data-testid="stage-ai-summary-alerts-full">
+                  <AlertList
+                    alerts={sortedAlerts}
+                    onAddPoiWaypoint={onAddPoiWaypoint}
                   />
-                ))}
-                {hiddenAlertsCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setAlertsExpanded(true)}
-                    className="self-start text-xs font-medium text-brand hover:text-brand/80 transition-colors cursor-pointer"
-                    data-testid="stage-ai-summary-alerts-show-more"
-                  >
-                    {t("showMoreAlerts", { count: hiddenAlertsCount })}
-                  </button>
-                )}
-              </div>
-            )}
+                </div>
+              ) : (
+                <div
+                  className={cn("flex flex-col gap-2")}
+                  data-testid="stage-ai-summary-alerts-preview"
+                >
+                  {previewAlerts.map((alert, idx) => (
+                    <AlertBadge
+                      key={`${alert.type}-${alert.message}-${idx}`}
+                      type={alert.type}
+                      message={alert.message}
+                    />
+                  ))}
+                  {hiddenAlertsCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setAlertsExpanded(true)}
+                      className="self-start text-xs font-medium text-brand hover:text-brand/80 transition-colors cursor-pointer"
+                      data-testid="stage-ai-summary-alerts-show-more"
+                    >
+                      {t("showMoreAlerts", { count: hiddenAlertsCount })}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </DiffHighlight>
       )}
     </div>
   );
