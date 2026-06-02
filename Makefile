@@ -74,7 +74,7 @@ qa-php: php-cs-fixer rector phpstan ## Run PHP-CS-Fixer, Rector, and PHPStan
 
 lint: qa-php ## Alias for qa-php
 
-qa-pwa: eslint prettier typescript-check ## Run ESLint, Prettier, and TypeScript Check
+qa-pwa: eslint i18n-check prettier typescript-check ## Run ESLint, i18n check, Prettier, and TypeScript Check
 
 qa-doc: markdownlint ## Run Markdownlint
 
