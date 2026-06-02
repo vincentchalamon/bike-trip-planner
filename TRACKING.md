@@ -370,8 +370,8 @@ Champ `action` sur le modèle Alert, actions contextuelles sur les analyseurs ex
 | 3     | [#283](https://github.com/vincentchalamon/bike-trip-planner/issues/283) | Nouvel analyseur : gare SNCF de secours (nudge)            | S      | [#330](https://github.com/vincentchalamon/bike-trip-planner/pull/330) | —         |
 | 4     | [#284](https://github.com/vincentchalamon/bike-trip-planner/issues/284) | Nouvel analyseur : pharmacie/hôpital à proximité (nudge)   | S      | [#331](https://github.com/vincentchalamon/bike-trip-planner/pull/331) | —         |
 | 5     | [#285](https://github.com/vincentchalamon/bike-trip-planner/issues/285) | Nouvel analyseur : passage frontière (nudge)               | M      | [#332](https://github.com/vincentchalamon/bike-trip-planner/pull/332) | —         |
-| 6     | [#313](https://github.com/vincentchalamon/bike-trip-planner/issues/313) | Nouvel analyseur : départ avant l'aube (warning)           | S      |     | —         |
-| 7     | [#314](https://github.com/vincentchalamon/bike-trip-planner/issues/314) | Nouvel analyseur : traversée cours d'eau sans pont (nudge) | M      |     | —         |
+| 6     | [#313](https://github.com/vincentchalamon/bike-trip-planner/issues/313) | ~~Nouvel analyseur : départ avant l'aube (warning)~~ — **abandonné** (non implémenté, fermé _not planned_) | S      |     | —         |
+| 7     | [#314](https://github.com/vincentchalamon/bike-trip-planner/issues/314) | ~~Nouvel analyseur : traversée cours d'eau sans pont (nudge)~~ — **abandonné** (non implémenté, fermé _not planned_) | M      |     | —         |
 | 8     | [#315](https://github.com/vincentchalamon/bike-trip-planner/issues/315) | ADR-TBD : alertes actionnables (action DTO, 4 types)       | S      |     | —         |
 
 ---
@@ -648,13 +648,13 @@ Ajustement de l'infrastructure pour démarrer une **beta restreinte (<10 users)*
 | Ordre | ID                                                                      | Titre                                                                              | Effort | PRs | Dépend de   |
 |-------|-------------------------------------------------------------------------|------------------------------------------------------------------------------------|--------|-----|-------------|
 | 1     | [#563](https://github.com/vincentchalamon/bike-trip-planner/issues/563) | Profil beta — modèle 3B unique (analyse + chat) + Ollama on-demand                 | S      | [#579](https://github.com/vincentchalamon/bike-trip-planner/pull/579) ✅ mergée | —           |
-| 2     | [#564](https://github.com/vincentchalamon/bike-trip-planner/issues/564) | Couture endpoint analyse/chat (`OLLAMA_ANALYSIS_URL` / `OLLAMA_CHAT_URL`)           | M      | [#580](https://github.com/vincentchalamon/bike-trip-planner/pull/580) 🚧 | —           |
-| 3     | [#565](https://github.com/vincentchalamon/bike-trip-planner/issues/565) | Transport `llm` dédié + `worker-llm` (split async/llm)                              | M      | [#581](https://github.com/vincentchalamon/bike-trip-planner/pull/581) 🚧 | —           |
-| 4     | [#566](https://github.com/vincentchalamon/bike-trip-planner/issues/566) | Limites mémoire conteneurs + Redis maxmemory (noeviction) + Postgres borné         | S      | [#582](https://github.com/vincentchalamon/bike-trip-planner/pull/582) 🚧 (base #581) | #565        |
-| 5     | [#567](https://github.com/vincentchalamon/bike-trip-planner/issues/567) | Beta sans analytics — gating env + différer le serveur + doc réactivation          | S      | [#583](https://github.com/vincentchalamon/bike-trip-planner/pull/583) 🚧 | #552, #553  |
-| 6     | [#568](https://github.com/vincentchalamon/bike-trip-planner/issues/568) | Observabilité beta SaaS — Sentry + UptimeRobot                                      | S      | [#584](https://github.com/vincentchalamon/bike-trip-planner/pull/584) 🚧 | —           |
-| 7     | [#569](https://github.com/vincentchalamon/bike-trip-planner/issues/569) | OSM France entière — build local mensuel + runbook + désactiver osm-cron nightly   | M      | [#575](https://github.com/vincentchalamon/bike-trip-planner/pull/575) (partiel) + [#585](https://github.com/vincentchalamon/bike-trip-planner/pull/585) 🚧 | —           |
-| 8     | [#570](https://github.com/vincentchalamon/bike-trip-planner/issues/570) | ADR-035 right-sizing Free Tier + correction budget ADR-019                         | S      | [#586](https://github.com/vincentchalamon/bike-trip-planner/pull/586) 🚧 (ADR-039) | —           |
+| 2     | [#564](https://github.com/vincentchalamon/bike-trip-planner/issues/564) | Couture endpoint analyse/chat (`OLLAMA_ANALYSIS_URL` / `OLLAMA_CHAT_URL`)           | M      | [#580](https://github.com/vincentchalamon/bike-trip-planner/pull/580) ✅ mergée | —           |
+| 3     | [#565](https://github.com/vincentchalamon/bike-trip-planner/issues/565) | Transport `llm` dédié + `worker-llm` (split async/llm)                              | M      | [#581](https://github.com/vincentchalamon/bike-trip-planner/pull/581) ✅ mergée | —           |
+| 4     | [#566](https://github.com/vincentchalamon/bike-trip-planner/issues/566) | Limites mémoire conteneurs + Redis maxmemory (noeviction) + Postgres borné         | S      | [#582](https://github.com/vincentchalamon/bike-trip-planner/pull/582) ✅ mergée (base #581) | #565        |
+| 5     | [#567](https://github.com/vincentchalamon/bike-trip-planner/issues/567) | Beta sans analytics — gating env + différer le serveur + doc réactivation          | S      | [#583](https://github.com/vincentchalamon/bike-trip-planner/pull/583) ✅ mergée | #552, #553  |
+| 6     | [#568](https://github.com/vincentchalamon/bike-trip-planner/issues/568) | Observabilité beta SaaS — Sentry + UptimeRobot                                      | S      | [#584](https://github.com/vincentchalamon/bike-trip-planner/pull/584) ✅ mergée | —           |
+| 7     | [#569](https://github.com/vincentchalamon/bike-trip-planner/issues/569) | OSM France entière — build local mensuel + runbook + désactiver osm-cron nightly   | M      | [#575](https://github.com/vincentchalamon/bike-trip-planner/pull/575) + [#585](https://github.com/vincentchalamon/bike-trip-planner/pull/585) ✅ mergée | —           |
+| 8     | [#570](https://github.com/vincentchalamon/bike-trip-planner/issues/570) | ADR-035 right-sizing Free Tier + correction budget ADR-019                         | S      | [#586](https://github.com/vincentchalamon/bike-trip-planner/pull/586) ✅ mergée (ADR-039) | —           |
 
 ### Recette Sprint 34.5
 
@@ -669,65 +669,74 @@ Ajustement de l'infrastructure pour démarrer une **beta restreinte (<10 users)*
 
 ---
 
-## Sprint 35 — Recette complète & Audit
+## Sprint 35 — Outillage d'audit
 
-Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 33, hors sprint 34 RGPD/parcours compte qui a sa propre recette) et audit complet : performance, sécurité, accessibilité, SEO, qualité de code, couverture de tests. Deux phases : **audit** (cartographier les problèmes) puis **corrections** (fixer par lots thématiques).
+> **Restructuration** : l'ancien « Sprint 35 — Recette complète & Audit » (36 ordres, 4 phases) était trop gros et hétérogène (outillage codable vs audits produisant des findings vs recette manuelle vs corrections). Il est découpé en 5 sous-sprints séquencés : **35** (outillage) et **35.1** (référentiel) en parallèle, puis **35.2** (audit non-fonctionnel) et **35.3** (audit fonctionnel + couverture) en parallèle, puis recette manuelle, puis **35.4** (corrections). Périmètre audité = features livrées sur `main` (sprints 1-33, design S25-27, IA S28-32, S34/34.5), **hors** S18 #313/#314 (abandonnés) et osm-cron nightly (#575 : refresh OSM désormais manuel). L'état des issues GitHub étant peu fiable, les findings d'audit se regroupent par **milestone `Sprint 35.4`**, pas par état d'issue.
 
-### Phase 1 — Outillage automatisé
+Outillage automatisé, prérequis à tout l'audit. 6 livrables regroupés en **4 PRs** (items 1+4 partagent les fixtures Playwright ; 2/3/5/6 touchent Makefile/CI/lockfile) ; séquence (A)+(B) en parallèle, puis (C), puis (D).
 
-| Ordre | Titre                                                          | Effort |
-|-------|----------------------------------------------------------------|--------|
-| 1     | Intégrer `@axe-core/playwright` dans les fixtures E2E          | S      |
-| 2     | Intégrer Lighthouse CI (`make lighthouse`)                     | M      |
-| 3     | Script de complétude i18n FR/EN (`make i18n-check`)            | S      |
-| 4     | Monitoring console errors + requêtes 500 dans les fixtures E2E | S      |
-| 5     | Ajouter `npm audit` au workflow CI                             | S      |
-| 6     | Visual regression screenshots Playwright (36 baselines)        | M      |
+| Ordre | Titre | Effort | PR |
+|---|---|---|---|
+| 1 | `@axe-core/playwright` dans les fixtures E2E (helper `expectNoCriticalA11yViolations`) | S | A |
+| 4 | Monitoring console errors + requêtes 500 dans les fixtures E2E | S | A |
+| 3 | Script de complétude i18n FR/EN (`make i18n-check`) | S | B |
+| 5 | `npm audit` au workflow CI (`--audit-level=high`) | S | B |
+| 2 | Lighthouse CI (`make lighthouse`, pages publiques) | M | C |
+| 6 | Visual regression Playwright (36 baselines = 6 combos x 6 pages) | M | D |
 
-### Phase 2 — Audit
+**Compléments** (manquaient dans les 6 d'origine) : gate de couverture PHPUnit >= 80 % (aucun fail-under aujourd'hui) ; `composer audit` (en plus de `symfony check:security`) ; next-intl `onError` pour les clés manquantes au runtime ; 2e set VR « états » (modales/toasts/empty/error) ; câbler le monitoring 500 sur un vrai backend. CI : léger per-PR (`i18n-check`, `npm audit`, smoke axe), lourd en nightly (`lighthouse`, `visual-test`).
 
-| Ordre | Titre                                                                     | Effort |
-|-------|---------------------------------------------------------------------------|--------|
-| 7     | Audit sécurité : headers HTTP (CSP, HSTS, X-Frame-Options) dans Caddy    | S      |
-| 8     | Audit sécurité : isolation Mercure entre utilisateurs                     | M      |
-| 9     | Audit sécurité : auth exhaustive sur tous les endpoints (401/403)         | M      |
-| 10    | Audit sécurité : rate limiting effectif (magic link, trip create, scrape) | S      |
-| 11    | Audit sécurité : XSS dans les champs éditables (titre, locations)        | S      |
-| 12    | Audit performance : Lighthouse CI sur toutes les pages                    | M      |
-| 13    | Audit performance : N+1 Doctrine (TripDetail, stages, accommodations)    | M      |
-| 14    | Audit performance : bundle size Next.js + code splitting                  | S      |
-| 15    | Audit performance : temps calcul async complet (upload → dernier SSE)    | M      |
-| 16    | Audit accessibilité : axe-core 0 violation critique                      | M      |
-| 17    | Audit accessibilité : navigation clavier complète (carte, sidebar, modales) | M   |
-| 18    | Audit SEO : meta tags, Open Graph sur les pages de partage               | S      |
-| 19    | Audit i18n : complétude FR/EN, formatage dates/nombres, clés visibles    | S      |
+---
 
-### Phase 3 — Recette manuelle
+## Sprint 35.1 — Référentiel de recette
 
-| Ordre | Titre                                                          | Effort |
-|-------|----------------------------------------------------------------|--------|
-| 20    | Golden path A : trip depuis lien Komoot (parcours complet)     | L      |
-| 21    | Golden path B : trip depuis upload GPX (drag & drop, ~25 MB)   | M      |
-| 22    | Golden path C : trip via URL (`/?link=...`)                    | S      |
-| 23    | Cas limites : inputs invalides (GPX malformé, > 30 MB, 0 pts) | M      |
-| 24    | Cas limites : auth (token expiré, double-clic, 2 onglets, inactivité 15 min) | M |
-| 25    | Cas limites : réseau (coupure pendant calcul, SSE déconnecté, worker crash) | M  |
-| 26    | Cas limites : undo/redo séquences complexes (repos + hébergement + distance) | S |
-| 27    | Cas limites : trip 20+ étapes, 0 hébergement, dénivelé > 3000m | S     |
-| 28    | Audit visuel : desktop Chrome clair FR + Firefox sombre EN     | M      |
-| 29    | Audit visuel : tablette 768×1024 + mobile 375×812 (clair/sombre) | M    |
-| 30    | Audit visuel : mode sombre complet (carte, elevation, modales, toasts) | M |
-| 31    | Audit visuel : états vides + états d'erreur sur toutes les pages | S     |
+Spec commune à l'audit fonctionnel automatisé (35.3) et à la recette manuelle. Ne dépend pas de l'outillage, donc parallélisable avec 35. Livrables sous `docs/recette/`.
 
-### Phase 4 — Corrections
+| Ordre | Titre | Effort |
+|---|---|---|
+| 1 | Inventaire des écrans (dérivé de `pwa/src/app/`) + variantes (auth/anon, états données) | S |
+| 2 | Checklist par écran : éléments, comportements, états (hover/focus/disabled/loading/empty/error), responsive, a11y clavier | M |
+| 3 | Manifeste d'éléments attendus par écran (présence + position approximative) dérivé de l'export Claude Design | M |
+| 4 | Audit de couverture Gherkin (30 `.feature` vs features réelles) + scénarios manquants à écrire (IA S30-32, design S25-27) | M |
 
-| Ordre | Titre                                                      | Effort |
-|-------|------------------------------------------------------------|--------|
-| 32    | Fix : headers de sécurité manquants dans Caddy             | S      |
-| 33    | Fix : bugs bloquants (P0) et fonctionnels dégradés (P1)    | L      |
-| 34    | Fix : régressions UX/UI (P2)                               | M      |
-| 35    | Fix : performance et polish (P3)                           | M      |
-| 36    | Re-test : golden path A final après corrections            | M      |
+Source design : export Claude Design vendoré sous `docs/recette/` (`tokens.jsx`, `pages-*.jsx`, `Toutes les pages.html`). **Comparaison app vs design = présence + position approximative** (auto, Playwright) ; couleur / typo / polish = **regard humain** (capture côte-à-côte).
+
+---
+
+## Sprint 35.2 — Audit non-fonctionnel & qualité
+
+Exécute l'outillage de 35 + revue ciblée, produit des **findings en issues** (milestone `Sprint 35.4`, labels `security`/`perf`/`a11y`/`seo`/`i18n` + sévérité `P0`-`P3`). Pas de fix. Dépend de 35. Exécution : fan-out d'agents par dimension, findings vérifiés avant ouverture, rapport `docs/recette/audit-report.md`. _(ex-ordres 7-19)_
+
+| Ordre | Titre | Effort |
+|---|---|---|
+| 1 | Sécurité : headers Caddy (constat), isolation Mercure, auth 401/403 exhaustive, rate limiting, XSS champs éditables, stack trace prod, `composer audit` | L |
+| 2 | Performance : Lighthouse toutes pages (y.c. auth, iso-prod seedé), N+1 Doctrine, bundle/code splitting, temps calcul async | L |
+| 3 | Accessibilité : axe 0 violation critique, navigation clavier (scriptée + manuelle) | M |
+| 4 | SEO : meta + Open Graph sur les pages de partage | S |
+| 5 | i18n : `make i18n-check` (parité) + clés visibles + formatage dates/nombres | S |
+| 6 | Qualité : couverture >= 80 %, `make qa` propre, dette de tracking | S |
+| 7 | Privacy/anonymisation : `/privacy`, gating par env Plausible, 0 cookie / 0 PII, purge user en DB (pas de consentement, #385 abandonné) | M |
+
+---
+
+## Sprint 35.3 — Audit fonctionnel + couverture
+
+Transforme le référentiel (35.1) en couverture automatisée + valide les baselines VR. Dépend de 35 + 35.1. Exécution : fan-out par domaine d'écran, findings -> issues (milestone `Sprint 35.4`). _(ex-ordres 20-31)_
+
+| Ordre | Titre | Effort |
+|---|---|---|
+| 1 | Tests Playwright : vérifier l'existant et réparer le périmé (refonte design S25-27, IA S30-32) | M |
+| 2 | Golden paths A/B/C + cas limites en Gherkin (checklists ci-dessous) | L |
+| 3 | Combler les domaines `.feature` absents (IA, design) | M |
+| 4 | Baselines VR (36 pages + set « états ») + comparaison app vs design (présence + position) | M |
+
+DoD : `make test-e2e` + `make test-recette` + `make visual-test` verts ; chaque écran du manifeste 35.1 a un verdict.
+
+---
+
+## Recette manuelle (utilisateur)
+
+Entre 35.3 et 35.4 : recette manuelle sur l'environnement iso-prod, guidée par le référentiel 35.1 + les baselines, produisant des findings (issues milestone `Sprint 35.4`). Checklists et seuils ci-dessous.
 
 ### Recette Sprint 35 — Golden Path A (Komoot)
 
@@ -808,9 +817,25 @@ Recette fonctionnelle end-to-end de l'ensemble de l'application (sprints 1 à 33
   - [ ] `make i18n-check` : 0 clé manquante
   - [ ] Headers sécurité présents : CSP, HSTS, X-Content-Type-Options, X-Frame-Options
   - [ ] Aucune stack trace exposée en `APP_ENV=prod`
-  - [ ] Audit privacy : page `/privacy` complète, mention Plausible (cloud / auto-hébergé), gating consentement effectif
+  - [ ] Audit privacy : page `/privacy` complète, mention Plausible (cloud / auto-hébergé), gating par env (`NEXT_PUBLIC_PLAUSIBLE_DOMAIN`), 0 cookie / 0 PII (pas de consentement, #385 abandonné)
   - [ ] Audit anonymisation : suppression user → trips et préférences purgés (vérifier via requête DB) ; events Plausible anonymes par construction (pas de lien à l'user)
   - [ ] Tous les bugs trouvés reportés en issues GitHub avec labels (`bug`, `ux`, `perf`, `security`, `a11y`)
+
+---
+
+## Sprint 35.4 — Corrections
+
+Fixe les findings de 35.2 + 35.3 + recette manuelle, requêtés par **milestone `Sprint 35.4`** (l'état des issues n'étant pas fiable). Modèle worktree-parallèle (`/sprint`). _(ex-ordres 32-36)_
+
+| Ordre | Titre | Effort |
+|---|---|---|
+| 1 | Headers de sécurité Caddy (CSP / HSTS / X-Frame-Options / X-Content-Type-Options) | S |
+| 2 | P0/P1 : bugs bloquants + fonctionnels dégradés | L |
+| 3 | P2 : régressions UX/UI | M |
+| 4 | P3 : performance et polish | M |
+| 5 | Re-test golden path A final (gate de clôture) | M |
+
+DoD : toutes les issues P0-P3 fermées ou explicitement reportées ; golden path A re-testé vert.
 
 ---
 
