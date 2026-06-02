@@ -418,6 +418,44 @@ jobs:
         working-directory: pwa
         run: npm run lint
 
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "25"
+          cache: npm
+          cache-dependency-path: pwa/package-lock.json
+      - name: Install dependencies
+        working-directory: pwa
+        run: npm ci
+      - name: Run npm audit
+        working-directory: pwa
+        run: npm audit --audit-level=high
+
+  i18n-check:
+    name: i18n check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "25"
+          cache: npm
+          cache-dependency-path: pwa/package-lock.json
+      - name: Install dependencies
+        working-directory: pwa
+        run: npm ci
+      - name: Run i18n check
+        working-directory: pwa
+        run: npm run i18n:check
+
   typescript-check:
     name: TypeScript Check
     runs-on: ubuntu-latest

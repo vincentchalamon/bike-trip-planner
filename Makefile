@@ -53,6 +53,9 @@ phpstan: ## Run PHPStan
 eslint: ## Run Eslint
 	@docker compose run --rm --no-deps pwa npm run lint
 
+i18n-check: ## Run i18n catalog completeness check
+	@docker compose run --rm --no-deps pwa npm run i18n:check
+
 prettier: ## Run Prettier
 	@docker compose run --rm --no-deps pwa npx prettier --check .
 
@@ -71,7 +74,7 @@ qa-php: php-cs-fixer rector phpstan ## Run PHP-CS-Fixer, Rector, and PHPStan
 
 lint: qa-php ## Alias for qa-php
 
-qa-pwa: eslint prettier typescript-check ## Run ESLint, Prettier, and TypeScript Check
+qa-pwa: eslint i18n-check prettier typescript-check ## Run ESLint, i18n check, Prettier, and TypeScript Check
 
 qa-doc: markdownlint ## Run Markdownlint
 
