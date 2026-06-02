@@ -27,7 +27,6 @@ const DEFAULT_ALLOWLIST = [
   "carto",
   "basemaps.cartocdn",
   "maplibre",
-  "tile",
 ];
 
 /**
