@@ -133,6 +133,22 @@ lighthouse: ## Run Lighthouse CI on public pages (requires the prod stack up: ma
 		mcr.microsoft.com/playwright:v1.60.0-noble \
 		/bin/sh -c 'npm ci; npx lhci autorun --config=lighthouserc.json'
 
+visual-test: ## Run visual-regression assertions (requires prod stack + committed baselines)
+	@docker run --network host \
+		-w /app -v $(CURDIR)/pwa:/app \
+		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
+		--rm --ipc=host \
+		mcr.microsoft.com/playwright:v1.60.0-noble \
+		/bin/sh -c 'npm ci; npx playwright test --config playwright.visual.config.ts $(ARGS)'
+
+visual-update: ## (Re)generate visual-regression baselines in the container (requires prod stack: make start)
+	@docker run --network host \
+		-w /app -v $(CURDIR)/pwa:/app \
+		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
+		--rm --ipc=host \
+		mcr.microsoft.com/playwright:v1.60.0-noble \
+		/bin/sh -c 'npm ci; npx playwright test --config playwright.visual.config.ts --update-snapshots'
+
 coverage: ## Run PHPUnit with coverage (HTML report)
 	@docker compose exec -e XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-html coverage/api
 	@docker compose --profile provisioning run -e XDEBUG_MODE=coverage --entrypoint "" provisioner vendor/bin/phpunit --coverage-html coverage/provisioner
