@@ -4,9 +4,9 @@
 
 ---
 
-<!-- Original Claude Design export README preserved verbatim below, for traceability only. -->
+<!-- Original Claude Design export README preserved below, for traceability only. -->
 
-# CODING AGENTS: READ THIS FIRST
+## CODING AGENTS: READ THIS FIRST
 
 This is a **handoff bundle** from Claude Design (claude.ai/design).
 
