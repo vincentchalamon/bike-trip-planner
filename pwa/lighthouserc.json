@@ -8,7 +8,7 @@
         "https://localhost/legal",
         "https://localhost/privacy"
       ],
-      "numberOfRuns": 1,
+      "numberOfRuns": 3,
       "settings": {
         "chromeFlags": "--ignore-certificate-errors --no-sandbox"
       }
