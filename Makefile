@@ -53,6 +53,9 @@ phpstan: ## Run PHPStan
 eslint: ## Run Eslint
 	@docker compose run --rm --no-deps pwa npm run lint
 
+i18n-check: ## Run i18n catalog completeness check
+	@docker compose run --rm --no-deps pwa npm run i18n:check
+
 prettier: ## Run Prettier
 	@docker compose run --rm --no-deps pwa npx prettier --check .
 

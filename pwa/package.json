@@ -9,6 +9,7 @@
     "build:android": "npm run build:mobile && (test -d android || npx cap add android) && npx cap sync android",
     "start": "next start",
     "lint": "eslint",
+    "i18n:check": "node scripts/i18n-check.mjs",
     "typegen": "openapi-typescript openapi.json -o ./src/lib/api/schema.d.ts",
     "test:ts": "tsc --noEmit",
     "test:unit": "vitest run"
