@@ -8,25 +8,24 @@ export interface A11yOptions {
 }
 
 /**
- * Run an axe-core accessibility scan on the current page and assert that no
- * critical or serious WCAG 2.0 A/AA violation is present.
- *
- * Plain helper (no fixture coupling) so it can be imported from any test or
- * fixture chain. Violations with impact `minor`/`moderate` are ignored at this
- * stage; the exhaustive audits run later in Sprint 35.2.
+ * Run an axe-core scan on the current page and return only the critical/serious
+ * WCAG violations. Plain helper (no fixture coupling); `minor`/`moderate` are
+ * ignored at this stage.
  */
-export async function expectNoCriticalA11yViolations(
+export async function getCriticalA11yViolations(
   page: Page,
   opts: A11yOptions = {},
-): Promise<void> {
+): Promise<Result[]> {
   const { tags = ["wcag2a", "wcag2aa"] } = opts;
   const results = await new AxeBuilder({ page }).withTags(tags).analyze();
-  const violations: Result[] = results.violations;
-  const blocking = violations.filter(
+  return results.violations.filter(
     (v) => v.impact === "critical" || v.impact === "serious",
   );
+}
 
-  const summary = blocking
+/** Format a violation list for assertion / report messages. */
+export function formatA11yViolations(violations: Result[]): string {
+  return violations
     .map((v: Result) => {
       const targets = v.nodes
         .map((n: NodeResult) => n.target.join(" "))
@@ -34,11 +33,23 @@ export async function expectNoCriticalA11yViolations(
       return `  [${v.impact}] ${v.id}: ${v.help} (${targets})`;
     })
     .join("\n");
+}
 
+/**
+ * Assert that no critical or serious WCAG 2.0 A/AA violation is present.
+ * Used by the exhaustive a11y audit (Sprint 35.2); the Phase-1 smoke uses
+ * {@link getCriticalA11yViolations} without gating since the app is not yet
+ * audited.
+ */
+export async function expectNoCriticalA11yViolations(
+  page: Page,
+  opts: A11yOptions = {},
+): Promise<void> {
+  const blocking = await getCriticalA11yViolations(page, opts);
   expect(
     blocking,
     blocking.length > 0
-      ? `Critical/serious a11y violations:\n${summary}`
+      ? `Critical/serious a11y violations:\n${formatA11yViolations(blocking)}`
       : undefined,
   ).toEqual([]);
 }
