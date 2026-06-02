@@ -716,15 +716,17 @@ Source design : export Claude Design vendoré sous `docs/recette/design/` (`toke
 
 Exécute l'outillage de 35 + revue ciblée, produit des **findings en issues** (milestone `Sprint 35.4`, labels `security`/`perf`/`a11y`/`seo`/`i18n` + sévérité `P0`-`P3`). Pas de fix. Dépend de 35. Exécution : fan-out d'agents par dimension, findings vérifiés avant ouverture, rapport `docs/recette/audit-report.md`. _(ex-ordres 7-19)_
 
-| Ordre | Titre | Effort |
-|---|---|---|
-| 1 | Sécurité : headers Caddy (constat), isolation Mercure, auth 401/403 exhaustive, rate limiting, XSS champs éditables, stack trace prod, `composer audit` | L |
-| 2 | Performance : Lighthouse toutes pages (y.c. auth, iso-prod seedé), N+1 Doctrine, bundle/code splitting, temps calcul async | L |
-| 3 | Accessibilité : axe 0 violation critique, navigation clavier (scriptée + manuelle) | M |
-| 4 | SEO : meta + Open Graph sur les pages de partage | S |
-| 5 | i18n : `make i18n-check` (parité) + clés visibles + formatage dates/nombres | S |
-| 6 | Qualité : couverture >= 80 %, `make qa` propre, dette de tracking | S |
-| 7 | Privacy/anonymisation : `/privacy`, gating par env Plausible, 0 cookie / 0 PII, purge user en DB (pas de consentement, #385 abandonné) | M |
+**🚧 En cours** — rapport d'audit livré : [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) (`feature/sprint-35.2-audit-report`). 16 findings confirmés (1 P1, 8 P2, 7 P3, aucun P0) + conformités. Ouverture des issues `Sprint 35.4` différée à validation. Différés (iso-prod seedé / CI) : scores Lighthouse (outillage `make lighthouse` cassé, QUAL-005), couverture chiffrée, legs authentifiés (403 inter-users, XSS trip réel, purge DB, axe pages auth).
+
+| Ordre | Titre | Effort | Statut |
+|---|---|---|---|
+| 1 | Sécurité : headers Caddy (constat), isolation Mercure, auth 401/403 exhaustive, rate limiting, XSS champs éditables, stack trace prod, `composer audit` | L | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — 5 findings (SEC-001..005) |
+| 2 | Performance : Lighthouse toutes pages (y.c. auth, iso-prod seedé), N+1 Doctrine, bundle/code splitting, temps calcul async | L | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — PERF-001 ; Lighthouse différé (QUAL-005) |
+| 3 | Accessibilité : axe 0 violation critique, navigation clavier (scriptée + manuelle) | M | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — A11Y-001/002 ; axe runtime authed différé |
+| 4 | SEO : meta + Open Graph sur les pages de partage | S | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — SEO-001/002/003 |
+| 5 | i18n : `make i18n-check` (parité) + clés visibles + formatage dates/nombres | S | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — parité OK (848 clés) ; I18N-001 |
+| 6 | Qualité : couverture >= 80 %, `make qa` propre, dette de tracking | S | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — QUAL-001/002/003/005 ; % couverture délégué CI |
+| 7 | Privacy/anonymisation : `/privacy`, gating par env Plausible, 0 cookie / 0 PII, purge user en DB (pas de consentement, #385 abandonné) | M | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — conforme, 0 finding |
 
 ---
 
