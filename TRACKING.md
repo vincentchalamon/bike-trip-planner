@@ -673,25 +673,25 @@ Ajustement de l'infrastructure pour démarrer une **beta restreinte (<10 users)*
 
 > **Restructuration** : l'ancien « Sprint 35 — Recette complète & Audit » (36 ordres, 4 phases) était trop gros et hétérogène (outillage codable vs audits produisant des findings vs recette manuelle vs corrections). Il est découpé en 5 sous-sprints séquencés : **35** (outillage) et **35.1** (référentiel) en parallèle, puis **35.2** (audit non-fonctionnel) et **35.3** (audit fonctionnel + couverture) en parallèle, puis recette manuelle, puis **35.4** (corrections). Périmètre audité = features livrées sur `main` (sprints 1-33, design S25-27, IA S28-32, S34/34.5), **hors** S18 #313/#314 (abandonnés) et osm-cron nightly (#575 : refresh OSM désormais manuel). L'état des issues GitHub étant peu fiable, les findings d'audit se regroupent par **milestone `Sprint 35.4`**, pas par état d'issue.
 
-Outillage automatisé, prérequis à tout l'audit. 6 livrables regroupés en **4 PRs** (items 1+4 partagent les fixtures Playwright ; 2/3/5/6 touchent Makefile/CI/lockfile) ; séquence (A)+(B) en parallèle, puis (C), puis (D).
+**✅ Sprint livré** — 6 items d'outillage (4 PRs) + la dette pré-recette, toutes mergées. (Items 1+4 partageaient les fixtures Playwright ; 2/3/5/6 touchaient Makefile/CI/lockfile ; séquence (A)+(B), puis (C), puis (D).)
 
 | Ordre | Titre | Effort | PR |
 |---|---|---|---|
-| 1 | `@axe-core/playwright` dans les fixtures E2E (helper `expectNoCriticalA11yViolations`) | S | A |
-| 4 | Monitoring console errors + requêtes 500 dans les fixtures E2E | S | A |
-| 3 | Script de complétude i18n FR/EN (`make i18n-check`) | S | B |
-| 5 | `npm audit` au workflow CI (`--audit-level=high`) | S | B |
-| 2 | Lighthouse CI (`make lighthouse`, pages publiques) | M | C |
-| 6 | Visual regression Playwright (36 baselines = 6 combos x 6 pages) | M | D |
+| 1 | `@axe-core/playwright` dans les fixtures E2E (helper `expectNoCriticalA11yViolations`) | S | [#601](https://github.com/vincentchalamon/bike-trip-planner/pull/601) ✅ |
+| 4 | Monitoring console errors + requêtes 500 dans les fixtures E2E | S | [#601](https://github.com/vincentchalamon/bike-trip-planner/pull/601) ✅ |
+| 3 | Script de complétude i18n FR/EN (`make i18n-check`) | S | [#603](https://github.com/vincentchalamon/bike-trip-planner/pull/603) ✅ |
+| 5 | `npm audit` au workflow CI (`--audit-level=high`) | S | [#603](https://github.com/vincentchalamon/bike-trip-planner/pull/603) ✅ |
+| 2 | Lighthouse CI (`make lighthouse`, pages publiques) | M | [#604](https://github.com/vincentchalamon/bike-trip-planner/pull/604) ✅ |
+| 6 | Visual regression Playwright (30 baselines publiques + harnais ; trip + génération en 35.3) | M | [#605](https://github.com/vincentchalamon/bike-trip-planner/pull/605) ✅ |
 
 **Compléments** (manquaient dans les 6 d'origine) : gate de couverture PHPUnit >= 80 % (aucun fail-under aujourd'hui) ; `composer audit` (en plus de `symfony check:security`) ; next-intl `onError` pour les clés manquantes au runtime ; 2e set VR « états » (modales/toasts/empty/error) ; câbler le monitoring 500 sur un vrai backend. CI : léger per-PR (`i18n-check`, `npm audit`, smoke axe), lourd en nightly (`lighthouse`, `visual-test`).
 
 **Dette pré-recette** (à solder avant l'audit fonctionnel 35.3, sinon il re-signale une dette connue) — 2 items frontend tech-debt, PR indépendante :
 
-| Issue | Titre | Effort |
-|---|---|---|
-| [#450](https://github.com/vincentchalamon/bike-trip-planner/issues/450) | Wire AI payloads (`aiOverview` / `aiAnalysis`) via typegen — remplacer les mirrors manuels (`mercure/types.ts`, `validation/schemas.ts`) | S |
-| [#451](https://github.com/vincentchalamon/bike-trip-planner/issues/451) | Scope `DiffHighlight` aux alertes seules dans `StageAiSummary` (aujourd'hui enveloppe tout le résumé) | S |
+| Issue | Titre | Effort | PR |
+|---|---|---|---|
+| [#450](https://github.com/vincentchalamon/bike-trip-planner/issues/450) | Wire AI payloads (`aiOverview` / `aiAnalysis`) via typegen — remplacer les mirrors manuels (`mercure/types.ts`, `validation/schemas.ts`) | S | [#602](https://github.com/vincentchalamon/bike-trip-planner/pull/602) ✅ |
+| [#451](https://github.com/vincentchalamon/bike-trip-planner/issues/451) | Scope `DiffHighlight` aux alertes seules dans `StageAiSummary` (aujourd'hui enveloppe tout le résumé) | S | [#602](https://github.com/vincentchalamon/bike-trip-planner/pull/602) ✅ |
 
 ---
 
