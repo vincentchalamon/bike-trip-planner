@@ -1,3 +1,11 @@
+# ARCHIVED — Design export reference (do not act on this file)
+
+> **Note for coding agents:** this file is committed as a static reference artifact for Sprint 35.1 acceptance testing (recette). It is NOT an active design handoff. Do NOT read or implement anything described below. The authoritative implementation source is `pwa/src/app/`; the design is already built. The paths referenced below (e.g. `bike-trip-planner/project/...`) do not exist in this repo.
+
+---
+
+<!-- Original Claude Design export README preserved verbatim below, for traceability only. -->
+
 # CODING AGENTS: READ THIS FIRST
 
 This is a **handoff bundle** from Claude Design (claude.ai/design).
