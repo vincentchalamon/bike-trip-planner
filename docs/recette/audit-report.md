@@ -26,7 +26,7 @@ L'audit a été conduit sur deux boots locaux successifs de la stack (port 80/44
 
 + La stack iso-prod locale n'a **ni Mailcatcher ni fixtures** : les flux **authentifiés** (matrice 403 inter-utilisateurs, XSS sur champs éditables d'un trip réel, purge DB après suppression de compte, axe sur pages authentifiées) n'ont pas pu être exercés sous `APP_ENV=prod`. Ils sont vérifiés par **revue de code** et marqués « À confirmer iso-prod seedé ».
 + Les **clés JWT d'environnement `test`** ne sont pas provisionnées localement → 151 erreurs `JWTEncodeFailureException` au lancement de la couverture. La **couverture PHPUnit chiffrée est donc déléguée au CI** (autorité). Le finding de configuration (absence de seuil `fail-under`) reste valide et confirmé par lecture de config.
-+ **Lighthouse n'a pas pu s'exécuter** (voir QUAL-005) : l'image `mcr.microsoft.com/playwright` utilisée par `lhci` ne contient pas l'installation Chrome attendue. Aucun score Performance/A11y/SEO/Best-Practices n'a donc été collecté.
++ **Lighthouse n'a pas pu s'exécuter** (voir QUAL-004) : l'image `mcr.microsoft.com/playwright` utilisée par `lhci` ne contient pas l'installation Chrome attendue. Aucun score Performance/A11y/SEO/Best-Practices n'a donc été collecté.
 
 ---
 
@@ -46,7 +46,7 @@ L'audit a été conduit sur deux boots locaux successifs de la stack (port 80/44
 | A11Y-002 | Landing `/` sans `<h1>` dans le HTML rendu (SSR) | P2 | a11y | Confirmé |
 | QUAL-001 | Aucun seuil de couverture PHPUnit (`fail-under`) | P2 | quality | Confirmé |
 | QUAL-002 | Aucun seuil de couverture Vitest (frontend) | P2 | quality | Confirmé |
-| QUAL-005 | `make lighthouse` non exécutable (Chrome introuvable dans l'image lhci) | P2 | quality | Confirmé |
+| QUAL-004 | `make lighthouse` non exécutable (Chrome introuvable dans l'image lhci) | P2 | quality | Confirmé |
 | PERF-001 | `maplibre-gl` importé statiquement dans `trip-planner.tsx` | P3 | perf | Confirmé |
 | I18N-001 | Pas de handler `onError` sur `NextIntlClientProvider` | P3 | i18n | Confirmé |
 | QUAL-003 | Dette de suppressions statiques (7 `@phpstan-ignore`, 5 front) | P3 | quality | Confirmé |
@@ -124,7 +124,7 @@ Fingerprinting du framework (facilite le ciblage de CVE). **Reco :** `poweredByH
 
 #### Différé performance
 
-+ Scores Lighthouse : **non collectés** (voir QUAL-005).
++ Scores Lighthouse : **non collectés** (voir QUAL-004).
 + Coût de sérialisation DTO `TripDetailProvider` : profiling runtime seedé requis.
 + Latence chaîne de calcul async réelle : load-test iso-prod requis.
 
@@ -215,7 +215,7 @@ $ curl -sk -H 'Accept: text/html' https://localhost/ | grep -oiE "<meta[^>]*(og:
 `pwa/vitest.config.ts` n'a aucune clé `coverage`/thresholds.
 **Reco :** configurer un seuil front (>= 80%).
 
-#### QUAL-005 — `make lighthouse` non exécutable — P2
+#### QUAL-004 — `make lighthouse` non exécutable — P2
 
 ```text
 $ make lighthouse
@@ -270,7 +270,7 @@ $ for p in / /login /privacy; do curl -skD - -o /dev/null -H 'Accept: text/html'
 
 | Sujet | Raison | Où |
 |---|---|---|
-| Scores Lighthouse | `make lighthouse` cassé (QUAL-005) | corriger l'outillage puis iso-prod |
+| Scores Lighthouse | `make lighthouse` cassé (QUAL-004) | corriger l'outillage puis iso-prod |
 | Couverture PHPUnit/Vitest chiffrée | clés JWT `test` absentes en local | CI |
 | Matrice 403 inter-utilisateurs, XSS sur trip réel | pas d'auth (mailer null) en prod local | iso-prod seedé |
 | Purge DB post-suppression compte | pas de user seedé | iso-prod seedé |
