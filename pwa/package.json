@@ -44,6 +44,7 @@
     "@capacitor/android": "^7.6.2",
     "@capacitor/cli": "^7.6.2",
     "@eslint/eslintrc": "^3.3.5",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.2.4",
     "@testing-library/jest-dom": "^6.9.1",
@@ -64,6 +65,7 @@
     "vitest": "^4.1.5"
   },
   "overrides": {
-    "undici": "^6.24.0"
+    "undici": "^6.24.0",
+    "tmp": "^0.2.6"
   }
 }
