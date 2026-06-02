@@ -63,7 +63,7 @@ hadolint: ## Run Hadolint on Dockerfiles
 	@find .docker -name Dockerfile -exec sh -c 'echo "=> {}"; docker run --rm -i hadolint/hadolint < "{}"' \;
 
 markdownlint: ## Run Markdownlint
-	@docker run --rm -v $$(pwd):/app -w /app davidanson/markdownlint-cli2 "**/*.md" "!.claude/**" "!api/vendor/**" "!api/vendor-bin/**" "!pwa/node_modules/**"
+	@docker run --rm -v $$(pwd):/app -w /app davidanson/markdownlint-cli2 "**/*.md" "!.claude/**" "!api/vendor/**" "!api/vendor-bin/**" "!provisioner/vendor/**" "!provisioner/vendor-bin/**" "!pwa/node_modules/**"
 
 tsc: typescript-check ## Alias for "typescript-check"
 
