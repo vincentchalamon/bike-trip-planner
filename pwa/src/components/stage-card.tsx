@@ -208,19 +208,14 @@ export function StageCard({
             - Without AI analysis: fall back to the legacy fully-expanded
               {@link StageAlerts} grouped by severity. */}
         {hasAiAnalysis ? (
-          // TODO(#451): move DiffHighlight inside StageAiSummary so the flash
-          // scopes to the alerts sub-section instead of wrapping the whole card.
-          <DiffHighlight
+          // DiffHighlight lives inside StageAiSummary (issue #451) so the
+          // `alerts_added` flash scopes to the alerts sub-section instead of
+          // the whole briefing card.
+          <StageAiSummary
             stageIndex={stageIndex}
-            field="alerts_added"
-            changeLabel={t("diffAlertsAdded")}
-          >
-            <StageAiSummary
-              stageIndex={stageIndex}
-              alerts={stage.alerts}
-              onAddPoiWaypoint={onAddPoiWaypoint}
-            />
-          </DiffHighlight>
+            alerts={stage.alerts}
+            onAddPoiWaypoint={onAddPoiWaypoint}
+          />
         ) : (
           hasAlerts && (
             <DiffHighlight

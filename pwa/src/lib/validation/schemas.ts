@@ -137,10 +137,11 @@ export const SurfaceSegmentSchema = z.object({
 /**
  * LLaMA pass-1 stage analysis (issue #301 backend, surfaced by issue #306).
  *
- * Mirrors the backend `StageAiAnalysis` DTO and the Mercure
- * `StageAiAnalysisPayload`. The component is rendered above the per-stage
- * alerts as the "coach summary" of the hybrid layout — null when the LLM
- * pipeline is disabled, has not completed, or has failed.
+ * Runtime guard for the Mercure `StageAiAnalysisPayload`, which is now derived
+ * from the OpenAPI-generated `components["schemas"]["StageAiAnalysis.jsonld"]`.
+ * Shapes are kept aligned with that schema. The component is rendered above the
+ * per-stage alerts as the "coach summary" of the hybrid layout — null when the
+ * LLM pipeline is disabled, has not completed, or has failed.
  */
 export const StageAiAnalysisSchema = z.object({
   narrative: z.string(),
@@ -206,11 +207,11 @@ export const StageDataSchema = z.object({
 /**
  * Trip-level AI overview produced by the LLaMA pass 2 (issue #305).
  *
- * Mirrors the backend `TripAiOverview` DTO and the Mercure
- * `TripAiOverviewPayload`. Array fields default to `[]` so partial LLM output
- * (where the model omits a section) is coerced into safe empty lists rather
- * than throwing at render time.
- * TODO(#450): wire via typegen once backend Trip DTO exposes aiOverview in OpenAPI.
+ * Runtime guard for the Mercure `TripAiOverviewPayload`, which is now derived
+ * from the OpenAPI-generated `components["schemas"]["TripAiOverview"]`. Shapes
+ * are kept aligned with that schema; array fields default to `[]` so partial
+ * LLM output (where the model omits a section) is coerced into safe empty
+ * lists rather than throwing at render time.
  */
 export const TripAiOverviewSchema = z.object({
   narrative: z.string(),
