@@ -25,6 +25,7 @@ Audit des 30 fichiers `.feature` (15 sujets x FR/EN) sous `pwa/tests/recette/fea
 | weather-time | 10 | 10 | OK |
 
 **À corriger (parité) :** ajouter les 3 `Scenario Outline` manquants côté FR :
+
 - `alerts-analysis.fr.feature` : "Seuils de difficulté par type d'alerte"
 - `export.fr.feature` : "Export par format de fichier"
 - `trip-creation.fr.feature` : "Création de voyage depuis différentes sources"
@@ -55,6 +56,7 @@ Estimation ~53 scénarios : 2 nouveaux fichiers + extensions de 2 fichiers exist
 ### IA S28-32 — nouveau fichier `ai-features.{fr,en}.feature` (priorité HAUTE)
 
 **Synthèse IA voyage (`trip-ai-overview`)** — 5 scénarios :
+
 - Affichage de la carte de synthèse IA en haut de "Mon voyage".
 - Contenu narratif visible.
 - Patterns globaux visibles (dénivelé cumulé, difficultés saisonnières).
@@ -62,12 +64,14 @@ Estimation ~53 scénarios : 2 nouveaux fichiers + extensions de 2 fichiers exist
 - Carte masquée quand le LLM est absent/désactivé.
 
 **Synthèse IA étape (`stage-ai-summary`)** — 4 scénarios :
+
 - Carte "Analyse IA" présente sur chaque étape.
 - Description IA de l'étape affichée.
 - Alertes cross-stage intégrées dans la carte.
 - Déploiement de l'analyse complète au clic.
 
 **Chat IA (`ai-chat-panel`)** — 6 scénarios :
+
 - Panneau chat visible après calcul.
 - Message envoyé au backend (`POST /trips/*/chat`).
 - Réponse affichée dans l'historique.
@@ -76,6 +80,7 @@ Estimation ~53 scénarios : 2 nouveaux fichiers + extensions de 2 fichiers exist
 - Carte POI (`PoiCard`) affichée depuis une réponse.
 
 **Raffinement IA (`ai-refinement-card`)** — 7 scénarios :
+
 - Carte "Suggestion de modification" visible.
 - Limite 500 caractères respectée.
 - Compteur de caractères affiché.
@@ -85,6 +90,7 @@ Estimation ~53 scénarios : 2 nouveaux fichiers + extensions de 2 fichiers exist
 - Textarea vidée après succès.
 
 **Surlignage diff IA (`diff-highlight`)** — 3 scénarios :
+
 - Distance modifiée surlignée (animation ~3s).
 - Alerte ajoutée surlignée.
 - Annonce lecteur d'écran du champ modifié.
@@ -92,6 +98,7 @@ Estimation ~53 scénarios : 2 nouveaux fichiers + extensions de 2 fichiers exist
 ### Design S25-27 (priorité HAUTE / MOYENNE)
 
 **Page d'atterrissage** — nouveau fichier `landing-page.{fr,en}.feature` — 8 scénarios :
+
 - Hero (titre, description, CTA).
 - "Comment ça marche" (3-4 étapes).
 - Bento avantages.
@@ -102,6 +109,7 @@ Estimation ~53 scénarios : 2 nouveaux fichiers + extensions de 2 fichiers exist
 - Responsive 390px (sections empilées).
 
 **Onboarding** — étendre `cross-cutting-ux` — 7 scénarios :
+
 - Fermeture par `Esc`.
 - Fermeture par clic overlay.
 - Étape 1 cible le champ lien magique.
@@ -110,22 +118,26 @@ Estimation ~53 scénarios : 2 nouveaux fichiers + extensions de 2 fichiers exist
 - Tour ne réapparaît plus après fermeture (flag persistant).
 
 **Thème** — étendre `cross-cutting-ux` — 3 scénarios :
+
 - Cycle clair -> sombre -> système.
 - Mode système suit l'OS.
 - Choix persisté (localStorage) après refresh.
 
 **Langue** — étendre `cross-cutting-ux` — 3 scénarios :
+
 - Labels compacts (FR/EN) sur écran étroit.
 - Permutation sur mobile.
 - Persistance après refresh.
 
 **Supply timeline** — étendre `stage-management` — 4 scénarios :
+
 - Affichage de la timeline des ravitaillements.
 - Marqueurs avec icônes (eau, nourriture, mécanique).
 - Hover -> nom + distance.
 - Défilement horizontal sur mobile.
 
 **Timeline/roadbook redesignée** — étendre `stage-management` — 4 scénarios :
+
 - Vue splitée carte + timeline.
 - Toggle "Carte seule" / "Splitée".
 - Réajustement responsive.

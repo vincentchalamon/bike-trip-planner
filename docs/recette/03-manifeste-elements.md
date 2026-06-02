@@ -185,7 +185,7 @@ L'export design est en **1280px** (desktop, hauteur ~860px par page). Les libell
 
 - accordéon 7 items (premier ouvert par défaut).
 
-## Écrans système (design, non routés)
+## Écrans système (`not-found.tsx`, `error.tsx`)
 
 - **404** (`PageNotFoundDesktop`) : "404" serif ; H2 "Hors-piste." ; CTA "Retour à l'accueil" + "Mes voyages".
 - **500** (`PageErrorDesktop`) : icône alerte ; badge "Erreur serveur · 500" ; bloc `request_id` + timestamp ; CTA "Réessayer" + "Signaler le problème".

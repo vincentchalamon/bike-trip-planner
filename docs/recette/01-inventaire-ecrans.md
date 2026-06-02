@@ -151,9 +151,22 @@ Au-delà des états par écran, ces variantes s'appliquent largement et doivent 
 - **Onboarding :** `onboarding-tour.tsx` au premier lancement.
 - **Responsive :** mobile 390px vs desktop 1280px.
 
-## États non routés (écrans système)
+## Écrans système
 
-Pas de route App Router dédiée mais présents dans le design et le code :
+Fichiers spéciaux App Router (`pwa/src/app/`), testables en recette.
 
-- **404** : `not-found` (design `PageNotFoundDesktop`).
-- **500** : error boundary (design `PageErrorDesktop`, `TripPlannerErrorBoundary`).
+### 13. Page non trouvée — `not-found.tsx`
+
+- **Fichier :** `pwa/src/app/not-found.tsx`
+- **Objectif :** rendu sur toute URL non matchée (404).
+- **Auth :** public.
+- **Déclenchement recette :** naviguer vers une URL inexistante.
+- **Design :** `PageNotFoundDesktop`.
+
+### 14. Erreur applicative — `error.tsx` / `global-error.tsx`
+
+- **Fichiers :** `pwa/src/app/error.tsx`, `pwa/src/app/global-error.tsx`
+- **Objectif :** error boundary App Router (erreur de rendu) ; `global-error` couvre le layout racine.
+- **Auth :** public.
+- **Déclenchement recette :** provoquer une erreur de rendu (mock API en échec). Complété au niveau planner par `TripPlannerErrorBoundary`.
+- **Design :** `PageErrorDesktop`.

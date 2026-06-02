@@ -29,6 +29,7 @@ Appliquée à tout composant interactif, sauf mention contraire :
 ## 1. Accueil — `/`
 
 **Anon (landing) :**
+
 - [ ] Barre de nav : logo, sélecteur de langue, toggle thème, "Se connecter", "Demander l'accès".
 - [ ] Hero : titre, sous-titre, CTA "Créer mon itinéraire" + "Voir la démo".
 - [ ] Sections : "Comment ça marche" (4 étapes), bento avantages, sources supportées, aperçu écrans, CTA early access, footer (liens légaux).
@@ -36,6 +37,7 @@ Appliquée à tout composant interactif, sauf mention contraire :
 - [ ] Responsive 390px : sections empilées, lisibles.
 
 **Auth (planner) :**
+
 - [ ] Bascule vers `TripPlanner` sans flash anon (state `loading` -> `null`).
 - [ ] error boundary capture une erreur de rendu sans page blanche.
 
@@ -140,7 +142,15 @@ Appliquée à tout composant interactif, sauf mention contraire :
 - [ ] Liens d'ancrage fonctionnels.
 - [ ] Footer présent.
 
-## États système (404 / 500)
+## Écrans système (404 / 500)
 
-- [ ] 404 : message "Hors-piste", CTA "Retour à l'accueil" + "Mes voyages".
-- [ ] 500 : icône d'alerte, badge "Erreur serveur · 500", `request_id` + timestamp, CTA "Réessayer" + "Signaler".
+**404 (`not-found.tsx`)** — déclenchement : URL inexistante :
+
+- [ ] message "Hors-piste", CTA "Retour à l'accueil" + "Mes voyages".
+- [ ] CTA : hover, focus clavier.
+
+**500 (`error.tsx` / `global-error.tsx`)** — déclenchement : erreur de rendu :
+
+- [ ] icône d'alerte, badge "Erreur serveur · 500", `request_id` + timestamp.
+- [ ] CTA "Réessayer" (relance le rendu) + "Signaler".
+- [ ] `global-error` : la page reste affichable même si le layout racine échoue.
