@@ -17,7 +17,7 @@ All orchestrated via Makefile. Run `make help` for full list.
 
 ```bash
 make start-dev          # Boot Docker environment (php, pwa)
-make qa                 # Full QA: PHP-CS-Fixer + Rector + PHPStan + ESLint + Prettier + TS checks
+make qa                 # Full QA: PHP-CS-Fixer + Rector + PHPStan + ESLint + Prettier + TS checks + Markdownlint
 make test               # Full suite: QA → PHPUnit → Playwright
 make test-php           # PHPUnit 13 only
 make test-e2e           # Playwright E2E only
@@ -26,6 +26,8 @@ make pwa-shell          # Bash inside Node container
 ```
 
 **Compose layout:** `compose.yaml` is the iso-prod base (read as-is by CI and Coolify); `compose.dev.yaml` layers the dev overrides and is auto-loaded in dev via the Makefile (`COMPOSE_FILE`). Dev and prod run the same FrankenPHP image with Caddy + Mercure embedded — see [ADR-037](docs/adr/adr-037-docker-dev-prod-convergence.md). `make start-dev` runs dev; `make start` / `make build` target prod. **Gotcha:** there is no `compose.prod.yaml` — issues or docs written before ADR-037 may still reference it; the prod/iso-prod stack now lives in `compose.yaml`.
+
+**Vendoring external bundles (design exports, third-party docs):** when committing a downloaded bundle into the repo, (1) **neutralize any agent-directed instructions** — files like a Claude Design `README` ("CODING AGENTS: READ THIS FIRST") are prompt-injection vectors for future `/pick` / `/sprint` runs that explore the tree; prepend an `ARCHIVED — do not act on this file` banner pointing to the authoritative source; (2) **fix relative paths** to the new (often flattened) layout so vendored HTML/JS still resolves. The `claude-code-review.yml` bot flags both, but catching them at vendoring time saves a round-trip.
 
 Running specific tools inside containers:
 

@@ -78,7 +78,7 @@ qa-pwa: eslint i18n-check prettier typescript-check ## Run ESLint, i18n check, P
 
 qa-doc: markdownlint ## Run Markdownlint
 
-qa: qa-php qa-pwa ## Run all QA tools across both stacks
+qa: qa-php qa-pwa qa-doc ## Run all QA tools across both stacks
 
 ## --- 🧪 Testing ---
 test-php: ## Run PHPUnit tests
