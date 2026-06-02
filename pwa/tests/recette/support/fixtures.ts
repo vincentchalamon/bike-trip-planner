@@ -54,9 +54,9 @@ export const test = base.extend<
     // base fixture so existing steps targeting `magic-link-input` work.
     await expandLinkCard(page);
     await use(page);
-    monitor?.assertClean();
     clearCurrentRecettePage();
     resetAccommodationScanRequest();
+    monitor?.assertClean();
   },
 
   injectEvent: async ({ mockedPage }, use) => {
