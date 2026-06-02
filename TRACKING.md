@@ -616,7 +616,7 @@ Collecte de métriques d'usage **agrégées et anonymes** (sources, plateformes,
 | 1     | [#550](https://github.com/vincentchalamon/bike-trip-planner/issues/550) | Page `/privacy` + mentions légales `/legal` (sommaire sticky, footer global, mention Plausible)                  | M      | [#556](https://github.com/vincentchalamon/bike-trip-planner/pull/556) | sprint 25 |
 | 2     | [#549](https://github.com/vincentchalamon/bike-trip-planner/issues/549) | Anonymisation/suppression user (soft-delete trips + préférences) + export données JSON ; events Plausible non liés à l'user | M      | [#555](https://github.com/vincentchalamon/bike-trip-planner/pull/555) | —         |
 | 3     | [#548](https://github.com/vincentchalamon/bike-trip-planner/issues/548) | ADR-034 : décision Plausible auto-hébergé (justification RGPD, custom events)                                    | S      | [#554](https://github.com/vincentchalamon/bike-trip-planner/pull/554) | —         |
-| 4     | [#551](https://github.com/vincentchalamon/bike-trip-planner/issues/551) | Setup Plausible auto-hébergé Docker + domaine + DNS — **tâche manuelle (ops)**                                   | M      |     | #548      |
+| 4     | [#551](https://github.com/vincentchalamon/bike-trip-planner/issues/551) | Setup Plausible auto-hébergé Docker + domaine + DNS — **tâche manuelle (ops), différée post-beta** (ADR-034 / #567)  | M      |     | #548      |
 | 5     | [#552](https://github.com/vincentchalamon/bike-trip-planner/issues/552) | Intégration script Plausible dans `<head>` Next.js (data-domain, chargement conditionnel à la config env `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` — pas de consentement, cf. ADR-034) | S      | [#557](https://github.com/vincentchalamon/bike-trip-planner/pull/557) | #551      |
 | 6     | [#553](https://github.com/vincentchalamon/bike-trip-planner/issues/553) | Custom events Plausible — sources & plateformes (`import_komoot`, `import_strava`, `import_rwgps`, `import_gpx`) | S      | [#561](https://github.com/vincentchalamon/bike-trip-planner/pull/561) | #552      |
 | 7     | [#553](https://github.com/vincentchalamon/bike-trip-planner/issues/553) | Custom events Plausible — valeur features & rétention/UX (`trip_created`, `trip_shared`, `accommodation_selected`, `alert_action_clicked`, `ai_chat_opened`…) — _fusionné dans #553_ | M      | [#561](https://github.com/vincentchalamon/bike-trip-planner/pull/561) | #552      |
@@ -685,6 +685,13 @@ Outillage automatisé, prérequis à tout l'audit. 6 livrables regroupés en **4
 | 6 | Visual regression Playwright (36 baselines = 6 combos x 6 pages) | M | D |
 
 **Compléments** (manquaient dans les 6 d'origine) : gate de couverture PHPUnit >= 80 % (aucun fail-under aujourd'hui) ; `composer audit` (en plus de `symfony check:security`) ; next-intl `onError` pour les clés manquantes au runtime ; 2e set VR « états » (modales/toasts/empty/error) ; câbler le monitoring 500 sur un vrai backend. CI : léger per-PR (`i18n-check`, `npm audit`, smoke axe), lourd en nightly (`lighthouse`, `visual-test`).
+
+**Dette pré-recette** (à solder avant l'audit fonctionnel 35.3, sinon il re-signale une dette connue) — 2 items frontend tech-debt, PR indépendante :
+
+| Issue | Titre | Effort |
+|---|---|---|
+| [#450](https://github.com/vincentchalamon/bike-trip-planner/issues/450) | Wire AI payloads (`aiOverview` / `aiAnalysis`) via typegen — remplacer les mirrors manuels (`mercure/types.ts`, `validation/schemas.ts`) | S |
+| [#451](https://github.com/vincentchalamon/bike-trip-planner/issues/451) | Scope `DiffHighlight` aux alertes seules dans `StageAiSummary` (aujourd'hui enveloppe tout le résumé) | S |
 
 ---
 
@@ -874,6 +881,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 6     | Monitoring & healthchecks (incl. Ollama latence/disponibilité) | M      |
 | 7     | Migration données + smoke test production (incl. passe LLaMA 8B) | M      |
 | 8     | [#312](https://github.com/vincentchalamon/bike-trip-planner/issues/312) Feature-deploy : preview par PR (Étapes 1-7) | L |
+| 9     | [#270](https://github.com/vincentchalamon/bike-trip-planner/issues/270) Génération du keypair JWT sur le serveur (compose secrets + runbook `secrets-inventory.md`) | S |
 
 ### Recette Sprint 37
 
