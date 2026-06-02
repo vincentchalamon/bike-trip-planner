@@ -39,6 +39,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@capacitor/android": "^7.6.2",
     "@capacitor/cli": "^7.6.2",
     "@eslint/eslintrc": "^3.3.5",
@@ -49,6 +50,7 @@
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "axe-core": "^4.11.1",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.4",
     "jsdom": "^29.1.1",

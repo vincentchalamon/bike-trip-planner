@@ -1,6 +1,7 @@
 import { test as base, createBdd } from "playwright-bdd";
 import type { Page } from "@playwright/test";
-import { mockAllApis } from "../../fixtures/api-mocks";
+import { mockAllApis, type MockApiOptions } from "../../fixtures/api-mocks";
+import { attachRuntimeMonitor } from "../../fixtures/runtime-monitor";
 import { injectSseEvent, injectSseSequence } from "../../fixtures/sse-helpers";
 import { fullTripEventSequence } from "../../fixtures/mock-data";
 import type { MercureEvent } from "../../../src/lib/mercure/types";
@@ -20,8 +21,12 @@ interface RecetteFixtures {
   createFullTrip: () => Promise<void>;
 }
 
-export const test = base.extend<RecetteFixtures>({
-  mockedPage: async ({ page }, use, testInfo) => {
+export const test = base.extend<
+  RecetteFixtures & { mockOptions: MockApiOptions }
+>({
+  mockOptions: [{}, { option: true }],
+
+  mockedPage: async ({ page, mockOptions }, use, testInfo) => {
     resetExportDownloadTracker();
     clearCurrentRecettePage();
     resetAccommodationScanRequest();
@@ -37,8 +42,12 @@ export const test = base.extend<RecetteFixtures>({
         url: cookieUrl,
       },
     ]);
-    await mockAllApis(page);
+    await mockAllApis(page, mockOptions);
     setCurrentRecettePage(page);
+    // Opt-in runtime monitor: attach before navigation so no event is missed.
+    const monitor = mockOptions.assertNoRuntimeErrors
+      ? attachRuntimeMonitor(page)
+      : undefined;
     await page.goto("/");
     await page.waitForLoadState("networkidle");
     // Auto-expand the Link card on the welcome screen — mirrors the mocked
@@ -47,6 +56,7 @@ export const test = base.extend<RecetteFixtures>({
     await use(page);
     clearCurrentRecettePage();
     resetAccommodationScanRequest();
+    monitor?.assertClean();
   },
 
   injectEvent: async ({ mockedPage }, use) => {

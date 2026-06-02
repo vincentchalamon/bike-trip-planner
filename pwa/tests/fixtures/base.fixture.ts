@@ -5,6 +5,7 @@ import {
   type Locator,
 } from "@playwright/test";
 import { mockAllApis, type MockApiOptions } from "./api-mocks";
+import { attachRuntimeMonitor } from "./runtime-monitor";
 import { injectSseEvent, injectSseSequence } from "./sse-helpers";
 import { fullTripEventSequence } from "./mock-data";
 import type { MercureEvent } from "../../src/lib/mercure/types";
@@ -77,6 +78,10 @@ export const test = base.extend<
 
   mockedPage: async ({ page, mockOptions }, use) => {
     await mockAllApis(page, mockOptions);
+    // Opt-in runtime monitor: attach before navigation so no event is missed.
+    const monitor = mockOptions.assertNoRuntimeErrors
+      ? attachRuntimeMonitor(page)
+      : undefined;
     await page.goto("/");
     await page.waitForLoadState("networkidle");
     // Auto-expand the Link card on the welcome screen so tests that assert
@@ -86,6 +91,7 @@ export const test = base.extend<
     // opt out of this expansion.
     await expandLinkCard(page);
     await use(page);
+    monitor?.assertClean();
   },
 
   injectEvent: async ({ mockedPage }, use) => {

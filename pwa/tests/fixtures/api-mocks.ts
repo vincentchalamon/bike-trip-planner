@@ -5,6 +5,12 @@ export interface MockApiOptions {
   postTripBody?: Record<string, unknown>;
   deleteStageFail?: boolean;
   addStageFail?: boolean;
+  /**
+   * Opt-in: attach the runtime monitor (console errors + HTTP 5xx) to the
+   * mocked page and assert it stays clean after the test. Defaults to false so
+   * existing specs are not retroactively failed.
+   */
+  assertNoRuntimeErrors?: boolean;
 }
 
 const TRIP_ID = "test-trip-abc-123";
