@@ -699,14 +699,16 @@ Ajustement de l'infrastructure pour démarrer une **beta restreinte (<10 users)*
 
 Spec commune à l'audit fonctionnel automatisé (35.3) et à la recette manuelle. Ne dépend pas de l'outillage, donc parallélisable avec 35. Livrables sous `docs/recette/`.
 
-| Ordre | Titre | Effort |
-|---|---|---|
-| 1 | Inventaire des écrans (dérivé de `pwa/src/app/`) + variantes (auth/anon, états données) | S |
-| 2 | Checklist par écran : éléments, comportements, états (hover/focus/disabled/loading/empty/error), responsive, a11y clavier | M |
-| 3 | Manifeste d'éléments attendus par écran (présence + position approximative) dérivé de l'export Claude Design | M |
-| 4 | Audit de couverture Gherkin (30 `.feature` vs features réelles) + scénarios manquants à écrire (IA S30-32, design S25-27) | M |
+Livré en une PR unique (livrables fortement couplés sous `docs/recette/`).
 
-Source design : export Claude Design vendoré sous `docs/recette/` (`tokens.jsx`, `pages-*.jsx`, `Toutes les pages.html`). **Comparaison app vs design = présence + position approximative** (auto, Playwright) ; couleur / typo / polish = **regard humain** (capture côte-à-côte).
+| Ordre | Titre | Effort | PR |
+|---|---|---|---|
+| 1 | Inventaire des écrans (dérivé de `pwa/src/app/`) + variantes (auth/anon, états données) | S | [#607](https://github.com/vincentchalamon/bike-trip-planner/pull/607) 🚧 |
+| 2 | Checklist par écran : éléments, comportements, états (hover/focus/disabled/loading/empty/error), responsive, a11y clavier | M | [#607](https://github.com/vincentchalamon/bike-trip-planner/pull/607) 🚧 |
+| 3 | Manifeste d'éléments attendus par écran (présence + position approximative) dérivé de l'export Claude Design | M | [#607](https://github.com/vincentchalamon/bike-trip-planner/pull/607) 🚧 |
+| 4 | Audit de couverture Gherkin (30 `.feature` vs features réelles) + scénarios manquants à écrire (IA S30-32, design S25-27) | M | [#607](https://github.com/vincentchalamon/bike-trip-planner/pull/607) 🚧 |
+
+Source design : export Claude Design vendoré sous `docs/recette/design/` (`tokens.jsx`, `pages-*.jsx`, `toutes-les-pages.html`). **Comparaison app vs design = présence + position approximative** (auto, Playwright) ; couleur / typo / polish = **regard humain** (capture côte-à-côte).
 
 ---
 
