@@ -339,3 +339,19 @@ $ for p in / /login /privacy; do curl -skD - -o /dev/null -H 'Accept: text/html'
   scheme is missing »*, tous les appels renvoient un résultat vide ; **(2)** endpoint obsolète `/api/v1/places`
   → **404** alors que l'API v1 actuelle expose `/v1/catalog` et `/v1/placeOfInterest` (→ 200). **Fix 35.4** :
   ajouter `base_uri: https://api.datatourisme.fr` au scoped client + migrer endpoints/format vers l'API v1.
+
+### Lighthouse (pages publiques) — QUAL-004 corrigé, scores collectés
+
+`make lighthouse` (réparé) s'exécute désormais (Chrome trouvé via `CHROME_PATH`, 5 URLs × 3 runs) :
+
++ **Landing `/` sous les seuils** : Performance **0.65** (< 0.80) et Accessibility **0.84** (< 0.90)
+  → findings **`LH-PERF-HOME`** (P2) et **`LH-A11Y-HOME`** (P2, cohérent avec A11Y-001/002 : `<h1>`/`<main>`
+  absents du HTML SSR). SEO / Best-Practices OK sur `/`.
++ **`/login`, `/faq`, `/legal`, `/privacy` : conformes** (Perf ≥ 0.80, A11y ≥ 0.90, SEO ≥ 0.90, BP ≥ 0.90).
+
+### Isolation Mercure — confirmée empiriquement
+
+Un abonné **anonyme** au topic privé `/trips/{id}` ne reçoit **aucune donnée** (seulement le heartbeat SSE `:`).
+Les updates `private: true` ne sont délivrés qu'aux abonnés porteurs d'un JWT subscriber scopé (`subscriber_jwt`,
+Caddyfile) ; le `anonymous` du hub autorise la connexion mais pas la lecture des topics privés. Le finding v1
+« isolation Mercure à confirmer » est donc **levé**.
