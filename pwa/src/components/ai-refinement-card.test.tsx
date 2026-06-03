@@ -94,7 +94,7 @@ describe("AiRefinementCard", () => {
     // The ui/sonner wrapper forwards an options bag (correlation ID) as a 2nd
     // arg, so assert on the message key only.
     await waitFor(() => expect(toastError).toHaveBeenCalled());
-    expect(toastError.mock.calls[0][0]).toBe("applyFailed");
+    expect(toastError.mock.calls[0]?.[0]).toBe("applyFailed");
     expect(textarea.value).toBe("Add Ajaccio");
   });
 
@@ -109,7 +109,7 @@ describe("AiRefinementCard", () => {
     fireEvent.click(screen.getByTestId("ai-refinement-apply"));
 
     await waitFor(() => expect(toastError).toHaveBeenCalled());
-    expect(toastError.mock.calls[0][0]).toBe("applyFailed");
+    expect(toastError.mock.calls[0]?.[0]).toBe("applyFailed");
     expect(textarea.value).toBe("Add Ajaccio");
   });
 
