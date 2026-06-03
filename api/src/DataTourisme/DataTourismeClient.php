@@ -23,8 +23,12 @@ final readonly class DataTourismeClient implements DataTourismeClientInterface
         #[Autowire(service: 'limiter.datatourisme')]
         private RateLimiterFactoryInterface $rateLimiter,
         private LoggerInterface $logger,
+        // Nullable: the `default::` env processor resolves an unset/empty
+        // DATATOURISME_API_KEY to null, which is the default in prod (key not
+        // configured). A non-nullable string here threw a TypeError at construction,
+        // taking down ScanAccommodations entirely instead of degrading gracefully.
         #[Autowire(env: 'default::DATATOURISME_API_KEY')]
-        private string $apiKey,
+        private ?string $apiKey,
         #[Autowire(env: 'bool:default::DATATOURISME_ENABLED')]
         private bool $enabled,
     ) {
@@ -32,7 +36,7 @@ final readonly class DataTourismeClient implements DataTourismeClientInterface
 
     public function isEnabled(): bool
     {
-        return $this->enabled && '' !== $this->apiKey;
+        return $this->enabled && null !== $this->apiKey && '' !== $this->apiKey;
     }
 
     /**
