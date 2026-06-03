@@ -55,6 +55,7 @@ des passes.
 | A11Y-002 | Landing `/` sans `<h1>` dans le HTML rendu (SSR) | P2 | a11y | Confirmé |
 | LH-PERF-HOME | Landing `/` score Lighthouse Performance **0.65** (< 0.80) | P2 | perf | Confirmé |
 | LH-A11Y-HOME | Landing `/` score Lighthouse Accessibility **0.84** (< 0.90) | P2 | a11y | Confirmé |
+| LH-PERF-AUTH | Pages authentifiées sous seuil perf (`/trips` 0.73, `/trips/new` 0.52) | P2 | perf | Confirmé (empirique) |
 | DT-LIVE | DataTourisme mode live cassé : scoped client sans `base_uri` + endpoint obsolète | P2 | quality | Confirmé |
 | F5 | APIs externes flaky : **Overpass `429`/timeout** -> POI/alertes dégradés | P2 | perf | Confirmé |
 | QUAL-001 | Aucun seuil de couverture PHPUnit (`fail-under`) | P2 | quality | Confirmé |
@@ -230,8 +231,11 @@ l'ownership dans `TripDetailProvider`). Atténuations : pas d'IDOR en écriture,
   `access_request_ip` (3/3600s) — `rate_limiter.php`, consommés dans `AuthRequestLinkProcessor` /
   `AccessRequestCreateProcessor`. La rafale ne renvoie pas de `429` (anti-énumération, cf. F4 requalifié) mais
   **supprime bien les e-mails** au-delà du quota.
-+ **XSS (statique)** : aucun `dangerouslySetInnerHTML` dans `pwa/src` (React échappe par défaut). Test payload
-  sur champ éditable = à exécuter (cf. « Reste à exécuter »).
++ **XSS — aucun vecteur trouvé** : **0 sink HTML brut** dans tout `pwa/src` (`grep` `dangerouslySetInnerHTML` /
+  `.innerHTML` / `setHTML(` = ∅). Surface la plus à risque (popup carte, données POI/hébergements externes) :
+  `MapView.tsx:570` utilise `popup.setDOMContent(container)` où `container = document.createElement('div')` est
+  **rempli par un portail React** -> noms échappés (pas de `setHTML`). Chat IA / texte = enfants React (échappés).
+  React échappe donc l'intégralité des surfaces user/externe.
 + **Auth 401 + autorisation objet en écriture** : endpoints protégés -> `401` non authentifié (vérifié sur
   `/trips/{id}/detail`) ; la **collection `/trips` est owner-scopée** (un autre user voit 0 trip) et
   **`PATCH`/`DELETE` d'un trip d'autrui -> `403`** (`TripVoter` `TRIP_EDIT`). **Exception : IDOR-DETAIL** en
@@ -256,6 +260,20 @@ l'ownership dans `TripDetailProvider`). Atténuations : pas d'IDOR en écriture,
 maplibre-gl ~5.24`), sans `next/dynamic`. Atténué : `TripPlanner` n'est monté que sur les routes éditeur
 (`/trips/new`, `/trips/[id]`, `/s/[code]`), elles-mêmes en `dynamic()`.
 **Reco :** lazy-load `MapPanel` pour alléger le 1er chunk de la route éditeur.
+
+#### LH-PERF-AUTH — Lighthouse Performance pages authentifiées sous seuil — P2
+
+`make lighthouse-authed` (cookie `refresh_token` injecté via `extraHeaders`) sur la stack recette :
+
+```text
+/trips      (dashboard) : perf 0.73  a11y 1.00  best-practices 1.00  seo 1.00
+/trips/new  (éditeur)   : perf 0.52  a11y 1.00  best-practices 0.96  seo 1.00
+```
+
+**Performance < 0.80** sur les deux pages authentifiées ; l'éditeur tombe à **0.52** — cohérent avec PERF-001
+(`maplibre-gl` chargé statiquement sur la route éditeur). **A11y / Best-Practices / SEO conformes** (a11y = 1.0,
+contraste avec la landing publique A11Y-001/002). **Reco :** lazy-load `MapPanel` (PERF-001) + budget de perf sur
+les routes éditeur.
 
 #### Conformités performance vérifiées
 
@@ -464,12 +482,11 @@ Items non bloquants pour la publication de ce rapport, à exercer sur stack seed
 d'audit : conteneur pwa cappé, OOM `tsc`/`vitest`) :
 
 > Faits en R4 (passe empirique) : matrice 401/403 inter-utilisateurs (-> IDOR-DETAIL), purge RGPD DB/Redis
-> (-> RGPD-MAGIC), root-cause F4 (-> faux finding), stack-trace réelle (422/415/404/500). Restent :
+> (-> RGPD-MAGIC), root-cause F4 (-> faux finding), stack-trace réelle (422/415/404/500), **XSS** (0 sink, popup
+> portail React), **Lighthouse authentifié** (-> LH-PERF-AUTH). Restent (-> R5, en attente d'aval) :
 
 | Sujet | Pourquoi pas encore fait | Où |
 |---|---|---|
-| XSS payload sur champ éditable (chat IA / note) | nécessite trip calculé + chat Ollama actif | iso-prod recette |
-| Lighthouse pages authentifiées (`make lighthouse-authed`) | nécessite un cookie `refresh_token` frais (limiter IP saturé en fin de passe) | iso-prod recette |
 | N+1 Doctrine profilé au runtime | profiler/logger sur endpoints seedés | iso-prod recette |
 | Analyse de bundle / code-splitting | `next build` (OOM local) | CI / machine dédiée |
 | axe runtime + nav clavier pages authentifiées | stack dev seedée + Playwright | dev seedé |
