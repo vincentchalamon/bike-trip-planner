@@ -81,7 +81,8 @@ jobs:
           XDEBUG_MODE: coverage
           DATABASE_URL: "postgresql://app:!ChangeMe!@database:5432/app?serverVersion=18&charset=utf8"
           REDIS_URL: "redis://redis:6379"
-          JWT_PASSPHRASE: "test"
+          # JWT_PASSPHRASE is forced to "test" in api/phpunit.dist.xml (matches the
+          # keypair generated above with `-pass pass:test`), so no env override here.
           FRONTEND_URL: "https://localhost"
         run: vendor/bin/phpunit --coverage-clover coverage/clover.xml
       - name: Upload coverage report

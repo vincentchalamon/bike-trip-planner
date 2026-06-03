@@ -31,6 +31,12 @@ start: start-prod ## Alias for start-prod
 start-prod: ensure-default-pbf ## Start the Docker environment (Detached) in production mode
 	@docker compose -f compose.yaml up --wait
 
+start-recette: ensure-default-pbf ## Boot iso-prod + Mailcatcher + Ollama for the recette (manual audit). Re-routing needs `make provision` + `--profile routing`.
+	@mkdir -p .docker/jwt-recette
+	@test -f .docker/jwt-recette/private.pem || { openssl genpkey -algorithm RSA -out .docker/jwt-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/jwt-recette/private.pem -out .docker/jwt-recette/public.pem -passin pass:recette; }
+	@JWT_PRIVATE_KEY_PATH=$(CURDIR)/.docker/jwt-recette/private.pem JWT_PUBLIC_KEY_PATH=$(CURDIR)/.docker/jwt-recette/public.pem JWT_PASSPHRASE=recette docker compose -f compose.yaml -f compose.recette.yaml up --wait
+	@docker compose -f compose.yaml -f compose.recette.yaml exec -T ollama ollama pull $${RECETTE_OLLAMA_MODEL:-llama3.2:3b}
+
 stop: ## Stop the Docker environment
 	@docker compose stop
 
@@ -131,7 +137,7 @@ lighthouse: ## Run Lighthouse CI on public pages (requires the prod stack up: ma
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.60.0-noble \
-		/bin/sh -c 'npm ci; npx lhci autorun --config=lighthouserc.json'
+		/bin/sh -c 'npm ci; CHROME_PATH=$$(node -e "process.stdout.write(require(\"playwright\").chromium.executablePath())") npx lhci autorun --config=lighthouserc.json'
 
 visual-test: ## Run visual-regression assertions (requires prod stack + committed baselines)
 	@docker run --network host \
@@ -148,6 +154,9 @@ visual-update: ## (Re)generate visual-regression baselines in the container (req
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.60.0-noble \
 		/bin/sh -c 'npm ci; npx playwright test --config playwright.visual.config.ts --update-snapshots'
+
+jwt-keypair-test: ## (Re)generate JWT keys matching the test passphrase (run before coverage/test-php locally)
+	@docker compose exec php sh -c 'openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test'
 
 coverage: ## Run PHPUnit with coverage (HTML report)
 	@docker compose exec -e XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-html coverage/api

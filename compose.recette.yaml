@@ -1,0 +1,99 @@
+# Recette overlay on top of compose.yaml (iso-prod).
+#
+# Keeps the prod topology untouched (APP_ENV=prod, read_only, JWT secrets) and ONLY:
+#   - adds a Mailcatcher service (capture magic-link emails for the real auth flow),
+#   - adds an Ollama service + OLLAMA_ENABLED=1 (exercise the AI chat/enrichment and
+#     its XSS surface, absent from the iso-prod compose where inference is external).
+#
+# Load EXPLICITLY (never auto-loaded): docker compose -f compose.yaml -f compose.recette.yaml ...
+# Named compose.recette.yaml (not compose.override.yaml) to avoid implicit auto-load.
+# Provide JWT keys via JWT_PRIVATE_KEY_PATH / JWT_PUBLIC_KEY_PATH + JWT_PASSPHRASE
+# (see `make start-recette`), same pattern as the CI playwright job. Valhalla (re-routing)
+# stays opt-in via `--profile routing` + a regional OSM extract (`make provision`).
+
+services:
+  php:
+    environment:
+      MAILER_DSN: smtp://mailcatcher:1025
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_ENABLED: "1"
+      # Single small model for all LLM roles to keep the local recette light
+      # (chat default is 3b, analysis/overview default to 8b — overridden here).
+      OLLAMA_DIALOGUE_MODEL: "${OLLAMA_DIALOGUE_MODEL:-llama3.2:3b}"
+      OLLAMA_STAGE_MODEL: "${OLLAMA_STAGE_MODEL:-llama3.2:3b}"
+      OLLAMA_OVERVIEW_MODEL: "${OLLAMA_OVERVIEW_MODEL:-llama3.2:3b}"
+    depends_on:
+      ollama:
+        condition: service_healthy
+        required: false
+
+  worker:
+    environment:
+      MAILER_DSN: smtp://mailcatcher:1025
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_ENABLED: "1"
+      # Single small model for all LLM roles to keep the local recette light
+      # (chat default is 3b, analysis/overview default to 8b — overridden here).
+      OLLAMA_DIALOGUE_MODEL: "${OLLAMA_DIALOGUE_MODEL:-llama3.2:3b}"
+      OLLAMA_STAGE_MODEL: "${OLLAMA_STAGE_MODEL:-llama3.2:3b}"
+      OLLAMA_OVERVIEW_MODEL: "${OLLAMA_OVERVIEW_MODEL:-llama3.2:3b}"
+    depends_on:
+      ollama:
+        condition: service_healthy
+        required: false
+
+  worker-llm:
+    environment:
+      MAILER_DSN: smtp://mailcatcher:1025
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_ENABLED: "1"
+      # Single small model for all LLM roles to keep the local recette light
+      # (chat default is 3b, analysis/overview default to 8b — overridden here).
+      OLLAMA_DIALOGUE_MODEL: "${OLLAMA_DIALOGUE_MODEL:-llama3.2:3b}"
+      OLLAMA_STAGE_MODEL: "${OLLAMA_STAGE_MODEL:-llama3.2:3b}"
+      OLLAMA_OVERVIEW_MODEL: "${OLLAMA_OVERVIEW_MODEL:-llama3.2:3b}"
+    depends_on:
+      ollama:
+        condition: service_healthy
+        required: false
+
+  mailcatcher:
+    image: schickling/mailcatcher
+    restart: unless-stopped
+    ports:
+      - target: 1080
+        published: ${MAILCATCHER_PORT:-1080}
+        protocol: tcp
+    healthcheck:
+      test: ["CMD-SHELL", "ruby -e \"require 'net/http'; Net::HTTP.get(URI('http://localhost:1080'))\" || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    expose:
+      - 11434
+    environment:
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: "2"
+      OLLAMA_KEEP_ALIVE: "5m"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  ollama-data: ~
