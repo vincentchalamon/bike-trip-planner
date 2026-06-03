@@ -59,16 +59,18 @@ des passes.
 | QUAL-001 | Aucun seuil de couverture PHPUnit (`fail-under`) | P2 | quality | Confirmé |
 | QUAL-002 | Aucun seuil de couverture Vitest (frontend) | P2 | quality | Confirmé |
 | COV-API | Couverture PHPUnit API **71,8 %** statements (< 80 % DoD) | P2 | quality | Confirmé |
-| CI-UNIT | Tests unitaires front (Vitest) **non exécutés en CI** | P2 | quality | Confirmé |
+| COV-FRONT | Couverture front Vitest **16,85 %** statements (< 80 % DoD) | P2 | quality | Confirmé |
+| CI-UNIT | Tests unitaires front non gatés par la CI (suite cassée + 6 tests rot) | ~~P2~~ | quality | **Corrigé (PR #615)** |
 | QUAL-004 | `make lighthouse` non exécutable (Chrome introuvable dans l'image lhci) | ~~P2~~ | quality | **Corrigé (PR #612)** |
 | SEC-004 | Pas de Referrer-Policy | P3 | security | Confirmé |
 | SEC-005 | En-tête `x-powered-by: Next.js` exposé en prod | P3 | security | Confirmé |
 | PERF-001 | `maplibre-gl` importé statiquement dans `trip-planner.tsx` | P3 | perf | Confirmé |
 | I18N-001 | Pas de handler `onError` sur `NextIntlClientProvider` | P3 | i18n | Confirmé |
 | QUAL-003 | Dette de suppressions statiques (7 `@phpstan-ignore`, 5 front) | P3 | quality | Confirmé |
-| COV-PROV | Couverture provisioner non mesurable (xdebug absent du conteneur) | P3 | quality | Confirmé |
+| COV-PROV | Couverture provisioner (xdebug absent) -> mesurée 84,9 % | ~~P3~~ | quality | **Corrigé (PR #615)** |
 
-**Total : 1×P0, 3×P1 actifs (+1 corrigé), 15×P2 (+1 corrigé), 6×P3.** Le « aucun P0 » d'une première lecture
+**Total : 1×P0, 3×P1 actifs (+1 corrigé : F2), 15×P2 actifs (+2 corrigés : QUAL-004, CI-UNIT), 5×P3 actifs
+(+1 corrigé : COV-PROV).** Le « aucun P0 » d'une première lecture
 est **caduc** : F1 casse la création de trip en prod par défaut.
 
 ---
@@ -322,8 +324,9 @@ s'affiche en littéral sans signal.
 
 #### QUAL-001 / QUAL-002 — Pas de seuil de couverture (PHPUnit & Vitest) — P2
 
-`api/phpunit.dist.xml` : bloc `<coverage>` sans `<limit minimum="…">`. `pwa/vitest.config.ts` : aucune clé
-`coverage`/thresholds. La couverture n'est jamais un gate CI.
+`api/phpunit.dist.xml` : bloc `<coverage>` sans `<limit minimum="…">`. `pwa/vitest.config.ts` a une config
+`coverage` (provider v8, depuis #615) mais **aucun `thresholds`**. La couverture n'est donc jamais un gate CI
+(le job Vitest échoue sur un test rouge, pas sur un % insuffisant).
 **Reco :** seuil >= 80 % (cf. DoD) appliqué en CI, des deux côtés.
 
 #### COV-API — Couverture PHPUnit API 71,8 % statements (< 80 %) — P2
@@ -339,19 +342,28 @@ OK, but some tests were skipped! Tests: 1310, Assertions: 3819, Skipped: 1
 
 **Reco :** remonter la couverture API vers le seuil 80 % du DoD (couplé à QUAL-001).
 
-#### CI-UNIT — Tests unitaires front non exécutés en CI — P2
+#### CI-UNIT — Tests unitaires front non gatés par la CI — Corrigé (PR #615)
 
-`ci.yml` ne lance que `npm run test:ts` (TypeScript), **jamais `vitest`** : les tests unitaires front existent mais
-ne sont vérifiés par aucun pipeline. La mesure locale est en outre bloquée (conteneur `pwa` plafonné à 512 Mo
--> OOM-kill, provider `@vitest/coverage-v8` absent, volume `node_modules` désynchronisé -> `jsdom`
-`MODULE_NOT_FOUND`). Couverture front **non chiffrable en l'état**.
-**Reco :** ajouter un job `vitest run` en CI (+ provider de couverture pour QUAL-002).
+`ci.yml` ne lançait que `npm run test:ts` ; aucun job n'exécutait `vitest`. Le job `Unit Tests (Vitest)` ajouté
+(PR #615) a immédiatement révélé que la suite était **non-exécutable** : l'override `overrides.undici ^6.24.0`
+(plancher npm audit) forçait undici 6 dans `jsdom@29` qui exige `undici@^7.25.0` -> `Cannot find module
+'undici/lib/handler/wrap-handler.js'`, tous les tests échouaient au démarrage. De plus **6 tests étaient pourris**
+(test-rot jamais détecté faute de CI : assertions trop strictes, `TooltipProvider` manquant, timers chaînés).
+**PR #615** : override imbriqué `jsdom > undici ^7.25.0` (préserve le plancher ^6 ailleurs) + 6 corrections
+**test-only** (aucune modif appli) -> suite verte **234/234**, désormais gatée en CI.
 
-#### COV-PROV — Couverture provisioner non mesurable — P3
+#### COV-FRONT — Couverture front Vitest 16,85 % statements — P2
 
-Le conteneur `provisioner` n'embarque pas de driver xdebug -> `make coverage-ci` échoue sur cette jambe avec
-*« No code coverage driver available »*.
-**Reco :** aligner l'image provisioner sur l'API pour la couverture, ou exclure explicitement cette jambe.
+Désormais mesurable (provider `@vitest/coverage-v8` + config, PR #615) : `npx vitest run --coverage` ->
+statements **16,85 %** (1072/6359), lines 17,4 %, functions 12,7 %, branches 14,1 %. Très loin du seuil 80 %
+du DoD.
+**Reco :** remonter la couverture front (couplé à QUAL-002 pour le gate de seuil).
+
+#### COV-PROV — Couverture provisioner — Corrigé (PR #615)
+
+Le conteneur `provisioner` n'embarquait pas de driver xdebug -> `make coverage-ci` échouait sur cette jambe
+(*« No code coverage driver available »*). **PR #615** ajoute xdebug au stage dev du provisioner : couverture
+mesurée **84,9 %** statements (213/251, 32 tests OK).
 
 #### QUAL-004 — `make lighthouse` non exécutable — Corrigé (PR #612)
 
@@ -371,8 +383,8 @@ Volume faible et justifié, mais à tracer comme dette.
 
 #### Conformités qualité vérifiées
 
-+ **Suite QA/CI complète verte** (source de vérité = CI de cette PR, 21/21 checks) : PHP-CS-Fixer, Rector,
-  PHPStan **Level 9** + `banned_code`, ESLint strict (`no-explicit-any`, `no-console`), Prettier, TS,
++ **Suite QA/CI complète verte** (source de vérité = CI) : PHP-CS-Fixer, Rector, PHPStan **Level 9** +
+  `banned_code`, ESLint strict (`no-explicit-any`, `no-console`), Prettier, TS, **Vitest (depuis #615)**,
   Markdownlint, OpenAPI lint, Hadolint, i18n, PHPUnit (api + provisioner), Playwright, BDD recette, APK.
 + PHPUnit : `failOnWarning`/`failOnRisky`/`failOnDeprecation` = true.
 + `npm audit` : **8 modérées, 0 haute/critique** -> gate CI `--audit-level=high` vert.
@@ -415,6 +427,5 @@ d'audit : conteneur pwa cappé, OOM `tsc`/`vitest`) :
 | N+1 Doctrine profilé au runtime | profiler/logger sur endpoints seedés | iso-prod recette |
 | Analyse de bundle / code-splitting | `next build` (OOM local) | CI / machine dédiée |
 | axe runtime + nav clavier pages authentifiées | stack dev seedée + Playwright | dev seedé |
-| Couverture front Vitest chiffrée | provider absent + OOM + node_modules désync (cf. CI-UNIT) | CI à outiller |
 | Matrice multi-device (viewports × navigateurs × thèmes × langues) | Playwright lourd (OOM local) | CI / machine dédiée |
 | Chaos (kill/pause worker, coupure réseau -> retry/backoff, reconnexion SSE) | orchestration dédiée | machine dédiée |
