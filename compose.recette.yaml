@@ -15,6 +15,10 @@ services:
   php:
     environment:
       MAILER_DSN: smtp://mailcatcher:1025
+      # Workaround for a recette finding: compose.yaml (prod) omits LOCK_DSN, so it
+      # falls back to api/.env's redis://localhost:6379 (unreachable from the container,
+      # redis is the `redis` service) -> trip creation 500s. Fix belongs in compose.yaml (35.4).
+      LOCK_DSN: redis://redis:6379
       OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
       OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
       OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
@@ -32,6 +36,10 @@ services:
   worker:
     environment:
       MAILER_DSN: smtp://mailcatcher:1025
+      # Workaround for a recette finding: compose.yaml (prod) omits LOCK_DSN, so it
+      # falls back to api/.env's redis://localhost:6379 (unreachable from the container,
+      # redis is the `redis` service) -> trip creation 500s. Fix belongs in compose.yaml (35.4).
+      LOCK_DSN: redis://redis:6379
       OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
       OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
       OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
@@ -49,6 +57,10 @@ services:
   worker-llm:
     environment:
       MAILER_DSN: smtp://mailcatcher:1025
+      # Workaround for a recette finding: compose.yaml (prod) omits LOCK_DSN, so it
+      # falls back to api/.env's redis://localhost:6379 (unreachable from the container,
+      # redis is the `redis` service) -> trip creation 500s. Fix belongs in compose.yaml (35.4).
+      LOCK_DSN: redis://redis:6379
       OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
       OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
       OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
@@ -64,7 +76,9 @@ services:
         required: false
 
   mailcatcher:
-    image: schickling/mailcatcher
+    # Pinned by digest: schickling/mailcatcher has no versioned tags, and the
+    # mutable tag would let an upstream rebuild change the HTTP API recette-seed.sh relies on.
+    image: schickling/mailcatcher@sha256:55ed289525a565f7587b138a423705267eb34eda1ec8d35acd6dc7966a933e84
     restart: unless-stopped
     ports:
       - target: 1080
@@ -78,7 +92,8 @@ services:
       start_period: 10s
 
   ollama:
-    image: ollama/ollama:latest
+    # Pinned by digest for reproducibility (Ollama ships frequent inference-API changes).
+    image: ollama/ollama@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
     restart: unless-stopped
     expose:
       - 11434

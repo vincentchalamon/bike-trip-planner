@@ -134,7 +134,8 @@ services:
       start_period: 120s
 
   mailcatcher:
-    image: schickling/mailcatcher
+    # Pinned by digest (same as compose.recette.yaml): no versioned tags upstream.
+    image: schickling/mailcatcher@sha256:55ed289525a565f7587b138a423705267eb34eda1ec8d35acd6dc7966a933e84
     restart: unless-stopped
     ports:
       - target: 1080
@@ -148,7 +149,8 @@ services:
       start_period: 10s
 
   ollama:
-    image: ollama/ollama:latest
+    # Pinned by digest (same as compose.recette.yaml) for reproducibility.
+    image: ollama/ollama@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
     restart: unless-stopped
     expose:
       - 11434
