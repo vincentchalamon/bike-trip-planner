@@ -61,6 +61,14 @@ services:
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
       LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      # Ollama is a hard runtime dependency in prod (ADR-028, finding F3): the LLM
+      # tier is a SEPARATE resource (compose.ollama.yaml) reached over the shared
+      # `bike-trip-planner-llm` network. Enabled by default here; compose.dev.yaml
+      # forces 0, compose.recette.yaml forces 1.
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-1}"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
@@ -151,6 +159,14 @@ services:
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
       LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      # Ollama is a hard runtime dependency in prod (ADR-028, finding F3): the LLM
+      # tier is a SEPARATE resource (compose.ollama.yaml) reached over the shared
+      # `bike-trip-planner-llm` network. Enabled by default here; compose.dev.yaml
+      # forces 0, compose.recette.yaml forces 1.
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-1}"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
@@ -227,6 +243,14 @@ services:
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
       LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      # Ollama is a hard runtime dependency in prod (ADR-028, finding F3): the LLM
+      # tier is a SEPARATE resource (compose.ollama.yaml) reached over the shared
+      # `bike-trip-planner-llm` network. Enabled by default here; compose.dev.yaml
+      # forces 0, compose.recette.yaml forces 1.
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-1}"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
