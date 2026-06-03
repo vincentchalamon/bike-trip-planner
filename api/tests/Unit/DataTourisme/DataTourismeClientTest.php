@@ -54,6 +54,16 @@ final class DataTourismeClientTest extends TestCase
         $this->assertFalse($client->isEnabled());
     }
 
+    #[Test]
+    public function isEnabledReturnsFalseWhenKeyIsNull(): void
+    {
+        // The `default::DATATOURISME_API_KEY` env processor resolves an unset key
+        // to null (prod default); isEnabled() must stay false, not crash.
+        $client = $this->makeClient(apiKey: null, enabled: true);
+
+        $this->assertFalse($client->isEnabled());
+    }
+
     // -------------------------------------------------------------------------
     // request() — cache hit
     // -------------------------------------------------------------------------
@@ -241,7 +251,7 @@ final class DataTourismeClientTest extends TestCase
         ?HttpClientInterface $httpClient = null,
         ?RateLimiterFactoryInterface $rateLimiter = null,
         ?LoggerInterface $logger = null,
-        string $apiKey = 'test-api-key',
+        ?string $apiKey = 'test-api-key',
         bool $enabled = true,
     ): DataTourismeClient {
         return new DataTourismeClient(
