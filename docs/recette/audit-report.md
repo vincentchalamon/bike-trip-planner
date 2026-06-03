@@ -56,6 +56,7 @@ des passes.
 | LH-PERF-HOME | Landing `/` score Lighthouse Performance **0.65** (< 0.80) | P2 | perf | Confirmé |
 | LH-A11Y-HOME | Landing `/` score Lighthouse Accessibility **0.84** (< 0.90) | P2 | a11y | Confirmé |
 | LH-PERF-AUTH | Pages authentifiées sous seuil perf (`/trips` 0.73, `/trips/new` 0.52) | P2 | perf | Confirmé (empirique) |
+| CHAOS-RESTART | Worker `SIGKILL`/OOM ne redémarre pas malgré `restart: unless-stopped` (interaction `deploy.replicas`) | P2 | quality | Confirmé (empirique) |
 | DT-LIVE | DataTourisme mode live cassé : scoped client sans `base_uri` + endpoint obsolète | P2 | quality | Confirmé |
 | F5 | APIs externes flaky : **Overpass `429`/timeout** -> POI/alertes dégradés | P2 | perf | Confirmé |
 | QUAL-001 | Aucun seuil de couverture PHPUnit (`fail-under`) | P2 | quality | Confirmé |
@@ -72,7 +73,7 @@ des passes.
 | COV-PROV | Couverture provisioner (xdebug absent) -> mesurée 84,9 % | ~~P3~~ | quality | **Corrigé (PR #615)** |
 | RGPD-MAGIC | `magic_link` non purgés à la suppression de compte (7 rows, dont 2 valides) | P3 | privacy | Confirmé (empirique) |
 
-**Total : 1×P0, 3×P1 actifs (+1 corrigé : F2 ; F4 requalifié faux finding), 15×P2 actifs (+2 corrigés :
+**Total : 1×P0, 3×P1 actifs (+1 corrigé : F2 ; F4 requalifié faux finding), 17×P2 actifs (+2 corrigés :
 QUAL-004, CI-UNIT), 6×P3 actifs (+1 corrigé : COV-PROV).** Le « aucun P0 » d'une première lecture
 est **caduc** : F1 casse la création de trip en prod par défaut. **IDOR-DETAIL** (P1) est le finding sécurité
 majeur de la passe empirique R4.
@@ -277,9 +278,10 @@ les routes éditeur.
 
 #### Conformités performance vérifiées
 
-+ **N+1 Doctrine (statique)** : `TripCollectionProvider` (`leftJoin('t.stages')+addSelect` +
-  `Paginator(fetchJoinCollection: true)`) ; `DoctrineTripRequestRepository::storeStages` bulk DELETE + flush
-  unique ; updates JSONB par étape atomiques sans charger l'agrégat. Profiling runtime seedé = à exécuter.
++ **N+1 Doctrine — aucun, confirmé empiriquement** (cf. section R5) : `TripCollectionProvider`
+  (`leftJoin('t.stages')+addSelect` + `Paginator(fetchJoinCollection: true)`) ;
+  `DoctrineTripRequestRepository::storeStages` bulk DELETE + flush unique ; updates JSONB par étape atomiques.
+  Comptage SQL réel : `/detail` 3 requêtes (plat avec le nb de stages), `/trips` 4 requêtes (constant).
 + **Caches** : OSM 24h, météo 3h (ADR-022), points bruts/décimés 30 min.
 + **Async** : `FetchWeatherHandler` (cache->batch uncached->calcul), `OsmScanner::queryBatch` (Overpass
   concurrent), `ScanAccommodationsHandler` (multiplexage HTTP 2 vagues, SPARQL Wikidata batch).
@@ -476,19 +478,68 @@ $ for p in / /login /privacy; do curl -skD - -o /dev/null -H 'Accept: text/html'
 
 ---
 
+## R5 — perf runtime, responsive & résilience (empirique)
+
+### Analyse de bundle (`next build` prod)
+
+~6,5 Mo de chunks au total ; **maplibre-gl ~1,1 Mo** = dépendance dominante. Le chunk maplibre **n'est PAS dans
+`rootMainFiles`** (les 8 chunks chargés sur toutes les pages) et n'est référencé que par les routes carte
+(`/trips/new`...). Il est donc **route-splitté à l'éditeur**, absent de la landing/login/pages publiques ->
+**confirme l'atténuation de PERF-001** (maplibre hors du chemin critique public). Le lazy-load de `MapPanel`
+(reco PERF-001) allégerait encore le 1er paint de l'éditeur (LH-PERF-AUTH `/trips/new` = 0.52).
+
+### N+1 Doctrine — aucun (PostgreSQL `log_statement=all`, workers en pause)
+
+```text
+GET /trips/{id}/detail (3 stages) : 3 requêtes
+  SELECT ... FROM "user" WHERE ... (provider JWT)
+  SELECT ... FROM trip WHERE id = ?
+  SELECT ... FROM stage WHERE trip_id = ?     <- une seule, tous les stages
+GET /trips (collection) : 4 requêtes
+  SELECT ... FROM "user" ...
+  SELECT COUNT(DISTINCT t0_.id) FROM trip WHERE user_id = ?
+  SELECT DISTINCT id_0, MIN(...) ...          <- fenêtre d'ids (Paginator)
+  SELECT t0_.* ... (hydrate + join stages)    <- fetchJoinCollection
+```
+
+Aucune requête par-ligne : le `/detail` est **plat** avec le nombre de stages, la collection **constante** avec le
+nombre de trips. Conformité N+1 confirmée.
+
+### Multi-device / responsive — aucun overflow
+
+Matrice **90 checks** : 5 pages publiques (`/`, `/login`, `/faq`, `/legal`, `/privacy`) × 3 viewports
+(375 / 768 / 1440) × thèmes clair+sombre × **Chromium + Firefox + WebKit** -> **0 overflow horizontal, 0 erreur**
+(`document.scrollWidth <= clientWidth` partout). L'éditeur authentifié (`/trips/new`, panneaux + carte) reste un
+check responsive ciblé à part (cf. « Reste à exécuter »).
+
+### Chaos / résilience workers
+
++ **Durabilité — confirmée** : workers stoppés -> trip créé -> **0 stage** + **9 messages en attente** dans le
+  stream Redis `messages` (non perdus) -> redémarrage -> stages calculés, transport `failed` = **0**. Aucun message
+  perdu malgré l'absence de consommateur.
++ **CHAOS-RESTART (P2)** : un worker tué (`SIGKILL`, signal **137** = celui de l'OOM-killer) **ne redémarre pas**
+  malgré `restart: unless-stopped` (resté `Exited(137)` > 2 min sur 2 essais ; seul `docker start` manuel le
+  récupère). Cause probable : interaction `deploy.replicas: 2` + `restart` en Compose v2. Couplé au cap
+  **512 Mo/worker** (`deploy.resources.limits`), un worker OOM reste mort -> débit dégradé, voire pipeline en pause
+  si les deux tombent (les messages restent durables mais non traités). **Reco :** valider/forcer le redémarrage
+  sous réplicas (politique de restart effective ou superviseur basé healthcheck) + revoir le budget mémoire worker ;
+  à confirmer sur l'orchestrateur de prod (Coolify).
+
+---
+
 ## Reste à exécuter (empirique — recette ultérieure / Sprint 35.3+)
 
 Items non bloquants pour la publication de ce rapport, à exercer sur stack seedée (certains bridés par la machine
 d'audit : conteneur pwa cappé, OOM `tsc`/`vitest`) :
 
-> Faits en R4 (passe empirique) : matrice 401/403 inter-utilisateurs (-> IDOR-DETAIL), purge RGPD DB/Redis
-> (-> RGPD-MAGIC), root-cause F4 (-> faux finding), stack-trace réelle (422/415/404/500), **XSS** (0 sink, popup
-> portail React), **Lighthouse authentifié** (-> LH-PERF-AUTH). Restent (-> R5, en attente d'aval) :
+> Faits empiriquement : **R4** — matrice 401/403 (-> IDOR-DETAIL), purge RGPD DB/Redis (-> RGPD-MAGIC), F4
+> (-> faux finding), stack-trace (422/415/404/500), XSS (0 sink), Lighthouse authentifié (-> LH-PERF-AUTH) ;
+> **R5** — bundle (maplibre route-split), N+1 (aucun), multi-device 90 checks (0 overflow), chaos (durabilité OK
+> plus le finding CHAOS-RESTART). Restent (marginaux) :
 
 | Sujet | Pourquoi pas encore fait | Où |
 |---|---|---|
-| N+1 Doctrine profilé au runtime | profiler/logger sur endpoints seedés | iso-prod recette |
-| Analyse de bundle / code-splitting | `next build` (OOM local) | CI / machine dédiée |
+| Responsive éditeur authentifié (`/trips/new`, panneaux + carte) | overflow check authed | iso-prod recette |
 | axe runtime + nav clavier pages authentifiées | stack dev seedée + Playwright | dev seedé |
-| Matrice multi-device (viewports × navigateurs × thèmes × langues) | Playwright lourd (OOM local) | CI / machine dédiée |
-| Chaos (kill/pause worker, coupure réseau -> retry/backoff, reconnexion SSE) | orchestration dédiée | machine dédiée (R5, en attente d'aval) |
+| Reconnexion SSE Mercure sur coupure réseau (navigateur) | EventSource live + `tc netem`/disconnect | navigateur piloté |
+| XSS chat — payload runtime (complément au static 0-sink) | trip calculé + chat Ollama | iso-prod recette |
