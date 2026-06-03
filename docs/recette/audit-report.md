@@ -355,3 +355,23 @@ Un abonné **anonyme** au topic privé `/trips/{id}` ne reçoit **aucune donnée
 Les updates `private: true` ne sont délivrés qu'aux abonnés porteurs d'un JWT subscriber scopé (`subscriber_jwt`,
 Caddyfile) ; le `anonymous` du hub autorise la connexion mais pas la lecture des topics privés. Le finding v1
 « isolation Mercure à confirmer » est donc **levé**.
+
+### Couverture de tests — chiffrée
+
+Mesurée sur la stack **dev** (xdebug présent, clés JWT régénérées via `make jwt-keypair-test`,
+`JWT_PASSPHRASE=test` forcé par `phpunit.dist.xml` -> plus aucune `JWTEncodeFailureException`).
+
++ **API PHPUnit : 1310 tests OK** (3819 assertions, 1 skip). Couverture **statements 71,8 %** (6769/9432),
+  méthodes 58,5 % (561/959) -> **sous le seuil 80 %** (clover `api/coverage/api/clover.xml`) -> finding
+  **`COV-API`** (P2). Le mismatch passphrase/clés du rapport v1 est corrigé : la couverture s'exécute désormais.
++ **Provisioner** : couverture **non mesurable** (le conteneur `provisioner` n'embarque pas de driver xdebug ->
+  `make coverage-ci` échoue sur cette jambe avec *« No code coverage driver available »*). Finding **`COV-PROV`**
+  (P3) : aligner l'image provisioner sur l'API pour la couverture, ou exclure explicitement cette jambe.
++ **Front Vitest : non exécuté en CI** (`ci.yml` ne lance que `npm run test:ts`, jamais `vitest`) -> finding
+  **`CI-UNIT`** (P2) : les tests unitaires front existent mais ne sont vérifiés par aucun pipeline. Localement la
+  mesure est bloquée (conteneur `pwa` plafonné à 512 Mo -> OOM-kill, provider `@vitest/coverage-v8` absent,
+  volume `node_modules` désynchronisé -> `jsdom` `MODULE_NOT_FOUND`). Couverture front **non chiffrable en l'état**.
+
+> Suite QA complète : source de vérité = la CI de #614 (**21/21 checks verts** : PHP-CS-Fixer, Rector, PHPStan L9,
+> ESLint, Prettier, TS, Markdownlint, OpenAPI lint, Hadolint, i18n, PHPUnit api+provisioner, Playwright, BDD recette,
+> APK). Non rejouée localement (OOM `tsc`/`rector` connus, cf. mémoire CI).
