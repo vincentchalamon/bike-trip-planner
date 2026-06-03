@@ -100,9 +100,14 @@ describe("MagicLinkForm", () => {
     });
 
     // Tick past the cooldown — a chained setTimeout fires once per second.
-    await act(async () => {
-      vi.advanceTimersByTime(2500);
-    });
+    // The cooldown chains a fresh 1s setTimeout from an effect on each tick, so
+    // drive it one second at a time — each act() flushes the commit + passive
+    // effect that schedules the next timeout before we advance again.
+    for (let i = 0; i < 3; i++) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+    }
 
     expect(
       screen.getByTestId("magic-link-sent").getAttribute("data-substate"),
@@ -125,9 +130,14 @@ describe("MagicLinkForm", () => {
     expect(requestMagicLink).toHaveBeenCalledTimes(1);
 
     // Tick past the cooldown so the resend button becomes enabled.
-    await act(async () => {
-      vi.advanceTimersByTime(2500);
-    });
+    // The cooldown chains a fresh 1s setTimeout from an effect on each tick, so
+    // drive it one second at a time — each act() flushes the commit + passive
+    // effect that schedules the next timeout before we advance again.
+    for (let i = 0; i < 3; i++) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+    }
 
     const resendButton = screen.getByTestId("magic-link-resend");
     expect(resendButton).toBeEnabled();
