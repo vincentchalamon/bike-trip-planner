@@ -317,3 +317,25 @@ $ for p in / /login /privacy; do curl -skD - -o /dev/null -H 'Accept: text/html'
 | Purge DB post-suppression compte | pas de user seedé | iso-prod seedé |
 | axe runtime + nav clavier pages authentifiées | stack dev + Playwright | dev seedé (Sprint 35.3) |
 | Confirmation empirique isolation Mercure | publish + subscribe anonyme | iso-prod seedé |
+
+---
+
+## Recette v2 — résultats d'exécution (stack iso-prod rebâtie + golden path réel)
+
+> Exécution sur `make start-recette` (iso-prod `APP_ENV=prod` + Mailcatcher + Ollama), images rebâties
+> depuis `main` (fix DataTourisme #613 inclus). Golden path réel : compte via `app:create-user` →
+> magic-link Mailcatcher → JWT → trips Komoot (dont « Entre Sensée et Escaut », zone Lille).
+
+### DataTourisme — modes dégradé & live
+
++ **Mode dégradé (clé absente ou `DATATOURISME_ENABLED=false`) : OK.** Avec `ENABLED=true` et clé **vide**
+  (le cas du bug F2), `ScanAccommodations` est « handled successfully », **aucun `TypeError`** : le fix #613
+  (`?string $apiKey` + `isEnabled()` null-safe) dégrade gracieusement (source skippée par les registries).
+  Avant le fix, ce cas crashait en boucle de retry.
++ **Mode live (clé valide + `ENABLED=true`) : CASSÉ — finding `DT-LIVE` (P2, feature OFF par défaut).** La clé
+  est valide (`GET https://api.datatourisme.fr/v1/catalog` → 200), mais deux défauts : **(1)** le scoped client
+  `datatourisme.client` (`api/config/packages/framework.php:81`) a un `scope` (regex SSRF) **sans `base_uri`**
+  (contrairement à komoot/strava/overpass) → `request('/api/v1/places')` (path relatif) échoue *« Invalid URL:
+  scheme is missing »*, tous les appels renvoient un résultat vide ; **(2)** endpoint obsolète `/api/v1/places`
+  → **404** alors que l'API v1 actuelle expose `/v1/catalog` et `/v1/placeOfInterest` (→ 200). **Fix 35.4** :
+  ajouter `base_uri: https://api.datatourisme.fr` au scoped client + migrer endpoints/format vers l'API v1.
