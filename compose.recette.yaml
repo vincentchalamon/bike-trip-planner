@@ -11,23 +11,28 @@
 # (see `make start-recette`), same pattern as the CI playwright job. Valhalla (re-routing)
 # stays opt-in via `--profile routing` + a regional OSM extract (`make provision`).
 
+# Shared env for php/worker/worker-llm — extension field + YAML merge key to avoid
+# duplicating the block across the three services (review #612).
+x-recette-env: &recette-env
+  MAILER_DSN: smtp://mailcatcher:1025
+  # Workaround for a recette finding: compose.yaml (prod) omits LOCK_DSN, so it
+  # falls back to api/.env's redis://localhost:6379 (unreachable from the container,
+  # redis is the `redis` service) -> trip creation 500s. Fix belongs in compose.yaml (35.4).
+  LOCK_DSN: redis://redis:6379
+  OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+  OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+  OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+  OLLAMA_ENABLED: "1"
+  # Single small model for all LLM roles to keep the local recette light
+  # (chat default is 3b, analysis/overview default to 8b — overridden here).
+  OLLAMA_DIALOGUE_MODEL: "${OLLAMA_DIALOGUE_MODEL:-llama3.2:3b}"
+  OLLAMA_STAGE_MODEL: "${OLLAMA_STAGE_MODEL:-llama3.2:3b}"
+  OLLAMA_OVERVIEW_MODEL: "${OLLAMA_OVERVIEW_MODEL:-llama3.2:3b}"
+
 services:
   php:
     environment:
-      MAILER_DSN: smtp://mailcatcher:1025
-      # Workaround for a recette finding: compose.yaml (prod) omits LOCK_DSN, so it
-      # falls back to api/.env's redis://localhost:6379 (unreachable from the container,
-      # redis is the `redis` service) -> trip creation 500s. Fix belongs in compose.yaml (35.4).
-      LOCK_DSN: redis://redis:6379
-      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_ENABLED: "1"
-      # Single small model for all LLM roles to keep the local recette light
-      # (chat default is 3b, analysis/overview default to 8b — overridden here).
-      OLLAMA_DIALOGUE_MODEL: "${OLLAMA_DIALOGUE_MODEL:-llama3.2:3b}"
-      OLLAMA_STAGE_MODEL: "${OLLAMA_STAGE_MODEL:-llama3.2:3b}"
-      OLLAMA_OVERVIEW_MODEL: "${OLLAMA_OVERVIEW_MODEL:-llama3.2:3b}"
+      <<: *recette-env
     depends_on:
       ollama:
         condition: service_healthy
@@ -35,20 +40,7 @@ services:
 
   worker:
     environment:
-      MAILER_DSN: smtp://mailcatcher:1025
-      # Workaround for a recette finding: compose.yaml (prod) omits LOCK_DSN, so it
-      # falls back to api/.env's redis://localhost:6379 (unreachable from the container,
-      # redis is the `redis` service) -> trip creation 500s. Fix belongs in compose.yaml (35.4).
-      LOCK_DSN: redis://redis:6379
-      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_ENABLED: "1"
-      # Single small model for all LLM roles to keep the local recette light
-      # (chat default is 3b, analysis/overview default to 8b — overridden here).
-      OLLAMA_DIALOGUE_MODEL: "${OLLAMA_DIALOGUE_MODEL:-llama3.2:3b}"
-      OLLAMA_STAGE_MODEL: "${OLLAMA_STAGE_MODEL:-llama3.2:3b}"
-      OLLAMA_OVERVIEW_MODEL: "${OLLAMA_OVERVIEW_MODEL:-llama3.2:3b}"
+      <<: *recette-env
     depends_on:
       ollama:
         condition: service_healthy
@@ -56,20 +48,7 @@ services:
 
   worker-llm:
     environment:
-      MAILER_DSN: smtp://mailcatcher:1025
-      # Workaround for a recette finding: compose.yaml (prod) omits LOCK_DSN, so it
-      # falls back to api/.env's redis://localhost:6379 (unreachable from the container,
-      # redis is the `redis` service) -> trip creation 500s. Fix belongs in compose.yaml (35.4).
-      LOCK_DSN: redis://redis:6379
-      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_ENABLED: "1"
-      # Single small model for all LLM roles to keep the local recette light
-      # (chat default is 3b, analysis/overview default to 8b — overridden here).
-      OLLAMA_DIALOGUE_MODEL: "${OLLAMA_DIALOGUE_MODEL:-llama3.2:3b}"
-      OLLAMA_STAGE_MODEL: "${OLLAMA_STAGE_MODEL:-llama3.2:3b}"
-      OLLAMA_OVERVIEW_MODEL: "${OLLAMA_OVERVIEW_MODEL:-llama3.2:3b}"
+      <<: *recette-env
     depends_on:
       ollama:
         condition: service_healthy
