@@ -10,7 +10,7 @@
       ],
       "numberOfRuns": 3,
       "settings": {
-        "chromeFlags": "--ignore-certificate-errors --no-sandbox"
+        "chromeFlags": "--ignore-certificate-errors --allow-insecure-localhost --no-sandbox"
       }
     },
     "assert": {

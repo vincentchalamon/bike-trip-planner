@@ -1,10 +1,11 @@
 .DEFAULT_GOAL := help
 .PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision provision-update coverage coverage-ci migration migrate db-create fixtures
 
-# Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
-# explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
-# overrides never leak into a production invocation.
-export COMPOSE_FILE ?= compose.yaml:compose.dev.yaml
+# Dev loads the iso-prod base + the shared Ollama service + dev overrides
+# automatically. Prod targets pass an explicit `-f compose.yaml`, which takes
+# precedence over COMPOSE_FILE, so the dev/ollama layers never leak into prod.
+# (The `ollama-init` model-pull job stays behind its profile, so dev never pulls.)
+export COMPOSE_FILE ?= compose.yaml:compose.ollama.yaml:compose.dev.yaml
 
 help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -30,6 +31,11 @@ start: start-prod ## Alias for start-prod
 
 start-prod: ensure-default-pbf ## Start the Docker environment (Detached) in production mode
 	@docker compose -f compose.yaml up --wait
+
+start-recette: ensure-default-pbf ## Boot iso-prod + Mailcatcher + Ollama (compose.ollama.yaml) for the recette. Re-routing needs `make provision` + `--profile routing`.
+	@mkdir -p .docker/jwt-recette
+	@(test -f .docker/jwt-recette/private.pem && test -f .docker/jwt-recette/public.pem) || { openssl genpkey -algorithm RSA -out .docker/jwt-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/jwt-recette/private.pem -out .docker/jwt-recette/public.pem -passin pass:recette; }
+	@JWT_PRIVATE_KEY_PATH=$(CURDIR)/.docker/jwt-recette/private.pem JWT_PUBLIC_KEY_PATH=$(CURDIR)/.docker/jwt-recette/public.pem JWT_PASSPHRASE=recette OLLAMA_PULL_MODELS="$${OLLAMA_PULL_MODELS:-llama3.2:3b}" docker compose -f compose.yaml -f compose.recette.yaml -f compose.ollama.yaml --profile ollama-init up --wait
 
 stop: ## Stop the Docker environment
 	@docker compose stop
@@ -131,7 +137,7 @@ lighthouse: ## Run Lighthouse CI on public pages (requires the prod stack up: ma
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.60.0-noble \
-		/bin/sh -c 'npm ci; npx lhci autorun --config=lighthouserc.json'
+		/bin/sh -c 'npm ci; CHROME_PATH=$$(node -e "process.stdout.write(require(\"playwright\").chromium.executablePath())") npx lhci autorun --config=lighthouserc.json'
 
 visual-test: ## Run visual-regression assertions (requires prod stack + committed baselines)
 	@docker run --network host \
@@ -148,6 +154,9 @@ visual-update: ## (Re)generate visual-regression baselines in the container (req
 		--rm --ipc=host \
 		mcr.microsoft.com/playwright:v1.60.0-noble \
 		/bin/sh -c 'npm ci; npx playwright test --config playwright.visual.config.ts --update-snapshots'
+
+jwt-keypair-test: ## (Re)generate JWT keys matching the test passphrase (run before coverage/test-php locally)
+	@docker compose exec php sh -c 'openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test'
 
 coverage: ## Run PHPUnit with coverage (HTML report)
 	@docker compose exec -e XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-html coverage/api
