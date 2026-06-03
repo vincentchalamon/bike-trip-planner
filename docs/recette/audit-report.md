@@ -45,7 +45,7 @@ L'audit a été conduit sur deux boots locaux successifs de la stack (port 80/44
 | F2 | `DataTourismeClient` `TypeError` si clé absente/vide (défaut prod) → **`ScanAccommodations`/`ScanEvents` crashent** | **P1** | log worker `Argument #5 ($apiKey) must be of type string, null given` | **corrigé : PR #613** |
 | F3 | Intégration **Ollama prod absente de `compose.yaml`** + divergence ADR-028 (health hors `$required` → mode dégradé silencieux contraire à l'ADR « hard dependency ») | P1 | `grep OLLAMA compose.yaml`=∅ ; `HealthController::$required` sans ollama | **outillé : `compose.ollama.yaml` (PR #612)** ; aligner ADR-028 |
 | F4 | **Rate-limit `/auth/request-link` inopérant** : 6× même email → `202`, aucun `429` | P1 | boucle curl | investiguer le storage du limiter (prod `read_only`) |
-| F6 | APIs externes flaky : **Overpass `429`/timeout** → POI/alertes dégradés | P2 | logs worker `429 Too Many Requests` | tiers ; cache + retry |
+| F5 | APIs externes flaky : **Overpass `429`/timeout** → POI/alertes dégradés | P2 | logs worker `429 Too Many Requests` | tiers ; cache + retry |
 
 ### Corrections aux findings v1
 
@@ -92,7 +92,7 @@ Lighthouse (scores), axe runtime authed, **couverture chiffrée** (PHPUnit/Vites
 | I18N-001 | Pas de handler `onError` sur `NextIntlClientProvider` | P3 | i18n | Confirmé |
 | QUAL-003 | Dette de suppressions statiques (7 `@phpstan-ignore`, 5 front) | P3 | quality | Confirmé |
 
-**16 findings confirmés** : 1×P1, 8×P2, 7×P3. Aucun P0.
+**16 findings v1 confirmés** : 1×P1, 8×P2, 7×P3. **À compléter par la Recette v2 ci-dessus** : **1×P0 (F1 `LOCK_DSN`)**, 3×P1 (F2–F4), 1×P2 (F5) + corrections. Le « aucun P0 » initial est **caduc**.
 
 ---
 
