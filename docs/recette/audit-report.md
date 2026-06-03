@@ -30,6 +30,47 @@ L'audit a été conduit sur deux boots locaux successifs de la stack (port 80/44
 
 ---
 
+## Recette v2 — exécution sur iso-prod fidèle (mise à jour)
+
+> 2e passe sur une stack iso-prod **rebâtie depuis le code courant** (l'image `:ci` initiale
+> était périmée et masquait des régressions), avec **Mailcatcher + Ollama** (outillage PR #612)
+> et un **golden path authentifié réel** (compte via `app:create-user`, magic-link, liens Komoot
+> dont « Entre Sensée et Escaut » en zone Lille). Cette section corrige et complète la v1.
+
+### Nouveaux findings (prouvés empiriquement)
+
+| ID | Titre | Sévérité | Preuve | Suite |
+|---|---|---|---|---|
+| F1 | `LOCK_DSN` absent de `compose.yaml` → fallback `redis://localhost` injoignable → **création de trip 500 en prod** | **P0** | `LockAcquiringException: Redis connection refused` sur `POST /trips` (OK après override) | fix 35.4 : ajouter `LOCK_DSN` à `compose.yaml` |
+| F2 | `DataTourismeClient` `TypeError` si clé absente/vide (défaut prod) → **`ScanAccommodations`/`ScanEvents` crashent** | **P1** | log worker `Argument #5 ($apiKey) must be of type string, null given` | **corrigé : PR #613** |
+| F3 | Intégration **Ollama prod absente de `compose.yaml`** + divergence ADR-028 (health hors `$required` → mode dégradé silencieux contraire à l'ADR « hard dependency ») | P1 | `grep OLLAMA compose.yaml`=∅ ; `HealthController::$required` sans ollama | **outillé : `compose.ollama.yaml` (PR #612)** ; aligner ADR-028 |
+| F4 | **Rate-limit `/auth/request-link` inopérant** : 6× même email → `202`, aucun `429` | P1 | boucle curl | investiguer le storage du limiter (prod `read_only`) |
+| F6 | APIs externes flaky : **Overpass `429`/timeout** → POI/alertes dégradés | P2 | logs worker `429 Too Many Requests` | tiers ; cache + retry |
+
+### Corrections aux findings v1
+
++ **SEO-001 (P1) — confirmé empiriquement** : la page de partage `/s/kETacKMK` rend `<title>Planificateur de voyage vélo</title>` (titre global) + meta description générique, **aucun `og:`/`twitter:`** → aperçu social cassé prouvé sur un trip réellement partagé.
++ **QUAL-004 (Lighthouse) — corrigé (PR #612)** : cause = `chrome-launcher` ne trouve pas Chrome dans l'image Playwright **et** aucun job CI ne lançait lhci. Fix : `CHROME_PATH` + workflow manuel `lighthouse.yml`. Scores réels à collecter sur la stack recette.
++ **Couverture — cause corrigée** : pas « clés JWT `test` non provisionnées » mais un **mismatch passphrase/clés** (le CI régénère + force `JWT_PASSPHRASE=test`). Fix : `JWT_PASSPHRASE` forcé dans `phpunit.dist.xml` + cible `make jwt-keypair-test` (PR #612).
++ **SEC-003 — à nuancer** : `X-Frame-Options: deny` et `X-Content-Type-Options: nosniff` sont **présents sur les réponses API Platform** mais **absents des pages HTML PWA** (la surface clickjacking). Le finding ne vaut que pour la PWA.
++ **Stack-trace prod — conformité confirmée empiriquement** : de vrais `500` (lock) et `415` (mauvais content-type) renvoient un `problem+json` propre, **sans trace ni nom de classe** exposés.
++ **Faux positif écarté** : un crash `HealthController` (`RateLimiterFactory` injecté pour `$mercureClient`) au 1er boot venait d'un **cache prod périmé dans le volume `php_var`** réutilisé entre boots — **pas** un bug de `main` (résolu en recréant le volume). Ne PAS reporter.
+
+### Conformités confirmées
+
++ **Golden path** : le trip « Entre Sensée et Escaut » (Komoot, zone Lille) est **calculé** (stages, distance 70,2 km, dénivelé) — fetch source + pacing OK.
++ **Auth réelle** : magic-link via Mailcatcher → JWT (`/auth/verify` en `application/ld+json`) → création de trip authentifiée → partage.
+
+### Révision du verdict « aucun P0 »
+
+Caduc : **F1 (`LOCK_DSN`) est un P0** (création de trip cassée en prod par défaut).
+
+### Reste à exécuter (recette stable ultérieure, outillage prêt PR #612)
+
+Lighthouse (scores), axe runtime authed, **couverture chiffrée** (PHPUnit/Vitest via stack dev + `make jwt-keypair-test`), N+1 profilé, **isolation Mercure empirique**, **purge RGPD en DB**, XSS payload, analyse de bundle, multi-device, chaos (worker/réseau).
+
+---
+
 ## Synthèse des findings
 
 | ID | Titre | Sévérité | Label | Statut |
