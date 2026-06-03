@@ -43,7 +43,7 @@ des passes.
 | F1 | `LOCK_DSN` absent de `compose.yaml` -> fallback `redis://localhost` injoignable -> **création de trip 500 en prod** | **P0** | quality | Confirmé |
 | IDOR-DETAIL | `GET /trips/{id}/detail` sans autorisation objet -> **lecture du trip d'autrui** (IDOR authentifié) | **P1** | security | Confirmé (empirique) |
 | SEO-001 | Pages de partage `/s/[code]` sans `generateMetadata` (aperçu social cassé) | P1 | seo | Confirmé |
-| F3 | Intégration **Ollama prod absente de `compose.yaml`** + divergence ADR-028 (mode dégradé silencieux) | P1 | quality | Confirmé |
+| F3 | Ollama prod : wiring `OLLAMA_*` manquant dans `compose.yaml` + arbitrage hard-dep/dégradé (ADR-028) | P1 | quality | **En cours : #616 (wiring/ADR/réseau) + #304 (gating dégradé)** |
 | F2 | `DataTourismeClient` `TypeError` si clé absente/vide -> `ScanAccommodations`/`ScanEvents` crashent | ~~P1~~ | quality | **Corrigé (PR #613)** |
 | F4 | Rate-limit `/auth/request-link` « sans 429 » : 6× -> `202` | ~~P1~~ | security | **Faux finding** (202 par design anti-énumération ; limiter actif, e-mails supprimés) |
 | SEC-001 | Pas de Content-Security-Policy sur les réponses HTML | P2 | security | Confirmé |
@@ -98,13 +98,32 @@ LockAcquiringException: Failed to acquire the "..." lock — Redis connection re
 **Reco (35.4) :** ajouter `LOCK_DSN: redis://redis:6379` à `compose.yaml`. (Contourné en recette via
 `compose.recette.yaml` pour débloquer le golden path.)
 
-#### F3 — Intégration Ollama prod absente + divergence ADR-028 — P1
+#### F3 — Intégration Ollama prod : wiring manquant + arbitrage hard-dep/dégradé — P1
 
-`grep OLLAMA compose.yaml` = ∅ : le tier IA (analyse d'étapes, overview, chat) n'a aucune définition dans la
-stack iso-prod. De plus `HealthController::$required` n'inclut pas Ollama -> health vert même IA absente, un
-**mode dégradé silencieux** contraire à l'ADR-028 (« hard dependency »).
-**Reco (35.4) :** versionner Ollama en prod (`compose.ollama.yaml` livré PR #612 sert de base) ; aligner ADR-028
-(soit Ollama dans `$required`, soit acter le mode dégradé dans l'ADR).
+Deux constats distincts :
+
+1. **Wiring prod absent** : `grep OLLAMA compose.yaml` = ∅ -> les workers prod n'avaient **aucune** variable
+   `OLLAMA_*`, donc `OLLAMA_ENABLED` à `false` par défaut -> **IA OFF en prod**. (La présence d'Ollama lui-même
+   dans une stack séparée — `compose.ollama.yaml`, #612/#566 — est **voulue** : ressource lourde dimensionnée à
+   part. Ce n'était donc pas « Ollama absent » mais « l'app ne sait pas le joindre ».)
+2. **Divergence ADR-028** : `HealthController::$required` n'inclut pas Ollama (health vert même IA down) alors
+   qu'ADR-028 affirmait « hard dependency ». **Mais** 2 tests épinglent délibérément ce comportement
+   (`readinessReturns200WhenOllamaIsDown`) -> le **code + tests implémentent le mode dégradé**, pas le hard-dep.
+
+**Décision (audit 35.2) : mode dégradé-OK** — l'app doit fonctionner sans IA. Cela **réverse** le hard-dep
+Sprint-29 (#375) ; l'objection « dégradé silencieux » est levée en rendant la dégradation **explicite**.
+
+**Correctifs :**
+
++ **PR #616** : wiring `OLLAMA_*` + `OLLAMA_ENABLED=1` dans `compose.yaml` (dev force 0, recette 1) ; Ollama
+  reste **hors** du `$required` readiness ; **ADR-028** réécrit (« Decision Update - Degraded Mode », supersède
+  le hard-dep) ; **ADR-027** annoté.
++ **Topologie réseau (ADR-028)** : la stack Ollama **possède** le réseau `bike-trip-planner-llm` ; l'app le
+  **rejoint** en `external` (le consommateur rejoint le fournisseur ; seuls php/worker/worker-llm s'y attachent ;
+  DB/Redis hors de portée d'Ollama). À câbler au déploiement prod (overlay `external`).
++ **#304 (rouvert)** : feature dédiée — dégradation gracieuse API (skip + logs `critical`) + gating front des
+  features IA (génération depuis IA, chat, analyse) + signal capabilities. Couvre les **3 états** (IA activée /
+  désactivée / activée-mais-indispo), à valider en recette + 35.3.
 
 #### F4 — Rate-limit « sans 429 » — Faux finding (comportement par design)
 
