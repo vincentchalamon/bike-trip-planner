@@ -45,10 +45,13 @@ RECETTE_JWT=$($CURL -X POST "$BASE_URL/auth/verify" -H 'Content-Type: applicatio
 [ -n "$RECETTE_JWT" ] || { echo "ERROR: /auth/verify did not return a JWT" >&2; exit 1; }
 
 create_trip() { # url start end maxDistancePerDay [ebike]
-  $CURL -X POST "$BASE_URL/trips" \
+  local id
+  id=$($CURL -f -X POST "$BASE_URL/trips" \
     -H "Authorization: Bearer $RECETTE_JWT" -H 'Content-Type: application/ld+json' \
     -d "{\"sourceUrl\":\"$1\",\"startDate\":\"$2\",\"endDate\":\"$3\",\"maxDistancePerDay\":$4,\"ebikeMode\":${5:-false}}" \
-    | json 'd=json.load(sys.stdin);print(d.get("id",""))'
+    | json 'd=json.load(sys.stdin);print(d.get("id",""))')
+  [ -n "$id" ] || { echo "ERROR: /trips returned no id for $1" >&2; exit 1; }
+  echo "$id"
 }
 
 echo "==> Creating trips from the provided Komoot links"
