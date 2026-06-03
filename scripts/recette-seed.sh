@@ -26,7 +26,7 @@ echo "==> Ensuring user $RECETTE_EMAIL (app:create-user, idempotent)"
 $COMPOSE exec -T php bin/console app:create-user "$RECETTE_EMAIL" --locale="$LOCALE" || true
 
 echo "==> Requesting a fresh magic link"
-$CURL -X POST "$BASE_URL/auth/request-link" -H 'Content-Type: application/json' \
+$CURL -X POST "$BASE_URL/auth/request-link" -H 'Content-Type: application/ld+json' \
   -d "{\"email\":\"$RECETTE_EMAIL\"}" >/dev/null
 
 echo "==> Reading magic link from Mailcatcher"
@@ -37,13 +37,13 @@ TOKEN=$($CURL "$MAILCATCHER_URL/messages/$MSG_ID.html" | grep -oE 'auth/verify/[
 [ -n "$TOKEN" ] || { echo "ERROR: no /auth/verify token in mail $MSG_ID" >&2; exit 1; }
 
 echo "==> Verifying token -> JWT"
-RECETTE_JWT=$($CURL -X POST "$BASE_URL/auth/verify" -H 'Content-Type: application/json' \
+RECETTE_JWT=$($CURL -X POST "$BASE_URL/auth/verify" -H 'Content-Type: application/ld+json' \
   -d "{\"token\":\"$TOKEN\"}" | json 'print(json.load(sys.stdin)["token"])')
 [ -n "$RECETTE_JWT" ] || { echo "ERROR: /auth/verify did not return a JWT" >&2; exit 1; }
 
 create_trip() { # url start end maxDistancePerDay [ebike]
-  $CURL -X POST "$BASE_URL/trips.json" \
-    -H "Authorization: Bearer $RECETTE_JWT" -H 'Content-Type: application/json' \
+  $CURL -X POST "$BASE_URL/trips" \
+    -H "Authorization: Bearer $RECETTE_JWT" -H 'Content-Type: application/ld+json' \
     -d "{\"sourceUrl\":\"$1\",\"startDate\":\"$2\",\"endDate\":\"$3\",\"maxDistancePerDay\":$4,\"ebikeMode\":${5:-false}}" \
     | json 'd=json.load(sys.stdin);print(d.get("id",""))'
 }
