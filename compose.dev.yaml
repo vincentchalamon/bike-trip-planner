@@ -8,7 +8,8 @@
 # Dev keeps the prod topology (FrankenPHP edge: reverse proxy + embedded Mercure
 # + PHP app); it only swaps the build target to frankenphp_dev (Xdebug, file
 # watcher), bind-mounts the source, relaxes read_only/secrets, and adds the
-# dev-only mailcatcher and ollama services.
+# dev-only mailcatcher service. The `ollama` service lives in compose.ollama.yaml
+# (single source of truth) and is layered in via COMPOSE_FILE for dev too.
 
 services:
   php:
@@ -148,30 +149,6 @@ services:
       retries: 3
       start_period: 10s
 
-  ollama:
-    # Pinned by digest (same as compose.recette.yaml) for reproducibility.
-    image: ollama/ollama@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
-    restart: unless-stopped
-    expose:
-      - 11434
-    environment:
-      # Beta profile (issue #563): right-size for Oracle ARM (24GB/4c, <10 users).
-      # One resident model at a time, two parallel slots for chat <-> analysis
-      # coexistence, 5m keep_alive so models unload at rest (~0GB idle, ~2.3GB
-      # during a 3B analysis). Cold-start (~3-8s) is invisible behind async phase 2.
-      OLLAMA_MAX_LOADED_MODELS: "1"
-      OLLAMA_NUM_PARALLEL: "2"
-      OLLAMA_KEEP_ALIVE: "5m"
-    volumes:
-      - ollama-data:/root/.ollama
-    healthcheck:
-      # /api/tags is the lightest endpoint exposed by Ollama (lists local models).
-      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
   # Dev provisioner: build the `dev` target with the working tree mounted, so
   # `make provision` and the provisioner QA targets run against live code
   # (the prod base bakes the sources into the image instead).
@@ -183,7 +160,6 @@ services:
       - ./provisioner:/app
 
 volumes:
-  ollama-data: ~
   # Dev-only: the pwa source mounts live in this file's pwa override.
   pwa_node_modules: ~
   pwa_next: ~
