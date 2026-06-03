@@ -33,7 +33,7 @@ echo "==> Reading magic link from Mailcatcher"
 sleep 2
 MSG_ID=$($CURL "$MAILCATCHER_URL/messages" | json 'm=json.load(sys.stdin);print(m[-1]["id"] if m else "")')
 [ -n "$MSG_ID" ] || { echo "ERROR: no mail captured in Mailcatcher" >&2; exit 1; }
-TOKEN=$($CURL "$MAILCATCHER_URL/messages/$MSG_ID.html" | grep -oE 'auth/verify/[A-Za-z0-9]+' | head -1 | sed 's#auth/verify/##')
+TOKEN=$($CURL "$MAILCATCHER_URL/messages/$MSG_ID.html" | grep -oE 'auth/verify/[A-Za-z0-9_-]+' | head -1 | sed 's#auth/verify/##')
 [ -n "$TOKEN" ] || { echo "ERROR: no /auth/verify token in mail $MSG_ID" >&2; exit 1; }
 
 echo "==> Verifying token -> JWT"
