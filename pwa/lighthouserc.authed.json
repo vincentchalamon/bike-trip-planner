@@ -1,0 +1,20 @@
+{
+  "ci": {
+    "collect": {
+      "url": ["https://localhost/trips", "https://localhost/trips/new"],
+      "numberOfRuns": 3,
+      "settings": {
+        "chromeFlags": "--ignore-certificate-errors --allow-insecure-localhost --no-sandbox",
+        "extraHeaders": { "Cookie": "__RECETTE_COOKIE__" }
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["warn", { "minScore": 0.8 }],
+        "categories:accessibility": ["warn", { "minScore": 0.9 }],
+        "categories:best-practices": ["warn", { "minScore": 0.9 }],
+        "categories:seo": "off"
+      }
+    }
+  }
+}
