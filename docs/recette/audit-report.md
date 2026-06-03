@@ -56,7 +56,7 @@ des passes.
 | LH-PERF-HOME | Landing `/` score Lighthouse Performance **0.65** (< 0.80) | P2 | perf | Confirmé |
 | LH-A11Y-HOME | Landing `/` score Lighthouse Accessibility **0.84** (< 0.90) | P2 | a11y | Confirmé |
 | LH-PERF-AUTH | Pages authentifiées sous seuil perf (`/trips` 0.73, `/trips/new` 0.52) | P2 | perf | Confirmé (empirique) |
-| CHAOS-RESTART | Worker `SIGKILL`/OOM ne redémarre pas malgré `restart: unless-stopped` (interaction `deploy.replicas`) | P2 | quality | Confirmé (empirique) |
+| CHAOS-RESTART | Worker `SIGKILL`/OOM lent/peu fiable à redémarrer (resté down > 2 min en test ; cause à confirmer) | P3 | quality | À confirmer |
 | DT-LIVE | DataTourisme mode live cassé : scoped client sans `base_uri` + endpoint obsolète | P2 | quality | Confirmé |
 | F5 | APIs externes flaky : **Overpass `429`/timeout** -> POI/alertes dégradés | P2 | perf | Confirmé |
 | QUAL-001 | Aucun seuil de couverture PHPUnit (`fail-under`) | P2 | quality | Confirmé |
@@ -73,10 +73,10 @@ des passes.
 | COV-PROV | Couverture provisioner (xdebug absent) -> mesurée 84,9 % | ~~P3~~ | quality | **Corrigé (PR #615)** |
 | RGPD-MAGIC | `magic_link` non purgés à la suppression de compte (7 rows, dont 2 valides) | P3 | privacy | Confirmé (empirique) |
 
-**Total : 1×P0, 3×P1 actifs (+1 corrigé : F2 ; F4 requalifié faux finding), 17×P2 actifs (+2 corrigés :
-QUAL-004, CI-UNIT), 6×P3 actifs (+1 corrigé : COV-PROV).** Le « aucun P0 » d'une première lecture
-est **caduc** : F1 casse la création de trip en prod par défaut. **IDOR-DETAIL** (P1) est le finding sécurité
-majeur de la passe empirique R4.
+**Total : 1×P0, 3×P1 actifs (+1 corrigé : F2 ; F4 requalifié faux finding), 16×P2 actifs (+2 corrigés :
+QUAL-004, CI-UNIT), 6×P3 actifs (+1 corrigé : COV-PROV) + 1×P3 à confirmer (CHAOS-RESTART).** Le « aucun P0 »
+d'une première lecture est **caduc** : F1 casse la création de trip en prod par défaut. **IDOR-DETAIL** (P1) est le
+finding sécurité majeur de la passe empirique R4.
 
 ---
 
@@ -215,16 +215,20 @@ voyage, étapes calculées : géométrie, météo, POI, hébergements). Preuve e
 
 ```text
 # A crée le trip 019e8dca-... ; B = autre compte
-GET /trips/019e8dca-.../detail  (B, non-proprio)  -> HTTP 200 + {"title":"Entre Sensée et Escaut","sourceUrl":...}
-GET /trips/019e8dca-.../detail  (anonyme)         -> HTTP 401
-PATCH/DELETE /trips/019e8dca-... (B)              -> HTTP 403   (TRIP_EDIT appliqué)
-GET /trips (collection, B)                        -> 0 item     (collection owner-scopée)
+GET /trips/019e8dca-.../detail        (B, non-proprio) -> HTTP 200 + {"title":"Entre Sensée et Escaut",...}
+GET /trips/019e8dca-.../detail        (anonyme)        -> HTTP 401
+GET /trips/019e8dca-.../chat-history  (B, non-proprio) -> HTTP 403   <- correctement protégé
+PATCH/DELETE /trips/019e8dca-...      (B)              -> HTTP 403   (TRIP_EDIT appliqué)
+GET /trips (collection, B)                             -> 0 item     (collection owner-scopée)
 ```
 
-L'écriture et la collection sont donc bien protégées ; **seule la lecture `/detail` fuit**. Cela **réfute** la
-conformité v1 « IDOR couvert par TripVoter » : `TRIP_EDIT` l'est, `TRIP_VIEW` ne l'est pas sur `/detail`.
-**Reco (35.4) :** ajouter `security: "is_granted('TRIP_VIEW', object)"` sur l'opération `Get` `/detail` (ou enforcer
-l'ownership dans `TripDetailProvider`). Atténuations : pas d'IDOR en écriture, UUIDv7 non trivialement énumérable.
+L'écriture, la collection **et le chat** sont bien protégés ; **seule la lecture `/detail` fuit**. Ce n'est donc
+**pas systémique** : le pattern correct existe déjà dans le code — `GET /trips/{id}/chat-history` (#459,
+`TripChatMessageResource:56`) déclare `security: "is_granted('TRIP_VIEW', request.attributes.get('id'))"` (B -> 403
+vérifié). `/detail` est le **seul** endpoint de lecture trip à l'omettre. Cela **réfute** la conformité v1 « IDOR
+couvert par TripVoter » uniquement pour `/detail`.
+**Reco (35.4) :** copier l'expression `security` du chat-history sur l'opération `Get` `/detail`
+(`ApiResource/TripDetail.php`). Atténuations : pas d'IDOR en écriture, UUIDv7 non trivialement énumérable.
 
 #### Conformités sécurité vérifiées
 
@@ -240,7 +244,7 @@ l'ownership dans `TripDetailProvider`). Atténuations : pas d'IDOR en écriture,
 + **Auth 401 + autorisation objet en écriture** : endpoints protégés -> `401` non authentifié (vérifié sur
   `/trips/{id}/detail`) ; la **collection `/trips` est owner-scopée** (un autre user voit 0 trip) et
   **`PATCH`/`DELETE` d'un trip d'autrui -> `403`** (`TripVoter` `TRIP_EDIT`). **Exception : IDOR-DETAIL** en
-  lecture (cf. ci-dessous) — `TRIP_VIEW` n'est PAS appliqué sur `/detail`.
+  lecture (cf. finding ci-dessus) — `TRIP_VIEW` n'est PAS appliqué sur `/detail`.
 + **Stack-trace prod — confirmé empiriquement** : une **vraie `422`** (validation `startDate`), un `415`
   (mauvais content-type), un `404` et un `500` (lock F1) renvoient un `problem+json` RFC7807 propre (titre
   générique « An error occurred »), **sans trace, classe ni fichier** exposés ; `/_profiler` -> 404,
@@ -502,8 +506,10 @@ GET /trips (collection) : 4 requêtes
   SELECT t0_.* ... (hydrate + join stages)    <- fetchJoinCollection
 ```
 
-Aucune requête par-ligne : le `/detail` est **plat** avec le nombre de stages, la collection **constante** avec le
-nombre de trips. Conformité N+1 confirmée.
+Aucune requête par-ligne : le `/detail` est **plat** avec le nombre de stages (1 SELECT pour les 3 stages). Pour la
+collection (mesurée ici avec 1 trip), le **nombre de requêtes est O(1) par construction** — le triptyque
+count + fenêtre d'ids + hydrate-join est la signature `fetchJoinCollection`, indépendante du nombre de trips.
+Conformité N+1 confirmée (un re-test à N trips le confirmerait quantitativement).
 
 ### Multi-device / responsive — aucun overflow
 
@@ -517,13 +523,15 @@ check responsive ciblé à part (cf. « Reste à exécuter »).
 + **Durabilité — confirmée** : workers stoppés -> trip créé -> **0 stage** + **9 messages en attente** dans le
   stream Redis `messages` (non perdus) -> redémarrage -> stages calculés, transport `failed` = **0**. Aucun message
   perdu malgré l'absence de consommateur.
-+ **CHAOS-RESTART (P2)** : un worker tué (`SIGKILL`, signal **137** = celui de l'OOM-killer) **ne redémarre pas**
-  malgré `restart: unless-stopped` (resté `Exited(137)` > 2 min sur 2 essais ; seul `docker start` manuel le
-  récupère). Cause probable : interaction `deploy.replicas: 2` + `restart` en Compose v2. Couplé au cap
-  **512 Mo/worker** (`deploy.resources.limits`), un worker OOM reste mort -> débit dégradé, voire pipeline en pause
-  si les deux tombent (les messages restent durables mais non traités). **Reco :** valider/forcer le redémarrage
-  sous réplicas (politique de restart effective ou superviseur basé healthcheck) + revoir le budget mémoire worker ;
-  à confirmer sur l'orchestrateur de prod (Coolify).
++ **CHAOS-RESTART (P3 — à confirmer)** : après `docker kill` (`SIGKILL`, signal **137** = celui de l'OOM-killer),
+  un worker est resté `Exited(137)` **> 2 min** (sur 2 essais) au lieu de redémarrer vite. **Mais** `docker inspect`
+  donne `RestartCount=1` (Policy `unless-stopped`) : la politique **a bien fini par s'appliquer** — ce n'est donc
+  pas un « jamais de redémarrage ». La mesure est **confondue** par mes kills répétés (backoff Docker croissant)
+  et l'environnement local. L'attribution à l'interaction `deploy.replicas` reste **non prouvée**. Le risque
+  théorique demeure : workers cappés à **512 Mo** (`deploy.resources.limits`), donc OOM plausible ; un redémarrage
+  lent/peu fiable dégraderait le débit (messages durables, non perdus, mais traités en retard).
+  **Reco :** retester proprement en isolé (un seul kill, backoff réinitialisé) **sur l'orchestrateur de prod
+  (Coolify)**, et vérifier que la politique de restart est effective sous réplicas avant de statuer.
 
 ---
 
