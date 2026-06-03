@@ -56,6 +56,10 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
+      # Symfony Lock store. Without this, framework.lock falls back to api/.env's
+      # redis://localhost:6379 (unreachable from the container) -> trip creation
+      # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
+      LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
@@ -142,6 +146,10 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
+      # Symfony Lock store. Without this, framework.lock falls back to api/.env's
+      # redis://localhost:6379 (unreachable from the container) -> trip creation
+      # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
+      LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
@@ -214,6 +222,10 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
+      # Symfony Lock store. Without this, framework.lock falls back to api/.env's
+      # redis://localhost:6379 (unreachable from the container) -> trip creation
+      # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
+      LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
