@@ -31,11 +31,10 @@ start: start-prod ## Alias for start-prod
 start-prod: ensure-default-pbf ## Start the Docker environment (Detached) in production mode
 	@docker compose -f compose.yaml up --wait
 
-start-recette: ensure-default-pbf ## Boot iso-prod + Mailcatcher + Ollama for the recette (manual audit). Re-routing needs `make provision` + `--profile routing`.
+start-recette: ensure-default-pbf ## Boot iso-prod + Mailcatcher + Ollama (compose.ollama.yaml) for the recette. Re-routing needs `make provision` + `--profile routing`.
 	@mkdir -p .docker/jwt-recette
 	@test -f .docker/jwt-recette/private.pem || { openssl genpkey -algorithm RSA -out .docker/jwt-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/jwt-recette/private.pem -out .docker/jwt-recette/public.pem -passin pass:recette; }
-	@JWT_PRIVATE_KEY_PATH=$(CURDIR)/.docker/jwt-recette/private.pem JWT_PUBLIC_KEY_PATH=$(CURDIR)/.docker/jwt-recette/public.pem JWT_PASSPHRASE=recette docker compose -f compose.yaml -f compose.recette.yaml up --wait
-	@docker compose -f compose.yaml -f compose.recette.yaml exec -T ollama ollama pull $${RECETTE_OLLAMA_MODEL:-llama3.2:3b}
+	@JWT_PRIVATE_KEY_PATH=$(CURDIR)/.docker/jwt-recette/private.pem JWT_PUBLIC_KEY_PATH=$(CURDIR)/.docker/jwt-recette/public.pem JWT_PASSPHRASE=recette OLLAMA_PULL_MODELS="$${OLLAMA_PULL_MODELS:-llama3.2:3b}" docker compose -f compose.yaml -f compose.recette.yaml -f compose.ollama.yaml up --wait
 
 stop: ## Stop the Docker environment
 	@docker compose stop

@@ -1,0 +1,55 @@
+# Ollama inference — deployed as a SEPARATE resource (ADR-028 + #566), NOT part of
+# the main iso-prod stack (compose.yaml). Versioned here so the production LLM tier is
+# reproducible and validated by the recette, instead of living only in Coolify env vars.
+#
+# Prod (Coolify): deploy this file as its own resource on the shared network; the app
+#   workers reach it via OLLAMA_BASE_URL=http://ollama:11434. Models are pulled at deploy
+#   time by the one-shot `ollama-init` job (ADR-028). Size OLLAMA_PULL_MODELS to the tier
+#   (default: dialogue 3b + analysis 8b; resource-constrained operators use 1b/8b-q4_K_M).
+# Recette (local): docker compose -f compose.yaml -f compose.recette.yaml -f compose.ollama.yaml up --wait
+#   (see `make start-recette`); OLLAMA_PULL_MODELS is narrowed to llama3.2:3b to stay light.
+
+services:
+  ollama:
+    # Pinned by digest (matches compose.dev.yaml / compose.recette.yaml).
+    image: ollama/ollama@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
+    restart: unless-stopped
+    expose:
+      - 11434
+    # Beta profile sizing (#566 / ADR-019): one resident model, two parallel slots,
+    # 5m keep-alive. ~2.3 GB during a 3B analysis; 8B-q4 needs more headroom.
+    deploy:
+      resources:
+        limits:
+          memory: ${OLLAMA_MEMORY_LIMIT:-6G}
+    environment:
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: "2"
+      OLLAMA_KEEP_ALIVE: "5m"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # One-shot model pull at deploy time (ADR-028: "models pulled at deploy via a one-shot
+  # init job; the volume persists the blobs across restarts"). Exits 0 once models are present.
+  ollama-init:
+    image: ollama/ollama@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
+    restart: "no"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_PULL_MODELS: "${OLLAMA_PULL_MODELS:-llama3.2:3b llama3.1:8b}"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - 'for m in $$OLLAMA_PULL_MODELS; do echo "pulling $$m"; ollama pull "$$m"; done'
+
+volumes:
+  ollama-data: ~

@@ -2,8 +2,8 @@
 #
 # Keeps the prod topology untouched (APP_ENV=prod, read_only, JWT secrets) and ONLY:
 #   - adds a Mailcatcher service (capture magic-link emails for the real auth flow),
-#   - adds an Ollama service + OLLAMA_ENABLED=1 (exercise the AI chat/enrichment and
-#     its XSS surface, absent from the iso-prod compose where inference is external).
+#   - sets OLLAMA_ENABLED=1 + OLLAMA_* URLs so the workers use the Ollama service from
+#     compose.ollama.yaml (load it too) to exercise the AI tier, absent from iso-prod.
 #
 # Load EXPLICITLY (never auto-loaded): docker compose -f compose.yaml -f compose.recette.yaml ...
 # Named compose.recette.yaml (not compose.override.yaml) to avoid implicit auto-load.
@@ -91,24 +91,6 @@ services:
       retries: 3
       start_period: 10s
 
-  ollama:
-    # Pinned by digest for reproducibility (Ollama ships frequent inference-API changes).
-    image: ollama/ollama@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
-    restart: unless-stopped
-    expose:
-      - 11434
-    environment:
-      OLLAMA_MAX_LOADED_MODELS: "1"
-      OLLAMA_NUM_PARALLEL: "2"
-      OLLAMA_KEEP_ALIVE: "5m"
-    volumes:
-      - ollama-data:/root/.ollama
-    healthcheck:
-      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
-volumes:
-  ollama-data: ~
+# The `ollama` service (+ ollama-data volume) lives in compose.ollama.yaml so the prod
+# LLM tier is versioned and validated by the recette. Load all three:
+#   docker compose -f compose.yaml -f compose.recette.yaml -f compose.ollama.yaml up --wait
