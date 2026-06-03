@@ -20,8 +20,10 @@ x-recette-env: &recette-env
   # redis is the `redis` service) -> trip creation 500s. Fix belongs in compose.yaml (35.4).
   LOCK_DSN: redis://redis:6379
   OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-  OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-  OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+  # Flat defaults (no nested interpolation): robust across Compose versions and
+  # unambiguous. Recette never overrides OLLAMA_BASE_URL alone, so no fallback is lost.
+  OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-http://ollama:11434}"
+  OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-http://ollama:11434}"
   OLLAMA_ENABLED: "1"
   # Single small model for all LLM roles to keep the local recette light
   # (chat default is 3b, analysis/overview default to 8b — overridden here).
