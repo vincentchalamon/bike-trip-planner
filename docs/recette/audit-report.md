@@ -41,10 +41,11 @@ des passes.
 | ID | Titre | Sévérité | Label | Statut |
 |---|---|---|---|---|
 | F1 | `LOCK_DSN` absent de `compose.yaml` -> fallback `redis://localhost` injoignable -> **création de trip 500 en prod** | **P0** | quality | Confirmé |
+| IDOR-DETAIL | `GET /trips/{id}/detail` sans autorisation objet -> **lecture du trip d'autrui** (IDOR authentifié) | **P1** | security | Confirmé (empirique) |
 | SEO-001 | Pages de partage `/s/[code]` sans `generateMetadata` (aperçu social cassé) | P1 | seo | Confirmé |
 | F3 | Intégration **Ollama prod absente de `compose.yaml`** + divergence ADR-028 (mode dégradé silencieux) | P1 | quality | Confirmé |
-| F4 | **Rate-limit `/auth/request-link` inopérant** : 6× même email -> `202`, aucun `429` | P1 | security | Confirmé |
 | F2 | `DataTourismeClient` `TypeError` si clé absente/vide -> `ScanAccommodations`/`ScanEvents` crashent | ~~P1~~ | quality | **Corrigé (PR #613)** |
+| F4 | Rate-limit `/auth/request-link` « sans 429 » : 6× -> `202` | ~~P1~~ | security | **Faux finding** (202 par design anti-énumération ; limiter actif, e-mails supprimés) |
 | SEC-001 | Pas de Content-Security-Policy sur les réponses HTML | P2 | security | Confirmé |
 | SEC-002 | Pas de Strict-Transport-Security (HSTS) | P2 | security | Confirmé |
 | SEC-003 | Pas de X-Frame-Options ni X-Content-Type-Options sur les pages PWA | P2 | security | Confirmé |
@@ -68,10 +69,12 @@ des passes.
 | I18N-001 | Pas de handler `onError` sur `NextIntlClientProvider` | P3 | i18n | Confirmé |
 | QUAL-003 | Dette de suppressions statiques (7 `@phpstan-ignore`, 5 front) | P3 | quality | Confirmé |
 | COV-PROV | Couverture provisioner (xdebug absent) -> mesurée 84,9 % | ~~P3~~ | quality | **Corrigé (PR #615)** |
+| RGPD-MAGIC | `magic_link` non purgés à la suppression de compte (7 rows, dont 2 valides) | P3 | privacy | Confirmé (empirique) |
 
-**Total : 1×P0, 3×P1 actifs (+1 corrigé : F2), 15×P2 actifs (+2 corrigés : QUAL-004, CI-UNIT), 5×P3 actifs
-(+1 corrigé : COV-PROV).** Le « aucun P0 » d'une première lecture
-est **caduc** : F1 casse la création de trip en prod par défaut.
+**Total : 1×P0, 3×P1 actifs (+1 corrigé : F2 ; F4 requalifié faux finding), 15×P2 actifs (+2 corrigés :
+QUAL-004, CI-UNIT), 6×P3 actifs (+1 corrigé : COV-PROV).** Le « aucun P0 » d'une première lecture
+est **caduc** : F1 casse la création de trip en prod par défaut. **IDOR-DETAIL** (P1) est le finding sécurité
+majeur de la passe empirique R4.
 
 ---
 
@@ -101,19 +104,21 @@ stack iso-prod. De plus `HealthController::$required` n'inclut pas Ollama -> hea
 **Reco (35.4) :** versionner Ollama en prod (`compose.ollama.yaml` livré PR #612 sert de base) ; aligner ADR-028
 (soit Ollama dans `$required`, soit acter le mode dégradé dans l'ADR).
 
-#### F4 — Rate-limit `/auth/request-link` inopérant — P1
+#### F4 — Rate-limit « sans 429 » — Faux finding (comportement par design)
 
-6 requêtes successives sur le même email renvoient toutes `202`, **aucun `429`** :
+6 requêtes successives renvoient toutes `202` (aucun `429`). **Ce n'est pas un bug** : `AuthRequestLinkProcessor`
+(l.30 *« Always returns the same neutral message to prevent user enumeration »*, l.62 *« Apply rate limiters --
+silently deny if exceeded »*) consomme bien les limiters (`isAccepted()`) puis renvoie **toujours** un `202` neutre,
+qu'il envoie l'e-mail ou non. L'absence de `429` est **anti-énumération volontaire**, pas un limiter cassé.
 
-```text
-$ for i in $(seq 1 6); do curl -sk -o /dev/null -w "%{http_code} " -X POST https://localhost/auth/request-link \
-    -H 'Content-Type: application/ld+json' -d '{"email":"flood@example.com"}'; done
-202 202 202 202 202 202
-```
+Preuve empirique du limiter actif : sur une rafale de `request-link` au-delà du quota IP (`magic_link_ip` 10/900s),
+**aucun e-mail n'arrive dans Mailcatcher** alors que tous renvoient `202` (l'e-mail d'invitation `app:create-user`,
+lui, est bien délivré -> le mailer fonctionne). Le limiter supprime donc silencieusement les envois.
 
-Les limiters sont pourtant configurés (`magic_link_email` 3/900s, cf. conformités Ordre 1). Piste : le storage du
-limiter en prod `read_only` (filesystem/cache) n'est pas writable, le limiter no-op silencieusement.
-**Reco (35.4) :** investiguer le storage du limiter sous `read_only` (Redis plutôt que cache filesystem).
+> Note : le pool `cache.rate_limiter` n'est pas défini dans `cache.php` (il retombe sur le cache applicatif
+> filesystem, écrit dans le volume `php_var` -> writable malgré `read_only`). L'hypothèse v1 « storage read-only »
+> est donc fausse. **Aucune action requise** ; éventuellement migrer le pool limiter sur Redis pour le partage
+> inter-réplicas (durcissement mineur, hors finding).
 
 #### DT-LIVE — DataTourisme mode live cassé — P2 (feature OFF par défaut)
 
@@ -196,17 +201,44 @@ x-powered-by: Next.js
 
 Fingerprinting du framework (facilite le ciblage de CVE). **Reco :** `poweredByHeader: false` dans `next.config`.
 
+#### IDOR-DETAIL — `GET /trips/{id}/detail` sans autorisation objet — P1
+
+`GET /trips/{id}/detail` n'applique **aucun contrôle d'ownership** : `TripDetailProvider::provide()`
+(`api/src/State/TripDetailProvider.php`) charge le trip par id et le renvoie tel quel — seul un `404` est levé s'il
+n'existe pas ; aucun `is_granted`, aucune comparaison au user courant. L'opération `Get` (`ApiResource/TripDetail.php`,
+`uriTemplate: /trips/{id}/detail`) ne déclare **pas de `security`**. Seul le firewall global impose l'authentification.
+
+Conséquence : **tout utilisateur authentifié lit le trip d'un autre** via son UUID (titre, `sourceUrl`, dates de
+voyage, étapes calculées : géométrie, météo, POI, hébergements). Preuve empirique (deux comptes distincts) :
+
+```text
+# A crée le trip 019e8dca-... ; B = autre compte
+GET /trips/019e8dca-.../detail  (B, non-proprio)  -> HTTP 200 + {"title":"Entre Sensée et Escaut","sourceUrl":...}
+GET /trips/019e8dca-.../detail  (anonyme)         -> HTTP 401
+PATCH/DELETE /trips/019e8dca-... (B)              -> HTTP 403   (TRIP_EDIT appliqué)
+GET /trips (collection, B)                        -> 0 item     (collection owner-scopée)
+```
+
+L'écriture et la collection sont donc bien protégées ; **seule la lecture `/detail` fuit**. Cela **réfute** la
+conformité v1 « IDOR couvert par TripVoter » : `TRIP_EDIT` l'est, `TRIP_VIEW` ne l'est pas sur `/detail`.
+**Reco (35.4) :** ajouter `security: "is_granted('TRIP_VIEW', object)"` sur l'opération `Get` `/detail` (ou enforcer
+l'ownership dans `TripDetailProvider`). Atténuations : pas d'IDOR en écriture, UUIDv7 non trivialement énumérable.
+
 #### Conformités sécurité vérifiées
 
-+ **Rate limiting (config)** : `magic_link_email` (3/900s), `magic_link_ip` (10/900s), `access_request_ip`
-  (3/3600s) — `rate_limiter.php` + appliqués dans `AuthRequestLinkProcessor` / `AccessRequestCreateProcessor`.
-  **Mais inopérant au runtime prod (cf. F4).**
++ **Rate limiting — actif (empirique)** : `magic_link_email` (3/900s), `magic_link_ip` (10/900s),
+  `access_request_ip` (3/3600s) — `rate_limiter.php`, consommés dans `AuthRequestLinkProcessor` /
+  `AccessRequestCreateProcessor`. La rafale ne renvoie pas de `429` (anti-énumération, cf. F4 requalifié) mais
+  **supprime bien les e-mails** au-delà du quota.
 + **XSS (statique)** : aucun `dangerouslySetInnerHTML` dans `pwa/src` (React échappe par défaut). Test payload
   sur champ éditable = à exécuter (cf. « Reste à exécuter »).
-+ **Auth 401 / IDOR** : `/trips` et endpoints protégés renvoient `401 JWT Token not found` non authentifié ;
-  IDOR couvert par `TripVoter` (`is_granted('TRIP_VIEW'/'TRIP_EDIT', object)`).
-+ **Stack-trace prod — confirmé empiriquement** : de vrais `500` (lock F1) et `415` (mauvais content-type)
-  renvoient un `problem+json` propre, **sans trace ni nom de classe** exposés ; `/_profiler` -> 404,
++ **Auth 401 + autorisation objet en écriture** : endpoints protégés -> `401` non authentifié (vérifié sur
+  `/trips/{id}/detail`) ; la **collection `/trips` est owner-scopée** (un autre user voit 0 trip) et
+  **`PATCH`/`DELETE` d'un trip d'autrui -> `403`** (`TripVoter` `TRIP_EDIT`). **Exception : IDOR-DETAIL** en
+  lecture (cf. ci-dessous) — `TRIP_VIEW` n'est PAS appliqué sur `/detail`.
++ **Stack-trace prod — confirmé empiriquement** : une **vraie `422`** (validation `startDate`), un `415`
+  (mauvais content-type), un `404` et un `500` (lock F1) renvoient un `problem+json` RFC7807 propre (titre
+  générique « An error occurred »), **sans trace, classe ni fichier** exposés ; `/_profiler` -> 404,
   `web_profiler` désactivé en prod.
 + **Isolation Mercure — confirmée empiriquement** : un abonné **anonyme** au topic privé `/trips/{id}` ne reçoit
   **aucune donnée** (seulement le heartbeat SSE `:`). Les updates `private: true` (`TripUpdatePublisher`) ne sont
@@ -393,7 +425,7 @@ Volume faible et justifié, mais à tracer comme dette.
 
 ### Privacy / anonymisation (Ordre 7)
 
-Aucune non-conformité. Conformités vérifiées :
+Une non-conformité mineure (RGPD-MAGIC, P3). Conformités vérifiées :
 
 + **Page `/privacy`** complète : responsable, base légale, finalités, données, rétention, droits, sous-traitants,
   analytics, contact. Plausible auto-hébergé, cookieless, sans PII vers tiers.
@@ -407,9 +439,23 @@ $ for p in / /login /privacy; do curl -skD - -o /dev/null -H 'Accept: text/html'
 /: none   /login: none   /privacy: none
 ```
 
-+ **Purge user (RGPD)** : `DELETE /users/me` -> `AccountDeleteProcessor` : transaction, cascade FK
-  (trips/stages/chat/shares), révocation des refresh tokens, anonymisation de l'email — irréversible, immédiat,
-  pas de cron (décision projet). Vérification DB/Redis après suppression = à exécuter (cf. ci-dessous).
++ **Purge user (RGPD) — confirmée empiriquement** : `DELETE /users/me` -> `204`. Sur un compte réel
+  (18 trips / 60 stages / 1 share / 7 refresh_token) :
+
+```text
+# avant: trips=18 stages=60 shares=1 refresh=7 ; email=recette@example.com
+DELETE /users/me -> 204
+# après: trips=0 stages=0 shares=0 refresh=0
+#        email=deleted-019e8c49-...@deleted.invalid  deleted_at=2026-06-03 13:57:10
+# Redis: 0 occurrence de l'email, 0 clé citant l'uid
+```
+
+  Cascade FK + révocation des refresh tokens + anonymisation irréversible de l'email confirmées ; pas de PII
+  résiduelle en base ni en Redis. Pas de cron (décision projet).
++ **RGPD-MAGIC (P3) — non-conformité** : la suppression **ne purge pas** la table `magic_link` (7 rows subsistent
+  pour le compte supprimé, dont **2 encore valides**). Le user ayant `deleted_at` posé, l'auth doit les rejeter
+  (hygiène plutôt qu'exploitation), mais c'est une purge incomplète. **Reco :** supprimer les `magic_link` du user
+  dans `AccountDeleteProcessor`.
 
 ---
 
@@ -418,14 +464,15 @@ $ for p in / /login /privacy; do curl -skD - -o /dev/null -H 'Accept: text/html'
 Items non bloquants pour la publication de ce rapport, à exercer sur stack seedée (certains bridés par la machine
 d'audit : conteneur pwa cappé, OOM `tsc`/`vitest`) :
 
+> Faits en R4 (passe empirique) : matrice 401/403 inter-utilisateurs (-> IDOR-DETAIL), purge RGPD DB/Redis
+> (-> RGPD-MAGIC), root-cause F4 (-> faux finding), stack-trace réelle (422/415/404/500). Restent :
+
 | Sujet | Pourquoi pas encore fait | Où |
 |---|---|---|
-| Matrice 403 inter-utilisateurs | second compte seedé requis | iso-prod recette |
-| XSS payload sur champ éditable d'un trip réel | nécessite trip seedé + inspection DOM rendu | iso-prod recette |
-| Purge RGPD vérifiée en DB/Redis/logs | requêtes SQL + `redis-cli KEYS` post-`DELETE /users/me` | iso-prod recette |
-| F4 rate-limit : root-cause du storage sous `read_only` | investigation infra | iso-prod recette |
+| XSS payload sur champ éditable (chat IA / note) | nécessite trip calculé + chat Ollama actif | iso-prod recette |
+| Lighthouse pages authentifiées (`make lighthouse-authed`) | nécessite un cookie `refresh_token` frais (limiter IP saturé en fin de passe) | iso-prod recette |
 | N+1 Doctrine profilé au runtime | profiler/logger sur endpoints seedés | iso-prod recette |
 | Analyse de bundle / code-splitting | `next build` (OOM local) | CI / machine dédiée |
 | axe runtime + nav clavier pages authentifiées | stack dev seedée + Playwright | dev seedé |
 | Matrice multi-device (viewports × navigateurs × thèmes × langues) | Playwright lourd (OOM local) | CI / machine dédiée |
-| Chaos (kill/pause worker, coupure réseau -> retry/backoff, reconnexion SSE) | orchestration dédiée | machine dédiée |
+| Chaos (kill/pause worker, coupure réseau -> retry/backoff, reconnexion SSE) | orchestration dédiée | machine dédiée (R5, en attente d'aval) |
