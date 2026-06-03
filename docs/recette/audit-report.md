@@ -440,18 +440,17 @@ $ for p in / /login /privacy; do curl -skD - -o /dev/null -H 'Accept: text/html'
 ```
 
 + **Purge user (RGPD) — confirmée empiriquement** : `DELETE /users/me` -> `204`. Sur un compte réel
-  (18 trips / 60 stages / 1 share / 7 refresh_token) :
+  (18 trips / 60 stages / 1 share / 7 refresh_token), cascade FK + révocation des refresh tokens +
+  anonymisation irréversible de l'email confirmées, sans PII résiduelle en base ni Redis (pas de cron) :
 
-```text
-# avant: trips=18 stages=60 shares=1 refresh=7 ; email=recette@example.com
-DELETE /users/me -> 204
-# après: trips=0 stages=0 shares=0 refresh=0
-#        email=deleted-019e8c49-...@deleted.invalid  deleted_at=2026-06-03 13:57:10
-# Redis: 0 occurrence de l'email, 0 clé citant l'uid
-```
+  ```text
+  # avant: trips=18 stages=60 shares=1 refresh=7 ; email=recette@example.com
+  DELETE /users/me -> 204
+  # après: trips=0 stages=0 shares=0 refresh=0 ; deleted_at posé
+  #        email = deleted-019e8c49-...@deleted.invalid
+  # Redis : 0 occurrence de l'email, 0 clé citant l'uid
+  ```
 
-  Cascade FK + révocation des refresh tokens + anonymisation irréversible de l'email confirmées ; pas de PII
-  résiduelle en base ni en Redis. Pas de cron (décision projet).
 + **RGPD-MAGIC (P3) — non-conformité** : la suppression **ne purge pas** la table `magic_link` (7 rows subsistent
   pour le compte supprimé, dont **2 encore valides**). Le user ayant `deleted_at` posé, l'auth doit les rejeter
   (hygiène plutôt qu'exploitation), mais c'est une purge incomplète. **Reco :** supprimer les `magic_link` du user
