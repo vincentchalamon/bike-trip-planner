@@ -5,6 +5,7 @@ import {
   StageSurfaceBreakdown,
   aggregateBreakdown,
 } from "./StageSurfaceBreakdown";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Stub next-intl to keep the component decoupled from a NextIntlClientProvider
 // in unit tests. Returning the key suffix is enough to assert layout logic.
@@ -57,13 +58,15 @@ describe("StageSurfaceBreakdown", () => {
 
   it("renders one segment per family and percentages sum to 100", () => {
     const { getByTestId, queryByTestId } = render(
-      <StageSurfaceBreakdown
-        breakdown={[
-          { surface: "asphalt", lengthMeters: 6000 },
-          { surface: "gravel", lengthMeters: 3000 },
-          { surface: "sett", lengthMeters: 1000 },
-        ]}
-      />,
+      <TooltipProvider>
+        <StageSurfaceBreakdown
+          breakdown={[
+            { surface: "asphalt", lengthMeters: 6000 },
+            { surface: "gravel", lengthMeters: 3000 },
+            { surface: "sett", lengthMeters: 1000 },
+          ]}
+        />
+      </TooltipProvider>,
     );
 
     const paved = getByTestId("stage-surface-segment-paved");
@@ -81,13 +84,15 @@ describe("StageSurfaceBreakdown", () => {
   it("absorbs rounding error so the bar always sums to 100%", () => {
     // 33.33% / 33.33% / 33.33% — naive rounding gives 33+33+33=99 → dominant slice fixes it.
     const { getByTestId } = render(
-      <StageSurfaceBreakdown
-        breakdown={[
-          { surface: "asphalt", lengthMeters: 1000 },
-          { surface: "gravel", lengthMeters: 1000 },
-          { surface: "sett", lengthMeters: 1000 },
-        ]}
-      />,
+      <TooltipProvider>
+        <StageSurfaceBreakdown
+          breakdown={[
+            { surface: "asphalt", lengthMeters: 1000 },
+            { surface: "gravel", lengthMeters: 1000 },
+            { surface: "sett", lengthMeters: 1000 },
+          ]}
+        />
+      </TooltipProvider>,
     );
     const sum =
       Number(getByTestId("stage-surface-segment-paved").dataset.percent) +
