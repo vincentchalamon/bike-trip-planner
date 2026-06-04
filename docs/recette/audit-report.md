@@ -1,11 +1,13 @@
 # Rapport d'audit non-fonctionnel & qualité — Sprint 35.2
 
-> **Statut : rapport d'audit, AUCUN fix de code applicatif.** Les findings ci-dessous sont destinés à être
-> ouverts en issues GitHub (milestone `Sprint 35.4`, labels `security`/`perf`/`a11y`/`seo`/`i18n`/`quality`/`privacy`
-> et sévérité `P0`-`P3`). La création des issues est différée à validation utilisateur. Seuls l'**outillage de
-> recette** (PR #612) et la **dégradation gracieuse DataTourisme** (PR #613) ont été livrés pendant l'audit.
+> **Statut : rapport d'audit.** Les findings **non corrigés** ci-dessous sont destinés à être ouverts en issues
+> GitHub (milestone `Sprint 35.4`, labels `security`/`perf`/`a11y`/`seo`/`i18n`/`quality`/`privacy` et sévérité
+> `P0`-`P3`). La création des issues est différée à validation utilisateur. Ont été **corrigés pendant/après
+> l'audit** : l'outillage de recette (#612), la dégradation gracieuse DataTourisme (#613), la CI Vitest +
+> couverture (#615), puis les **correctifs critiques** — F1 (P0), IDOR-DETAIL et ENUM-404 (P1 sécurité) + le
+> wiring/réseau Ollama — via #616 et #618. Le reste est différé à Sprint 35.4.
 
-**Date :** 2026-06-03
+**Date :** 2026-06-03 (mis à jour 2026-06-04 : correctifs #616/#618)
 
 **Périmètre :** features livrées sur `main` (sprints 1-33, design S25-27, IA S28-32, S34/34.5),
 hors S18 #313/#314 (abandonnés) et osm-cron nightly (#575).
@@ -40,10 +42,11 @@ des passes.
 
 | ID | Titre | Sévérité | Label | Statut |
 |---|---|---|---|---|
-| F1 | `LOCK_DSN` absent de `compose.yaml` -> fallback `redis://localhost` injoignable -> **création de trip 500 en prod** | **P0** | quality | Confirmé |
-| IDOR-DETAIL | `GET /trips/{id}/detail` sans autorisation objet -> **lecture du trip d'autrui** (IDOR authentifié) | **P1** | security | Confirmé (empirique) |
+| F1 | `LOCK_DSN` absent de `compose.yaml` -> fallback `redis://localhost` injoignable -> **création de trip 500 en prod** | ~~P0~~ | quality | **Corrigé (#616)** |
+| IDOR-DETAIL | `GET /trips/{id}/detail` sans autorisation objet -> **lecture du trip d'autrui** (IDOR authentifié) | ~~P1~~ | security | **Corrigé (#616)** |
+| ENUM-404 | Refus d'autorisation objet -> `403` (vs `404` si inexistant) -> **fuite d'existence** par énumération | ~~P1~~ | security | **Corrigé (#618, ADR-038)** |
 | SEO-001 | Pages de partage `/s/[code]` sans `generateMetadata` (aperçu social cassé) | P1 | seo | Confirmé |
-| F3 | Ollama prod : wiring `OLLAMA_*` manquant dans `compose.yaml` + arbitrage hard-dep/dégradé (ADR-028) | P1 | quality | **En cours : #616 (wiring/ADR/réseau) + #304 (gating dégradé)** |
+| F3 | Ollama prod : wiring `OLLAMA_*` manquant dans `compose.yaml` + arbitrage hard-dep/dégradé (ADR-028) | P1 | quality | **Wiring/ADR/réseau corrigés (#616) ; reste #304 (gating dégradé)** |
 | F2 | `DataTourismeClient` `TypeError` si clé absente/vide -> `ScanAccommodations`/`ScanEvents` crashent | ~~P1~~ | quality | **Corrigé (PR #613)** |
 | F4 | Rate-limit `/auth/request-link` « sans 429 » : 6× -> `202` | ~~P1~~ | security | **Faux finding** (202 par design anti-énumération ; limiter actif, e-mails supprimés) |
 | SEC-001 | Pas de Content-Security-Policy sur les réponses HTML | P2 | security | Confirmé |
@@ -73,10 +76,12 @@ des passes.
 | COV-PROV | Couverture provisioner (xdebug absent) -> mesurée 84,9 % | ~~P3~~ | quality | **Corrigé (PR #615)** |
 | RGPD-MAGIC | `magic_link` non purgés à la suppression de compte (7 rows, dont 2 valides) | P3 | privacy | Confirmé (empirique) |
 
-**Total : 1×P0, 3×P1 actifs (+1 corrigé : F2 ; F4 requalifié faux finding), 16×P2 actifs (+2 corrigés :
-QUAL-004, CI-UNIT), 6×P3 actifs (+1 corrigé : COV-PROV) + 1×P3 à confirmer (CHAOS-RESTART).** Le « aucun P0 »
-d'une première lecture est **caduc** : F1 casse la création de trip en prod par défaut. **IDOR-DETAIL** (P1) est le
-finding sécurité majeur de la passe empirique R4.
+**Total actifs (différés Sprint 35.4) : 1×P1 (SEO-001), 16×P2, 6×P3 + 1×P3 à confirmer (CHAOS-RESTART).**
+**Corrigés pendant/après l'audit : F1 (P0, #616) ; IDOR-DETAIL et ENUM-404 (P1, #616/#618) ; F3 wiring/réseau
+(#616) ; F2 (P1, #613) ; QUAL-004 (#612) ; CI-UNIT + COV-PROV (#615) ; F4 requalifié faux finding.** Le « aucun
+P0 » d'une première lecture était **caduc** (F1 cassait la création de trip en prod) ; F1 et les deux findings
+sécurité majeurs de R4 (IDOR-DETAIL en lecture, ENUM-404 sur l'énumération) sont désormais **corrigés**. Reste le
+suivi #304 (mode dégradé Ollama) pour clore F3 côté produit.
 
 ---
 
@@ -95,8 +100,8 @@ LockAcquiringException: Failed to acquire the "..." lock — Redis connection re
 # POST /trips -> 500 ; OK après override LOCK_DSN=redis://redis:6379
 ```
 
-**Reco (35.4) :** ajouter `LOCK_DSN: redis://redis:6379` à `compose.yaml`. (Contourné en recette via
-`compose.recette.yaml` pour débloquer le golden path.)
+**Corrigé (#616) :** `LOCK_DSN: redis://redis:6379` ajouté à `compose.yaml` (le contournement temporaire de
+`compose.recette.yaml` a été retiré).
 
 #### F3 — Intégration Ollama prod : wiring manquant + arbitrage hard-dep/dégradé — P1
 
@@ -118,9 +123,11 @@ Sprint-29 (#375) ; l'objection « dégradé silencieux » est levée en rendant 
 + **PR #616** : wiring `OLLAMA_*` + `OLLAMA_ENABLED=1` dans `compose.yaml` (dev force 0, recette 1) ; Ollama
   reste **hors** du `$required` readiness ; **ADR-028** réécrit (« Decision Update - Degraded Mode », supersède
   le hard-dep) ; **ADR-027** annoté.
-+ **Topologie réseau (ADR-028)** : la stack Ollama **possède** le réseau `bike-trip-planner-llm` ; l'app le
-  **rejoint** en `external` (le consommateur rejoint le fournisseur ; seuls php/worker/worker-llm s'y attachent ;
-  DB/Redis hors de portée d'Ollama). À câbler au déploiement prod (overlay `external`).
++ **Topologie réseau (ADR-028)** : réseau partagé `bike-trip-planner-llm` **non-external, épinglé par `name`** —
+  la stack Ollama le **possède** et porte l'alias réseau `ollama` ; l'app le **rejoint** par ce nom (seuls
+  php/worker/worker-llm s'y attachent ; DB/Redis hors de portée d'Ollama). `attachable: true` est déclaré **des
+  deux côtés** pour éviter un « network exists with different configuration » selon l'ordre de démarrage. En prod
+  Coolify (projets séparés) le partage se fait par nom ; cf. ADR-028 « Deployment topology » + `docs/deployment.md`.
 + **#304 (rouvert)** : feature dédiée — dégradation gracieuse API (skip + logs `critical`) + gating front des
   features IA (génération depuis IA, chat, analyse) + signal capabilities. Couvre les **3 états** (IA activée /
   désactivée / activée-mais-indispo), à valider en recette + 35.3.
@@ -246,8 +253,23 @@ L'écriture, la collection **et le chat** sont bien protégés ; **seule la lect
 `TripChatMessageResource:56`) déclare `security: "is_granted('TRIP_VIEW', request.attributes.get('id'))"` (B -> 403
 vérifié). `/detail` est le **seul** endpoint de lecture trip à l'omettre. Cela **réfute** la conformité v1 « IDOR
 couvert par TripVoter » uniquement pour `/detail`.
-**Reco (35.4) :** copier l'expression `security` du chat-history sur l'opération `Get` `/detail`
-(`ApiResource/TripDetail.php`). Atténuations : pas d'IDOR en écriture, UUIDv7 non trivialement énumérable.
+**Corrigé (#616) :** l'expression `security: "is_granted('TRIP_VIEW', request.attributes.get('id'))"` du
+chat-history est appliquée à l'opération `Get` `/detail` (`ApiResource/TripDetail.php`). En complément,
+**ENUM-404 (#618, ADR-038)** uniformise tous les refus d'autorisation objet en `404` : le bloc de preuve
+ci-dessus, daté de l'audit, montrait `403` sur chat-history/`PATCH`/`DELETE` -> ces refus renvoient **désormais
+`404`** (un trip d'autrui devient indistinguable d'un trip inexistant).
+
+#### ENUM-404 — Refus d'autorisation objet en `403` -> fuite d'existence — P1 — Corrigé (#618)
+
+Constat (revue adverse de R4) : un refus d'autorisation objet renvoyait `403` alors qu'un trip inexistant renvoie
+`404`. Un attaquant authentifié distinguait donc « existe mais pas à moi » (`403`) de « n'existe pas » (`404`) en
+sondant des UUID — faiblesse d'énumération (OWASP API #1/#3 ; RFC 7231 §6.5.4 autorise explicitement le `404` pour
+masquer une ressource interdite).
+**Corrigé (#618, ADR-038) :** un listener `kernel.exception` (`HideForbiddenAsNotFoundListener`, priorité 2, gated
+sur l'authentification pleine) remplace l'`AccessDeniedException` objet par la même `TripNotFoundException`
+(message fixe, sans id échoé) que les providers lèvent pour un trip absent -> `404` **byte-identique** entre trip
+d'autrui et trip inexistant, sur tous les endpoints (item `GET`/`PATCH`/`DELETE`, `/detail`, chat-history,
+analyze). L'anonyme garde son `401` (entry point) ; un voyage verrouillé qu'on possède garde son `423`.
 
 #### Conformités sécurité vérifiées
 
@@ -260,10 +282,11 @@ couvert par TripVoter » uniquement pour `/detail`.
   `MapView.tsx:570` utilise `popup.setDOMContent(container)` où `container = document.createElement('div')` est
   **rempli par un portail React** -> noms échappés (pas de `setHTML`). Chat IA / texte = enfants React (échappés).
   React échappe donc l'intégralité des surfaces user/externe.
-+ **Auth 401 + autorisation objet en écriture** : endpoints protégés -> `401` non authentifié (vérifié sur
-  `/trips/{id}/detail`) ; la **collection `/trips` est owner-scopée** (un autre user voit 0 trip) et
-  **`PATCH`/`DELETE` d'un trip d'autrui -> `403`** (`TripVoter` `TRIP_EDIT`). **Exception : IDOR-DETAIL** en
-  lecture (cf. finding ci-dessus) — `TRIP_VIEW` n'est PAS appliqué sur `/detail`.
++ **Auth 401 + autorisation objet** : endpoints protégés -> `401` non authentifié ; la **collection `/trips` est
+  owner-scopée** (un autre user voit 0 trip). Au moment de l'audit, `PATCH`/`DELETE`/chat-history d'un trip
+  d'autrui renvoyaient `403` et `/detail` fuyait en `200` (IDOR-DETAIL). **Post-#616/#618 : `/detail` est protégé
+  par `TRIP_VIEW` et tous les refus d'autorisation objet renvoient `404`** (ENUM-404, ADR-038) — lecture comme
+  écriture d'un trip d'autrui indistinguables d'un trip inexistant.
 + **Stack-trace prod — confirmé empiriquement** : une **vraie `422`** (validation `startDate`), un `415`
   (mauvais content-type), un `404` et un `500` (lock F1) renvoient un `problem+json` RFC7807 propre (titre
   générique « An error occurred »), **sans trace, classe ni fichier** exposés ; `/_profiler` -> 404,
