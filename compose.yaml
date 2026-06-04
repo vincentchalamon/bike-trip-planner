@@ -61,10 +61,12 @@ services:
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
       LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
-      # Ollama is a hard runtime dependency in prod (ADR-028, finding F3): the LLM
-      # tier is a SEPARATE resource (compose.ollama.yaml) reached over the shared
-      # `bike-trip-planner-llm` network. Enabled by default here; compose.dev.yaml
-      # forces 0, compose.recette.yaml forces 1.
+      # Ollama (LLM tier) runs as a SEPARATE resource (compose.ollama.yaml, ADR-028).
+      # These vars tell the app where to reach it. dev/recette load both files as one
+      # compose project, so `ollama` resolves directly. A separate-stack prod joins
+      # Ollama's `bike-trip-planner-llm` network (ADR-028 topology, via a deploy
+      # overlay) or sets OLLAMA_BASE_URL to a routable address; unreachable -> degraded
+      # mode (#304), not a 5xx. OLLAMA_ENABLED: dev forces 0, recette/prod 1.
       OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
       OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
       OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
@@ -159,10 +161,12 @@ services:
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
       LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
-      # Ollama is a hard runtime dependency in prod (ADR-028, finding F3): the LLM
-      # tier is a SEPARATE resource (compose.ollama.yaml) reached over the shared
-      # `bike-trip-planner-llm` network. Enabled by default here; compose.dev.yaml
-      # forces 0, compose.recette.yaml forces 1.
+      # Ollama (LLM tier) runs as a SEPARATE resource (compose.ollama.yaml, ADR-028).
+      # These vars tell the app where to reach it. dev/recette load both files as one
+      # compose project, so `ollama` resolves directly. A separate-stack prod joins
+      # Ollama's `bike-trip-planner-llm` network (ADR-028 topology, via a deploy
+      # overlay) or sets OLLAMA_BASE_URL to a routable address; unreachable -> degraded
+      # mode (#304), not a 5xx. OLLAMA_ENABLED: dev forces 0, recette/prod 1.
       OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
       OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
       OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
@@ -243,10 +247,12 @@ services:
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
       LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
-      # Ollama is a hard runtime dependency in prod (ADR-028, finding F3): the LLM
-      # tier is a SEPARATE resource (compose.ollama.yaml) reached over the shared
-      # `bike-trip-planner-llm` network. Enabled by default here; compose.dev.yaml
-      # forces 0, compose.recette.yaml forces 1.
+      # Ollama (LLM tier) runs as a SEPARATE resource (compose.ollama.yaml, ADR-028).
+      # These vars tell the app where to reach it. dev/recette load both files as one
+      # compose project, so `ollama` resolves directly. A separate-stack prod joins
+      # Ollama's `bike-trip-planner-llm` network (ADR-028 topology, via a deploy
+      # overlay) or sets OLLAMA_BASE_URL to a routable address; unreachable -> degraded
+      # mode (#304), not a 5xx. OLLAMA_ENABLED: dev forces 0, recette/prod 1.
       OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
       OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
       OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"

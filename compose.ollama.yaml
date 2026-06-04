@@ -14,6 +14,12 @@ services:
     # Pinned by digest (matches compose.dev.yaml / compose.recette.yaml).
     image: ollama/ollama@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
     restart: unless-stopped
+    # `default` keeps ollama reachable inside a single merged compose project
+    # (dev/recette/CI). `bike-trip-planner-llm` is the shared network the app
+    # stack joins in a separate-stack prod deployment (see ADR-028 + networks below).
+    networks:
+      - default
+      - bike-trip-planner-llm
     expose:
       - 11434
     # Beta profile sizing (#566 / ADR-019): one resident model, two parallel slots,
@@ -53,6 +59,17 @@ services:
       - /bin/sh
       - -c
       - 'for m in $$OLLAMA_PULL_MODELS; do echo "pulling $$m"; ollama pull "$$m"; done'
+
+networks:
+  # This (Ollama) stack OWNS the shared LLM network; the application stack joins
+  # it as `external` in a separate-stack production deployment, so php/worker/
+  # worker-llm can reach `http://ollama:11434` (consumer joins provider — see
+  # ADR-028 "Deployment topology"). `attachable` lets a separately-deployed app
+  # project attach to it. In dev/recette/CI the two compose files load as one
+  # project, so this network is simply created by that project.
+  bike-trip-planner-llm:
+    name: bike-trip-planner-llm
+    attachable: true
 
 volumes:
   ollama-data: ~
