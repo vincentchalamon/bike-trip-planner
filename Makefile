@@ -139,6 +139,16 @@ lighthouse: ## Run Lighthouse CI on public pages (requires the prod stack up: ma
 		mcr.microsoft.com/playwright:v1.60.0-noble \
 		/bin/sh -c 'npm ci; CHROME_PATH=$$(node -e "process.stdout.write(require(\"playwright\").chromium.executablePath())") npx lhci autorun --config=lighthouserc.json'
 
+lighthouse-authed: ## Run Lighthouse on authenticated pages (requires recette stack + RECETTE_COOKIE=refresh_token=...). Collect-only (warnings, no gate).
+	@test -n "$(RECETTE_COOKIE)" || { echo "Set RECETTE_COOKIE=refresh_token=<value> (from scripts/recette-seed.sh)"; exit 1; }
+	@docker run --network host \
+		-w /app -v $(CURDIR)/pwa:/app \
+		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
+		--rm --ipc=host \
+		-e RECETTE_COOKIE="$(RECETTE_COOKIE)" \
+		mcr.microsoft.com/playwright:v1.60.0-noble \
+		/bin/sh -c 'npm ci; sed "s|__RECETTE_COOKIE__|$$RECETTE_COOKIE|" lighthouserc.authed.json > /tmp/lhci-authed.json; CHROME_PATH=$$(node -e "process.stdout.write(require(\"playwright\").chromium.executablePath())") npx lhci autorun --config=/tmp/lhci-authed.json'
+
 visual-test: ## Run visual-regression assertions (requires prod stack + committed baselines)
 	@docker run --network host \
 		-w /app -v $(CURDIR)/pwa:/app \

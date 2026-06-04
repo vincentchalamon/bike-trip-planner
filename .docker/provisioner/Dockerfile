@@ -26,6 +26,14 @@ RUN apt-get update \
     	osmium-tool \
     && rm -rf /var/lib/apt/lists/*
 
+# xdebug enables `make coverage`/`coverage-ci` on the provisioner leg (same driver as
+# the php dev image). Off by default so normal `make test-php` is unaffected; the
+# coverage targets set XDEBUG_MODE=coverage per run.
+ADD --checksum=sha256:ca45e43f4299997f3cc78459eb7cc29c125281db8779f99209dc3fe3298fd117 \
+    --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.1/install-php-extensions /usr/local/bin/
+RUN install-php-extensions xdebug
+ENV XDEBUG_MODE=off
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app

@@ -89,8 +89,27 @@ final class TripDetailTest extends ApiTestCase
     #[Test]
     public function detailNonExistentTripReturns404(): void
     {
+        // Object-level authz denials are surfaced as 404 (ADR-038): an unknown trip
+        // and a foreign trip are indistinguishable, so existence is not leaked.
         $this->client->request('GET', '/trips/00000000-0000-0000-0000-000000000000/detail', [
             'headers' => $this->authHeader($this->jwtToken),
+        ]);
+
+        $this->assertResponseStatusCodeSame(404);
+    }
+
+    #[Test]
+    public function detailOfAnotherUsersTripReturns404(): void
+    {
+        // IDOR-DETAIL regression: a trip owned by someone else must not be readable,
+        // and is hidden as 404 (not 403) so its existence is not revealed (ADR-038).
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, []);
+
+        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+
+        $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($otherToken)),
         ]);
 
         $this->assertResponseStatusCodeSame(404);

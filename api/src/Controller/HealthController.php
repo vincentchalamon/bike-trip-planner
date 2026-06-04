@@ -84,6 +84,10 @@ final readonly class HealthController
             $deps[$name] = $this->finishHttpCheck($pair);
         }
 
+        // Ollama is intentionally NOT required: the app runs in a degraded mode when
+        // the LLM tier is down (AI features disabled, not a 5xx) — see ADR-028
+        // "Degraded Mode" update. ollama_chat/ollama_analysis are still surfaced in
+        // `deps` (and logged) so operators can see/alert on the outage.
         $required = ['postgres', 'redis', 'mercure', 'valhalla'];
         $status = 'ok';
         foreach ($required as $dep) {

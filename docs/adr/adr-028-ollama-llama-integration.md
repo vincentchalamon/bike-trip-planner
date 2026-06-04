@@ -1,4 +1,4 @@
-# ADR-028: Ollama/LLaMA Integration Architecture (2-Pass Pipeline, Context Window, Hard Dependency)
+# ADR-028: Ollama/LLaMA Integration Architecture (2-Pass Pipeline, Context Window, Graceful Degradation)
 
 - **Status:** Accepted
 - **Date:** 2026-05-06
@@ -110,6 +110,39 @@ Every prompt invokes Ollama with `format: "json"` and a JSON Schema embedded in 
 - Models are pulled at deploy time via a one-shot init job; the container's volume persists the model blobs across restarts.
 - The PHP `OllamaClient` is a scoped HTTP client (per ADR-001 SSRF policy) bound to the Ollama base URI, with a 60 s timeout for the analysis pass and a 10 s timeout for the dialogue pass.
 
+### Deployment topology — separate resource + shared network (refined Sprint 35.4)
+
+The original "Ollama runs on the project's Docker network" wording is superseded. Following #566/#612 and
+audit finding F3, in production Ollama is deployed as a **separate resource** (`compose.ollama.yaml`), not part
+of the main application stack (`compose.yaml`). Rationale: resource sizing (~2-6 GB resident, GPU-optional,
+model blobs on a persistent volume — radically different from the 512 MB app workers) and an independent
+lifecycle (slow model pulls via the one-shot `ollama-init`; restarts/upgrades decoupled from the stateless app).
+This separation is for **deployment decoupling**; at runtime the LLM tier is **optional** — see the "Degraded Mode"
+update below, which supersedes the earlier hard-dependency stance.
+
+- **Network — a shared, name-pinned bridge.** Both stacks declare `bike-trip-planner-llm` by a fixed `name`
+  (non-`external`). `compose.ollama.yaml` attaches `ollama` to it and **owns the `ollama` network alias**, so the
+  app resolves `http://ollama:11434` regardless of the Ollama stack's project/service name. `compose.yaml` attaches
+  only the services that call Ollama (`php`, `worker`, `worker-llm`); `database`, `redis`, `mercure`, `valhalla`
+  stay on the app's default network (least connectivity — the third-party inference container has no route to the
+  datastore). Non-`external` (rather than `external` + a pre-created network) is chosen deliberately: CI boots a
+  subset (`docker compose up -d database php pwa worker redis`, no Ollama) and `make start-prod` runs `compose.yaml`
+  alone — an `external` network would force a `docker network create` in CI, every Makefile target, and Coolify
+  ops. With a name-pinned non-`external` network each context simply creates it if absent.
+- **Resolution per context.** Single merged project (dev/recette/CI): one network, created by the project, every
+  service resolves `ollama`. Standalone app project (`make start-prod`, no Ollama): the app creates the network and
+  runs degraded (no `ollama` to resolve). Two separate Coolify projects (app + Ollama): the network is **shared by
+  name** — the first stack up creates it, the second attaches by name. `OLLAMA_ENABLED` defaults to `1` in
+  `compose.yaml` (AI on whenever the tier is reachable), `0` in `compose.dev.yaml`, `1` in `compose.recette.yaml`.
+- **Ordering.** No service-health startup ordering: an app worker boots even if Ollama is not yet reachable, and
+  in-flight LLM messages retry on the durable Redis transport until it is. In the two-project Coolify case, if a
+  Compose version flags a project-label conflict on the shared name-pinned network, switch both stacks to
+  `external: true` + a one-time `docker network create bike-trip-planner-llm` (validate when the prod target exists).
+- **Health.** Ollama is deliberately **excluded from the readiness `$required` set** (`GET /api/health` stays `ok`
+  when the LLM tier is down) and from liveness — an Ollama outage must neither return traffic-blocking 503s nor
+  restart-loop the app. Its status is still **surfaced in `deps.ollama_chat`/`deps.ollama_analysis`** and logged
+  `critical` so operators can alert. This realises the degraded-mode contract below.
+
 ---
 
 ## Decision Update — Hard Dependency (Sprint 29)
@@ -131,6 +164,36 @@ This update supersedes the "graceful fallback" wording from the original draft. 
 
 ---
 
+## Decision Update — Degraded Mode Re-instated (Sprint 35.4)
+
+The Sprint-29 "hard dependency" stance above is **reversed**: the application must remain usable when the LLM tier
+is unavailable. This re-arbitration came out of the Sprint 35.2 audit (finding F3): the operational reality of issue
+[#566](https://github.com/vincentchalamon/bike-trip-planner/issues/566) (Ollama deployed as a separate,
+resource-heavy resource that can legitimately be down or unprovisioned) collided with the "health 503 if Ollama
+down" rule, which would take the whole app offline for an AI outage.
+
+The original objection to a fallback was that it was **silent** (non-deterministic output depending on Ollama
+uptime). That objection is **resolved by making degradation explicit**, not by forbidding it:
+
+- **API — graceful degradation, not 5xx.** When Ollama is configured (`OLLAMA_ENABLED=1`) but unreachable, the
+  AI passes (stage analysis, overview, chat) are **skipped** rather than retried-to-failure, and the event is
+  logged at **`critical`** for alerting. The app does not return a traffic-blocking 503 for an AI outage; Ollama
+  stays **out of the readiness `$required` set** (see Deployment topology → Health).
+- **Front — explicit feature-gating.** The PWA reads AI availability (capabilities signal / health `deps.ollama`)
+  and **disables the AI-driven features** when the tier is down: AI trip generation, the in-editor AI chat, and
+  AI trip analysis. The user sees *why* they are unavailable rather than silently receiving a degraded report —
+  this is the determinism guarantee the Sprint-29 update was protecting, kept intact.
+- **Three supported states.** `OLLAMA_ENABLED=0` (AI off by config — features hidden), `OLLAMA_ENABLED=1` +
+  reachable (full AI), and `OLLAMA_ENABLED=1` + unreachable (degraded — features disabled, `critical` logs).
+- **Issues.** #304 (graceful fallback without Ollama) is **re-opened** to carry the front gating + API
+  degradation + critical-logging work. #307 (rule-based-only toggle) and #308 (form-based brief fallback) remain
+  separate and are not implied by this update.
+
+This update supersedes "Decision Update — Hard Dependency (Sprint 29)" for the availability/health contract. The
+two-pass pipeline, JSON-mode contract, and model roles above are unchanged.
+
+---
+
 ## Consequences
 
 ### Positive
@@ -138,13 +201,13 @@ This update supersedes the "graceful fallback" wording from the original draft. 
 - **Privacy preserved end-to-end.** No user payload leaves the operator's perimeter. Trip briefs, even those containing personal information, are processed locally.
 - **Zero per-inference cost.** Adding an extra stage or running a regression suite has no marginal cost beyond local compute time.
 - **Reviewable prompts.** All prompt logic lives in versioned text files. Behaviour changes are visible in `git diff`, reviewable in PRs, and testable against fixtures.
-- **Deterministic production output.** Because Ollama is a hard dependency, every deployed instance produces output of the same shape; no silent feature degradation.
+- **Deterministic, non-silent degradation.** When Ollama is up, every instance produces the same shape of output. When it is down, the AI features are *explicitly* disabled (front gating + `critical` logs) rather than silently dropped, so a user never unknowingly receives a degraded report — the determinism guarantee is kept without forcing a hard dependency (see "Decision Update — Degraded Mode").
 - **Latency contained to Phase 2.** Per ADR-027, the analysis pass runs after the preview is already on screen, so the 8B model's per-stage cost (~10–30 s) does not impact the time-to-first-render.
 - **Composable with the rule-based engine.** The rule-based alerts (ADR-012) remain the deterministic source of truth; the LLM only ranks, narrates, and contextualises them. A regression in LLM output does not silently invent alerts.
 
 ### Negative
 
-- **Hard runtime dependency on Ollama.** Operators must run Ollama on the same network as the workers. The backend health check refuses to mark the deployment ready otherwise. This is an explicit trade-off (see "Decision update").
+- **Optional LLM tier with an explicit degradation surface.** Ollama runs as a separate resource on a shared network (see "Deployment topology"). When it is unavailable the app stays up in **degraded mode** — AI features disabled in the PWA, AI passes skipped in the API with `critical` logs; readiness is unaffected. The trade-off is the added gating/degradation surface across front + API, tracked in #304 (see "Decision Update — Degraded Mode").
 - **Memory footprint.** The 8B model in Q4 quantisation occupies ~5 GB resident; the 3B model adds ~2 GB. Operators below 8 GB RAM must use smaller variants and accept reduced quality.
 - **Cold-start latency.** First inference after container boot incurs a model-load delay (5–15 s depending on disk speed). Mitigated by a warm-up call in the worker bootstrap.
 - **Prompt drift on model upgrades.** Upgrading the base model (e.g. LLaMA 3.x → 3.y) may shift output format adherence. Each model upgrade must run the regression fixture suite before promotion.

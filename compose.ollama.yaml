@@ -14,6 +14,16 @@ services:
     # Pinned by digest (matches compose.dev.yaml / compose.recette.yaml).
     image: ollama/ollama@sha256:a6149234667efc71d37766d61c1a16f24c33e4cd7a0bf4125c44a7e47e2419c4
     restart: unless-stopped
+    # `default` keeps ollama reachable inside a single merged compose project
+    # (dev/recette/CI). `bike-trip-planner-llm` is the shared network the app
+    # stack joins in a separate-stack prod deployment (see ADR-028 + networks below).
+    networks:
+      default: {}
+      # Explicit alias so the app stack always resolves `ollama` on this shared
+      # network, independent of the Ollama stack's project/service name.
+      bike-trip-planner-llm:
+        aliases:
+          - ollama
     expose:
       - 11434
     # Beta profile sizing (#566 / ADR-019): one resident model, two parallel slots,
@@ -53,6 +63,17 @@ services:
       - /bin/sh
       - -c
       - 'for m in $$OLLAMA_PULL_MODELS; do echo "pulling $$m"; ollama pull "$$m"; done'
+
+networks:
+  # Shared LLM network. This (Ollama) stack attaches `ollama` to it and owns the
+  # `ollama` alias; `attachable: true` lets a separately-deployed app project join
+  # it by name. The application stack (compose.yaml) declares the same fixed name
+  # as non-external too: each context creates the network if absent (CI, standalone
+  # `make start-prod`, single merged dev/recette project) or reuses the existing one
+  # in a two-stack prod deployment. See ADR-028 "Deployment topology".
+  bike-trip-planner-llm:
+    name: bike-trip-planner-llm
+    attachable: true
 
 volumes:
   ollama-data: ~

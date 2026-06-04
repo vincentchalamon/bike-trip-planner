@@ -740,8 +740,9 @@ Transforme le référentiel (35.1) en couverture automatisée + valide les basel
 | 2 | Golden paths A/B/C + cas limites en Gherkin (checklists ci-dessous) | L |
 | 3 | Combler les domaines `.feature` absents (IA, design) | M |
 | 4 | Baselines VR (36 pages + set « états ») + comparaison app vs design (présence + position) | M |
+| 5 | Vérifier liens & ancres (docs, README, ADR, rapport recette) : aucun lien mort (404) ni ancre disparue | S |
 
-DoD : `make test-e2e` + `make test-recette` + `make visual-test` verts ; chaque écran du manifeste 35.1 a un verdict.
+DoD : `make test-e2e` + `make test-recette` + `make visual-test` verts ; chaque écran du manifeste 35.1 a un verdict ; aucun lien/ancre cassé (ordre 5).
 
 ---
 

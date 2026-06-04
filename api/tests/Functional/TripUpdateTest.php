@@ -126,9 +126,32 @@ final class TripUpdateTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(404);
         $this->assertMatchesJsonSchema((string) file_get_contents(__DIR__.'/error-schema.json'));
+        // Fixed message, no echoed id, so a missing trip is indistinguishable from a
+        // foreign one (ADR-038).
         $this->assertJsonContains([
             'status' => 404,
-            'detail' => 'Trip "nonexistent-trip-id" not found or has expired.',
+            'detail' => 'Trip not found or has expired.',
+        ]);
+    }
+
+    #[Test]
+    public function cannotUpdateForeignTripReturns404(): void
+    {
+        // A trip owned by another user is hidden as 404, not 403, so its existence is
+        // not revealed by enumeration (ADR-038). The body matches the missing-trip 404.
+        $this->seedTrip(self::TRIP_ID);
+
+        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+
+        $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
+            'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($otherToken)),
+            'json' => ['fatigueFactor' => 0.8],
+        ]);
+
+        $this->assertResponseStatusCodeSame(404);
+        $this->assertJsonContains([
+            'status' => 404,
+            'detail' => 'Trip not found or has expired.',
         ]);
     }
 

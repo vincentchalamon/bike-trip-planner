@@ -159,6 +159,12 @@ This is the only concurrency primitive outside the PSR-6 cache path, and it is c
 
 ### Ollama as a Hard Dependency
 
+> **Superseded (Sprint 35.4).** This "hard dependency" stance was reversed — see
+> [ADR-028 → "Decision Update — Degraded Mode Re-instated"](adr-028-ollama-llama-integration.md). The app now stays
+> up when Ollama is unavailable: Phase 2 AI passes are skipped (with `critical` logs) instead of failing the trip,
+> and the PWA disables the AI features. #304 is re-opened to carry that work. The paragraph below is kept for
+> historical context.
+
 LLaMA inference (`RunLlamaInferenceHandler`) is a **non-skippable step** of Phase 2. There is no fallback path: if Ollama is unavailable or returns an error, Phase 2 fails and `trip_ready` is not emitted (instead `trip_error` is published via Mercure). Ollama must be running and healthy for the analysis pipeline to complete.
 
 This decision was solidified as part of issue [#375](https://github.com/vincentchalamon/bike-trip-planner/issues/375) (design v2 arbitrage: "IA toujours active"). Issues #304 (graceful fallback), #307 (stale AI banner), and #308 (frontend LLaMA fallback) were closed accordingly. Deployment configurations (see ADR-019) must include Ollama with a healthcheck gate before the application is considered operational.

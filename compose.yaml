@@ -36,6 +36,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    networks:
+      - default
+      - bike-trip-planner-llm
     environment:
       APP_ENV: prod
       CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
@@ -56,7 +59,21 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
+      # Symfony Lock store. Without this, framework.lock falls back to api/.env's
+      # redis://localhost:6379 (unreachable from the container) -> trip creation
+      # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
+      LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      # Ollama (LLM tier) runs as a SEPARATE resource (compose.ollama.yaml, ADR-028).
+      # These vars tell the app where to reach it. dev/recette load both files as one
+      # compose project, so `ollama` resolves directly. A separate-stack prod joins
+      # Ollama's `bike-trip-planner-llm` network (ADR-028 topology, via a deploy
+      # overlay) or sets OLLAMA_BASE_URL to a routable address; unreachable -> degraded
+      # mode (#304), not a 5xx. OLLAMA_ENABLED: dev forces 0, recette/prod 1.
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-1}"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
@@ -111,6 +128,9 @@ services:
       dockerfile: .docker/php/Dockerfile
       target: frankenphp_prod
     command: bin/console messenger:consume async --time-limit=3600 -vv
+    networks:
+      - default
+      - bike-trip-planner-llm
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -142,7 +162,21 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
+      # Symfony Lock store. Without this, framework.lock falls back to api/.env's
+      # redis://localhost:6379 (unreachable from the container) -> trip creation
+      # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
+      LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      # Ollama (LLM tier) runs as a SEPARATE resource (compose.ollama.yaml, ADR-028).
+      # These vars tell the app where to reach it. dev/recette load both files as one
+      # compose project, so `ollama` resolves directly. A separate-stack prod joins
+      # Ollama's `bike-trip-planner-llm` network (ADR-028 topology, via a deploy
+      # overlay) or sets OLLAMA_BASE_URL to a routable address; unreachable -> degraded
+      # mode (#304), not a 5xx. OLLAMA_ENABLED: dev forces 0, recette/prod 1.
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-1}"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
@@ -182,6 +216,9 @@ services:
       dockerfile: .docker/php/Dockerfile
       target: frankenphp_prod
     command: bin/console messenger:consume llm --time-limit=3600 -vv
+    networks:
+      - default
+      - bike-trip-planner-llm
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -214,7 +251,21 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
+      # Symfony Lock store. Without this, framework.lock falls back to api/.env's
+      # redis://localhost:6379 (unreachable from the container) -> trip creation
+      # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
+      LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
+      # Ollama (LLM tier) runs as a SEPARATE resource (compose.ollama.yaml, ADR-028).
+      # These vars tell the app where to reach it. dev/recette load both files as one
+      # compose project, so `ollama` resolves directly. A separate-stack prod joins
+      # Ollama's `bike-trip-planner-llm` network (ADR-028 topology, via a deploy
+      # overlay) or sets OLLAMA_BASE_URL to a routable address; unreachable -> degraded
+      # mode (#304), not a 5xx. OLLAMA_ENABLED: dev forces 0, recette/prod 1.
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
+      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-1}"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
@@ -411,3 +462,17 @@ volumes:
   php_var: ~
   database_data: ~
   valhalla-tiles: ~
+
+networks:
+  # Shared with the separate Ollama stack (compose.ollama.yaml) so php/worker/
+  # worker-llm reach http://ollama:11434. Declared by a fixed `name` (non-external):
+  # in a single merged project (dev/recette/CI) it is created once; a standalone app
+  # project creates it too. The Ollama stack declares the same name and owns the
+  # `ollama` network alias. For fully separate Coolify projects the network is shared
+  # by name; see ADR-028 "Deployment topology".
+  bike-trip-planner-llm:
+    name: bike-trip-planner-llm
+    # Must match compose.ollama.yaml exactly: whichever stack comes up first
+    # creates the network, so identical attributes avoid a "network exists with
+    # different configuration" mismatch when the other stack joins it by name.
+    attachable: true

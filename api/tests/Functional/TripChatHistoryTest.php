@@ -235,7 +235,9 @@ final class TripChatHistoryTest extends ApiTestCase
             ['headers' => ['Accept' => 'application/ld+json', ...$this->authHeader($this->jwtToken)]],
         );
 
-        $this->assertResponseStatusCodeSame(403);
+        // Object-level authz denials are hidden as 404 (ADR-038), not 403, so a
+        // foreign trip is indistinguishable from a non-existent one.
+        $this->assertResponseStatusCodeSame(404);
     }
 
     #[Test]
