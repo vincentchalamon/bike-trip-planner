@@ -65,12 +65,12 @@ services:
       - 'for m in $$OLLAMA_PULL_MODELS; do echo "pulling $$m"; ollama pull "$$m"; done'
 
 networks:
-  # This (Ollama) stack OWNS the shared LLM network; the application stack joins
-  # it as `external` in a separate-stack production deployment, so php/worker/
-  # worker-llm can reach `http://ollama:11434` (consumer joins provider — see
-  # ADR-028 "Deployment topology"). `attachable` lets a separately-deployed app
-  # project attach to it. In dev/recette/CI the two compose files load as one
-  # project, so this network is simply created by that project.
+  # Shared LLM network. This (Ollama) stack attaches `ollama` to it and owns the
+  # `ollama` alias; `attachable: true` lets a separately-deployed app project join
+  # it by name. The application stack (compose.yaml) declares the same fixed name
+  # as non-external too: each context creates the network if absent (CI, standalone
+  # `make start-prod`, single merged dev/recette project) or reuses the existing one
+  # in a two-stack prod deployment. See ADR-028 "Deployment topology".
   bike-trip-planner-llm:
     name: bike-trip-planner-llm
     attachable: true
