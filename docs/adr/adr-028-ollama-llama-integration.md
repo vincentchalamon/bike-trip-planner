@@ -120,22 +120,24 @@ lifecycle (slow model pulls via the one-shot `ollama-init`; restarts/upgrades de
 This separation is for **deployment decoupling**; at runtime the LLM tier is **optional** — see the "Degraded Mode"
 update below, which supersedes the earlier hard-dependency stance.
 
-- **Network — the consumer joins the provider.** The Ollama stack **owns** a dedicated, stably-named Docker
-  network (`bike-trip-planner-llm`) and attaches `ollama` to it. The application stack **joins** that network as
-  `external` (consumer reaching into the provider's network, matching the dependency direction Project -> Ollama).
-  Only the services that call Ollama (`php`, `worker`, `worker-llm`) attach; `database`, `redis`, `mercure`,
-  `valhalla` stay on the app's internal network (least connectivity — the third-party inference container has no
-  route to the datastore). Preferred over a third pre-created shared network: clear ownership, no out-of-band
-  `docker network create`.
-- **dev / recette.** `compose.yaml` + `compose.ollama.yaml` load as a **single** Compose project, so the network
-  is created by that project (non-external) and `http://ollama:11434` resolves directly; only the production app
-  stack declares the network `external: true`. `OLLAMA_ENABLED` defaults to `1` in `compose.yaml` (AI on whenever
-  the tier is reachable), is overridden to `0` in `compose.dev.yaml`, and `1` in `compose.recette.yaml`.
-- **Ordering.** Bring the Ollama stack up first so its network exists before the app stack joins (an `external`
-  network must pre-exist). The network persists across `ollama` service restarts; only `docker compose down` on the
-  Ollama stack removes it, so tear the app stack down first. There is **no service-health startup ordering**: an app
-  worker boots even if Ollama is not yet reachable, and in-flight LLM messages retry on the durable Redis transport
-  until it is.
+- **Network — a shared, name-pinned bridge.** Both stacks declare `bike-trip-planner-llm` by a fixed `name`
+  (non-`external`). `compose.ollama.yaml` attaches `ollama` to it and **owns the `ollama` network alias**, so the
+  app resolves `http://ollama:11434` regardless of the Ollama stack's project/service name. `compose.yaml` attaches
+  only the services that call Ollama (`php`, `worker`, `worker-llm`); `database`, `redis`, `mercure`, `valhalla`
+  stay on the app's default network (least connectivity — the third-party inference container has no route to the
+  datastore). Non-`external` (rather than `external` + a pre-created network) is chosen deliberately: CI boots a
+  subset (`docker compose up -d database php pwa worker redis`, no Ollama) and `make start-prod` runs `compose.yaml`
+  alone — an `external` network would force a `docker network create` in CI, every Makefile target, and Coolify
+  ops. With a name-pinned non-`external` network each context simply creates it if absent.
+- **Resolution per context.** Single merged project (dev/recette/CI): one network, created by the project, every
+  service resolves `ollama`. Standalone app project (`make start-prod`, no Ollama): the app creates the network and
+  runs degraded (no `ollama` to resolve). Two separate Coolify projects (app + Ollama): the network is **shared by
+  name** — the first stack up creates it, the second attaches by name. `OLLAMA_ENABLED` defaults to `1` in
+  `compose.yaml` (AI on whenever the tier is reachable), `0` in `compose.dev.yaml`, `1` in `compose.recette.yaml`.
+- **Ordering.** No service-health startup ordering: an app worker boots even if Ollama is not yet reachable, and
+  in-flight LLM messages retry on the durable Redis transport until it is. In the two-project Coolify case, if a
+  Compose version flags a project-label conflict on the shared name-pinned network, switch both stacks to
+  `external: true` + a one-time `docker network create bike-trip-planner-llm` (validate when the prod target exists).
 - **Health.** Ollama is deliberately **excluded from the readiness `$required` set** (`GET /api/health` stays `ok`
   when the LLM tier is down) and from liveness — an Ollama outage must neither return traffic-blocking 503s nor
   restart-loop the app. Its status is still **surfaced in `deps.ollama_chat`/`deps.ollama_analysis`** and logged

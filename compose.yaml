@@ -36,6 +36,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    networks:
+      - default
+      - bike-trip-planner-llm
     environment:
       APP_ENV: prod
       CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
@@ -125,6 +128,9 @@ services:
       dockerfile: .docker/php/Dockerfile
       target: frankenphp_prod
     command: bin/console messenger:consume async --time-limit=3600 -vv
+    networks:
+      - default
+      - bike-trip-planner-llm
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -210,6 +216,9 @@ services:
       dockerfile: .docker/php/Dockerfile
       target: frankenphp_prod
     command: bin/console messenger:consume llm --time-limit=3600 -vv
+    networks:
+      - default
+      - bike-trip-planner-llm
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -453,3 +462,13 @@ volumes:
   php_var: ~
   database_data: ~
   valhalla-tiles: ~
+
+networks:
+  # Shared with the separate Ollama stack (compose.ollama.yaml) so php/worker/
+  # worker-llm reach http://ollama:11434. Declared by a fixed `name` (non-external):
+  # in a single merged project (dev/recette/CI) it is created once; a standalone app
+  # project creates it too. The Ollama stack declares the same name and owns the
+  # `ollama` network alias. For fully separate Coolify projects the network is shared
+  # by name; see ADR-028 "Deployment topology".
+  bike-trip-planner-llm:
+    name: bike-trip-planner-llm

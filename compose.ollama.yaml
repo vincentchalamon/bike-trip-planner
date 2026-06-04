@@ -18,8 +18,12 @@ services:
     # (dev/recette/CI). `bike-trip-planner-llm` is the shared network the app
     # stack joins in a separate-stack prod deployment (see ADR-028 + networks below).
     networks:
-      - default
-      - bike-trip-planner-llm
+      default: {}
+      # Explicit alias so the app stack always resolves `ollama` on this shared
+      # network, independent of the Ollama stack's project/service name.
+      bike-trip-planner-llm:
+        aliases:
+          - ollama
     expose:
       - 11434
     # Beta profile sizing (#566 / ADR-019): one resident model, two parallel slots,
