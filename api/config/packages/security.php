@@ -25,6 +25,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'stateless' => true,
                 'provider' => 'app_user_provider',
                 'jwt' => [],
+                // Object-level authz denials (TRIP_*) -> 404, not 403, to avoid
+                // leaking trip existence by enumeration (ADR-038). Only fires for
+                // authenticated requests; anonymous still gets 401 via the entry point.
+                'access_denied_handler' => HideForbiddenAsNotFoundHandler::class,
             ],
         ],
         'access_control' => [
