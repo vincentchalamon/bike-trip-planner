@@ -517,7 +517,7 @@ Service OllamaClient PHP, configuration Docker Ollama, gate mechanism dans Compu
 
 ## Sprint 29 — LLaMA 8B : analyse 2 passes
 
-Pipeline d'analyse IA : passe 1 par étape (parallélisable via Messenger), passe 2 vue d'ensemble, orchestration gate → LLaMA → TRIP_READY. **Décision (Sprint 29) : Ollama est une dépendance dure** — pas de fallback gracieux (cf. issue #375 arbitrage v2 « IA toujours active »). Issue #304 fermée, puis **rouverte par l'audit Sprint 35.2** : la décision est ré-inversée en **mode dégradé explicite** (cf. ADR-028 « Decision Update — Degraded Mode » + #616) ; implémentée sur `feature/304`.
+Pipeline d'analyse IA : passe 1 par étape (parallélisable via Messenger), passe 2 vue d'ensemble, orchestration gate → LLaMA → TRIP_READY. **Décision (Sprint 29) : Ollama est une dépendance dure** — pas de fallback gracieux (cf. issue #375 arbitrage v2 « IA toujours active »). Issue #304 fermée, puis **rouverte par l'audit Sprint 35.2** : la décision est ré-inversée en **mode dégradé explicite** (cf. ADR-028 « Decision Update — Degraded Mode » + #616) ; livrée (#304 mergé).
 
 | Ordre | ID                                                                      | Titre                                                     | Effort | PRs                                                                                | Dépend de      |
 |-------|-------------------------------------------------------------------------|-----------------------------------------------------------|--------|------------------------------------------------------------------------------------|----------------|
@@ -703,10 +703,10 @@ Livré en une PR unique (livrables fortement couplés sous `docs/recette/`).
 
 | Ordre | Titre | Effort | PR |
 |---|---|---|---|
-| 1 | Inventaire des écrans (dérivé de `pwa/src/app/`) + variantes (auth/anon, états données) | S | [#607](https://github.com/vincentchalamon/bike-trip-planner/pull/607) 🚧 |
-| 2 | Checklist par écran : éléments, comportements, états (hover/focus/disabled/loading/empty/error), responsive, a11y clavier | M | [#607](https://github.com/vincentchalamon/bike-trip-planner/pull/607) 🚧 |
-| 3 | Manifeste d'éléments attendus par écran (présence + position approximative) dérivé de l'export Claude Design | M | [#607](https://github.com/vincentchalamon/bike-trip-planner/pull/607) 🚧 |
-| 4 | Audit de couverture Gherkin (30 `.feature` vs features réelles) + scénarios manquants à écrire (IA S30-32, design S25-27) | M | [#607](https://github.com/vincentchalamon/bike-trip-planner/pull/607) 🚧 |
+| 1 | Inventaire des écrans (dérivé de `pwa/src/app/`) + variantes (auth/anon, états données) | S | [#607](https://github.com/vincentchalamon/bike-trip-planner/pull/607) ✅ mergée |
+| 2 | Checklist par écran : éléments, comportements, états (hover/focus/disabled/loading/empty/error), responsive, a11y clavier | M | [#607](https://github.com/vincentchalamon/bike-trip-planner/pull/607) ✅ mergée |
+| 3 | Manifeste d'éléments attendus par écran (présence + position approximative) dérivé de l'export Claude Design | M | [#607](https://github.com/vincentchalamon/bike-trip-planner/pull/607) ✅ mergée |
+| 4 | Audit de couverture Gherkin (30 `.feature` vs features réelles) + scénarios manquants à écrire (IA S30-32, design S25-27) | M | [#607](https://github.com/vincentchalamon/bike-trip-planner/pull/607) ✅ mergée |
 
 Source design : export Claude Design vendoré sous `docs/recette/design/` (`tokens.jsx`, `pages-*.jsx`, `toutes-les-pages.html`). **Comparaison app vs design = présence + position approximative** (auto, Playwright) ; couleur / typo / polish = **regard humain** (capture côte-à-côte).
 
@@ -716,17 +716,17 @@ Source design : export Claude Design vendoré sous `docs/recette/design/` (`toke
 
 Exécute l'outillage de 35 + revue ciblée, produit des **findings en issues** (milestone `Sprint 35.4`, labels `security`/`perf`/`a11y`/`seo`/`i18n` + sévérité `P0`-`P3`). Pas de fix. Dépend de 35. Exécution : fan-out d'agents par dimension, findings vérifiés avant ouverture, rapport `docs/recette/audit-report.md`. _(ex-ordres 7-19)_
 
-**🚧 En cours** — rapport d'audit livré : [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) (`feature/sprint-35.2-audit-report`). 16 findings confirmés (1 P1, 8 P2, 7 P3, aucun P0) + conformités. Ouverture des issues `Sprint 35.4` différée à validation. Différés (iso-prod seedé / CI) : scores Lighthouse (outillage `make lighthouse` cassé, QUAL-004), couverture chiffrée, legs authentifiés (403 inter-users, XSS trip réel, purge DB, axe pages auth).
+**✅ Audit livré** — rapport consolidé [#614](https://github.com/vincentchalamon/bike-trip-planner/pull/614) (màj de [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610)), à jour de l'état courant. Audit empirique complet (golden path Komoot réel, Lighthouse authentifié, couverture chiffrée, legs 401/404, purge RGPD, XSS, N+1, multi-device, chaos). Findings différés catalogués pour `Sprint 35.4` (ouverture des issues différée à validation). **Correctifs critiques mergés pendant/après l'audit** : F1 (P0, #616), IDOR-DETAIL + ENUM-404 (P1 sécurité, #616/#618, ADR-038), wiring/réseau Ollama + mode dégradé (#616/#304), F2 (#613), outillage Lighthouse/couverture/CI Vitest (#612/#615). Reste renvoyé à 35.3 : axe runtime authed, responsive éditeur authed, reconnexion SSE Mercure, payload XSS chat.
 
 | Ordre | Titre | Effort | Statut |
 |---|---|---|---|
-| 1 | Sécurité : headers Caddy (constat), isolation Mercure, auth 401/403 exhaustive, rate limiting, XSS champs éditables, stack trace prod, `composer audit` | L | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — 5 findings (SEC-001..005) |
-| 2 | Performance : Lighthouse toutes pages (y.c. auth, iso-prod seedé), N+1 Doctrine, bundle/code splitting, temps calcul async | L | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — PERF-001 ; Lighthouse différé (QUAL-004) |
-| 3 | Accessibilité : axe 0 violation critique, navigation clavier (scriptée + manuelle) | M | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — A11Y-001/002 ; axe runtime authed différé |
-| 4 | SEO : meta + Open Graph sur les pages de partage | S | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — SEO-001/002/003 |
-| 5 | i18n : `make i18n-check` (parité) + clés visibles + formatage dates/nombres | S | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — parité OK (848 clés) ; I18N-001 |
-| 6 | Qualité : couverture >= 80 %, `make qa` propre, dette de tracking | S | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — QUAL-001/002/003/004 ; % couverture délégué CI |
-| 7 | Privacy/anonymisation : `/privacy`, gating par env Plausible, 0 cookie / 0 PII, purge user en DB (pas de consentement, #385 abandonné) | M | 🚧 [#610](https://github.com/vincentchalamon/bike-trip-planner/pull/610) — conforme, 0 finding |
+| 1 | Sécurité : headers Caddy (constat), isolation Mercure, auth 401/403 exhaustive, rate limiting, XSS champs éditables, stack trace prod, `composer audit` | L | ✅ [#614](https://github.com/vincentchalamon/bike-trip-planner/pull/614) — SEC-001..005 (35.4) ; IDOR-DETAIL + ENUM-404 corrigés (#616/#618) |
+| 2 | Performance : Lighthouse toutes pages (y.c. auth, iso-prod seedé), N+1 Doctrine, bundle/code splitting, temps calcul async | L | ✅ [#614](https://github.com/vincentchalamon/bike-trip-planner/pull/614) — PERF-001 ; Lighthouse mesuré (LH-PERF-HOME/AUTH) ; N+1 aucun |
+| 3 | Accessibilité : axe 0 violation critique, navigation clavier (scriptée + manuelle) | M | ✅ [#614](https://github.com/vincentchalamon/bike-trip-planner/pull/614) — A11Y-001/002, LH-A11Y-HOME ; axe runtime authed -> 35.3 |
+| 4 | SEO : meta + Open Graph sur les pages de partage | S | ✅ [#614](https://github.com/vincentchalamon/bike-trip-planner/pull/614) — SEO-001/002/003 |
+| 5 | i18n : `make i18n-check` (parité) + clés visibles + formatage dates/nombres | S | ✅ [#614](https://github.com/vincentchalamon/bike-trip-planner/pull/614) — parité OK (848 clés) ; I18N-001 |
+| 6 | Qualité : couverture >= 80 %, `make qa` propre, dette de tracking | S | ✅ [#614](https://github.com/vincentchalamon/bike-trip-planner/pull/614) — QUAL-001/002/003 ; QUAL-004 corrigé (#612) ; COV-API/FRONT mesurées (#615) |
+| 7 | Privacy/anonymisation : `/privacy`, gating par env Plausible, 0 cookie / 0 PII, purge user en DB (pas de consentement, #385 abandonné) | M | ✅ [#614](https://github.com/vincentchalamon/bike-trip-planner/pull/614) — RGPD-MAGIC (P3) ; conformités OK |
 
 ---
 
@@ -1007,7 +1007,7 @@ Sprint dédié à la résilience de la donnée en production. ADR-032 (Migration
 
 | ID                                                                      | Titre                                                  | Raison                                                                       |
 |-------------------------------------------------------------------------|--------------------------------------------------------|------------------------------------------------------------------------------|
-| [#304](https://github.com/vincentchalamon/bike-trip-planner/issues/304) | Fallback gracieux sans Ollama                          | **Rouvert** (audit Sprint 35.2) — mode dégradé explicite, en cours sur `feature/304` (ADR-028 « Degraded Mode ») |
+| [#304](https://github.com/vincentchalamon/bike-trip-planner/issues/304) | Fallback gracieux sans Ollama                          | **Rouvert puis corrigé** (audit Sprint 35.2) — mode dégradé explicite livré (#616 + #304 mergés ; ADR-028 « Degraded Mode », ADR-038) |
 | [#307](https://github.com/vincentchalamon/bike-trip-planner/issues/307) | Bandeau « Actualiser l'analyse IA »                    | IA toujours active — pas de bandeau (issue #375 §16 Sprint 27)               |
 | [#308](https://github.com/vincentchalamon/bike-trip-planner/issues/308) | Fallback frontend sans LLaMA                           | Ollama = dépendance dure — impossible (issue #375 arbitrage v2)              |
 
