@@ -80,12 +80,16 @@ Vous devriez recevoir un document JSON OpenAPI.
 ## Tâches courantes
 
 ```bash
-make start     # Démarrer tous les conteneurs
-make stop      # Arrêter tous les conteneurs (conserve les données)
-make clean     # Arrêter tous les conteneurs et effacer toutes les données (à utiliser avec précaution)
+make start         # Démarrer tous les conteneurs (mode iso-prod)
+make start-dev     # Démarrer en mode développement (hot reload ; tier IA désactivé par défaut)
+make start-recette # Iso-prod + Mailcatcher + Ollama (IA activée) pour la recette
+make stop          # Arrêter tous les conteneurs (conserve les données)
+make clean         # Arrêter tous les conteneurs et effacer toutes les données (à utiliser avec précaution)
 ```
 
 Consultez `make help` pour la liste complète des cibles disponibles.
+
+> **Un seul projet, aucun ordre.** En local, chaque cible `make start*` démarre l'app et le tier IA Ollama dans un **seul** projet Compose : le réseau partagé `bike-trip-planner-llm` est créé une fois et tu n'as jamais à démarrer l'un avant l'autre. En production, le tier IA est une ressource *séparée* avec son propre modèle de démarrage — voir [deployment.md](deployment.md#llm-tier-ollama-and-the-shared-network).
 
 ---
 
