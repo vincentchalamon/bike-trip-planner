@@ -610,7 +610,8 @@
     "errorUnavailable": "The AI assistant is temporarily unavailable. Try again later.",
     "errorGeneric": "Something went wrong. Please try again later.",
     "fullAnalysisHint": "This change requires a brand-new full analysis.",
-    "relaunchAnalysis": "Relaunch analysis"
+    "relaunchAnalysis": "Relaunch analysis",
+    "unavailableTitle": "AI assistant unavailable"
   },
   "chat": {
     "offline": {
@@ -655,6 +656,11 @@
     "applying": "Applying…",
     "unavailable": "AI assistant coming soon.",
     "applyFailed": "Failed to apply the suggestion. Please retry."
+  },
+  "aiUnavailable": {
+    "analysis": "AI analysis unavailable: the AI service is currently offline.",
+    "refinement": "AI assistant unavailable, try again later.",
+    "chat": "AI assistant unavailable."
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",

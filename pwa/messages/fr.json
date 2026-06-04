@@ -610,7 +610,8 @@
     "errorUnavailable": "L'assistant IA est temporairement indisponible. Réessayez plus tard.",
     "errorGeneric": "Une erreur est survenue. Réessayez plus tard.",
     "fullAnalysisHint": "Cette modification nécessite une nouvelle analyse complète.",
-    "relaunchAnalysis": "Relancer l'analyse"
+    "relaunchAnalysis": "Relancer l'analyse",
+    "unavailableTitle": "Assistant IA indisponible"
   },
   "chat": {
     "offline": {
@@ -655,6 +656,11 @@
     "applying": "Application…",
     "unavailable": "Assistant IA bientôt disponible.",
     "applyFailed": "Impossible d'appliquer la suggestion. Réessayez."
+  },
+  "aiUnavailable": {
+    "analysis": "Analyse IA indisponible : le service IA est actuellement hors ligne.",
+    "refinement": "Assistant IA indisponible, réessayez plus tard.",
+    "chat": "Assistant IA indisponible."
   },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",

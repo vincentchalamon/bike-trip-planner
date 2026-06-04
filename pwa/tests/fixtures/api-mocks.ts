@@ -11,6 +11,12 @@ export interface MockApiOptions {
    * existing specs are not retroactively failed.
    */
   assertNoRuntimeErrors?: boolean;
+  /**
+   * Runtime AI-tier availability surfaced by the mocked `/api/health`
+   * (`deps.ollama_chat.status`). Defaults to reachable so existing AI specs
+   * (bubble, chat) keep passing; set `false` to exercise the degraded mode (#304).
+   */
+  aiAvailable?: boolean;
 }
 
 const TRIP_ID = "test-trip-abc-123";
@@ -45,6 +51,7 @@ export async function mockAllApis(
     postTripBody,
     deleteStageFail = false,
     addStageFail = false,
+    aiAvailable = true,
   } = options;
 
   // POST /auth/refresh — return fake JWT so AuthGuard's silentRefresh succeeds
@@ -54,6 +61,29 @@ export async function mockAllApis(
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+    });
+  });
+
+  // GET /api/health — readiness probe the PWA reads to gate AI features (#304).
+  // `aiAvailable` toggles deps.ollama_chat between "ok"/"down"; the aggregate
+  // status stays "ok" either way (Ollama is excluded from the required set).
+  await page.route("**/api/health", (route, request) => {
+    if (request.method() !== "GET") return route.fallback();
+    const ollamaStatus = aiAvailable ? "ok" : "down";
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        status: "ok",
+        deps: {
+          postgres: { status: "ok" },
+          redis: { status: "ok" },
+          mercure: { status: "ok" },
+          valhalla: { status: "ok" },
+          ollama_chat: { status: ollamaStatus },
+          ollama_analysis: { status: ollamaStatus },
+        },
+      }),
     });
   });
 

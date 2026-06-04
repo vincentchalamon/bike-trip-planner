@@ -6,6 +6,7 @@ import { toast } from "@/components/ui/sonner";
 import { Sparkles, Loader2, Eraser, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AiUnavailableNotice } from "@/components/ai-unavailable-notice";
 import { cn } from "@/lib/utils";
 
 /**
@@ -34,6 +35,11 @@ interface AiRefinementCardProps {
    * recomputation or when the trip is locked / offline).
    */
   disabled?: boolean;
+  /**
+   * When `true`, the AI tier is enabled but unreachable (#304): the card is
+   * disabled and an explicit "unavailable" notice is shown inline.
+   */
+  unavailable?: boolean;
   className?: string;
 }
 
@@ -57,6 +63,7 @@ interface AiRefinementCardProps {
 export function AiRefinementCard({
   onApply,
   disabled = false,
+  unavailable = false,
   className,
 }: AiRefinementCardProps) {
   const t = useTranslations("aiRefinement");
@@ -65,10 +72,11 @@ export function AiRefinementCard({
   const [suggestion, setSuggestion] = useState("");
   const [isApplying, setIsApplying] = useState(false);
 
+  const isDisabled = disabled || unavailable;
   const trimmed = suggestion.trim();
   const remaining = MAX_SUGGESTION_LENGTH - suggestion.length;
-  const canApply = trimmed.length > 0 && !isApplying && !disabled;
-  const canClear = suggestion.length > 0 && !isApplying && !disabled;
+  const canApply = trimmed.length > 0 && !isApplying && !isDisabled;
+  const canClear = suggestion.length > 0 && !isApplying && !isDisabled;
 
   const handleClear = useCallback(() => {
     setSuggestion("");
@@ -123,6 +131,7 @@ export function AiRefinementCard({
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
+        {unavailable && <AiUnavailableNotice context="refinement" />}
         <label htmlFor={textareaId} className="sr-only">
           {t("textareaLabel")}
         </label>
@@ -136,7 +145,7 @@ export function AiRefinementCard({
           maxLength={MAX_SUGGESTION_LENGTH}
           placeholder={t("placeholder")}
           aria-describedby={`${helperId} ${helperId}-counter`}
-          disabled={disabled || isApplying}
+          disabled={isDisabled || isApplying}
           data-testid="ai-refinement-textarea"
           className={cn(
             "w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs",

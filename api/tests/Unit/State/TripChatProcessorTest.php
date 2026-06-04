@@ -22,6 +22,7 @@ use App\InRide\OpeningHoursParser;
 use App\InRide\PoiIntentDetector;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
+use App\Llm\Exception\OllamaUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
 use App\Scanner\OsmOverpassQueryBuilder;
@@ -37,6 +38,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -646,6 +648,31 @@ final class TripChatProcessorTest extends TestCase
         self::assertSame('OK même si PG est cassé', $response->response);
     }
 
+    #[Test]
+    public function returnsServiceUnavailableAndLogsCriticalWhenOllamaUnreachable(): void
+    {
+        // AI enabled but the chat call hits an unreachable tier: 503 + `critical` log (#304).
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('critical')
+            ->with(self::stringContains('Ollama unreachable'));
+
+        $processor = $this->newProcessor(
+            llmContent: '',
+            stagesCount: 1,
+            messageBus: $this->newMessageBus(),
+            logger: $logger,
+            chatException: new OllamaUnavailableException('boom'),
+        );
+
+        $this->expectException(ServiceUnavailableHttpException::class);
+
+        $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+    }
+
     /**
      * @param array<string, mixed>|null $scannerResponse optional Overpass payload returned by the in-ride scanner mock
      */
@@ -657,6 +684,7 @@ final class TripChatProcessorTest extends TestCase
         ?EntityManagerInterface $entityManager = null,
         ?array $scannerResponse = null,
         ?LoggerInterface $logger = null,
+        ?\Throwable $chatException = null,
     ): TripChatProcessor {
         $tripRequest = new TripRequest();
         $stages = [];
@@ -678,9 +706,14 @@ final class TripChatProcessorTest extends TestCase
 
         $llmClient = $this->createStub(LlmClientInterface::class);
         $llmClient->method('isEnabled')->willReturn(true);
-        $llmClient->method('chat')->willReturn([
-            'message' => ['role' => 'assistant', 'content' => $llmContent],
-        ]);
+        if ($chatException instanceof \Throwable) {
+            $llmClient->method('chat')->willThrowException($chatException);
+        } else {
+            $llmClient->method('chat')->willReturn([
+                'message' => ['role' => 'assistant', 'content' => $llmContent],
+            ]);
+        }
+
         // PoiIntentDetector + InRideAssistant narrative both call generate().
         // We return the same `$llmContent` envelope so in-ride tests can drive
         // the intent classifier with the same fixture as planning tests; the

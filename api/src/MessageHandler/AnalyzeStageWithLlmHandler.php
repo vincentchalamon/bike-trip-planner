@@ -141,7 +141,7 @@ final readonly class AnalyzeStageWithLlmHandler
                 ],
             );
         } catch (OllamaUnavailableException $ollamaUnavailableException) {
-            $this->logger->warning('Ollama unreachable — skipping stage analysis.', [
+            $this->logger->critical('Ollama unreachable — skipping stage analysis.', [
                 'tripId' => $message->tripId,
                 'dayNumber' => $message->dayNumber,
                 'error' => $ollamaUnavailableException->getMessage(),

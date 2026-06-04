@@ -375,7 +375,7 @@ final readonly class InRideAssistant
                 ],
             );
         } catch (OllamaUnavailableException $ollamaUnavailableException) {
-            $this->logger->info('InRideAssistant: LLM unavailable for narrative, using fallback.', [
+            $this->logger->critical('InRideAssistant: LLM unavailable for narrative, using fallback.', [
                 'error' => $ollamaUnavailableException->getMessage(),
             ]);
 

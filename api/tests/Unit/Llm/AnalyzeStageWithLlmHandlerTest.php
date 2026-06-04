@@ -21,6 +21,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -142,7 +143,11 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         $llmClient->method('isEnabled')->willReturn(true);
         $llmClient->method('generate')->willThrowException(new OllamaUnavailableException('boom'));
 
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
+        // AI enabled but Ollama unreachable must be logged at `critical` for ops alerting (#304).
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('critical')->with(self::stringContains('Ollama unreachable'));
+
+        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient, logger: $logger);
         $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 1));
     }
 
@@ -385,12 +390,14 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
      * @param TripRequestRepositoryInterface&MockObject $repo
      * @param LlmClientInterface&MockObject             $llmClient
      * @param (MessageBusInterface&MockObject)|null     $messageBus override the bus when the test asserts pass-2 dispatch
+     * @param (LoggerInterface&MockObject)|null         $logger     override the logger when the test asserts a log level
      */
     private function makeHandler(
         TripRequestRepositoryInterface $repo,
         LlmClientInterface $llmClient,
         bool $claimsOverviewDispatch = false,
         ?MessageBusInterface $messageBus = null,
+        ?LoggerInterface $logger = null,
     ): AnalyzeStageWithLlmHandler {
         $tracker = $this->createStub(LlmAnalysisTrackerInterface::class);
         $tracker->method('markStageAnalysisSettled')->willReturn(['completed' => 1, 'failed' => 0, 'total' => 1]);
@@ -401,7 +408,7 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
             llmClient: $llmClient,
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
             summaryBuilder: new StageAnalysisSummaryBuilder(),
-            logger: new NullLogger(),
+            logger: $logger ?? new NullLogger(),
             llmTracker: $tracker,
             messageBus: $messageBus ?? $this->createStub(MessageBusInterface::class),
             publisher: new NullTripUpdatePublisher(),

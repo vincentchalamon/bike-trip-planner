@@ -38,3 +38,12 @@ export const SCRAPE_DEBOUNCE_MS = 500;
 
 /** Backend API base URL */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://localhost";
+
+/**
+ * Whether the AI tier is enabled for this build (mirrors backend `OLLAMA_ENABLED`).
+ * Build-time only — `NEXT_PUBLIC_*` is inlined, so flipping it requires a front
+ * rebuild. Defaults to enabled; set `NEXT_PUBLIC_AI_ENABLED=0` to hide the AI
+ * features outright (no network call). When enabled, runtime availability is read
+ * from `/api/health` (see `ai-availability.ts`).
+ */
+export const AI_ENABLED = process.env.NEXT_PUBLIC_AI_ENABLED !== "0";

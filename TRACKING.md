@@ -517,7 +517,7 @@ Service OllamaClient PHP, configuration Docker Ollama, gate mechanism dans Compu
 
 ## Sprint 29 — LLaMA 8B : analyse 2 passes
 
-Pipeline d'analyse IA : passe 1 par étape (parallélisable via Messenger), passe 2 vue d'ensemble, orchestration gate → LLaMA → TRIP_READY. **Décision : Ollama est une dépendance dure** — pas de fallback gracieux (cf. issue #375 arbitrage v2 « IA toujours active »). Issue #304 fermée.
+Pipeline d'analyse IA : passe 1 par étape (parallélisable via Messenger), passe 2 vue d'ensemble, orchestration gate → LLaMA → TRIP_READY. **Décision (Sprint 29) : Ollama est une dépendance dure** — pas de fallback gracieux (cf. issue #375 arbitrage v2 « IA toujours active »). Issue #304 fermée, puis **rouverte par l'audit Sprint 35.2** : la décision est ré-inversée en **mode dégradé explicite** (cf. ADR-028 « Decision Update — Degraded Mode » + #616) ; implémentée sur `feature/304`.
 
 | Ordre | ID                                                                      | Titre                                                     | Effort | PRs                                                                                | Dépend de      |
 |-------|-------------------------------------------------------------------------|-----------------------------------------------------------|--------|------------------------------------------------------------------------------------|----------------|
@@ -1007,7 +1007,7 @@ Sprint dédié à la résilience de la donnée en production. ADR-032 (Migration
 
 | ID                                                                      | Titre                                                  | Raison                                                                       |
 |-------------------------------------------------------------------------|--------------------------------------------------------|------------------------------------------------------------------------------|
-| [#304](https://github.com/vincentchalamon/bike-trip-planner/issues/304) | Fallback gracieux sans Ollama                          | Ollama = dépendance dure (issue #375 arbitrage v2 « IA toujours active »)    |
+| [#304](https://github.com/vincentchalamon/bike-trip-planner/issues/304) | Fallback gracieux sans Ollama                          | **Rouvert** (audit Sprint 35.2) — mode dégradé explicite, en cours sur `feature/304` (ADR-028 « Degraded Mode ») |
 | [#307](https://github.com/vincentchalamon/bike-trip-planner/issues/307) | Bandeau « Actualiser l'analyse IA »                    | IA toujours active — pas de bandeau (issue #375 §16 Sprint 27)               |
 | [#308](https://github.com/vincentchalamon/bike-trip-planner/issues/308) | Fallback frontend sans LLaMA                           | Ollama = dépendance dure — impossible (issue #375 arbitrage v2)              |
 

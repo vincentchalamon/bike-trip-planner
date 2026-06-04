@@ -88,7 +88,7 @@ PROMPT;
                 ],
             );
         } catch (OllamaUnavailableException $ollamaUnavailableException) {
-            $this->logger->info('PoiIntentDetector: LLM unavailable, defaulting to unknown intent.', [
+            $this->logger->critical('PoiIntentDetector: LLM unavailable, defaulting to unknown intent.', [
                 'error' => $ollamaUnavailableException->getMessage(),
             ]);
 

@@ -19,6 +19,7 @@ import { TripPreview } from "@/components/trip-preview";
 import { ProcessingProgress } from "@/components/processing-progress";
 import { TripSummary } from "@/components/trip-summary";
 import { TripAiOverview } from "@/components/trip-ai-overview";
+import { AiUnavailableNotice } from "@/components/ai-unavailable-notice";
 import { TripHeader } from "@/components/trip-header";
 import { AiBubble } from "@/components/ai-bubble";
 import { StageProgressBar } from "@/components/stage-progress-bar";
@@ -44,6 +45,7 @@ import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { useOfflineStore } from "@/store/offline-store";
 import { useSwipe } from "@/hooks/use-swipe";
+import { fetchAiAvailability } from "@/lib/ai-availability";
 import {
   MEAL_COST_MIN,
   MEAL_COST_MAX,
@@ -134,6 +136,23 @@ export function TripPlanner({
   const resetStepper = useUiStore((s) => s.resetStepper);
   const hasAnalysisStarted = useUiStore((s) => s.hasAnalysisStarted);
   const isAnalysisPhaseActive = useUiStore((s) => s.isAnalysisPhaseActive);
+  const aiEnabled = useUiStore((s) => s.aiCapability.enabled);
+  const aiAvailable = useUiStore((s) => s.aiCapability.available);
+  const setAiAvailable = useUiStore((s) => s.setAiAvailable);
+
+  // Probe the LLM tier once on mount so AI features can be gated explicitly when it
+  // is enabled but unreachable (#304); no network call at all when AI is off.
+  useEffect(() => {
+    if (!aiEnabled) return;
+    let cancelled = false;
+    void fetchAiAvailability().then((available) => {
+      if (!cancelled) setAiAvailable(available);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [aiEnabled, setAiAvailable]);
+
   const activeStages = useMemo(
     () => stages.filter((s) => !s.isRestDay),
     [stages],
@@ -214,6 +233,13 @@ export function TripPlanner({
         useTripStore.getState().clearTrip();
       }
     };
+    const onSetAiCapability = (e: Event) => {
+      const detail = (
+        e as CustomEvent<{ enabled: boolean; available: boolean }>
+      ).detail;
+      if (detail) useUiStore.getState().setAiCapability(detail);
+    };
+    window.addEventListener("__test_set_ai_capability", onSetAiCapability);
     window.addEventListener("__test_set_processing", onProcessing);
     window.addEventListener("__test_set_analysis_started", onAnalysisStarted);
     window.addEventListener("__test_clear_ai_overview", onClearAiOverview);
@@ -234,6 +260,7 @@ export function TripPlanner({
         onSetActiveDayNumber,
       );
       window.removeEventListener("__test_set_trip_id", onSetTripId);
+      window.removeEventListener("__test_set_ai_capability", onSetAiCapability);
     };
   }, []);
 
@@ -636,6 +663,9 @@ export function TripPlanner({
                   silently when the LLM pipeline is disabled or did not produce
                   an overview. Placed above the stage timeline so it gives the
                   user a high-level view before they dive into per-stage data. */}
+              {aiEnabled && !aiAvailable && (
+                <AiUnavailableNotice context="analysis" />
+              )}
               <TripAiOverview />
 
               {/* Sentinel — marks the natural position of the progress bar in the
