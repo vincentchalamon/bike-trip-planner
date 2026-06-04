@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Entity\User;
-use App\Security\HideForbiddenAsNotFoundHandler;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
@@ -26,10 +25,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'stateless' => true,
                 'provider' => 'app_user_provider',
                 'jwt' => [],
-                // Object-level authz denials (TRIP_*) -> 404, not 403, to avoid
-                // leaking trip existence by enumeration (ADR-038). Only fires for
-                // authenticated requests; anonymous still gets 401 via the entry point.
-                'access_denied_handler' => HideForbiddenAsNotFoundHandler::class,
+                // Object-level authz denials (TRIP_*) are surfaced as 404, not 403, to
+                // avoid leaking trip existence by enumeration (ADR-038). Handled by
+                // App\EventListener\HideForbiddenAsNotFoundListener on kernel.exception.
             ],
         ],
         'access_control' => [

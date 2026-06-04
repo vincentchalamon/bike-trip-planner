@@ -31,28 +31,40 @@ RFC 7231 §6.5.4 explicitly sanctions this ("An origin server that wishes to 'hi
 existence of a forbidden target resource MAY instead respond with a status code of 404"); it is
 also the convention used by GitHub for private resources a caller cannot access.
 
-Implementation: a firewall **`access_denied_handler`** (`App\Security\HideForbiddenAsNotFoundHandler`)
-that converts the `AccessDeniedException` raised by the `security:` expressions into a
-`NotFoundHttpException`, rendered by API Platform as a normal `problem+json` 404. The handler is
-wired on the `api` firewall in `config/packages/security.php`.
+Implementation: a **`kernel.exception` listener** (`App\EventListener\HideForbiddenAsNotFoundListener`)
+replaces the `AccessDeniedException` raised by the `security:` expressions with the same
+`App\Exception\TripNotFoundException` (a `NotFoundHttpException` with a fixed message and no echoed id)
+that the trip providers raise for a missing or expired trip. API Platform then renders one canonical
+`problem+json` 404, so a foreign trip and a non-existent one are **byte-for-byte identical**.
+
+The listener runs at **priority 2**, immediately before the firewall's own exception listener
+(priority 1): it swaps the throwable so the firewall no longer treats it as an access denial. The swap
+is gated on full authentication (`AuthenticationTrustResolverInterface::isFullFledged`, the same test the
+firewall applies), so an anonymous caller still gets 401 from the entry point. The replacement carries no
+`previous` link, because the firewall listener walks `getPrevious()` and would otherwise re-detect the
+wrapped `AccessDeniedException` and re-handle it.
 
 ## Scope and boundaries
 
 The mapping is **only** for object-level access denials:
 
-- **Anonymous requests stay 401.** A firewall invokes its access-denied handler only *after*
-  authentication; unauthenticated callers are turned into 401 by the entry point before the handler
-  runs (`access_control` requires `IS_AUTHENTICATED_FULLY` on `^/`).
+- **Anonymous requests stay 401.** The listener swaps only for a *fully authenticated* caller
+  (`isFullFledged`, the same test the firewall uses); an unauthenticated caller's denial is left
+  untouched and the entry point turns it into 401 (`access_control` requires `IS_AUTHENTICATED_FULLY`
+  on `^/`).
 - **Owned-but-forbidden state denials stay 4xx of their own.** Editing a *locked* trip you own
   throws `HttpException(423)` (`TripLocker::assertNotLocked`), not `AccessDeniedException`, so it is
   untouched — the caller already knows the trip exists, hiding it would be wrong.
 - **Today every `AccessDeniedException` in the app is an object-access denial** (`TRIP_*`); there are
   no direct `AccessDeniedHttpException` throws and no authenticated role-only 403s
   (`ROLE_USER` / `IS_AUTHENTICATED_FULLY` / `PUBLIC_ACCESS` never deny an authenticated user). The
-  blanket handler is therefore correct. **If a future capability/role denial must stay 403** (a
-  denial that does *not* hide an object's existence), it must bypass this handler — e.g. throw an
-  `AccessDeniedHttpException` (which the handler does not intercept) or branch on the denied
-  attribute. This boundary is the maintenance contract of this ADR.
+  blanket swap is therefore correct. **If a future capability/role denial must stay 403** (a
+  denial that does *not* hide an object's existence), it must bypass this listener by throwing an
+  `AccessDeniedHttpException` (the HttpKernel one): the listener only intercepts the Security
+  `AccessDeniedException`, so an `AccessDeniedHttpException` is rendered as 403 untouched. (API
+  Platform throws a bare `AccessDeniedException` with no attributes, so the listener cannot scope by
+  the denied attribute — hence the swap is unconditional for authenticated callers.) This boundary is
+  the maintenance contract of this ADR.
 
 ## Consequences
 
@@ -79,10 +91,14 @@ The mapping is **only** for object-level access denials:
 - **Throw 404 in each provider/processor** instead of using `security:` expressions. Rejected: scatters
   the policy across many state classes, easy to forget on a new endpoint, and loses the single
   voter-based access model.
-- **A `kernel.exception` listener** converting `AccessDeniedException` to `NotFoundHttpException`.
-  Workable but has to be ordered carefully against the firewall's own exception listener (which turns
-  the anonymous case into 401). The `access_denied_handler` is the framework's intended hook and fires
-  only for the authenticated-forbidden case, so it needs no priority juggling.
+- **A firewall `access_denied_handler`.** The framework's intended hook for an authenticated denial,
+  firing only for the authenticated-forbidden case (no auth gating needed). Rejected after testing: the
+  handler must *return* a `Response` and cannot rethrow — throwing a `NotFoundHttpException` from it is
+  caught by the firewall and re-wrapped as a 500 (*"Exception thrown when handling an exception"*). A
+  hand-built return `Response` would also not match API Platform's `problem+json` 404, leaving a foreign
+  trip distinguishable from a missing one by body on the object-load endpoints (where the missing case is
+  raised by the provider, not the voter). The `kernel.exception` listener (priority 2, gated on full
+  authentication) avoids both problems: it swaps the exception so API Platform renders one canonical 404.
 
 ## Sources
 
