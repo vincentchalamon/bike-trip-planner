@@ -1,0 +1,24 @@
+name: Markdown Links (external)
+
+# Network-dependent job: probes every external http(s) link in the Markdown docs
+# and fails on non-2xx/3xx. Kept out of the per-PR lane (and off any cron) because
+# external endpoints are flaky and frequently 403 bots — the project favours
+# manual execution over automatic crons (cf. lighthouse.yml / #575). Run it on
+# demand to audit rotted external references; the same check runs locally via
+# `make link-check -- --external`.
+on:
+  workflow_dispatch: ~
+
+jobs:
+  markdown-links-external:
+    name: Markdown Links (external)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "25"
+      - name: Check Markdown links & anchors (internal + external)
+        run: node scripts/check-md-links.mjs --external

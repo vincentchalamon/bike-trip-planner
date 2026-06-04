@@ -9,7 +9,7 @@
 
 Uptime Kuma is the **primary** uptime monitor for Bike Trip Planner. It runs on
 the same Coolify host as the application (Oracle Cloud Always Free VM, see
-[ADR-019](../../docs/adr/0019-hosting-coolify-oracle-cloud.md)) and provides
+[ADR-019](../../docs/adr/adr-019-deployment-infrastructure-strategy.md)) and provides
 sub-minute detection for backend and frontend outages.
 
 Because it shares the VM with the app, a host-level outage will take Uptime Kuma
