@@ -292,20 +292,24 @@ Given("I am logged in as user A", async ({ page }) => {
 });
 
 When("je tente d'accéder au voyage de l'utilisateur B", async ({ page }) => {
+  // Object-level authz denials are hidden as 404, not 403 (ADR-038): a foreign
+  // trip is indistinguishable from a non-existent one.
   await page.route("**/trips/other-user-trip/detail", (route) =>
     route.fulfill({
-      status: 403,
-      body: JSON.stringify({ detail: "Access Denied" }),
+      status: 404,
+      body: JSON.stringify({ detail: "Trip not found or has expired." }),
     }),
   );
   await page.goto("/trips/other-user-trip");
 });
 
 When("I try to access user B's trip", async ({ page }) => {
+  // Object-level authz denials are hidden as 404, not 403 (ADR-038): a foreign
+  // trip is indistinguishable from a non-existent one.
   await page.route("**/trips/other-user-trip/detail", (route) =>
     route.fulfill({
-      status: 403,
-      body: JSON.stringify({ detail: "Access Denied" }),
+      status: 404,
+      body: JSON.stringify({ detail: "Trip not found or has expired." }),
     }),
   );
   await page.goto("/trips/other-user-trip");

@@ -283,6 +283,7 @@ final class TripAnalyzeTest extends ApiTestCase
             ['headers' => [...['Content-Type' => 'application/ld+json'], ...$this->authHeader($otherToken)]],
         );
 
-        $this->assertResponseStatusCodeSame(403);
+        // Object-level authz denials are hidden as 404 (ADR-038), not 403.
+        $this->assertResponseStatusCodeSame(404);
     }
 }

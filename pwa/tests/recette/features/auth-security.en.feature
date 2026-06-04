@@ -60,4 +60,4 @@ Feature: Authentication and security
   Scenario: Trip isolation between users
     Given I am logged in as user A
     When I try to access user B's trip
-    Then I get a 403 error or a not found page
+    Then I get a 404 error or a not found page

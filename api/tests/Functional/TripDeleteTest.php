@@ -88,4 +88,20 @@ final class TripDeleteTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(404);
     }
+
+    #[Test]
+    public function deleteForeignTripReturns404(): void
+    {
+        // Deleting another user's trip is hidden as 404, not 403, so its existence is
+        // not revealed by enumeration (ADR-038).
+        $this->seedTrip(self::TRIP_ID);
+
+        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+
+        $this->client->request('DELETE', \sprintf('/trips/%s', self::TRIP_ID), [
+            'headers' => $this->authHeader($otherToken),
+        ]);
+
+        $this->assertResponseStatusCodeSame(404);
+    }
 }

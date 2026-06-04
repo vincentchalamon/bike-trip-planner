@@ -61,4 +61,4 @@ Fonctionnalité: Authentification et sécurité
   Scénario: Isolation des voyages entre utilisateurs
     Étant donné que je suis connecté en tant qu'utilisateur A
     Quand je tente d'accéder au voyage de l'utilisateur B
-    Alors j'obtiens une erreur 403 ou une page non trouvée
+    Alors j'obtiens une erreur 404 ou une page non trouvée

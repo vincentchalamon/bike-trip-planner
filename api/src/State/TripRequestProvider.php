@@ -7,8 +7,8 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\TripRequest;
+use App\Exception\TripNotFoundException;
 use App\Repository\TripRequestRepositoryInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * @implements ProviderInterface<TripRequest>
@@ -30,7 +30,7 @@ final readonly class TripRequestProvider implements ProviderInterface
         $request = $this->tripStateManager->getRequest($id);
 
         if (!$request instanceof TripRequest) {
-            throw new NotFoundHttpException(\sprintf('Trip "%s" not found or has expired.', $id));
+            throw new TripNotFoundException();
         }
 
         return $request;

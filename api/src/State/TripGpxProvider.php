@@ -7,8 +7,8 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Trip;
+use App\Exception\TripNotFoundException;
 use App\Repository\TripRequestRepositoryInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Provides a {@see Trip} resource for GPX export.
@@ -39,7 +39,7 @@ final readonly class TripGpxProvider implements ProviderInterface
         $stages = $this->tripStateManager->getStages($id);
 
         if (null === $stages) {
-            throw new NotFoundHttpException(\sprintf('Trip "%s" not found or has expired.', $id));
+            throw new TripNotFoundException();
         }
 
         $context['trip_stages'] = $stages;

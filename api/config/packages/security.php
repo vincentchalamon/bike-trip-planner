@@ -25,6 +25,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'stateless' => true,
                 'provider' => 'app_user_provider',
                 'jwt' => [],
+                // Object-level authz denials (TRIP_*) are surfaced as 404, not 403, to
+                // avoid leaking trip existence by enumeration (ADR-038). Handled by
+                // App\EventListener\HideForbiddenAsNotFoundListener on kernel.exception.
             ],
         ],
         'access_control' => [
