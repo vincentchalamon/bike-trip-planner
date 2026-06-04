@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { enableMapSet } from "immer";
+import { AI_ENABLED } from "@/lib/constants";
 
 // Required for Immer to allow mutating Set/Map drafts (used by completedSteps).
 enableMapSet();
@@ -173,6 +174,14 @@ interface UiState {
    * Persisted by {@link toggleBubble} the first time the panel opens.
    */
   hasSeenBubble: boolean;
+  /**
+   * AI tier availability driving the explicit degraded-mode gating (#304).
+   * - `enabled`: build-time config (`AI_ENABLED`); when false, AI features are hidden.
+   * - `available`: runtime reachability of the LLM tier, read from `/api/health`
+   *   (`deps.ollama_chat`). Starts optimistic (`true`) to avoid a disabled→enabled
+   *   flash; flipped to `false` only once an outage is confirmed.
+   */
+  aiCapability: { enabled: boolean; available: boolean };
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -233,6 +242,13 @@ interface UiState {
   clearHistory: () => void;
   /** Flip the in-flight indicator that drives the typing dots. */
   setChatSending: (value: boolean) => void;
+  /** Update the runtime AI availability (from the `/api/health` probe, #304). */
+  setAiAvailable: (value: boolean) => void;
+  /** Replace the whole AI capability — E2E override hook for the 3 states (#304). */
+  setAiCapability: (capability: {
+    enabled: boolean;
+    available: boolean;
+  }) => void;
 }
 
 const BUBBLE_SEEN_STORAGE_KEY = "btp.ai-bubble.seen";
@@ -307,6 +323,7 @@ export const useUiStore = create<UiState>()(
     currentContext: { currentStage: null },
     isChatSending: false,
     hasSeenBubble: readBubbleSeenFromStorage(),
+    aiCapability: { enabled: AI_ENABLED, available: true },
 
     setProcessing: (value) =>
       set((state) => {
@@ -469,6 +486,16 @@ export const useUiStore = create<UiState>()(
     setChatSending: (value) =>
       set((state) => {
         state.isChatSending = value;
+      }),
+
+    setAiAvailable: (value) =>
+      set((state) => {
+        state.aiCapability.available = value;
+      }),
+
+    setAiCapability: (capability) =>
+      set((state) => {
+        state.aiCapability = capability;
       }),
   })),
 );

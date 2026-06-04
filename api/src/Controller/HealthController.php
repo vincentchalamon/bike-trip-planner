@@ -35,6 +35,8 @@ final readonly class HealthController
         private HttpClientInterface $ollamaChatClient,
         #[Autowire(service: 'ollama_analysis.client')]
         private HttpClientInterface $ollamaAnalysisClient,
+        #[Autowire(env: 'bool:default::OLLAMA_ENABLED')]
+        private bool $aiEnabled,
         #[Autowire(service: 'mercure.health.client')]
         private HttpClientInterface $mercureClient,
         #[Autowire(service: 'limiter.health_liveness')]
@@ -76,18 +78,25 @@ final readonly class HealthController
         $pending = [
             'mercure' => $this->startHttpCheck('HEAD', '?topic=health', $this->mercureClient),
             'valhalla' => $this->startHttpCheck('GET', '/status', $this->valhallaClient),
-            'ollama_chat' => $this->startHttpCheck('GET', '/api/tags', $this->ollamaChatClient),
-            'ollama_analysis' => $this->startHttpCheck('GET', '/api/tags', $this->ollamaAnalysisClient),
         ];
+
+        // The LLM tier is probed/surfaced only when enabled (OLLAMA_ENABLED=1). When off,
+        // the absence of `deps.ollama_*` is itself the "AI disabled" signal, and we skip
+        // two pointless probes against an unwired tier. The PWA gates AI features on
+        // NEXT_PUBLIC_AI_ENABLED + deps.ollama_chat (ADR-028 "Degraded Mode").
+        if ($this->aiEnabled) {
+            $pending['ollama_chat'] = $this->startHttpCheck('GET', '/api/tags', $this->ollamaChatClient);
+            $pending['ollama_analysis'] = $this->startHttpCheck('GET', '/api/tags', $this->ollamaAnalysisClient);
+        }
 
         foreach ($pending as $name => $pair) {
             $deps[$name] = $this->finishHttpCheck($pair);
         }
 
-        // Ollama is intentionally NOT required: the app runs in a degraded mode when
-        // the LLM tier is down (AI features disabled, not a 5xx) — see ADR-028
-        // "Degraded Mode" update. ollama_chat/ollama_analysis are still surfaced in
-        // `deps` (and logged) so operators can see/alert on the outage.
+        // Ollama is intentionally NOT required: the app runs in a degraded mode when the
+        // LLM tier is down (AI features disabled, not a 5xx) — see ADR-028 "Degraded Mode"
+        // update. When enabled, ollama_chat/ollama_analysis are surfaced in `deps` (and
+        // logged `critical`) so operators can see/alert on the outage.
         $required = ['postgres', 'redis', 'mercure', 'valhalla'];
         $status = 'ok';
         foreach ($required as $dep) {

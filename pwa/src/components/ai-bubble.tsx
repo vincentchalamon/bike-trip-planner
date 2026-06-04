@@ -43,6 +43,7 @@ export function AiBubble() {
   const setCurrentContext = useUiStore((s) => s.setCurrentContext);
 
   const trip = useTripStore((s) => s.trip);
+  const aiCapability = useUiStore((s) => s.aiCapability);
 
   useEffect(() => {
     setCurrentContext({ currentStage: activeDayNumber ?? null });
@@ -55,32 +56,46 @@ export function AiBubble() {
   };
 
   if (!trip || isAnalysisPhaseActive) return null;
+  // AI disabled by config (NEXT_PUBLIC_AI_ENABLED=0) — hide the assistant entirely.
+  if (!aiCapability.enabled) return null;
+
+  // Disabled affordance when the network is down OR the (enabled) AI tier is
+  // unreachable: same visual treatment, distinct title + data attribute (#304).
+  const isAiDown = !aiCapability.available;
+  const isUnavailable = !isOnline || isAiDown;
 
   return (
     <>
       <button
         type="button"
-        onClick={isOnline ? handleToggle : undefined}
-        aria-disabled={!isOnline}
+        onClick={isUnavailable ? undefined : handleToggle}
+        aria-disabled={isUnavailable}
         aria-label={isBubbleOpen ? t("closeAria") : t("openAria")}
         aria-expanded={isBubbleOpen}
         aria-controls="ai-chat-panel"
         data-testid="ai-bubble"
         data-open={isBubbleOpen || undefined}
         data-offline={!isOnline || undefined}
-        title={!isOnline ? tOffline("label") : undefined}
+        data-ai-down={(isOnline && isAiDown) || undefined}
+        title={
+          !isOnline
+            ? tOffline("label")
+            : isAiDown
+              ? t("unavailableTitle")
+              : undefined
+        }
         className={cn(
           "fixed bottom-6 right-6 z-30 inline-flex items-center justify-center",
           "h-14 w-14 rounded-full bg-brand text-white shadow-lg",
           "hover:bg-brand-hover transition-transform hover:scale-105",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-hover focus-visible:ring-offset-2",
-          !isOnline &&
+          isUnavailable &&
             "cursor-not-allowed opacity-60 hover:scale-100 hover:bg-brand",
         )}
       >
         <Sparkles className="h-6 w-6" aria-hidden="true" />
         {!isOnline && <ChatOfflineBadge />}
-        {isOnline && !hasSeenBubble && (
+        {isOnline && !isAiDown && !hasSeenBubble && (
           <span
             data-testid="ai-bubble-badge"
             className={cn(

@@ -145,7 +145,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
                 ],
             );
         } catch (OllamaUnavailableException $ollamaUnavailableException) {
-            $this->logger->warning('Ollama unreachable — skipping trip overview synthesis.', [
+            $this->logger->critical('Ollama unreachable — skipping trip overview synthesis.', [
                 'tripId' => $tripId,
                 'error' => $ollamaUnavailableException->getMessage(),
             ]);

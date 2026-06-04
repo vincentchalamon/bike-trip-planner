@@ -12,6 +12,7 @@ use App\InRide\InRideAssistant;
 use App\InRide\OpeningHoursParser;
 use App\InRide\PoiIntentDetector;
 use App\InRide\PoiSuggestion;
+use App\Llm\Exception\OllamaUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
 use App\Scanner\OsmOverpassQueryBuilder;
@@ -19,6 +20,8 @@ use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 /**
@@ -265,8 +268,51 @@ final class InRideAssistantTest extends TestCase
         $this->assertStringContainsString('rien trouvé', $response->narrative);
     }
 
-    private function buildAssistant(LlmClientInterface $llm, ScannerInterface $scanner): InRideAssistant
+    #[Test]
+    public function logsAtCriticalWhenOllamaUnreachableForNarrative(): void
     {
+        // Intent classification succeeds (user message) but the narrative call
+        // (JSON payload) hits an unreachable tier — it must log `critical` and
+        // still serve the fallback narrative (#304).
+        $llm = $this->createMock(LlmClientInterface::class);
+        $llm->method('generate')->willReturnCallback(
+            static function (string $model, string $prompt): array {
+                if (str_starts_with(trim($prompt), '{')) {
+                    throw new OllamaUnavailableException('boom');
+                }
+
+                return ['response' => '{"category":"water","max_distance_m":3000}'];
+            },
+        );
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('critical')
+            ->with(self::stringContains('LLM unavailable for narrative'));
+
+        $scanner = $this->createMock(ScannerInterface::class);
+        $scanner->method('query')->willReturn([
+            'elements' => [
+                ['type' => 'node', 'lat' => 50.8504, 'lon' => 4.3520, 'tags' => ['name' => 'Fontaine']],
+            ],
+        ]);
+
+        $assistant = $this->buildAssistant($llm, $scanner, $logger);
+
+        $response = $assistant->assist(
+            message: "Je cherche un point d'eau",
+            position: new GeoPosition(50.8503, 4.3517),
+        );
+
+        // Graceful degradation: POIs are still returned with a fallback narrative.
+        self::assertSame(PoiSuggestion::CATEGORY_WATER, $response->category);
+        self::assertNotEmpty($response->pois);
+    }
+
+    private function buildAssistant(
+        LlmClientInterface $llm,
+        ScannerInterface $scanner,
+        ?LoggerInterface $logger = null,
+    ): InRideAssistant {
         $distance = new HaversineDistance();
 
         return new InRideAssistant(
@@ -280,6 +326,7 @@ final class InRideAssistantTest extends TestCase
             llmClient: $llm,
             promptLoader: new SystemPromptLoader($this->promptDir),
             cache: new ArrayAdapter(),
+            logger: $logger ?? new NullLogger(),
         );
     }
 }

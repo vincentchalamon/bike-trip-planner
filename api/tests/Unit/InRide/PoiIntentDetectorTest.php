@@ -6,12 +6,14 @@ namespace App\Tests\Unit\InRide;
 
 use App\InRide\PoiIntentDetector;
 use App\InRide\PoiSuggestion;
+use App\Llm\Exception\OllamaUnavailableException;
 use App\Llm\LlmClientInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
@@ -33,6 +35,21 @@ final class PoiIntentDetectorTest extends TestCase
         $detector = new PoiIntentDetector($llm, new NullLogger());
 
         $intent = $detector->detect('   ');
+
+        self::assertTrue($intent->isUnknown());
+    }
+
+    #[Test]
+    public function logsAtCriticalWhenOllamaUnreachable(): void
+    {
+        $llm = $this->createMock(LlmClientInterface::class);
+        $llm->method('generate')->willThrowException(new OllamaUnavailableException('boom'));
+
+        // AI enabled but unreachable must be logged at `critical` for ops alerting (#304).
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('critical')->with(self::stringContains('LLM unavailable'));
+
+        $intent = new PoiIntentDetector($llm, $logger)->detect('Un café ?');
 
         self::assertTrue($intent->isUnknown());
     }

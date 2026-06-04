@@ -163,7 +163,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
                 ],
             );
         } catch (OllamaUnavailableException $ollamaUnavailableException) {
-            $this->logger->warning('Ollama unreachable — chat endpoint returning 503.', [
+            $this->logger->critical('Ollama unreachable — chat endpoint returning 503.', [
                 'tripId' => $tripId,
                 'error' => $ollamaUnavailableException->getMessage(),
             ]);

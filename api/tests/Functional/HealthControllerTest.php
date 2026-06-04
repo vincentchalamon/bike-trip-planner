@@ -32,11 +32,12 @@ final class HealthControllerTest extends ApiTestCase
     #[\Override]
     protected function tearDown(): void
     {
-        // Reset overridden services so that the broken-Postgres / broken-Redis
-        // mock injected by a given test does not leak into subsequent ones —
-        // the kernel is reused ($alwaysBootKernel = false).
-        $container = self::getContainer();
-        $container->reset();
+        // A test may flip OLLAMA_ENABLED and reboot the kernel (see
+        // bootWithOllamaEnabled): restore the default (0) and drop the kernel so the
+        // next test boots fresh with a clean env and no leaked service overrides
+        // (broken Postgres/Redis, mocked HTTP clients).
+        $_SERVER['OLLAMA_ENABLED'] = $_ENV['OLLAMA_ENABLED'] = '0';
+        self::ensureKernelShutdown();
         parent::tearDown();
     }
 
@@ -65,6 +66,7 @@ final class HealthControllerTest extends ApiTestCase
     #[Test]
     public function readinessReturns200WhenAllDependenciesAreUp(): void
     {
+        $this->bootWithOllamaEnabled();
         $this->mockHealthHttpClients(
             valhalla: new MockResponse('OK', ['http_code' => 200]),
             ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
@@ -187,6 +189,7 @@ final class HealthControllerTest extends ApiTestCase
     {
         // Ollama is intentionally excluded from $required, so its outage must
         // not flip the aggregate status — pin that contract here.
+        $this->bootWithOllamaEnabled();
         $this->mockHealthHttpClients(
             valhalla: new MockResponse('OK', ['http_code' => 200]),
             ollama: new MockResponse('error', ['http_code' => 500]),
@@ -206,6 +209,7 @@ final class HealthControllerTest extends ApiTestCase
     {
         // The analysis client is also excluded from $required; an analysis-only
         // outage surfaces in deps.ollama_analysis but must not flip the aggregate.
+        $this->bootWithOllamaEnabled();
         $this->mockHealthHttpClients(
             valhalla: new MockResponse('OK', ['http_code' => 200]),
             ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
@@ -219,6 +223,38 @@ final class HealthControllerTest extends ApiTestCase
         $data = $response->toArray();
         $this->assertSame('ok', $data['status']);
         $this->assertSame('down', $data['deps']['ollama_analysis']['status']);
+    }
+
+    #[Test]
+    public function readinessOmitsOllamaWhenAiDisabled(): void
+    {
+        // OLLAMA_ENABLED=0 (the test-suite default): the LLM tier is neither probed
+        // nor surfaced — its very absence from `deps` is the "AI disabled" signal.
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $response = $this->client->request('GET', '/api/health');
+
+        $this->assertResponseStatusCodeSame(200);
+        $data = $response->toArray();
+        $this->assertSame('ok', $data['status']);
+        $this->assertArrayNotHasKey('ollama_chat', $data['deps']);
+        $this->assertArrayNotHasKey('ollama_analysis', $data['deps']);
+    }
+
+    /**
+     * Reboot the kernel with OLLAMA_ENABLED=1 so the readiness probe surfaces the LLM
+     * tier. Must be called before mocking the HTTP clients (the reboot rebuilds the
+     * container). tearDown restores the default (0) and drops the kernel.
+     */
+    private function bootWithOllamaEnabled(): void
+    {
+        $_SERVER['OLLAMA_ENABLED'] = $_ENV['OLLAMA_ENABLED'] = '1';
+        self::ensureKernelShutdown();
+        $this->client = self::createClient();
     }
 
     private function mockHealthHttpClients(

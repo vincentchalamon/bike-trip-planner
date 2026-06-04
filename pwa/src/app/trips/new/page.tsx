@@ -45,6 +45,7 @@ function WizardContent() {
   const currentStep = useUiStore((s) => s.currentStep);
   const completedSteps = useUiStore((s) => s.completedSteps);
   const goToStep = useUiStore((s) => s.goToStep);
+  const aiCapability = useUiStore((s) => s.aiCapability);
   const tripId = useTripStore((s) => s.trip?.id ?? null);
 
   const requestedStep = useMemo<WizardStepId | null>(() => {
@@ -158,12 +159,19 @@ function WizardContent() {
       <div id="wizard-content">
         {/* Step 2 ("Aperçu") embeds the single-shot AI refinement card
             (issue #393). The slot is forwarded to {@link TripPreview} so the
-            card sits between the stages list and the launch CTA. The card is
-            rendered unconditionally — TripPlanner only mounts the preview
-            UI when the wizard is on step 2, so the slot is naturally scoped.
+            card sits between the stages list and the launch CTA. Gated on AI
+            availability (#304): hidden when AI is off by config, disabled with
+            an explicit notice when the tier is enabled but unreachable.
             TODO(#309): wire the `onApply` handler to the chat-IA endpoint
             (sprint 31) once it ships. */}
-        <TripPlanner hideStepper previewSlot={<AiRefinementCard />} />
+        <TripPlanner
+          hideStepper
+          previewSlot={
+            aiCapability.enabled ? (
+              <AiRefinementCard unavailable={!aiCapability.available} />
+            ) : undefined
+          }
+        />
       </div>
     </div>
   );

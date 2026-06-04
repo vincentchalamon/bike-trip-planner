@@ -140,8 +140,9 @@ update below, which supersedes the earlier hard-dependency stance.
   `external: true` + a one-time `docker network create bike-trip-planner-llm` (validate when the prod target exists).
 - **Health.** Ollama is deliberately **excluded from the readiness `$required` set** (`GET /api/health` stays `ok`
   when the LLM tier is down) and from liveness — an Ollama outage must neither return traffic-blocking 503s nor
-  restart-loop the app. Its status is still **surfaced in `deps.ollama_chat`/`deps.ollama_analysis`** and logged
-  `critical` so operators can alert. This realises the degraded-mode contract below.
+  restart-loop the app. When `OLLAMA_ENABLED=1` its status is **surfaced in `deps.ollama_chat`/`deps.ollama_analysis`**
+  (the keys are omitted entirely when AI is off by config, so their absence is itself the "disabled" signal), and an
+  unreachable enabled tier is logged `critical` so operators can alert. This realises the degraded-mode contract below.
 
 ---
 
@@ -179,10 +180,13 @@ uptime). That objection is **resolved by making degradation explicit**, not by f
   AI passes (stage analysis, overview, chat) are **skipped** rather than retried-to-failure, and the event is
   logged at **`critical`** for alerting. The app does not return a traffic-blocking 503 for an AI outage; Ollama
   stays **out of the readiness `$required` set** (see Deployment topology → Health).
-- **Front — explicit feature-gating.** The PWA reads AI availability (capabilities signal / health `deps.ollama`)
-  and **disables the AI-driven features** when the tier is down: AI trip generation, the in-editor AI chat, and
-  AI trip analysis. The user sees *why* they are unavailable rather than silently receiving a degraded report —
-  this is the determinism guarantee the Sprint-29 update was protecting, kept intact.
+- **Front — explicit feature-gating.** The PWA derives AI availability from two signals: the build-time
+  `NEXT_PUBLIC_AI_ENABLED` flag (mirrors `OLLAMA_ENABLED` — when off, AI features are hidden outright with no probe)
+  and, when enabled, a runtime `GET /api/health` → `deps.ollama_chat.status` probe at planner mount. It **disables
+  the AI-driven features** when the tier is unreachable: AI trip generation (refinement card), the in-editor AI chat,
+  and AI trip analysis (an explicit "AI unavailable" notice). The user sees *why* they are unavailable rather than
+  silently receiving a degraded report — the determinism guarantee the Sprint-29 update was protecting, kept intact.
+  No dedicated `/capabilities` endpoint is introduced: `/api/health` already carries the runtime signal.
 - **Three supported states.** `OLLAMA_ENABLED=0` (AI off by config — features hidden), `OLLAMA_ENABLED=1` +
   reachable (full AI), and `OLLAMA_ENABLED=1` + unreachable (degraded — features disabled, `critical` logs).
 - **Issues.** #304 (graceful fallback without Ollama) is **re-opened** to carry the front gating + API

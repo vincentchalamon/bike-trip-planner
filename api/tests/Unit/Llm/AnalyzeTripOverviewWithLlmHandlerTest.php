@@ -22,6 +22,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -189,7 +190,11 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
         $llmClient->method('isEnabled')->willReturn(true);
         $llmClient->method('generate')->willThrowException(new OllamaUnavailableException('boom'));
 
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
+        // AI enabled but Ollama unreachable must be logged at `critical` for ops alerting (#304).
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('critical')->with(self::stringContains('Ollama unreachable'));
+
+        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient, logger: $logger);
         $handler(new AnalyzeTripOverviewWithLlmMessage(self::TRIP_ID));
     }
 
@@ -497,12 +502,14 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
     /**
      * @param TripRequestRepositoryInterface&MockObject $repo
      * @param LlmClientInterface&MockObject             $llmClient
+     * @param (LoggerInterface&MockObject)|null         $logger    override the logger when the test asserts a log level
      */
     private function makeHandler(
         TripRequestRepositoryInterface $repo,
         LlmClientInterface $llmClient,
         bool $claimsTripReadyPublication = true,
         ?TripUpdatePublisherInterface $publisher = null,
+        ?LoggerInterface $logger = null,
     ): AnalyzeTripOverviewWithLlmHandler {
         $llmTracker = $this->createStub(LlmAnalysisTrackerInterface::class);
         $llmTracker->method('getStageAnalysisProgress')->willReturn(['completed' => 1, 'failed' => 0, 'total' => 1]);
@@ -515,7 +522,7 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
             tripStateManager: $repo,
             llmClient: $llmClient,
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
-            logger: new NullLogger(),
+            logger: $logger ?? new NullLogger(),
             llmTracker: $llmTracker,
             computationTracker: $computationTracker,
             publisher: $publisher ?? new NullTripUpdatePublisher(),
