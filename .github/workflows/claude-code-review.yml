@@ -271,7 +271,6 @@ jobs:
                  - [ ] Documentation is up to date
                  - [ ] Dependent tickets accounted for
               5. **Inline comments** — "Posted N inline comments." (or "No inline comments." if none)
-              6. **Footer** — "Generated with [Claude Code](https://claude.ai/code)"
 
             **IMPORTANT: This step is NOT optional.** You must ALWAYS reach this step and submit the review.
             If you created a PENDING review, you MUST submit it — an unsubmitted pending review is invisible on GitHub.

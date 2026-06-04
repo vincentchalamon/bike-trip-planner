@@ -103,7 +103,6 @@ jobs:
               - `## Test plan` (bulleted checklist)
               - `## Auto-critique` (what was verified per CLAUDE.md)
               - `Closes #${{ github.event.issue.number }}`
-              - Footer: `🤖 Generated with [Claude Code](https://claude.ai/code)`
 
             ## Step 7 — Monitor CI
 
