@@ -472,3 +472,7 @@ networks:
   # by name; see ADR-028 "Deployment topology".
   bike-trip-planner-llm:
     name: bike-trip-planner-llm
+    # Must match compose.ollama.yaml exactly: whichever stack comes up first
+    # creates the network, so identical attributes avoid a "network exists with
+    # different configuration" mismatch when the other stack joins it by name.
+    attachable: true
