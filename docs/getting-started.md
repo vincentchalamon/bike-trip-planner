@@ -80,12 +80,16 @@ You should receive an OpenAPI JSON document.
 ## Common tasks
 
 ```bash
-make start     # Start all containers
-make stop      # Stop all containers (preserves data)
-make clean     # Stop all containers and erase all data (use with caution)
+make start         # Start all containers (production-iso mode)
+make start-dev     # Start in development mode (hot reload; AI tier off by default)
+make start-recette # Production-iso + Mailcatcher + Ollama (AI on) for the recette
+make stop          # Stop all containers (preserves data)
+make clean         # Stop all containers and erase all data (use with caution)
 ```
 
 See `make help` for the full list of available targets.
+
+> **One project, no ordering.** Locally, every `make start*` target boots the app and the Ollama LLM tier as a **single** Compose project, so the shared `bike-trip-planner-llm` network is created once and you never have to start one before the other. In production the LLM tier is a *separate* resource with its own startup model — see [deployment.md](deployment.md#llm-tier-ollama-and-the-shared-network).
 
 ---
 

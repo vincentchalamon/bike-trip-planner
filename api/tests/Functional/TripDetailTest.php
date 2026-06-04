@@ -87,13 +87,32 @@ final class TripDetailTest extends ApiTestCase
     }
 
     #[Test]
-    public function detailNonExistentTripReturns404(): void
+    public function detailNonExistentTripReturns403(): void
     {
+        // The TRIP_VIEW voter runs before the provider (security expression on the
+        // id), so an unknown trip is denied (403) without revealing existence —
+        // same contract as GET /trips/{id}/chat-history.
         $this->client->request('GET', '/trips/00000000-0000-0000-0000-000000000000/detail', [
             'headers' => $this->authHeader($this->jwtToken),
         ]);
 
-        $this->assertResponseStatusCodeSame(404);
+        $this->assertResponseStatusCodeSame(403);
+    }
+
+    #[Test]
+    public function detailOfAnotherUsersTripReturns403(): void
+    {
+        // IDOR-DETAIL regression: a trip owned by someone else must not be readable.
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStages(self::TRIP_ID, []);
+
+        ['token' => $otherToken] = $this->createTestUserWithJwt('intruder@example.com');
+
+        $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($otherToken)),
+        ]);
+
+        $this->assertResponseStatusCodeSame(403);
     }
 
     #[Test]

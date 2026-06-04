@@ -15,10 +15,6 @@
 # duplicating the block across the three services (review #612).
 x-recette-env: &recette-env
   MAILER_DSN: smtp://mailcatcher:1025
-  # Workaround for a recette finding: compose.yaml (prod) omits LOCK_DSN, so it
-  # falls back to api/.env's redis://localhost:6379 (unreachable from the container,
-  # redis is the `redis` service) -> trip creation 500s. Fix belongs in compose.yaml (35.4).
-  LOCK_DSN: redis://redis:6379
   OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
   # Flat defaults (no nested interpolation): robust across Compose versions and
   # unambiguous. Recette never overrides OLLAMA_BASE_URL alone, so no fallback is lost.

@@ -11,6 +11,32 @@ Bike Trip Planner is deployed on Oracle Cloud Always Free (ARM A1) via Coolify (
 
 Migrations are executed at container boot (see [ADR-032](adr/adr-032-migrations-and-rollback-strategy.md)). Coolify keeps the N most recent images, enabling 1-click rollback to any previous SHA; the `build-images` job also prunes GHCR to the 10 most recent versions per image.
 
+## LLM tier (Ollama) and the shared network
+
+The Ollama inference tier is **not** part of the application stack (`compose.yaml`). It lives in `compose.ollama.yaml` and is deployed as a **separate Coolify resource** (ADR-028 + #566): it has very different resource needs (a resident model is ~2-6 GB RAM, GPU-optional, model blobs on a persistent volume) and an independent lifecycle (slow model pulls, restarts decoupled from the stateless app).
+
+The two stacks talk over a shared Docker network, `bike-trip-planner-llm`:
+
+- Declared by a fixed `name` (non-`external`) in **both** `compose.yaml` and `compose.ollama.yaml`. The first stack to come up creates it; the other attaches by name.
+- `compose.ollama.yaml` attaches `ollama` to it and owns the network alias `ollama`, so the app reaches `http://ollama:11434` regardless of the Ollama project/service name.
+- Only the LLM-calling services join it (`php`, `worker`, `worker-llm`). `database`, `redis`, `mercure` and `valhalla` stay on the app's default network (least connectivity: the third-party inference container has no route to the datastore).
+- Models are pulled once at deploy time by the `ollama-init` one-shot (`docker compose -f compose.ollama.yaml --profile ollama-init up`), persisted in the `ollama-data` volume.
+
+### Startup ordering
+
+**Order-independent.** Because the network is name-pinned and non-`external`, neither stack has to start first: the first `up` creates the network, the second attaches to it by name. Functionally too, the app boots even if Ollama is not yet up; it runs in **degraded mode** (AI features hidden in the PWA, AI passes skipped in the API with `critical` logs, `/api/health` stays `ok`) and in-flight LLM messages retry on the durable Redis transport until Ollama answers (see ADR-028 "Degraded Mode" and [runbooks/ollama-down.md](runbooks/ollama-down.md)). Bringing Ollama up first is optional, only so the very first AI request succeeds immediately.
+
+Two ways to run it:
+
+| Model | Command | When |
+| --- | --- | --- |
+| **Separate resources** (recommended) | App resource: `docker compose -f compose.yaml up -d` · Ollama resource: `docker compose -f compose.ollama.yaml up -d` (two Coolify resources / projects) | Prod: lets Ollama be sized/placed independently (RAM/GPU/host). |
+| **Co-located** (single host) | `docker compose -f compose.yaml -f compose.ollama.yaml up -d` (one project) | Simplest; only if one host has the RAM for Ollama. Loses the resource separation. |
+
+> **Caveat (two-project model):** sharing a name-pinned non-`external` network across two separate Compose projects works on current Compose, but some versions warn on the network's project-ownership label. If that surfaces in your Coolify setup, switch the network to `external: true` in both files and pre-create it once with `docker network create bike-trip-planner-llm` (then bring up either stack in any order). Tear down the app stack before the Ollama stack so the shared network is not removed from under a running consumer.
+
+> **Local dev/recette** boot everything as a **single** Compose project (`make start-dev`, `make start-recette`), so the network is created once and there is no ordering to worry about. `OLLAMA_ENABLED` is `0` in dev (AI off, no models pulled) and `1` in recette. See [getting-started.md](getting-started.md).
+
 ## Required GitHub Actions secrets
 
 | Secret | Required for | Purpose |
