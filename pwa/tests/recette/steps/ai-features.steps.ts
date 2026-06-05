@@ -145,7 +145,7 @@ const NEARBY_POIS = [
     distance_m: 450,
     detour_m: 200,
     opening_hours_today: "Mo-Sa 07:00-19:30",
-    closes_at: "2026-05-19T19:30:00+02:00",
+    closes_at: "2030-12-31T23:59:00+02:00",
     phone: "+33123456789",
     deeplink: "https://maps.google.com/?q=48.857,2.353",
     warning: null,
@@ -433,32 +433,40 @@ When("I expand the AI overview details", async ({ mockedPage }) => {
 When(
   "je déploie les alertes complètes de l'analyse IA de l'étape {int}",
   async ({ mockedPage }, n: number) => {
-    void n;
-    await mockedPage.getByTestId("stage-ai-summary-alerts-show-more").click();
+    await mockedPage
+      .getByTestId(`stage-ai-summary-${n - 1}`)
+      .getByTestId("stage-ai-summary-alerts-show-more")
+      .click();
   },
 );
 
 When(
   "I expand the full alerts of the AI analysis of stage {int}",
   async ({ mockedPage }, n: number) => {
-    void n;
-    await mockedPage.getByTestId("stage-ai-summary-alerts-show-more").click();
+    await mockedPage
+      .getByTestId(`stage-ai-summary-${n - 1}`)
+      .getByTestId("stage-ai-summary-alerts-show-more")
+      .click();
   },
 );
 
 When(
   "j'applique les suggestions IA de l'étape {int}",
   async ({ mockedPage }, n: number) => {
-    void n;
-    await mockedPage.getByTestId("stage-ai-summary-apply").click();
+    await mockedPage
+      .getByTestId(`stage-ai-summary-${n - 1}`)
+      .getByTestId("stage-ai-summary-apply")
+      .click();
   },
 );
 
 When(
   "I apply the AI suggestions of stage {int}",
   async ({ mockedPage }, n: number) => {
-    void n;
-    await mockedPage.getByTestId("stage-ai-summary-apply").click();
+    await mockedPage
+      .getByTestId(`stage-ai-summary-${n - 1}`)
+      .getByTestId("stage-ai-summary-apply")
+      .click();
   },
 );
 
@@ -730,9 +738,10 @@ Then(
 Then(
   "la description IA de l'étape {int} est affichée",
   async ({ mockedPage }, n: number) => {
-    void n;
     await expect(
-      mockedPage.getByTestId("stage-ai-summary-narrative"),
+      mockedPage
+        .getByTestId(`stage-ai-summary-${n - 1}`)
+        .getByTestId("stage-ai-summary-narrative"),
     ).toBeVisible({ timeout: 10000 });
   },
 );
@@ -740,9 +749,10 @@ Then(
 Then(
   "the AI description of stage {int} is displayed",
   async ({ mockedPage }, n: number) => {
-    void n;
     await expect(
-      mockedPage.getByTestId("stage-ai-summary-narrative"),
+      mockedPage
+        .getByTestId(`stage-ai-summary-${n - 1}`)
+        .getByTestId("stage-ai-summary-narrative"),
     ).toBeVisible({ timeout: 10000 });
   },
 );
@@ -750,9 +760,10 @@ Then(
 Then(
   "les insights IA de l'étape {int} sont affichés",
   async ({ mockedPage }, n: number) => {
-    void n;
     await expect(
-      mockedPage.getByTestId("stage-ai-summary-insights"),
+      mockedPage
+        .getByTestId(`stage-ai-summary-${n - 1}`)
+        .getByTestId("stage-ai-summary-insights"),
     ).toBeVisible({
       timeout: 10000,
     });
@@ -762,9 +773,10 @@ Then(
 Then(
   "the AI insights of stage {int} are displayed",
   async ({ mockedPage }, n: number) => {
-    void n;
     await expect(
-      mockedPage.getByTestId("stage-ai-summary-insights"),
+      mockedPage
+        .getByTestId(`stage-ai-summary-${n - 1}`)
+        .getByTestId("stage-ai-summary-insights"),
     ).toBeVisible({
       timeout: 10000,
     });
@@ -774,9 +786,10 @@ Then(
 Then(
   "les suggestions IA de l'étape {int} sont affichées",
   async ({ mockedPage }, n: number) => {
-    void n;
     await expect(
-      mockedPage.getByTestId("stage-ai-summary-suggestions"),
+      mockedPage
+        .getByTestId(`stage-ai-summary-${n - 1}`)
+        .getByTestId("stage-ai-summary-suggestions"),
     ).toBeVisible({ timeout: 10000 });
   },
 );
@@ -784,9 +797,10 @@ Then(
 Then(
   "the AI suggestions of stage {int} are displayed",
   async ({ mockedPage }, n: number) => {
-    void n;
     await expect(
-      mockedPage.getByTestId("stage-ai-summary-suggestions"),
+      mockedPage
+        .getByTestId(`stage-ai-summary-${n - 1}`)
+        .getByTestId("stage-ai-summary-suggestions"),
     ).toBeVisible({ timeout: 10000 });
   },
 );
@@ -794,9 +808,10 @@ Then(
 Then(
   "la liste complète des alertes IA de l'étape {int} est visible",
   async ({ mockedPage }, n: number) => {
-    void n;
     await expect(
-      mockedPage.getByTestId("stage-ai-summary-alerts-full"),
+      mockedPage
+        .getByTestId(`stage-ai-summary-${n - 1}`)
+        .getByTestId("stage-ai-summary-alerts-full"),
     ).toBeVisible({ timeout: 5000 });
   },
 );
@@ -804,9 +819,10 @@ Then(
 Then(
   "the full AI alert list of stage {int} is visible",
   async ({ mockedPage }, n: number) => {
-    void n;
     await expect(
-      mockedPage.getByTestId("stage-ai-summary-alerts-full"),
+      mockedPage
+        .getByTestId(`stage-ai-summary-${n - 1}`)
+        .getByTestId("stage-ai-summary-alerts-full"),
     ).toBeVisible({ timeout: 5000 });
   },
 );
