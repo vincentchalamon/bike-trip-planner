@@ -32,11 +32,7 @@ visualTest.describe("visual baselines (states & overlays)", () => {
   // --- Modals / overlays on a loaded roadbook -------------------------------
 
   visualTest("modal-share", async ({ visualPage, gotoRoadbook }, testInfo) => {
-    visualTest.skip(
-      shouldSkipMapScreen(testInfo),
-      MAP_SCREEN_SKIP_REASON,
-  shouldSkipMapScreen,
-    );
+    visualTest.skip(shouldSkipMapScreen(testInfo), MAP_SCREEN_SKIP_REASON);
     await gotoRoadbook();
     // No active share yet → the modal shows the "create link" CTA.
     await visualPage.route(
@@ -62,11 +58,7 @@ visualTest.describe("visual baselines (states & overlays)", () => {
   });
 
   visualTest("panel-config", async ({ visualPage, gotoRoadbook }, testInfo) => {
-    visualTest.skip(
-      shouldSkipMapScreen(testInfo),
-      MAP_SCREEN_SKIP_REASON,
-  shouldSkipMapScreen,
-    );
+    visualTest.skip(shouldSkipMapScreen(testInfo), MAP_SCREEN_SKIP_REASON);
     await gotoRoadbook();
     await visualPage.getByTestId("config-open-button").click();
     await visualExpect(
@@ -82,11 +74,7 @@ visualTest.describe("visual baselines (states & overlays)", () => {
   visualTest(
     "modal-help-shortcuts",
     async ({ visualPage, gotoRoadbook }, testInfo) => {
-      visualTest.skip(
-        shouldSkipMapScreen(testInfo),
-        MAP_SCREEN_SKIP_REASON,
-  shouldSkipMapScreen,
-      );
+      visualTest.skip(shouldSkipMapScreen(testInfo), MAP_SCREEN_SKIP_REASON);
       await gotoRoadbook();
       await visualPage.getByTestId("help-button").click();
       await visualExpect(visualPage.getByTestId("help-modal")).toBeVisible({
@@ -112,11 +100,7 @@ visualTest.describe("visual baselines (states & overlays)", () => {
   visualTest(
     "modal-help-faq",
     async ({ visualPage, gotoRoadbook }, testInfo) => {
-      visualTest.skip(
-        shouldSkipMapScreen(testInfo),
-        MAP_SCREEN_SKIP_REASON,
-  shouldSkipMapScreen,
-      );
+      visualTest.skip(shouldSkipMapScreen(testInfo), MAP_SCREEN_SKIP_REASON);
       await gotoRoadbook();
       await visualPage.getByTestId("help-button").click();
       await visualExpect(visualPage.getByTestId("help-modal")).toBeVisible({

@@ -88,11 +88,7 @@ visualTest.describe("visual baselines (authenticated pages)", () => {
   visualTest(
     "trip-roadbook",
     async ({ visualPage, gotoRoadbook }, testInfo) => {
-      visualTest.skip(
-        shouldSkipMapScreen(testInfo),
-        MAP_SCREEN_SKIP_REASON,
-  shouldSkipMapScreen,
-      );
+      visualTest.skip(shouldSkipMapScreen(testInfo), MAP_SCREEN_SKIP_REASON);
       await gotoRoadbook();
       await visualExpect(visualPage).toHaveScreenshot("trip-roadbook.png", {
         fullPage: true,
@@ -105,11 +101,7 @@ visualTest.describe("visual baselines (authenticated pages)", () => {
   visualTest(
     "trip-new-processing",
     async ({ visualPage, gotoProcessing }, testInfo) => {
-      visualTest.skip(
-        shouldSkipMapScreen(testInfo),
-        MAP_SCREEN_SKIP_REASON,
-  shouldSkipMapScreen,
-      );
+      visualTest.skip(shouldSkipMapScreen(testInfo), MAP_SCREEN_SKIP_REASON);
       await gotoProcessing();
       await visualExpect(visualPage).toHaveScreenshot(
         "trip-new-processing.png",
@@ -126,11 +118,7 @@ visualTest.describe("visual baselines (authenticated pages)", () => {
   visualTest(
     "trip-new-preview",
     async ({ visualPage, gotoPreview }, testInfo) => {
-      visualTest.skip(
-        shouldSkipMapScreen(testInfo),
-        MAP_SCREEN_SKIP_REASON,
-  shouldSkipMapScreen,
-      );
+      visualTest.skip(shouldSkipMapScreen(testInfo), MAP_SCREEN_SKIP_REASON);
       await gotoPreview();
       await visualPage.waitForTimeout(500);
       await visualExpect(visualPage).toHaveScreenshot("trip-new-preview.png", {
