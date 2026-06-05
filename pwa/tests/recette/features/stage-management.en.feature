@@ -73,3 +73,53 @@ Feature: Stage management
     Given I am on the home page
     When I submit a valid Komoot link
     Then I see a progress bar while stages are being computed
+
+  @desktop @supply
+  Scenario: Supply timeline displayed on a stage
+    Given supply data is available for stage 1
+    Then the supply timeline of stage 1 is visible
+
+  @desktop @supply
+  Scenario: Supply markers with water, food and mixed icons
+    Given supply data is available for stage 1
+    Then the supply marker at 15 km shows the water icon
+    And the supply marker at 42 km shows the food icon
+    And the supply marker at 59 km shows the mixed icon
+
+  @desktop @supply
+  Scenario: Hovering a marker shows the name and distance
+    Given supply data is available for stage 1
+    When I open the supply marker at 15 km
+    Then the supply tooltip shows "Cimetière de Vals"
+    And the supply tooltip shows "15 km"
+
+  @mobile @supply
+  Scenario: Horizontal scroll of the supply timeline on mobile
+    Given supply data is available for stage 1 on mobile
+    Then the supply timeline of stage 1 is visible
+
+  @desktop @timeline
+  Scenario: Split map + timeline view by default on desktop
+    Then I see both panels side by side
+    And the "split view" view mode button is active
+
+  @desktop @timeline
+  Scenario: Switch to timeline-only view
+    When I click the "timeline" view mode button
+    Then the timeline is visible
+    And the map panel is not visible
+
+  @desktop @timeline
+  Scenario: Back to split view from timeline-only view
+    When I click the "timeline" view mode button
+    And I click the "split view" view mode button
+    Then I see both panels side by side
+
+  @mobile @timeline
+  Scenario: Full-screen timeline on mobile with toggle to map
+    Given I switch to a mobile screen
+    When I click the "timeline" view mode button
+    Then the timeline is visible
+    And the map panel is not visible
+    When I click the "map only" view mode button
+    Then the map panel is visible

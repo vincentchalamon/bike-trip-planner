@@ -69,3 +69,75 @@ Feature: Cross-cutting UX
     Given the stage list exceeds the screen height
     When I scroll down
     Then a scroll-to-top button appears
+
+  @desktop @onboarding
+  Scenario: Onboarding tour shows on first launch
+    Given the onboarding tour is active on first launch
+    Then the onboarding tour popover is visible
+
+  @desktop @onboarding
+  Scenario: First step targets the magic link field
+    Given the onboarding tour is active on first launch
+    Then the onboarding tour popover is visible
+    And the tour step targets the magic link card
+
+  @desktop @onboarding
+  Scenario: Second step targets the GPX upload button
+    Given the onboarding tour is active on first launch
+    When I advance to the next tour step
+    Then the tour step targets the GPX upload card
+
+  @desktop @onboarding
+  Scenario: Closing the onboarding tour with Escape
+    Given the onboarding tour is active on first launch
+    When I press Escape
+    Then the onboarding tour popover is no longer visible
+
+  @desktop @onboarding
+  Scenario: Closing the onboarding tour by clicking the overlay
+    Given the onboarding tour is active on first launch
+    When I click the onboarding tour overlay
+    Then the onboarding tour popover is no longer visible
+
+  @desktop @onboarding
+  Scenario: The tour no longer reappears after being dismissed
+    Given the onboarding tour has already been seen
+    When I reload the page
+    Then the onboarding tour popover is no longer visible
+
+  @desktop @dark
+  Scenario: Theme cycle light to dark then system
+    When I toggle to light theme
+    And I click the theme button
+    Then the selected theme is "dark"
+    When I click the theme button
+    Then the selected theme is "system"
+
+  @desktop @dark
+  Scenario: System mode follows the operating system preference
+    Given the operating system prefers dark mode
+    When I select the system theme
+    Then the interface is displayed with a dark background
+
+  @desktop @dark
+  Scenario: Theme choice is persisted after reload
+    When I toggle to dark theme
+    And I reload the page
+    Then the interface is displayed with a dark background
+
+  @mobile
+  Scenario: Compact language labels on a narrow screen
+    Given I am displaying the app on a narrow screen
+    Then the compact language label "FR" is visible
+
+  @mobile
+  Scenario: Language swap on mobile
+    Given I am using the app on a mobile device
+    When I change the language to "English"
+    Then the interface is displayed in English
+
+  @desktop
+  Scenario: Language choice is persisted after reload
+    When I change the language to "English"
+    And I reload the page
+    Then the interface is displayed in English
