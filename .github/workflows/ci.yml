@@ -179,6 +179,24 @@ jobs:
       - name: Run Markdownlint
         run: markdownlint-cli2 "**/*.md" "!.claude/**" "!**/vendor/**" "!**/vendor-bin/**" "!pwa/node_modules/**"
 
+  markdown-links:
+    name: Markdown Links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "25"
+      # Internal links/anchors only (deterministic, no network). The script uses
+      # Node built-ins only, so no dependency install is needed. The external URL
+      # probe (--external) is network-dependent and flaky, so it is NOT gated in
+      # CI: run it manually via `make link-check -- --external` (the project
+      # favours manual execution over crons, cf. lighthouse.yml / #575).
+      - name: Check Markdown links & anchors (internal)
+        run: node scripts/check-md-links.mjs
+
   symfony-security-check:
     name: Security Check
     runs-on: ubuntu-latest

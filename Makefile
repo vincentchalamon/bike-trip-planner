@@ -7,6 +7,15 @@
 # (The `ollama-init` model-pull job stays behind its profile, so dev never pulls.)
 export COMPOSE_FILE ?= compose.yaml:compose.ollama.yaml:compose.dev.yaml
 
+# Forward extra CLI words after the goal (e.g. `make link-check -- --external`,
+# `make phpunit -- --filter=Foo`) into $(ARGS) and stub them as no-op goals so
+# Make does not try to build them. Only triggers for targets that read $(ARGS).
+ARGS_TARGETS := link-check phpunit test-php phpstan rector test-e2e playwright test-recette visual-test visual-update screenshots
+ifneq (,$(filter $(ARGS_TARGETS),$(firstword $(MAKECMDGOALS))))
+  ARGS := $(filter-out --,$(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS)))
+  $(eval $(ARGS):;@:)
+endif
+
 help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
@@ -73,6 +82,9 @@ hadolint: ## Run Hadolint on Dockerfiles
 
 markdownlint: ## Run Markdownlint
 	@docker run --rm -v $$(pwd):/app -w /app davidanson/markdownlint-cli2 "**/*.md" "!.claude/**" "!api/vendor/**" "!api/vendor-bin/**" "!provisioner/vendor/**" "!provisioner/vendor-bin/**" "!pwa/node_modules/**"
+
+link-check: ## Check Markdown links & anchors (internal fatal; use `make link-check -- --external` to gate on external URLs)
+	@docker run --rm -v $(CURDIR):/app -w /app node:22-slim node scripts/check-md-links.mjs $(ARGS)
 
 tsc: typescript-check ## Alias for "typescript-check"
 

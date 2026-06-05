@@ -22,7 +22,7 @@ Target (post-beta) two-layer uptime monitoring for Bike Trip Planner production:
 ## Why two layers?
 
 Uptime Kuma runs on the same Oracle Cloud Always Free VM as the application
-(see [ADR-019](../adr/0019-hosting-coolify-oracle-cloud.md)). If the VM goes
+(see [ADR-019](../adr/adr-019-deployment-infrastructure-strategy.md)). If the VM goes
 down — kernel panic, network ACL change, Oracle reclaims the instance — Uptime
 Kuma goes down with it and emits no alert. UptimeRobot's free tier runs from
 external probes; a single HTTP monitor is enough to detect a host-level outage
