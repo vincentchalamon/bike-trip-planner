@@ -60,6 +60,32 @@ export function maskRegions(page: Page): Locator[] {
   return [page.locator(MASK_SELECTORS.join(", "))];
 }
 
+/**
+ * The map-bearing planner screens (roadbook, wizard preview/processing, and the
+ * modals opened on top of them) are not deterministic VR targets on two combos:
+ *  - **Firefox** (container) has no WebGL, so MapLibre throws on init and the
+ *    screen hits the `TripPlannerErrorBoundary` instead of rendering.
+ *  - **Mobile (<700px)** stacks the roadbook vertically, where the MapLibre
+ *    canvas + tile-driven content settle to a slightly different full-page
+ *    height between runs (e.g. 2302 vs 2318px) — a dimension mismatch that
+ *    fails the screenshot regardless of `maxDiffPixelRatio`.
+ * These baselines are captured on the desktop/tablet chromium+webkit combos;
+ * firefox and the 375px mobiles skip them. Pure-DOM screens (public pages, trips
+ * list, account, 404, trip-error) are captured on every combo. Mobile roadbook
+ * polish stays a manual recette check; functional coverage is in the
+ * mocked/recette suites.
+ */
+export const MAP_SCREEN_SKIP_REASON =
+  "Map-bearing planner screen: non-deterministic VR on Firefox (no WebGL) and mobile (<700px, variable full-page height). Covered on desktop/tablet combos + functionally by the mocked/recette suites.";
+
+/** True when the current project can't produce a stable map-screen baseline. */
+export function shouldSkipMapScreen(testInfo: {
+  project: { name: string; use: { viewport?: { width: number } | null } };
+}): boolean {
+  const width = testInfo.project.use.viewport?.width ?? 9999;
+  return testInfo.project.name.includes("firefox") || width < 700;
+}
+
 interface VisualFixtures {
   /**
    * A page with the full API mock chain installed, theme/locale applied, and

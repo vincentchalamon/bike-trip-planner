@@ -3,6 +3,8 @@ import {
   test as visualTest,
   expect as visualExpect,
   maskRegions,
+  MAP_SCREEN_SKIP_REASON,
+  shouldSkipMapScreen,
 } from "./support/visual.fixture";
 
 /**
@@ -18,30 +20,32 @@ import {
  *  - authenticated pages — go through the mock chain (`visualPage` fixture):
  *    loaded roadbook, wizard step-3 processing, trips list (populated + empty).
  */
+// Each public page declares a stable "ready" testid so we wait for a concrete
+// render instead of `networkidle` — which never settles against the prod stack
+// (the AI-availability poll #304 + Mercure SSE keep connections open), the root
+// cause of the earlier non-deterministic public-page baselines.
 const PUBLIC_PAGES = [
-  { name: "landing", path: "/" },
-  { name: "login", path: "/login" },
-  { name: "faq", path: "/faq" },
-  { name: "legal", path: "/legal" },
-  { name: "privacy", path: "/privacy" },
+  { name: "landing", path: "/", ready: "landing-page" },
+  { name: "login", path: "/login", ready: "login-card" },
+  { name: "faq", path: "/faq", ready: "faq-back-link" },
+  { name: "legal", path: "/legal", ready: "legal-back-link" },
+  { name: "privacy", path: "/privacy", ready: "privacy-back-link" },
 ];
 
 test.describe("visual baselines (public pages)", () => {
-  for (const { name, path } of PUBLIC_PAGES) {
+  for (const { name, path, ready } of PUBLIC_PAGES) {
     test(name, async ({ page, baseURL }, testInfo) => {
       const { theme, appLocale } = testInfo.project.metadata as {
         theme: string;
         appLocale: string;
       };
-      await page
-        .context()
-        .addCookies([
-          {
-            name: "locale",
-            value: appLocale,
-            url: baseURL ?? "https://localhost",
-          },
-        ]);
+      await page.context().addCookies([
+        {
+          name: "locale",
+          value: appLocale,
+          url: baseURL ?? "https://localhost",
+        },
+      ]);
       // next-themes reads the persisted theme before first paint.
       await page.addInitScript((value) => {
         try {
@@ -50,9 +54,19 @@ test.describe("visual baselines (public pages)", () => {
           /* storage unavailable — colorScheme still drives prefers-color-scheme */
         }
       }, theme);
+      // Force the anonymous variant deterministically (so `/` renders the
+      // landing, not the dashboard) without depending on the live backend.
+      await page.route("**/auth/refresh", (route, request) =>
+        request.method() === "POST"
+          ? route.fulfill({ status: 401, body: "" })
+          : route.fallback(),
+      );
 
       await page.goto(path);
-      await page.waitForLoadState("networkidle");
+      await expect(page.getByTestId(ready)).toBeVisible({ timeout: 15000 });
+      // Fonts (Fraunces / Inter Tight) load from the network; wait so glyph
+      // metrics are stable before the snapshot.
+      await page.evaluate(() => document.fonts.ready);
 
       await expect(page).toHaveScreenshot(`${name}.png`, {
         fullPage: true,
@@ -71,39 +85,71 @@ test.describe("visual baselines (public pages)", () => {
 visualTest.describe("visual baselines (authenticated pages)", () => {
   // `/trips/[id]` roadbook — direct navigation with a stages-bearing detail
   // response (most deterministic path: no SSE timing involved).
-  visualTest("trip-roadbook", async ({ visualPage, gotoRoadbook }) => {
-    await gotoRoadbook();
-    await visualExpect(visualPage).toHaveScreenshot("trip-roadbook.png", {
-      fullPage: true,
-      mask: maskRegions(visualPage),
-    });
-  });
+  visualTest(
+    "trip-roadbook",
+    async ({ visualPage, gotoRoadbook }, testInfo) => {
+      visualTest.skip(
+        shouldSkipMapScreen(testInfo),
+        MAP_SCREEN_SKIP_REASON,
+  shouldSkipMapScreen,
+      );
+      await gotoRoadbook();
+      await visualExpect(visualPage).toHaveScreenshot("trip-roadbook.png", {
+        fullPage: true,
+        mask: maskRegions(visualPage),
+      });
+    },
+  );
 
   // `/trips/new` step 3 — narrative analysis/processing screen.
-  visualTest("trip-new-processing", async ({ visualPage, gotoProcessing }) => {
-    await gotoProcessing();
-    await visualExpect(visualPage).toHaveScreenshot("trip-new-processing.png", {
-      fullPage: true,
-      mask: maskRegions(visualPage),
-    });
-  });
+  visualTest(
+    "trip-new-processing",
+    async ({ visualPage, gotoProcessing }, testInfo) => {
+      visualTest.skip(
+        shouldSkipMapScreen(testInfo),
+        MAP_SCREEN_SKIP_REASON,
+  shouldSkipMapScreen,
+      );
+      await gotoProcessing();
+      await visualExpect(visualPage).toHaveScreenshot(
+        "trip-new-processing.png",
+        {
+          fullPage: true,
+          mask: maskRegions(visualPage),
+        },
+      );
+    },
+  );
 
   // `/trips/new` step 2 — preview (map + stats + stages + launch CTA). Reached
   // by the same submit flow as the planner preview (`stage-card-N`).
-  visualTest("trip-new-preview", async ({ visualPage, gotoPreview }) => {
-    await gotoPreview();
-    await visualPage.waitForTimeout(500);
-    await visualExpect(visualPage).toHaveScreenshot("trip-new-preview.png", {
-      fullPage: true,
-      mask: maskRegions(visualPage),
-    });
-  });
+  visualTest(
+    "trip-new-preview",
+    async ({ visualPage, gotoPreview }, testInfo) => {
+      visualTest.skip(
+        shouldSkipMapScreen(testInfo),
+        MAP_SCREEN_SKIP_REASON,
+  shouldSkipMapScreen,
+      );
+      await gotoPreview();
+      await visualPage.waitForTimeout(500);
+      await visualExpect(visualPage).toHaveScreenshot("trip-new-preview.png", {
+        fullPage: true,
+        mask: maskRegions(visualPage),
+      });
+    },
+  );
 
   // `/trips` — populated list (override the default empty collection).
   visualTest("trips-populated", async ({ visualPage }) => {
     await visualPage.route(
       (url) => url.pathname === "/trips",
       (route, request) => {
+        // In the iso-prod build the PWA and API share the `https://localhost`
+        // origin, so `/trips` is BOTH the page route and the API collection.
+        // Let the top-level document navigation through (it must render the
+        // Next.js page); only fulfill the data fetch with the mock collection.
+        if (request.resourceType() === "document") return route.continue();
         if (request.method() !== "GET") return route.fallback();
         return route.fulfill({
           status: 200,
@@ -122,8 +168,22 @@ visualTest.describe("visual baselines (authenticated pages)", () => {
     });
   });
 
-  // `/trips` — empty state (the default mock returns an empty collection).
+  // `/trips` — empty state. Re-route `/trips` with the same document guard as
+  // `trips-populated` (the shared mock would otherwise fulfill the page
+  // navigation itself with JSON on the same-origin iso-prod build).
   visualTest("trips-empty", async ({ visualPage }) => {
+    await visualPage.route(
+      (url) => url.pathname === "/trips",
+      (route, request) => {
+        if (request.resourceType() === "document") return route.continue();
+        if (request.method() !== "GET") return route.fallback();
+        return route.fulfill({
+          status: 200,
+          contentType: "application/ld+json",
+          body: JSON.stringify(tripsCollection(0)),
+        });
+      },
+    );
     await visualPage.goto("/trips");
     await visualExpect(
       visualPage.getByTestId("trips-empty-no-trips"),

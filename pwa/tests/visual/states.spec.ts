@@ -2,6 +2,8 @@ import {
   test as visualTest,
   expect as visualExpect,
   maskRegions,
+  MAP_SCREEN_SKIP_REASON,
+  shouldSkipMapScreen,
 } from "./support/visual.fixture";
 import { getTripId } from "../fixtures/api-mocks";
 
@@ -29,7 +31,12 @@ import { getTripId } from "../fixtures/api-mocks";
 visualTest.describe("visual baselines (states & overlays)", () => {
   // --- Modals / overlays on a loaded roadbook -------------------------------
 
-  visualTest("modal-share", async ({ visualPage, gotoRoadbook }) => {
+  visualTest("modal-share", async ({ visualPage, gotoRoadbook }, testInfo) => {
+    visualTest.skip(
+      shouldSkipMapScreen(testInfo),
+      MAP_SCREEN_SKIP_REASON,
+  shouldSkipMapScreen,
+    );
     await gotoRoadbook();
     // No active share yet → the modal shows the "create link" CTA.
     await visualPage.route(
@@ -54,7 +61,12 @@ visualTest.describe("visual baselines (states & overlays)", () => {
     });
   });
 
-  visualTest("panel-config", async ({ visualPage, gotoRoadbook }) => {
+  visualTest("panel-config", async ({ visualPage, gotoRoadbook }, testInfo) => {
+    visualTest.skip(
+      shouldSkipMapScreen(testInfo),
+      MAP_SCREEN_SKIP_REASON,
+  shouldSkipMapScreen,
+    );
     await gotoRoadbook();
     await visualPage.getByTestId("config-open-button").click();
     await visualExpect(
@@ -67,44 +79,60 @@ visualTest.describe("visual baselines (states & overlays)", () => {
     });
   });
 
-  visualTest("modal-help-shortcuts", async ({ visualPage, gotoRoadbook }) => {
-    await gotoRoadbook();
-    await visualPage.getByTestId("help-button").click();
-    await visualExpect(visualPage.getByTestId("help-modal")).toBeVisible({
-      timeout: 10000,
-    });
-    // Shortcuts tab is the default.
-    await visualExpect(
-      visualPage.getByTestId("help-tab-shortcuts-panel"),
-    ).toBeVisible();
-    await visualPage.waitForTimeout(200);
-    await visualExpect(visualPage).toHaveScreenshot(
-      "modal-help-shortcuts.png",
-      {
-        fullPage: true,
-        mask: maskRegions(visualPage),
-      },
-    );
-  });
+  visualTest(
+    "modal-help-shortcuts",
+    async ({ visualPage, gotoRoadbook }, testInfo) => {
+      visualTest.skip(
+        shouldSkipMapScreen(testInfo),
+        MAP_SCREEN_SKIP_REASON,
+  shouldSkipMapScreen,
+      );
+      await gotoRoadbook();
+      await visualPage.getByTestId("help-button").click();
+      await visualExpect(visualPage.getByTestId("help-modal")).toBeVisible({
+        timeout: 10000,
+      });
+      // Shortcuts tab is the default.
+      await visualExpect(
+        visualPage.getByTestId("help-tab-shortcuts-panel"),
+      ).toBeVisible();
+      await visualPage.waitForTimeout(200);
+      await visualExpect(visualPage).toHaveScreenshot(
+        "modal-help-shortcuts.png",
+        {
+          fullPage: true,
+          mask: maskRegions(visualPage),
+        },
+      );
+    },
+  );
 
   // Manifest "Modale FAQ" == the FAQ tab of the unified help modal (the app has
   // no standalone FAQ modal; the help modal hosts the same accordion as /faq).
-  visualTest("modal-help-faq", async ({ visualPage, gotoRoadbook }) => {
-    await gotoRoadbook();
-    await visualPage.getByTestId("help-button").click();
-    await visualExpect(visualPage.getByTestId("help-modal")).toBeVisible({
-      timeout: 10000,
-    });
-    await visualPage.getByTestId("help-tab-faq").click();
-    await visualExpect(
-      visualPage.getByTestId("help-tab-faq-panel"),
-    ).toBeVisible();
-    await visualPage.waitForTimeout(200);
-    await visualExpect(visualPage).toHaveScreenshot("modal-help-faq.png", {
-      fullPage: true,
-      mask: maskRegions(visualPage),
-    });
-  });
+  visualTest(
+    "modal-help-faq",
+    async ({ visualPage, gotoRoadbook }, testInfo) => {
+      visualTest.skip(
+        shouldSkipMapScreen(testInfo),
+        MAP_SCREEN_SKIP_REASON,
+  shouldSkipMapScreen,
+      );
+      await gotoRoadbook();
+      await visualPage.getByTestId("help-button").click();
+      await visualExpect(visualPage.getByTestId("help-modal")).toBeVisible({
+        timeout: 10000,
+      });
+      await visualPage.getByTestId("help-tab-faq").click();
+      await visualExpect(
+        visualPage.getByTestId("help-tab-faq-panel"),
+      ).toBeVisible();
+      await visualPage.waitForTimeout(200);
+      await visualExpect(visualPage).toHaveScreenshot("modal-help-faq.png", {
+        fullPage: true,
+        mask: maskRegions(visualPage),
+      });
+    },
+  );
 
   // --- Transient UI: toast ---------------------------------------------------
 
@@ -119,12 +147,14 @@ visualTest.describe("visual baselines (states & overlays)", () => {
       visualPage.getByTestId("export-data-button"),
     ).toBeVisible({ timeout: 10000 });
     await visualPage.getByTestId("export-data-button").click();
-    // sonner renders its toasts inside this region.
-    const toaster = visualPage.locator("[data-sonner-toaster]");
-    await visualExpect(toaster).toBeVisible({ timeout: 10000 });
-    await visualExpect(toaster.locator("[data-sonner-toast]")).toBeVisible({
-      timeout: 10000,
-    });
+    // Assert the toast ITEM, not the `[data-sonner-toaster]` <ol> container —
+    // sonner keeps the container in the DOM but reports it hidden until a toast
+    // mounts, so a container visibility check is unreliable. The error toast is
+    // sticky enough to capture; pin it open by extending its lifetime is not
+    // needed since we screenshot immediately after it appears.
+    await visualExpect(
+      visualPage.locator("[data-sonner-toast]").first(),
+    ).toBeVisible({ timeout: 10000 });
     await visualExpect(visualPage).toHaveScreenshot("toast-error.png", {
       fullPage: true,
       mask: maskRegions(visualPage),
