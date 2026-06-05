@@ -660,6 +660,9 @@ async function navigateForwardAndPickDay(
       return;
     }
   }
+  // Fail loudly: a silent return would let later assertions pass vacuously and
+  // mask a calendar-rendering regression (the date was never actually set).
+  throw new Error(`Day ${day} not found or disabled in the calendar grid`);
 }
 
 // --- Strava private route — FR + EN ---
