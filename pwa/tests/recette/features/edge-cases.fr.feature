@@ -70,3 +70,41 @@ Fonctionnalité: Cas limites et robustesse
   Scénario: Comportement stable avec des données météo manquantes
     Quand les données météo ne sont pas disponibles pour une étape
     Alors les cartes d'étapes s'affichent correctement sans données météo
+
+  @desktop @critique
+  Scénario: URL Strava d'un itinéraire privé gérée proprement
+    Étant donné que je suis sur la page d'accueil
+    Quand je soumets une URL Strava d'un itinéraire privé
+    Alors je vois un message d'erreur indiquant que la source est inaccessible
+    Et l'application reste utilisable
+
+  @desktop
+  Scénario: Date de départ très éloignée (~2 ans) sans plantage
+    Étant donné que j'ai créé un voyage complet avec 3 étapes
+    Quand j'ouvre le sélecteur de dates
+    Et que je configure une date de départ à environ deux ans
+    Alors je vois la carte de l'étape 1
+    Et le panneau carte est visible
+
+  @desktop
+  Scénario: Reconnexion automatique SSE Mercure reprend les mises à jour
+    Étant donné que j'ai créé un voyage complet avec 3 étapes
+    Quand la connexion internet est perdue
+    Et que la connexion est rétablie
+    Et qu'une mise à jour temps réel de l'étape 1 est reçue
+    Alors la carte de l'étape 1 affiche "55"
+
+  @desktop
+  Scénario: Aucun hébergement trouvé sur tout le voyage affiche un message informatif
+    Étant donné que j'ai créé un voyage complet avec 3 étapes
+    Quand aucun hébergement n'est trouvé pour l'ensemble du voyage
+    Alors la carte de l'étape 1 affiche "Aucun hébergement"
+    Et la carte de l'étape 2 affiche "Aucun hébergement"
+
+  @desktop
+  Scénario: Annulation jusqu'au début désactive le bouton sans planter
+    Étant donné que j'ai créé un voyage complet avec 3 étapes
+    Quand je modifie une étape
+    Et que j'appuie sur Ctrl+Z
+    Alors je vois 3 cartes d'étapes
+    Et le bouton d'annulation est désactivé

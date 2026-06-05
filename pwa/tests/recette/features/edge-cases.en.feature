@@ -69,3 +69,41 @@ Feature: Edge cases and robustness
   Scenario: Stable behaviour with missing weather data
     When weather data is not available for a stage
     Then stage cards are displayed correctly without weather data
+
+  @desktop @critical
+  Scenario: Private Strava route URL handled gracefully
+    Given I am on the home page
+    When I submit a private Strava route URL
+    Then I see an error message indicating the source is inaccessible
+    And the application remains usable
+
+  @desktop
+  Scenario: Very distant departure date (~2 years) without crashing
+    Given I have created a full trip with 3 stages
+    When I open the date picker
+    And I set a departure date about two years out
+    Then I see stage card 1
+    And the map panel is visible
+
+  @desktop
+  Scenario: Automatic Mercure SSE reconnection resumes updates
+    Given I have created a full trip with 3 stages
+    When the internet connection is lost
+    And the connection is restored
+    And a real-time update for stage 1 is received
+    Then stage card 1 shows "55"
+
+  @desktop
+  Scenario: No accommodation found across the whole trip shows an informative message
+    Given I have created a full trip with 3 stages
+    When no accommodation is found for the entire trip
+    Then stage card 1 shows "No accommodation"
+    And stage card 2 shows "No accommodation"
+
+  @desktop
+  Scenario: Undo to the beginning disables the button without crashing
+    Given I have created a full trip with 3 stages
+    When I modify a stage
+    And I press Ctrl+Z
+    Then I see 3 stage cards
+    And the undo button is disabled
