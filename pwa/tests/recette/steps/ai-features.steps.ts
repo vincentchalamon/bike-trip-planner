@@ -38,6 +38,10 @@ async function mockChat(
   },
   delayMs = 0,
 ): Promise<void> {
+  // Reset the module-level capture: it persists across scenarios in the same
+  // worker, so a prior `mockChat` scenario would otherwise leave stale entries
+  // and make the "request sent" poll pass without a fresh POST.
+  capturedChatRequests.length = 0;
   await page.route(chatUrlPattern(), async (route, request) => {
     if (request.method() !== "POST") return route.fallback();
     try {
