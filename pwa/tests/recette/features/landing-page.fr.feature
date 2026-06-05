@@ -27,7 +27,7 @@ Fonctionnalité: Page d'atterrissage
     Alors la section des sources est visible
     Et la source "komoot" est affichée
     Et la source "strava" est affichée
-    Et la source "ridewithgps" est affichée
+    Et la source "rwgps" est affichée
     Et la source "gpx" est affichée
 
   @desktop

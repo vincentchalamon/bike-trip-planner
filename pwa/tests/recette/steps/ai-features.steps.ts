@@ -514,7 +514,9 @@ When(
   async ({ mockedPage, injectEvent }, n: number) => {
     const stageCard = mockedPage.getByTestId(`stage-card-${n}`);
     await stageCard
-      .getByRole("button", { name: "Sélectionner cet hébergement" })
+      .getByRole("button", {
+        name: /Sélectionner cet hébergement|Select accommodation/,
+      })
       .first()
       .click();
     await expect(mockedPage.getByTestId("stage-skeleton").first()).toBeVisible({
@@ -530,7 +532,9 @@ When(
   async ({ mockedPage, injectEvent }, n: number) => {
     const stageCard = mockedPage.getByTestId(`stage-card-${n}`);
     await stageCard
-      .getByRole("button", { name: "Sélectionner cet hébergement" })
+      .getByRole("button", {
+        name: /Sélectionner cet hébergement|Select accommodation/,
+      })
       .first()
       .click();
     await expect(mockedPage.getByTestId("stage-skeleton").first()).toBeVisible({
@@ -546,7 +550,9 @@ When(
   async ({ mockedPage, injectEvent }, n: number) => {
     const stageCard = mockedPage.getByTestId(`stage-card-${n}`);
     await stageCard
-      .getByRole("button", { name: "Sélectionner cet hébergement" })
+      .getByRole("button", {
+        name: /Sélectionner cet hébergement|Select accommodation/,
+      })
       .first()
       .click();
     await expect(mockedPage.getByTestId("stage-skeleton").first()).toBeVisible({
@@ -562,7 +568,9 @@ When(
   async ({ mockedPage, injectEvent }, n: number) => {
     const stageCard = mockedPage.getByTestId(`stage-card-${n}`);
     await stageCard
-      .getByRole("button", { name: "Sélectionner cet hébergement" })
+      .getByRole("button", {
+        name: /Sélectionner cet hébergement|Select accommodation/,
+      })
       .first()
       .click();
     await expect(mockedPage.getByTestId("stage-skeleton").first()).toBeVisible({

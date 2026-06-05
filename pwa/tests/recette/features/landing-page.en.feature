@@ -26,7 +26,7 @@ Feature: Landing page
     Then the sources section is visible
     And the "komoot" source is displayed
     And the "strava" source is displayed
-    And the "ridewithgps" source is displayed
+    And the "rwgps" source is displayed
     And the "gpx" source is displayed
 
   @desktop
