@@ -53,6 +53,70 @@ export function stagesComputedEvent(): MercureEvent {
   };
 }
 
+/**
+ * Variant of {@link stagesComputedEvent} whose stages carry real geometry, so
+ * the elevation profile renders (`ElevationProfile` returns null without it).
+ * The default `stagesComputedEvent` intentionally ships empty geometry — some
+ * map tests assert the profile is *absent* — so geometry-dependent scenarios
+ * (golden-path B/C "carte & profil") inject this variant explicitly instead.
+ */
+export function stagesComputedEventWithGeometry(): MercureEvent {
+  const geometryFor = (
+    a: { lat: number; lon: number; ele: number },
+    mid: { lat: number; lon: number; ele: number },
+    b: { lat: number; lon: number; ele: number },
+  ) => [a, mid, b];
+  return {
+    type: "stages_computed",
+    data: {
+      stages: [
+        {
+          dayNumber: 1,
+          distance: 72.5,
+          elevation: 1180,
+          elevationLoss: 920,
+          startPoint: { lat: 44.735, lon: 4.598, ele: 280 },
+          endPoint: { lat: 44.532, lon: 4.392, ele: 540 },
+          geometry: geometryFor(
+            { lat: 44.735, lon: 4.598, ele: 280 },
+            { lat: 44.62, lon: 4.46, ele: 650 },
+            { lat: 44.532, lon: 4.392, ele: 540 },
+          ),
+          label: null,
+        },
+        {
+          dayNumber: 2,
+          distance: 63.2,
+          elevation: 870,
+          elevationLoss: 1050,
+          startPoint: { lat: 44.532, lon: 4.392, ele: 540 },
+          endPoint: { lat: 44.295, lon: 4.087, ele: 360 },
+          geometry: geometryFor(
+            { lat: 44.532, lon: 4.392, ele: 540 },
+            { lat: 44.38, lon: 4.2, ele: 480 },
+            { lat: 44.295, lon: 4.087, ele: 360 },
+          ),
+          label: null,
+        },
+        {
+          dayNumber: 3,
+          distance: 51.6,
+          elevation: 800,
+          elevationLoss: 750,
+          startPoint: { lat: 44.295, lon: 4.087, ele: 360 },
+          endPoint: { lat: 44.112, lon: 3.876, ele: 410 },
+          geometry: geometryFor(
+            { lat: 44.295, lon: 4.087, ele: 360 },
+            { lat: 44.2, lon: 3.98, ele: 520 },
+            { lat: 44.112, lon: 3.876, ele: 410 },
+          ),
+          label: null,
+        },
+      ],
+    },
+  };
+}
+
 export function weatherFetchedEvent(): MercureEvent {
   return {
     type: "weather_fetched",

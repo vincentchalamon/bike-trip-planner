@@ -53,7 +53,8 @@ Feature: End-to-end golden paths
     When I open the share modal
     And I click "Copy text"
     Then the summary text containing the trip title is copied
-    When I click "Télécharger le GPX complet"
+    When I press Escape
+    And I click "Télécharger le GPX complet"
     Then a GET request to /trips/*.gpx is sent
 
   @desktop @critical @golden-path-a
@@ -88,6 +89,7 @@ Feature: End-to-end golden paths
   @desktop @critical @golden-path-b
   Scenario: Golden Path B — configuration and elevation profile for the Strava trip
     Given I create a full trip from "https://www.strava.com/routes/12345"
+    And the computed stages contain geometry data
     Then the map panel is visible
     And the elevation profile is visible
     When I open the settings panel
@@ -113,6 +115,7 @@ Feature: End-to-end golden paths
   Scenario: Golden Path C — map, profile and export for the GPX trip
     Given I create a trip by importing a GPX file
     And the route_parsed and stages_computed events are received
+    And the computed stages contain geometry data
     Then the map panel is visible
     And the elevation profile is visible
     And the "Download GPX" button for stage 1 is enabled

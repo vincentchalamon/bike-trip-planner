@@ -54,7 +54,8 @@ Fonctionnalité: Parcours complets de bout en bout
     Quand j'ouvre la modale de partage
     Et que je clique sur "Copier le texte"
     Alors le texte résumé contenant le titre du voyage est copié
-    Quand je clique sur "Télécharger le GPX complet"
+    Quand j'appuie sur Échap
+    Et je clique sur "Télécharger le GPX complet"
     Alors une requête GET vers /trips/*.gpx est envoyée
 
   @desktop @critique @golden-path-a
@@ -89,6 +90,7 @@ Fonctionnalité: Parcours complets de bout en bout
   @desktop @critique @golden-path-b
   Scénario: Golden Path B — configuration et profil altimétrique du parcours Strava
     Étant donné que je crée un voyage complet depuis "https://www.strava.com/routes/12345"
+    Et que les étapes calculées contiennent un tracé géométrique
     Alors le panneau carte est visible
     Et le profil altimétrique est visible
     Quand j'ouvre le panneau de paramètres
@@ -114,6 +116,7 @@ Fonctionnalité: Parcours complets de bout en bout
   Scénario: Golden Path C — carte, profil et export du parcours GPX
     Étant donné que je crée un voyage en important un fichier GPX
     Et que les événements route_parsed et stages_computed sont reçus
+    Et que les étapes calculées contiennent un tracé géométrique
     Alors le panneau carte est visible
     Et le profil altimétrique est visible
     Et le bouton "Télécharger le GPX" de l'étape 1 est actif

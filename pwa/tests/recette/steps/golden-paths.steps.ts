@@ -1,9 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
-import {
-  routeParsedEvent,
-  stageUpdatedEventWithSelectedAccommodation,
-} from "../../fixtures/mock-data";
+import { stageUpdatedEventWithSelectedAccommodation } from "../../fixtures/mock-data";
 import { injectSseEvent } from "../../fixtures/sse-helpers";
 import { expandGpxCard } from "../../fixtures/base.fixture";
 
@@ -42,11 +39,31 @@ async function selectAccommodation(
 
 /**
  * Upload a valid GPX file through the welcome-screen GPX card. The upload POSTs
- * to /trips (mocked) and seeds the store via `setTrip`, which mounts the Mercure
- * subscriber so injected SSE events are processed. Unlike the magic-link flow,
- * a GPX upload does not navigate to /trips/{id} — the planner renders in place.
+ * to `/trips/gpx-upload` (mocked, 202 + trip body) which seeds the store via
+ * `setTrip` and mounts the Mercure subscriber so injected SSE events are
+ * processed. Unlike the magic-link flow, a GPX upload does not navigate to
+ * /trips/{id} — the planner renders in place. Mirrors `tests/mocked/
+ * gpx-upload.spec.ts`.
  */
 async function importGpxFile(page: Page): Promise<void> {
+  await page.route("**/trips/gpx-upload", (route, request) => {
+    if (request.method() !== "POST") return route.fallback();
+    return route.fulfill({
+      status: 202,
+      contentType: "application/json",
+      body: JSON.stringify({
+        "@context": "/contexts/Trip",
+        "@id": "/trips/test-trip-abc-123",
+        "@type": "Trip",
+        id: "test-trip-abc-123",
+        computationStatus: { route: "done", stages: "pending" },
+        title: "Mon Tour GPX",
+        totalDistance: 187.3,
+        totalElevation: 2850,
+        totalElevationLoss: 2720,
+      }),
+    });
+  });
   await expandGpxCard(page);
   await expect(page.getByTestId("card-gpx")).toBeVisible({ timeout: 5000 });
   await page.getByTestId("gpx-file-input").setInputFiles({
@@ -59,10 +76,10 @@ async function importGpxFile(page: Page): Promise<void> {
         "</trkseg></trk></gpx>",
     ),
   });
-  // route_parsed sets the title, proving the trip is in the store and the SSE
-  // pipeline is live before the scenario injects the remaining events.
-  await injectSseEvent(page, routeParsedEvent());
-  await expect(page.getByTestId("trip-title")).toBeVisible({ timeout: 10000 });
+  // The 202 response carries the title, so the planner renders in place.
+  await expect(
+    page.getByTestId("trip-title-skeleton").or(page.getByTestId("trip-title")),
+  ).toBeVisible({ timeout: 10000 });
 }
 
 // --- Given steps FR ---
@@ -102,6 +119,23 @@ Given(
 
 Given("I create a trip by importing a GPX file", async ({ mockedPage }) => {
   await importGpxFile(mockedPage);
+});
+
+// --- Geometry injection (elevation profile needs a real trace) FR + EN ---
+
+When(
+  "les étapes calculées contiennent un tracé géométrique",
+  async ({ injectEvent }) => {
+    const { stagesComputedEventWithGeometry } =
+      await import("../../fixtures/mock-data");
+    await injectEvent(stagesComputedEventWithGeometry());
+  },
+);
+
+When("the computed stages contain geometry data", async ({ injectEvent }) => {
+  const { stagesComputedEventWithGeometry } =
+    await import("../../fixtures/mock-data");
+  await injectEvent(stagesComputedEventWithGeometry());
 });
 
 // --- When steps FR ---
