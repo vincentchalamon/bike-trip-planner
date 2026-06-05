@@ -83,8 +83,15 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   reporter: "line",
+  // The 6 projects share a single local iso-prod stack; too many parallel
+  // workers overload it and the setup waits (mock chain + SSE) time out
+  // non-deterministically. Cap workers to keep baseline generation/comparison
+  // reproducible. Generous test timeout for the slower roadbook/wizard setups.
+  workers: 4,
+  timeout: 60_000,
   snapshotPathTemplate: "{testDir}/__screenshots__/{projectName}/{arg}{ext}",
   expect: {
+    timeout: 15_000,
     toHaveScreenshot: {
       maxDiffPixelRatio: 0.02,
       animations: "disabled",
