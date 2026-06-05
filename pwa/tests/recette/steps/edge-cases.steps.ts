@@ -4,7 +4,11 @@ import {
   routeParsedEvent,
   stagesComputedEvent,
   tripCompleteEvent,
+  stageUpdatedEvent,
+  emptyAccommodationsFoundEvent,
+  validationErrorEvent,
 } from "../../fixtures/mock-data";
+import { injectSseEvent, injectSseSequence } from "../../fixtures/sse-helpers";
 import { expandGpxCard, expandLinkCard } from "../../fixtures/base.fixture";
 
 /**
@@ -614,3 +618,147 @@ Then(
     await expect(mockedPage.getByTestId("stage-card-3")).toBeVisible();
   },
 );
+
+// ---------------------------------------------------------------------------
+// Additional edge cases (Sprint 35.3) — Strava private, distant dates,
+// Mercure SSE reconnection, no accommodation trip-wide, undo to the start.
+// ---------------------------------------------------------------------------
+
+/**
+ * Click the date picker's "next month" button `count` times, then select a
+ * mid-month day. The picker is assumed already open (grid visible). Used to
+ * exercise far-future dates without depending on a hardcoded year.
+ */
+async function navigateForwardAndPickDay(
+  page: Page,
+  count: number,
+  day: number,
+): Promise<void> {
+  const nextButton = page.locator(
+    'button[aria-label*="suivant"], button[aria-label*="next"], button[aria-label*="Next"]',
+  );
+  for (let i = 0; i < count; i += 1) {
+    await nextButton.first().click();
+  }
+  const gridCells = page.locator(
+    'button[role="gridcell"]:not([aria-disabled="true"])',
+  );
+  const total = await gridCells.count();
+  for (let i = 0; i < total; i += 1) {
+    const cell = gridCells.nth(i);
+    if ((await cell.textContent())?.trim() === String(day)) {
+      await cell.click();
+      return;
+    }
+  }
+}
+
+// --- Strava private route — FR + EN ---
+
+When(
+  "je soumets une URL Strava d'un itinéraire privé",
+  async ({ submitUrl, injectEvent }) => {
+    // A private Strava route passes URL validation (the format is supported),
+    // so POST /trips succeeds; the backend route-fetch worker then fails and
+    // emits a validation_error SSE event surfaced as a toast.
+    await submitUrl("https://www.strava.com/routes/99999999");
+    await injectEvent(validationErrorEvent());
+  },
+);
+
+When(
+  "I submit a private Strava route URL",
+  async ({ submitUrl, injectEvent }) => {
+    await submitUrl("https://www.strava.com/routes/99999999");
+    await injectEvent(validationErrorEvent());
+  },
+);
+
+Then(
+  "je vois un message d'erreur indiquant que la source est inaccessible",
+  async ({ mockedPage }) => {
+    await expect(
+      mockedPage
+        .getByText(/inaccessible|invalide|invalid|unavailable|source/i)
+        .first(),
+    ).toBeVisible({ timeout: 5000 });
+  },
+);
+
+Then(
+  "I see an error message indicating the source is inaccessible",
+  async ({ mockedPage }) => {
+    await expect(
+      mockedPage
+        .getByText(/inaccessible|invalide|invalid|unavailable|source/i)
+        .first(),
+    ).toBeVisible({ timeout: 5000 });
+  },
+);
+
+// --- Very distant departure date (~2 years) — FR + EN ---
+
+When(
+  "je configure une date de départ à environ deux ans",
+  async ({ mockedPage }) => {
+    await navigateForwardAndPickDay(mockedPage, 24, 15);
+  },
+);
+
+When("I set a departure date about two years out", async ({ mockedPage }) => {
+  await navigateForwardAndPickDay(mockedPage, 24, 15);
+});
+
+// --- Mercure SSE reconnection resumes updates — FR + EN ---
+
+When(
+  "une mise à jour temps réel de l'étape {int} est reçue",
+  async ({ mockedPage }, stage: number) => {
+    await injectSseEvent(mockedPage, stageUpdatedEvent(stage - 1));
+  },
+);
+
+When(
+  "a real-time update for stage {int} is received",
+  async ({ mockedPage }, stage: number) => {
+    await injectSseEvent(mockedPage, stageUpdatedEvent(stage - 1));
+  },
+);
+
+// --- No accommodation found across the whole trip — FR + EN ---
+
+When(
+  "aucun hébergement n'est trouvé pour l'ensemble du voyage",
+  async ({ mockedPage }) => {
+    await injectSseSequence(mockedPage, [
+      emptyAccommodationsFoundEvent(0),
+      emptyAccommodationsFoundEvent(1),
+      emptyAccommodationsFoundEvent(2),
+    ]);
+  },
+);
+
+When(
+  "no accommodation is found for the entire trip",
+  async ({ mockedPage }) => {
+    await injectSseSequence(mockedPage, [
+      emptyAccommodationsFoundEvent(0),
+      emptyAccommodationsFoundEvent(1),
+      emptyAccommodationsFoundEvent(2),
+    ]);
+  },
+);
+
+// --- Undo to the beginning disables the button — FR + EN ---
+
+Then("le bouton d'annulation est désactivé", async ({ mockedPage }) => {
+  await expect(mockedPage.getByTestId("undo-button")).toBeDisabled({
+    timeout: 5000,
+  });
+});
+
+Then("the undo button is disabled", async ({ mockedPage }) => {
+  await expect(mockedPage.getByTestId("undo-button")).toBeDisabled({
+    timeout: 5000,
+  });
+});
