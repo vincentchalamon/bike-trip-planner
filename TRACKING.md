@@ -848,10 +848,10 @@ Fixe les findings de 35.2 + 35.3 + recette manuelle, requêtés par **milestone 
 - [#629](https://github.com/vincentchalamon/bike-trip-planner/pull/629) `fix(security)` — **finalité de suppression de compte** (bug surfacé hors-rapport : un compte supprimé pouvait se ré-authentifier) : `DeletedUserChecker` (user_checker), refus `isDeleted` dans AuthVerify/AuthRefresh, purge `magic_link` (RGPD-MAGIC) + `access_request` (PII résiduelle). 5 tests.
 - [#630](https://github.com/vincentchalamon/bike-trip-planner/pull/630) `fix(security)` — **SEC-002/003/004** (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy) + **SEC-001** CSP en **Report-Only** (enforce à acter après observation recette) + **SEC-005** (x-powered-by).
 - [#632](https://github.com/vincentchalamon/bike-trip-planner/pull/632) `feat(seo)` — **SEO-001/002/003** (OG/Twitter, robots, sitemap, métadonnées de partage) + **I18N-001** (onError).
-- [#633](https://github.com/vincentchalamon/bike-trip-planner/pull/633) `fix(a11y)` — **A11Y-001/002 + LH-A11Y-HOME** (SSR de la landing : `<main>` + `<h1>`).
-- [#631](https://github.com/vincentchalamon/bike-trip-planner/pull/631) `perf` — **PERF-001 / LH-PERF-AUTH** (lazy-load MapPanel, maplibre hors du 1er chunk éditeur).
+- [#633](https://github.com/vincentchalamon/bike-trip-planner/pull/633) `fix(a11y)` — **A11Y-001/002** (SSR de la landing : `<main>` + `<h1>`) ; vise LH-A11Y-HOME (à re-mesurer).
+- [#631](https://github.com/vincentchalamon/bike-trip-planner/pull/631) `perf` — **PERF-001** (lazy-load MapPanel, maplibre hors du 1er chunk éditeur) ; vise LH-PERF-AUTH (à re-mesurer).
 
-**Reste 35.4** (non avancé) : COV-API/COV-FRONT/QUAL-001/002 (couverture), DT-LIVE, F5 (Overpass), CHAOS-RESTART, promotion CSP enforce, + findings de la recette manuelle. Détails et nouveau finding (auth-bypass / access_request) dans [`docs/recette/audit-report.md`](docs/recette/audit-report.md).
+**Reste 35.4** (non avancé) : COV-API/COV-FRONT/QUAL-001/002 (couverture), DT-LIVE, F5 (Overpass), CHAOS-RESTART, promotion CSP enforce, re-mesure Lighthouse (LH-PERF-HOME/LH-A11Y-HOME/LH-PERF-AUTH), + findings de la recette manuelle. Détails et nouveau finding (auth-bypass / access_request) dans [`docs/recette/audit-report.md`](docs/recette/audit-report.md).
 
 | Ordre | Titre | Effort |
 |---|---|---|
