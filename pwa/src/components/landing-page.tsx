@@ -20,7 +20,7 @@ import {
  */
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-background" data-testid="landing-page">
+    <main className="min-h-screen bg-background" data-testid="landing-page">
       <LandingHero />
       <LandingHowItWorks />
       <LandingBentoGrid />
@@ -30,6 +30,6 @@ export function LandingPage() {
       <LandingTestimonials />
       <EarlyAccessSection />
       <LandingFooter />
-    </div>
+    </main>
   );
 }
