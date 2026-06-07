@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter_Tight, JetBrains_Mono } from "next/font/google";
-import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { DEFAULT_LOCALE } from "@/i18n/locale";
+import { API_URL } from "@/lib/constants";
 import "./globals.css";
+import { IntlProvider } from "@/components/intl-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -27,18 +28,38 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
+  let title = "Bike Trip Planner";
+  let description = "Plan your bikepacking trips";
   try {
     const t = await getTranslations("layout");
-    return {
-      title: t("title"),
-      description: t("description"),
-    };
+    title = t("title");
+    description = t("description");
   } catch {
-    return {
-      title: "Bike Trip Planner",
-      description: "Plan your bikepacking trips",
-    };
+    // Static export prerendering: next-intl server context unavailable — keep
+    // the English defaults above.
   }
+
+  // Open Graph / Twitter Card on every page (audit 35.2 SEO-003). `metadataBase`
+  // makes relative OG URLs absolute; the PWA and API share the origin in
+  // iso-prod, so API_URL is the site URL. Per-page metadata (e.g. shared trips)
+  // overrides these.
+  return {
+    metadataBase: new URL(API_URL),
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: "/",
+      siteName: "Bike Trip Planner",
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
 }
 
 export default async function RootLayout({
@@ -65,7 +86,7 @@ export default async function RootLayout({
       className={`${fraunces.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
     >
       <body className="antialiased overflow-x-hidden">
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <IntlProvider locale={locale} messages={messages}>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -78,7 +99,7 @@ export default async function RootLayout({
             </AuthGuard>
             <Toaster richColors position="top-right" />
           </ThemeProvider>
-        </NextIntlClientProvider>
+        </IntlProvider>
         <PlausibleScript />
       </body>
     </html>
