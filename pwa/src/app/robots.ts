@@ -1,6 +1,10 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/constants";
 
+// Required for `output: export` (mobile/Capacitor build): metadata route
+// handlers must be statically generated at build time.
+export const dynamic = "force-static";
+
 /**
  * robots.txt (audit 35.2 SEO-002). Crawlers may index the public pages; the
  * authenticated app (`/trips`, `/account`) and the unguessable share links
