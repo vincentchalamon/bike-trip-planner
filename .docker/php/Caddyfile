@@ -95,7 +95,10 @@
         # nonce middleware); blob: by MapLibre web workers. External origins:
         # Carto/Esri/OSM map tiles + Wikimedia POI images. Plausible/Sentry are
         # env-gated off here; add their origins to script-src/connect-src when enabled.
-        header @pwa Content-Security-Policy-Report-Only "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://basemaps.cartocdn.com https://server.arcgisonline.com https://tile.openstreetmap.org https://commons.wikimedia.org; connect-src 'self' https://basemaps.cartocdn.com https://server.arcgisonline.com https://tile.openstreetmap.org; worker-src 'self' blob:; font-src 'self' data:; manifest-src 'self'"
+        # `report-uri {$CSP_REPORT_URI:}` is a no-op when the env var is unset
+        # (dev/CI) and collects violations in prod when set to a GlitchTip/Sentry
+        # CSP endpoint, turning the Report-Only phase into a real safety net.
+        header @pwa Content-Security-Policy-Report-Only "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://basemaps.cartocdn.com https://server.arcgisonline.com https://tile.openstreetmap.org https://commons.wikimedia.org; connect-src 'self' https://basemaps.cartocdn.com https://server.arcgisonline.com https://tile.openstreetmap.org; worker-src 'self' blob:; font-src 'self' data:; manifest-src 'self'; report-uri {$CSP_REPORT_URI:}"
 
         # Comment the following line if you don't want Next.js to catch requests for HTML documents.
         # In this case, they will be handled by the PHP app.
