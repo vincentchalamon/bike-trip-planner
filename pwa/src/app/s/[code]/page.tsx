@@ -30,7 +30,7 @@ export async function generateMetadata({
   params: Promise<{ code: string }>;
 }): Promise<Metadata> {
   const { code } = await params;
-  const fallback: Metadata = { title: "Voyage partagé — Bike Trip Planner" };
+  const fallback: Metadata = { title: "Shared trip — Bike Trip Planner" };
 
   if ("__placeholder" === code) {
     return fallback;
@@ -50,16 +50,18 @@ export async function generateMetadata({
     }
 
     const trip = (await res.json()) as SharedTripMeta;
-    const title = `${trip.title?.trim() || "Voyage à vélo"} — Bike Trip Planner`;
+    const title = `${trip.title?.trim() || "Bike trip"} — Bike Trip Planner`;
     const stages = trip.stages ?? [];
-    const km = Math.round(stages.reduce((sum, s) => sum + (s.distance ?? 0), 0));
+    const km = Math.round(
+      stages.reduce((sum, s) => sum + (s.distance ?? 0), 0),
+    );
     const dPlus = Math.round(
       stages.reduce((sum, s) => sum + (s.elevation ?? 0), 0),
     );
     const description =
       km > 0
-        ? `Itinéraire vélo partagé : ${km} km, ${dPlus} m D+.`
-        : "Itinéraire vélo partagé.";
+        ? `Shared bike route: ${km} km, ${dPlus} m D+.`
+        : "Shared bike route.";
 
     return {
       title,
