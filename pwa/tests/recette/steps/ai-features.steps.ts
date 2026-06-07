@@ -1066,34 +1066,33 @@ Then("an AI unavailable notice is displayed", async ({ mockedPage }) => {
 Then(
   "le surlignage de diff de la distance de l'étape {int} est visible",
   async ({ mockedPage }, n: number) => {
-    void n;
-    await expect(mockedPage.getByTestId("diff-highlight-distance")).toBeVisible(
-      {
-        timeout: 2000,
-      },
-    );
+    await expect(
+      mockedPage
+        .getByTestId(`stage-card-${n}`)
+        .getByTestId("diff-highlight-distance"),
+    ).toBeVisible({ timeout: 2000 });
   },
 );
 
 Then(
   "the distance diff highlight of stage {int} is visible",
   async ({ mockedPage }, n: number) => {
-    void n;
-    await expect(mockedPage.getByTestId("diff-highlight-distance")).toBeVisible(
-      {
-        timeout: 2000,
-      },
-    );
+    await expect(
+      mockedPage
+        .getByTestId(`stage-card-${n}`)
+        .getByTestId("diff-highlight-distance"),
+    ).toBeVisible({ timeout: 2000 });
   },
 );
 
 Then(
   "le surlignage de diff de la distance de l'étape {int} disparaît après {int} secondes",
   async ({ mockedPage }, n: number, seconds: number) => {
-    void n;
     await mockedPage.waitForTimeout(seconds * 1000 + 500);
     await expect(
-      mockedPage.getByTestId("diff-highlight-distance"),
+      mockedPage
+        .getByTestId(`stage-card-${n}`)
+        .getByTestId("diff-highlight-distance"),
     ).toBeHidden();
   },
 );
@@ -1101,10 +1100,11 @@ Then(
 Then(
   "the distance diff highlight of stage {int} disappears after {int} seconds",
   async ({ mockedPage }, n: number, seconds: number) => {
-    void n;
     await mockedPage.waitForTimeout(seconds * 1000 + 500);
     await expect(
-      mockedPage.getByTestId("diff-highlight-distance"),
+      mockedPage
+        .getByTestId(`stage-card-${n}`)
+        .getByTestId("diff-highlight-distance"),
     ).toBeHidden();
   },
 );
@@ -1112,9 +1112,10 @@ Then(
 Then(
   "le surlignage de diff des alertes de l'étape {int} est visible",
   async ({ mockedPage }, n: number) => {
-    void n;
     await expect(
-      mockedPage.getByTestId("diff-highlight-alerts_added"),
+      mockedPage
+        .getByTestId(`stage-card-${n}`)
+        .getByTestId("diff-highlight-alerts_added"),
     ).toBeVisible({ timeout: 2000 });
   },
 );
@@ -1122,9 +1123,10 @@ Then(
 Then(
   "the alerts diff highlight of stage {int} is visible",
   async ({ mockedPage }, n: number) => {
-    void n;
     await expect(
-      mockedPage.getByTestId("diff-highlight-alerts_added"),
+      mockedPage
+        .getByTestId(`stage-card-${n}`)
+        .getByTestId("diff-highlight-alerts_added"),
     ).toBeVisible({ timeout: 2000 });
   },
 );
