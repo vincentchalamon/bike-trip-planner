@@ -74,3 +74,53 @@ Fonctionnalité: Gestion des étapes
     Étant donné que je suis sur la page d'accueil
     Quand je soumets un lien Komoot valide
     Alors je vois une barre de progression pendant le calcul des étapes
+
+  @desktop @ravitaillement
+  Scénario: Affichage de la timeline des ravitaillements sur une étape
+    Étant donné que des données de ravitaillement sont disponibles pour l'étape 1
+    Alors la timeline des ravitaillements de l'étape 1 est visible
+
+  @desktop @ravitaillement
+  Scénario: Marqueurs de ravitaillement avec icônes eau, nourriture et mixte
+    Étant donné que des données de ravitaillement sont disponibles pour l'étape 1
+    Alors le marqueur de ravitaillement à 15 km affiche l'icône eau
+    Et le marqueur de ravitaillement à 42 km affiche l'icône nourriture
+    Et le marqueur de ravitaillement à 59 km affiche l'icône mixte
+
+  @desktop @ravitaillement
+  Scénario: Survol d'un marqueur affiche le nom et la distance
+    Étant donné que des données de ravitaillement sont disponibles pour l'étape 1
+    Quand j'ouvre le marqueur de ravitaillement à 15 km
+    Alors l'info-bulle de ravitaillement affiche "Cimetière de Vals"
+    Et l'info-bulle de ravitaillement affiche "15 km"
+
+  @mobile @ravitaillement
+  Scénario: Défilement horizontal de la timeline des ravitaillements sur mobile
+    Étant donné que des données de ravitaillement sont disponibles pour l'étape 1 sur mobile
+    Alors la timeline des ravitaillements de l'étape 1 est visible
+
+  @desktop @timeline
+  Scénario: Vue splitée carte + timeline par défaut sur desktop
+    Alors je vois les deux panneaux côte à côte
+    Et le bouton de mode "vue splitée" est actif
+
+  @desktop @timeline
+  Scénario: Bascule vers la vue timeline seule
+    Quand je clique sur le bouton de mode "chronologie"
+    Alors la timeline est visible
+    Et le panneau carte n'est pas visible
+
+  @desktop @timeline
+  Scénario: Retour à la vue splitée depuis la vue timeline seule
+    Quand je clique sur le bouton de mode "chronologie"
+    Et que je clique sur le bouton de mode "vue splitée"
+    Alors je vois les deux panneaux côte à côte
+
+  @mobile @timeline
+  Scénario: Timeline plein écran sur mobile avec bascule vers la carte
+    Étant donné que je passe sur un écran mobile
+    Quand je clique sur le bouton de mode "chronologie"
+    Alors la timeline est visible
+    Et le panneau carte n'est pas visible
+    Quand je clique sur le bouton de mode "carte seule"
+    Alors le panneau carte est visible

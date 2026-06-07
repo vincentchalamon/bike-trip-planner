@@ -4,8 +4,20 @@ import {
   routeParsedEvent,
   stagesComputedEvent,
   tripCompleteEvent,
+  supplyTimelineEvent,
 } from "../../fixtures/mock-data";
 import { getTripId } from "../../fixtures/api-mocks";
+
+// Maps the localized supply-marker icon word to the emoji rendered by the
+// SupplyTimeline component (water 💧, food 🍴, mixed 🏘️).
+const SUPPLY_ICON: Record<string, string> = {
+  eau: "💧",
+  water: "💧",
+  nourriture: "🍴",
+  food: "🍴",
+  mixte: "🏘️",
+  mixed: "🏘️",
+};
 
 // ---------------------------------------------------------------------------
 // Stage management — FR + EN
@@ -444,5 +456,166 @@ Then(
     // It only renders after stages are computed (dayNumbers > 0), so it cannot be
     // observed "during computation". No computation progress bar exists in the app.
     $test.fixme();
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Supply timeline — FR + EN
+// The Background ships a full trip; supply markers arrive via a
+// `supply_timeline` SSE event for the targeted stage index.
+// ---------------------------------------------------------------------------
+
+Given(
+  "des données de ravitaillement sont disponibles pour l'étape {int}",
+  async ({ injectEvent }, stage: number) => {
+    await injectEvent(supplyTimelineEvent(stage - 1));
+  },
+);
+
+Given(
+  "supply data is available for stage {int}",
+  async ({ injectEvent }, stage: number) => {
+    await injectEvent(supplyTimelineEvent(stage - 1));
+  },
+);
+
+Given(
+  "des données de ravitaillement sont disponibles pour l'étape {int} sur mobile",
+  async ({ mockedPage, injectEvent }, stage: number) => {
+    await mockedPage.setViewportSize({ width: 390, height: 844 });
+    await injectEvent(supplyTimelineEvent(stage - 1));
+  },
+);
+
+Given(
+  "supply data is available for stage {int} on mobile",
+  async ({ mockedPage, injectEvent }, stage: number) => {
+    await mockedPage.setViewportSize({ width: 390, height: 844 });
+    await injectEvent(supplyTimelineEvent(stage - 1));
+  },
+);
+
+When(
+  "j'ouvre le marqueur de ravitaillement à {int} km",
+  async ({ mockedPage }, km: number) => {
+    await mockedPage.getByTestId(`supply-marker-${km}`).click();
+  },
+);
+
+When(
+  "I open the supply marker at {int} km",
+  async ({ mockedPage }, km: number) => {
+    await mockedPage.getByTestId(`supply-marker-${km}`).click();
+  },
+);
+
+Then(
+  "la timeline des ravitaillements de l'étape {int} est visible",
+  async ({ mockedPage }, stage: number) => {
+    await expect(
+      mockedPage
+        .getByTestId(`stage-card-${stage}`)
+        .getByTestId("supply-timeline"),
+    ).toBeVisible({ timeout: 10000 });
+  },
+);
+
+Then(
+  "the supply timeline of stage {int} is visible",
+  async ({ mockedPage }, stage: number) => {
+    await expect(
+      mockedPage
+        .getByTestId(`stage-card-${stage}`)
+        .getByTestId("supply-timeline"),
+    ).toBeVisible({ timeout: 10000 });
+  },
+);
+
+Then(
+  "le marqueur de ravitaillement à {int} km affiche l'icône {word}",
+  async ({ mockedPage }, km: number, icon: string) => {
+    const marker = mockedPage.getByTestId(`supply-marker-${km}`);
+    await expect(marker).toBeVisible({ timeout: 10000 });
+    await expect(marker).toContainText(SUPPLY_ICON[icon] ?? icon);
+  },
+);
+
+Then(
+  "the supply marker at {int} km shows the {word} icon",
+  async ({ mockedPage }, km: number, icon: string) => {
+    const marker = mockedPage.getByTestId(`supply-marker-${km}`);
+    await expect(marker).toBeVisible({ timeout: 10000 });
+    await expect(marker).toContainText(SUPPLY_ICON[icon] ?? icon);
+  },
+);
+
+Then(
+  "l'info-bulle de ravitaillement affiche {string}",
+  async ({ mockedPage }, text: string) => {
+    await expect(mockedPage.getByTestId("supply-tooltip")).toContainText(text, {
+      timeout: 3000,
+    });
+  },
+);
+
+Then(
+  "the supply tooltip shows {string}",
+  async ({ mockedPage }, text: string) => {
+    await expect(mockedPage.getByTestId("supply-tooltip")).toContainText(text, {
+      timeout: 3000,
+    });
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Timeline / roadbook redesign — FR + EN
+// The Background's full trip provides active stages, so the ViewModeToggle and
+// the split layout (#timeline + map-panel) render. Geometry-free is fine: the
+// panels' visibility depends on `activeStages.length`, not on geometry.
+// ---------------------------------------------------------------------------
+
+Given("je passe sur un écran mobile", async ({ mockedPage }) => {
+  await mockedPage.setViewportSize({ width: 390, height: 844 });
+});
+
+Given("I switch to a mobile screen", async ({ mockedPage }) => {
+  await mockedPage.setViewportSize({ width: 390, height: 844 });
+});
+
+Then("la timeline est visible", async ({ mockedPage }) => {
+  await expect(mockedPage.locator("#timeline")).toBeVisible({ timeout: 5000 });
+});
+
+Then("the timeline is visible", async ({ mockedPage }) => {
+  await expect(mockedPage.locator("#timeline")).toBeVisible({ timeout: 5000 });
+});
+
+Then(
+  "le bouton de mode {string} est actif",
+  async ({ mockedPage }, mode: string) => {
+    const modeMap: Record<string, string> = {
+      "carte seule": "view-mode-map",
+      "vue splitée": "view-mode-split",
+      chronologie: "view-mode-timeline",
+    };
+    const testId = modeMap[mode] ?? `view-mode-${mode}`;
+    await expect(
+      mockedPage.getByTestId("view-mode-toggle").getByTestId(testId),
+    ).toHaveAttribute("aria-pressed", "true", { timeout: 5000 });
+  },
+);
+
+Then(
+  "the {string} view mode button is active",
+  async ({ mockedPage }, mode: string) => {
+    const modeMap: Record<string, string> = {
+      "map only": "view-mode-map",
+      "split view": "view-mode-split",
+      timeline: "view-mode-timeline",
+    };
+    const testId = modeMap[mode] ?? `view-mode-${mode}`;
+    await expect(
+      mockedPage.getByTestId("view-mode-toggle").getByTestId(testId),
+    ).toHaveAttribute("aria-pressed", "true", { timeout: 5000 });
   },
 );

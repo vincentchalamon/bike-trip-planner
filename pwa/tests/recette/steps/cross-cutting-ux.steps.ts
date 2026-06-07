@@ -457,3 +457,264 @@ Then("a scroll-to-top button appears", async ({ $test }) => {
   // Scroll-to-top button may not be implemented
   $test.fixme();
 });
+
+// ---------------------------------------------------------------------------
+// Onboarding tour (driver.js) — FR + EN
+//
+// The tour is suppressed under WebDriver unless the
+// `__PLAYWRIGHT_SHOW_ONBOARDING` flag is set before navigation. The mockedPage
+// fixture already navigated, so we install the init script then reload so the
+// flag is present on the next page load and the tour fires after its 800 ms
+// startup delay. Onboarding only runs on `/`.
+// ---------------------------------------------------------------------------
+
+const ONBOARDING_FLAG = "bike-trip-planner:onboarding-done";
+const ONBOARDING_POPOVER = ".driver-popover.onboarding-popover";
+
+async function startOnboarding(
+  page: import("@playwright/test").Page,
+): Promise<void> {
+  await page.addInitScript(() => {
+    localStorage.removeItem("bike-trip-planner:onboarding-done");
+    (
+      window as Window & { __PLAYWRIGHT_SHOW_ONBOARDING?: boolean }
+    ).__PLAYWRIGHT_SHOW_ONBOARDING = true;
+  });
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await expect(page.locator(ONBOARDING_POPOVER)).toBeVisible({ timeout: 4000 });
+  // Wait for the driver.js highlight transition (≈400 ms) to settle.
+  await page.waitForTimeout(500);
+}
+
+Given(
+  "le tour d'onboarding est actif au premier lancement",
+  async ({ mockedPage }) => {
+    await startOnboarding(mockedPage);
+  },
+);
+
+Given(
+  "the onboarding tour is active on first launch",
+  async ({ mockedPage }) => {
+    await startOnboarding(mockedPage);
+  },
+);
+
+Given("le tour d'onboarding a déjà été vu", async ({ mockedPage }) => {
+  await mockedPage.addInitScript((flag) => {
+    localStorage.setItem(flag, "true");
+    (
+      window as Window & { __PLAYWRIGHT_SHOW_ONBOARDING?: boolean }
+    ).__PLAYWRIGHT_SHOW_ONBOARDING = true;
+  }, ONBOARDING_FLAG);
+  await mockedPage.goto("/");
+  await mockedPage.waitForLoadState("networkidle");
+});
+
+Given("the onboarding tour has already been seen", async ({ mockedPage }) => {
+  await mockedPage.addInitScript((flag) => {
+    localStorage.setItem(flag, "true");
+    (
+      window as Window & { __PLAYWRIGHT_SHOW_ONBOARDING?: boolean }
+    ).__PLAYWRIGHT_SHOW_ONBOARDING = true;
+  }, ONBOARDING_FLAG);
+  await mockedPage.goto("/");
+  await mockedPage.waitForLoadState("networkidle");
+});
+
+When("j'avance à l'étape suivante du tour", async ({ mockedPage }) => {
+  await mockedPage
+    .locator(".driver-popover-navigation-btns button")
+    .last()
+    .click();
+  await mockedPage.waitForTimeout(500);
+});
+
+When("I advance to the next tour step", async ({ mockedPage }) => {
+  await mockedPage
+    .locator(".driver-popover-navigation-btns button")
+    .last()
+    .click();
+  await mockedPage.waitForTimeout(500);
+});
+
+When("je clique sur l'overlay du tour d'onboarding", async ({ mockedPage }) => {
+  await mockedPage
+    .locator(".driver-overlay")
+    .click({ position: { x: 5, y: 5 } });
+});
+
+When("I click the onboarding tour overlay", async ({ mockedPage }) => {
+  await mockedPage
+    .locator(".driver-overlay")
+    .click({ position: { x: 5, y: 5 } });
+});
+
+Then("le popover du tour d'onboarding est visible", async ({ mockedPage }) => {
+  await expect(mockedPage.locator(ONBOARDING_POPOVER)).toBeVisible({
+    timeout: 4000,
+  });
+});
+
+Then("the onboarding tour popover is visible", async ({ mockedPage }) => {
+  await expect(mockedPage.locator(ONBOARDING_POPOVER)).toBeVisible({
+    timeout: 4000,
+  });
+});
+
+Then(
+  "le popover du tour d'onboarding n'est plus visible",
+  async ({ mockedPage }) => {
+    await expect(mockedPage.locator(ONBOARDING_POPOVER)).toBeHidden({
+      timeout: 4000,
+    });
+  },
+);
+
+Then(
+  "the onboarding tour popover is no longer visible",
+  async ({ mockedPage }) => {
+    await expect(mockedPage.locator(ONBOARDING_POPOVER)).toBeHidden({
+      timeout: 4000,
+    });
+  },
+);
+
+Then(
+  "l'étape du tour cible la carte de lien magique",
+  async ({ mockedPage }) => {
+    await expect(
+      mockedPage.locator('.driver-active-element[data-testid="card-link"]'),
+    ).toBeAttached({ timeout: 3000 });
+  },
+);
+
+Then("the tour step targets the magic link card", async ({ mockedPage }) => {
+  await expect(
+    mockedPage.locator('.driver-active-element[data-testid="card-link"]'),
+  ).toBeAttached({ timeout: 3000 });
+});
+
+Then("l'étape du tour cible la carte d'import GPX", async ({ mockedPage }) => {
+  await expect(
+    mockedPage.locator('.driver-active-element[data-testid="card-gpx"]'),
+  ).toBeAttached({ timeout: 3000 });
+});
+
+Then("the tour step targets the GPX upload card", async ({ mockedPage }) => {
+  await expect(
+    mockedPage.locator('.driver-active-element[data-testid="card-gpx"]'),
+  ).toBeAttached({ timeout: 3000 });
+});
+
+// ---------------------------------------------------------------------------
+// Theme — three-state cycle / system follow / persistence — FR + EN
+// ---------------------------------------------------------------------------
+
+When("je clique sur le bouton de thème", async ({ mockedPage }) => {
+  await mockedPage.getByTestId("theme-toggle").click();
+});
+
+When("I click the theme button", async ({ mockedPage }) => {
+  await mockedPage.getByTestId("theme-toggle").click();
+});
+
+Then(
+  "le thème sélectionné est {string}",
+  async ({ mockedPage }, state: string) => {
+    await expect(mockedPage.getByTestId("theme-toggle")).toHaveAttribute(
+      "data-theme-state",
+      state,
+      { timeout: 5000 },
+    );
+  },
+);
+
+Then(
+  "the selected theme is {string}",
+  async ({ mockedPage }, state: string) => {
+    await expect(mockedPage.getByTestId("theme-toggle")).toHaveAttribute(
+      "data-theme-state",
+      state,
+      { timeout: 5000 },
+    );
+  },
+);
+
+Given(
+  "le système d'exploitation préfère le mode sombre",
+  async ({ mockedPage }) => {
+    await mockedPage.emulateMedia({ colorScheme: "dark" });
+  },
+);
+
+Given("the operating system prefers dark mode", async ({ mockedPage }) => {
+  await mockedPage.emulateMedia({ colorScheme: "dark" });
+});
+
+When("je sélectionne le thème système", async ({ mockedPage }) => {
+  const toggle = mockedPage.getByTestId("theme-toggle");
+  await expect(toggle).toBeVisible({ timeout: 5000 });
+  for (let i = 0; i < 3; i++) {
+    if ((await toggle.getAttribute("data-theme-state")) === "system") break;
+    await toggle.click();
+  }
+  await expect(toggle).toHaveAttribute("data-theme-state", "system", {
+    timeout: 5000,
+  });
+});
+
+When("I select the system theme", async ({ mockedPage }) => {
+  const toggle = mockedPage.getByTestId("theme-toggle");
+  await expect(toggle).toBeVisible({ timeout: 5000 });
+  for (let i = 0; i < 3; i++) {
+    if ((await toggle.getAttribute("data-theme-state")) === "system") break;
+    await toggle.click();
+  }
+  await expect(toggle).toHaveAttribute("data-theme-state", "system", {
+    timeout: 5000,
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Language — compact labels / reload persistence — FR + EN
+// ---------------------------------------------------------------------------
+
+Then(
+  "le label compact de langue {string} est visible",
+  async ({ mockedPage }, label: string) => {
+    await expect(
+      mockedPage.getByTestId("locale-switch-fr").getByText(label, {
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 5000 });
+  },
+);
+
+Then(
+  "the compact language label {string} is visible",
+  async ({ mockedPage }, label: string) => {
+    await expect(
+      mockedPage.getByTestId("locale-switch-fr").getByText(label, {
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 5000 });
+  },
+);
+
+When("I reload the page", async ({ page }) => {
+  await page.reload();
+});
+
+Given("j'affiche l'application sur un écran étroit", async ({ mockedPage }) => {
+  await mockedPage.setViewportSize({ width: 390, height: 844 });
+  await mockedPage.goto("/");
+  await mockedPage.waitForLoadState("networkidle");
+});
+
+Given("I am displaying the app on a narrow screen", async ({ mockedPage }) => {
+  await mockedPage.setViewportSize({ width: 390, height: 844 });
+  await mockedPage.goto("/");
+  await mockedPage.waitForLoadState("networkidle");
+});
