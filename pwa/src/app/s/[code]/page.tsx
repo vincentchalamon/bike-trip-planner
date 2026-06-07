@@ -41,6 +41,9 @@ export async function generateMetadata({
     const res = await fetch(`${backend}/s/${encodeURIComponent(code)}`, {
       headers: { Accept: "application/ld+json" },
       cache: "no-store",
+      // Bound SSR on a slow/hanging backend (project HTTP convention: 10s). An
+      // AbortError is caught below and falls back to the generic metadata.
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
       return fallback;
