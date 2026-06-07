@@ -159,8 +159,17 @@ final class AuthRefreshTest extends ApiTestCase
         $user->anonymize();
         $em->flush();
 
-        $this->sendRefreshRequest('deleted-refresh-token');
+        $response = $this->sendRefreshRequest('deleted-refresh-token');
 
         $this->assertResponseStatusCodeSame(401);
+
+        // The deleted-account branch clears the refresh cookie: a refresh_token
+        // Set-Cookie must be present and expired (Max-Age=0 / 1970), not absent.
+        $setCookie = $response->getHeaders(false)['set-cookie'][0] ?? '';
+        $this->assertStringContainsString('refresh_token=', $setCookie);
+        $this->assertMatchesRegularExpression(
+            '/Max-Age=0|expires=Thu, 01-Jan-1970/i',
+            $setCookie,
+        );
     }
 }

@@ -26,7 +26,10 @@ final class DeletedUserChecker implements UserCheckerInterface
     public function checkPreAuth(UserInterface $user): void
     {
         if ($user instanceof User && $user->isDeleted()) {
-            throw new CustomUserMessageAccountStatusException('Account deleted.');
+            // Neutral message: Lexik surfaces it verbatim in the 401 body, so it
+            // must not reveal that the account ever existed (same rationale as the
+            // neutral key in AuthVerifyProcessor).
+            throw new CustomUserMessageAccountStatusException('Invalid credentials.');
         }
     }
 
