@@ -16,11 +16,19 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import dynamic from "next/dynamic";
 import { TripHeader } from "@/components/trip-header";
 import { TripSummary } from "@/components/trip-summary";
-import { MapPanel } from "@/components/Map";
 import { useUiStore } from "@/store/ui-store";
 import type { StageData, WeatherData } from "@/lib/validation/schemas";
+
+// Lazy-load the map panel so maplibre-gl stays out of the wizard's first chunk.
+// Static import here would defeat the trip-planner lazy-load (synchronous chain
+// trip-planner → TripPreview → MapPanel → MapView → maplibre-gl). Audit PERF-001.
+const MapPanel = dynamic(
+  () => import("@/components/Map/MapPanel").then((m) => m.MapPanel),
+  { ssr: false, loading: () => null },
+);
 
 interface TripPreviewProps {
   title: string;
