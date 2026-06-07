@@ -66,6 +66,14 @@
     # Disable Topics tracking if not enabled explicitly: https://github.com/jkarlin/topics
     header ?Permissions-Policy "browsing-topics=()"
 
+    # Security headers (audit 35.2 SEC-002..004). Set site-wide; safe for both the
+    # PWA documents and the API responses. CSP (SEC-001) is scoped to the PWA in
+    # the route block below so it never touches the API docs UI.
+    header ?Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    header ?X-Frame-Options "DENY"
+    header ?X-Content-Type-Options "nosniff"
+    header ?Referrer-Policy "strict-origin-when-cross-origin"
+
     route {
         # Matches requests for HTML documents, for static files and for Next.js files,
         # except for known API paths and paths with extensions handled by API Platform
@@ -78,6 +86,16 @@
             )
             || path('/favicon.ico', '/manifest.json', '/robots.txt', '/sitemap*', '/_next*', '/__next*')
             || query({'_rsc': '*'})`
+
+        # Content-Security-Policy (audit 35.2 SEC-001), scoped to the PWA so the
+        # API docs UI is untouched. Shipped as Report-Only first: it never blocks,
+        # so it carries zero regression risk while the manual recette observes any
+        # violation in the console — then it is promoted to enforce (35.4).
+        # 'unsafe-inline' (script/style) is required by Next.js hydration (no
+        # nonce middleware); blob: by MapLibre web workers. External origins:
+        # Carto/Esri/OSM map tiles + Wikimedia POI images. Plausible/Sentry are
+        # env-gated off here; add their origins to script-src/connect-src when enabled.
+        header @pwa Content-Security-Policy-Report-Only "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://basemaps.cartocdn.com https://server.arcgisonline.com https://tile.openstreetmap.org https://commons.wikimedia.org; connect-src 'self' https://basemaps.cartocdn.com https://server.arcgisonline.com https://tile.openstreetmap.org; worker-src 'self' blob:; font-src 'self' data:; manifest-src 'self'"
 
         # Comment the following line if you don't want Next.js to catch requests for HTML documents.
         # In this case, they will be handled by the PHP app.
