@@ -7,7 +7,17 @@
 > couverture (#615), puis les **correctifs critiques** — F1 (P0), IDOR-DETAIL et ENUM-404 (P1 sécurité) + le
 > wiring/réseau Ollama — via #616 et #618. Le reste est différé à Sprint 35.4.
 
-**Date :** 2026-06-03 (mis à jour 2026-06-04 : correctifs #616/#618)
+> **MAJ 2026-06-07 — batch durcissement pré-recette (5 PRs).** Avant la recette manuelle, le
+> sous-ensemble déterministe et code-local a été corrigé : **SEC-001** (CSP, en Report-Only —
+> enforce à finaliser) / **SEC-002/003/004/005** ([#630](https://github.com/vincentchalamon/bike-trip-planner/pull/630)),
+> **SEO-001/002/003** + **I18N-001** ([#632](https://github.com/vincentchalamon/bike-trip-planner/pull/632)),
+> **A11Y-001/002 + LH-A11Y-HOME** ([#633](https://github.com/vincentchalamon/bike-trip-planner/pull/633)),
+> **PERF-001 / LH-PERF-AUTH** ([#631](https://github.com/vincentchalamon/bike-trip-planner/pull/631)),
+> et un **nouveau finding surfacé hors-rapport** — AUTH-DELETED + RGPD-MAGIC + access_request PII —
+> ([#629](https://github.com/vincentchalamon/bike-trip-planner/pull/629)). Restent 35.4 : couverture
+> (COV-*/QUAL-001/002), DT-LIVE, F5, CHAOS-RESTART, promotion CSP enforce.
+
+**Date :** 2026-06-03 (mis à jour 2026-06-04 : correctifs #616/#618 ; 2026-06-07 : batch pré-recette)
 
 **Périmètre :** features livrées sur `main` (sprints 1-33, design S25-27, IA S28-32, S34/34.5),
 hors S18 #313/#314 (abandonnés) et osm-cron nightly (#575).
@@ -74,9 +84,11 @@ des passes.
 | I18N-001 | Pas de handler `onError` sur `NextIntlClientProvider` | P3 | i18n | Confirmé |
 | QUAL-003 | Dette de suppressions statiques (7 `@phpstan-ignore`, 5 front) | P3 | quality | Confirmé |
 | COV-PROV | Couverture provisioner (xdebug absent) -> mesurée 84,9 % | ~~P3~~ | quality | **Corrigé (PR #615)** |
-| RGPD-MAGIC | `magic_link` non purgés à la suppression de compte (7 rows, dont 2 valides) | P3 | privacy | Confirmé (empirique) |
+| RGPD-MAGIC | `magic_link` non purgés à la suppression de compte (7 rows, dont 2 valides) | ~~P3~~ | privacy | **Corrigé (#629)** |
+| AUTH-DELETED | Compte supprimé (soft-delete) **ré-authentifiable** (magic_link/refresh sans contrôle `deletedAt`, pas de `user_checker`) + `access_request` (email/IP) non purgé -> suppression non finale (intégrité RGPD) | ~~P2~~ | security | **Corrigé (#629)** — surfacé hors-rapport au challenge |
 
-**Total actifs (différés Sprint 35.4) : 1×P1 (SEO-001), 16×P2, 6×P3 + 1×P3 à confirmer (CHAOS-RESTART).**
+**Décompte initial de l'audit (avant batch pré-recette) : 1×P1 (SEO-001), 16×P2, 6×P3 + 1×P3 à confirmer (CHAOS-RESTART).**
+**Batch pré-recette (#629-#633) :** SEC-001..005, SEO-001/002/003, A11Y-001/002 (+LH-A11Y), PERF-001 (+LH-PERF-AUTH), I18N-001, RGPD-MAGIC, AUTH-DELETED corrigés (CSP en Report-Only, enforce à finaliser). **Restent réellement 35.4 :** COV-API/COV-FRONT, QUAL-001/002/003, DT-LIVE, F5 (Overpass tiers), CHAOS-RESTART, promotion CSP enforce. Voir le bloc « MAJ 2026-06-07 » en tête.
 **Corrigés pendant/après l'audit : F1 (P0, #616) ; IDOR-DETAIL et ENUM-404 (P1, #616/#618) ; F3 wiring/réseau
 (#616) ; F2 (P1, #613) ; QUAL-004 (#612) ; CI-UNIT + COV-PROV (#615) ; F4 requalifié faux finding.** Le « aucun
 P0 » d'une première lecture était **caduc** (F1 cassait la création de trip en prod) ; F1 et les deux findings
