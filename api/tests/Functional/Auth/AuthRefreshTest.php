@@ -149,4 +149,18 @@ final class AuthRefreshTest extends ApiTestCase
         $parts = explode('.', (string) $data['token']);
         $this->assertCount(3, $parts, 'JWT should have 3 dot-separated parts');
     }
+
+    #[Test]
+    public function refreshDeletedAccountReturns401(): void
+    {
+        // A lingering refresh token must not re-authenticate a deleted account.
+        $user = $this->createUserWithRefreshToken('deleted-refresh@example.com', 'deleted-refresh-token');
+        $em = $this->getEntityManager();
+        $user->anonymize();
+        $em->flush();
+
+        $this->sendRefreshRequest('deleted-refresh-token');
+
+        $this->assertResponseStatusCodeSame(401);
+    }
 }

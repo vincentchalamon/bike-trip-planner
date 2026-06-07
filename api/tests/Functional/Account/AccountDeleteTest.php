@@ -6,8 +6,12 @@ namespace App\Tests\Functional\Account;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\ApiResource\TripRequest;
+use App\Entity\AccessRequest;
+use App\Entity\MagicLink;
 use App\Entity\RefreshToken;
 use App\Entity\User;
+use App\Repository\AccessRequestRepository;
+use App\Repository\MagicLinkRepository;
 use App\Repository\RefreshTokenRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -161,6 +165,72 @@ final class AccountDeleteTest extends ApiTestCase
     {
         self::createClient()->request('DELETE', '/users/me');
 
+        $this->assertResponseStatusCodeSame(401);
+    }
+
+    #[Test]
+    public function deleteAccountPurgesMagicLinks(): void
+    {
+        $fixtures = $this->createUserWithTrip('magic-purge@example.com');
+        $user = $fixtures['user'];
+        $userId = $user->getId()->toRfc4122();
+
+        $em = $this->getEntityManager();
+        $em->persist(new MagicLink($user, 'lingering-link-token', new \DateTimeImmutable('+30 minutes')));
+        $em->flush();
+
+        self::createClient()->request('DELETE', '/users/me', [
+            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+        ]);
+        $this->assertResponseStatusCodeSame(204);
+
+        /** @var MagicLinkRepository $repo */
+        $repo = self::getContainer()->get(MagicLinkRepository::class);
+        $em->clear();
+        $reloaded = $em->find(User::class, Uuid::fromString($userId));
+        \assert($reloaded instanceof User);
+
+        $this->assertCount(0, $repo->findBy(['user' => $reloaded]), 'magic_link rows must be purged on erasure');
+    }
+
+    #[Test]
+    public function deleteAccountPurgesAccessRequest(): void
+    {
+        $email = 'access-purge@example.com';
+        $em = $this->getEntityManager();
+        $em->persist(new AccessRequest($email, '203.0.113.7'));
+        $em->flush();
+
+        $fixtures = $this->createUserWithTrip($email);
+
+        self::createClient()->request('DELETE', '/users/me', [
+            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+        ]);
+        $this->assertResponseStatusCodeSame(204);
+
+        /** @var AccessRequestRepository $repo */
+        $repo = self::getContainer()->get(AccessRequestRepository::class);
+        $em->clear();
+
+        $this->assertNull($repo->findByEmail($email), 'access_request PII must be purged on erasure');
+    }
+
+    #[Test]
+    public function deletedAccountJwtIsRejected(): void
+    {
+        // After erasure, a JWT minted for the account must no longer authenticate
+        // (DeletedUserChecker rejects the soft-deleted user on the per-request
+        // JWT reload).
+        $fixtures = $this->createUserWithTrip('ghost@example.com');
+
+        self::createClient()->request('DELETE', '/users/me', [
+            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+        ]);
+        $this->assertResponseStatusCodeSame(204);
+
+        self::createClient()->request('GET', '/trips', [
+            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+        ]);
         $this->assertResponseStatusCodeSame(401);
     }
 }

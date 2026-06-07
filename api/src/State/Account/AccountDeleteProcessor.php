@@ -9,6 +9,8 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Account\Account;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
+use App\Repository\AccessRequestRepository;
+use App\Repository\MagicLinkRepository;
 use App\Repository\RefreshTokenRepository;
 use App\Security\AuthCookies;
 use Doctrine\ORM\EntityManagerInterface;
@@ -33,6 +35,8 @@ final readonly class AccountDeleteProcessor implements ProcessorInterface
     public function __construct(
         private EntityManagerInterface $entityManager,
         private RefreshTokenRepository $refreshTokenRepository,
+        private MagicLinkRepository $magicLinkRepository,
+        private AccessRequestRepository $accessRequestRepository,
         private Security $security,
         private LoggerInterface $logger,
     ) {
@@ -47,7 +51,11 @@ final readonly class AccountDeleteProcessor implements ProcessorInterface
 
         \assert($user instanceof User);
 
-        $this->entityManager->wrapInTransaction(function () use ($user): void {
+        // Capture the email before anonymisation so we can purge the standalone
+        // access_request rows (email PII, no user FK) that hold it.
+        $email = $user->getEmail();
+
+        $this->entityManager->wrapInTransaction(function () use ($user, $email): void {
             // Purge trips (cascades to stages, chat messages and shares via FK
             // ON DELETE CASCADE) which also removes the per-trip preferences.
             $this->entityManager->createQueryBuilder()
@@ -59,6 +67,15 @@ final readonly class AccountDeleteProcessor implements ProcessorInterface
 
             // Revoke every refresh token so lingering sessions cannot be reused.
             $this->refreshTokenRepository->removeAllForUser($user);
+
+            // Purge magic links: the soft-delete below does not trigger the FK
+            // ON DELETE CASCADE, so a lingering valid link could otherwise still
+            // authenticate the (now anonymised) account.
+            $this->magicLinkRepository->removeAllForUser($user);
+
+            // Purge early-access requests holding the email/IP PII (standalone
+            // table, no user FK).
+            $this->accessRequestRepository->removeAllForEmail($email);
 
             // Soft-delete + irreversible PII anonymisation.
             $user->anonymize();

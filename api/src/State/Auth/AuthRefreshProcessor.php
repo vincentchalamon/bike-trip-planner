@@ -76,9 +76,24 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
             return $response;
         }
 
+        $user = $existing->getUser();
+
+        // A deleted (anonymised) account must never be re-authenticated, even if
+        // a refresh token lingered (GDPR erasure is final). Reject + clear cookie.
+        if ($user->isDeleted()) {
+            $this->logger->warning('Auth refresh attempted on a deleted account', ['user' => $user->getId()->toRfc4122()]);
+
+            $response = new JsonResponse(
+                ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
+                Response::HTTP_UNAUTHORIZED,
+            );
+            $response->headers->clearCookie(AuthCookies::REFRESH_TOKEN, '/', null, true, true, 'strict');
+
+            return $response;
+        }
+
         // Atomic expire + rotate in a single transaction to prevent TOCTOU race
         // and ensure no token is lost if the flush fails.
-        $user = $existing->getUser();
         $expiredRows = 0;
         $newRefreshToken = null;
 

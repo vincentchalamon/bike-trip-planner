@@ -57,6 +57,18 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
             );
         }
 
+        // A deleted (anonymised) account must never be re-authenticated, even
+        // with an otherwise-valid magic link (GDPR erasure is final). Neutral
+        // 401 — do not leak that the account existed.
+        if ($user->isDeleted()) {
+            $this->logger->warning('Auth verify attempted on a deleted account', ['user' => $user->getId()->toRfc4122()]);
+
+            return new JsonResponse(
+                ['error' => $this->translator->trans('auth.error.invalid_link', [], 'auth')],
+                Response::HTTP_UNAUTHORIZED,
+            );
+        }
+
         $jwt = $this->jwtManager->create($user);
 
         // Wrap refresh token creation in a transaction: if flush fails, the
