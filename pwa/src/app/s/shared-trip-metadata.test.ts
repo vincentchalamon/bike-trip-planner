@@ -8,8 +8,8 @@ import { generateMetadata } from "@/app/s/[code]/page";
 
 const params = (code: string) => ({ params: Promise.resolve({ code }) });
 
-const mockFetch = (impl: () => unknown) => {
-  const fn = vi.fn(impl as never);
+const mockFetch = (impl: (...args: unknown[]) => unknown) => {
+  const fn = vi.fn(impl);
   vi.stubGlobal("fetch", fn);
   return fn;
 };
@@ -36,7 +36,7 @@ describe("generateMetadata (shared trip)", () => {
 
     expect(meta).toEqual({ title: "Shared trip — Bike Trip Planner" });
     expect(fetchSpy).toHaveBeenCalledOnce();
-    expect(fetchSpy.mock.calls[0][0]).toContain("/s/missing");
+    expect(fetchSpy.mock.calls[0]?.[0]).toContain("/s/missing");
   });
 
   it("falls back to the generic title when the fetch throws (timeout/network)", async () => {
