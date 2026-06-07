@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { API_URL } from "@/lib/constants";
+import { SITE_URL } from "@/lib/constants";
 
 /**
  * robots.txt (audit 35.2 SEO-002). Crawlers may index the public pages; the
@@ -13,6 +13,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/trips", "/account", "/s/"],
     },
-    sitemap: new URL("/sitemap.xml", API_URL).toString(),
+    sitemap: new URL("/sitemap.xml", SITE_URL).toString(),
   };
 }

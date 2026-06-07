@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { DEFAULT_LOCALE } from "@/i18n/locale";
-import { API_URL } from "@/lib/constants";
+import { SITE_URL } from "@/lib/constants";
 import "./globals.css";
 import { IntlProvider } from "@/components/intl-provider";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -44,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
   // iso-prod, so API_URL is the site URL. Per-page metadata (e.g. shared trips)
   // overrides these.
   return {
-    metadataBase: new URL(API_URL),
+    metadataBase: new URL(SITE_URL),
     title,
     description,
     openGraph: {
