@@ -108,8 +108,16 @@ export function useKeyboardShortcuts(stageCount: number) {
         case "m":
         case "M":
           e.preventDefault();
-          // Toggle map visibility: timeline (no map) ↔ split (map shown).
-          setViewMode(viewMode === "timeline" ? "split" : "timeline");
+          // Toggle the map between the two desktop layouts: timeline (no map) ↔
+          // split (timeline + map). The map-only layout (a mobile default) is
+          // left unchanged so the round-trip is not lossy.
+          setViewMode(
+            viewMode === "split"
+              ? "timeline"
+              : viewMode === "timeline"
+                ? "split"
+                : viewMode,
+          );
           break;
       }
     }
