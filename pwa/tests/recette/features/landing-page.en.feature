@@ -33,10 +33,6 @@ Feature: Landing page
   Scenario: Platforms section
     Then the platforms section is visible
 
-  @desktop
-  Scenario: Testimonials and use cases
-    Then the testimonials section is visible
-
   @desktop @critical
   Scenario: Footer with legal links
     Then the footer is visible

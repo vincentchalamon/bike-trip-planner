@@ -124,16 +124,6 @@ Then("the platforms section is visible", async ({ mockedPage }) => {
   await expect(mockedPage.getByTestId("section-availability")).toBeVisible();
 });
 
-Then("la section des témoignages est visible", async ({ mockedPage }) => {
-  await mockedPage.getByTestId("section-testimonials").scrollIntoViewIfNeeded();
-  await expect(mockedPage.getByTestId("section-testimonials")).toBeVisible();
-});
-
-Then("the testimonials section is visible", async ({ mockedPage }) => {
-  await mockedPage.getByTestId("section-testimonials").scrollIntoViewIfNeeded();
-  await expect(mockedPage.getByTestId("section-testimonials")).toBeVisible();
-});
-
 // --- Then: footer + CTA (FR + EN) ---
 
 Then("le footer est visible", async ({ mockedPage }) => {

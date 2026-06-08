@@ -6,7 +6,6 @@ import {
   LandingBentoGrid,
   LandingSources,
   LandingPlatforms,
-  LandingTestimonials,
   LandingFooter,
 } from "@/components/landing";
 
@@ -27,7 +26,6 @@ export function LandingPage() {
       <LandingSources />
       <LandingPlatforms />
       <ScreenshotsSection />
-      <LandingTestimonials />
       <EarlyAccessSection />
       <LandingFooter />
     </main>

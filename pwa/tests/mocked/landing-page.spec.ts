@@ -22,14 +22,13 @@ test.describe("Landing page", () => {
       await page.waitForLoadState("networkidle");
     });
 
-    test("all 8 sections are rendered", async ({ page }) => {
+    test("all 7 sections are rendered", async ({ page }) => {
       await expect(page.getByTestId("section-hero")).toBeVisible();
       await expect(page.getByTestId("section-how-it-works")).toBeVisible();
       await expect(page.getByTestId("section-features")).toBeVisible();
       await expect(page.getByTestId("section-sources")).toBeVisible();
       await expect(page.getByTestId("section-availability")).toBeVisible();
       await expect(page.getByTestId("section-screenshots")).toBeVisible();
-      await expect(page.getByTestId("section-testimonials")).toBeVisible();
       await expect(page.getByTestId("section-early-access")).toBeVisible();
       await expect(page.getByTestId("section-footer")).toBeVisible();
     });

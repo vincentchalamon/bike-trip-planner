@@ -753,10 +753,10 @@
   },
   "landing": {
     "hero": {
-      "badge": "Early Access — Limited spots",
-      "title": "Your co-pilot for every kilometre",
-      "subtitle": "Plan your cycling trip with complete peace of mind. Route analysis, terrain alerts, weather, accommodation and resupply — all in one place.",
-      "ctaPrimary": "Create a trip",
+      "badge": "Private beta · access on request",
+      "title": "Your next bike trip, planned down to the last detail",
+      "subtitle": "Komoot, RideWithGPS, Strava, GPX. Elevation, weather, accommodation, alerts. Available offline, shareable with a single link.",
+      "ctaPrimary": "Create an itinerary",
       "ctaDemo": "See how it works"
     },
     "howItWorks": {
@@ -788,7 +788,7 @@
       },
       "ai": {
         "title": "AI assistant",
-        "description": "Generate or optimise your itinerary with AI. Import from a ChatGPT conversation, get route variants, and contextual analysis per stage."
+        "description": "Generate or optimise your itinerary by describing your constraints, refine it through multi-turn dialogue, and get contextual analysis for each stage."
       },
       "accommodation": {
         "title": "Accommodation",
@@ -839,25 +839,6 @@
       "analysis": "AI analysis",
       "prev": "Previous",
       "next": "Next"
-    },
-    "testimonials": {
-      "title": "What testers say",
-      "starsLabel": "5 stars out of 5",
-      "1": {
-        "text": "An indispensable tool for planning my bikepacking trips. The terrain alerts saved me from several nasty surprises!",
-        "author": "Marie L.",
-        "role": "Cycle tourist, beta tester"
-      },
-      "2": {
-        "text": "The automatic stage management and Komoot integration are mind-blowing. I can't imagine planning without this tool anymore.",
-        "author": "Thomas B.",
-        "role": "Long-distance cyclist, beta tester"
-      },
-      "3": {
-        "text": "The AI assistant is really useful for generating route variants. The app is still in beta but already very comprehensive.",
-        "author": "Sophie M.",
-        "role": "Bikepacker, beta tester"
-      }
     },
     "earlyAccess": {
       "title": "Join early access",
