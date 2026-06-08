@@ -51,6 +51,7 @@
     "estimatedBudget": "Estimated budget:",
     "disclaimer": "Automatically detected data may contain errors.",
     "downloadGpx": "Download full trip GPX",
+    "downloadFit": "Download full trip FIT",
     "downloadFailed": "Download failed. Please try again.",
     "datesLabel": "Trip dates",
     "noDates": "Dates not set",

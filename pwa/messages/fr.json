@@ -51,6 +51,7 @@
     "estimatedBudget": "Budget estimé :",
     "disclaimer": "Les données détectées automatiquement peuvent contenir des erreurs.",
     "downloadGpx": "Télécharger le GPX complet",
+    "downloadFit": "Télécharger le FIT complet",
     "downloadFailed": "Le téléchargement a échoué. Veuillez réessayer.",
     "datesLabel": "Dates du voyage",
     "noDates": "Dates non définies",

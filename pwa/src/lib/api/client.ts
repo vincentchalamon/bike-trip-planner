@@ -711,15 +711,16 @@ function triggerBlobDownload(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-export async function downloadTripGpx(
+export async function downloadTripFile(
   tripId: string,
   tripTitle: string,
+  format: "gpx" | "fit",
 ): Promise<void> {
-  const res = await apiFetch(`${API_URL}/trips/${tripId}.gpx`);
+  const res = await apiFetch(`${API_URL}/trips/${tripId}.${format}`);
   if (!res.ok) throw new Error(`Download failed with status ${res.status}`);
   const blob = await res.blob();
   const safeName = tripTitle.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
-  triggerBlobDownload(blob, `${safeName}.gpx`);
+  triggerBlobDownload(blob, `${safeName}.${format}`);
 }
 
 export async function downloadStageFile(
@@ -844,17 +845,20 @@ export async function fetchSharedTrip(
 }
 
 /**
- * Download shared trip as GPX via short code (anonymous).
+ * Download a shared trip as GPX or FIT via short code (anonymous).
  */
-export async function downloadSharedTripGpx(
+export async function downloadSharedTripFile(
   shortCode: string,
   tripTitle: string,
+  format: "gpx" | "fit",
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/s/${encodeURIComponent(shortCode)}.gpx`);
+  const res = await fetch(
+    `${API_URL}/s/${encodeURIComponent(shortCode)}.${format}`,
+  );
   if (!res.ok) throw new Error("Download failed");
   const blob = await res.blob();
   const safeName = tripTitle.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
-  triggerBlobDownload(blob, `${safeName}.gpx`);
+  triggerBlobDownload(blob, `${safeName}.${format}`);
 }
 
 /**

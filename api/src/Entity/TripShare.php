@@ -83,6 +83,15 @@ use Symfony\Component\Uid\Uuid;
             provider: TripShareGpxProvider::class,
         ),
         new Get(
+            uriTemplate: '/s/{shortCode}.fit',
+            outputFormats: ['fit' => ['application/vnd.ant.fit']],
+            uriVariables: ['shortCode' => new Link(fromClass: TripShare::class, identifiers: ['shortCode'])],
+            openapi: new Operation(summary: 'Download shared trip as FIT via short code.'),
+            security: 'is_granted("PUBLIC_ACCESS")',
+            output: Trip::class,
+            provider: TripShareGpxProvider::class, // format-agnostic: also serves .fit
+        ),
+        new Get(
             uriTemplate: '/s/{shortCode}/stages/{index}{._format}',
             outputFormats: [
                 'gpx' => ['application/gpx+xml'],

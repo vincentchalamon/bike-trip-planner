@@ -59,4 +59,57 @@ test.describe("FIT download", () => {
       .toBeGreaterThan(0);
     expect(fitRequests[0]).toContain("/stages/0.fit");
   });
+
+  test("global FIT download button is visible after stages computed", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      tripCompleteEvent(),
+    ]);
+
+    const button = mockedPage.getByRole("button", {
+      name: /Télécharger le FIT complet/,
+    });
+    await expect(button).toBeVisible();
+    await expect(button).toBeEnabled();
+  });
+
+  test("global FIT download triggers API fetch on the trip endpoint", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      tripCompleteEvent(),
+    ]);
+
+    // Track whole-trip FIT API requests (not the per-stage `/stages/*.fit`).
+    const fitRequests: string[] = [];
+    await mockedPage.route("**/trips/*.fit", (route) => {
+      fitRequests.push(route.request().url());
+      return route.fulfill({
+        status: 200,
+        contentType: "application/vnd.ant.fit",
+        body: Buffer.from([0x0e, 0x20, 0x14, 0x08]), // minimal FIT header stub
+      });
+    });
+
+    const button = mockedPage.getByRole("button", {
+      name: /Télécharger le FIT complet/,
+    });
+    await button.click();
+
+    await expect
+      .poll(() => fitRequests.length, { timeout: 5000 })
+      .toBeGreaterThan(0);
+    expect(fitRequests[0]).toMatch(/\/trips\/[^/]+\.fit$/);
+  });
 });

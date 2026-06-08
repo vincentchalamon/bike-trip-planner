@@ -14,7 +14,12 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * Downloads a shared trip as GPX via short code (anonymous access).
+ * Downloads a shared trip as GPX or FIT via short code (anonymous access).
+ *
+ * Format-agnostic: it resolves the share, delegates to {@see TripGpxProvider}
+ * to load the trip + stages, and lets the format-specific normalizer
+ * ({@see \App\Serializer\TripGpxNormalizer} / {@see \App\Serializer\TripFitNormalizer})
+ * render the response. The "Gpx" name is historical.
  *
  * @implements ProviderInterface<Trip>
  */
