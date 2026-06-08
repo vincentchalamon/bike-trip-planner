@@ -696,6 +696,7 @@
     "checkYourInbox": "Vérifie ta boîte mail",
     "linkSentTo": "Si <strong>{email}</strong> est enregistrée, tu recevras un lien de connexion sous peu.",
     "checkSpamHint": "Pense à vérifier tes courriers indésirables.",
+    "linkExpiryHint": "Le lien de connexion expire dans 30 minutes.",
     "resendLink": "Renvoyer un lien",
     "resendLinkCountdown": "Renvoyer un lien ({seconds}s)",
     "linkExpiredTitle": "Lien expiré ou invalide",

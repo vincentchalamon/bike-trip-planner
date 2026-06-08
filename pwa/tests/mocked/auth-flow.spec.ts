@@ -45,6 +45,8 @@ test.describe("Auth flow", () => {
     // disabled resend button counting down from 60s.
     await expect(page.getByTestId("magic-link-sent")).toBeVisible();
     await expect(page.getByText("test@example.com")).toBeVisible();
+    // The link-expiry hint ("expires in 30 minutes") is shown.
+    await expect(page.getByTestId("magic-link-expiry-hint")).toBeVisible();
   });
 
   test("unauthenticated user sees landing page at /", async ({ page }) => {
