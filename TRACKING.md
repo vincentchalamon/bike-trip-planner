@@ -843,12 +843,22 @@ Entre 35.3 et 35.4 : recette manuelle sur l'environnement iso-prod, guidée par 
 
 Fixe les findings de 35.2 + 35.3 + recette manuelle, requêtés par **milestone `Sprint 35.4`** (l'état des issues n'étant pas fiable). Modèle worktree-parallèle (`/sprint`). _(ex-ordres 32-36)_
 
+**⏩ Avancé en pré-recette (batch durcissement, 5 PRs, avant la recette manuelle)** — corrige le sous-ensemble déterministe et code-local des findings du rapport pour que la recette parte d'une app durcie :
+
+- [#629](https://github.com/vincentchalamon/bike-trip-planner/pull/629) `fix(security)` — **finalité de suppression de compte** (bug surfacé hors-rapport : un compte supprimé pouvait se ré-authentifier) : `DeletedUserChecker` (user_checker), refus `isDeleted` dans AuthVerify/AuthRefresh, purge `magic_link` (RGPD-MAGIC) + `access_request` (PII résiduelle). 5 tests.
+- [#630](https://github.com/vincentchalamon/bike-trip-planner/pull/630) `fix(security)` — **SEC-002/003/004** (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy) + **SEC-001** CSP en **Report-Only** (enforce à acter après observation recette) + **SEC-005** (x-powered-by).
+- [#632](https://github.com/vincentchalamon/bike-trip-planner/pull/632) `feat(seo)` — **SEO-001/002/003** (OG/Twitter, robots, sitemap, métadonnées de partage) + **I18N-001** (onError).
+- [#633](https://github.com/vincentchalamon/bike-trip-planner/pull/633) `fix(a11y)` — **A11Y-001/002** (SSR de la landing : `<main>` + `<h1>`) ; vise LH-A11Y-HOME (à re-mesurer).
+- [#631](https://github.com/vincentchalamon/bike-trip-planner/pull/631) `perf` — **PERF-001** (lazy-load MapPanel, maplibre hors du 1er chunk éditeur) ; vise LH-PERF-AUTH (à re-mesurer).
+
+**Reste 35.4** (non avancé) : COV-API/COV-FRONT/QUAL-001/002 (couverture), DT-LIVE, F5 (Overpass), CHAOS-RESTART, promotion CSP enforce, re-mesure Lighthouse (LH-PERF-HOME/LH-A11Y-HOME/LH-PERF-AUTH), + findings de la recette manuelle. Détails et nouveau finding (auth-bypass / access_request) dans [`docs/recette/audit-report.md`](docs/recette/audit-report.md).
+
 | Ordre | Titre | Effort |
 |---|---|---|
-| 1 | Headers de sécurité Caddy (CSP / HSTS / X-Frame-Options / X-Content-Type-Options) | S |
-| 2 | P0/P1 : bugs bloquants + fonctionnels dégradés | L |
-| 3 | P2 : régressions UX/UI | M |
-| 4 | P3 : performance et polish | M |
+| 1 | Headers de sécurité Caddy (CSP / HSTS / X-Frame-Options / X-Content-Type-Options) | S — ⏩ #630 (CSP report-only ; enforce à finaliser) |
+| 2 | P0/P1 : bugs bloquants + fonctionnels dégradés | L — auth-bypass compte supprimé ⏩ #629 |
+| 3 | P2 : régressions UX/UI | M — A11Y ⏩ #633, SEO ⏩ #632 |
+| 4 | P3 : performance et polish | M — PERF-001 ⏩ #631, I18N-001 ⏩ #632 |
 | 5 | Re-test golden path A final (gate de clôture) | M |
 
 DoD : toutes les issues P0-P3 fermées ou explicitement reportées ; golden path A re-testé vert.

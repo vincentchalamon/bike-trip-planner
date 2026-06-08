@@ -7,7 +7,19 @@
 > couverture (#615), puis les **correctifs critiques** — F1 (P0), IDOR-DETAIL et ENUM-404 (P1 sécurité) + le
 > wiring/réseau Ollama — via #616 et #618. Le reste est différé à Sprint 35.4.
 
-**Date :** 2026-06-03 (mis à jour 2026-06-04 : correctifs #616/#618)
+> **MAJ 2026-06-07 — batch durcissement pré-recette (5 PRs).** Avant la recette manuelle, le
+> sous-ensemble déterministe et code-local a été corrigé : **SEC-001** (CSP, en Report-Only —
+> enforce à finaliser) / **SEC-002/003/004/005** ([#630](https://github.com/vincentchalamon/bike-trip-planner/pull/630)),
+> **SEO-001/002/003** + **I18N-001** ([#632](https://github.com/vincentchalamon/bike-trip-planner/pull/632)),
+> **A11Y-001/002** ([#633](https://github.com/vincentchalamon/bike-trip-planner/pull/633)),
+> **PERF-001** ([#631](https://github.com/vincentchalamon/bike-trip-planner/pull/631)),
+> et un **nouveau finding surfacé hors-rapport** — AUTH-DELETED + RGPD-MAGIC + access_request PII —
+> ([#629](https://github.com/vincentchalamon/bike-trip-planner/pull/629)). Les scores Lighthouse
+> (LH-A11Y-HOME via #633, LH-PERF-AUTH via #631) sont **visés** par ces fix mais **restent à re-mesurer**
+> (`make lighthouse`). Restent 35.4 : couverture (COV-*/QUAL-001/002), DT-LIVE, F5, CHAOS-RESTART,
+> promotion CSP enforce, re-mesure Lighthouse.
+
+**Date :** 2026-06-03 (mis à jour 2026-06-04 : correctifs #616/#618 ; 2026-06-07 : batch pré-recette)
 
 **Périmètre :** features livrées sur `main` (sprints 1-33, design S25-27, IA S28-32, S34/34.5),
 hors S18 #313/#314 (abandonnés) et osm-cron nightly (#575).
@@ -45,20 +57,20 @@ des passes.
 | F1 | `LOCK_DSN` absent de `compose.yaml` -> fallback `redis://localhost` injoignable -> **création de trip 500 en prod** | ~~P0~~ | quality | **Corrigé (#616)** |
 | IDOR-DETAIL | `GET /trips/{id}/detail` sans autorisation objet -> **lecture du trip d'autrui** (IDOR authentifié) | ~~P1~~ | security | **Corrigé (#616)** |
 | ENUM-404 | Refus d'autorisation objet -> `403` (vs `404` si inexistant) -> **fuite d'existence** par énumération | ~~P1~~ | security | **Corrigé (#618, ADR-038)** |
-| SEO-001 | Pages de partage `/s/[code]` sans `generateMetadata` (aperçu social cassé) | P1 | seo | Confirmé |
+| SEO-001 | Pages de partage `/s/[code]` sans `generateMetadata` (aperçu social cassé) | ~~P1~~ | seo | **Corrigé (#632)** |
 | F3 | Ollama prod : wiring `OLLAMA_*` manquant dans `compose.yaml` + arbitrage hard-dep/dégradé (ADR-028) | P1 | quality | **Wiring/ADR/réseau corrigés (#616) ; reste #304 (gating dégradé)** |
 | F2 | `DataTourismeClient` `TypeError` si clé absente/vide -> `ScanAccommodations`/`ScanEvents` crashent | ~~P1~~ | quality | **Corrigé (PR #613)** |
 | F4 | Rate-limit `/auth/request-link` « sans 429 » : 6× -> `202` | ~~P1~~ | security | **Faux finding** (202 par design anti-énumération ; limiter actif, e-mails supprimés) |
-| SEC-001 | Pas de Content-Security-Policy sur les réponses HTML | P2 | security | Confirmé |
-| SEC-002 | Pas de Strict-Transport-Security (HSTS) | P2 | security | Confirmé |
-| SEC-003 | Pas de X-Frame-Options ni X-Content-Type-Options sur les pages PWA | P2 | security | Confirmé |
-| SEO-002 | `robots.txt` et `sitemap.xml` absents (404) | P2 | seo | Confirmé |
-| SEO-003 | Aucune balise Open Graph / Twitter Card sur les pages publiques | P2 | seo | Confirmé |
-| A11Y-001 | Landing `/` sans landmark `<main>` dans le HTML rendu | P2 | a11y | Confirmé |
-| A11Y-002 | Landing `/` sans `<h1>` dans le HTML rendu (SSR) | P2 | a11y | Confirmé |
-| LH-PERF-HOME | Landing `/` score Lighthouse Performance **0.65** (< 0.80) | P2 | perf | Confirmé |
-| LH-A11Y-HOME | Landing `/` score Lighthouse Accessibility **0.84** (< 0.90) | P2 | a11y | Confirmé |
-| LH-PERF-AUTH | Pages authentifiées sous seuil perf (`/trips` 0.73, `/trips/new` 0.52) | P2 | perf | Confirmé (empirique) |
+| SEC-001 | Pas de Content-Security-Policy sur les réponses HTML | P2 | security | **Report-Only (#630)** — enforce différé 35.4 |
+| SEC-002 | Pas de Strict-Transport-Security (HSTS) | ~~P2~~ | security | **Corrigé (#630)** |
+| SEC-003 | Pas de X-Frame-Options ni X-Content-Type-Options sur les pages PWA | ~~P2~~ | security | **Corrigé (#630)** |
+| SEO-002 | `robots.txt` et `sitemap.xml` absents (404) | ~~P2~~ | seo | **Corrigé (#632)** |
+| SEO-003 | Aucune balise Open Graph / Twitter Card sur les pages publiques | ~~P2~~ | seo | **Corrigé (#632)** |
+| A11Y-001 | Landing `/` sans landmark `<main>` dans le HTML rendu | ~~P2~~ | a11y | **Corrigé (#633)** |
+| A11Y-002 | Landing `/` sans `<h1>` dans le HTML rendu (SSR) | ~~P2~~ | a11y | **Corrigé (#633)** |
+| LH-PERF-HOME | Landing `/` score Lighthouse Performance **0.65** (< 0.80) | P2 | perf | Confirmé (SSR #633 peut améliorer — à re-mesurer) |
+| LH-A11Y-HOME | Landing `/` score Lighthouse Accessibility **0.84** (< 0.90) | P2 | a11y | **Visé par #633** (SSR `<main>`/`<h1>`) — à re-mesurer |
+| LH-PERF-AUTH | Pages authentifiées sous seuil perf (`/trips` 0.73, `/trips/new` 0.52) | P2 | perf | **Visé par #631** (lazy maplibre) — à re-mesurer |
 | CHAOS-RESTART | Worker `SIGKILL`/OOM lent/peu fiable à redémarrer (resté down > 2 min en test ; cause à confirmer) | P3 | quality | À confirmer |
 | DT-LIVE | DataTourisme mode live cassé : scoped client sans `base_uri` + endpoint obsolète | P2 | quality | Confirmé |
 | F5 | APIs externes flaky : **Overpass `429`/timeout** -> POI/alertes dégradés | P2 | perf | Confirmé |
@@ -68,15 +80,17 @@ des passes.
 | COV-FRONT | Couverture front Vitest **16,85 %** statements (< 80 % DoD) | P2 | quality | Confirmé |
 | CI-UNIT | Tests unitaires front non gatés par la CI (suite cassée + 6 tests rot) | ~~P2~~ | quality | **Corrigé (PR #615)** |
 | QUAL-004 | `make lighthouse` non exécutable (Chrome introuvable dans l'image lhci) | ~~P2~~ | quality | **Corrigé (PR #612)** |
-| SEC-004 | Pas de Referrer-Policy | P3 | security | Confirmé |
-| SEC-005 | En-tête `x-powered-by: Next.js` exposé en prod | P3 | security | Confirmé |
-| PERF-001 | `maplibre-gl` importé statiquement dans `trip-planner.tsx` | P3 | perf | Confirmé |
-| I18N-001 | Pas de handler `onError` sur `NextIntlClientProvider` | P3 | i18n | Confirmé |
+| SEC-004 | Pas de Referrer-Policy | ~~P3~~ | security | **Corrigé (#630)** |
+| SEC-005 | En-tête `x-powered-by: Next.js` exposé en prod | ~~P3~~ | security | **Corrigé (#630)** |
+| PERF-001 | `maplibre-gl` importé statiquement dans `trip-planner.tsx` | ~~P3~~ | perf | **Corrigé (#631)** |
+| I18N-001 | Pas de handler `onError` sur `NextIntlClientProvider` | ~~P3~~ | i18n | **Corrigé (#632)** |
 | QUAL-003 | Dette de suppressions statiques (7 `@phpstan-ignore`, 5 front) | P3 | quality | Confirmé |
 | COV-PROV | Couverture provisioner (xdebug absent) -> mesurée 84,9 % | ~~P3~~ | quality | **Corrigé (PR #615)** |
-| RGPD-MAGIC | `magic_link` non purgés à la suppression de compte (7 rows, dont 2 valides) | P3 | privacy | Confirmé (empirique) |
+| RGPD-MAGIC | `magic_link` non purgés à la suppression de compte (7 rows, dont 2 valides) | ~~P3~~ | privacy | **Corrigé (#629)** |
+| AUTH-DELETED | Compte supprimé (soft-delete) **ré-authentifiable** (magic_link/refresh sans contrôle `deletedAt`, pas de `user_checker`) + `access_request` (email/IP) non purgé -> suppression non finale (intégrité RGPD) | ~~P2~~ | security | **Corrigé (#629)** — surfacé hors-rapport au challenge |
 
-**Total actifs (différés Sprint 35.4) : 1×P1 (SEO-001), 16×P2, 6×P3 + 1×P3 à confirmer (CHAOS-RESTART).**
+**Décompte initial de l'audit (avant batch pré-recette) : 1×P1 (SEO-001), 16×P2, 6×P3 + 1×P3 à confirmer (CHAOS-RESTART).**
+**Batch pré-recette (#629-#633) :** SEC-001..005, SEO-001/002/003, A11Y-001/002, PERF-001, I18N-001, RGPD-MAGIC, AUTH-DELETED corrigés (CSP en Report-Only, enforce à finaliser) ; scores LH-A11Y-HOME/LH-PERF-AUTH visés (#633/#631) mais à re-mesurer. **Restent réellement 35.4 :** COV-API/COV-FRONT, QUAL-001/002/003, DT-LIVE, F5 (Overpass tiers), CHAOS-RESTART, promotion CSP enforce, re-mesure Lighthouse (LH-PERF-HOME/LH-A11Y-HOME/LH-PERF-AUTH). Voir le bloc « MAJ 2026-06-07 » en tête.
 **Corrigés pendant/après l'audit : F1 (P0, #616) ; IDOR-DETAIL et ENUM-404 (P1, #616/#618) ; F3 wiring/réseau
 (#616) ; F2 (P1, #613) ; QUAL-004 (#612) ; CI-UNIT + COV-PROV (#615) ; F4 requalifié faux finding.** Le « aucun
 P0 » d'une première lecture était **caduc** (F1 cassait la création de trip en prod) ; F1 et les deux findings
