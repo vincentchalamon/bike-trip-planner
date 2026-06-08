@@ -84,6 +84,12 @@ export function EmailSent({
           })}
         </p>
         <p className="text-muted-foreground text-xs">{t("checkSpamHint")}</p>
+        <p
+          className="text-muted-foreground text-xs"
+          data-testid="magic-link-expiry-hint"
+        >
+          {t("linkExpiryHint")}
+        </p>
       </div>
 
       <Button

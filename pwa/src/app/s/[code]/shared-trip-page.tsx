@@ -281,14 +281,14 @@ function SharedTripLoader({ code }: { code: string }) {
               <div
                 className={
                   viewMode === "split"
-                    ? "hidden lg:block lg:w-[520px] lg:shrink-0"
+                    ? "lg:w-[520px] lg:shrink-0"
                     : "w-full h-[calc(100vh-12rem)]"
                 }
               >
                 <div
                   className={
                     viewMode === "split"
-                      ? "lg:sticky lg:top-20 lg:h-[calc(100dvh-6rem)]"
+                      ? "h-[calc(100dvh-6rem)] lg:sticky lg:top-20"
                       : "w-full h-full"
                   }
                 >
