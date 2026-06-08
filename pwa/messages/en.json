@@ -967,13 +967,15 @@
   "errorPages": {
     "notFound": {
       "title": "Off the trail",
-      "subtitle": "This page does not exist or has been moved.",
+      "subtitle": "This route does not exist — or the shared link has been revoked.",
       "illustrationAlt": "Lost cyclist in the mountains",
-      "backHome": "Back to home"
+      "backHome": "Back to home",
+      "myTrips": "My trips"
     },
     "error": {
       "title": "A pebble in the derailleur",
       "subtitle": "An unexpected error occurred. You can try again or return home.",
+      "badge": "Server error · 500",
       "retry": "Try again",
       "backHome": "Back to home"
     },

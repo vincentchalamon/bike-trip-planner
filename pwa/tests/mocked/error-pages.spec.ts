@@ -39,8 +39,11 @@ test.describe("404 / not-found page", () => {
 
     // Subtitle in French.
     await expect(page.getByTestId("not-found-subtitle")).toHaveText(
-      "Cette page n'existe pas ou a été déplacée.",
+      "Cette route n'existe pas — ou le lien de partage a été révoqué.",
     );
+
+    // Large decorative "404" numeral.
+    await expect(page.getByTestId("not-found-code")).toHaveText("404");
 
     // SVG illustration is present and has an accessible label.
     const illustration = page.getByTestId("not-found-illustration");
@@ -55,6 +58,12 @@ test.describe("404 / not-found page", () => {
     await expect(homeLink).toBeVisible();
     await expect(homeLink).toHaveText("Retour à l'accueil");
     await expect(homeLink).toHaveAttribute("href", "/");
+
+    // Second CTA links to the trips list.
+    const tripsLink = page.getByTestId("not-found-trips-link");
+    await expect(tripsLink).toBeVisible();
+    await expect(tripsLink).toHaveText("Mes voyages");
+    await expect(tripsLink).toHaveAttribute("href", "/trips");
   });
 
   test("uses the warm paper surface token as background", async ({ page }) => {

@@ -8,13 +8,15 @@ interface Copy {
   subtitle: string;
   illustrationAlt: string;
   backHome: string;
+  myTrips: string;
 }
 
 const FALLBACK_COPY: Copy = {
   title: "Hors-piste",
-  subtitle: "Cette page n'existe pas ou a été déplacée.",
+  subtitle: "Cette route n'existe pas — ou le lien de partage a été révoqué.",
   illustrationAlt: "Cycliste perdu en montagne",
   backHome: "Retour à l'accueil",
+  myTrips: "Mes voyages",
 };
 
 export default async function NotFound() {
@@ -26,6 +28,7 @@ export default async function NotFound() {
       subtitle: t("subtitle"),
       illustrationAlt: t("illustrationAlt"),
       backHome: t("backHome"),
+      myTrips: t("myTrips"),
     };
   } catch (e) {
     logger.error(
@@ -68,6 +71,14 @@ export default async function NotFound() {
           <circle cx="74" cy="70" r="0.5" fill="currentColor" />
         </svg>
 
+        <div
+          className="font-serif text-7xl md:text-8xl font-medium italic leading-none tracking-tight text-[var(--color-accent-brand)]"
+          data-testid="not-found-code"
+          aria-hidden="true"
+        >
+          404
+        </div>
+
         <div className="space-y-3">
           <h1
             className="font-serif text-4xl md:text-5xl font-semibold tracking-tight"
@@ -83,9 +94,19 @@ export default async function NotFound() {
           </p>
         </div>
 
-        <Button asChild size="lg" data-testid="not-found-home-link">
-          <Link href="/">{copy.backHome}</Link>
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button asChild size="lg" data-testid="not-found-home-link">
+            <Link href="/">{copy.backHome}</Link>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            data-testid="not-found-trips-link"
+          >
+            <Link href="/trips">{copy.myTrips}</Link>
+          </Button>
+        </div>
       </div>
     </main>
   );

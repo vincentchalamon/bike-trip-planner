@@ -967,13 +967,15 @@
   "errorPages": {
     "notFound": {
       "title": "Hors-piste",
-      "subtitle": "Cette page n'existe pas ou a été déplacée.",
+      "subtitle": "Cette route n'existe pas — ou le lien de partage a été révoqué.",
       "illustrationAlt": "Cycliste perdu en montagne",
-      "backHome": "Retour à l'accueil"
+      "backHome": "Retour à l'accueil",
+      "myTrips": "Mes voyages"
     },
     "error": {
       "title": "Un caillou dans le dérailleur",
       "subtitle": "Une erreur inattendue est survenue. Vous pouvez réessayer ou revenir à l'accueil.",
+      "badge": "Erreur serveur · 500",
       "retry": "Réessayer",
       "backHome": "Retour à l'accueil"
     },
