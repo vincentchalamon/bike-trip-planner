@@ -134,6 +134,36 @@ test.describe("Keyboard shortcuts", () => {
     await expect(mapContainer).toHaveAttribute("data-focused-stage", "2");
   });
 
+  test("T key cycles the theme", async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
+    const toggle = mockedPage.getByTestId("theme-toggle");
+    await expect(toggle).toBeVisible();
+    const before = (await toggle.getAttribute("data-theme-state")) ?? "";
+
+    await mockedPage.locator("body").click();
+    await mockedPage.keyboard.press("t");
+
+    // The selected theme cycled (light → dark → system → light).
+    await expect(toggle).not.toHaveAttribute("data-theme-state", before);
+  });
+
+  test("M key toggles the map", async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
+    const map = mockedPage.getByTestId("map-container");
+    // Default desktop view mode is "split" → the map is shown.
+    await expect(map).toBeVisible();
+
+    await mockedPage.locator("body").click();
+
+    // Hide the map (split → timeline).
+    await mockedPage.keyboard.press("m");
+    await expect(map).not.toBeVisible();
+
+    // Show it again (timeline → split).
+    await mockedPage.keyboard.press("m");
+    await expect(map).toBeVisible();
+  });
+
   test("shortcuts are suppressed when focus is inside an <input>", async ({
     mockedPage,
   }) => {

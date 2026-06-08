@@ -404,7 +404,9 @@
     "undo": "Undo last action",
     "redo": "Redo undone action",
     "toggleHelp": "Show / hide this help",
-    "closePanels": "Close open panel"
+    "closePanels": "Close open panel",
+    "toggleTheme": "Toggle light / dark theme",
+    "toggleMap": "Show / hide the map"
   },
   "tripLocked": {
     "banner": "This trip is underway or has passed — view only. Use \"Duplicate\" to plan a new variant."
