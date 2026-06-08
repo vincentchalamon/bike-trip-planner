@@ -184,4 +184,30 @@ final class AuthVerifyTest extends ApiTestCase
         $parts = explode('.', (string) $data['token']);
         $this->assertCount(3, $parts, 'JWT should have 3 dot-separated parts');
     }
+
+    #[Test]
+    public function verifyDeletedAccountReturns401(): void
+    {
+        // A still-valid magic link must not re-authenticate a deleted account
+        // (GDPR erasure is final). Guards against the auth-bypass where the link
+        // outlived the account (magic links are now purged on deletion, but the
+        // auth path must reject deleted users regardless).
+        $user = $this->createUserWithMagicLink('deleted@example.com', 'deleted-account-token');
+        $em = $this->getEntityManager();
+        $user->anonymize();
+        $em->flush();
+
+        $response = self::createClient()->request('POST', '/auth/verify', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['token' => 'deleted-account-token'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(401);
+
+        // No session must be established for a deleted account.
+        $cookies = $response->getHeaders(false)['set-cookie'] ?? [];
+        foreach ($cookies as $cookie) {
+            $this->assertStringStartsNotWith('refresh_token=', (string) $cookie, 'No refresh cookie for a deleted account');
+        }
+    }
 }

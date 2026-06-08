@@ -25,6 +25,23 @@ final class AccessRequestRepository extends ServiceEntityRepository
     }
 
     /**
+     * Marks every access request for the given email for removal.
+     *
+     * Does NOT flush — the caller is responsible for flushing. Used by GDPR
+     * erasure: the table holds the email + IP as plain PII with no user FK, so
+     * it must be purged explicitly on account deletion.
+     */
+    public function removeAllForEmail(string $email): void
+    {
+        $this->getEntityManager()->createQueryBuilder()
+            ->delete(AccessRequest::class, 'ar')
+            ->where('ar.email = :email')
+            ->setParameter('email', $email)
+            ->getQuery()
+            ->execute();
+    }
+
+    /**
      * @return list<AccessRequest>
      */
     public function findVerified(

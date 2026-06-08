@@ -84,6 +84,24 @@ final class MagicLinkRepository extends ServiceEntityRepository
         return $magicLink?->getUser();
     }
 
+    /**
+     * Marks all magic links for the given user for removal.
+     *
+     * Does NOT flush — the caller is responsible for flushing. Used by GDPR
+     * erasure: the soft-delete (anonymise) does not trigger the FK ON DELETE
+     * CASCADE, so lingering links would otherwise survive and could still be
+     * consumed.
+     */
+    public function removeAllForUser(User $user): void
+    {
+        $this->getEntityManager()->createQueryBuilder()
+            ->delete(MagicLink::class, 'ml')
+            ->where('ml.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->execute();
+    }
+
     private function hasActiveLinkForUser(User $user): bool
     {
         $count = $this->createQueryBuilder('ml')

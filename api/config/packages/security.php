@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Entity\User;
+use App\Security\DeletedUserChecker;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
@@ -24,6 +25,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'pattern' => '^/',
                 'stateless' => true,
                 'provider' => 'app_user_provider',
+                // Reject soft-deleted (anonymised) accounts on every authentication,
+                // including the per-request JWT reload (see DeletedUserChecker).
+                'user_checker' => DeletedUserChecker::class,
                 'jwt' => [],
                 // Object-level authz denials (TRIP_*) are surfaced as 404, not 403, to
                 // avoid leaking trip existence by enumeration (ADR-038). Handled by
