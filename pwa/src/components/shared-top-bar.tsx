@@ -16,10 +16,10 @@ interface SharedTopBarProps {
  * Contrast with the owner top bar in {@link TripPlanner}: there is no
  * undo/redo, no Share button, no profile menu, no config gear, and no
  * insertion / deletion controls. Only the brand link (left) and the global
- * GPX download (right) are exposed.
+ * GPX / FIT download (right) are exposed.
  *
- * The Garmin FIT export from sprint 34 is intentionally omitted until that
- * feature ships — see issue #404.
+ * Garmin Connect sync (direct upload to the watch) remains out of scope — see
+ * issue #404.
  */
 export function SharedTopBar({ tripTitle }: SharedTopBarProps) {
   const t = useTranslations("sharedTopBar");
@@ -54,7 +54,7 @@ export function SharedTopBar({ tripTitle }: SharedTopBarProps) {
         {/* Spacer when no title to push the download button to the right */}
         {!tripTitle && <div className="flex-1" />}
 
-        {/* Global GPX download — only action available in read-only mode */}
+        {/* Global GPX / FIT download — only action available in read-only mode */}
         <div className="shrink-0">
           <TripDownloads tripId={undefined} tripTitle={tripTitle ?? ""} />
         </div>
