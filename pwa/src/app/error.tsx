@@ -22,6 +22,9 @@ export default function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
     });
   }, [error]);
 
+  // Shown alongside the request_id so a user can quote when the error occurred.
+  const timestamp = new Date().toISOString();
+
   return (
     <main
       className="flex min-h-screen items-center justify-center px-4 py-12 bg-[var(--color-surface)] text-[var(--color-ink)]"
@@ -29,7 +32,7 @@ export default function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
     >
       <div className="text-center space-y-6 max-w-md">
         <div
-          className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent-ink)]"
+          className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
           aria-hidden="true"
         >
           <svg
@@ -48,6 +51,12 @@ export default function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
         </div>
 
         <div className="space-y-3">
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.15em] text-red-600 dark:text-red-400"
+            data-testid="error-badge"
+          >
+            {t("badge")}
+          </p>
           <h1
             className="font-serif text-3xl md:text-4xl font-semibold tracking-tight"
             data-testid="error-title"
@@ -61,6 +70,17 @@ export default function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
             {t("subtitle")}
           </p>
         </div>
+
+        {error.digest && (
+          <div
+            className="rounded-lg border border-border bg-[var(--color-surface)] p-3 text-left font-mono text-xs text-[var(--color-ink)]/60"
+            data-testid="error-request-id"
+          >
+            request_id: {error.digest}
+            <br />
+            timestamp: {timestamp}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button onClick={reset} size="lg" data-testid="error-retry-button">
