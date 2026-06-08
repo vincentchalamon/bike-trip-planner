@@ -6,6 +6,8 @@ const isMobile = process.env.BUILD_TARGET === "mobile";
 
 const nextConfig: NextConfig = {
   output: isMobile ? "export" : "standalone",
+  // Don't advertise the framework (audit 35.2 SEC-005: drop `x-powered-by`).
+  poweredByHeader: false,
   env: {
     NEXT_PUBLIC_IS_MOBILE_BUILD: isMobile ? "1" : "",
   },
