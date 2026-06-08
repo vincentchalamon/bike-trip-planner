@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,9 @@ export default function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
     });
   }, [error]);
 
-  // Shown alongside the request_id so a user can quote when the error occurred.
-  const timestamp = new Date().toISOString();
+  // Captured once at mount so it stays stable across re-renders: shown alongside
+  // the request_id so a user can quote when the error occurred.
+  const [timestamp] = useState(() => new Date().toISOString());
 
   return (
     <main
