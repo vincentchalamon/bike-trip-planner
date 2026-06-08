@@ -34,10 +34,6 @@ Fonctionnalité: Page d'atterrissage
   Scénario: Section plateformes
     Alors la section des plateformes est visible
 
-  @desktop
-  Scénario: Témoignages et cas d'usage
-    Alors la section des témoignages est visible
-
   @desktop @critique
   Scénario: Footer avec liens légaux
     Alors le footer est visible

@@ -753,10 +753,10 @@
   },
   "landing": {
     "hero": {
-      "badge": "Accès anticipé — Places limitées",
-      "title": "Votre copilote pour chaque kilomètre",
-      "subtitle": "Préparez votre voyage à vélo en toute sérénité. Analyse d'itinéraire, alertes de terrain, météo, hébergements et ravitaillement — tout en un.",
-      "ctaPrimary": "Créer un voyage",
+      "badge": "Beta privée · accès sur demande",
+      "title": "Votre prochain voyage à vélo, planifié dans les moindres détails",
+      "subtitle": "Komoot, RideWithGPS, Strava, GPX. Dénivelé, météo, hébergements, alertes. Consultable hors-ligne, partageable en un lien.",
+      "ctaPrimary": "Créer un itinéraire",
       "ctaDemo": "Voir comment ça marche"
     },
     "howItWorks": {
@@ -788,7 +788,7 @@
       },
       "ai": {
         "title": "Assistant IA",
-        "description": "Générez ou optimisez votre itinéraire avec l'IA. Import depuis une conversation ChatGPT, suggestions de variantes, analyse contextuelle de chaque étape."
+        "description": "Générez ou optimisez votre itinéraire en décrivant vos contraintes, affinez en dialogue multi-tours, et obtenez une analyse contextuelle de chaque étape."
       },
       "accommodation": {
         "title": "Hébergements",
@@ -839,25 +839,6 @@
       "analysis": "Analyse IA",
       "prev": "Précédent",
       "next": "Suivant"
-    },
-    "testimonials": {
-      "title": "Ils l'ont testé",
-      "starsLabel": "5 étoiles sur 5",
-      "1": {
-        "text": "Un outil indispensable pour préparer mes voyages bikepacking. Les alertes terrain m'ont évité plusieurs mauvaises surprises !",
-        "author": "Marie L.",
-        "role": "Cyclotouriste, testeuse bêta"
-      },
-      "2": {
-        "text": "La gestion automatique des étapes et l'intégration Komoot sont bluffantes. Je n'imagine plus planifier sans cet outil.",
-        "author": "Thomas B.",
-        "role": "Biker longue distance, testeur bêta"
-      },
-      "3": {
-        "text": "L'assistant IA est vraiment utile pour générer des variantes d'itinéraire. L'application est encore en bêta mais déjà très complète.",
-        "author": "Sophie M.",
-        "role": "Randonneuse à vélo, testeuse bêta"
-      }
     },
     "earlyAccess": {
       "title": "Rejoignez l'accès anticipé",
