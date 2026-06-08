@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Bike } from "lucide-react";
+import { TopBar } from "@/components/top-bar";
+import { AccountRail } from "@/components/account/account-rail";
 import { AccountSection } from "@/components/account/account-section";
 import { PreferencesSection } from "@/components/account/preferences-section";
 import { DataSection } from "@/components/account/data-section";
 import { DangerZoneSection } from "@/components/account/danger-zone-section";
-import { LogoutSection } from "@/components/account/logout-section";
+import { LandingFooter } from "@/components/landing/footer";
 
 /**
  * Account settings page (#383).
@@ -16,28 +16,24 @@ import { LogoutSection } from "@/components/account/logout-section";
  * {@link AuthGuard}: `/account/settings` is not a public path, so an
  * unauthenticated visitor is redirected to `/login`.
  *
- * Sections: account (email + magic-link change), preferences (language +
- * theme), data export (GDPR), danger zone (account deletion) and logout.
+ * Chrome (audit #7): the global {@link TopBar} (help suppressed — no modal
+ * here), a left identity/nav rail ({@link AccountRail}, which also hosts the
+ * red logout), the content cards, and the shared {@link LandingFooter}. The
+ * rail stacks above the content under the `md` breakpoint.
+ *
+ * Content sections: account (email + magic-link change), preferences (language
+ * + theme), data export (GDPR) and danger zone (account deletion). Logout lives
+ * in the rail.
  */
 export default function AccountSettingsPage() {
   const t = useTranslations("accountSettings");
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 w-full border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="max-w-[800px] mx-auto flex items-center gap-2 px-4 md:px-6 h-14">
-          <Link
-            href="/"
-            className="flex items-center gap-2 font-bold text-base text-brand hover:opacity-80 transition-opacity"
-          >
-            <Bike className="h-5 w-5" aria-hidden="true" />
-            <span className="hidden sm:inline">Bike Trip Planner</span>
-          </Link>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background flex flex-col">
+      <TopBar showHelp={false} />
 
       <main
-        className="max-w-[800px] mx-auto px-4 md:px-6 py-8 md:py-12"
+        className="flex-1 w-full max-w-[1100px] mx-auto px-4 md:px-6 py-8 md:py-12"
         data-testid="account-settings-page"
       >
         <div className="mb-8">
@@ -47,14 +43,18 @@ export default function AccountSettingsPage() {
           <p className="text-muted-foreground text-sm mt-1">{t("subtitle")}</p>
         </div>
 
-        <div className="flex flex-col gap-6">
-          <AccountSection />
-          <PreferencesSection />
-          <DataSection />
-          <DangerZoneSection />
-          <LogoutSection />
+        <div className="grid gap-8 md:grid-cols-[240px_1fr]">
+          <AccountRail />
+          <div className="flex flex-col gap-6 min-w-0">
+            <AccountSection />
+            <PreferencesSection />
+            <DataSection />
+            <DangerZoneSection />
+          </div>
         </div>
       </main>
+
+      <LandingFooter />
     </div>
   );
 }
