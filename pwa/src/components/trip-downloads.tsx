@@ -17,6 +17,10 @@ interface TripDownloadsProps {
  * Whole-trip download controls for the top bar: GPX and FIT, each merging all
  * stages into a single file. Mirrors the per-stage {@link StageDownloads} two-
  * button pattern. In the shared (read-only) view it downloads via short code.
+ *
+ * Mobile keeps the bar within the viewport (no mobile artboard yet, audit H11):
+ * the GPX button is icon-only and the FIT button is hidden under the `sm`
+ * breakpoint. Per-stage FIT export stays available everywhere.
  */
 export function TripDownloads({ tripId, tripTitle }: TripDownloadsProps) {
   const t = useTranslations("tripSummary");
@@ -58,12 +62,12 @@ export function TripDownloads({ tripId, tripTitle }: TripDownloadsProps) {
         ) : (
           <Download className="h-4 w-4" />
         )}
-        <span className="text-xs font-medium">GPX</span>
+        <span className="hidden text-xs font-medium sm:inline">GPX</span>
       </Button>
       <Button
         variant="ghost"
         size="sm"
-        className="h-9 gap-1 px-2 cursor-pointer"
+        className="hidden h-9 gap-1 px-2 cursor-pointer sm:inline-flex"
         disabled={disabled}
         onClick={() => void handleDownload("fit")}
         aria-label={t("downloadFit")}
