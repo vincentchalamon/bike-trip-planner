@@ -694,7 +694,7 @@
     "checkYourInbox": "Check your inbox",
     "linkSentTo": "If <strong>{email}</strong> is registered, you'll receive a sign-in link shortly.",
     "checkSpamHint": "Don't forget to check your spam folder.",
-    "linkExpiryHint": "The sign-in link expires in 15 minutes.",
+    "linkExpiryHint": "The sign-in link expires in 30 minutes.",
     "resendLink": "Resend link",
     "resendLinkCountdown": "Resend link ({seconds}s)",
     "linkExpiredTitle": "Link expired or invalid",
