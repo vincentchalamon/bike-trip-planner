@@ -10,6 +10,22 @@ test.describe("/faq page", () => {
     });
   });
 
+  test("renders the public chrome: top bar, sections rail and footer", async ({
+    page,
+  }) => {
+    await page.goto("/faq");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByTestId("public-top-bar")).toBeVisible();
+    await expect(page.getByTestId("faq-sections-rail")).toBeVisible();
+    // One rail link per category, anchored to its heading.
+    await expect(page.getByTestId("faq-sections-link-project")).toHaveAttribute(
+      "href",
+      "#faq-category-project",
+    );
+    await expect(page.getByTestId("section-footer")).toBeVisible();
+  });
+
   test("displays all three FAQ categories", async ({ page }) => {
     await page.goto("/faq");
     await page.waitForLoadState("networkidle");

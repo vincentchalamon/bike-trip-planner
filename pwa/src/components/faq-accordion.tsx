@@ -80,7 +80,7 @@ export function FaqAccordion({ categories }: FaqAccordionProps) {
         >
           <h2
             id={`faq-category-${category.id}`}
-            className="text-lg font-semibold mb-4"
+            className="scroll-mt-24 text-lg font-semibold mb-4"
           >
             {category.label}
           </h2>
