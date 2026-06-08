@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTheme } from "next-themes";
 import { useUiStore } from "@/store/ui-store";
 
 /**
@@ -10,6 +11,8 @@ import { useUiStore } from "@/store/ui-store";
  * - `?`: toggle the keyboard shortcuts help modal
  * - `j`: navigate to the next stage (increment `focusedMapStageIndex`)
  * - `k`: navigate to the previous stage (decrement `focusedMapStageIndex`)
+ * - `t`: cycle the theme (light → dark → system), mirroring the ThemeToggle
+ * - `m`: toggle the map (timeline ↔ split view modes)
  *
  * Undo/redo shortcuts (Ctrl+Z / Ctrl+Y) are handled separately by
  * `useUndoRedo` to keep temporal concerns isolated.
@@ -22,6 +25,8 @@ import { useUiStore } from "@/store/ui-store";
  *   to the global map view (null). Pass `0` when no trip is loaded.
  */
 export function useKeyboardShortcuts(stageCount: number) {
+  const { theme, setTheme } = useTheme();
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       // Ignore events when the user is typing
@@ -44,6 +49,8 @@ export function useKeyboardShortcuts(stageCount: number) {
         setHelpModalOpen,
         focusedMapStageIndex,
         setFocusedMapStageIndex,
+        viewMode,
+        setViewMode,
       } = useUiStore.getState();
 
       switch (e.key) {
@@ -88,10 +95,34 @@ export function useKeyboardShortcuts(stageCount: number) {
             setFocusedMapStageIndex(focusedMapStageIndex - 1);
           }
           break;
+
+        case "t":
+        case "T":
+          e.preventDefault();
+          // Cycle light → dark → system → light (mirrors ThemeToggle).
+          setTheme(
+            theme === "light" ? "dark" : theme === "dark" ? "system" : "light",
+          );
+          break;
+
+        case "m":
+        case "M":
+          e.preventDefault();
+          // Toggle the map between the two desktop layouts: timeline (no map) ↔
+          // split (timeline + map). The map-only layout (a mobile default) is
+          // left unchanged so the round-trip is not lossy.
+          setViewMode(
+            viewMode === "split"
+              ? "timeline"
+              : viewMode === "timeline"
+                ? "split"
+                : viewMode,
+          );
+          break;
       }
     }
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [stageCount]);
+  }, [stageCount, theme, setTheme]);
 }

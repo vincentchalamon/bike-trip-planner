@@ -404,7 +404,9 @@
     "undo": "Annuler la dernière action",
     "redo": "Rétablir l'action annulée",
     "toggleHelp": "Afficher / masquer cette aide",
-    "closePanels": "Fermer le panneau ouvert"
+    "closePanels": "Fermer le panneau ouvert",
+    "toggleTheme": "Basculer le thème clair / sombre",
+    "toggleMap": "Afficher / masquer la carte"
   },
   "tripLocked": {
     "banner": "Ce trip est en cours ou passé — consultation uniquement. Utilisez « Dupliquer » pour planifier une nouvelle variante."

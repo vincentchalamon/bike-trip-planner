@@ -176,6 +176,8 @@ export function HelpModal() {
                 shortcuts={[
                   { keys: ["?"], label: tShortcuts("toggleHelp") },
                   { keys: ["Esc"], label: tShortcuts("closePanels") },
+                  { keys: ["T"], label: tShortcuts("toggleTheme") },
+                  { keys: ["M"], label: tShortcuts("toggleMap") },
                 ]}
               />
             </section>
