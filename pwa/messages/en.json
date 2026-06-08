@@ -1063,14 +1063,14 @@
       "host": {
         "title": "Host",
         "paragraphs": [
-          "The application is hosted on cloud infrastructure located within the European Union.",
+          "The application is hosted by the operator of this instance.",
           "The exact details of the host can be provided on request at the contact address below."
         ]
       },
       "contact": {
         "title": "Contact",
         "paragraphs": [
-          "For any question about the site or to exercise your rights, contact us at: contact@bike-trip-planner.app.",
+          "For any question about the site or to exercise your rights, contact us at: __CONTACT_EMAIL__.",
           "You can also open an issue on the project's GitHub repository."
         ]
       },
@@ -1095,7 +1095,7 @@
         "title": "Data controller",
         "paragraphs": [
           "The data controller is the publisher of Bike Trip Planner (see the legal notice).",
-          "For any question about your personal data, contact us at: contact@bike-trip-planner.app."
+          "For any question about your personal data, contact us at: __CONTACT_EMAIL__."
         ]
       },
       "basis": {
@@ -1124,7 +1124,7 @@
       "retention": {
         "title": "Retention period",
         "paragraphs": [
-          "Your account and trips are kept for as long as your account is active. You may request their deletion at any time.",
+          "Your account and trips are kept for as long as your account is active. You may request their deletion at any time; deletion triggers an immediate and irreversible anonymisation of your account.",
           "Raw cached route data is kept for a maximum of 24 hours.",
           "Anonymous audience measurement data is aggregated and cannot be used to re-identify you."
         ]
@@ -1133,14 +1133,14 @@
         "title": "Your rights",
         "paragraphs": [
           "In accordance with the GDPR, you have the right of access, rectification, erasure, restriction, objection and portability of your data.",
-          "To exercise these rights, contact us at: contact@bike-trip-planner.app. We respond within one month.",
+          "To exercise these rights, contact us at: __CONTACT_EMAIL__. We respond within one month.",
           "You also have the right to lodge a complaint with your supervisory authority (in France, the CNIL — www.cnil.fr)."
         ]
       },
       "processors": {
         "title": "Processors",
         "paragraphs": [
-          "Infrastructure hosting: cloud provider located within the European Union.",
+          "Infrastructure hosting: a cloud provider chosen by the operator of this instance.",
           "Sending sign-in emails: a transactional email delivery provider.",
           "Open-data sources queried for analysis (OpenStreetMap, weather forecasts): no identifying personal data is transmitted to them."
         ]
@@ -1148,7 +1148,7 @@
       "analytics": {
         "title": "Audience measurement (Plausible)",
         "paragraphs": [
-          "We use Plausible Analytics, a privacy-friendly audience measurement solution, self-hosted on our own infrastructure within the European Union.",
+          "We use Plausible Analytics, a privacy-friendly audience measurement solution, self-hosted on the same infrastructure as the application.",
           "Plausible sets no cookies and uses no fingerprinting techniques. No data is shared with third parties for advertising purposes.",
           "IP addresses and user agents (browser) are anonymised and never stored; no data can be used to identify you or track you across sites.",
           "Purpose: to understand, in aggregate, which pages are visited and overall usage in order to improve the service. Retention: aggregated statistics only, no individual data.",
@@ -1158,7 +1158,7 @@
       "contact": {
         "title": "Contact",
         "paragraphs": [
-          "For any question about this privacy policy, write to us at: contact@bike-trip-planner.app.",
+          "For any question about this privacy policy, write to us at: __CONTACT_EMAIL__.",
           "This policy may be updated; the last-updated date is shown at the top of this page."
         ]
       }

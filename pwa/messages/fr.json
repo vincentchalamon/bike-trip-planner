@@ -1063,14 +1063,14 @@
       "host": {
         "title": "Hébergeur",
         "paragraphs": [
-          "L'application est hébergée sur une infrastructure cloud située dans l'Union européenne.",
+          "L'application est hébergée par l'opérateur de cette instance.",
           "Les coordonnées exactes de l'hébergeur peuvent être communiquées sur demande à l'adresse de contact ci-dessous."
         ]
       },
       "contact": {
         "title": "Contact",
         "paragraphs": [
-          "Pour toute question relative au site ou pour exercer vos droits, vous pouvez nous contacter à l'adresse : contact@bike-trip-planner.app.",
+          "Pour toute question relative au site ou pour exercer vos droits, vous pouvez nous contacter à l'adresse : __CONTACT_EMAIL__.",
           "Vous pouvez également ouvrir une issue sur le dépôt GitHub du projet."
         ]
       },
@@ -1095,7 +1095,7 @@
         "title": "Responsable du traitement",
         "paragraphs": [
           "Le responsable du traitement des données est l'éditeur de Bike Trip Planner (voir les mentions légales).",
-          "Pour toute question relative à vos données personnelles, contactez-nous à : contact@bike-trip-planner.app."
+          "Pour toute question relative à vos données personnelles, contactez-nous à : __CONTACT_EMAIL__."
         ]
       },
       "basis": {
@@ -1124,7 +1124,7 @@
       "retention": {
         "title": "Durée de conservation",
         "paragraphs": [
-          "Votre compte et vos voyages sont conservés tant que votre compte est actif. Vous pouvez demander leur suppression à tout moment.",
+          "Votre compte et vos voyages sont conservés tant que votre compte est actif. Vous pouvez demander leur suppression à tout moment ; la suppression entraîne une anonymisation immédiate et irréversible de votre compte.",
           "Les données de tracé brutes en cache sont conservées au maximum 24 heures.",
           "Les données de mesure d'audience anonyme sont agrégées et ne permettent pas de vous réidentifier."
         ]
@@ -1133,14 +1133,14 @@
         "title": "Vos droits",
         "paragraphs": [
           "Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de vos données.",
-          "Pour exercer ces droits, contactez-nous à : contact@bike-trip-planner.app. Nous répondons dans un délai d'un mois.",
+          "Pour exercer ces droits, contactez-nous à : __CONTACT_EMAIL__. Nous répondons dans un délai d'un mois.",
           "Vous avez également le droit d'introduire une réclamation auprès de la CNIL (www.cnil.fr)."
         ]
       },
       "processors": {
         "title": "Sous-traitants",
         "paragraphs": [
-          "Hébergement de l'infrastructure : prestataire cloud situé dans l'Union européenne.",
+          "Hébergement de l'infrastructure : prestataire cloud choisi par l'opérateur de cette instance.",
           "Envoi des emails de connexion : prestataire d'envoi d'emails transactionnels.",
           "Sources de données ouvertes interrogées pour l'analyse (OpenStreetMap, prévisions météo) : aucune donnée personnelle identifiante ne leur est transmise."
         ]
@@ -1148,7 +1148,7 @@
       "analytics": {
         "title": "Mesure d'audience (Plausible)",
         "paragraphs": [
-          "Nous utilisons Plausible Analytics, une solution de mesure d'audience respectueuse de la vie privée, auto-hébergée sur notre propre infrastructure dans l'Union européenne.",
+          "Nous utilisons Plausible Analytics, une solution de mesure d'audience respectueuse de la vie privée, auto-hébergée sur la même infrastructure que l'application.",
           "Plausible ne dépose aucun cookie et n'utilise aucune technique d'empreinte numérique (fingerprinting). Aucune donnée n'est partagée avec des tiers à des fins publicitaires.",
           "Les adresses IP et les agents utilisateur (navigateur) sont anonymisés et ne sont jamais stockés ; aucune donnée ne permet de vous identifier ou de vous suivre entre les sites.",
           "Finalité : comprendre de façon agrégée les pages consultées et l'usage global afin d'améliorer le service. Rétention : statistiques agrégées uniquement, aucune donnée individuelle.",
@@ -1158,7 +1158,7 @@
       "contact": {
         "title": "Contact",
         "paragraphs": [
-          "Pour toute question relative à cette politique de confidentialité, écrivez-nous à : contact@bike-trip-planner.app.",
+          "Pour toute question relative à cette politique de confidentialité, écrivez-nous à : __CONTACT_EMAIL__.",
           "Cette politique peut être mise à jour ; la date de dernière mise à jour figure en haut de cette page."
         ]
       }

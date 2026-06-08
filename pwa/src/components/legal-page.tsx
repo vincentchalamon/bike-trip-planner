@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { CONTACT_EMAIL } from "@/lib/constants";
 
 export interface LegalSection {
   id: string;
@@ -14,6 +15,11 @@ export function asParagraphs(raw: unknown, key: string): string[] {
     throw new Error(`Translation "${key}" must be an array of strings`);
   }
   return raw;
+}
+
+/** Substitutes the `__CONTACT_EMAIL__` token in legal copy with CONTACT_EMAIL. */
+export function withContactEmail(paragraphs: string[]): string[] {
+  return paragraphs.map((p) => p.replace(/__CONTACT_EMAIL__/g, CONTACT_EMAIL));
 }
 
 interface LegalPageProps {

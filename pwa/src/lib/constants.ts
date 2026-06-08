@@ -56,3 +56,12 @@ export const SITE_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost";
  * from `/api/health` (see `ai-availability.ts`).
  */
 export const AI_ENABLED = process.env.NEXT_PUBLIC_AI_ENABLED !== "0";
+
+/**
+ * GDPR/legal contact address shown on the legal & privacy pages. Each
+ * self-hosted instance sets its own mailbox via `NEXT_PUBLIC_CONTACT_EMAIL`
+ * (build-time inlined); the default is a generic RFC 2606 placeholder so the
+ * upstream build never ships a real address.
+ */
+export const CONTACT_EMAIL =
+  process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contact@example.org";
