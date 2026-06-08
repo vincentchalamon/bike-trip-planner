@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { FaqAccordion, type FaqCategory } from "@/components/faq-accordion";
+import { PublicTopBar } from "@/components/public-top-bar";
+import { LandingFooter } from "@/components/landing/footer";
 
 export default async function FaqPage() {
   const t = await getTranslations("faq");
@@ -37,35 +39,64 @@ export default async function FaqPage() {
   ];
 
   return (
-    <main className="max-w-2xl mx-auto px-4 md:px-6 py-12">
-      {/* Back link */}
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
-        data-testid="faq-back-link"
+    <div className="min-h-screen bg-background flex flex-col">
+      <PublicTopBar />
+
+      <main
+        className="flex-1 w-full max-w-5xl mx-auto px-4 md:px-6 py-12"
+        data-testid="faq-page"
       >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        {t("backToHome")}
-      </Link>
-
-      {/* Header */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">{t("title")}</h1>
-        <p className="text-muted-foreground">{t("description")}</p>
-      </div>
-
-      {/* FAQ Categories */}
-      <FaqAccordion categories={categories} />
-
-      {/* Footer link back */}
-      <div className="mt-12 pt-6 border-t text-center">
+        {/* Back link */}
         <Link
           href="/"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
+          data-testid="faq-back-link"
         >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           {t("backToHome")}
         </Link>
-      </div>
-    </main>
+
+        {/* Header */}
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            {t("title")}
+          </h1>
+          <p className="text-muted-foreground">{t("description")}</p>
+        </div>
+
+        <div className="grid gap-10 md:grid-cols-[16rem_1fr]">
+          {/* Sections rail (sticky on desktop) */}
+          <nav
+            aria-label={t("sectionsLabel")}
+            className="md:sticky md:top-12 md:self-start"
+            data-testid="faq-sections-rail"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+              {t("sectionsLabel")}
+            </p>
+            <ul className="space-y-2 text-sm border-l border-border">
+              {categories.map((category) => (
+                <li key={category.id}>
+                  <a
+                    href={`#faq-category-${category.id}`}
+                    className="block -ml-px border-l border-transparent pl-4 text-muted-foreground hover:text-foreground hover:border-brand transition-colors"
+                    data-testid={`faq-sections-link-${category.id}`}
+                  >
+                    {category.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Content */}
+          <div className="min-w-0">
+            <FaqAccordion categories={categories} />
+          </div>
+        </div>
+      </main>
+
+      <LandingFooter />
+    </div>
   );
 }
