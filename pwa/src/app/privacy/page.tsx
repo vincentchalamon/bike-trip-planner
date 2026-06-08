@@ -3,6 +3,7 @@ import {
   LegalPageLayout,
   type LegalSection,
   asParagraphs,
+  withContactEmail,
 } from "@/components/legal-page";
 import { LandingFooter } from "@/components/landing/footer";
 
@@ -18,8 +19,6 @@ const SECTION_IDS = [
   "contact",
 ] as const;
 
-// TODO: the GDPR contact address (contact@bike-trip-planner.app in messages/*.json)
-// is a routable placeholder. Replace it with the real mailbox before going to production.
 export default async function PrivacyPage() {
   const t = await getTranslations("privacy");
 
@@ -28,7 +27,7 @@ export default async function PrivacyPage() {
     return {
       id,
       title: t(`sections.${id}.title`),
-      paragraphs: asParagraphs(t.raw(key), `privacy.${key}`),
+      paragraphs: withContactEmail(asParagraphs(t.raw(key), `privacy.${key}`)),
     };
   });
 
