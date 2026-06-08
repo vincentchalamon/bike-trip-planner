@@ -1,162 +1,220 @@
-# Ordre 4 — Findings comparaison app vs design
+# Audit app vs design — v2 (pré-recette)
 
-Audit de **divergences fonctionnelles, d'éléments et de positionnement** entre
-l'application réelle (stack iso-prod locale, build `pwa:ci`) et l'export Claude
-Design (manifeste [`03-manifeste-elements.md`](03-manifeste-elements.md),
-inventaire [`01-inventaire-ecrans.md`](01-inventaire-ecrans.md)).
+Audit code-level des divergences entre l'application réelle
+(`pwa/src/app`, `pwa/src/components`, `pwa/messages/*.json`,
+`pwa/src/app/globals.css`) et l'export Claude Design
+(`docs/recette/design/*.jsx`, manifeste `03-manifeste-elements.md`,
+inventaire `01-inventaire-ecrans.md`).
 
-But : alimenter Sprint 35.4 et **guider la recette manuelle** (côte-à-côte). On
-ne traite **pas** ici la colorimétrie, la typo, les espacements ni le polish :
-ce sont des vérifications "à l'oeil" en recette manuelle (voir la convention du
-manifeste). On se concentre sur : **présence/absence d'éléments**, **différences
-de texte/fonctionnalité**, **mauvais positionnement de région**.
+Cette v2 **corrige et enrichit** la v1 à partir d'une relecture du code.
+Périmètre élargi par rapport à la v1 : la v2 traite aussi le microcopy, les
+tokens de couleur/typo, la parité i18n, les états et le responsive, en plus de
+la présence/absence d'éléments. Produite par audit multi-agent (10 dimensions,
+111 observations) puis synthèse curée.
 
 ## Méthode et honnêteté
 
-- **Source app** : code des composants (`pwa/src/app`, `pwa/src/components`) +
-  baselines VR rendues (`pwa/tests/visual/__screenshots__`), build iso-prod.
-- **Source design** : manifeste d'éléments + inventaire (dérivés de l'export).
-- **Pourquoi pas 100 % automatisé** : une première version de `manifest.spec.ts`
-  (assertions de région via heuristique de viewport) a été **retirée** car non
-  fiable, pour deux raisons documentées ici :
-  1. **Variante d'authentification** — les écrans anon (`/`, `/login`) rendus à
-     travers le fixture mocké *authentifié* affichent leur variante connectée
-     (redirection / dashboard), produisant de faux "élément absent".
-  2. **Heuristique de région** — classer un élément en header/sidebar/footer
-     d'après sa bounding box relative au viewport produit des faux positifs
-     (ex. un lien de footer réel détecté "en main"). Le positionnement réel se
-     vérifie mieux à l'oeil en recette manuelle.
-  Les baselines VR (captures déterministes) restent l'outil de non-régression ;
-  ce document est l'**audit de divergence** curé.
+- **Détection code-level uniquement** : lecture des fichiers source, aucun rendu
+  navigateur. Les jugements esthétiques, éditoriaux et d'équivalence visuelle
+  sont marqués ⚪ / décision humaine et renvoyés au checkpoint utilisateur.
+- **Source de vérité design** : `docs/recette/design/*.jsx`.
 - **Légende gravité** : 🔴 fonctionnel/élément manquant impactant · 🟠 écart de
-  structure/positionnement · 🟢 conforme (ou app plus riche) · ⚪ non vérifiable
-  ici (recette manuelle).
+  structure/positionnement/contenu · 🟢 conforme (ou app plus riche) · ⚪ non
+  vérifiable code-level (recette manuelle / décision).
+
+## Corrections de la v1 (findings périmés)
+
+| Finding v1 | Statut | Correction |
+|---|---|---|
+| Landing : « CTA capture email beta absente » (🟠, hotlist #3) | ❌ FAUX | `landing-page.tsx` l.31 monte `EarlyAccessSection` (section-early-access) → `EarlyAccessForm` + confirmation `?access=confirmed`. App plus riche. L'écart résiduel est éditorial (« Inscriptions bientôt disponibles » vs « Demander l'accès », argument « gratuit pendant la beta »). |
+| Landing : « 🟢 conforme, app plus riche » | ⚠️ INCOMPLET | Header/top-bar **absent** de la landing (🔴) : `landing-page.tsx` démarre par `LandingHero`, le `TopBar` n'est monté que dans `trip-planner.tsx`. Langue/thème/connexion seulement au footer. |
+| Landing sections « toutes présentes (+ en plus) » | ⚠️ À PRÉCISER | `LandingPlatforms` et `LandingTestimonials` sont **absentes du design** et intercalées dans la séquence ; témoignages potentiellement placeholder. |
+| 500 « non déclenchable / polish manuel » | ⚠️ REQUALIFIÉ | Écart code-level : `error.tsx` sans badge 500, sans request_id/timestamp (digest loggé mais non rendu), sans « Signaler ». |
+| 404 « conforme, 404 + 2 CTA » | ⚠️ INEXACT | `not-found.tsx` : illustration SVG + 1 seul bouton. Numéral « 404 » et CTA « Mes voyages » absents. |
+| Modales « GPX/FIT » / FIT supposé dispo | ⚠️ INEXACT | `trip-downloads.tsx` = GPX seul (global) ; FIT seulement au niveau étape (`stage-downloads.tsx`). Commentaire de `top-bar.tsx` trompeur. |
+| Tokens hors périmètre | ⚠️ ÉLARGI | Dérives systématiques : surface carte fusionnée au fond (#faf7f0 partout), palette sémantique red/blue/green sans token. |
 
 ## Verdict par écran
 
-### 1. Landing `/` (anon) — 🟢 conforme, app plus riche
+### 1. Landing `/` — 🔴 écart majeur (header) + écarts éditoriaux
 
 | Aspect | Design | App | Verdict |
 |---|---|---|---|
-| Sections | hero, 4 étapes, bento, sources, aperçu écrans, CTA beta, footer | hero, how-it-works, features, bento, sources, availability, testimonials, footer | 🟢 toutes présentes (+ `section-features`, `section-testimonials` en plus) |
-| CTA hero | "Créer mon itinéraire" + "Voir la démo" | `cta-create-itinerary` + `cta-demo` | 🟢 |
-| **CTA beta bas de page** | section "Rejoignez la beta privée" : **champ email + Demander l'accès** | aucun champ email de capture en bas de landing | 🟠 **capture email beta absente de la landing** (le flux early-access existe via `/login` + `/access-requests/verify`, mais pas en CTA bas de page) — à confirmer en recette |
+| Header / top-bar | header sur le hero (logo + FR/EN + thème + « Se connecter » + « Demander l'accès ») | aucun header ; `LandingHero` direct | 🔴 absent — nav/connexion/langue/thème repoussés au footer |
+| Capture email beta | « Rejoignez la beta privée » + champ email | `EarlyAccessSection` + `EarlyAccessForm` (+ états success/throttled/confirmed) | 🟢 présent (corrige la v1) ; copie à arbitrer |
+| Hero titre / sous-titre / badge | « planifié dans les moindres détails » / sources nommées / « accès sur demande » | « copilote pour chaque kilomètre » / bénéfice / « Places limitées » | 🟠 réécriture éditoriale |
+| CTA hero | « Créer mon itinéraire » / « Voir la démo » | « Créer un voyage » / « Voir comment ça marche » | 🟠 incohérence interne (earlyAccess dit « Créer un itinéraire ») |
+| How it works | titre narratif + Import/Aperçu&config/Analyse/Personnalisation | « Comment ça marche » + Importez/Analysez/Planifiez/Partez | 🟠 mapping d'étapes 1:1 imparfait |
+| Features bento | « rouler serein » + « 20+ alertes » + « 9 hébergements » | « 9 modules » ; pas de carte « 20+ alertes » | 🟠 chiffres/cartes divergents |
+| Testimonials / Platforms | absents du design | sections ajoutées et intercalées | 🟠 ajouts à valider (avis réels ?) |
+| Footer | minimal + liens | tagline open-source + login + liens | 🟢 app plus riche |
+| Bannière cookies | présente (design) | absente (Plausible sans cookie, justifié) | ⚪ divergence assumée |
+| Ordre des sections communes | Hero→HowItWorks→Bento→Sources→Screens→EarlyAccess→Footer | identique | 🟢 ordre préservé |
 
-### 2. Login `/login` (anon-only) — 🟢 conforme
+### 2. Login `/login` — 🟢 conforme, ton à arbitrer
 
-| Aspect | Design | App | Verdict |
-|---|---|---|---|
-| Carte centrée | logo + H2 "Bon retour" + email + "Envoyer le lien magique" + lien demander accès | `login-card` (`MagicLinkForm`) | 🟢 |
-| Bannière early access | — | `early-access-banner` (présent en plus) | 🟢 app plus riche |
-| États envoyé/cooldown | check + "Email envoyé" + "Renvoyer (Ns)" | gérés par `MagicLinkForm` | ⚪ sous-états à vérifier en recette |
+États form/sent/cooldown/sent-ready/expired tous présents
+(`magic-link-form.tsx`, `email-sent.tsx`, `link-expired.tsx`), validation email
+inline présente. Écarts de ton : design chaleureux (« Bon retour. », « lien
+magique », affirmation d'envoi + « 15 minutes ») vs app sobre/anti-énumération
+(« Si X est enregistrée… »). 🟠 éditorial — recommandation : garder
+l'anti-énumération, ajouter le délai « 15 minutes ».
 
-### 3. Trips list `/trips` (auth) — 🟢 conforme
-
-| Aspect | Design | App | Verdict |
-|---|---|---|---|
-| En-tête | H1 "Mes voyages" + recherche + filtre date + "Nouveau voyage" | `new-trip-button` + filtres + recherche | 🟢 |
-| Grille | cartes 2 col (vignette, pill statut, titre, route+date, stats) | `trips-grid` / `TripCard` | 🟢 |
-| États empty / no-results / error / loading | états UI design | `TripsEmptyState` (no-trips / no-results), error, loader | 🟢 couverture supérieure |
-| TopBar | header TopBar | header de page (pas la TopBar roadbook) | ⚪ chrome d'en-tête à comparer en recette |
-
-### 4. Wizard `/trips/new` (auth) — ⚪ à vérifier en recette
-
-| Aspect | Design | App | Verdict |
-|---|---|---|---|
-| Stepper | `WizardStepper` (sidebar-L) | `wizard-stepper` présent | 🟢 |
-| Step 1 onglets | "Lien URL" / "Fichier GPX" / "Assistant IA" | `CardSelection` (URL / GPX / IA) | 🟢 |
-| Step 2 config | profil + 5 sliders pacing + e-bike + dates + types héberg. + "Affiner avec l'IA" + "Lancer l'analyse" | panneau config + `AiRefinementCard` | 🟢 éléments présents |
-| Step 3 analyse | progression globale + 7 actes de calcul + aperçu temps réel | `processing-progress` (flux SSE) | ⚪ libellés/positions à comparer en recette |
-
-### 5. Roadbook `/trips/[id]` (auth) — 🟢 conforme structurellement
+### 3. Trips `/trips` — 🟠 chrome + carte voyage
 
 | Aspect | Design | App | Verdict |
 |---|---|---|---|
-| Timeline étapes (sidebar-L) | header "Étapes" + timeline + ajouter étape/repos | `timeline-sidebar` | 🟢 |
-| Carte + profil + ravitaillement (centre) | carte OSM + profil altimétrique + `SupplyTimeline` | `elevation-profile`, `supply-timeline` | 🟢 |
-| Synthèse IA globale + d'étape | carte IA globale (droite) + synthèse IA d'étape | `trip-ai-overview`, `stage-ai-summary` | 🟢 |
-| Bulle de chat IA (overlay) | bulle de chat IA | `ai-bubble` + `ai-chat-panel` | 🟢 (note : masquée en mode IA dégradé, #304) |
-| Météo / alertes / hébergements (sidebar-R) | météo + alertes groupées + hébergements | présents | 🟢 |
+| TopBar de page + footer | `TopBarDesktop` + `DesktopFooter` | `<main>` nu, H1 + croix | 🟠 absents |
+| Filtre date | 1 bouton « Filtrer par date » | 2 `Input type=date` inline + clear | 🟠 structure (équivalent/plus riche) |
+| Carte voyage | route ville→ville, stat « jours », menu ⋯ | date seule, « étapes », poubelle directe | 🟠 3 écarts (dont suppression directe = risque UX) |
+| États empty/no-results/error/loading | définis | 5 états mutuellement exclusifs + pagination | 🟢 couverture supérieure |
+| Statuts (pills) | active/done/draft/archived | draft/analyzing/analyzed | ⚪ dépend du data-model |
 
-### 6. Vue partagée `/s/[code]` (public) — ⚪ recette manuelle
+### 4. Wizard `/trips/new` — 🟢 fonctionnel, chrome absent
 
-Bannière lecture seule + top-bar simplifiée (GPX/FIT) + hero carte + cartes
-étapes. Composants présents (`SharedTopBar`, `RoadbookMasterDetail readOnly`).
-Positionnement et bannière à comparer côte-à-côte.
+`WizardStepper` + `CardSelection` (URL/GPX/IA) + `processing-progress` (7 actes,
+sous-états pending/in_progress/done/failed) présents. Pas de `TopBar` ni footer
+(🟠). États d'erreur d'import (GPX invalide/lourd/corrompu, URL non supportée,
+detection states) non vérifiés code-level dans ce passage → ⚪ recette.
 
-### 7. Account settings `/account/settings` (auth) — 🟠 divergence de structure
+### 5. Roadbook `/trips/[id]` — 🟢 structurellement conforme, FIT manquant
 
-| Aspect | Design | App | Verdict |
-|---|---|---|---|
-| **Rail sidebar-L** | sidebar 240px : avatar + nom + email ; "Mon compte" (actif) ; **déconnexion (rouge)** | **absent** : layout **single-column** centré (`max-w-[800px]`) | 🟠 **pas de rail latéral** ; sections empilées dans `main` |
-| Header | TopBar | barre logo minimale (lien "/" seul) | 🟠 chrome réduit |
-| Déconnexion | bouton rouge dans le rail | `LogoutSection` empilée dans `main` | 🟠 positionnement différent |
-| Footer | footer | **absent** | 🟠 |
-| Cartes (Email / Préférences / RGPD / Danger Zone) | présentes | `account-section`, `preferences-section`, `data-section`, `danger-zone-section` | 🟢 contenu présent |
+Structure timeline / carte / profil / supply / IA globale+étape / météo /
+alertes / hébergements présente. Affordances d'étape « Élargir la zone » +
+« Ajouter manuellement » présentes (🟢). **🔴 Export FIT global absent**
+(`trip-downloads.tsx` = GPX seul ; FIT au niveau étape uniquement).
 
-### 10. FAQ `/faq` (public) — 🟠 divergence de structure et de contenu
+### 6. Vue partagée `/s/[code]` — 🟠 structure + responsive
 
-| Aspect | Design | App | Verdict |
-|---|---|---|---|
-| **Rail sidebar-L "Sections"** | nav 240px : Prise en main, Import & formats, Calculs & météo, Partage, Hors-ligne, **Tarifs** + carte GitHub | **absent** : layout single-column `max-w-2xl` | 🟠 **pas de rail de navigation** |
-| Catégories accordéon | (6 sections design) | **3 catégories** : Projet / Fonctionnement / Accès | 🟠 **taxonomie différente** ; pas de section "Tarifs" (cohérent : pas de pricing) |
-| Header | TopBar | lien retour `faq-back-link` seul | 🟠 chrome réduit |
-| Footer | footer | lien "retour accueil" minimal (pas `LandingFooter`) | 🟠 |
+`SharedTopBar` + `SharedViewBanner` + `RoadbookMasterDetail readOnly` +
+`ViewModeToggle`. Le design propose une grille de cartes étapes + hero carte ;
+l'app réutilise le master/detail propriétaire read-only (🟠, fonctionnellement
+plus riche). **🟠 responsive** : la carte reçoit `hidden lg:block` en split
+(masquée < lg) alors que l'éditeur l'empile en pleine largeur — incohérence à
+aligner. FIT du top-bar partagé reporté (#404).
 
-### 11–12. Legal `/legal` & Privacy `/privacy` (public) — 🟢 conforme
+### 7. Account `/account/settings` — 🟠 divergence de structure
 
-| Aspect | Design | App | Verdict |
-|---|---|---|---|
-| Rail sidebar-L (Sommaire / menu) | TOC 220px sticky | `LegalPageLayout` : `md:grid-cols-[16rem_1fr]` + `<nav>` sticky `*-toc` | 🟢 **rail présent** (≈256px) |
-| Sections ancrées | sections de contenu | `*-section-*` avec ancres | 🟢 |
-| Footer | footer | `LandingFooter` | 🟢 |
+Header réduit au logo (pas de nav/langue/thème/profil), pas de rail latéral
+240px (avatar/email/déconnexion rouge), pas de footer. Single-column
+`max-w-[800px]`. Contenu des cartes (Email/Préférences/RGPD/Danger Zone)
+présent ; microcopy conforme (« Modifier via magic link », « Télécharger mes
+données (JSON) », confirmation « SUPPRIMER »).
 
-> Correction d'une hypothèse antérieure : le rail latéral n'est **pas** absent
-> sur legal/privacy (contrairement à account/faq). Il l'est seulement sur **faq**
-> et **account**.
+### 8. FAQ `/faq` — 🟠 structure + taxonomie
 
-### 13. 404 `not-found.tsx` (public) — 🟢 conforme
+Pas de `TopBar`, pas de rail « Sections », pas de `LandingFooter`. Accordéon 3
+catégories (Projet/Fonctionnement/Accès, 9 items) vs 6 sections design (dont
+« Tarifs », sans objet ici). Questions entièrement réécrites. ⚪ éditorial.
 
-"404" + H2 + CTA retour accueil / mes voyages. `not-found-page` rendu. 🟢
+### 9. Legal `/legal` & Privacy `/privacy` — 🟢 structure / 🔴 contenu factuel
 
-### 14. 500 `error.tsx` / `global-error.tsx` — ⚪ non déclenchable en l'état
+Rail TOC `md:grid-cols-[16rem_1fr]` sticky présent (🟢, corrige une hypothèse v1
+antérieure). **🔴 divergences factuelles** : domaine contact
+`biketripplanner.app` (design) vs `bike-trip-planner.app` (app, avec tirets) ;
+conservation « 13 mois » vs « tant que le compte est actif » ; DPO dédié vs
+contact générique ; hébergeur OVH nommé vs « cloud UE ». Point juridique à
+trancher.
 
-| Aspect | Design | App | Verdict |
-|---|---|---|---|
-| Page erreur serveur | icône + badge "Erreur serveur · 500" + `request_id` + timestamp + "Réessayer" / "Signaler" | `error.tsx` existe mais **non déclenchable sans route de test** embarquée | ⚪ baseline VR substituée par la surface 404 voyage (`TripNotFound`, `trip-error`) ; polish 500 = recette manuelle |
+### 10. 404 `not-found.tsx` — 🟠 éléments
 
-### Modales (overlays sur roadbook chargé) — 🟢 / 🟠
+Illustration SVG cycliste + H1 « Hors-piste » + 1 bouton « Retour à l'accueil ».
+Numéral « 404 » serif et 2e CTA « Mes voyages » du design absents.
+
+### 11. 500 `error.tsx` — 🟠 éléments d'état
+
+Icône accent (pas rouge) + retry + retour accueil. Manquent : badge « Erreur
+serveur · 500 », bloc mono request_id + timestamp (digest loggé non rendu),
+bouton « Signaler le problème ». request_id seulement dans `global-error.tsx`
+(boundary distincte).
+
+### 12. Modales (overlays roadbook)
 
 | Modale | Design | App | Verdict |
 |---|---|---|---|
-| Partage | lien + infographie PNG + résumé texte + Garmin Connect | `modal-share` (create-link / link-text) | 🟢 baseline ; contenu Garmin/infographie à vérifier en recette |
-| Config | dates + profil + sliders + hébergements + thème/langue + dupliquer/partager | `config-open-button` → dialog Paramètres | 🟢 baseline |
-| Aide — Raccourcis | liste J/K, Ctrl+Z/Y, ?, Esc, T, M | `help-tab-shortcuts-panel` | 🟢 baseline |
-| **FAQ rapide** | **modale FAQ autonome** (`ModalFaq`, accordéon 7 items) | **onglet FAQ de la modale Aide** (`help-tab-faq`) — pas de modale FAQ séparée | 🟠 **fonctionnalité fusionnée** : la "modale FAQ" du design = onglet de la modale Aide dans l'app |
+| Partage | lien + PNG + texte + **Garmin Connect** | lien + PNG (rect + carré 1080²) + texte ; **pas de Garmin** | 🔴 Garmin Connect absent ; app plus riche sur l'infographie |
+| Config | dates + pacing + héberg. + **thème/langue** + **preset profil** | dates + pacing + héberg. + actions ; drawer latéral | 🟠 thème/langue déplacés au TopBar ; preset segmenté absent ; drawer vs modale centrée |
+| Aide — Raccourcis | J/K/Ctrl+Z/Y/?/Esc + **T** + **M** | J/K/Ctrl+Z/Y/?/Esc | 🟠 T (thème) et M (carte) absents (hook + libellés) |
+| FAQ | modale autonome | onglet de la modale Aide (`help-tab-faq`) | 🟢 fusion actée (évite duplication) |
 
-## Hotlist Sprint 35.4 (divergences actionnables)
+## Tokens (globals.css vs tokens.jsx)
 
-1. 🟠 **Account settings** : pas de rail latéral (avatar/email/déconnexion), pas
-   de footer, header réduit. Décider : aligner sur le design (rail + footer) ou
-   acter le single-column comme choix produit.
-2. 🟠 **FAQ** : pas de rail "Sections", taxonomie 3 catégories vs 6, pas de
-   `LandingFooter`. Décider : rail + footer + section "Tarifs" (si pricing) ou
-   acter la version simplifiée.
-3. 🟠 **Landing** : CTA de capture email "beta privée" absent en bas de page
-   (flux early-access présent ailleurs). Décider si on ajoute la section.
-4. 🟠 **Modale FAQ** : design = modale autonome, app = onglet de la modale Aide.
-   Acter la fusion (recommandé, évite la duplication) ou séparer.
-5. ⚪ **Page 500** : non déclenchable en recette sans route de test. Évaluer une
-   route `/__error` gardée hors-prod pour rendre `error.tsx` testable, sinon
-   garder la vérif manuelle.
-6. ⚪ **Polish (couleur/typo/espacement)** sur tous les écrans 🟢/⚪ : revue
-   visuelle côte-à-côte en recette manuelle, hors périmètre auto.
+| Élément | Design | App | Verdict |
+|---|---|---|---|
+| Familles police | Fraunces / Inter Tight / JetBrains Mono | identiques (next/font → --font-*) | 🟢 |
+| Accent amber | #c2671e | #c2671e | 🟢 |
+| Surface carte | #ffffff distinct de bg #faf7f0 | --card = --background = --surface = #faf7f0 | 🟠 contraste carte/fond supprimé |
+| Encre principale | #2a2418 | #1a1814 | 🟠 plus sombre/froide |
+| Palette red/blue/green (+soft) | hex pinnés (~90 réfs) | aucun token, classes Tailwind brutes | 🔴 valeurs design non respectées |
+| Neutres line/inkSoft/inkMute/surfaceAlt | hex tièdes très référencés | oklch shadcn génériques | 🟠 grille de neutres non exposée |
+| Ombres | teintées brun chaud | noir neutre, nomenclature différente | 🟠 |
+| Variantes accent + dark | amber/forest/indigo/brick + dark | toutes implémentées | 🟢 app conforme/plus riche |
+| forest/rose, radius/spacing/fontSize | accents décoratifs / littéraux composant | tokens différents / non comparables | ⚪ recette |
 
-## Couverture VR (baselines committées)
+## i18n FR/EN — 🟢 conforme
 
-Captures déterministes par `make visual-update`, comparées par `make
-visual-test` (local, hors CI). Régions non déterministes (cartes, canvas, dates,
-texte IA) masquées. Écrans dont l'état n'est pas atteignable de façon
-déterministe via la chaîne de mocks contre le build iso-prod sont marqués
-`fixme` dans les specs avec une raison explicite (couverts fonctionnellement par
-les suites mocked/recette).
+Parité de clés EN/FR **parfaite** (0 clé manquante dans les deux sens),
+namespaces et tableaux (legal/privacy paragraphs) identiques, placeholders ICU
+cohérents. Seuls « écarts » : valeurs EN==FR légitimes (marques, cognats,
+unités) et un écart stylistique mineur sur `status_analyzing`
+(« Analyzing… » vs « En cours d'analyse »). Aucun risque de crash next-intl.
+
+## Responsive — 🟢 globalement solide, 2 écarts
+
+262 prefixes Tailwind répartis ; dialogs mobile-safe ; viewport Next.js par
+défaut. Écarts : (1) nav primaire `hidden sm:flex` sans hamburger < 640px ;
+(2) carte vue partagée `hidden lg:block` en split (incohérent avec l'éditeur).
+Le design ne fournit aucun artboard mobile (équivalence visuelle ⚪).
+
+## Iconographie — ⚪ majoritairement décision humaine
+
+App = lucide 75+ ; design = SVG maison. UI conforme ; carto/météo plus riches.
+Écarts structurels (logo lucide Bike vs logomark dédié ; wordmarks sources vs
+glyphes ; illustrations 404/500 ; absence og:image) à juger en recette.
+
+## Hotlist détaillée
+
+| ID | Écran | Gravité | Écart | Effort | Décision humaine |
+|---|---|---|---|---|---|
+| H1 | landing `/` | 🔴 | Header/top-bar absent (connexion + langue + thème en haut) | M | non |
+| H2 | trips, account, faq, wizard | 🟠 | TopBar globale absente hors roadbook | L | oui |
+| H3 | roadbook & shared | 🔴 | Export FIT global manquant (GPX seul) | M | oui |
+| H4 | modale Partage | 🔴 | Section Garmin Connect absente | L | oui |
+| H5 | legal & privacy | 🔴 | Divergences factuelles RGPD/légales (domaine, hébergeur, conservation, DPO) | S | oui |
+| H6 | 500 `error.tsx` | 🟠 | Sans badge 500, request_id/timestamp ni « Signaler » | S | oui |
+| H7 | 404 `not-found.tsx` | 🟠 | Sans numéral « 404 » ni 2e CTA « Mes voyages » | S | oui |
+| H8 | trips `/trips` (carte) | 🟠 | Pas de route ville→ville, stat « étapes » vs « jours », poubelle directe vs menu ⋯ | M | oui |
+| H9 | modale Aide — Raccourcis | 🟠 | Raccourcis T (thème) et M (carte) absents | S | non |
+| H10 | shared `/s/[code]` | 🟠 | Carte masquée (`hidden lg:block`) en split, incohérent avec l'éditeur | S | non |
+| H11 | global (top-bar) | 🟠 | Nav primaire masquée < 640px sans hamburger | M | oui |
+| H12 | global (tokens couleur) | 🟠 | Palette sémantique red/blue/green sans token + surface carte fusionnée au fond | M | non |
+| H13 | landing (testimonials) | 🟢 | Section témoignages absente du design — vérifier la véracité des avis | S | oui |
+| H14 | landing (hero CTA) | 🟢 | Incohérence interne CTA « voyage » (hero) vs « itinéraire » (earlyAccess) | S | oui |
+
+## Décisions prises (checkpoint pré-recette)
+
+Arbitrées avec l'éditeur avant build. Le batch pré-recette construit le sous-
+ensemble ci-dessous ; le reste est différé au Sprint 35.4 ou acté comme choix
+produit.
+
+| Sujet | Décision | Disposition |
+|---|---|---|
+| TopBar globale (H2) | Généraliser la TopBar à `/trips`, `/account/settings`, `/faq`, wizard | **Build** |
+| Header landing (H1) | Monter un header (logo + FR/EN + thème + connexion + demander l'accès) | **Build** |
+| Account (rail + footer) | Ajouter le rail latéral 240px + footer | **Build** |
+| FAQ (rail + footer) | Ajouter le rail « Sections » + `LandingFooter` ; **garder la taxo 3-cat** (pas de « Tarifs », pas de pricing) | **Build** |
+| Export FIT (H3) | FIT global maintenant (handler déjà au niveau étape) ; corriger le commentaire trompeur de `top-bar.tsx` | **Build** |
+| Garmin Connect (H4) | Différé post-recette (Sprint 31) | Différé |
+| Légal/privacy (H5) | **Copie générique self-host** : pas de domaine ni hébergeur figé (domaine de déploiement encore inconnu ; hébergeur potentiellement Oracle Cloud Free Tier, amené à changer ; projet open-source auto-hébergeable). Conservation = anonymisation immédiate + cache 24h. Contact générique, pas de DPO dédié | **Build** |
+| Landing microcopy (H14, hero/badge/étapes) | Aligner au plus près du design (badge beta, punchline IA, sources nommées) ; harmoniser le CTA interne | **Build** |
+| Témoignages landing (H13) | Garder mais encadrer « exemple / testeur bêta » (avis non vérifiés → risque éditorial sinon) | **Build** |
+| Page 500 (H6) | Enrichir : badge « 500 » + request_id (digest) + timestamp + icône rouge ; pas de « Signaler » (aucun canal de report) | **Build** |
+| Page 404 (H7) | Ajouter le numéral « 404 » + 2e CTA « Mes voyages » | **Build** |
+| Raccourcis T/M (H9) | Ajouter les bindings + libellés | **Build** |
+| Carte split partagée (H10) | Aligner sur l'éditeur (retirer `hidden lg:block`) | **Build** |
+| Carte voyage (H8) | Sécuriser la suppression (menu ⋯ / confirmation) ; libellé jours/étapes et route ville→ville selon le data-model | **Build (partiel)** |
+| Nav mobile (H11) | Hamburger mobile | Différé 35.4 (pas d'artboard mobile design) |
+| Tokens couleur (H12) | Exposer tokens sémantiques + distinguer `--card`/`--background` | Différé 35.4 (refactor transverse) |
+| Bannière cookies | Ne pas ajouter (Plausible sans cookie, justifié dans privacy) | Acté (divergence assumée) |
+| Modale FAQ fusionnée | Onglet de la modale Aide | Acté (évite duplication) |
+| Ton login | Garder l'anti-énumération ; ajouter le délai « 15 minutes » | **Build** |
