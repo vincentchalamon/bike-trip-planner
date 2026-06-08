@@ -12,8 +12,6 @@ export function generateStaticParams() {
 /** Minimal shape of the public shared-trip payload used for metadata. */
 interface SharedTripMeta {
   title?: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
   stages?: { distance?: number | null; elevation?: number | null }[] | null;
 }
 
