@@ -89,7 +89,7 @@ use Symfony\Component\Uid\Uuid;
             openapi: new Operation(summary: 'Download shared trip as FIT via short code.'),
             security: 'is_granted("PUBLIC_ACCESS")',
             output: Trip::class,
-            provider: TripShareGpxProvider::class,
+            provider: TripShareGpxProvider::class, // format-agnostic: also serves .fit
         ),
         new Get(
             uriTemplate: '/s/{shortCode}/stages/{index}{._format}',
