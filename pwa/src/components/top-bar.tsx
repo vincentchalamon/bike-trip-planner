@@ -39,12 +39,19 @@ export function TopBar({
   onOpenConfig,
   tripId,
   tripTitle,
+  showHelp = true,
 }: {
   onShare?: () => void;
   onOpenConfig?: () => void;
   /** When set (a trip is loaded), enables the global GPX/FIT download menu. */
   tripId?: string;
   tripTitle?: string;
+  /**
+   * Whether to show the help "?" button. Defaults to true (roadbook context).
+   * The help modal is only mounted by the trip planner, so pages that mount the
+   * bar standalone (e.g. /trips) pass false to avoid a dead button.
+   */
+  showHelp?: boolean;
 }) {
   const t = useTranslations();
   const tNav = useTranslations("navigation");
@@ -175,18 +182,20 @@ export function TopBar({
           </Button>
         )}
 
-        {/* 5. Help */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 cursor-pointer"
-          onClick={() => setHelpModalOpen(true)}
-          title={t("help.openButton")}
-          aria-label={t("help.openButton")}
-          data-testid="help-button"
-        >
-          <HelpCircle className="h-4 w-4" />
-        </Button>
+        {/* 5. Help — only where the help modal is mounted (roadbook context) */}
+        {showHelp && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 cursor-pointer"
+            onClick={() => setHelpModalOpen(true)}
+            title={t("help.openButton")}
+            aria-label={t("help.openButton")}
+            data-testid="help-button"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </Button>
+        )}
 
         {/* 6. Language pills */}
         <LocaleSwitcher />

@@ -21,6 +21,7 @@ import { apiFetch } from "@/lib/api/client";
 import { API_URL } from "@/lib/constants";
 import { TripCard } from "@/components/trip-card";
 import { TripsEmptyState } from "@/components/trips-empty-state";
+import { TopBar } from "@/components/top-bar";
 import type { components } from "@/lib/api/schema";
 
 type TripListItem = components["schemas"]["Trip.TripListItem.jsonld"];
@@ -159,13 +160,14 @@ export default function TripsPage() {
   ]);
 
   return (
-    <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-        <h1 className="font-serif text-3xl md:text-4xl font-semibold tracking-tight">
-          {t("title")}
-        </h1>
-        <div className="flex items-center gap-2">
+    <>
+      <TopBar showHelp={false} />
+      <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
+        {/* Header */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <h1 className="font-serif text-3xl md:text-4xl font-semibold tracking-tight">
+            {t("title")}
+          </h1>
           <Button
             asChild
             variant="default"
@@ -174,189 +176,183 @@ export default function TripsPage() {
           >
             <Link href="/trips/new">{t("newTrip")}</Link>
           </Button>
-          <Button
-            asChild
-            variant="ghost"
-            size="icon"
-            title={t("close")}
-            aria-label={t("close")}
-          >
-            <Link href="/">
-              <X className="h-4 w-4" />
-            </Link>
-          </Button>
         </div>
-      </div>
 
-      {/* Filters */}
-      <div className="mb-6 flex flex-wrap items-end gap-3">
-        <Input
-          type="search"
-          placeholder={t("filterPlaceholder")}
-          value={titleFilter}
-          onChange={(e) => setTitleFilter(e.target.value)}
-          className="max-w-sm"
-          aria-label={t("filterPlaceholder")}
-        />
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-muted-foreground whitespace-nowrap">
-            {t("filterFrom")}
-          </label>
+        {/* Filters */}
+        <div className="mb-6 flex flex-wrap items-end gap-3">
           <Input
-            type="date"
-            value={startDateFilter}
-            onChange={(e) => {
-              setStartDateFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-40"
-            aria-label={t("filterFrom")}
+            type="search"
+            placeholder={t("filterPlaceholder")}
+            value={titleFilter}
+            onChange={(e) => setTitleFilter(e.target.value)}
+            className="max-w-sm"
+            aria-label={t("filterPlaceholder")}
           />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-muted-foreground whitespace-nowrap">
-            {t("filterUntil")}
-          </label>
-          <Input
-            type="date"
-            value={endDateFilter}
-            onChange={(e) => {
-              setEndDateFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-40"
-            aria-label={t("filterUntil")}
-          />
-        </div>
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={resetFilters}
-            data-testid="clear-filters-button"
-          >
-            <X className="h-4 w-4 mr-1" />
-            {t("clearFilters")}
-          </Button>
-        )}
-      </div>
-
-      {/* Loading */}
-      {isLoading && (
-        <div
-          className="flex items-center justify-center py-16 gap-3 text-muted-foreground"
-          aria-live="polite"
-          aria-busy="true"
-        >
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>{t("loading")}</span>
-        </div>
-      )}
-
-      {/* Error */}
-      {!isLoading && loadError && (
-        <div className="text-center py-16">
-          <p className="text-destructive mb-4">{t("loadingError")}</p>
-          <Button variant="outline" onClick={() => void fetchTrips()}>
-            {t("retry")}
-          </Button>
-        </div>
-      )}
-
-      {/* Empty states (mutually exclusive: filters active vs no trips at all) */}
-      {!isLoading && !loadError && trips.length === 0 && (
-        <TripsEmptyState
-          variant={hasActiveFilters ? "no-results" : "empty"}
-          activeFiltersLabel={activeFiltersLabel}
-          onResetFilters={hasActiveFilters ? resetFilters : undefined}
-        />
-      )}
-
-      {/* Trip grid */}
-      {!isLoading && !loadError && trips.length > 0 && (
-        <>
-          <p className="text-sm text-muted-foreground mb-4" aria-live="polite">
-            {t("totalItems", { count: totalItems })}
-          </p>
-          <ul
-            className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6"
-            role="list"
-            data-testid="trips-grid"
-          >
-            {trips.map((trip) => (
-              <li key={trip.id}>
-                <TripCard trip={trip} onDelete={setDeleteTarget} />
-              </li>
-            ))}
-          </ul>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <nav
-              className="flex items-center justify-center gap-3 mt-8"
-              aria-label={t("page", { current: page, total: totalPages })}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-muted-foreground whitespace-nowrap">
+              {t("filterFrom")}
+            </label>
+            <Input
+              type="date"
+              value={startDateFilter}
+              onChange={(e) => {
+                setStartDateFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-40"
+              aria-label={t("filterFrom")}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-muted-foreground whitespace-nowrap">
+              {t("filterUntil")}
+            </label>
+            <Input
+              type="date"
+              value={endDateFilter}
+              onChange={(e) => {
+                setEndDateFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-40"
+              aria-label={t("filterUntil")}
+            />
+          </div>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              data-testid="clear-filters-button"
             >
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                aria-label={t("previousPage")}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                {t("page", { current: page, total: totalPages })}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                aria-label={t("nextPage")}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </nav>
+              <X className="h-4 w-4 mr-1" />
+              {t("clearFilters")}
+            </Button>
           )}
-        </>
-      )}
+        </div>
 
-      {/* Delete confirmation dialog */}
-      <Dialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("deleteTripConfirmTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("deleteTripConfirmDescription", {
-                title: deleteTarget?.title ?? "",
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteTarget(null)}
-              disabled={isDeleting}
-            >
-              {t("deleteTripCancel")}
+        {/* Loading */}
+        {isLoading && (
+          <div
+            className="flex items-center justify-center py-16 gap-3 text-muted-foreground"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>{t("loading")}</span>
+          </div>
+        )}
+
+        {/* Error */}
+        {!isLoading && loadError && (
+          <div className="text-center py-16">
+            <p className="text-destructive mb-4">{t("loadingError")}</p>
+            <Button variant="outline" onClick={() => void fetchTrips()}>
+              {t("retry")}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => void handleDelete()}
-              disabled={isDeleting}
+          </div>
+        )}
+
+        {/* Empty states (mutually exclusive: filters active vs no trips at all) */}
+        {!isLoading && !loadError && trips.length === 0 && (
+          <TripsEmptyState
+            variant={hasActiveFilters ? "no-results" : "empty"}
+            activeFiltersLabel={activeFiltersLabel}
+            onResetFilters={hasActiveFilters ? resetFilters : undefined}
+          />
+        )}
+
+        {/* Trip grid */}
+        {!isLoading && !loadError && trips.length > 0 && (
+          <>
+            <p
+              className="text-sm text-muted-foreground mb-4"
+              aria-live="polite"
             >
-              {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {t("deleteTripConfirm")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </main>
+              {t("totalItems", { count: totalItems })}
+            </p>
+            <ul
+              className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6"
+              role="list"
+              data-testid="trips-grid"
+            >
+              {trips.map((trip) => (
+                <li key={trip.id}>
+                  <TripCard trip={trip} onDelete={setDeleteTarget} />
+                </li>
+              ))}
+            </ul>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <nav
+                className="flex items-center justify-center gap-3 mt-8"
+                aria-label={t("page", { current: page, total: totalPages })}
+              >
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  aria-label={t("previousPage")}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {t("page", { current: page, total: totalPages })}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  aria-label={t("nextPage")}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </nav>
+            )}
+          </>
+        )}
+
+        {/* Delete confirmation dialog */}
+        <Dialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("deleteTripConfirmTitle")}</DialogTitle>
+              <DialogDescription>
+                {t("deleteTripConfirmDescription", {
+                  title: deleteTarget?.title ?? "",
+                })}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+              >
+                {t("deleteTripCancel")}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => void handleDelete()}
+                disabled={isDeleting}
+              >
+                {isDeleting && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                {t("deleteTripConfirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </main>
+    </>
   );
 }

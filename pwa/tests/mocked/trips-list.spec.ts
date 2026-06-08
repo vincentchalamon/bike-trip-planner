@@ -59,6 +59,17 @@ test.describe("/trips page", () => {
     await expect(page.getByText("Bretagne coastal")).toBeVisible();
   });
 
+  test("shows the global top bar without the roadbook-only help button", async ({
+    page,
+  }) => {
+    await expect(page.getByTestId("top-bar")).toBeVisible();
+    await expect(page.getByTestId("nav-my-trips")).toBeVisible();
+    await expect(page.getByTestId("profile-button")).toBeVisible();
+    // The help modal is only mounted by the trip planner, so the help button
+    // is suppressed here (showHelp={false}).
+    await expect(page.getByTestId("help-button")).toHaveCount(0);
+  });
+
   test("delete button opens confirmation dialog", async ({ page }) => {
     await expect(page.getByText("Tour des Alpes")).toBeVisible();
     const deleteButton = page
