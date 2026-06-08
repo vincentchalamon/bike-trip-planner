@@ -39,6 +39,25 @@ test.describe("Account settings", () => {
     );
   });
 
+  test("renders the account chrome: top bar, identity rail and footer", async ({
+    page,
+  }) => {
+    await mockAuthenticated(page);
+
+    await page.goto("/account/settings");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByTestId("top-bar")).toBeVisible();
+    await expect(page.getByTestId("account-rail")).toBeVisible();
+    await expect(page.getByTestId("account-rail-email")).toHaveText(
+      "test@example.com",
+    );
+    await expect(page.getByTestId("section-footer")).toBeVisible();
+    // The help modal is only mounted by the trip planner, so the help button
+    // is suppressed here (showHelp={false}).
+    await expect(page.getByTestId("help-button")).toHaveCount(0);
+  });
+
   test("unauthenticated user is redirected to login", async ({ page }) => {
     await page.route("**/auth/refresh", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
