@@ -30,8 +30,10 @@ test.describe("landing public header", () => {
     await expect(login).toBeVisible();
     await expect(login).toHaveAttribute("href", "/login");
 
-    // Request-access CTA is desktop-only (hidden under the sm breakpoint).
+    // Request-access CTA is desktop-only (hidden under the sm breakpoint); at
+    // the default 1280px viewport it must be visible.
     const request = page.getByTestId("public-top-bar-request");
+    await expect(request).toBeVisible();
     await expect(request).toHaveAttribute("href", "/login");
   });
 });
