@@ -28,7 +28,7 @@ import { ConfigPanel } from "@/components/config-panel";
 import { HelpModal } from "@/components/help-modal";
 import { TopBar } from "@/components/top-bar";
 import { ShareModal } from "@/components/share-modal";
-import { MapPanel } from "@/components/Map";
+import dynamic from "next/dynamic";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { Button } from "@/components/ui/button";
 import { Stepper } from "@/components/stepper";
@@ -51,6 +51,14 @@ import {
   MEAL_COST_MAX,
   mealsForStage,
 } from "@/lib/budget-constants";
+
+// Lazy-load the map panel so MapLibre GL (~1.1 MB) is split out of the editor's
+// first chunk and only fetched when a map-bearing view is actually shown
+// (audit 35.2 PERF-001 / LH-PERF-AUTH). `ssr: false`: MapLibre is browser-only.
+const MapPanel = dynamic(
+  () => import("@/components/Map/MapPanel").then((m) => m.MapPanel),
+  { ssr: false, loading: () => null },
+);
 
 export function TripPlanner({
   onClose,
