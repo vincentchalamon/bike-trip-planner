@@ -911,7 +911,9 @@
     "primary": "Primary navigation",
     "newTrip": "New trip",
     "myTrips": "My trips",
-    "accountSettings": "My account"
+    "accountSettings": "My account",
+    "login": "Sign in",
+    "requestAccess": "Request access"
   },
   "help": {
     "title": "Help",

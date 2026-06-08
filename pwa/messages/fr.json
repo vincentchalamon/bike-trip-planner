@@ -911,7 +911,9 @@
     "primary": "Navigation principale",
     "newTrip": "Nouveau voyage",
     "myTrips": "Mes voyages",
-    "accountSettings": "Mon compte"
+    "accountSettings": "Mon compte",
+    "login": "Se connecter",
+    "requestAccess": "Demander l'accès"
   },
   "help": {
     "title": "Aide",

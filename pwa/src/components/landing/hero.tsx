@@ -2,6 +2,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { CtaButton } from "@/components/cta-button";
+import { PublicTopBar } from "@/components/public-top-bar";
 
 /**
  * Cinematic hero with a topographic / contour-line SVG background that evokes
@@ -17,6 +18,8 @@ export function LandingHero() {
       className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden bg-surface"
       data-testid="section-hero"
     >
+      <PublicTopBar transparent />
+
       {/* ── Background: layered topographic map SVG ─────────────────── */}
       <div className="absolute inset-0 z-0" aria-hidden="true">
         {/* Warm paper base */}
