@@ -40,6 +40,15 @@ export const SCRAPE_DEBOUNCE_MS = 500;
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://localhost";
 
 /**
+ * Absolute site origin for building canonical/OG/sitemap URLs. Unlike API_URL,
+ * this falls back on an EMPTY string too (`||`, not `??`): the mobile/export
+ * build injects `NEXT_PUBLIC_API_URL=""` when the var is unset, and
+ * `new URL(path, "")` throws — which would break the static sitemap/robots
+ * generation. The PWA and API share the origin in iso-prod/prod.
+ */
+export const SITE_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost";
+
+/**
  * Whether the AI tier is enabled for this build (mirrors backend `OLLAMA_ENABLED`).
  * Build-time only — `NEXT_PUBLIC_*` is inlined, so flipping it requires a front
  * rebuild. Defaults to enabled; set `NEXT_PUBLIC_AI_ENABLED=0` to hide the AI
