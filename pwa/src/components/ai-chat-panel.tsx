@@ -260,7 +260,7 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
             size="sm"
             onClick={() => void handleRelaunchAnalysis()}
             data-testid="ai-chat-panel-relaunch"
-            className="bg-brand text-white hover:bg-brand-hover"
+            className="bg-brand-fill text-white hover:bg-brand-fill-hover"
           >
             {t("relaunchAnalysis")}
           </Button>
@@ -297,7 +297,7 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
           disabled={!canSend}
           aria-label={t("sendAria")}
           data-testid="ai-chat-panel-send"
-          className="shrink-0 bg-brand text-white hover:bg-brand-hover disabled:bg-brand/40"
+          className="shrink-0 bg-brand-fill text-white hover:bg-brand-fill-hover disabled:bg-brand-fill/40"
         >
           <Send className="h-4 w-4" aria-hidden="true" />
         </Button>
@@ -331,7 +331,7 @@ function ChatBubble({ message }: ChatBubbleProps) {
           className={cn(
             "rounded-2xl px-3 py-2 text-sm leading-relaxed shadow-sm whitespace-pre-wrap",
             isUser
-              ? "bg-brand text-white rounded-br-sm self-end"
+              ? "bg-brand-fill text-white rounded-br-sm self-end"
               : "bg-background border border-border text-foreground rounded-bl-sm self-start",
           )}
         >

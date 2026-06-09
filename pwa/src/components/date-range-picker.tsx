@@ -198,7 +198,7 @@ function MonthGrid({
                       className={cn(
                         "relative z-10 flex items-center justify-center h-full w-full rounded-full",
                         day.isSelected &&
-                          "bg-brand text-white ring-2 ring-brand font-bold",
+                          "bg-brand-fill text-white ring-2 ring-brand font-bold",
                         day.isHovered &&
                           !day.isSelected &&
                           !day.isPast &&

@@ -392,7 +392,7 @@ function StatusIndicator({ status }: { status: AggregatedStatus }) {
         <span
           aria-label={t("statusLabels.done")}
           data-testid="status-done"
-          className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-fill text-white"
         >
           <Check className="h-3 w-3" aria-hidden="true" />
         </span>

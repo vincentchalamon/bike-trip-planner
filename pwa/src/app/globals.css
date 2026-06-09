@@ -49,6 +49,8 @@
   --color-brand: var(--brand);
   --color-brand-light: var(--brand-light);
   --color-brand-hover: var(--brand-hover);
+  --color-brand-fill: var(--brand-fill);
+  --color-brand-fill-hover: var(--brand-fill-hover);
   --color-muted-icon: var(--muted-icon);
   --color-diff-highlight: var(--diff-highlight);
   /* ── Semantic design tokens (sprint 25+) ────────────────────────────── */
@@ -93,6 +95,11 @@
   --brand-light: #fdf0e6;
   /* Darker amber for hover states (darker than --brand, ≥ 3:1 on brand-light) */
   --brand-hover: #8c4716;
+  /* Filled-button background: amber guaranteed ≥ 4.5:1 with white text in     */
+  /* both modes. In light it equals --brand; in dark it stays this dark amber  */
+  /* (vs the lighter accent --brand #e08040 which fails white-on-fill at 2.86) */
+  --brand-fill: #a8561a;
+  --brand-fill-hover: #8c4716;
   --muted-icon: #9da5a7;
   --diff-highlight: oklch(0.97 0.12 60);
 
@@ -150,6 +157,10 @@
   --brand: #e08040;
   --brand-light: #2e1a08;
   --brand-hover: #f09050;
+  /* Filled-button background stays dark amber so white text keeps ≥ 4.5:1     */
+  /* (the bright accent --brand #e08040 gives only 2.86:1 with white).         */
+  --brand-fill: #a8561a;
+  --brand-fill-hover: #8c4716;
   --muted-icon: #6b7275;
   --diff-highlight: oklch(0.32 0.08 60);
 
@@ -204,6 +215,8 @@
   --brand: #3a7c47;
   --brand-light: #eaf4ec;
   --brand-hover: #2e6338;
+  --brand-fill: #3a7c47;
+  --brand-fill-hover: #2e6338;
   --accent-brand: #3a7c47;
   --accent-soft: #eaf4ec;
   --accent-ink: #1a3d22;
@@ -217,6 +230,8 @@
   --brand: #5aad6a;
   --brand-light: #0d2e14;
   --brand-hover: #72c47e;
+  --brand-fill: #3a7c47;
+  --brand-fill-hover: #2e6338;
   --accent-brand: #5aad6a;
   --accent-soft: #0d2e14;
   --accent-ink: #b8f0c0;
@@ -229,6 +244,8 @@
   --brand: #4a5eb8;
   --brand-light: #edf0fb;
   --brand-hover: #3a4ea8;
+  --brand-fill: #4a5eb8;
+  --brand-fill-hover: #3a4ea8;
   --accent-brand: #4a5eb8;
   --accent-soft: #edf0fb;
   --accent-ink: #1e2860;
@@ -242,6 +259,8 @@
   --brand: #7a8ee0;
   --brand-light: #131828;
   --brand-hover: #9aacf0;
+  --brand-fill: #4a5eb8;
+  --brand-fill-hover: #3a4ea8;
   --accent-brand: #7a8ee0;
   --accent-soft: #131828;
   --accent-ink: #c8d4ff;
@@ -254,6 +273,8 @@
   --brand: #b84040;
   --brand-light: #faeaea;
   --brand-hover: #9a3030;
+  --brand-fill: #b84040;
+  --brand-fill-hover: #9a3030;
   --accent-brand: #b84040;
   --accent-soft: #faeaea;
   --accent-ink: #5a1010;
@@ -267,6 +288,8 @@
   --brand: #e07070;
   --brand-light: #2a0a0a;
   --brand-hover: #f09090;
+  --brand-fill: #b84040;
+  --brand-fill-hover: #9a3030;
   --accent-brand: #e07070;
   --accent-soft: #2a0a0a;
   --accent-ink: #ffc8c8;
@@ -372,16 +395,17 @@
   color: var(--accent-foreground);
 }
 
-/* "Next" / "Done" button uses the brand colour */
+/* "Next" / "Done" button uses the brand colour (filled, white text -> use     */
+/* --brand-fill so it keeps WCAG AA contrast in dark mode, like the buttons).   */
 .driver-popover.onboarding-popover .driver-popover-next-btn {
-  background-color: var(--brand) !important;
+  background-color: var(--brand-fill) !important;
   color: #ffffff !important;
-  border-color: var(--brand) !important;
+  border-color: var(--brand-fill) !important;
 }
 
 .driver-popover.onboarding-popover .driver-popover-next-btn:hover {
-  background-color: var(--brand-hover) !important;
-  border-color: var(--brand-hover) !important;
+  background-color: var(--brand-fill-hover) !important;
+  border-color: var(--brand-fill-hover) !important;
 }
 
 /* Close (×) button */

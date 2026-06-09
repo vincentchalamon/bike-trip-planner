@@ -41,7 +41,7 @@ export function AccountRail() {
       data-testid="account-rail"
     >
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-fill text-sm font-semibold text-white">
           {initial !== "?" ? (
             initial
           ) : (
