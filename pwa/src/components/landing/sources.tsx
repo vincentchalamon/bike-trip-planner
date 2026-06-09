@@ -105,7 +105,6 @@ export function LandingSources() {
                     href={source.href}
                     target={source.external ? "_blank" : undefined}
                     rel={source.external ? "noopener noreferrer" : undefined}
-                    aria-label={`${source.name} — ${t(`${source.key}Type`)}`}
                     data-testid={`source-${source.key}`}
                     className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-2xl"
                   >

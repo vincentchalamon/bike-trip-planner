@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import { useOnboarding } from "@/hooks/use-onboarding";
+import { useAuthStore } from "@/store/auth-store";
 
 /**
  * OnboardingTour — renders nothing in the DOM.
@@ -29,12 +30,16 @@ import { useOnboarding } from "@/hooks/use-onboarding";
 export function OnboardingTour() {
   const t = useTranslations("onboarding");
   const pathname = usePathname();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { hasSeenOnboarding, markOnboardingDone } = useOnboarding();
   const startedRef = useRef(false);
 
   useEffect(() => {
-    // Only show onboarding on the home page
-    if (pathname !== "/") return;
+    // The tour targets the authenticated planner's cards (card-link / card-gpx),
+    // which only exist on the home page once signed in — never on the public
+    // landing. Gating on auth also keeps the anon landing clear of driver.js's
+    // injected helper elements (accessibility: aria-allowed-attr / contrast).
+    if (pathname !== "/" || !isAuthenticated) return;
     // Wait until localStorage has been read (null = not yet resolved)
     if (hasSeenOnboarding !== false) return;
     // Guard against StrictMode double-invoke
@@ -119,7 +124,7 @@ export function OnboardingTour() {
         driverObj.destroy();
       }
     };
-  }, [hasSeenOnboarding, markOnboardingDone, t]);
+  }, [pathname, isAuthenticated, hasSeenOnboarding, markOnboardingDone, t]);
 
   return null;
 }

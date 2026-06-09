@@ -74,10 +74,14 @@ export function ScreenshotsSection() {
               onClick={() => setActive(i)}
               aria-label={t(s.key)}
               aria-pressed={i === active}
-              className={`h-2 rounded-full transition-all duration-200 ${
-                i === active ? "w-8 bg-brand" : "w-2 bg-muted-foreground/30"
-              }`}
-            />
+              className="flex h-6 min-w-[24px] items-center justify-center"
+            >
+              <span
+                className={`h-2 rounded-full transition-all duration-200 ${
+                  i === active ? "w-8 bg-brand" : "w-2 bg-muted-foreground/30"
+                }`}
+              />
+            </button>
           ))}
         </div>
 
