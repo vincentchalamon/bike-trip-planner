@@ -11,17 +11,18 @@ import { useAuthStore } from "@/store/auth-store";
 /**
  * OnboardingTour — renders nothing in the DOM.
  *
- * On first visit (no localStorage flag), automatically starts a 4-step
- * driver.js tour that walks the user through the core workflow:
+ * On an authenticated user's first home-page visit (no localStorage flag), it
+ * starts a 4-step driver.js tour through the core workflow:
  *   1. Paste a Komoot link
  *   2. Upload a GPX file (alternative input)
  *   3. Configure the rider profile (pacing / fatigue)
  *   4. Read stages in the timeline (shown after a trip loads)
  *
- * Steps 1–2 target elements that are always in the DOM. Steps 3–4 are
- * centred modals (no DOM target): step 3 describes the rider profile
- * (the settings gear only appears once a trip is open), step 4 the
- * timeline, since no trip data is loaded yet on a first visit.
+ * Steps 1–2 target elements that only exist on the authenticated home page
+ * (`card-link` / `card-gpx`). Steps 3–4 are centred modals (no DOM target):
+ * step 3 describes the rider profile (the settings gear only appears once a
+ * trip is open), step 4 the timeline, since no trip data is loaded yet on a
+ * first visit.
  *
  * The tour is dismissed by finishing, pressing Escape, or clicking the
  * overlay. In all cases `markOnboardingDone()` is called so the tour
