@@ -39,7 +39,12 @@ export function OnboardingTour() {
     // which only exist on the home page once signed in — never on the public
     // landing. Gating on auth also keeps the anon landing clear of driver.js's
     // injected helper elements (accessibility: aria-allowed-attr / contrast).
-    if (pathname !== "/" || !isAuthenticated) return;
+    if (pathname !== "/" || !isAuthenticated) {
+      // Reset so the tour can restart if the user re-authenticates on this same
+      // mount (e.g. logs out mid-tour then back in) without a full reload.
+      startedRef.current = false;
+      return;
+    }
     // Wait until localStorage has been read (null = not yet resolved)
     if (hasSeenOnboarding !== false) return;
     // Guard against StrictMode double-invoke

@@ -55,7 +55,7 @@ const SOURCES: Source[] = [
     href: null,
     external: false,
     Icon: Sparkles,
-    color: "#c2671e",
+    color: "#a8561a",
   },
 ];
 
