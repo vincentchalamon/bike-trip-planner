@@ -64,7 +64,7 @@ const COLORS = {
   surface: "#faf7f0",
   ink: "#1a1814",
   inkSoft: "#5a5249",
-  brand: "#c2671e",
+  brand: "#a8561a",
   brandSoft: "#fdf0e6",
   border: "#e8dfd0",
   mapFallback: "#e6e0d0",
