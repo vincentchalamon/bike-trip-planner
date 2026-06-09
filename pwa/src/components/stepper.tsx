@@ -101,7 +101,7 @@ export function Stepper() {
                       "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors duration-200 cursor-pointer",
                       "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
                       isCompleted
-                        ? "border-brand bg-brand text-white hover:bg-brand/80"
+                        ? "border-brand bg-brand-fill text-white hover:bg-brand-fill/80"
                         : "border-brand bg-background text-brand hover:bg-brand/10",
                     )}
                   >
@@ -119,9 +119,9 @@ export function Stepper() {
                     className={cn(
                       "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors duration-200",
                       isActive
-                        ? "border-brand bg-brand text-white"
+                        ? "border-brand bg-brand-fill text-white"
                         : isCompleted || isPast
-                          ? "border-brand bg-brand text-white"
+                          ? "border-brand bg-brand-fill text-white"
                           : isFuture
                             ? "border-muted-foreground/30 bg-background text-muted-foreground/50"
                             : "border-brand bg-background text-brand",

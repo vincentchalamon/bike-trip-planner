@@ -261,8 +261,8 @@ export function AiChatCard({
         disabled={!canSubmitConversation}
         data-testid="ai-chat-submit"
         className={cn(
-          "w-full sm:w-auto self-end bg-brand text-white hover:bg-brand-hover",
-          "disabled:bg-brand/50",
+          "w-full sm:w-auto self-end bg-brand-fill text-white hover:bg-brand-fill-hover",
+          "disabled:bg-brand-fill/50",
         )}
       >
         {t("submitLabel")}
@@ -287,7 +287,7 @@ function ChatBubble({ message }: ChatBubbleProps) {
         className={cn(
           "max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed shadow-sm",
           isUser
-            ? "bg-brand text-white rounded-br-sm"
+            ? "bg-brand-fill text-white rounded-br-sm"
             : "bg-background border border-border text-foreground rounded-bl-sm",
         )}
       >

@@ -216,7 +216,7 @@ export function TopBar({
           <Link href="/account/settings">
             {initial !== "?" ? (
               <span
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-fill text-xs font-semibold text-white"
                 data-testid="profile-initial"
               >
                 {initial}

@@ -165,7 +165,7 @@ export function WizardStepper({
                     className={cn(
                       "flex items-center justify-center w-9 h-9 rounded-full border-2 transition-colors duration-200 cursor-pointer",
                       "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
-                      "border-brand bg-brand text-white hover:bg-brand/80",
+                      "border-brand bg-brand-fill text-white hover:bg-brand-fill/80",
                     )}
                   >
                     {isCompleted ? (
@@ -183,9 +183,9 @@ export function WizardStepper({
                     className={cn(
                       "flex items-center justify-center w-9 h-9 rounded-full border-2 transition-colors duration-200",
                       isActive
-                        ? "border-brand bg-brand text-white shadow-sm"
+                        ? "border-brand bg-brand-fill text-white shadow-sm"
                         : isCompleted || isPast
-                          ? "border-brand bg-brand text-white"
+                          ? "border-brand bg-brand-fill text-white"
                           : isFuture
                             ? "border-muted-foreground/30 bg-background text-muted-foreground/50"
                             : "border-brand bg-background text-brand",

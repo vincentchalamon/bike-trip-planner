@@ -20,7 +20,7 @@ export function CtaButton({
     <Button
       asChild
       size={size}
-      className={`bg-brand hover:bg-brand-hover text-white font-semibold ${className}`}
+      className={`bg-brand-fill hover:bg-brand-fill-hover text-white font-semibold ${className}`}
     >
       <Link href={href} data-testid="cta-create-itinerary">
         {label}
