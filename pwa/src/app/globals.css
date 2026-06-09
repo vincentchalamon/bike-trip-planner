@@ -85,18 +85,20 @@
   --shadow-strong: 0 8px 24px rgb(0 0 0 / 0.16);
 
   /* ── Brand (amber) ────────────────────────────────────────────────────── */
-  /* --brand is the Tailwind alias used by every existing component          */
-  --brand: #c2671e;
+  /* --brand is the Tailwind alias used by every existing component.         */
+  /* Darkened from #c2671e to #a8561a for WCAG AA (4.5:1): white-on-brand    */
+  /* and brand-text-on-surface (a11y LH-A11Y-HOME / H12).                    */
+  --brand: #a8561a;
   /* Soft amber for hovers, backgrounds, shimmer tints                       */
   --brand-light: #fdf0e6;
-  /* Slightly darker amber for hover states (≥ 3:1 contrast on brand-light)  */
-  --brand-hover: #a8561a;
+  /* Darker amber for hover states (darker than --brand, ≥ 3:1 on brand-light) */
+  --brand-hover: #8c4716;
   --muted-icon: #9da5a7;
   --diff-highlight: oklch(0.97 0.12 60);
 
   /* ── Semantic tokens ──────────────────────────────────────────────────── */
-  /* accent-brand = amber principal (#c2671e)                                */
-  --accent-brand: #c2671e;
+  /* accent-brand = amber principal (darkened to #a8561a for WCAG AA)        */
+  --accent-brand: #a8561a;
   /* accent-soft = warm sand for diff/highlight backgrounds                  */
   --accent-soft: #fdf0e6;
   /* accent-ink = deep brown, AA contrast on surface (#faf7f0)               */
