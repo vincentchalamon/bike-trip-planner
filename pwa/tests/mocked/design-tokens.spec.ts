@@ -8,7 +8,7 @@ import { test, expect } from "@playwright/test";
  * et sur le roadbook (mode clair + sombre).
  */
 
-const AMBER_BRAND_LIGHT = "#c2671e";
+const AMBER_BRAND_LIGHT = "#a8561a";
 const AMBER_BRAND_DARK = "#e08040";
 const SURFACE_LIGHT = "#faf7f0";
 const INK_LIGHT = "#1a1814";

@@ -50,7 +50,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           // Inline tokens so the page renders even if globals.css failed to load.
           "--surface": "#faf7f0",
           "--ink": "#1a1814",
-          "--accent-brand": "#c2671e",
+          "--accent-brand": "#a8561a",
           "--accent-soft": "#fdf0e6",
           "--accent-ink": "#6b2d00",
         } as React.CSSProperties

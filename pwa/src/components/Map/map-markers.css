@@ -32,7 +32,7 @@
   right: -3px;
   width: 12px;
   height: 12px;
-  background: var(--brand, #c2671e);
+  background: var(--brand, #a8561a);
   color: white;
   font-size: 9px;
   font-weight: 700;
@@ -58,7 +58,7 @@
   position: absolute;
   inset: -6px;
   border-radius: 50%;
-  background: var(--brand, #c2671e);
+  background: var(--brand, #a8561a);
   opacity: 0.45;
   z-index: 0;
   pointer-events: none;
