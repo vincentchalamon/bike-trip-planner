@@ -395,16 +395,17 @@
   color: var(--accent-foreground);
 }
 
-/* "Next" / "Done" button uses the brand colour */
+/* "Next" / "Done" button uses the brand colour (filled, white text -> use     */
+/* --brand-fill so it keeps WCAG AA contrast in dark mode, like the buttons).   */
 .driver-popover.onboarding-popover .driver-popover-next-btn {
-  background-color: var(--brand) !important;
+  background-color: var(--brand-fill) !important;
   color: #ffffff !important;
-  border-color: var(--brand) !important;
+  border-color: var(--brand-fill) !important;
 }
 
 .driver-popover.onboarding-popover .driver-popover-next-btn:hover {
-  background-color: var(--brand-hover) !important;
-  border-color: var(--brand-hover) !important;
+  background-color: var(--brand-fill-hover) !important;
+  border-color: var(--brand-fill-hover) !important;
 }
 
 /* Close (×) button */
