@@ -90,7 +90,7 @@ export function AiBubble() {
           "hover:bg-brand-fill-hover transition-transform hover:scale-105",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-hover focus-visible:ring-offset-2",
           isUnavailable &&
-            "cursor-not-allowed opacity-60 hover:scale-100 hover:bg-brand",
+            "cursor-not-allowed opacity-60 hover:scale-100 hover:bg-brand-fill",
         )}
       >
         <Sparkles className="h-6 w-6" aria-hidden="true" />
