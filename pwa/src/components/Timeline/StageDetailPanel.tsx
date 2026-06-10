@@ -93,9 +93,16 @@ export function StageDetailPanel({
   const tStage = useTranslations("stage");
   const recomputingStages = useTripStore((s) => s.recomputingStages);
   const selectedRef = useRef<HTMLDivElement>(null);
+  const prevSelectedIndexRef = useRef(selectedIndex);
 
-  // Scroll the selected stage into view when selection changes.
+  // Scroll the selected stage into view on user selection changes — but skip the
+  // initial render so loading a trip keeps the scroll at the top instead of
+  // jumping down to the first stage (recette #649). Comparing against the
+  // previous index (rather than a "has-run" flag) stays correct under React
+  // Strict Mode's double-invoked mount effect.
   useEffect(() => {
+    if (prevSelectedIndexRef.current === selectedIndex) return;
+    prevSelectedIndexRef.current = selectedIndex;
     selectedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selectedIndex]);
 
