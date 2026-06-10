@@ -545,6 +545,7 @@
     "linkInputPlaceholder": "Enter your Komoot, Strava or RideWithGPS link here...",
     "linkInvalidUrl": "Please enter a valid URL.",
     "linkUnsupportedSource": "Unsupported source. Use Komoot, Strava or RideWithGPS.",
+    "linkSubmit": "Import",
     "gpxTitle": "GPX file",
     "gpxDescription": "Drag & drop your file",
     "gpxBrowse": "Browse",

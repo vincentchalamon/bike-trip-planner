@@ -240,24 +240,35 @@ function LinkCard({ expanded, disabled, onSelect, onSubmit }: LinkCardProps) {
           >
             {t("linkInputLabel")}
           </label>
-          <Input
-            ref={inputRef}
-            id="card-link-url"
-            type="url"
-            value={url}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder={t("linkInputPlaceholder")}
-            disabled={disabled}
-            className={cn(
-              "w-full text-base rounded-lg px-4 py-3 h-auto",
-              error && "ring-2 ring-destructive",
-            )}
-            data-testid="magic-link-input"
-            aria-invalid={!!error}
-            aria-describedby={error ? "card-link-error" : undefined}
-          />
+          <div className="flex gap-2">
+            <Input
+              ref={inputRef}
+              id="card-link-url"
+              type="url"
+              value={url}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder={t("linkInputPlaceholder")}
+              disabled={disabled}
+              className={cn(
+                "w-full text-base rounded-lg px-4 py-3 h-auto",
+                error && "ring-2 ring-destructive",
+              )}
+              data-testid="magic-link-input"
+              aria-invalid={!!error}
+              aria-describedby={error ? "card-link-error" : undefined}
+            />
+            <Button
+              type="button"
+              onClick={() => void submit(url)}
+              disabled={disabled || url.trim().length === 0}
+              className="shrink-0 h-auto px-4 cursor-pointer bg-brand-fill text-white hover:bg-brand-fill-hover"
+              data-testid="magic-link-submit"
+            >
+              {t("linkSubmit")}
+            </Button>
+          </div>
           {error && (
             <p
               id="card-link-error"
