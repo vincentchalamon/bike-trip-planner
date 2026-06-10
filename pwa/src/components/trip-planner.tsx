@@ -296,11 +296,17 @@ export function TripPlanner({
   // - Stages computed, processing settled, analysis not launched → "preview"
   // - Stages computed, analysis complete → "my_trip"
   useEffect(() => {
-    if (isProcessing) {
-      // Computation in flight: advance past preparation/preview into analysis.
+    if (isProcessing && hasAnalysisStarted) {
+      // Acte 2 analysis in flight: advance past preparation/preview into analysis.
       completeStep("preparation");
       completeStep("preview");
       goToStep("analysis");
+    } else if (isProcessing) {
+      // Initial route computation (URL submit / GPX upload) in flight: park on
+      // "preview" (loading) instead of jumping to analysis, so the wizard passes
+      // through the preview step before the user launches the analysis (#649).
+      completeStep("preparation");
+      goToStep("preview");
     } else if (trip && stages.length > 0 && !hasAnalysisStarted) {
       // Phase 1 complete: pacing engine produced stages. Park on "preview"
       // and wait for the user to explicitly click "Lancer l'analyse".
