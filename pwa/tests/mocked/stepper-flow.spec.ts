@@ -24,14 +24,15 @@ test.describe("Stepper — initial state", () => {
 });
 
 test.describe("Stepper — step transitions", () => {
-  test("advances to 'analysis' after URL submission", async ({
+  test("advances to 'preview' after URL submission", async ({
     submitUrl,
     mockedPage,
   }) => {
     await submitUrl();
-    // After URL submit + trip creation, isProcessing=true → analysis step
-    const analysisStep = mockedPage.getByTestId("stepper-step-analysis");
-    await expect(analysisStep).toHaveAttribute("aria-current", "step", {
+    // The initial route computation parks on "preview" (recette #649); analysis
+    // only follows the explicit "Lancer l'analyse" action.
+    const previewStep = mockedPage.getByTestId("stepper-step-preview");
+    await expect(previewStep).toHaveAttribute("aria-current", "step", {
       timeout: 5000,
     });
   });
@@ -52,9 +53,9 @@ test.describe("Stepper — step transitions", () => {
     mockedPage,
   }) => {
     await submitUrl();
-    // Wait until we move past preparation
+    // Wait until we move past preparation (now onto "preview")
     await expect(
-      mockedPage.getByTestId("stepper-step-analysis"),
+      mockedPage.getByTestId("stepper-step-preview"),
     ).toHaveAttribute("aria-current", "step", { timeout: 5000 });
     // preparation step should no longer be the active one
     await expect(
@@ -140,9 +141,9 @@ test.describe("Stepper — responsive mobile", () => {
     await mockedPage.setViewportSize({ width: 375, height: 812 });
     await submitUrl();
     const mobileLabel = mockedPage.getByTestId("stepper-mobile-label");
-    // After URL submit: moves to analysis (step 3)
-    await expect(mobileLabel).toContainText("3/4", { timeout: 5000 });
-    await expect(mobileLabel).toContainText("Analyse", { timeout: 5000 });
+    // After URL submit: moves to preview (step 2)
+    await expect(mobileLabel).toContainText("2/4", { timeout: 5000 });
+    await expect(mobileLabel).toContainText("Aperçu", { timeout: 5000 });
   });
 });
 
@@ -169,7 +170,7 @@ test.describe("Stepper — reset on clearTrip", () => {
     // Submitting a new URL must advance again instead of being stuck.
     await submitUrl();
     await expect(
-      mockedPage.getByTestId("stepper-step-analysis"),
+      mockedPage.getByTestId("stepper-step-preview"),
     ).toHaveAttribute("aria-current", "step", { timeout: 5000 });
   });
 });
@@ -182,13 +183,12 @@ test.describe("Stepper — backwards navigation", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
-    // After route_parsed: preparation is complete, but we may still be in analysis
-    // Inject stages to reach preview
+    // Inject stages to reach the preview step
     await injectEvent(stagesComputedEvent());
 
-    // Wait until we're past preparation
+    // Wait until we're past preparation (now on "preview")
     await expect(
-      mockedPage.getByTestId("stepper-step-analysis"),
+      mockedPage.getByTestId("stepper-step-preview"),
     ).toHaveAttribute("aria-current", "step", { timeout: 5000 });
 
     // Inject a trip_complete event to move to my_trip is not done yet,
