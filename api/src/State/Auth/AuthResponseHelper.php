@@ -26,13 +26,19 @@ trait AuthResponseHelper
 
     private function setRefreshTokenCookie(JsonResponse $response, string $token, \DateTimeImmutable $expiresAt): void
     {
+        // SameSite=Lax (not Strict) so the cookie is sent on top-level cross-site
+        // navigations (e.g. following a magic link from an email client, or a
+        // bookmark). The web server reads it during SSR to render the dashboard
+        // on the first paint instead of flashing the landing (#649). Lax still
+        // withholds the cookie from cross-site sub-requests / POSTs, so the
+        // refresh endpoint stays CSRF-safe.
         $cookie = Cookie::create(AuthCookies::REFRESH_TOKEN)
             ->withValue($token)
             ->withExpires($expiresAt)
             ->withPath('/')
             ->withSecure(true)
             ->withHttpOnly(true)
-            ->withSameSite('strict');
+            ->withSameSite('lax');
 
         $response->headers->setCookie($cookie);
     }
