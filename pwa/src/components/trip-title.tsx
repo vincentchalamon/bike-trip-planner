@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { EditableField } from "@/components/editable-field";
@@ -33,7 +33,9 @@ export function TripTitle({
   // re-proposed after a reload (recette #649).
   const storageKey = tripId ? `btp.title-suggestion-dismissed.${tripId}` : null;
 
-  useEffect(() => {
+  // Read the persisted decision before paint (not after) so a previously
+  // dismissed suggestion never flashes on reload (#649 review).
+  useLayoutEffect(() => {
     if (!storageKey) return;
     try {
       if (window.localStorage.getItem(storageKey) === "1") setDismissed(true);

@@ -192,7 +192,7 @@ function LinkCard({ expanded, disabled, onSelect, onSubmit }: LinkCardProps) {
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value);
     // Clear any previous error while the user is editing. Validation runs
-    // on submit (Enter or paste of a fully-formed URL).
+    // on submit (Enter or the Import button).
     setError(null);
   }, []);
 
@@ -212,13 +212,14 @@ function LinkCard({ expanded, disabled, onSelect, onSubmit }: LinkCardProps) {
       const trimmed = pasted.trim();
       if (!trimmed) return;
       if (isSupportedSourceUrl(trimmed)) {
+        // Fill the field for review — submission stays explicit (Enter or the
+        // Import button), so a paste never navigates away unprompted (#649).
         e.preventDefault();
         setUrl(trimmed);
         setError(null);
-        void submit(trimmed);
       }
     },
-    [submit],
+    [],
   );
 
   return (

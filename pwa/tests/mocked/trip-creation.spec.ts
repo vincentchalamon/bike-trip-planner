@@ -123,7 +123,7 @@ test.describe("Trip creation flow", () => {
     );
   });
 
-  test("auto-submits on paste of valid URL", async ({ mockedPage }) => {
+  test("paste fills the field without submitting", async ({ mockedPage }) => {
     const input = mockedPage.getByTestId("magic-link-input");
     await input.focus();
     // Dispatch a paste event with clipboardData
@@ -142,7 +142,16 @@ test.describe("Trip creation flow", () => {
       });
       el.dispatchEvent(event);
     });
-    // Should auto-submit — trip title skeleton or title should appear
+    // Paste populates the field for review — it must NOT auto-submit/navigate.
+    await expect(input).toHaveValue("https://www.komoot.com/fr-fr/tour/12345");
+    await expect(mockedPage).toHaveURL("/");
+  });
+
+  test("Import button submits the entered URL", async ({ mockedPage }) => {
+    const input = mockedPage.getByTestId("magic-link-input");
+    await input.fill("https://www.komoot.com/fr-fr/tour/12345");
+    await mockedPage.getByTestId("magic-link-submit").click();
+    await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
     await expect(
       mockedPage
         .getByTestId("trip-title-skeleton")

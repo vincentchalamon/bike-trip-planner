@@ -429,6 +429,20 @@ When(
   },
 );
 
+Then(
+  "le champ de lien magique contient {string}",
+  async ({ mockedPage }, value: string) => {
+    await expect(mockedPage.getByTestId("magic-link-input")).toHaveValue(value);
+  },
+);
+
+Then(
+  "the magic link field contains {string}",
+  async ({ mockedPage }, value: string) => {
+    await expect(mockedPage.getByTestId("magic-link-input")).toHaveValue(value);
+  },
+);
+
 // ---------------------------------------------------------------------------
 // Error messages — FR + EN
 // ---------------------------------------------------------------------------

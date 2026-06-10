@@ -51,8 +51,15 @@ Fonctionnalité: Création de voyage
     Et je vois la carte de l'étape 3
 
   @desktop
-  Scénario: Soumission automatique lors du collage d'une URL valide
+  Scénario: Le collage d'une URL valide remplit le champ sans soumettre
     Quand je colle l'URL "https://www.komoot.com/fr-fr/tour/12345" dans le champ de lien magique
+    Alors le champ de lien magique contient "https://www.komoot.com/fr-fr/tour/12345"
+    Et je reste sur la page d'accueil
+
+  @desktop
+  Scénario: Soumission d'un lien valide via le bouton Importer
+    Quand je saisis "https://www.komoot.com/fr-fr/tour/12345" dans le champ de lien magique
+    Et que je clique sur le bouton "Importer"
     Alors je suis redirigé vers la page du voyage
 
   @desktop
