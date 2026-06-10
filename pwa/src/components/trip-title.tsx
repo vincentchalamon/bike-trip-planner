@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { EditableField } from "@/components/editable-field";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTripStore } from "@/store/trip-store";
 
 import { getSuggestionName } from "@/lib/trip-utils";
 
@@ -23,9 +24,33 @@ export function TripTitle({
   isLoading,
 }: TripTitleProps) {
   const t = useTranslations("tripTitle");
+  const tripId = useTripStore((s) => s.trip?.id ?? null);
   const [dismissed, setDismissed] = useState(false);
   const [suggestedName] = useState(() => getSuggestionName(title));
   const hasShown = useRef(false);
+
+  // Persist the accept/dismiss decision per trip so the suggestion is not
+  // re-proposed after a reload (recette #649).
+  const storageKey = tripId ? `btp.title-suggestion-dismissed.${tripId}` : null;
+
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      if (window.localStorage.getItem(storageKey) === "1") setDismissed(true);
+    } catch {
+      /* localStorage unavailable (private mode, SSR) — keep showing once */
+    }
+  }, [storageKey]);
+
+  const dismiss = () => {
+    setDismissed(true);
+    if (!storageKey) return;
+    try {
+      window.localStorage.setItem(storageKey, "1");
+    } catch {
+      /* ignore storage write errors */
+    }
+  };
 
   const shouldShow = showSuggestion && !dismissed && !hasShown.current;
 
@@ -65,7 +90,7 @@ export function TripTitle({
             className="h-6 text-xs cursor-pointer"
             onClick={() => {
               onChange(suggestedName);
-              setDismissed(true);
+              dismiss();
             }}
           >
             {t("apply")}
@@ -74,7 +99,7 @@ export function TripTitle({
             variant="ghost"
             size="icon"
             className="h-6 w-6 cursor-pointer"
-            onClick={() => setDismissed(true)}
+            onClick={dismiss}
             aria-label={t("dismissSuggestion")}
           >
             <X className="h-3.5 w-3.5" />
