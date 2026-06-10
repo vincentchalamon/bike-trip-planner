@@ -192,7 +192,7 @@ function LinkCard({ expanded, disabled, onSelect, onSubmit }: LinkCardProps) {
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setUrl(e.target.value);
     // Clear any previous error while the user is editing. Validation runs
-    // on submit (Enter or paste of a fully-formed URL).
+    // on submit (Enter or the Import button).
     setError(null);
   }, []);
 
@@ -212,13 +212,14 @@ function LinkCard({ expanded, disabled, onSelect, onSubmit }: LinkCardProps) {
       const trimmed = pasted.trim();
       if (!trimmed) return;
       if (isSupportedSourceUrl(trimmed)) {
+        // Fill the field for review — submission stays explicit (Enter or the
+        // Import button), so a paste never navigates away unprompted (#649).
         e.preventDefault();
         setUrl(trimmed);
         setError(null);
-        void submit(trimmed);
       }
     },
-    [submit],
+    [],
   );
 
   return (
@@ -240,24 +241,35 @@ function LinkCard({ expanded, disabled, onSelect, onSubmit }: LinkCardProps) {
           >
             {t("linkInputLabel")}
           </label>
-          <Input
-            ref={inputRef}
-            id="card-link-url"
-            type="url"
-            value={url}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder={t("linkInputPlaceholder")}
-            disabled={disabled}
-            className={cn(
-              "w-full text-base rounded-lg px-4 py-3 h-auto",
-              error && "ring-2 ring-destructive",
-            )}
-            data-testid="magic-link-input"
-            aria-invalid={!!error}
-            aria-describedby={error ? "card-link-error" : undefined}
-          />
+          <div className="flex gap-2">
+            <Input
+              ref={inputRef}
+              id="card-link-url"
+              type="url"
+              value={url}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder={t("linkInputPlaceholder")}
+              disabled={disabled}
+              className={cn(
+                "w-full text-base rounded-lg px-4 py-3 h-auto",
+                error && "ring-2 ring-destructive",
+              )}
+              data-testid="magic-link-input"
+              aria-invalid={!!error}
+              aria-describedby={error ? "card-link-error" : undefined}
+            />
+            <Button
+              type="button"
+              onClick={() => void submit(url)}
+              disabled={disabled || url.trim().length === 0}
+              className="shrink-0 h-auto px-4 cursor-pointer bg-brand-fill text-white hover:bg-brand-fill-hover"
+              data-testid="magic-link-submit"
+            >
+              {t("linkSubmit")}
+            </Button>
+          </div>
           {error && (
             <p
               id="card-link-error"

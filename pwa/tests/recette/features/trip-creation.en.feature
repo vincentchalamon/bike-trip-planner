@@ -50,8 +50,15 @@ Feature: Trip creation
     And I see stage card 3
 
   @desktop
-  Scenario: Auto-submit when pasting a valid URL
+  Scenario: Pasting a valid URL fills the field without submitting
     When I paste "https://www.komoot.com/fr-fr/tour/12345" into the magic link field
+    Then the magic link field contains "https://www.komoot.com/fr-fr/tour/12345"
+    And I stay on the home page
+
+  @desktop
+  Scenario: Submitting a valid link via the Import button
+    When I type "https://www.komoot.com/fr-fr/tour/12345" in the magic link field
+    And I click the "Import" button
     Then I am redirected to the trip page
 
   @desktop
