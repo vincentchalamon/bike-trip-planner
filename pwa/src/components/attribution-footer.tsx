@@ -18,7 +18,7 @@ export function AttributionFooter() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+        className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         data-testid="attribution-footer-link"
       >
         {t("link")}

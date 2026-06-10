@@ -59,7 +59,7 @@ export function PublicTopBar({ transparent = false }: { transparent?: boolean })
           className="hidden sm:inline-flex bg-brand-fill hover:bg-brand-fill-hover text-white"
           data-testid="public-top-bar-request"
         >
-          <Link href="/login">{t("requestAccess")}</Link>
+          <Link href="/#early-access">{t("requestAccess")}</Link>
         </Button>
       </div>
     </header>

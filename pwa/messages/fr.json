@@ -826,7 +826,7 @@
     },
     "availability": {
       "title": "Disponible partout",
-      "subtitle": "Sur le web, sur votre poche et même sans réseau.",
+      "subtitle": "Sur le web, dans votre poche et même sans réseau.",
       "webTitle": "Web",
       "webDescription": "Optimisé pour tous les écrans, du smartphone au desktop.",
       "pwaTitle": "PWA",

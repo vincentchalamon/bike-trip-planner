@@ -31,6 +31,7 @@ export function EarlyAccessSection() {
 
   return (
     <section
+      id="early-access"
       className="py-24 md:py-32 bg-foreground text-background"
       data-testid="section-early-access"
     >
