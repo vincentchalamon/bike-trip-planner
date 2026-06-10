@@ -10,6 +10,7 @@ import {
 import { useTranslations } from "next-intl";
 import { Link2, FileUp, Sparkles, ArrowLeft } from "lucide-react";
 import { AiChatCard, type AiChatMessage } from "@/components/ai-chat-card";
+import { AiUnavailableNotice } from "@/components/ai-unavailable-notice";
 import { GpxDropZoneCard } from "@/components/gpx-drop-zone-card";
 import { SourceUrlChip } from "@/components/source-url-chip";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { isSupportedSourceUrl, isValidUrl } from "@/lib/validation/url";
+import { useUiStore } from "@/store/ui-store";
 
 /**
  * Input mode selected by the user.
@@ -59,6 +61,7 @@ export function CardSelection({
   disabled = false,
 }: CardSelectionProps) {
   const t = useTranslations("cardSelection");
+  const aiCapability = useUiStore((s) => s.aiCapability);
   const [selected, setSelected] = useState<InputMode>(null);
 
   const handleSelect = useCallback(
@@ -112,12 +115,14 @@ export function CardSelection({
           />
         )}
 
-        {/* Card: AI Assistant — multi-turn chat shell (#392). Backend wiring
-            lands in sprint 31 (see #309). */}
-        {(selected === null || selected === "ai") && (
+        {/* Card: AI Assistant — multi-turn chat shell (#392). Gated on AI
+            availability (#304): hidden when AI is off by config, disabled with
+            an inline notice when enabled but the LLM tier is unreachable. */}
+        {aiCapability.enabled && (selected === null || selected === "ai") && (
           <AiCard
             expanded={selected === "ai"}
             disabled={disabled}
+            unavailable={!aiCapability.available}
             onSelect={() => handleSelect("ai")}
             onSubmitConversation={onSubmitAiConversation}
           />
@@ -379,6 +384,7 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
 interface AiCardProps {
   expanded: boolean;
   disabled: boolean;
+  unavailable?: boolean;
   onSelect: () => void;
   onSubmitConversation?: (messages: ReadonlyArray<AiChatMessage>) => void;
 }
@@ -386,6 +392,7 @@ interface AiCardProps {
 function AiCard({
   expanded,
   disabled,
+  unavailable = false,
   onSelect,
   onSubmitConversation,
 }: AiCardProps) {
@@ -396,17 +403,21 @@ function AiCard({
       testId="card-ai"
       ariaLabel={t("ariaSelectAi")}
       expanded={expanded}
-      disabled={disabled}
+      disabled={disabled || unavailable}
       onSelect={onSelect}
       icon={<Sparkles className="h-6 w-6" aria-hidden="true" />}
       title={t("aiTitle")}
       description={t("aiDescription")}
     >
-      {expanded && (
-        <AiChatCard
-          onSubmitConversation={onSubmitConversation}
-          disabled={disabled}
-        />
+      {unavailable ? (
+        <AiUnavailableNotice context="chat" />
+      ) : (
+        expanded && (
+          <AiChatCard
+            onSubmitConversation={onSubmitConversation}
+            disabled={disabled}
+          />
+        )
       )}
     </CardShell>
   );

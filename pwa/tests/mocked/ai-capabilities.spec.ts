@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/base.fixture";
+import { mockAllApis } from "../fixtures/api-mocks";
 
 /**
  * Issue #304 — explicit degraded-mode gating of the AI features.
@@ -73,5 +74,63 @@ test.describe("AI capabilities gating (#304)", () => {
     await expect(mockedPage.getByTestId("ai-unavailable-notice")).toHaveCount(
       0,
     );
+  });
+});
+
+/**
+ * Same three states for the Acte 1 AI generation card (card-selection): hidden
+ * when AI is off by config, disabled with an inline notice when enabled but the
+ * LLM tier is unreachable, active otherwise. Availability is driven via the
+ * mocked `/api/health` probe; the build-time "disabled" state via the test hook.
+ */
+test.describe("AI generation card gating (#304)", () => {
+  test("tier reachable: the generation card is active and expands to the chat", async ({
+    page,
+  }) => {
+    await mockAllApis(page);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    const card = page.getByTestId("card-ai");
+    await expect(card).toBeVisible();
+    await expect(page.getByTestId("ai-unavailable-notice")).toHaveCount(0);
+
+    await card.click();
+    await expect(page.getByTestId("ai-chat-card")).toBeVisible();
+  });
+
+  test("tier enabled but unreachable: the generation card is disabled with a notice", async ({
+    page,
+  }) => {
+    await mockAllApis(page, { aiAvailable: false });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    const card = page.getByTestId("card-ai");
+    await expect(card).toBeVisible();
+    await expect(card).toHaveAttribute("data-disabled", "true");
+    await expect(page.getByTestId("ai-unavailable-notice")).toBeVisible();
+
+    // Disabled → a forced click must not expand the chat composer.
+    await card.click({ force: true });
+    await expect(page.getByTestId("ai-chat-card")).toHaveCount(0);
+  });
+
+  test("disabled by config: the generation card is hidden", async ({ page }) => {
+    await mockAllApis(page);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    // Build-time AI_ENABLED can't be flipped at runtime; drive it via the hook.
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new CustomEvent("__test_set_ai_capability", {
+          detail: { enabled: false, available: false },
+        }),
+      ),
+    );
+
+    await expect(page.getByTestId("card-ai")).toHaveCount(0);
+    await expect(page.getByTestId("card-link")).toBeVisible();
   });
 });
