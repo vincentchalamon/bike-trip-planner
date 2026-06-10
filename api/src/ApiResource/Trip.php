@@ -152,7 +152,7 @@ use App\State\TripUpdateProcessor;
                 'fit' => ['application/vnd.ant.fit'],
             ],
             openapi: new Operation(summary: 'Download the full trip as a single GPX or FIT file containing all stages.'),
-            security: "is_granted('TRIP_VIEW', object)",
+            security: "is_granted('TRIP_VIEW', request.attributes.get('id'))",
             provider: TripGpxProvider::class,
         ),
         new Delete(

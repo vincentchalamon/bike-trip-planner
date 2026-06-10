@@ -34,6 +34,6 @@ test.describe("landing public header", () => {
     // the default 1280px viewport it must be visible.
     const request = page.getByTestId("public-top-bar-request");
     await expect(request).toBeVisible();
-    await expect(request).toHaveAttribute("href", "/login");
+    await expect(request).toHaveAttribute("href", "/#early-access");
   });
 });
