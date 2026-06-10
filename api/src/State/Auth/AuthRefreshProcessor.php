@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Auth\Auth;
 use App\Entity\RefreshToken;
+use App\Entity\User;
 use App\Repository\RefreshTokenRepository;
 use App\Security\AuthCookies;
 use Doctrine\ORM\EntityManagerInterface;
@@ -29,6 +30,13 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 final readonly class AuthRefreshProcessor implements ProcessorInterface
 {
     use AuthResponseHelper;
+
+    /**
+     * Seconds a just-rotated token stays usable so a reload race (the browser
+     * re-sends the pre-rotation cookie) resolves to its successor instead of a
+     * 401. Far longer than any reload round-trip, far shorter than the TTL.
+     */
+    private const int GRACE_SECONDS = 30;
 
     public function __construct(
         private RefreshTokenRepository $refreshTokenRepository,
@@ -67,13 +75,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         if (!$existing instanceof RefreshToken) {
             $this->logger->debug('Auth refresh invalid token');
 
-            $response = new JsonResponse(
-                ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
-                Response::HTTP_UNAUTHORIZED,
-            );
-            $response->headers->clearCookie(AuthCookies::REFRESH_TOKEN, '/', null, true, true, 'strict');
-
-            return $response;
+            return $this->unauthorized();
         }
 
         $user = $existing->getUser();
@@ -83,44 +85,25 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         if ($user->isDeleted()) {
             $this->logger->warning('Auth refresh attempted on a deleted account', ['user' => $user->getId()->toRfc4122()]);
 
-            $response = new JsonResponse(
-                ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
-                Response::HTTP_UNAUTHORIZED,
-            );
-            $response->headers->clearCookie(AuthCookies::REFRESH_TOKEN, '/', null, true, true, 'strict');
-
-            return $response;
+            return $this->unauthorized();
         }
 
-        // Atomic expire + rotate in a single transaction to prevent TOCTOU race
-        // and ensure no token is lost if the flush fails.
-        $expiredRows = 0;
-        $newRefreshToken = null;
+        // Resolve the live successor token. A refresh token is rotated on first
+        // use but kept valid for a short grace window: a rapid reload re-sends the
+        // pre-rotation cookie before the browser applied the Set-Cookie, and that
+        // request must resolve to the successor (idempotent) rather than a 401
+        // that clears the cookie and destroys the session (recette #649).
+        $replacedBy = $existing->getReplacedByToken();
+        $live = null !== $replacedBy
+            ? $this->refreshTokenRepository->findValidByToken($replacedBy)
+            : $this->rotate($existing, $user);
 
-        $this->entityManager->wrapInTransaction(function () use ($existing, $user, &$expiredRows, &$newRefreshToken): void {
-            $expiredRows = $this->entityManager->getConnection()->executeStatement(
-                "UPDATE refresh_token SET expires_at = '1970-01-01 00:00:00' WHERE id = :id AND expires_at > NOW()",
-                ['id' => $existing->getId()->toRfc4122()],
-            );
+        if (!$live instanceof RefreshToken) {
+            // The successor itself fell out of its grace window: genuinely stale.
+            $this->logger->debug('Auth refresh successor no longer valid');
 
-            if (0 === $expiredRows) {
-                return;
-            }
-
-            $this->entityManager->remove($existing);
-            $newRefreshToken = $this->refreshTokenRepository->createForUser($user);
-        });
-
-        if (0 === $expiredRows) {
-            $this->logger->debug('Auth refresh token already consumed (race)');
-
-            return new JsonResponse(
-                ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
-                Response::HTTP_UNAUTHORIZED,
-            );
+            return $this->unauthorized();
         }
-
-        \assert($newRefreshToken instanceof RefreshToken);
 
         $jwt = $this->jwtManager->create($user);
 
@@ -128,11 +111,70 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
         $responseData = ['token' => $jwt];
         if ($isCapacitor) {
-            $responseData['refresh_token'] = $newRefreshToken->getToken();
+            $responseData['refresh_token'] = $live->getToken();
         }
 
         $response = new JsonResponse($responseData);
-        $this->setRefreshTokenCookie($response, $newRefreshToken->getToken(), $newRefreshToken->getExpiresAt());
+        $this->setRefreshTokenCookie($response, $live->getToken(), $live->getExpiresAt());
+
+        return $response;
+    }
+
+    /**
+     * Rotates the token but KEEPS the old one for a short grace window pointing
+     * at its successor, instead of deleting it. A reload race that re-sends the
+     * pre-rotation token then resolves to the successor (idempotent) rather than
+     * a 401 that clears the cookie and destroys the session (recette #649).
+     */
+    private function rotate(RefreshToken $existing, User $user): ?RefreshToken
+    {
+        // Successor created in-memory only (createForUser persists, never flushes).
+        $successor = $this->refreshTokenRepository->createForUser($user);
+        $grace = new \DateTimeImmutable(\sprintf('+%d seconds', self::GRACE_SECONDS));
+        $claimed = 0;
+
+        $this->entityManager->wrapInTransaction(function () use ($existing, $successor, $grace, &$claimed): void {
+            // Atomic CAS: only the first concurrent caller flips replaced_by_token
+            // from NULL — this fences a double-rotation that would otherwise orphan
+            // a live 30-day successor (and ensures the INSERT shares the txn).
+            $claimed = $this->entityManager->getConnection()->executeStatement(
+                'UPDATE refresh_token SET replaced_by_token = :new, expires_at = :grace WHERE id = :id AND replaced_by_token IS NULL AND expires_at > NOW()',
+                [
+                    'new' => $successor->getToken(),
+                    'grace' => $grace->format('Y-m-d H:i:s'),
+                    'id' => $existing->getId()->toRfc4122(),
+                ],
+            );
+
+            if (1 === $claimed) {
+                // Won: mirror the claim onto the managed entity so the successor is
+                // flushed and the mapped property is assigned in PHP (PHPStan can't
+                // see Doctrine's hydration of replaced_by_token).
+                $existing->replaceWith($successor->getToken(), $grace);
+            } else {
+                // Lost: drop the pending successor so the flush can't INSERT it.
+                $this->entityManager->detach($successor);
+            }
+        });
+
+        if (1 === $claimed) {
+            return $successor;
+        }
+
+        // Lost the race: a concurrent request rotated first. Follow its chain.
+        $this->entityManager->refresh($existing);
+        $replacedBy = $existing->getReplacedByToken();
+
+        return null !== $replacedBy ? $this->refreshTokenRepository->findValidByToken($replacedBy) : null;
+    }
+
+    private function unauthorized(): JsonResponse
+    {
+        $response = new JsonResponse(
+            ['error' => $this->translator->trans('auth.error.refresh_invalid', [], 'auth')],
+            Response::HTTP_UNAUTHORIZED,
+        );
+        $response->headers->clearCookie(AuthCookies::REFRESH_TOKEN, '/', null, true, true, 'strict');
 
         return $response;
     }

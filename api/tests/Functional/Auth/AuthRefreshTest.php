@@ -123,17 +123,45 @@ final class AuthRefreshTest extends ApiTestCase
     }
 
     #[Test]
-    public function refreshTokenCannotBeReusedAfterRotation(): void
+    public function refreshWithinGraceWindowReturnsSameSuccessor(): void
     {
+        // A rapid reload re-sends the pre-rotation token. Within the grace window
+        // it must return the SAME successor (idempotent) and keep the session,
+        // instead of the 401 that previously logged the user out (recette #649).
         $this->createUserWithRefreshToken('reuse@example.com', 'single-use-token');
 
-        // First refresh should succeed
-        $this->sendRefreshRequest('single-use-token');
+        $first = $this->sendRefreshRequest('single-use-token');
+        $this->assertResponseStatusCodeSame(200);
+        $successor = $first->toArray(false)['refresh_token'];
+
+        $second = $this->sendRefreshRequest('single-use-token');
+        $this->assertResponseStatusCodeSame(200);
+        $this->assertSame($successor, $second->toArray(false)['refresh_token']);
+    }
+
+    #[Test]
+    public function refreshCutsRotatedTokenToGraceWindow(): void
+    {
+        // The old token is kept (so a reload race resolves to its successor) but
+        // its lifetime is cut to the grace window — it must not survive the full
+        // 30-day TTL, which would widen the replay surface.
+        $this->createUserWithRefreshToken('grace@example.com', 'rotated-token');
+
+        $this->sendRefreshRequest('rotated-token');
         $this->assertResponseStatusCodeSame(200);
 
-        // Second refresh with the same token should fail (token was rotated)
-        $this->sendRefreshRequest('single-use-token');
-        $this->assertResponseStatusCodeSame(401);
+        $em = $this->getEntityManager();
+        $em->clear();
+
+        $old = $em->getRepository(RefreshToken::class)->findOneBy(['token' => 'rotated-token']);
+
+        $this->assertNotNull($old, 'Rotated token is kept for reload-race idempotency');
+        $this->assertNotNull($old->getReplacedByToken(), 'Rotated token points at its successor');
+        $this->assertLessThan(
+            new \DateTimeImmutable('+120 seconds'),
+            $old->getExpiresAt(),
+            'Rotated token lifetime is cut to the grace window, not the full TTL',
+        );
     }
 
     #[Test]
