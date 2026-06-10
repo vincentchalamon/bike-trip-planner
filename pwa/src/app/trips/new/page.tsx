@@ -91,7 +91,16 @@ function WizardContent() {
   // app logic — e.g. analysis is reached only after the user clicks
   // "Lancer l'analyse"). We rely on the store's own guards (see `goToStep`).
   useEffect(() => {
-    if (requestedStep === null) return;
+    if (requestedStep === null) {
+      // Bare `/trips/new` (e.g. the header "Nouveau voyage" link) is an explicit
+      // fresh-start intent: reset a stale wizard instead of letting the
+      // store→URL effect re-pin a leftover `?step` and trap the user on the
+      // analysis/loading screen (recette #649).
+      if (currentStepRef.current !== "preparation") {
+        navigateToStep("preparation");
+      }
+      return;
+    }
     // Read the latest store step from a ref so this effect only re-runs when
     // the URL changes — not when the store advances asynchronously.
     const current = currentStepRef.current;

@@ -21,9 +21,10 @@ interface WizardFixtures {
   wizardPage: Page;
   injectWizardEvent: (event: MercureEvent) => Promise<void>;
   /**
-   * Simulate `isProcessing=true` via the TripPlanner test hook. This triggers
-   * the same stepper transition that a real URL submit would (preparation +
-   * preview → analysis) without navigating away from /trips/new.
+   * Drive the stepper to the "analysis" step via the TripPlanner test hooks
+   * (analysis started + processing), without navigating away from /trips/new.
+   * A real URL submit now parks on "preview"; analysis follows "Lancer l'analyse"
+   * (recette #649).
    */
   simulateProcessing: () => Promise<void>;
 }
@@ -48,7 +49,13 @@ const test = base.extend<WizardFixtures>({
 
   simulateProcessing: async ({ wizardPage }, use) => {
     await use(async () => {
+      // Reaching "analysis" now requires the analysis phase to have started
+      // (the user clicked "Lancer l'analyse"); processing alone parks on
+      // "preview" (recette #649). Drive both hooks to reach the analysis state.
       await wizardPage.evaluate(() => {
+        window.dispatchEvent(
+          new CustomEvent("__test_set_analysis_started", { detail: true }),
+        );
         window.dispatchEvent(
           new CustomEvent("__test_set_processing", { detail: true }),
         );
