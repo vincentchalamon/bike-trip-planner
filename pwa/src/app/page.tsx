@@ -1,57 +1,28 @@
-"use client";
-
-import { Suspense, useEffect, useRef } from "react";
-import { useAuthStore } from "@/store/auth-store";
-import { HydrationBoundary } from "@/components/hydration-boundary";
-import { TripPlanner } from "@/components/trip-planner";
-import { TripPlannerErrorBoundary } from "@/components/trip-planner-error-boundary";
-import { LandingPage } from "@/components/landing-page";
+import { Suspense } from "react";
+import { HomeContent } from "@/components/home-content";
 
 /**
  * Home page (dual-state: anonymous landing / authenticated dashboard).
  *
- * `/` is public, so it runs its own silent auth check on mount. The landing is
- * rendered on the FIRST (server) pass — instead of the previous `null` — so the
- * SSR HTML carries the landing's `<main>` + `<h1>` (audit 35.2 A11Y-001/002 +
- * LH-A11Y, and a better LCP). Authenticated users briefly see the landing during
- * the silent refresh, then swap to the dashboard. (A `cookies()`-based hint would
- * avoid that flash but makes the route dynamic, which is incompatible with the
- * static mobile/Capacitor `output: export` build.)
+ * On the web (standalone) the server reads the refresh-token cookie so a
+ * logged-in user is never shown the landing (the browser-only dashboard then
+ * renders on mount), instead of flashing the landing while `silentRefresh`
+ * runs. The static mobile/Capacitor build (`output: export`) cannot read
+ * cookies — and a `cookies()` call would break that build — so the read is
+ * guarded behind the build target; mobile falls back to the client-side silent
+ * refresh (`initialAuthed = null`).
  */
-function HomeContent() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const checkStarted = useRef(false);
+export default async function Page() {
+  let initialAuthed: boolean | null = null;
 
-  useEffect(() => {
-    if (checkStarted.current) return;
-    checkStarted.current = true;
-    if (isAuthenticated) return;
-    void useAuthStore.getState().silentRefresh();
-  }, [isAuthenticated]);
-
-  if (!isAuthenticated) {
-    return (
-      <Suspense fallback={null}>
-        <LandingPage />
-      </Suspense>
-    );
+  if (process.env.NEXT_PUBLIC_IS_MOBILE_BUILD !== "1") {
+    const { cookies } = await import("next/headers");
+    initialAuthed = (await cookies()).has("refresh_token");
   }
 
   return (
-    <HydrationBoundary>
-      <TripPlannerErrorBoundary>
-        <Suspense fallback={null}>
-          <TripPlanner />
-        </Suspense>
-      </TripPlannerErrorBoundary>
-    </HydrationBoundary>
-  );
-}
-
-export default function Page() {
-  return (
     <Suspense fallback={null}>
-      <HomeContent />
+      <HomeContent initialAuthed={initialAuthed} />
     </Suspense>
   );
 }

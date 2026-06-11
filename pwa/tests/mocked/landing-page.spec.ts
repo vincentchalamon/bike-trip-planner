@@ -167,6 +167,86 @@ test.describe("Landing page", () => {
         timeout: 5000,
       });
     });
+
+    test("session cookie shows the dashboard, not the landing (#649)", async ({
+      page,
+    }, testInfo) => {
+      // Seed the refresh-token cookie the backend sets on a logged-in user, so
+      // the server (not the client) decides what `/` renders.
+      const baseURL = testInfo.project.use.baseURL ?? "https://localhost";
+      await page
+        .context()
+        .addCookies([
+          { name: "refresh_token", value: "seed-session", url: baseURL },
+        ]);
+
+      await page.route("**/auth/refresh", (route, request) => {
+        if (request.method() !== "POST") return route.fallback();
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+        });
+      });
+      await page.route(
+        (url) => url.pathname === "/trips",
+        (route, request) => {
+          if (request.method() !== "GET") return route.fallback();
+          return route.fulfill({
+            status: 200,
+            contentType: "application/ld+json",
+            body: JSON.stringify({
+              "@context": "/contexts/Trip",
+              "@id": "/trips",
+              "@type": "hydra:Collection",
+              "hydra:totalItems": 0,
+              "hydra:member": [],
+              member: [],
+              totalItems: 0,
+            }),
+          });
+        },
+      );
+      await page.route("**/.well-known/mercure*", (route) => route.abort());
+
+      // Assert on the raw SSR HTML (the navigation response, before any JS) so
+      // this pins the SERVER-side decision — not just the final client DOM,
+      // which the client path alone would also produce. The logged-in user then
+      // mounts the dashboard, and the landing is never shown (#649).
+      const response = await page.goto("/");
+      if (!response) throw new Error("no navigation response for /");
+      expect(response.ok()).toBe(true);
+      expect(await response.text()).not.toContain('data-testid="landing-page"');
+      await expect(page.getByTestId("card-selection")).toBeVisible({
+        timeout: 5000,
+      });
+      await expect(page.getByTestId("landing-page")).not.toBeVisible();
+    });
+
+    test("stale cookie (refresh fails) falls back to the landing (#649)", async ({
+      page,
+    }, testInfo) => {
+      // The server hint says "authenticated" (cookie present) but silentRefresh
+      // fails: once the check resolves, the store's auth state wins and the
+      // landing is shown instead of leaving the user on an empty dashboard.
+      const baseURL = testInfo.project.use.baseURL ?? "https://localhost";
+      await page
+        .context()
+        .addCookies([
+          { name: "refresh_token", value: "stale-token", url: baseURL },
+        ]);
+
+      await page.route("**/auth/refresh", (route, request) => {
+        if (request.method() !== "POST") return route.fallback();
+        return route.fulfill({ status: 401, body: "" });
+      });
+      await page.route("**/.well-known/mercure*", (route) => route.abort());
+
+      await page.goto("/");
+      await expect(page.getByTestId("landing-page")).toBeVisible({
+        timeout: 5000,
+      });
+    });
   });
 
   // ── Responsive — mobile viewport ─────────────────────────────────────────

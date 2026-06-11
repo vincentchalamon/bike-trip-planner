@@ -39,6 +39,13 @@ export async function scrollLocatorIntoCenter(locator: Locator): Promise<void> {
  */
 export async function expandLinkCard(page: Page): Promise<void> {
   const linkCard = page.getByTestId("card-link");
+  // The card-selection screen can still be hydrating right after a navigation
+  // (e.g. `/?link=...` resolves the silent refresh before the welcome screen
+  // mounts), so give the card a moment to appear before deciding it is absent.
+  // Without this, an instant isVisible() check no-ops and the URL input never
+  // shows — the recurring flaky `?link=` recette scenario. Absence is still
+  // tolerated (after a trip loads, the welcome screen is gone).
+  await linkCard.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
   if (!(await linkCard.isVisible().catch(() => false))) return;
   const expanded = await linkCard.getAttribute("data-expanded");
   if (expanded !== "true") await linkCard.click();
