@@ -82,7 +82,6 @@ export function GpxLogo({ className }: LogoProps) {
         fontWeight="700"
         fill="currentColor"
         stroke="none"
-        fontFamily="system-ui, sans-serif"
       >
         GPX
       </text>
