@@ -11,6 +11,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Mapper\StageResponseMapper;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
@@ -18,7 +19,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
 /**
  * @implements ProcessorInterface<null, StageResponse>
@@ -28,7 +28,7 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
-        private ObjectMapperInterface $objectMapper,
+        private StageResponseMapper $stageResponseMapper,
         private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
     ) {
@@ -97,6 +97,6 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
             $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }
 
-        return $this->objectMapper->map($restDay, StageResponse::class);
+        return $this->stageResponseMapper->map($restDay);
     }
 }

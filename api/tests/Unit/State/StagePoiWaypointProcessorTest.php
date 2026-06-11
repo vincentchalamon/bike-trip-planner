@@ -8,10 +8,11 @@ use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\StagePoiWaypointRequest;
-use App\ApiResource\StageResponse;
 use App\ApiResource\TripRequest;
-use App\Message\RecalculateRouteSegment;
+use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Mapper\StageResponseMapper;
+use App\Message\RecalculateRouteSegment;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StagePoiWaypointProcessor;
 use App\State\TripLocker;
@@ -24,7 +25,6 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
 #[AllowMockObjectsWithoutExpectations]
 final class StagePoiWaypointProcessorTest extends TestCase
@@ -33,7 +33,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
 
     private MockObject&MessageBusInterface $messageBus;
 
-    private MockObject&ObjectMapperInterface $objectMapper;
+    private StageResponseMapper $stageResponseMapper;
 
     private StagePoiWaypointProcessor $processor;
 
@@ -42,7 +42,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
-        $this->objectMapper = $this->createMock(ObjectMapperInterface::class);
+        $this->stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('current')->willReturn(1);
@@ -54,7 +54,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
         $this->processor = new StagePoiWaypointProcessor(
             $this->tripStateManager,
             $this->messageBus,
-            $this->objectMapper,
+            $this->stageResponseMapper,
             $generationTracker,
             new TripLocker(),
         );
@@ -86,8 +86,6 @@ final class StagePoiWaypointProcessorTest extends TestCase
 
             return new Envelope($msg);
         });
-
-        $this->objectMapper->method('map')->willReturn(new StageResponse());
 
         $data = new StagePoiWaypointRequest(waypointLat: 48.2, waypointLon: 2.3);
         $this->processor->process($data, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
@@ -139,7 +137,7 @@ final class StagePoiWaypointProcessorTest extends TestCase
         $processor = new StagePoiWaypointProcessor(
             $tripStateManager,
             $this->createStub(MessageBusInterface::class),
-            $this->createStub(ObjectMapperInterface::class),
+            new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
             $generationTracker,
             new TripLocker(),
         );

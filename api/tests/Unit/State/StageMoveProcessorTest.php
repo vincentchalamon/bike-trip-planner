@@ -8,9 +8,10 @@ use ApiPlatform\Metadata\Patch;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
-use App\ApiResource\StageResponse;
 use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageMoveProcessor;
 use App\State\TripLocker;
@@ -19,7 +20,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
 #[AllowMockObjectsWithoutExpectations]
 final class StageMoveProcessorTest extends TestCase
@@ -38,8 +38,7 @@ final class StageMoveProcessorTest extends TestCase
         $tripStateManager->method('getRequest')->willReturn($lockedRequest);
         $tripStateManager->method('getStages')->willReturn([$stage0, $stage1]);
 
-        $objectMapper = $this->createStub(ObjectMapperInterface::class);
-        $objectMapper->method('map')->willReturn(new StageResponse());
+        $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('increment')->willReturn(1);
@@ -47,7 +46,7 @@ final class StageMoveProcessorTest extends TestCase
         $processor = new StageMoveProcessor(
             $tripStateManager,
             $this->createStub(MessageBusInterface::class),
-            $objectMapper,
+            $stageResponseMapper,
             $generationTracker,
             new TripLocker(),
         );

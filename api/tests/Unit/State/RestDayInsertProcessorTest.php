@@ -7,12 +7,13 @@ namespace App\Tests\Unit\State;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
-use App\ApiResource\StageResponse;
 use App\ApiResource\TripRequest;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
+use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\RestDayInsertProcessor;
 use App\State\TripLocker;
@@ -25,7 +26,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
 #[AllowMockObjectsWithoutExpectations]
 final class RestDayInsertProcessorTest extends TestCase
@@ -34,7 +34,7 @@ final class RestDayInsertProcessorTest extends TestCase
 
     private MockObject&MessageBusInterface $messageBus;
 
-    private MockObject&ObjectMapperInterface $objectMapper;
+    private StageResponseMapper $stageResponseMapper;
 
     private RestDayInsertProcessor $processor;
 
@@ -43,7 +43,7 @@ final class RestDayInsertProcessorTest extends TestCase
     {
         $this->tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
         $this->messageBus = $this->createMock(MessageBusInterface::class);
-        $this->objectMapper = $this->createMock(ObjectMapperInterface::class);
+        $this->stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('increment')->willReturn(2);
@@ -51,7 +51,7 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->processor = new RestDayInsertProcessor(
             $this->tripStateManager,
             $this->messageBus,
-            $this->objectMapper,
+            $this->stageResponseMapper,
             $generationTracker,
             new TripLocker(),
         );
@@ -137,8 +137,6 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->tripStateManager->method('getRequest')->willReturn(new TripRequest());
         $this->messageBus->method('dispatch')->willReturnCallback(static fn (object $msg): Envelope => new Envelope($msg));
 
-        $this->objectMapper->method('map')->willReturn(new StageResponse());
-
         $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
 
         $this->assertNotNull($capturedStages);
@@ -165,18 +163,11 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->tripStateManager->method('getRequest')->willReturn(new TripRequest());
         $this->messageBus->method('dispatch')->willReturnCallback(static fn (object $msg): Envelope => new Envelope($msg));
 
-        $expectedResponse = new StageResponse();
-        $this->objectMapper->expects($this->once())
-            ->method('map')
-            ->with(
-                $this->callback(static fn (Stage $s): bool => $s->isRestDay && 'trip-1' === $s->tripId),
-                StageResponse::class,
-            )
-            ->willReturn($expectedResponse);
-
         $result = $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
 
-        $this->assertSame($expectedResponse, $result);
+        // The response is built from the inserted rest day.
+        $this->assertTrue($result->isRestDay);
+        $this->assertSame('trip-1', $result->trip->id);
     }
 
     #[Test]
@@ -198,8 +189,6 @@ final class RestDayInsertProcessorTest extends TestCase
 
                 return new Envelope($msg);
             });
-
-        $this->objectMapper->method('map')->willReturn(new StageResponse());
 
         // Insert after index 0 → rest day at position 1, affected indices = [1, 2, 3]
         $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
@@ -234,8 +223,6 @@ final class RestDayInsertProcessorTest extends TestCase
                 return new Envelope($msg);
             });
 
-        $this->objectMapper->method('map')->willReturn(new StageResponse());
-
         $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
 
         $weatherMessages = array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof FetchWeather);
@@ -266,8 +253,6 @@ final class RestDayInsertProcessorTest extends TestCase
 
                 return new Envelope($msg);
             });
-
-        $this->objectMapper->method('map')->willReturn(new StageResponse());
 
         $this->processor->process(null, new Post(), ['tripId' => 'trip-1', 'index' => 0]);
 

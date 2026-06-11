@@ -8,12 +8,13 @@ use ApiPlatform\Metadata\Patch;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\StageRequest;
-use App\ApiResource\StageResponse;
 use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
+use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageUpdateProcessor;
 use App\State\TripLocker;
@@ -22,7 +23,6 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
 final class StageUpdateProcessorTest extends TestCase
 {
@@ -116,8 +116,7 @@ final class StageUpdateProcessorTest extends TestCase
         $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
-        $objectMapper = $this->createStub(ObjectMapperInterface::class);
-        $objectMapper->method('map')->willReturn(new StageResponse());
+        $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('increment')->willReturn(2);
@@ -128,7 +127,7 @@ final class StageUpdateProcessorTest extends TestCase
             $distanceCalculator,
             $elevationCalculator,
             $routeSimplifier,
-            $objectMapper,
+            $stageResponseMapper,
             $generationTracker,
             new TripLocker(),
         );
@@ -201,8 +200,7 @@ final class StageUpdateProcessorTest extends TestCase
         $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
-        $objectMapper = $this->createStub(ObjectMapperInterface::class);
-        $objectMapper->method('map')->willReturn(new StageResponse());
+        $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('increment')->willReturn(2);
@@ -213,7 +211,7 @@ final class StageUpdateProcessorTest extends TestCase
             $distanceCalculator,
             $elevationCalculator,
             $routeSimplifier,
-            $objectMapper,
+            $stageResponseMapper,
             $generationTracker,
             new TripLocker(),
         );
@@ -271,8 +269,7 @@ final class StageUpdateProcessorTest extends TestCase
         $messageBus = $this->createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
-        $objectMapper = $this->createStub(ObjectMapperInterface::class);
-        $objectMapper->method('map')->willReturn(new StageResponse());
+        $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('increment')->willReturn(2);
@@ -283,7 +280,7 @@ final class StageUpdateProcessorTest extends TestCase
             $distanceCalculator,
             $elevationCalculator,
             $routeSimplifier,
-            $objectMapper,
+            $stageResponseMapper,
             $generationTracker,
             new TripLocker(),
         );
@@ -321,7 +318,7 @@ final class StageUpdateProcessorTest extends TestCase
             $this->createStub(DistanceCalculatorInterface::class),
             $this->createStub(ElevationCalculatorInterface::class),
             $this->createStub(RouteSimplifierInterface::class),
-            $this->createStub(ObjectMapperInterface::class),
+            new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
             $this->createStub(TripGenerationTrackerInterface::class),
             new TripLocker(),
         );
