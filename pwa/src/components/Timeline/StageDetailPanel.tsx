@@ -117,8 +117,10 @@ export function StageDetailPanel({
 
   // Scroll-spy: mark a stage active as soon as it reaches the top of the
   // viewport while scrolling (recette #649). An IntersectionObserver with a
-  // top-anchored root margin reports the day section crossing the sticky-header
-  // line; the closest one above that line becomes the selected stage.
+  // top-anchored root margin defines a thin band just below the sticky header;
+  // the topmost section currently inside that band becomes the selected stage.
+  // Visibility is tracked in a Map because the observer callback only reports
+  // sections whose intersection *changed* — not every visible one.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -127,22 +129,33 @@ export function StageDetailPanel({
     );
     if (sections.length === 0) return;
 
+    const visibleTops = new Map<number, number>();
+
     const observer = new IntersectionObserver(
       (entries) => {
-        // Pick the entry whose top is closest to (but past) the anchor line.
-        let best: { index: number; top: number } | null = null;
         for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
           const index = Number(
             (entry.target as HTMLElement).dataset.stageIndex,
           );
-          const top = entry.boundingClientRect.top;
-          if (best === null || top > best.top) best = { index, top };
+          if (entry.isIntersecting) {
+            visibleTops.set(index, entry.boundingClientRect.top);
+          } else {
+            visibleTops.delete(index);
+          }
         }
-        if (best === null) return;
-        if (best.index === prevSelectedIndexRef.current) return;
+        if (visibleTops.size === 0) return;
+        // Topmost section inside the band = the one closest to the anchor line.
+        let bestIndex = -1;
+        let bestTop = Number.POSITIVE_INFINITY;
+        for (const [index, top] of visibleTops) {
+          if (top < bestTop) {
+            bestTop = top;
+            bestIndex = index;
+          }
+        }
+        if (bestIndex < 0 || bestIndex === prevSelectedIndexRef.current) return;
         fromScrollSpyRef.current = true;
-        setSelectedStageIndex(best.index);
+        setSelectedStageIndex(bestIndex);
       },
       // Anchor near the top of the viewport (below the sticky header) so the
       // stage occupying that band is the "current" one.
