@@ -2,9 +2,23 @@
 
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Bike, ArrowUp, ArrowDown, Clock, Wallet, Pencil } from "lucide-react";
+import {
+  Bike,
+  Mountain,
+  ArrowUp,
+  ArrowDown,
+  Clock,
+  Wallet,
+  Pencil,
+  Info,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { StageDistanceEditor } from "@/components/stage-distance-editor";
 import { DiffHighlight } from "@/components/diff-highlight";
 import { computeStageTimes, formatDecimalHour } from "@/lib/travel-time";
@@ -75,6 +89,12 @@ interface StageStatsRowProps {
   departureHour?: number;
   /** Average riding speed (km/h) from trip configuration. */
   averageSpeedKmh?: number;
+  /**
+   * Optional extra cell appended to the grid (recette #649) — used in the
+   * full-width list layout to surface the compact difficulty pill at the same
+   * width as the other stat cells.
+   */
+  difficultySlot?: ReactNode;
 }
 
 /**
@@ -98,6 +118,7 @@ export function StageStatsRow({
   onDistanceChange,
   departureHour,
   averageSpeedKmh,
+  difficultySlot,
 }: StageStatsRowProps) {
   const t = useTranslations("stageStats");
   const tStage = useTranslations("stage");
@@ -154,7 +175,9 @@ export function StageStatsRow({
       className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3"
       data-testid="stage-stats-row"
     >
-      {/* Distance — editable inline */}
+      {/* Distance — editable inline. The pencil sits next to the value (not the
+          label) and its tooltip explains the ripple effect on other stages
+          (recette #649). */}
       <DiffHighlight
         stageIndex={stageIndex}
         field="distance"
@@ -164,21 +187,6 @@ export function StageStatsRow({
           label={t("distance")}
           icon={<Bike className="h-3.5 w-3.5 text-brand" />}
           testId="stat-distance"
-          trailing={
-            !readOnly && onDistanceChange && !editingDistance ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 text-muted-icon cursor-pointer"
-                onClick={() => setEditingDistance(true)}
-                aria-label={tStage("editDistance")}
-                title={tStage("editDistance")}
-                data-testid="stat-distance-edit"
-              >
-                <Pencil className="h-3 w-3" />
-              </Button>
-            ) : undefined
-          }
           value={
             editingDistance ? (
               <StageDistanceEditor
@@ -190,11 +198,32 @@ export function StageStatsRow({
                 onCancel={() => setEditingDistance(false)}
               />
             ) : distance !== null ? (
-              <span>
-                {Number.isInteger(distance) ? distance : distance.toFixed(1)}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">
-                  km
+              <span className="flex items-center gap-1.5">
+                <span>
+                  {Number.isInteger(distance) ? distance : distance.toFixed(1)}
+                  <span className="ml-1 text-sm font-normal text-muted-foreground">
+                    km
+                  </span>
                 </span>
+                {!readOnly && onDistanceChange && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-icon cursor-pointer"
+                        onClick={() => setEditingDistance(true)}
+                        aria-label={tStage("editDistance")}
+                        data-testid="stat-distance-edit"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[15rem]">
+                      {t("distanceEditTooltip")}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </span>
             ) : (
               <Skeleton className="w-16 h-5" />
@@ -203,16 +232,19 @@ export function StageStatsRow({
         />
       </DiffHighlight>
 
-      {/* Elevation gain (D+) with elevation loss (D-) hint */}
+      {/* Elevation — mountain icon in the title (recette #649). The red up
+          arrow sits next to the positive gain, mirroring the blue down arrow
+          next to the negative loss in the hint. */}
       <StatCell
         label={t("elevation")}
-        icon={<ArrowUp className="h-3.5 w-3.5 text-red-500" />}
+        icon={<Mountain className="h-3.5 w-3.5 text-orange-500" />}
         testId="stat-elevation"
         value={
           elevation !== null ? (
-            <span>
+            <span className="inline-flex items-center gap-1">
+              <ArrowUp className="h-3.5 w-3.5 text-red-500" aria-hidden="true" />
               {Math.round(elevation)}
-              <span className="ml-1 text-sm font-normal text-muted-foreground">
+              <span className="text-sm font-normal text-muted-foreground">
                 m
               </span>
             </span>
@@ -256,11 +288,29 @@ export function StageStatsRow({
         }
       />
 
-      {/* Budget — per-stage min/max */}
+      {/* Budget — per-stage min/max. The "+ lodging" hint was dropped; an info
+          icon next to the label explains the calculation on hover (#649). */}
       <StatCell
         label={t("budget")}
         icon={<Wallet className="h-3.5 w-3.5 text-emerald-500" />}
         testId="stat-budget"
+        trailing={
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center text-muted-foreground hover:text-foreground transition-colors cursor-help"
+                aria-label={t("budgetTooltip")}
+                data-testid="stat-budget-info"
+              >
+                <Info className="h-3.5 w-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[15rem]">
+              {t("budgetTooltip")}
+            </TooltipContent>
+          </Tooltip>
+        }
         value={
           isProcessing && distance === null ? (
             <Skeleton className="w-20 h-5" />
@@ -275,8 +325,11 @@ export function StageStatsRow({
             </span>
           )
         }
-        hint={<span>{t("budgetHint", { meals })}</span>}
       />
+
+      {/* Optional difficulty cell — appended in the full-width list layout so it
+          lines up with the other stat cells (recette #649). */}
+      {difficultySlot}
     </div>
   );
 }

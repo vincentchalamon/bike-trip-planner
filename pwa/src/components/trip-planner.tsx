@@ -22,11 +22,11 @@ import { TripAiOverview } from "@/components/trip-ai-overview";
 import { AiUnavailableNotice } from "@/components/ai-unavailable-notice";
 import { TripHeader } from "@/components/trip-header";
 import { AiBubble } from "@/components/ai-bubble";
-import { StageProgressBar } from "@/components/stage-progress-bar";
 import { RoadbookMasterDetail } from "@/components/Timeline";
 import { ConfigPanel } from "@/components/config-panel";
 import { HelpModal } from "@/components/help-modal";
 import { TopBar } from "@/components/top-bar";
+import { TripActions } from "@/components/trip-actions";
 import { ShareModal } from "@/components/share-modal";
 import dynamic from "next/dynamic";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
@@ -119,6 +119,7 @@ export function TripPlanner({
     handleInsertRestDay,
     handleAddPoiWaypoint,
     handleDuplicateTrip,
+    handleDeleteTrip,
     handleLaunchAnalysis,
     handleShareTrip,
     isShareModalOpen,
@@ -440,6 +441,12 @@ export function TripPlanner({
   // distance, pacing, etc.) don't re-trigger the progress screen.
   const isAnalysing =
     !!trip && isProcessing && isAnalysisPhaseActive && activeStages.length > 0;
+  // Acte 3 — the trip is fully loaded (stages computed and the analysis pass
+  // has run). Used to hide the creation stepper there (recette #649). Excludes
+  // the loading / preview / analysis sub-states so the stepper stays visible
+  // throughout the creation flow.
+  const isTripLoaded =
+    !!trip && hasAnalysisStarted && activeStages.length > 0 && !isAnalysing;
   const clearTripAndReset = useCallback(() => {
     clearTrip();
     useUiStore.getState().setProcessing(false);
@@ -453,14 +460,10 @@ export function TripPlanner({
       onDrop={handleGpxUpload}
       disabled={isProcessing || !!trip || !isOnline}
     >
-      {/* Desktop top bar (#384) — brand, nav tabs, undo/redo + share + config
-          (trip detail only), help, language, theme, profile. */}
-      <TopBar
-        onShare={() => setShareModalOpen(true)}
-        onOpenConfig={() => setConfigPanelOpen(true)}
-        tripId={trip?.id}
-        tripTitle={trip?.title}
-      />
+      {/* Desktop top bar (#384) — brand, nav tabs, help, language, theme,
+          profile. Trip-specific actions now sit next to the trip title
+          (recette #649). */}
+      <TopBar />
 
       <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative overflow-x-clip">
         {/* Skip link */}
@@ -474,12 +477,15 @@ export function TripPlanner({
         {/* Offline status banner */}
         <OfflineBanner />
 
-        {/* Stepper — visible in all planning states (welcome, loading, trip loaded).
+        {/* Stepper — visible during the creation flow (welcome, loading,
+            preview, analysis). Hidden once the trip is fully loaded (Acte 3):
+            the creation progress bar no longer serves a purpose there and was
+            confused with the horizontal day timeline on scroll (recette #649).
             Hidden on landing page, FAQ and trips list since those pages don't
             render TripPlanner at all. The wizard at `/trips/new` renders its
             own {@link WizardStepper} synced with the URL and passes
             `hideStepper` to suppress this internal one. */}
-        {!hideStepper && (
+        {!hideStepper && !isTripLoaded && (
           <div className="mb-8 pb-6" data-testid="stepper-wrapper">
             <Stepper />
           </div>
@@ -614,34 +620,27 @@ export function TripPlanner({
               />
             )}
 
-            {/* Close button — top-right corner */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-4 md:right-6 h-8 w-8 z-10 text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                if (onClose) {
-                  onClose();
-                } else {
-                  clearTripAndReset();
-                  router.push("/");
-                }
-              }}
-              title={t("planner.closeTrip")}
-              aria-label={t("planner.closeTrip")}
-              data-testid="close-trip-button"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-
-            {/* Trip title — actions now live in the global top bar (#384) */}
-            <div className="min-w-0 text-center md:text-left">
-              <TripHeader
-                title={trip.title}
-                onTitleChange={handleTitleChange}
-                showTitleSuggestion={totalDistance !== null}
-                isTitleLoading={isProcessing && totalDistance === null}
-              />
+            {/* Trip title + actions — the per-trip toolbar (downloads,
+                undo/redo, share, config) sits on the title line, aligned to
+                the right (recette #649). The redundant close button has been
+                removed. */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 text-center md:text-left">
+                <TripHeader
+                  title={trip.title}
+                  onTitleChange={handleTitleChange}
+                  showTitleSuggestion={totalDistance !== null}
+                  isTitleLoading={isProcessing && totalDistance === null}
+                />
+              </div>
+              <div className="shrink-0">
+                <TripActions
+                  tripId={trip.id}
+                  tripTitle={trip.title}
+                  onShare={() => setShareModalOpen(true)}
+                  onOpenConfig={() => setConfigPanelOpen(true)}
+                />
+              </div>
             </div>
 
             {/* Locked banner */}
@@ -668,6 +667,7 @@ export function TripPlanner({
                 elevationPenalty={elevationPenalty}
                 maxDistancePerDay={maxDistancePerDay}
                 averageSpeed={averageSpeed}
+                showNoDatesBanner={!isLocked}
               />
 
               {/* Trip-level AI overview (issue #305) — narrative + patterns +
@@ -692,31 +692,26 @@ export function TripPlanner({
               )}
 
               {/* Fixed header — visible after scrolling past the sentinel.
-                Contains the segmented progress bar (timeline/split only) and
-                the view mode toggle (all modes), so both remain accessible
-                while the user is deep in the timeline. */}
-              <div
-                ref={fixedHeaderRef}
-                className={[
-                  "fixed top-0 left-0 right-0 z-20 bg-background border-b border-border",
-                  "transition-transform duration-200",
-                  isScrolledPast ? "" : "-translate-y-full pointer-events-none",
-                ].join(" ")}
-              >
-                <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-2 flex flex-col gap-1">
-                  {/* Progress bar — hidden in map-only mode */}
-                  {(!hasMap || viewMode !== "map") && (
-                    <div className="w-full">
-                      <StageProgressBar />
-                    </div>
-                  )}
-                  {hasMap && (
-                    <div className="flex justify-end">
-                      <ViewModeToggle testId="view-mode-toggle-sticky" />
-                    </div>
-                  )}
+                Carries the view mode toggle so it stays reachable while the
+                user is deep in the timeline. The day progress bar is no longer
+                duplicated here: it lives above the days (and stays sticky)
+                inside the roadbook itself (recette #649). */}
+              {hasMap && (
+                <div
+                  ref={fixedHeaderRef}
+                  className={[
+                    "fixed top-0 left-0 right-0 z-20 bg-background border-b border-border",
+                    "transition-transform duration-200",
+                    isScrolledPast
+                      ? ""
+                      : "-translate-y-full pointer-events-none",
+                  ].join(" ")}
+                >
+                  <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-2 flex justify-end">
+                    <ViewModeToggle testId="view-mode-toggle-sticky" />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Split view: timeline (left) + map (right, sticky) */}
               {/* Swipe handlers enable left/right swipe between map and timeline on mobile */}
@@ -763,7 +758,6 @@ export function TripPlanner({
                       onAccommodationHover={handleAccommodationHover}
                       newAccKey={newAccKey}
                       onClearNewAcc={clearNewAccKey}
-                      onOpenConfig={() => setConfigPanelOpen(true)}
                     />
                   </div>
                 )}
@@ -841,8 +835,10 @@ export function TripPlanner({
           onAccommodationTypesChange={handleAccommodationTypesChange}
           readOnly={isLocked || !isOnline}
           hasTripLoaded={!!trip}
+          tripTitle={trip?.title}
           onDuplicate={handleDuplicateTrip}
           onShare={handleShareTrip}
+          onDelete={handleDeleteTrip}
         />
 
         {/* Unified help modal (shortcuts + FAQ) */}

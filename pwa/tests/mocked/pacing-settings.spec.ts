@@ -159,32 +159,28 @@ test.describe("Pacing settings", () => {
     ).toBeVisible();
   });
 
-  test("pacing settings are preserved after submitting a new trip", async ({
+  test("pacing settings persist in the store across config open/close", async ({
     mockedPage,
     submitUrl,
     injectEvent,
   }) => {
-    // The config gear only renders on a trip detail route (#384), so load a
-    // trip first, then open the panel and select the Débutant preset.
+    // The config gear only renders once a trip is loaded, so load a trip first,
+    // then open the panel and select the Débutant preset.
     await submitUrl();
     await injectEvent(routeParsedEvent());
     await openConfigPanel(mockedPage);
     await mockedPage
       .getByRole("button", { name: "Appliquer le profil Débutant" })
       .click();
-    // Close config panel
+    // Close the config panel (Escape) then reopen it: the user-configured
+    // pacing must survive in the store. The dedicated close button that used to
+    // drive a clearTrip round-trip was removed (recette #649), so we assert the
+    // store invariant directly via reopen.
     await mockedPage.keyboard.press("Escape");
+    await expect(
+      mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    ).not.toBeInViewport();
 
-    // Close the trip — client-side navigation back to "/" calls clearTrip(),
-    // which must preserve the user-configured pacing settings.
-    await mockedPage.getByTestId("close-trip-button").click();
-    await mockedPage.waitForURL((url) => !url.pathname.startsWith("/trips"));
-
-    // Submit a new URL — the new trip inherits the preserved pacing settings.
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
-
-    // Re-open config panel and verify settings are still Débutant
     await openConfigPanel(mockedPage);
     await expect(
       mockedPage.getByRole("slider", {

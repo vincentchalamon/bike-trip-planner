@@ -101,7 +101,9 @@ test.describe("/trips/[id] detail page", () => {
     );
   });
 
-  test("renders close button after successful load", async ({ page }) => {
+  test("renders the trip actions toolbar after successful load", async ({
+    page,
+  }) => {
     await page.route(`**/trips/${TRIP_ID}/detail`, (route, request) => {
       const accept = request.headers()["accept"] ?? "";
       if (!accept.includes("application/ld+json")) return route.fallback();
@@ -113,10 +115,13 @@ test.describe("/trips/[id] detail page", () => {
     });
 
     await page.goto(`/trips/${TRIP_ID}`);
-    // TripPlanner may keep SSE connections open — do not wait for networkidle
-    await expect(page.getByTestId("close-trip-button")).toBeVisible({
+    // The dedicated close button was removed (recette #649); the per-trip
+    // actions toolbar (config gear) sits next to the title once loaded.
+    // TripPlanner may keep SSE connections open — do not wait for networkidle.
+    await expect(page.getByTestId("trip-actions")).toBeVisible({
       timeout: 10000,
     });
+    await expect(page.getByTestId("config-open-button")).toBeVisible();
   });
 
   test("shows error state when API call fails", async ({ page }) => {
@@ -136,7 +141,7 @@ test.describe("/trips/[id] detail page", () => {
   });
 });
 
-test.describe("Timeline sidebar", () => {
+test.describe("Horizontal day timeline", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("**/auth/refresh", (route) =>
       route.fulfill({
@@ -157,25 +162,28 @@ test.describe("Timeline sidebar", () => {
     });
   });
 
-  test("clicking a sidebar stage updates the detail panel", async ({
+  test("clicking a day on the horizontal timeline activates that stage", async ({
     page,
   }) => {
     await page.goto(`/trips/${TRIP_ID}`);
 
-    // Wait for the roadbook master-detail view to be visible
+    // Wait for the roadbook master-detail view to be visible. The vertical
+    // sidebar was replaced by the horizontal progress bar (recette #649).
     await expect(page.getByTestId("roadbook-master-detail")).toBeVisible({
       timeout: 10000,
     });
+    await expect(page.getByTestId("stage-progress-bar")).toBeVisible();
 
-    // Stage 0 is selected by default; click on stage 1
-    await page.click('[data-testid="timeline-sidebar-stage-1"]');
+    // Stage 1 (day 1) is selected by default; click day 2 on the timeline.
+    await page.getByTestId("progress-segment-2").click();
 
-    // Stage 1 button should now be active
-    await expect(
-      page.locator('[data-testid="timeline-sidebar-stage-1"]'),
-    ).toHaveAttribute("data-active", "true");
+    // The day-2 marker should now be the current one.
+    await expect(page.getByTestId("progress-segment-2")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
 
-    // The detail panel for stage 1 should be visible
+    // The detail panel stays visible.
     await expect(page.getByTestId("stage-detail-panel")).toBeVisible();
   });
 });

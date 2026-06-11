@@ -11,8 +11,10 @@ import {
   Euro,
   CalendarDays,
   User,
+  Pencil,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NoDatesBanner } from "@/components/no-dates-banner";
 import { weatherIconMap, DefaultWeatherIcon } from "@/lib/weather-icons";
 import { getActivePresetKey } from "@/lib/pacing-presets";
 import { useUiStore } from "@/store/ui-store";
@@ -33,6 +35,12 @@ interface TripSummaryProps {
   elevationPenalty: number;
   maxDistancePerDay: number;
   averageSpeed: number;
+  /**
+   * When true (editable trip view), surface the "no dates set" alert under the
+   * trip info (recette #649). Off in read-only contexts (shared view) where the
+   * config drawer that the CTA opens is not mounted.
+   */
+  showNoDatesBanner?: boolean;
 }
 
 export function TripSummary({
@@ -50,6 +58,7 @@ export function TripSummary({
   elevationPenalty,
   maxDistancePerDay,
   averageSpeed,
+  showNoDatesBanner = false,
 }: TripSummaryProps) {
   const t = useTranslations("tripSummary");
   const tPacing = useTranslations("pacing");
@@ -151,29 +160,51 @@ export function TripSummary({
           )}
         {/* Force line break on mobile */}
         <div className="basis-full h-0 md:hidden" aria-hidden="true" />
-        {/* Dates chip — clickable → opens ConfigPanel dates section */}
+        {/* Dates chip — clickable → opens ConfigPanel dates section. The pencil
+            hints that dates are editable (recette #649). */}
         <button
           type="button"
-          className="flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
+          className="group flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
           onClick={() => openConfigPanelAt("dates")}
           aria-label={t("datesLabel")}
+          title={t("editDatesHint")}
           data-testid="summary-dates"
         >
           <CalendarDays className="h-4 w-4 text-brand" />
           <span>{datesDisplay}</span>
+          <Pencil
+            className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground transition-colors"
+            aria-hidden="true"
+          />
         </button>
-        {/* Cyclo profile chip — clickable → opens ConfigPanel pacing section */}
+        {/* Cyclo profile chip — clickable → opens ConfigPanel pacing section.
+            The pencil hints that the profile is editable (recette #649). */}
         <button
           type="button"
-          className="flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
+          className="group flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
           onClick={() => openConfigPanelAt("pacing")}
           aria-label={t("profileLabel")}
+          title={t("editProfileHint")}
           data-testid="summary-profile"
         >
           <User className="h-4 w-4 text-brand" />
           <span>{profileLabel}</span>
+          <Pencil
+            className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground transition-colors"
+            aria-hidden="true"
+          />
         </button>
       </div>
+
+      {/* No-dates alert — moved here (recette #649) so it sits directly under
+          the trip info and above the disclaimer, keeping its amber alert style.
+          Only shown in the editable trip view when no start date is set. */}
+      {showNoDatesBanner && !startDate && (
+        <div className="pt-1">
+          <NoDatesBanner onOpenConfig={() => openConfigPanelAt("dates")} />
+        </div>
+      )}
+
       <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground/70">
         <Info className="h-3 w-3" />
         {t("disclaimer")}

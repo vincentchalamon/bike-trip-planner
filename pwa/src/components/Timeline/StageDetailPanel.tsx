@@ -6,7 +6,6 @@ import { StageCard } from "@/components/stage-card";
 import { StagePanelSkeleton } from "@/components/stage-panel-skeleton";
 import { StageSkeleton } from "@/components/stage-skeleton";
 import { RestDayCard } from "@/components/rest-day-card";
-import { NoDatesBanner } from "@/components/no-dates-banner";
 import { RoadbookEmptyState } from "@/components/roadbook-empty-state";
 import { AddStageButton } from "@/components/add-stage-button";
 import { AddRestDayButton } from "@/components/add-rest-day-button";
@@ -46,7 +45,6 @@ interface StageDetailPanelProps {
   onAccommodationHover?: (stageIndex: number, accIndex: number | null) => void;
   newAccKey?: string | null;
   onClearNewAcc?: () => void;
-  onOpenConfig?: () => void;
 }
 
 function formatDayDate(startDate: string | null, dayNumber: number): string {
@@ -88,23 +86,85 @@ export function StageDetailPanel({
   onAccommodationHover,
   newAccKey,
   onClearNewAcc,
-  onOpenConfig,
 }: StageDetailPanelProps) {
   const tStage = useTranslations("stage");
   const recomputingStages = useTripStore((s) => s.recomputingStages);
+  const setSelectedStageIndex = useTripStore((s) => s.setSelectedStageIndex);
+  const containerRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLDivElement>(null);
   const prevSelectedIndexRef = useRef(selectedIndex);
+  // Set while a scroll-spy update is in flight so the scroll-into-view effect
+  // below ignores it — otherwise the programmatic scroll would fight the user's
+  // own scrolling.
+  const fromScrollSpyRef = useRef(false);
 
-  // Scroll the selected stage into view on user selection changes — but skip the
-  // initial render so loading a trip keeps the scroll at the top instead of
-  // jumping down to the first stage (recette #649). Comparing against the
-  // previous index (rather than a "has-run" flag) stays correct under React
-  // Strict Mode's double-invoked mount effect.
+  // Scroll the selected stage into view on *deliberate* selection changes
+  // (clicking a day on the horizontal timeline) — but skip the initial render
+  // so loading a trip keeps the scroll at the top instead of jumping down to
+  // the first stage (recette #649), and skip selections that originate from the
+  // scroll-spy below. Comparing against the previous index (rather than a
+  // "has-run" flag) stays correct under React Strict Mode's double-invoked
+  // mount effect.
   useEffect(() => {
     if (prevSelectedIndexRef.current === selectedIndex) return;
     prevSelectedIndexRef.current = selectedIndex;
+    if (fromScrollSpyRef.current) {
+      fromScrollSpyRef.current = false;
+      return;
+    }
     selectedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selectedIndex]);
+
+  // Scroll-spy: mark a stage active as soon as it reaches the top of the
+  // viewport while scrolling (recette #649). An IntersectionObserver with a
+  // top-anchored root margin defines a thin band just below the sticky header;
+  // the topmost section currently inside that band becomes the selected stage.
+  // Visibility is tracked in a Map because the observer callback only reports
+  // sections whose intersection *changed* — not every visible one.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const sections = Array.from(
+      container.querySelectorAll<HTMLElement>("[data-stage-index]"),
+    );
+    if (sections.length === 0) return;
+
+    const visibleTops = new Map<number, number>();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const index = Number(
+            (entry.target as HTMLElement).dataset.stageIndex,
+          );
+          if (entry.isIntersecting) {
+            visibleTops.set(index, entry.boundingClientRect.top);
+          } else {
+            visibleTops.delete(index);
+          }
+        }
+        if (visibleTops.size === 0) return;
+        // Topmost section inside the band = the one closest to the anchor line.
+        let bestIndex = -1;
+        let bestTop = Number.POSITIVE_INFINITY;
+        for (const [index, top] of visibleTops) {
+          if (top < bestTop) {
+            bestTop = top;
+            bestIndex = index;
+          }
+        }
+        if (bestIndex < 0 || bestIndex === prevSelectedIndexRef.current) return;
+        fromScrollSpyRef.current = true;
+        setSelectedStageIndex(bestIndex);
+      },
+      // Anchor near the top of the viewport (below the sticky header) so the
+      // stage occupying that band is the "current" one.
+      { rootMargin: "-96px 0px -65% 0px", threshold: 0 },
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, [stages.length, setSelectedStageIndex]);
 
   const canInsertStage = useCallback(
     (afterIndex: number): boolean => {
@@ -136,11 +196,11 @@ export function StageDetailPanel({
   const safeIndex = Math.min(Math.max(0, selectedIndex), stages.length - 1);
 
   return (
-    <div data-testid="stage-detail-panel" className="flex flex-col gap-6">
-      {!startDate && onOpenConfig && (
-        <NoDatesBanner onOpenConfig={onOpenConfig} />
-      )}
-
+    <div
+      ref={containerRef}
+      data-testid="stage-detail-panel"
+      className="flex flex-col gap-6"
+    >
       {stages.map((stage, i) => {
         if (!stage) return null;
         const isSelected = i === safeIndex;
@@ -154,7 +214,7 @@ export function StageDetailPanel({
             className={[
               "flex flex-col gap-4 rounded-xl p-1 transition-colors",
               isSelected
-                ? "ring-2 ring-brand/40 ring-offset-2"
+                ? "ring-2 ring-brand/20 ring-offset-2"
                 : "opacity-60 hover:opacity-80",
             ].join(" ")}
           >

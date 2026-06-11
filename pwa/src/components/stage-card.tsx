@@ -22,6 +22,7 @@ import {
 } from "@/components/StageDetail";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 import { useTripStore, useStageAiAnalysis } from "@/store/trip-store";
+import { useUiStore } from "@/store/ui-store";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 
 function formatCoords(point: { lat: number; lon: number }): string {
@@ -103,11 +104,18 @@ export function StageCard({
   const departureHour = useTripStore((s) => s.departureHour);
   const averageSpeed = useTripStore((s) => s.averageSpeed);
   const startDate = useTripStore((s) => s.startDate);
+  const viewMode = useUiStore((s) => s.viewMode);
 
   const aiSummary = stage.aiSummary?.trim();
   const aiAnalysis = useStageAiAnalysis(stageIndex);
   const hasAiAnalysis = Boolean(aiAnalysis?.narrative.trim());
   const hasAlerts = stage.alerts.length > 0;
+
+  // In the split (map + list) layout the card is narrow, so keep the legacy
+  // 80% width and the full difficulty bars below the stats. In the full-width
+  // list layout the card spans 100% and the difficulty collapses into a
+  // compact cell aligned with the other stats (recette #649).
+  const isSplit = viewMode === "split";
 
   return (
     <Card
@@ -116,7 +124,9 @@ export function StageCard({
       // navigation) lands the card *below* the progress bar rather than
       // underneath it. Without this offset, hit-tests on inline controls
       // (e.g. the distance pencil button) fall on the sticky header.
-      className="border-border shadow-sm rounded-xl w-full md:max-w-[80%] relative scroll-mt-24"
+      className={`border-border shadow-sm rounded-xl relative scroll-mt-24 ${
+        isSplit ? "w-full md:max-w-[80%]" : "w-full"
+      }`}
       data-testid={`stage-card-${stage.dayNumber}`}
     >
       <CardContent className="p-4 md:p-6 space-y-4">
@@ -165,7 +175,10 @@ export function StageCard({
           <StageAiSummaryLegacy summary={aiSummary} />
         )}
 
-        {/* 3. Stats 4-col — distance (editable), D+, duration, budget */}
+        {/* 3. Stats 4-col — distance (editable), D+, duration, budget. In the
+            full-width list layout, a compact difficulty cell is appended so it
+            aligns with the other stats; in split mode it stays below as the
+            full 3-bar gauge (recette #649). */}
         <StageStatsRow
           stage={stage}
           stageIndex={stageIndex}
@@ -176,10 +189,19 @@ export function StageCard({
           onDistanceChange={onDistanceChange}
           departureHour={stage.isRestDay ? undefined : departureHour}
           averageSpeedKmh={stage.isRestDay ? undefined : averageSpeed}
+          difficultySlot={
+            !isSplit && stage.distance !== null ? (
+              <StageDifficultyComposed
+                variant="compact"
+                distance={stage.distance}
+                elevation={stage.elevation ?? 0}
+              />
+            ) : undefined
+          }
         />
 
-        {/* 4. Composed difficulty gauge */}
-        {stage.distance !== null && (
+        {/* 4. Composed difficulty gauge — full 3-bar view in split mode only. */}
+        {isSplit && stage.distance !== null && (
           <StageDifficultyComposed
             distance={stage.distance}
             elevation={stage.elevation ?? 0}
@@ -206,28 +228,34 @@ export function StageCard({
               pass-1 briefing on top and collapses the alerts behind a top-3
               preview so the rider scans the coach view first.
             - Without AI analysis: fall back to the legacy fully-expanded
-              {@link StageAlerts} grouped by severity. */}
+              {@link StageAlerts} grouped by severity.
+            `pb-2` adds breathing room between the last alert and the horizontal
+            separator below (recette #649). */}
         {hasAiAnalysis ? (
           // DiffHighlight lives inside StageAiSummary (issue #451) so the
           // `alerts_added` flash scopes to the alerts sub-section instead of
           // the whole briefing card.
-          <StageAiSummary
-            stageIndex={stageIndex}
-            alerts={stage.alerts}
-            onAddPoiWaypoint={onAddPoiWaypoint}
-          />
+          <div className="pb-2">
+            <StageAiSummary
+              stageIndex={stageIndex}
+              alerts={stage.alerts}
+              onAddPoiWaypoint={onAddPoiWaypoint}
+            />
+          </div>
         ) : (
           hasAlerts && (
-            <DiffHighlight
-              stageIndex={stageIndex}
-              field="alerts_added"
-              changeLabel={t("diffAlertsAdded")}
-            >
-              <StageAlerts
-                alerts={stage.alerts}
-                onAddPoiWaypoint={onAddPoiWaypoint}
-              />
-            </DiffHighlight>
+            <div className="pb-2">
+              <DiffHighlight
+                stageIndex={stageIndex}
+                field="alerts_added"
+                changeLabel={t("diffAlertsAdded")}
+              >
+                <StageAlerts
+                  alerts={stage.alerts}
+                  onAddPoiWaypoint={onAddPoiWaypoint}
+                />
+              </DiffHighlight>
+            </div>
           )
         )}
         {!hasAlerts && isProcessing && (

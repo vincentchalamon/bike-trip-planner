@@ -20,6 +20,7 @@ import {
   scanAccommodations,
   addPoiWaypointToRoute,
   duplicateTrip,
+  deleteTrip,
   launchTripAnalysis,
   applyBatchRecompute,
   sendTripChat,
@@ -745,6 +746,37 @@ export function useTripPlanner() {
   }
 
   /**
+   * Delete the loaded trip from the trip view itself (recette #649). Reuses the
+   * same `DELETE /trips/{id}` endpoint as the "Mes voyages" list, then clears
+   * the local store and navigates back to the trips list.
+   *
+   * @returns true on success, false otherwise.
+   */
+  async function handleDeleteTrip(): Promise<boolean> {
+    if (!tripId) return false;
+    try {
+      const ok = await deleteTrip(tripId);
+      if (!ok) {
+        toast.error(t("config.deleteFailed"));
+        return false;
+      }
+      toast.success(t("config.deleteSuccess"));
+      actions.clearTrip();
+      useUiStore.getState().setProcessing(false);
+      useUiStore.getState().setAccommodationScanning(false);
+      router.push("/trips");
+      return true;
+    } catch (err) {
+      if (isNetworkError(err)) {
+        toast.error(t("errors.networkError"));
+      } else {
+        toast.error(t("config.deleteFailed"));
+      }
+      return false;
+    }
+  }
+
+  /**
    * Dispatch a chat turn to `POST /trips/{id}/chat`, append both the user
    * message and the assistant reply to {@link useUiStore.chatHistory}, and
    * — when the backend dispatched an inline recomputation — flag the impacted
@@ -1095,6 +1127,7 @@ export function useTripPlanner() {
     handleInsertRestDay,
     handleAddPoiWaypoint,
     handleDuplicateTrip,
+    handleDeleteTrip,
     handleLaunchAnalysis,
     handleShareTrip,
     isShareModalOpen,

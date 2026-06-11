@@ -54,8 +54,10 @@
     "downloadFit": "Télécharger le FIT complet",
     "downloadFailed": "Le téléchargement a échoué. Veuillez réessayer.",
     "datesLabel": "Dates du voyage",
+    "editDatesHint": "Modifier les dates",
     "noDates": "Dates non définies",
     "profileLabel": "Profil cyclo",
+    "editProfileHint": "Modifier le profil cyclo",
     "customProfile": "Personnalisé",
     "loadingAriaLabel": "Chargement du résumé du voyage"
   },
@@ -85,6 +87,7 @@
     "editDistance": "Modifier la distance",
     "distanceLabel": "Distance (km)",
     "saveDistance": "Enregistrer",
+    "cancelDistance": "Annuler",
     "travelTime": "Départ ~{departure} → Arrivée ~{arrival}",
     "travelTimeTooltip": "Estimation basée sur la vitesse moyenne et le dénivelé (règle de Naismith adaptée au vélo)",
     "diffDistanceChanged": "Distance modifiée",
@@ -245,7 +248,14 @@
     "shareCopyFailed": "Impossible de copier le lien de partage",
     "shareCreateFailed": "Impossible de créer le lien de partage",
     "shareRevokeSuccess": "Lien de partage révoqué",
-    "shareRevokeFailed": "Impossible de révoquer le lien de partage"
+    "shareRevokeFailed": "Impossible de révoquer le lien de partage",
+    "deleteLabel": "Supprimer le voyage",
+    "deleteTitle": "Supprimer le voyage ?",
+    "deleteDescription": "Cette action est irréversible. Toutes les étapes et données de « {title} » seront définitivement supprimées.",
+    "deleteConfirm": "Supprimer",
+    "deleteCancel": "Annuler",
+    "deleteSuccess": "Voyage supprimé.",
+    "deleteFailed": "Impossible de supprimer le voyage. Veuillez réessayer."
   },
   "weather": {
     "humidity": "Humidité",
@@ -268,7 +278,8 @@
     "duration": "Durée",
     "durationUnavailable": "—",
     "budget": "Budget",
-    "budgetHint": "{meals, plural, one {# repas} other {# repas}} + hébergement"
+    "distanceEditTooltip": "Modifie la distance de cette étape. Le reste de l'itinéraire est recalculé en conséquence.",
+    "budgetTooltip": "Estimation basée sur les repas de la journée et l'hébergement (sélectionné ou moyenne des options trouvées)."
   },
   "stageAiSummary": {
     "ariaLabel": "Résumé de l'étape généré par IA",

@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useTranslations } from "next-intl";
-import { TimelineSidebar } from "./TimelineSidebar";
 import { StageDetailPanel } from "./StageDetailPanel";
+import { StageProgressBar } from "@/components/stage-progress-bar";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
@@ -38,7 +37,6 @@ interface RoadbookMasterDetailProps {
   onAccommodationHover?: (stageIndex: number, accIndex: number | null) => void;
   newAccKey?: string | null;
   onClearNewAcc?: () => void;
-  onOpenConfig?: () => void;
 }
 
 /**
@@ -72,47 +70,36 @@ export function RoadbookMasterDetail(props: RoadbookMasterDetailProps) {
     onAccommodationHover,
     newAccKey,
     onClearNewAcc,
-    onOpenConfig,
   } = props;
 
-  const t = useTranslations("timeline");
   const selectedStageIndex = useTripStore((s) => s.selectedStageIndex);
-  const setSelectedStageIndex = useTripStore((s) => s.setSelectedStageIndex);
   const setActiveDayNumber = useUiStore((s) => s.setActiveDayNumber);
 
   // Keep the legacy `activeDayNumber` UI flag in sync with the selected stage,
   // so the StageProgressBar / sticky header continue to highlight the correct
-  // day even though the timeline no longer scrolls.
+  // day. Scroll changes (scroll-spy) update `selectedStageIndex` directly.
   useEffect(() => {
     const stage = stages[selectedStageIndex];
     setActiveDayNumber(stage?.dayNumber ?? null);
   }, [selectedStageIndex, stages, setActiveDayNumber]);
 
   return (
-    <div
-      className="flex flex-col gap-6 lg:flex-row lg:gap-8 lg:items-start"
-      data-testid="roadbook-master-detail"
-    >
-      {/* Sidebar — sticky on large screens so the timeline stays in view
-          while the user reads through the detail panel. */}
-      <aside
-        aria-label={t("sidebarLabel")}
-        className={[
-          "w-full lg:w-[260px] lg:shrink-0",
-          "lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto",
-          "rounded-xl border border-border bg-card/40 p-3 lg:p-4",
-        ].join(" ")}
-      >
-        <TimelineSidebar
-          stages={stages}
-          selectedIndex={selectedStageIndex}
-          onSelect={setSelectedStageIndex}
-          isProcessing={isProcessing}
-        />
-      </aside>
+    <div className="flex flex-col gap-6" data-testid="roadbook-master-detail">
+      {/* Horizontal day timeline — always shown above the days (recette #649).
+          Replaces the former vertical sidebar so each stage card gets the full
+          width. Sticky so it stays reachable while scrolling the day list;
+          clicking a marker scrolls to the day, and scrolling activates the
+          matching day automatically (scroll-spy in StageDetailPanel). */}
+      {stages.length > 0 && (
+        <div className="sticky top-0 z-20 -mx-1 px-1 pt-1 pb-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="rounded-xl border border-border bg-card/60 px-4 pt-3 pb-2">
+            <StageProgressBar />
+          </div>
+        </div>
+      )}
 
-      {/* Detail panel — flexible width. */}
-      <div className="flex-1 min-w-0">
+      {/* Detail panel — full width. */}
+      <div className="min-w-0">
         <StageDetailPanel
           stages={stages}
           selectedIndex={selectedStageIndex}
@@ -133,7 +120,6 @@ export function RoadbookMasterDetail(props: RoadbookMasterDetailProps) {
           onAccommodationHover={onAccommodationHover}
           newAccKey={newAccKey}
           onClearNewAcc={onClearNewAcc}
-          onOpenConfig={onOpenConfig}
         />
       </div>
     </div>

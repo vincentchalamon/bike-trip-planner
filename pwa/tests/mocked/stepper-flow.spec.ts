@@ -37,15 +37,17 @@ test.describe("Stepper — step transitions", () => {
     });
   });
 
-  test("advances to 'my_trip' after trip computation completes", async ({
+  test("hides the creation stepper once the trip is loaded", async ({
     createFullTrip,
     mockedPage,
   }) => {
     await createFullTrip();
-    const myTripStep = mockedPage.getByTestId("stepper-step-my_trip");
-    await expect(myTripStep).toHaveAttribute("aria-current", "step", {
+    // The full trip view is reached (Acte 3). The creation stepper is now
+    // hidden there (recette #649) — it no longer serves a purpose.
+    await expect(mockedPage.getByTestId("stage-detail-panel")).toBeVisible({
       timeout: 5000,
     });
+    await expect(mockedPage.getByTestId("stepper-wrapper")).toHaveCount(0);
   });
 
   test("'preparation' step is completed after URL submission", async ({
@@ -64,23 +66,7 @@ test.describe("Stepper — step transitions", () => {
   });
 });
 
-test.describe("Stepper — non-interactive at 'my_trip'", () => {
-  test("no step is clickable once at my_trip", async ({
-    createFullTrip,
-    mockedPage,
-  }) => {
-    await createFullTrip();
-    // At "my_trip" the stepper is a visual indicator — no buttons for navigation
-    // Verify that completed steps are rendered as non-interactive divs, not buttons
-    const preparationEl = mockedPage.getByTestId("stepper-step-preparation");
-    await expect(preparationEl).toBeVisible({ timeout: 5000 });
-    // It should be a div (non-interactive), not a button
-    const tagName = await preparationEl.evaluate((el) =>
-      el.tagName.toLowerCase(),
-    );
-    expect(tagName).toBe("div");
-  });
-
+test.describe("Stepper — non-interactive system step", () => {
   test("'analysis' step is never a button (never clickable)", async ({
     mockedPage,
   }) => {
@@ -147,31 +133,26 @@ test.describe("Stepper — responsive mobile", () => {
   });
 });
 
-test.describe("Stepper — reset on clearTrip", () => {
-  test("stepper rewinds from my_trip to preparation when the trip is closed, and advances again on resubmit", async ({
+test.describe("Stepper — hidden once the trip is loaded", () => {
+  test("the creation stepper is hidden in Acte 3 and reappears for a fresh trip", async ({
     createFullTrip,
-    submitUrl,
     mockedPage,
   }) => {
     await createFullTrip();
-    await expect(
-      mockedPage.getByTestId("stepper-step-my_trip"),
-    ).toHaveAttribute("aria-current", "step", { timeout: 5000 });
 
-    // Close the trip from the UI — same button the user would click.
-    await mockedPage.getByTestId("close-trip-button").click();
+    // Once the trip is fully loaded, the creation progress bar is hidden — it
+    // no longer serves a purpose and was confused with the horizontal day
+    // timeline on scroll (recette #649).
+    await expect(mockedPage.getByTestId("stage-detail-panel")).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(mockedPage.getByTestId("stepper-wrapper")).toHaveCount(0);
 
-    // The Act-3 lock in goToStep used to prevent any rewind here; resetStepper
-    // bypasses it, so the stepper should land back on "preparation".
-    await expect(
-      mockedPage.getByTestId("stepper-step-preparation"),
-    ).toHaveAttribute("aria-current", "step", { timeout: 5000 });
-
-    // Submitting a new URL must advance again instead of being stuck.
-    await submitUrl();
-    await expect(
-      mockedPage.getByTestId("stepper-step-preview"),
-    ).toHaveAttribute("aria-current", "step", { timeout: 5000 });
+    // Starting a brand-new trip brings the stepper back.
+    await mockedPage.goto("/trips/new");
+    await expect(mockedPage.getByTestId("wizard-trip-new")).toBeVisible({
+      timeout: 5000,
+    });
   });
 });
 
