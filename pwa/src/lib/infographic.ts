@@ -17,7 +17,6 @@ export interface InfographicData {
     dates: string;
     budget: string;
     difficulty: string;
-    weather: string;
     difficultyEasy: string;
     difficultyMedium: string;
     difficultyHard: string;
@@ -25,23 +24,42 @@ export interface InfographicData {
   };
 }
 
-const DIFFICULTY_HEX: Record<string, string> = {
-  easy: "#22c55e",
-  medium: "#f97316",
-  hard: "#ef4444",
-};
+/**
+ * Per-stage palette. The elevation profile and route are coloured by stage
+ * index (not difficulty) so that every stage gets a distinct colour even when
+ * several stages share the same difficulty class.
+ */
+const STAGE_PALETTE = [
+  "#38bdf8",
+  "#f97316",
+  "#a78bfa",
+  "#4ade80",
+  "#fb7185",
+  "#facc15",
+  "#22d3ee",
+  "#c084fc",
+];
+
+function stageColor(index: number): string {
+  return STAGE_PALETTE[index % STAGE_PALETTE.length]!;
+}
 
 export const CARD_WIDTH = 800;
 export const CARD_HEIGHT = 480;
 const PADDING = 28;
-const MAP_WIDTH = 260;
-const MAP_HEIGHT = 200;
+// 70 / 30 split of the content row between the map and the stats column.
+const CONTENT_WIDTH = CARD_WIDTH - PADDING * 2; // 744
+const COLUMN_GAP = 16;
+const MAP_WIDTH = Math.round((CONTENT_WIDTH - COLUMN_GAP) * 0.7); // ~510
+const MAP_HEIGHT = 210;
 const ELEV_HEIGHT = 88;
 // Layout positions (fixed, always reserve space for the date line)
 const SEP_Y = PADDING + 32 + 24 + 8; // 92
 const CONTENT_TOP = SEP_Y + 16; // 108
-const SEP2_Y = CONTENT_TOP + MAP_HEIGHT + 12; // 320
-const ELEV_Y = SEP2_Y + 12; // 332
+// Reserve a line under the map for the OSM attribution.
+const MAP_ATTRIBUTION_H = 16;
+const SEP2_Y = CONTENT_TOP + MAP_HEIGHT + MAP_ATTRIBUTION_H + 12;
+const ELEV_Y = SEP2_Y + 12;
 
 function computeOverallDifficulty(
   stages: StageData[],
@@ -65,38 +83,6 @@ function computeOverallDifficulty(
     return { label: labels.difficultyMedium, color: "#f97316" };
   }
   return { label: labels.difficultyEasy, color: "#22c55e" };
-}
-
-function getWeatherSummary(
-  stages: StageData[],
-): { tempMin: number; tempMax: number; description: string } | null {
-  const withWeather = stages.filter((s) => s.weather && !s.isRestDay);
-  if (withWeather.length === 0) return null;
-
-  const temps = withWeather.map((s) => s.weather!);
-  const tempMin = temps.reduce(
-    (a, w) => (w.tempMin < a ? w.tempMin : a),
-    temps[0]!.tempMin,
-  );
-  const tempMax = temps.reduce(
-    (a, w) => (w.tempMax > a ? w.tempMax : a),
-    temps[0]!.tempMax,
-  );
-
-  const descCounts = new Map<string, number>();
-  for (const w of temps) {
-    descCounts.set(w.description, (descCounts.get(w.description) ?? 0) + 1);
-  }
-  let description = "";
-  let maxCount = 0;
-  for (const [desc, count] of descCounts) {
-    if (count > maxCount) {
-      description = desc;
-      maxCount = count;
-    }
-  }
-
-  return { tempMin, tempMax, description };
 }
 
 /**
@@ -151,7 +137,7 @@ export async function renderInfographic(
   ctx.lineTo(CARD_WIDTH - PADDING, SEP_Y);
   ctx.stroke();
 
-  // Route map (left side of content row) — async tile fetch
+  // Route map (left side of content row, ~70% width) — async tile fetch
   await drawRouteMap(
     ctx,
     PADDING,
@@ -161,15 +147,22 @@ export async function renderInfographic(
     data.stages,
   );
 
-  // Stats grid (right side of content row)
-  const statsX = PADDING + MAP_WIDTH + 16;
-  const statsW = CARD_WIDTH - statsX - PADDING;
-  const colWidth = statsW / 2;
-  const rowHeight = MAP_HEIGHT / 3;
+  // OSM attribution, directly under the map
+  ctx.fillStyle = "#475569";
+  ctx.font = "10px system-ui, -apple-system, sans-serif";
+  ctx.textBaseline = "top";
+  ctx.fillText(
+    "© OpenStreetMap contributors",
+    PADDING,
+    CONTENT_TOP + MAP_HEIGHT + 4,
+  );
+
+  // Stats column (right side of content row, ~30% width) — single column
+  const statsX = PADDING + MAP_WIDTH + COLUMN_GAP;
+  const colWidth = CARD_WIDTH - statsX - PADDING;
 
   const activeStages = data.stages.filter((s) => !s.isRestDay);
   const difficulty = computeOverallDifficulty(data.stages, data.labels);
-  const weather = getWeatherSummary(data.stages);
   const datesValue =
     formatDateRange(data.startDate, data.endDate) || `${activeStages.length}`;
 
@@ -204,14 +197,6 @@ export async function renderInfographic(
       color: "#a78bfa",
     },
     {
-      icon: "\uD83C\uDF24\uFE0F",
-      label: data.labels.weather,
-      value: weather
-        ? `${weather.description}, ${Math.round(weather.tempMin)}-${Math.round(weather.tempMax)}\u00B0C`
-        : "\u2014",
-      color: "#fbbf24",
-    },
-    {
       icon: "\uD83D\uDCB6",
       label: data.labels.budget,
       value:
@@ -228,28 +213,23 @@ export async function renderInfographic(
     },
   ];
 
+  const statRowH = MAP_HEIGHT / stats.length;
   stats.forEach((stat, i) => {
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-    const sx = statsX + col * colWidth;
-    const sy = CONTENT_TOP + row * rowHeight;
+    const sx = statsX;
+    const sy = CONTENT_TOP + i * statRowH;
 
-    ctx.font = "20px system-ui, -apple-system, sans-serif";
+    ctx.font = "18px system-ui, -apple-system, sans-serif";
     ctx.fillStyle = "#ffffff";
     ctx.textBaseline = "top";
     ctx.fillText(stat.icon, sx, sy);
 
     ctx.font = "11px system-ui, -apple-system, sans-serif";
     ctx.fillStyle = "#64748b";
-    ctx.fillText(stat.label, sx + 30, sy + 2);
+    ctx.fillText(stat.label, sx + 28, sy);
 
     ctx.font = "bold 14px system-ui, -apple-system, sans-serif";
     ctx.fillStyle = stat.color;
-    ctx.fillText(
-      truncateText(ctx, stat.value, colWidth - 38),
-      sx + 30,
-      sy + 18,
-    );
+    ctx.fillText(truncateText(ctx, stat.value, colWidth - 28), sx + 28, sy + 15);
   });
 
   // Second separator
@@ -270,12 +250,12 @@ export async function renderInfographic(
     data.stages,
   );
 
-  // Footer / branding + OSM attribution
+  // Footer / branding (OSM attribution is rendered under the map)
   ctx.fillStyle = "#475569";
   ctx.font = "11px system-ui, -apple-system, sans-serif";
   ctx.textBaseline = "bottom";
   ctx.fillText(
-    `${data.labels.powered} \u00B7 \u00A9 OpenStreetMap contributors`,
+    `\u00A9 ${data.labels.powered}`,
     PADDING,
     CARD_HEIGHT - PADDING / 2,
   );
@@ -442,12 +422,9 @@ async function drawRouteMap(
     }
   }
 
-  // Draw route on top of tiles
-  for (const stage of activeStages) {
-    const color =
-      DIFFICULTY_HEX[getDifficulty(stage.distance, stage.elevation)] ??
-      "#38bdf8";
-    ctx.strokeStyle = color;
+  // Draw route on top of tiles (one colour per stage)
+  activeStages.forEach((stage, stageIdx) => {
+    ctx.strokeStyle = stageColor(stageIdx);
     ctx.lineWidth = 3;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -461,7 +438,7 @@ async function drawRouteMap(
       ctx.lineTo(px, py);
     }
     ctx.stroke();
-  }
+  });
 
   // Start marker (green) and end marker (red)
   const firstGeom = activeStages[0]!.geometry;
@@ -497,11 +474,12 @@ function drawElevationProfile(
   const activeStages = stages.filter((s) => !s.isRestDay);
   if (activeStages.length === 0) return;
 
-  // Build per-stage segments with elevation + difficulty color
+  // Build per-stage segments with elevation + one colour per stage (by index,
+  // so every stage is visually distinct even when several share a difficulty).
   type Segment = { eles: number[]; color: string };
-  const segments: Segment[] = activeStages.map((s) => ({
+  const segments: Segment[] = activeStages.map((s, i) => ({
     eles: s.geometry.map((p) => p.ele),
-    color: DIFFICULTY_HEX[getDifficulty(s.distance, s.elevation)] ?? "#38bdf8",
+    color: stageColor(i),
   }));
 
   const allEles = segments.flatMap((seg) => seg.eles);

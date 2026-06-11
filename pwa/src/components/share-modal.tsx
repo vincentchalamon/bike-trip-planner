@@ -35,8 +35,6 @@ import {
   CARD_WIDTH,
   CARD_HEIGHT,
 } from "@/lib/infographic";
-import { useExportInfographic } from "@/hooks/use-export-infographic";
-import { MAX_STAGE_LIST } from "@/lib/infographic-square";
 import { buildTripText } from "@/lib/text-export";
 import { logger } from "@/lib/logger";
 import {
@@ -93,11 +91,6 @@ export function ShareModal({
   const [isRenderingInfographic, setIsRenderingInfographic] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const {
-    canvasRef: squareCanvasRef,
-    exportPng: exportSquarePng,
-    isExporting: isExportingSquare,
-  } = useExportInfographic();
 
   // Fetch existing active share on first open
   useEffect(() => {
@@ -151,7 +144,6 @@ export function ShareModal({
           dates: t("statDates"),
           budget: t("statBudget"),
           difficulty: t("statDifficulty"),
-          weather: t("statWeather"),
           difficultyEasy: tStage("difficultyEasy"),
           difficultyMedium: tStage("difficultyMedium"),
           difficultyHard: tStage("difficultyHard"),
@@ -232,43 +224,6 @@ export function ShareModal({
     const safeName = title.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
     downloadInfographicPng(canvas, `${safeName}-infographic.png`);
   }, [title]);
-
-  const handleDownloadSquarePng = useCallback(() => {
-    const safeName = title.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
-    const activeCount = stages.filter((s) => !s.isRestDay).length;
-    const extra = Math.max(0, activeCount - MAX_STAGE_LIST);
-    void exportSquarePng(
-      {
-        title,
-        totalDistance,
-        totalElevation,
-        stages,
-        estimatedBudgetMin,
-        estimatedBudgetMax,
-        labels: {
-          distance: t("statDistance"),
-          elevation: t("statElevation"),
-          days: t("squareStatDays"),
-          budget: t("statBudget"),
-          stagesHeading: t("squareStagesHeading"),
-          restDay: "—",
-          more: t("squareMoreStages", { count: extra }),
-          dayPrefix: t("squareDayPrefix"),
-          poweredBy: t("poweredBy"),
-        },
-      },
-      `${safeName}-infographic-square.png`,
-    );
-  }, [
-    title,
-    totalDistance,
-    totalElevation,
-    stages,
-    estimatedBudgetMin,
-    estimatedBudgetMax,
-    exportSquarePng,
-    t,
-  ]);
 
   const tripText = useMemo(
     () =>
@@ -450,40 +405,8 @@ export function ShareModal({
                 )}
                 {t("downloadPng")}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 cursor-pointer"
-                onClick={handleDownloadSquarePng}
-                disabled={isExportingSquare}
-                data-testid="share-download-square-png-button"
-                title={t("downloadSquarePngHint")}
-              >
-                {isExportingSquare ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-                {t("downloadSquarePng")}
-              </Button>
             </div>
           </div>
-          {/* Off-screen canvas used to render the 1080×1080 export. Kept in
-              the DOM (positioned off-screen) so the canvas context survives
-              between exports without remounts. */}
-          <canvas
-            ref={squareCanvasRef}
-            data-testid="share-infographic-square-canvas"
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              left: "-99999px",
-              top: 0,
-              width: 1,
-              height: 1,
-              pointerEvents: "none",
-            }}
-          />
         </section>
 
         <Separator />
