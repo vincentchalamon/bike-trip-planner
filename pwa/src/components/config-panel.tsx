@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { X, Copy, Share2, Loader2 } from "lucide-react";
+import { X, Copy, Share2, Trash2, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { PacingSettings } from "@/components/pacing-settings";
 import { DateRangePicker } from "@/components/date-range-picker";
+import { DestructiveDialog } from "@/components/destructive-dialog";
 import { useUiStore } from "@/store/ui-store";
 import { cn } from "@/lib/utils";
 import {
@@ -45,8 +46,12 @@ interface ConfigPanelProps {
   /** When true, date/pacing/accommodation controls are disabled (trip is locked). */
   readOnly?: boolean;
   hasTripLoaded?: boolean;
+  /** Title of the loaded trip — surfaced in the delete confirmation dialog. */
+  tripTitle?: string;
   onDuplicate?: () => Promise<string | null>;
   onShare?: () => void;
+  /** Permanently delete the loaded trip (recette #649). May be async. */
+  onDelete?: () => Promise<boolean> | void;
 }
 
 export function ConfigPanel({
@@ -67,11 +72,15 @@ export function ConfigPanel({
   onAccommodationTypesChange,
   readOnly = false,
   hasTripLoaded = false,
+  tripTitle,
   onDuplicate,
   onShare,
+  onDelete,
 }: ConfigPanelProps) {
   const t = useTranslations("config");
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const tAccommodation = useTranslations("accommodation");
   const isOpen = useUiStore((s) => s.isConfigPanelOpen);
   const setConfigPanelOpen = useUiStore((s) => s.setConfigPanelOpen);
@@ -342,10 +351,52 @@ export function ConfigPanel({
                 <Share2 className="h-4 w-4" />
                 {t("shareLabel")}
               </Button>
+
+              {/* Delete — destructive action, mirrors the "Mes voyages" list
+                  deletion but available from the trip itself (recette #649). */}
+              {onDelete && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start gap-2 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={!hasTripLoaded || readOnly}
+                  aria-label={t("deleteLabel")}
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  data-testid="delete-trip-button"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {t("deleteLabel")}
+                </Button>
+              )}
             </div>
           </section>
         </div>
       </div>
+
+      {/* Destructive confirmation for trip deletion. */}
+      {onDelete && (
+        <DestructiveDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={(open) => {
+            if (!isDeleting) setIsDeleteDialogOpen(open);
+          }}
+          title={t("deleteTitle")}
+          description={t("deleteDescription", { title: tripTitle ?? "" })}
+          cancelLabel={t("deleteCancel")}
+          confirmLabel={t("deleteConfirm")}
+          isLoading={isDeleting}
+          onConfirm={async () => {
+            setIsDeleting(true);
+            try {
+              await onDelete();
+              setIsDeleteDialogOpen(false);
+            } finally {
+              setIsDeleting(false);
+            }
+          }}
+          data-testid="delete-trip-dialog"
+        />
+      )}
     </>
   );
 }

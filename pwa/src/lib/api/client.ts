@@ -696,6 +696,19 @@ export async function duplicateTrip(
 }
 
 /**
+ * Permanently delete a trip and all its stages (`DELETE /trips/{id}`).
+ * Used both by the trips list and by the in-trip configuration drawer (#649).
+ *
+ * @returns true when the backend confirms deletion, false otherwise.
+ */
+export async function deleteTrip(tripId: string): Promise<boolean> {
+  const { error } = await apiClient.DELETE("/trips/{id}", {
+    params: { path: { id: tripId } },
+  });
+  return !error;
+}
+
+/**
  * Download the full trip as a single GPX file containing all stages and trigger
  * a browser save dialog.
  * @throws {Error} When the server responds with a non-2xx status.

@@ -10,8 +10,8 @@ import { TripPlanner } from "@/components/trip-planner";
 import { TripPlannerErrorBoundary } from "@/components/trip-planner-error-boundary";
 import { TripNotFound } from "@/components/trip-not-found";
 import { TripSummarySkeleton } from "@/components/trip-summary-skeleton";
-import { TimelineSidebarSkeleton } from "@/components/timeline-sidebar-skeleton";
 import { StagePanelSkeleton } from "@/components/stage-panel-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { HydrationBoundary } from "@/components/hydration-boundary";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
@@ -190,13 +190,13 @@ function TripLoader({ tripId }: { tripId: string }) {
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           <span>{t("loading")}</span>
         </div>
-        <div className="flex flex-col gap-6 lg:flex-row lg:gap-8 lg:items-start">
-          <aside className="w-full lg:w-[260px] lg:shrink-0 rounded-xl border border-border bg-card/40 p-3 lg:p-4">
-            <TimelineSidebarSkeleton count={4} />
-          </aside>
-          <div className="flex-1 min-w-0">
-            <StagePanelSkeleton />
+        {/* Single-column roadbook skeleton — mirrors the new layout where the
+            horizontal day timeline sits above the stage cards (recette #649). */}
+        <div className="flex flex-col gap-6">
+          <div className="rounded-xl border border-border bg-card/40 px-4 py-3">
+            <Skeleton className="h-4 w-full" />
           </div>
+          <StagePanelSkeleton />
         </div>
       </main>
     );

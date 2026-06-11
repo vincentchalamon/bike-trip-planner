@@ -117,6 +117,13 @@ function Bar({ label, icon, score, difficulty, detail, testId }: BarProps) {
 interface StageDifficultyComposedProps {
   distance: number;
   elevation: number;
+  /**
+   * `full` (default) renders the three labelled sub-score bars. `compact`
+   * renders only the overall difficulty pill inside a stat-cell-sized box so
+   * it can sit in the stats grid at the same width as Distance/Elevation in
+   * the full-width list layout (recette #649).
+   */
+  variant?: "full" | "compact";
 }
 
 /**
@@ -133,6 +140,7 @@ interface StageDifficultyComposedProps {
 export function StageDifficultyComposed({
   distance,
   elevation,
+  variant = "full",
 }: StageDifficultyComposedProps) {
   const t = useTranslations("difficultyComposed");
   const tStage = useTranslations("stage");
@@ -154,6 +162,47 @@ export function StageDifficultyComposed({
   // keep finding meaningful information.
   const overallAriaLabel = `${overallLabel} — ${Math.round(distance)} km, D+ ${Math.round(elevation)} m`;
 
+  const overallPill = (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+        overall === "easy"
+          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
+          : overall === "medium"
+            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+      }`}
+      data-testid="stage-difficulty-overall"
+      aria-label={overallAriaLabel}
+    >
+      <span
+        aria-hidden="true"
+        className={`h-1.5 w-1.5 rounded-full ${SEGMENT_COLORS[overall]}`}
+      />
+      {overallLabel}
+    </span>
+  );
+
+  // Compact cell — mirrors StageStatsRow's StatCell so it lines up in the grid
+  // at the same width as Distance/Elevation/Duration/Budget.
+  if (variant === "compact") {
+    return (
+      <div
+        className="flex flex-col gap-1 rounded-lg border border-border/60 bg-card/40 p-3"
+        data-testid="stage-difficulty-composed"
+        data-overall={overall}
+        aria-label={t("ariaLabel")}
+      >
+        <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span aria-hidden="true" className="text-muted-foreground">
+            <Mountain className="h-3.5 w-3.5" />
+          </span>
+          <span className="truncate">{t("title")}</span>
+        </div>
+        <div>{overallPill}</div>
+      </div>
+    );
+  }
+
   return (
     <section
       data-testid="stage-difficulty-composed"
@@ -165,23 +214,7 @@ export function StageDifficultyComposed({
         <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
           {t("title")}
         </h3>
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-            overall === "easy"
-              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400"
-              : overall === "medium"
-                ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-          }`}
-          data-testid="stage-difficulty-overall"
-          aria-label={overallAriaLabel}
-        >
-          <span
-            aria-hidden="true"
-            className={`h-1.5 w-1.5 rounded-full ${SEGMENT_COLORS[overall]}`}
-          />
-          {overallLabel}
-        </span>
+        {overallPill}
       </header>
 
       <div className="space-y-1.5">

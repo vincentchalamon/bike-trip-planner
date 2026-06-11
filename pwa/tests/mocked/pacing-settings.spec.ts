@@ -175,9 +175,10 @@ test.describe("Pacing settings", () => {
     // Close config panel
     await mockedPage.keyboard.press("Escape");
 
-    // Close the trip — client-side navigation back to "/" calls clearTrip(),
-    // which must preserve the user-configured pacing settings.
-    await mockedPage.getByTestId("close-trip-button").click();
+    // Leave the trip — the dedicated close button was removed (recette #649),
+    // so navigate home via the brand link. The client-side navigation back to
+    // "/" calls clearTrip(), which must preserve the user-configured pacing.
+    await mockedPage.getByTestId("top-bar-brand").click();
     await mockedPage.waitForURL((url) => !url.pathname.startsWith("/trips"));
 
     // Submit a new URL — the new trip inherits the preserved pacing settings.

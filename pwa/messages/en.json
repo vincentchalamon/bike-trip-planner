@@ -54,8 +54,10 @@
     "downloadFit": "Download full trip FIT",
     "downloadFailed": "Download failed. Please try again.",
     "datesLabel": "Trip dates",
+    "editDatesHint": "Edit dates",
     "noDates": "Dates not set",
     "profileLabel": "Rider profile",
+    "editProfileHint": "Edit rider profile",
     "customProfile": "Custom",
     "loadingAriaLabel": "Loading trip summary"
   },
@@ -85,6 +87,7 @@
     "editDistance": "Edit distance",
     "distanceLabel": "Distance (km)",
     "saveDistance": "Save",
+    "cancelDistance": "Cancel",
     "travelTime": "Dep ~{departure} → Arr ~{arrival}",
     "travelTimeTooltip": "Estimate based on average speed and elevation gain (Naismith rule adapted for cycling)",
     "diffDistanceChanged": "Distance changed",
@@ -245,7 +248,14 @@
     "shareCopyFailed": "Could not copy share link",
     "shareCreateFailed": "Failed to create share link",
     "shareRevokeSuccess": "Share link revoked",
-    "shareRevokeFailed": "Failed to revoke share link"
+    "shareRevokeFailed": "Failed to revoke share link",
+    "deleteLabel": "Delete trip",
+    "deleteTitle": "Delete trip?",
+    "deleteDescription": "This action is irreversible. All stages and data for \"{title}\" will be permanently deleted.",
+    "deleteConfirm": "Delete",
+    "deleteCancel": "Cancel",
+    "deleteSuccess": "Trip deleted.",
+    "deleteFailed": "Failed to delete trip. Please try again."
   },
   "weather": {
     "humidity": "Humidity",
@@ -268,7 +278,8 @@
     "duration": "Duration",
     "durationUnavailable": "—",
     "budget": "Budget",
-    "budgetHint": "{meals, plural, one {# meal} other {# meals}} + lodging"
+    "distanceEditTooltip": "Edit this stage's distance. The rest of the route is recalculated accordingly.",
+    "budgetTooltip": "Estimate based on the day's meals and accommodation (selected option or average of nearby options)."
   },
   "stageAiSummary": {
     "ariaLabel": "AI-generated stage summary",

@@ -3,18 +3,8 @@
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import {
-  Bike,
-  HelpCircle,
-  Share2,
-  Plus,
-  Map,
-  User,
-  Settings,
-} from "lucide-react";
+import { Bike, HelpCircle, Plus, Map, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { UndoRedoButtons } from "@/components/undo-redo-buttons";
-import { TripDownloads } from "@/components/trip-downloads";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -27,25 +17,18 @@ import { useAuthStore } from "@/store/auth-store";
  * Left → right composition:
  *  1. Brand (logo + "Bike Trip Planner")
  *  2. Navigation tabs ("Nouveau voyage" / "Mes voyages")
- *  3. Undo / Redo — only on a trip detail route (`/trips/[id]`)
- *  4. Share button — only on a trip detail route
- *  5. Help "?" — opens the unified help modal (shortcuts + FAQ)
- *  6. Language pills (FR | EN) — always visible
- *  7. Theme toggle (light / dark / auto)
- *  8. Profile circle (user initial) — direct link to /account/settings
+ *  3. Help "?" — opens the unified help modal (shortcuts + FAQ)
+ *  4. Language pills (FR | EN) — always visible
+ *  5. Theme toggle (light / dark / auto)
+ *  6. Profile circle (user initial) — direct link to /account/settings
+ *
+ * Trip-specific action buttons (downloads, undo/redo, share, config) used to
+ * live here but were moved next to the trip title (recette #649) so the global
+ * bar only carries app-wide controls.
  */
 export function TopBar({
-  onShare,
-  onOpenConfig,
-  tripId,
-  tripTitle,
   showHelp = true,
 }: {
-  onShare?: () => void;
-  onOpenConfig?: () => void;
-  /** When set (a trip is loaded), enables the global GPX/FIT download menu. */
-  tripId?: string;
-  tripTitle?: string;
   /**
    * Whether to show the help "?" button. Defaults to true (roadbook context).
    * The help modal is only mounted by the trip planner, so pages that mount the
@@ -58,15 +41,6 @@ export function TopBar({
   const pathname = usePathname();
   const setHelpModalOpen = useUiStore((s) => s.setHelpModalOpen);
   const email = useAuthStore((s) => s.user?.email ?? "");
-
-  // Undo/Redo + Share + config are only meaningful while a trip is loaded.
-  // A trip lives at /trips/[id] but is also loaded in-place on the home page
-  // when the user opens a saved trip card (no route change). We therefore key
-  // these controls off the loaded trip (`tripId`) rather than the path. The
-  // /trips list and /trips/new wizard are explicitly excluded.
-  const isTripDetailRoute = /^\/trips\/[^/]+$/.test(pathname ?? "");
-  const isWizard = pathname === "/trips/new";
-  const showTripActions = (isTripDetailRoute || !!tripId) && !isWizard;
 
   const initial = email.trim().charAt(0).toUpperCase() || "?";
 
@@ -138,51 +112,7 @@ export function TopBar({
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Global GPX/FIT download — only when a trip is loaded */}
-        {showTripActions && tripId && (
-          <TripDownloads tripId={tripId} tripTitle={tripTitle ?? ""} />
-        )}
-
-        {/* 3. Undo / Redo — only when a trip is loaded. Hidden on small
-            screens to keep the bar within the viewport (shortcuts still work). */}
-        {showTripActions && (
-          <div className="hidden sm:flex">
-            <UndoRedoButtons />
-          </div>
-        )}
-
-        {/* 4. Share — only once the trip is actually loaded (tripId present),
-            not merely when the /trips/[id] route resolves. */}
-        {showTripActions && onShare && tripId && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 cursor-pointer"
-            onClick={onShare}
-            title={t("share.title")}
-            aria-label={t("share.title")}
-            data-testid="share-button"
-          >
-            <Share2 className="h-4 w-4" />
-          </Button>
-        )}
-
-        {/* Config gear — only when a trip is loaded (opens the settings drawer) */}
-        {showTripActions && onOpenConfig && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 cursor-pointer"
-            onClick={onOpenConfig}
-            title={t("config.open")}
-            aria-label={t("config.open")}
-            data-testid="config-open-button"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-        )}
-
-        {/* 5. Help — only where the help modal is mounted (roadbook context) */}
+        {/* Help — only where the help modal is mounted (roadbook context) */}
         {showHelp && (
           <Button
             variant="ghost"
@@ -197,13 +127,13 @@ export function TopBar({
           </Button>
         )}
 
-        {/* 6. Language pills */}
+        {/* 4. Language pills */}
         <LocaleSwitcher />
 
-        {/* 7. Theme toggle */}
+        {/* 5. Theme toggle */}
         <ThemeToggle />
 
-        {/* 8. Profile circle */}
+        {/* 6. Profile circle */}
         <Button
           asChild
           variant="ghost"
