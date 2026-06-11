@@ -702,10 +702,12 @@ export async function duplicateTrip(
  * @returns true when the backend confirms deletion, false otherwise.
  */
 export async function deleteTrip(tripId: string): Promise<boolean> {
-  const { error } = await apiClient.DELETE("/trips/{id}", {
+  const { response } = await apiClient.DELETE("/trips/{id}", {
     params: { path: { id: tripId } },
   });
-  return !error;
+  // A 204 has no body, so `error` stays undefined even on 5xx empty responses;
+  // rely on the HTTP status to tell success from failure.
+  return response.ok;
 }
 
 /**
