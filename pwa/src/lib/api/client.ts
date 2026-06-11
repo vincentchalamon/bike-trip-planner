@@ -730,7 +730,7 @@ export async function downloadStageFile(
   dayNumber: number,
 ): Promise<void> {
   const res = await apiFetch(
-    `${API_URL}/trips/${tripId}/stages/${stageIndex}.${format}`,
+    `${API_URL}/trips/${tripId}/stages/${stageIndex}/export.${format}`,
   );
   if (!res.ok) throw new Error(`Download failed with status ${res.status}`);
   const blob = await res.blob();

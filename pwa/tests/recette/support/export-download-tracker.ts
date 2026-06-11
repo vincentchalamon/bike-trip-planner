@@ -3,9 +3,9 @@ import type { Page, Route } from "@playwright/test";
 const GPX_BODY =
   '<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="44.7" lon="4.5"><ele>280</ele></trkpt></trkseg></trk></gpx>';
 
-const STAGE_GPX_PATTERN = "**/trips/*/stages/*.gpx";
+const STAGE_GPX_PATTERN = "**/trips/*/stages/*/export.gpx";
 const TRIP_GPX_PATTERN = "**/trips/*.gpx";
-const STAGE_FIT_PATTERN = "**/trips/*/stages/*.fit";
+const STAGE_FIT_PATTERN = "**/trips/*/stages/*/export.fit";
 
 const capturedRequests = {
   stageGpx: [] as string[],
@@ -74,7 +74,7 @@ export async function trackStageExportDownload(
 ): Promise<void> {
   resetRequests("stageExport");
   await page.route(
-    `**/trips/*/stages/*.${extension}`,
+    `**/trips/*/stages/*/export.${extension}`,
     (route) => {
       capturedRequests.stageExport.push(route.request().url());
       return route.fulfill({

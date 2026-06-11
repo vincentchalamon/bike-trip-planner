@@ -32,7 +32,12 @@ use App\State\StageUpdateProcessor;
     shortName: 'Stage',
     operations: [
         new Get(
-            uriTemplate: '/trips/{tripId}/stages/{index}{._format}',
+            // Dedicated export sub-route: the canonical '/trips/{tripId}/stages/{index}'
+            // path is the StageResponse NotExposed IRI (json-ld). Sharing it made the
+            // NotExposedAction controller shadow this gpx/fit download, so the
+            // authenticated download 404'd with "This route does not aim to be called"
+            // (recette #649). A distinct path avoids the collision.
+            uriTemplate: '/trips/{tripId}/stages/{index}/export{._format}',
             outputFormats: [
                 'gpx' => ['application/gpx+xml'],
                 'fit' => ['application/vnd.ant.fit'],

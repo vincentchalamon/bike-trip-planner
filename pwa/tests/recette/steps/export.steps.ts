@@ -158,13 +158,13 @@ Then(
 );
 
 Then(
-  /^une requête GET vers \/trips\/\*\/stages\/0\.gpx est envoyée$/,
+  /^une requête GET vers \/trips\/\*\/stages\/0\/export\.gpx est envoyée$/,
   async () => {
     const gpxRequests = getTrackedStageGpxRequests();
     await expect
       .poll(() => gpxRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
-    expect(gpxRequests[0]).toContain("/stages/0.gpx");
+    expect(gpxRequests[0]).toContain("/stages/0/export.gpx");
   },
 );
 
@@ -200,13 +200,13 @@ Then("un message d'erreur s'affiche", async ({ mockedPage }) => {
 });
 
 Then(
-  /^une requête GET vers \/trips\/\*\/stages\/0\.fit est envoyée$/,
+  /^une requête GET vers \/trips\/\*\/stages\/0\/export\.fit est envoyée$/,
   async () => {
     const fitRequests = getTrackedStageFitRequests();
     await expect
       .poll(() => fitRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
-    expect(fitRequests[0]).toContain("/stages/0.fit");
+    expect(fitRequests[0]).toContain("/stages/0/export.fit");
   },
 );
 
@@ -248,13 +248,16 @@ Then(
   },
 );
 
-Then(/^a GET request to \/trips\/\*\/stages\/0\.gpx is sent$/, async () => {
-  const gpxRequests = getTrackedStageGpxRequests();
-  await expect
-    .poll(() => gpxRequests.length, { timeout: 5000 })
-    .toBeGreaterThan(0);
-  expect(gpxRequests[0]).toContain("/stages/0.gpx");
-});
+Then(
+  /^a GET request to \/trips\/\*\/stages\/0\/export\.gpx is sent$/,
+  async () => {
+    const gpxRequests = getTrackedStageGpxRequests();
+    await expect
+      .poll(() => gpxRequests.length, { timeout: 5000 })
+      .toBeGreaterThan(0);
+    expect(gpxRequests[0]).toContain("/stages/0/export.gpx");
+  },
+);
 
 Then(
   'the "Télécharger le GPX complet" button is visible and enabled',
@@ -289,13 +292,16 @@ Then("an error message is displayed", async ({ mockedPage }) => {
   ).toBeVisible({ timeout: 5000 });
 });
 
-Then(/^a GET request to \/trips\/\*\/stages\/0\.fit is sent$/, async () => {
-  const fitRequests = getTrackedStageFitRequests();
-  await expect
-    .poll(() => fitRequests.length, { timeout: 5000 })
-    .toBeGreaterThan(0);
-  expect(fitRequests[0]).toContain("/stages/0.fit");
-});
+Then(
+  /^a GET request to \/trips\/\*\/stages\/0\/export\.fit is sent$/,
+  async () => {
+    const fitRequests = getTrackedStageFitRequests();
+    await expect
+      .poll(() => fitRequests.length, { timeout: 5000 })
+      .toBeGreaterThan(0);
+    expect(fitRequests[0]).toContain("/stages/0/export.fit");
+  },
+);
 
 Then(
   "the FIT button for stage {int} is disabled",

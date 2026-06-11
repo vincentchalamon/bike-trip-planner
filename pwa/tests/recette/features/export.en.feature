@@ -13,7 +13,7 @@ Feature: GPX and FIT export
   @desktop @critical
   Scenario: Stage GPX download triggers API call
     When I click "Download GPX" for stage 1
-    Then a GET request to /trips/*/stages/0.gpx is sent
+    Then a GET request to /trips/*/stages/0/export.gpx is sent
 
   @desktop @critical
   Scenario: Global GPX download button visible after stages computed
@@ -38,7 +38,7 @@ Feature: GPX and FIT export
   @desktop @critical
   Scenario: Stage FIT download
     When I click "Download FIT" for stage 1
-    Then a GET request to /trips/*/stages/0.fit is sent
+    Then a GET request to /trips/*/stages/0/export.fit is sent
 
   @desktop
   Scenario: FIT button disabled during computation

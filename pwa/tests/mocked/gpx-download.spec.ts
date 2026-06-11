@@ -38,7 +38,7 @@ test.describe("GPX download", () => {
 
     // Track GPX API requests
     const gpxRequests: string[] = [];
-    await mockedPage.route("**/trips/*/stages/*.gpx", (route) => {
+    await mockedPage.route("**/trips/*/stages/*/export.gpx", (route) => {
       gpxRequests.push(route.request().url());
       return route.fulfill({
         status: 200,
@@ -57,7 +57,7 @@ test.describe("GPX download", () => {
     await expect
       .poll(() => gpxRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
-    expect(gpxRequests[0]).toContain("/stages/0.gpx");
+    expect(gpxRequests[0]).toContain("/stages/0/export.gpx");
   });
 
   test("global GPX download button is visible after stages computed", async ({
