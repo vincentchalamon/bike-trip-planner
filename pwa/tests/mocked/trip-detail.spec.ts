@@ -101,7 +101,9 @@ test.describe("/trips/[id] detail page", () => {
     );
   });
 
-  test("renders close button after successful load", async ({ page }) => {
+  test("renders the trip actions toolbar after successful load", async ({
+    page,
+  }) => {
     await page.route(`**/trips/${TRIP_ID}/detail`, (route, request) => {
       const accept = request.headers()["accept"] ?? "";
       if (!accept.includes("application/ld+json")) return route.fallback();
@@ -113,10 +115,13 @@ test.describe("/trips/[id] detail page", () => {
     });
 
     await page.goto(`/trips/${TRIP_ID}`);
-    // TripPlanner may keep SSE connections open — do not wait for networkidle
-    await expect(page.getByTestId("close-trip-button")).toBeVisible({
+    // The dedicated close button was removed (recette #649); the per-trip
+    // actions toolbar (config gear) sits next to the title once loaded.
+    // TripPlanner may keep SSE connections open — do not wait for networkidle.
+    await expect(page.getByTestId("trip-actions")).toBeVisible({
       timeout: 10000,
     });
+    await expect(page.getByTestId("config-open-button")).toBeVisible();
   });
 
   test("shows error state when API call fails", async ({ page }) => {

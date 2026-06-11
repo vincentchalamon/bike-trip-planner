@@ -442,8 +442,12 @@ export function TripPlanner({
   // distance, pacing, etc.) don't re-trigger the progress screen.
   const isAnalysing =
     !!trip && isProcessing && isAnalysisPhaseActive && activeStages.length > 0;
-  // Acte 3 — the full, persisted trip view. Mirrors the JSX guard below.
-  const isTripLoaded = !!trip && !isPreview && !isAnalysing;
+  // Acte 3 — the trip is fully loaded (stages computed and the analysis pass
+  // has run). Used to hide the creation stepper there (recette #649). Excludes
+  // the loading / preview / analysis sub-states so the stepper stays visible
+  // throughout the creation flow.
+  const isTripLoaded =
+    !!trip && hasAnalysisStarted && activeStages.length > 0 && !isAnalysing;
   const clearTripAndReset = useCallback(() => {
     clearTrip();
     useUiStore.getState().setProcessing(false);
