@@ -576,6 +576,18 @@ function dispatchEvent(event: MercureEvent): void {
       // Remove this stage from the recomputing set — the shimmer skeleton
       // can now be replaced by the real card.
       store.finishStageRecomputation(event.data.stageIndex);
+
+      // A batch/inline recompute (Mode 2) re-publishes per-stage `stage_updated`
+      // events but never the terminal `trip_complete`/`trip_ready`: the enrichment
+      // gate only fires once EVERY initialised computation has settled, and the
+      // computations a trip never runs (e.g. weather/calendar without dates) stay
+      // "pending" forever. So once the last recomputing stage settles, clear the
+      // global processing overlay here — otherwise it spins forever (recette #649,
+      // "profil expert"). Tied to `recomputingStages` so the initial full analysis
+      // (which never populates that set) keeps relying on `trip_ready`.
+      if (useTripStore.getState().recomputingStages.size === 0) {
+        useUiStore.getState().setProcessing(false);
+      }
       // Labels may have been wiped if endpoints moved — refresh if needed.
       const updated = useTripStore.getState().stages[event.data.stageIndex];
       if (
