@@ -724,12 +724,6 @@
     "createLink": "Create share link",
     "infographicTitle": "Infographic",
     "downloadPng": "Download as PNG",
-    "downloadSquarePng": "Download square (1080×1080)",
-    "downloadSquarePngHint": "Optimised for Instagram, WhatsApp and messaging apps",
-    "squareStatDays": "Days",
-    "squareStagesHeading": "Stages",
-    "squareMoreStages": "+ {count, plural, one {# more stage} other {# more stages}}",
-    "squareDayPrefix": "D",
     "textTitle": "Formatted text",
     "copyText": "Copy text",
     "textCopiedBtn": "Copied!",
@@ -741,7 +735,6 @@
     "statDates": "Dates",
     "statBudget": "Budget",
     "statDifficulty": "Difficulty",
-    "statWeather": "Weather",
     "poweredBy": "Bike Trip Planner"
   },
   "sharePage": {
