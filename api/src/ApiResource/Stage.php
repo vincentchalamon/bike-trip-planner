@@ -27,8 +27,6 @@ use App\State\StagePoiWaypointProcessor;
 use App\State\StageProvider;
 use App\State\StageSelectAccommodationProcessor;
 use App\State\StageUpdateProcessor;
-use App\Symfony\ObjectMapper\TripTransformer;
-use Symfony\Component\ObjectMapper\Attribute\Map;
 
 #[ApiResource(
     shortName: 'Stage',
@@ -142,7 +140,6 @@ use Symfony\Component\ObjectMapper\Attribute\Map;
         ),
     ],
 )]
-#[Map(target: StageResponse::class)]
 final class Stage
 {
     public ?WeatherForecast $weather = null;
@@ -177,7 +174,6 @@ final class Stage
      * @param list<Coordinate> $geometry
      */
     public function __construct(
-        #[Map(target: 'trip', transform: TripTransformer::class)]
         public string $tripId,
         public int $dayNumber,
         public float $distance,

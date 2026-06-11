@@ -13,13 +13,13 @@ use App\ApiResource\StageRequest;
 use App\ApiResource\StageResponse;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
+use App\Mapper\StageResponseMapper;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
 /**
  * @implements ProcessorInterface<StageRequest, StageResponse>
@@ -30,7 +30,7 @@ final readonly class StageCreateProcessor implements ProcessorInterface
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
-        private ObjectMapperInterface $objectMapper,
+        private StageResponseMapper $stageResponseMapper,
         private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
     ) {
@@ -90,7 +90,7 @@ final readonly class StageCreateProcessor implements ProcessorInterface
             $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }
 
-        return $this->objectMapper->map($newStage, StageResponse::class);
+        return $this->stageResponseMapper->map($newStage);
     }
 
     /**

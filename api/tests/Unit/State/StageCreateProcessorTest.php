@@ -7,10 +7,11 @@ namespace App\Tests\Unit\State;
 use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\StageRequest;
-use App\ApiResource\StageResponse;
 use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
+use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageCreateProcessor;
 use App\State\TripLocker;
@@ -19,7 +20,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
 #[AllowMockObjectsWithoutExpectations]
 final class StageCreateProcessorTest extends TestCase
@@ -40,14 +40,13 @@ final class StageCreateProcessorTest extends TestCase
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $generationTracker->method('increment')->willReturn(1);
 
-        $objectMapper = $this->createStub(ObjectMapperInterface::class);
-        $objectMapper->method('map')->willReturn(new StageResponse());
+        $stageResponseMapper = new StageResponseMapper($this->createStub(ComputationTrackerInterface::class));
 
         $processor = new StageCreateProcessor(
             $tripStateManager,
             $this->createStub(MessageBusInterface::class),
             $distanceCalculator,
-            $objectMapper,
+            $stageResponseMapper,
             $generationTracker,
             new TripLocker(),
         );

@@ -12,6 +12,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\StageResponse;
 use App\ApiResource\StageSelectAccommodationRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Mapper\StageResponseMapper;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
@@ -20,7 +21,6 @@ use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
 /**
  * Handles selecting or deselecting an accommodation for a stage.
@@ -47,7 +47,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
-        private ObjectMapperInterface $objectMapper,
+        private StageResponseMapper $stageResponseMapper,
         private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
     ) {
@@ -87,7 +87,7 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             $affectedDeselect = isset($stages[$index + 1]) ? [$index, $index + 1] : [$index];
             $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect, skipAccommodationScan: true, generation: $generation));
 
-            return $this->objectMapper->map($stage, StageResponse::class);
+            return $this->stageResponseMapper->map($stage);
         }
 
         $lat = $data->selectedAccommodationLat;
@@ -151,6 +151,6 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }
 
-        return $this->objectMapper->map($stage, StageResponse::class);
+        return $this->stageResponseMapper->map($stage);
     }
 }

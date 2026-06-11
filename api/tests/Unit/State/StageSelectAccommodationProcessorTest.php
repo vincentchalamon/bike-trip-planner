@@ -7,7 +7,9 @@ namespace App\Tests\Unit\State;
 use ApiPlatform\Metadata\Patch;
 use App\ApiResource\StageSelectAccommodationRequest;
 use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Mapper\StageResponseMapper;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\StageSelectAccommodationProcessor;
 use App\State\TripLocker;
@@ -16,7 +18,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
 #[AllowMockObjectsWithoutExpectations]
 final class StageSelectAccommodationProcessorTest extends TestCase
@@ -34,7 +35,7 @@ final class StageSelectAccommodationProcessorTest extends TestCase
         $processor = new StageSelectAccommodationProcessor(
             $tripStateManager,
             $this->createStub(MessageBusInterface::class),
-            $this->createStub(ObjectMapperInterface::class),
+            new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
             $this->createStub(TripGenerationTrackerInterface::class),
             new TripLocker(),
         );

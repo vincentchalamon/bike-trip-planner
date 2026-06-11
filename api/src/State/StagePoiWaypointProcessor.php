@@ -11,12 +11,12 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\StagePoiWaypointRequest;
 use App\ApiResource\StageResponse;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Mapper\StageResponseMapper;
 use App\Message\RecalculateRouteSegment;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
 /**
  * Handles adding a cultural POI as a waypoint to a stage route.
@@ -32,7 +32,7 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
         private MessageBusInterface $messageBus,
-        private ObjectMapperInterface $objectMapper,
+        private StageResponseMapper $stageResponseMapper,
         private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
     ) {
@@ -80,6 +80,6 @@ final readonly class StagePoiWaypointProcessor implements ProcessorInterface
             generation: $generation,
         ));
 
-        return $this->objectMapper->map($stage, StageResponse::class);
+        return $this->stageResponseMapper->map($stage);
     }
 }

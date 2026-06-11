@@ -16,13 +16,13 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
+use App\Mapper\StageResponseMapper;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\ObjectMapper\ObjectMapperInterface;
 
 /**
  * @implements ProcessorInterface<StageRequest, StageResponse>
@@ -35,7 +35,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
         private DistanceCalculatorInterface $distanceCalculator,
         private ElevationCalculatorInterface $elevationCalculator,
         private RouteSimplifierInterface $routeSimplifier,
-        private ObjectMapperInterface $objectMapper,
+        private StageResponseMapper $stageResponseMapper,
         private TripGenerationTrackerInterface $generationTracker,
         private TripLocker $tripLocker,
     ) {
@@ -96,7 +96,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
                 $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
             }
 
-            return $this->objectMapper->map($stages[$index], StageResponse::class);
+            return $this->stageResponseMapper->map($stages[$index]);
         }
 
         if ($pointsChanged) {
@@ -118,7 +118,7 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
             $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }
 
-        return $this->objectMapper->map($stage, StageResponse::class);
+        return $this->stageResponseMapper->map($stage);
     }
 
     /**
