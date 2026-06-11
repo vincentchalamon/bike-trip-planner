@@ -34,7 +34,6 @@ export interface Modification {
 import type { AccommodationType } from "@/lib/accommodation-types";
 import { FILTERABLE_ACCOMMODATION_TYPES } from "@/lib/accommodation-types";
 import { createTemporalStore } from "@/store/temporal-middleware";
-import type { SavedTrip } from "@/store/offline-store";
 
 // Required for Immer to allow mutating Set/Map drafts (used by recomputingStages).
 enableMapSet();
@@ -246,8 +245,6 @@ interface TripState {
   setSelectedStageIndex: (index: number) => void;
 
   clearTrip: () => void;
-  /** Hydrate the trip store from a {@link SavedTrip} snapshot (offline consultation). */
-  loadFromSavedTrip: (trip: SavedTrip) => void;
 }
 
 const initialState = {
@@ -757,33 +754,6 @@ export const useTripStore = create<TripState>()(
           : 0;
         state.selectedStageIndex = safe;
       }),
-
-    loadFromSavedTrip: (trip) => {
-      useTripTemporalStore.getState().clear();
-      set((state) => {
-        state.trip = {
-          id: trip.id,
-          title: trip.title,
-          sourceUrl: trip.sourceUrl,
-        };
-        state.startDate = trip.startDate;
-        state.endDate = trip.endDate;
-        state.fatigueFactor = trip.fatigueFactor;
-        state.elevationPenalty = trip.elevationPenalty;
-        state.maxDistancePerDay = trip.maxDistancePerDay;
-        state.averageSpeed = trip.averageSpeed;
-        state.ebikeMode = trip.ebikeMode;
-        state.departureHour = trip.departureHour;
-        state.enabledAccommodationTypes = trip.enabledAccommodationTypes;
-        state.stages = trip.stages;
-        state.selectedStageIndex = 0;
-        state.isLocked = true;
-        state.totalDistance = trip.totalDistance ?? 0;
-        state.totalElevation = trip.totalElevation ?? 0;
-        state.totalElevationLoss = trip.totalElevationLoss ?? 0;
-        state.sourceType = trip.sourceType ?? "";
-      });
-    },
 
     clearTrip: () => {
       // Clear undo/redo history when starting a fresh trip — history from a

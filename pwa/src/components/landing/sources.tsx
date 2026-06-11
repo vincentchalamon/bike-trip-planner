@@ -1,19 +1,22 @@
+import type { ReactElement } from "react";
 import { useTranslations } from "next-intl";
-import { FileText, Sparkles, Link as LinkIcon, Activity } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import {
+  KomootLogo,
+  StravaLogo,
+  RideWithGpsLogo,
+  GpxLogo,
+} from "@/components/landing/source-logos";
 
 type Source = {
   key: "komoot" | "strava" | "rwgps" | "gpx" | "ai";
   name: string;
   href: string | null;
   external: boolean;
-  /**
-   * Brand mark — uses an inline glyph (lucide icon) coloured with the brand's
-   * canonical hue so we don't have to ship third-party logos. Sprint 25
-   * design guidance prefers semantic typography over bitmap logos.
-   */
-  Icon: LucideIcon;
-  color: string;
+  /** Brand logo (official SVG mark) or, for generic sources, a lucide glyph. */
+  Logo: (props: { className?: string }) => ReactElement;
+  /** Tailwind classes for the logo tile (background + foreground/theme). */
+  tile: string;
 };
 
 const SOURCES: Source[] = [
@@ -22,40 +25,41 @@ const SOURCES: Source[] = [
     name: "Komoot",
     href: "https://www.komoot.com",
     external: true,
-    Icon: LinkIcon,
-    color: "#6AA127",
+    Logo: KomootLogo,
+    tile: "bg-[#6AA127]/10",
   },
   {
     key: "strava",
     name: "Strava",
     href: "https://www.strava.com",
     external: true,
-    Icon: Activity,
-    color: "#FC4C02",
+    Logo: StravaLogo,
+    tile: "bg-[#FC4C02]/10",
   },
   {
     key: "rwgps",
     name: "RideWithGPS",
     href: "https://ridewithgps.com",
     external: true,
-    Icon: LinkIcon,
-    color: "#E63022",
+    Logo: RideWithGpsLogo,
+    tile: "bg-[#E63022]/10",
   },
   {
     key: "gpx",
     name: "GPX",
     href: null,
     external: false,
-    Icon: FileText,
-    color: "#1a1814",
+    // currentColor → readable in both themes (was near-invisible in dark).
+    Logo: GpxLogo,
+    tile: "bg-muted text-foreground",
   },
   {
     key: "ai",
     name: "AI",
     href: null,
     external: false,
-    Icon: Sparkles,
-    color: "#a8561a",
+    Logo: (props) => <Sparkles {...props} />,
+    tile: "bg-brand/10 text-brand",
   },
 ];
 
@@ -77,17 +81,13 @@ export function LandingSources() {
 
         <ul className="flex flex-wrap items-stretch justify-center gap-4 md:gap-5">
           {SOURCES.map((source) => {
-            const Icon = source.Icon;
+            const Logo = source.Logo;
             const content = (
               <span className="flex h-full flex-col items-center justify-center gap-3 rounded-2xl border border-border/60 bg-card px-6 py-5 min-w-[136px] transition-all hover:border-brand/40 hover:shadow-md">
                 <span
-                  className="flex h-12 w-12 items-center justify-center rounded-xl"
-                  style={{
-                    backgroundColor: `${source.color}1A`,
-                    color: source.color,
-                  }}
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${source.tile}`}
                 >
-                  <Icon className="h-6 w-6" />
+                  <Logo className="h-6 w-6" />
                 </span>
                 <span className="text-sm font-semibold text-foreground">
                   {source.name}

@@ -101,6 +101,18 @@ for (const page_ of PAGES) {
       await expect(privacyLink).toHaveAttribute("href", "/privacy");
     });
 
+    test("renders the public top bar header (#649)", async ({ page }) => {
+      await page.goto(path);
+      await page.waitForLoadState("networkidle");
+
+      const header = page.getByTestId("public-top-bar");
+      await expect(header).toBeVisible();
+      await expect(page.getByTestId("public-top-bar-brand")).toHaveAttribute(
+        "href",
+        "/",
+      );
+    });
+
     test("back-to-home link navigates to /", async ({ page }) => {
       await page.route("**/auth/refresh", (route, request) => {
         if (request.method() !== "POST") return route.fallback();

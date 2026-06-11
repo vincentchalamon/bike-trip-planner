@@ -3,7 +3,6 @@
 import { useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SUPPORTED_LOCALES, type SupportedLocale } from "@/i18n/locale";
@@ -42,12 +41,6 @@ export function LocaleSwitcher() {
       role="group"
       aria-label={t("languageTitle")}
     >
-      <Languages
-        className={cn(
-          "hidden sm:block h-4 w-4 text-muted-foreground shrink-0",
-          isPending && "animate-spin",
-        )}
-      />
       <div className="flex gap-1">
         {SUPPORTED_LOCALES.map((locale) => {
           const isActive = locale === currentLocale;

@@ -106,17 +106,17 @@ Feature: Cross-cutting UX
     Then the onboarding tour popover is no longer visible
 
   @desktop @dark
-  Scenario: Theme cycle light to dark then system
+  Scenario: Theme button flips between light and dark
     When I toggle to light theme
     And I click the theme button
     Then the selected theme is "dark"
     When I click the theme button
-    Then the selected theme is "system"
+    Then the selected theme is "light"
 
   @desktop @dark
-  Scenario: System mode follows the operating system preference
+  Scenario: By default the theme follows the operating system preference
     Given the operating system prefers dark mode
-    When I select the system theme
+    When I reload the page
     Then the interface is displayed with a dark background
 
   @desktop @dark

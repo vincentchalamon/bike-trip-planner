@@ -35,7 +35,6 @@ import { Stepper } from "@/components/stepper";
 import { InlineRecomputationBar } from "@/components/inline-recomputation-bar";
 import { ModificationQueue } from "@/components/modification-queue";
 import { RecentTrips } from "@/components/recent-trips";
-import { SavedTripsSection } from "@/components/saved-trips-section";
 import { OfflineBanner } from "@/components/offline-banner";
 import { AttributionFooter } from "@/components/attribution-footer";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
@@ -495,7 +494,6 @@ export function TripPlanner({
               disabled={!isOnline}
             />
             <RecentTrips />
-            <SavedTripsSection />
             <footer className="mt-4 text-center space-y-2">
               <div>
                 <Link

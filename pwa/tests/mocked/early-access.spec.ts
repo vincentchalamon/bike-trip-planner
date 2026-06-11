@@ -62,6 +62,32 @@ test.describe("Early access form", () => {
     await expect(page.getByTestId("early-access-submit")).toBeVisible();
   });
 
+  test("early-access block has no 'create itinerary' CTA and a brand submit (#649)", async ({
+    page,
+  }) => {
+    await mockUnauthenticated(page);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    const section = page.getByTestId("section-early-access");
+    await section.scrollIntoViewIfNeeded();
+
+    // The "Créer un itinéraire" CTA was removed from this block (it stays in
+    // the hero only).
+    await expect(
+      section.getByTestId("cta-create-itinerary"),
+    ).toHaveCount(0);
+
+    // The submit button uses the amber brand fill (same as the hero CTA).
+    const submit = page.getByTestId("early-access-submit");
+    await expect(submit).toBeVisible();
+    await expect(submit).toHaveClass(/bg-brand-fill/);
+
+    // The email input is rendered on a white background.
+    const input = page.getByTestId("early-access-email-input");
+    await expect(input).toHaveClass(/bg-white/);
+  });
+
   test("shows success message after valid email submission", async ({
     page,
   }) => {

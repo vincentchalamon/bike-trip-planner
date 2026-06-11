@@ -74,6 +74,11 @@ export function TopBar({
     return pathname === href;
   }
 
+  // The home page ("/") is the authenticated dashboard's "new trip" entry
+  // point — same screen as /trips/new — so the tab must read as active there
+  // too (#649). A loaded trip lives at /trips/[id] and must not light it up.
+  const isNewTripActive = isActive("/trips/new") || isActive("/");
+
   return (
     <header
       data-testid="top-bar"
@@ -103,13 +108,13 @@ export function TopBar({
             size="sm"
             className={cn(
               "h-9 gap-1 cursor-pointer",
-              isActive("/trips/new") && "bg-accent text-accent-foreground",
+              isNewTripActive && "bg-accent text-accent-foreground",
             )}
             data-testid="nav-new-trip"
           >
             <Link
               href="/trips/new"
-              aria-current={isActive("/trips/new") ? "page" : undefined}
+              aria-current={isNewTripActive ? "page" : undefined}
             >
               <Plus className="h-4 w-4" />
               <span className="hidden md:inline">{tNav("newTrip")}</span>

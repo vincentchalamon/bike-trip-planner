@@ -11,9 +11,9 @@ async function clickLocaleSwitch(
   });
 }
 
-// The theme toggle (#384) is a permanent control in the top bar that cycles
-// light → dark → system on each click. Drive it until `data-theme-state`
-// matches the requested theme (max one full cycle).
+// The theme toggle (#384) is a permanent control in the top bar that flips
+// between light and dark on each click (#649 — no "system" state). Drive it
+// until `data-theme-state` matches the requested theme.
 async function setTheme(
   page: import("@playwright/test").Page,
   target: "light" | "dark",
@@ -609,7 +609,7 @@ Then("the tour step targets the GPX upload card", async ({ mockedPage }) => {
 });
 
 // ---------------------------------------------------------------------------
-// Theme — three-state cycle / system follow / persistence — FR + EN
+// Theme — two-state toggle / OS default / persistence — FR + EN
 // ---------------------------------------------------------------------------
 
 When("je clique sur le bouton de thème", async ({ mockedPage }) => {
@@ -651,30 +651,6 @@ Given(
 
 Given("the operating system prefers dark mode", async ({ mockedPage }) => {
   await mockedPage.emulateMedia({ colorScheme: "dark" });
-});
-
-When("je sélectionne le thème système", async ({ mockedPage }) => {
-  const toggle = mockedPage.getByTestId("theme-toggle");
-  await expect(toggle).toBeVisible({ timeout: 5000 });
-  for (let i = 0; i < 3; i++) {
-    if ((await toggle.getAttribute("data-theme-state")) === "system") break;
-    await toggle.click();
-  }
-  await expect(toggle).toHaveAttribute("data-theme-state", "system", {
-    timeout: 5000,
-  });
-});
-
-When("I select the system theme", async ({ mockedPage }) => {
-  const toggle = mockedPage.getByTestId("theme-toggle");
-  await expect(toggle).toBeVisible({ timeout: 5000 });
-  for (let i = 0; i < 3; i++) {
-    if ((await toggle.getAttribute("data-theme-state")) === "system") break;
-    await toggle.click();
-  }
-  await expect(toggle).toHaveAttribute("data-theme-state", "system", {
-    timeout: 5000,
-  });
 });
 
 // ---------------------------------------------------------------------------

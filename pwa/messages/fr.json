@@ -415,7 +415,7 @@
     "title": "Mes voyages",
     "newTrip": "Nouveau voyage",
     "backToList": "Retour aux voyages",
-    "noTrips": "Aucun voyage pour l'instant. Créez votre premier voyage !",
+    "noTrips": "Aucun voyage pour l'instant. Crée ton premier voyage !",
     "loading": "Chargement des voyages...",
     "loadingError": "Impossible de charger les voyages.",
     "stages": "{count, plural, one {# étape} other {# étapes}}",
@@ -446,9 +446,9 @@
     "openTrip": "Ouvrir le voyage « {title} »",
     "emptyState": {
       "createFirstTitle": "Crée ton premier voyage",
-      "createFirstDescription": "Importe une trace GPX, un itinéraire Komoot, Strava ou RideWithGPS — et laisse-toi guider sur les routes.",
+      "createFirstDescription": "Tu n'as encore aucun voyage. Importe une trace GPX, un itinéraire Komoot, Strava ou RideWithGPS — et laisse-toi guider sur les routes.",
       "newTrip": "Créer un voyage",
-      "noResultsTitle": "Aucun voyage ne correspond à votre recherche",
+      "noResultsTitle": "Aucun voyage ne correspond à ta recherche",
       "activeFilters": "Filtres actifs :",
       "filterTitle": "titre « {value} »",
       "filterDates": "dates {value}",
@@ -686,6 +686,7 @@
   },
   "auth": {
     "loginTitle": "Connexion",
+    "backToHome": "Retour à l'accueil",
     "loginDescription": "Entrez votre adresse email pour recevoir un lien de connexion.",
     "emailLabel": "Adresse email",
     "emailPlaceholder": "vous@exemple.com",
@@ -865,13 +866,7 @@
   },
   "offline": {
     "offlineMessage": "Hors ligne — consultation des données en cache. Modification désactivée.",
-    "reconnected": "Connexion rétablie.",
-    "savedTrips": {
-      "title": "Mes voyages sauvegardés",
-      "stages": "{count, plural, one {# étape} other {# étapes}}",
-      "noDate": "Non daté",
-      "offlineBadge": "Hors ligne"
-    }
+    "reconnected": "Connexion rétablie."
   },
   "earlyAccess": {
     "sectionTitle": "Demander un accès anticipé",

@@ -51,18 +51,6 @@ Fonctionnalité: Mobile et mode hors ligne
     Et que la connexion est rétablie
     Alors le champ de saisie est à nouveau actif
 
-  @mobile @critique
-  Scénario: Voyage sauvegardé dans IndexedDB après trip_complete
-    Quand un voyage complet est créé
-    Alors le voyage est sauvegardé localement dans IndexedDB
-
-  @mobile @critique
-  Scénario: Consultation hors ligne d'un voyage précédemment sauvegardé
-    Étant donné qu'un voyage a été précédemment sauvegardé localement
-    Quand la connexion internet est perdue
-    Et que j'ouvre ce voyage
-    Alors je peux consulter les étapes du voyage
-
   @mobile
   Scénario: Interface responsive sur écran 390px
     Quand je redimensionne la fenêtre à 390px de largeur

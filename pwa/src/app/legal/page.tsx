@@ -5,6 +5,7 @@ import {
   asParagraphs,
   withContactEmail,
 } from "@/components/legal-page";
+import { PublicTopBar } from "@/components/public-top-bar";
 import { LandingFooter } from "@/components/landing/footer";
 
 const SECTION_IDS = [
@@ -28,6 +29,7 @@ export default async function LegalNoticePage() {
 
   return (
     <>
+      <PublicTopBar />
       <LegalPageLayout
         title={t("title")}
         intro={t("intro")}

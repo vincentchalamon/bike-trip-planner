@@ -446,7 +446,7 @@
     "openTrip": "Open trip \"{title}\"",
     "emptyState": {
       "createFirstTitle": "Create your first trip",
-      "createFirstDescription": "Import a GPX track, a Komoot, Strava or RideWithGPS route — and let yourself be guided onto the road.",
+      "createFirstDescription": "You don't have any trips yet. Import a GPX track, a Komoot, Strava or RideWithGPS route — and let yourself be guided onto the road.",
       "newTrip": "Create a trip",
       "noResultsTitle": "No trip matches your search",
       "activeFilters": "Active filters:",
@@ -686,6 +686,7 @@
   },
   "auth": {
     "loginTitle": "Sign in",
+    "backToHome": "Back to home",
     "loginDescription": "Enter your email address to receive a sign-in link.",
     "emailLabel": "Email address",
     "emailPlaceholder": "you@example.com",
@@ -865,13 +866,7 @@
   },
   "offline": {
     "offlineMessage": "Offline — viewing cached data. Editing disabled.",
-    "reconnected": "Connection restored.",
-    "savedTrips": {
-      "title": "My saved trips",
-      "stages": "{count, plural, one {# stage} other {# stages}}",
-      "noDate": "No date",
-      "offlineBadge": "Offline"
-    }
+    "reconnected": "Connection restored."
   },
   "earlyAccess": {
     "sectionTitle": "Request early access",
