@@ -22,6 +22,18 @@ test.describe("Desktop top bar", () => {
     await expect(mockedPage.getByTestId("profile-button")).toBeVisible();
   });
 
+  test("'Nouveau voyage' tab is active on the home dashboard (#649)", async ({
+    mockedPage,
+  }) => {
+    // The home page ("/") is the "new trip" entry point, so the tab must read
+    // as the current page there. `asChild` merges the testid onto the <a>,
+    // which carries aria-current="page".
+    await expect(mockedPage.getByTestId("nav-new-trip")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
   test("undo/redo and share are hidden on the welcome screen", async ({
     mockedPage,
   }) => {
@@ -78,18 +90,21 @@ test.describe("Desktop top bar", () => {
     );
   });
 
-  test("theme toggle cycles through light, dark and auto", async ({
+  test("theme toggle flips between light and dark (two states)", async ({
     mockedPage,
   }) => {
     const toggle = mockedPage.getByTestId("theme-toggle");
     await expect(toggle).toBeVisible();
 
+    // The toggle only ever reports the resolved light/dark theme (#649 — the
+    // "system" state was removed from the top bar).
     const initial = await toggle.getAttribute("data-theme-state");
+    expect(["light", "dark"]).toContain(initial);
+
     await toggle.click();
     await expect(toggle).not.toHaveAttribute("data-theme-state", initial ?? "");
 
-    // Three clicks return to the starting state (light → dark → system → …)
-    await toggle.click();
+    // Two clicks round-trip back to the starting state (light ⇄ dark).
     await toggle.click();
     await expect(toggle).toHaveAttribute("data-theme-state", initial ?? "");
   });

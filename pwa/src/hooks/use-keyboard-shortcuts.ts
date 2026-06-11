@@ -25,7 +25,7 @@ import { useUiStore } from "@/store/ui-store";
  *   to the global map view (null). Pass `0` when no trip is loaded.
  */
 export function useKeyboardShortcuts(stageCount: number) {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -99,10 +99,9 @@ export function useKeyboardShortcuts(stageCount: number) {
         case "t":
         case "T":
           e.preventDefault();
-          // Cycle light → dark → system → light (mirrors ThemeToggle).
-          setTheme(
-            theme === "light" ? "dark" : theme === "dark" ? "system" : "light",
-          );
+          // Two-state toggle light ⇄ dark, off the resolved theme (mirrors
+          // ThemeToggle — no "system" state in the UI, #649).
+          setTheme(resolvedTheme === "dark" ? "light" : "dark");
           break;
 
         case "m":
@@ -124,5 +123,5 @@ export function useKeyboardShortcuts(stageCount: number) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [stageCount, theme, setTheme]);
+  }, [stageCount, resolvedTheme, setTheme]);
 }

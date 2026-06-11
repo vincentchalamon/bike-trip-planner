@@ -96,9 +96,8 @@ export function TripsEmptyState({
       </p>
       <Button
         asChild
-        variant="default"
         size="lg"
-        className="mt-6"
+        className="mt-6 bg-brand-fill font-semibold text-white hover:bg-brand-fill-hover"
         data-testid="trips-empty-new-trip-primary"
       >
         <Link href="/trips/new">{t("newTrip")}</Link>

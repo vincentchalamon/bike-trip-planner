@@ -3,38 +3,37 @@
 import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
-import { Sun, Moon, Monitor } from "lucide-react";
+import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const emptySubscribe = () => () => {};
 const getTrue = () => true;
 const getFalse = () => false;
 
-// Three-state cycle: light → dark → system → light.
-type ThemeState = "light" | "dark" | "system";
+// Two-state toggle: light ⇄ dark.
+type ThemeState = "light" | "dark";
 
 const THEME_ICONS: Record<ThemeState, typeof Sun> = {
   light: Sun,
   dark: Moon,
-  system: Monitor,
 };
 
 const NEXT_THEME: Record<ThemeState, ThemeState> = {
   light: "dark",
-  dark: "system",
-  system: "light",
+  dark: "light",
 };
 
 /**
- * Theme toggle with three states (light / dark / auto) backed by next-themes.
+ * Theme toggle with two states (light / dark) backed by next-themes.
  *
- * A single click cycles to the next state. `system` defers to the OS
- * preference via `setTheme("system")`. The icon reflects the *selected*
- * theme (not the resolved one) so the auto state is always discoverable.
+ * The provider defaults to `system`, so on first load the theme matches the
+ * OS preference. A single click then flips to the opposite *resolved* theme
+ * and pins it explicitly (no "auto/system" state in the top bar — #649). The
+ * dedicated Account → Préférences picker still exposes the three options.
  */
 export function ThemeToggle() {
   const t = useTranslations("theme");
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(emptySubscribe, getTrue, getFalse);
 
   if (!mounted) {
@@ -45,8 +44,9 @@ export function ThemeToggle() {
     );
   }
 
-  const current: ThemeState =
-    theme === "light" || theme === "dark" ? theme : "system";
+  // Reflect the resolved theme so the icon stays accurate even while the
+  // provider is still on "system" (no explicit light/dark chosen yet).
+  const current: ThemeState = resolvedTheme === "dark" ? "dark" : "light";
   const nextTheme = NEXT_THEME[current];
   const Icon = THEME_ICONS[current];
 

@@ -107,17 +107,17 @@ Fonctionnalité: UX transverse
     Alors le popover du tour d'onboarding n'est plus visible
 
   @desktop @sombre
-  Scénario: Cycle de thème clair vers sombre puis système
+  Scénario: Le bouton de thème bascule entre clair et sombre
     Quand je bascule vers le thème clair
     Et que je clique sur le bouton de thème
     Alors le thème sélectionné est "dark"
     Quand je clique sur le bouton de thème
-    Alors le thème sélectionné est "system"
+    Alors le thème sélectionné est "light"
 
   @desktop @sombre
-  Scénario: Le mode système suit la préférence du système d'exploitation
+  Scénario: Par défaut, le thème suit la préférence du système d'exploitation
     Étant donné que le système d'exploitation préfère le mode sombre
-    Quand je sélectionne le thème système
+    Quand je recharge la page
     Alors l'interface s'affiche avec un fond sombre
 
   @desktop @sombre

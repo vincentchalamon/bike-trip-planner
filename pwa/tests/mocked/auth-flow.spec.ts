@@ -18,6 +18,22 @@ test.describe("Auth flow", () => {
     ).toBeVisible();
   });
 
+  test("login page has a back-to-home link (#649)", async ({ page }) => {
+    await page.route("**/auth/refresh", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      return route.fulfill({ status: 401, body: "" });
+    });
+
+    await page.goto("/login");
+    await page.waitForLoadState("networkidle");
+
+    const back = page.getByTestId("login-back-link");
+    await expect(back).toBeVisible();
+    await expect(back).toHaveAttribute("href", "/");
+    await back.click();
+    await expect(page).toHaveURL("/");
+  });
+
   test("login page shows confirmation after submit", async ({ page }) => {
     // Mock auth/refresh as 401 (not authenticated)
     await page.route("**/auth/refresh", (route, request) => {

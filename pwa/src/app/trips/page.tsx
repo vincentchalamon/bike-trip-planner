@@ -170,8 +170,8 @@ export default function TripsPage() {
           </h1>
           <Button
             asChild
-            variant="default"
             size="sm"
+            className="bg-brand-fill hover:bg-brand-fill-hover font-semibold text-white"
             data-testid="new-trip-button"
           >
             <Link href="/trips/new">{t("newTrip")}</Link>

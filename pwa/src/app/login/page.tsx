@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Bike } from "lucide-react";
+import { ArrowLeft, Bike } from "lucide-react";
 import { useAuthStore } from "@/store/auth-store";
 import { AttributionFooter } from "@/components/attribution-footer";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
@@ -28,12 +28,21 @@ export default function LoginPage() {
 
   return (
     <div
-      className="flex min-h-screen flex-col items-center justify-center"
+      className="relative flex min-h-screen flex-col items-center justify-center"
       style={{
         backgroundColor: "var(--surface)",
         padding: "var(--spacing-lg)",
       }}
     >
+      <Link
+        href="/"
+        className="absolute left-4 top-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground sm:left-6 sm:top-6"
+        data-testid="login-back-link"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        {t("backToHome")}
+      </Link>
+
       <main
         className="w-full max-w-sm"
         style={{ display: "grid", gap: "var(--spacing-2xl)" }}

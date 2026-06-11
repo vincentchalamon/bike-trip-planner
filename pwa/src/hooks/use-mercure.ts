@@ -6,8 +6,6 @@ import type { EnrichedStagePayload, MercureEvent } from "@/lib/mercure/types";
 import { TripAiOverviewSchema } from "@/lib/validation/schemas";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
-import { useOfflineStore } from "@/store/offline-store";
-import type { SavedTrip } from "@/store/offline-store";
 import { reverseGeocode } from "@/lib/geocode/client";
 import { fetchAiAvailability } from "@/lib/ai-availability";
 import { toast } from "@/components/ui/sonner";
@@ -431,31 +429,6 @@ function dispatchEvent(event: MercureEvent): void {
       store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
-
-      // Persist the completed trip to IndexedDB for offline consultation
-      if (store.trip) {
-        const snapshot: SavedTrip = {
-          id: store.trip.id,
-          title: store.trip.title,
-          sourceUrl: store.trip.sourceUrl,
-          totalDistance: store.totalDistance,
-          totalElevation: store.totalElevation,
-          totalElevationLoss: store.totalElevationLoss,
-          sourceType: store.sourceType,
-          startDate: store.startDate,
-          endDate: store.endDate,
-          fatigueFactor: store.fatigueFactor,
-          elevationPenalty: store.elevationPenalty,
-          maxDistancePerDay: store.maxDistancePerDay,
-          averageSpeed: store.averageSpeed,
-          ebikeMode: store.ebikeMode,
-          departureHour: store.departureHour,
-          enabledAccommodationTypes: store.enabledAccommodationTypes,
-          stages: store.stages,
-          savedAt: new Date().toISOString(),
-        };
-        void useOfflineStore.getState().saveTrip(snapshot);
-      }
       break;
 
     case "computation_step_completed":
@@ -520,31 +493,6 @@ function dispatchEvent(event: MercureEvent): void {
           needsLabels.map(({ s }) => s),
           needsLabels.map(({ i }) => i),
         );
-      }
-
-      // Persist completed trip to IndexedDB for offline consultation.
-      if (snapshotStore.trip) {
-        const snapshot: SavedTrip = {
-          id: snapshotStore.trip.id,
-          title: snapshotStore.trip.title,
-          sourceUrl: snapshotStore.trip.sourceUrl,
-          totalDistance: snapshotStore.totalDistance,
-          totalElevation: snapshotStore.totalElevation,
-          totalElevationLoss: snapshotStore.totalElevationLoss,
-          sourceType: snapshotStore.sourceType,
-          startDate: snapshotStore.startDate,
-          endDate: snapshotStore.endDate,
-          fatigueFactor: snapshotStore.fatigueFactor,
-          elevationPenalty: snapshotStore.elevationPenalty,
-          maxDistancePerDay: snapshotStore.maxDistancePerDay,
-          averageSpeed: snapshotStore.averageSpeed,
-          ebikeMode: snapshotStore.ebikeMode,
-          departureHour: snapshotStore.departureHour,
-          enabledAccommodationTypes: snapshotStore.enabledAccommodationTypes,
-          stages: snapshotStore.stages,
-          savedAt: new Date().toISOString(),
-        };
-        void useOfflineStore.getState().saveTrip(snapshot);
       }
       break;
     }

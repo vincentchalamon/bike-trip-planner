@@ -103,7 +103,9 @@ export function EarlyAccessForm() {
           aria-describedby={emailError ? "early-access-error" : undefined}
           aria-invalid={!!emailError}
           data-testid="early-access-email-input"
-          className={emailError ? "ring-2 ring-destructive" : ""}
+          className={`bg-white text-neutral-900 placeholder:text-neutral-400 dark:bg-white dark:text-neutral-900 border-transparent ${
+            emailError ? "ring-2 ring-destructive" : ""
+          }`}
         />
         {emailError && (
           <p
@@ -118,6 +120,7 @@ export function EarlyAccessForm() {
       <Button
         type="submit"
         disabled={loading}
+        className="bg-brand-fill hover:bg-brand-fill-hover text-white font-semibold"
         data-testid="early-access-submit"
       >
         {loading ? t("sending") : t("submitButton")}

@@ -143,7 +143,7 @@ test.describe("Keyboard shortcuts", () => {
     await mockedPage.locator("body").click();
     await mockedPage.keyboard.press("t");
 
-    // The selected theme cycled (light → dark → system → light).
+    // The resolved theme flipped (light ⇄ dark — two-state toggle, #649).
     await expect(toggle).not.toHaveAttribute("data-theme-state", before);
   });
 

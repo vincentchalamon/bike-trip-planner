@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/store/auth-store";
-import { CtaButton } from "@/components/cta-button";
 import { EarlyAccessForm } from "@/components/early-access-form";
 
 function EarlyAccessConfirmation() {
@@ -38,8 +37,6 @@ export function EarlyAccessSection() {
       <div className="max-w-2xl mx-auto px-4 md:px-6 text-center">
         <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("title")}</h2>
         <p className="text-lg opacity-75 mb-10">{t("description")}</p>
-
-        <CtaButton label={t("ctaPrimary")} size="lg" className="mb-10" />
 
         {!isAuthenticated && (
           <div

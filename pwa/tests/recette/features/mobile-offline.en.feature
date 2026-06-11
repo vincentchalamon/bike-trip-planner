@@ -50,18 +50,6 @@ Feature: Mobile and offline mode
     And the connection is restored
     Then the input field is enabled again
 
-  @mobile @critical
-  Scenario: Trip saved to IndexedDB after trip_complete
-    When a full trip is created
-    Then the trip is saved locally in IndexedDB
-
-  @mobile @critical
-  Scenario: Offline consultation of a previously saved trip
-    Given a trip has been previously saved locally
-    When the internet connection is lost
-    And I open that trip
-    Then I can view the trip stages
-
   @mobile
   Scenario: Responsive layout at 390px width
     When I resize the window to 390px width
