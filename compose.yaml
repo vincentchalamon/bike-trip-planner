@@ -388,7 +388,12 @@ services:
       start_period: 3600s
 
   database:
-    image: postgres:18-alpine
+    # PostGIS-enabled Postgres. The local-first Tier-1 reference index
+    # (POI/accommodations/water/admin/cycle) is imported by the provisioner and
+    # read via spatial corridor queries (ST_DWithin), replacing the runtime
+    # Overpass dependency. The Alpine variant keeps the small footprint of the
+    # former postgres:18-alpine base (same PG18 binaries + data layout). ADR-040.
+    image: postgis/postgis:18-3.6-alpine
     restart: unless-stopped
     # Modest tuning for the beta profile (#566): max_connections covers php +
     # 2 async workers + 1 llm worker + provisioner with headroom; shared_buffers

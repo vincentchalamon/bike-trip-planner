@@ -24,7 +24,11 @@ jobs:
       options: --user root
     services:
       database:
-        image: postgres:18-alpine
+        # PostGIS image: Foundry resets the test DB in "migrate" mode, so the
+        # CREATE EXTENSION postgis migration (ADR-040) runs here too — the test
+        # DB engine must match the app's PostGIS-enabled Postgres. The init
+        # script also enables postgis on POSTGRES_DB and template1.
+        image: postgis/postgis:18-3.6-alpine
         env:
           POSTGRES_USER: app
           POSTGRES_PASSWORD: "!ChangeMe!"

@@ -18,6 +18,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'default' => [
                     'url' => '%env(resolve:DATABASE_URL)%',
                     'profiling_collect_backtrace' => '%kernel.debug%',
+                    // PostGIS creates the spatial_ref_sys table in the public schema.
+                    // Exclude it from the schema tool so doctrine:migrations:diff and
+                    // schema:validate don't emit a DROP for it. The Tier-1 osm2pgsql
+                    // tables live in their own schema, also outside Doctrine (ADR-040).
+                    'schema_filter' => '~^(?!spatial_ref_sys)~',
                     'mapping_types' => [
                         'jsonb' => 'jsonb',
                         '_text' => 'text[]',
