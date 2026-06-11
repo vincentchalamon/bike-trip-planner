@@ -40,7 +40,8 @@ const STAGE_PALETTE = [
   "#c084fc",
 ];
 
-function stageColor(index: number): string {
+/** Stable colour for a stage, cycling through {@link STAGE_PALETTE}. */
+export function stageColor(index: number): string {
   return STAGE_PALETTE[index % STAGE_PALETTE.length]!;
 }
 
@@ -524,7 +525,7 @@ function drawElevationProfile(
     globalIdx += seg.eles.length;
   }
 
-  // Stroke line per segment with difficulty color
+  // Stroke line per segment with its per-stage color
   globalIdx = 0;
   for (const seg of segments) {
     if (seg.eles.length < 2) {
