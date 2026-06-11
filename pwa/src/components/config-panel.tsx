@@ -388,8 +388,8 @@ export function ConfigPanel({
           onConfirm={async () => {
             setIsDeleting(true);
             try {
-              await onDelete();
-              setIsDeleteDialogOpen(false);
+              const ok = await onDelete();
+              if (ok !== false) setIsDeleteDialogOpen(false);
             } finally {
               setIsDeleting(false);
             }
