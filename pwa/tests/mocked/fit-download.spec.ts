@@ -38,7 +38,7 @@ test.describe("FIT download", () => {
 
     // Track FIT API requests
     const fitRequests: string[] = [];
-    await mockedPage.route("**/trips/*/stages/*.fit", (route) => {
+    await mockedPage.route("**/trips/*/stages/*/export.fit", (route) => {
       fitRequests.push(route.request().url());
       return route.fulfill({
         status: 200,
@@ -57,7 +57,7 @@ test.describe("FIT download", () => {
     await expect
       .poll(() => fitRequests.length, { timeout: 5000 })
       .toBeGreaterThan(0);
-    expect(fitRequests[0]).toContain("/stages/0.fit");
+    expect(fitRequests[0]).toContain("/stages/0/export.fit");
   });
 
   test("global FIT download button is visible after stages computed", async ({
@@ -91,7 +91,7 @@ test.describe("FIT download", () => {
       tripCompleteEvent(),
     ]);
 
-    // Track whole-trip FIT API requests (not the per-stage `/stages/*.fit`).
+    // Track whole-trip FIT API requests (not the per-stage `/stages/*/export.fit`).
     const fitRequests: string[] = [];
     await mockedPage.route("**/trips/*.fit", (route) => {
       fitRequests.push(route.request().url());

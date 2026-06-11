@@ -222,8 +222,8 @@ export async function mockAllApis(
     });
   });
 
-  // GET /trips/{id}/stages/{index}.gpx — serve mock GPX
-  await page.route("**/trips/*/stages/*.gpx", (route) =>
+  // GET /trips/{id}/stages/{index}/export.gpx — serve mock GPX
+  await page.route("**/trips/*/stages/*/export.gpx", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/gpx+xml",

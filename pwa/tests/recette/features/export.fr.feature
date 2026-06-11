@@ -14,7 +14,7 @@ Fonctionnalité: Export GPX et FIT
   @desktop @critique
   Scénario: Téléchargement GPX d'une étape déclenche l'appel API
     Quand je clique sur "Télécharger le GPX" de l'étape 1
-    Alors une requête GET vers /trips/*/stages/0.gpx est envoyée
+    Alors une requête GET vers /trips/*/stages/0/export.gpx est envoyée
 
   @desktop @critique
   Scénario: Bouton GPX global visible après le calcul des étapes
@@ -39,7 +39,7 @@ Fonctionnalité: Export GPX et FIT
   @desktop @critique
   Scénario: Téléchargement FIT d'une étape
     Quand je clique sur "Télécharger le FIT" de l'étape 1
-    Alors une requête GET vers /trips/*/stages/0.fit est envoyée
+    Alors une requête GET vers /trips/*/stages/0/export.fit est envoyée
 
   @desktop
   Scénario: Bouton FIT désactivé pendant le calcul
