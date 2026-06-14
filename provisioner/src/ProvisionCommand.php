@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Provisioner;
 
 use Provisioner\Exception\DownloadFailedException;
+use Provisioner\Exception\ImportFailedException;
 use Provisioner\Exception\MergeFailedException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -26,9 +27,13 @@ final class ProvisionCommand extends Command
 
     private const string DEFAULT_SELECTION_FILE = '/data/regions.json';
 
+    private const string DEFAULT_FILTERED_PBF = '/data/tier1-filtered.osm.pbf';
+
     private readonly RegionSelectionStore $selectionStore;
 
     private readonly OsmDataDownloader $downloader;
+
+    private readonly PostgisImporter $postgisImporter;
 
     public function __construct(
         private readonly string $regionsDir = self::DEFAULT_REGIONS_DIR,
@@ -37,16 +42,22 @@ final class ProvisionCommand extends Command
         ?RegionSelectionStore $selectionStore = null,
         ?OsmDataDownloader $downloader = null,
         private readonly bool $runMerge = true,
+        private readonly string $filteredPbf = self::DEFAULT_FILTERED_PBF,
+        ?PostgisImporter $postgisImporter = null,
     ) {
         parent::__construct();
 
         $this->selectionStore = $selectionStore ?? new RegionSelectionStore($selectionFile);
         $this->downloader = $downloader ?? new OsmDataDownloader(regionsDir: $this->regionsDir);
+        $this->postgisImporter = $postgisImporter ?? new PostgisImporter(
+            flexStylePath: \dirname(__DIR__).'/osm2pgsql/tier1.lua',
+        );
     }
 
     protected function configure(): void
     {
         $this->addOption('dry-run', null, InputOption::VALUE_NONE, 'Show what would be downloaded without executing');
+        $this->addOption('with-postgis', null, InputOption::VALUE_NONE, 'After merging, import the Tier-1 features into PostGIS (requires PG* env)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -55,6 +66,7 @@ final class ProvisionCommand extends Command
         $io->title('OSM Region Provisioner');
 
         $dryRun = (bool) $input->getOption('dry-run');
+        $importPostgis = (bool) $input->getOption('with-postgis');
         $interactive = $input->isInteractive();
         $hasSelection = $this->selectionStore->exists();
 
@@ -65,13 +77,13 @@ final class ProvisionCommand extends Command
         }
 
         if ($hasSelection) {
-            return $this->runUpdateFlow($io, $dryRun, $interactive);
+            return $this->runUpdateFlow($io, $dryRun, $interactive, $importPostgis);
         }
 
-        return $this->runInstallFlow($io, $dryRun);
+        return $this->runInstallFlow($io, $dryRun, $importPostgis);
     }
 
-    private function runInstallFlow(SymfonyStyle $io, bool $dryRun): int
+    private function runInstallFlow(SymfonyStyle $io, bool $dryRun, bool $importPostgis): int
     {
         $allRegions = GeofabrikRegionRegistry::all();
         $regionNames = array_keys($allRegions);
@@ -154,7 +166,7 @@ final class ProvisionCommand extends Command
 
         $slugs = array_map(static fn (string $name): string => $allRegions[$name]['slug'], $selected);
 
-        $result = $this->downloadAndMerge($io, $slugs, force: false);
+        $result = $this->downloadAndMerge($io, $slugs, force: false, importPostgis: $importPostgis);
         if (Command::SUCCESS !== $result) {
             return $result;
         }
@@ -165,7 +177,7 @@ final class ProvisionCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function runUpdateFlow(SymfonyStyle $io, bool $dryRun, bool $interactive): int
+    private function runUpdateFlow(SymfonyStyle $io, bool $dryRun, bool $interactive, bool $importPostgis): int
     {
         $slugs = $this->selectionStore->load();
         $knownSlugs = array_column(GeofabrikRegionRegistry::all(), 'slug');
@@ -189,11 +201,11 @@ final class ProvisionCommand extends Command
 
             $io->warning('Selection file exists but is empty or invalid. Falling back to install flow.');
 
-            return $this->runInstallFlow($io, $dryRun);
+            return $this->runInstallFlow($io, $dryRun, $importPostgis);
         }
 
         if (!$interactive) {
-            return $this->runSilentUpdate($io, $slugs, $dryRun);
+            return $this->runSilentUpdate($io, $slugs, $dryRun, $importPostgis);
         }
 
         $choice = $io->choice(
@@ -203,8 +215,8 @@ final class ProvisionCommand extends Command
         );
 
         return match ($choice) {
-            'update' => $this->runSilentUpdate($io, $slugs, $dryRun),
-            'reconfigure' => $this->runInstallFlow($io, $dryRun),
+            'update' => $this->runSilentUpdate($io, $slugs, $dryRun, $importPostgis),
+            'reconfigure' => $this->runInstallFlow($io, $dryRun, $importPostgis),
             default => Command::SUCCESS,
         };
     }
@@ -212,7 +224,7 @@ final class ProvisionCommand extends Command
     /**
      * @param list<string> $slugs
      */
-    private function runSilentUpdate(SymfonyStyle $io, array $slugs, bool $dryRun): int
+    private function runSilentUpdate(SymfonyStyle $io, array $slugs, bool $dryRun, bool $importPostgis): int
     {
         $io->section('Updating persisted regions');
         foreach ($slugs as $slug) {
@@ -225,7 +237,7 @@ final class ProvisionCommand extends Command
             return Command::SUCCESS;
         }
 
-        $result = $this->downloadAndMerge($io, $slugs, force: true);
+        $result = $this->downloadAndMerge($io, $slugs, force: true, importPostgis: $importPostgis);
         if (Command::SUCCESS !== $result) {
             return $result;
         }
@@ -238,7 +250,7 @@ final class ProvisionCommand extends Command
     /**
      * @param list<string> $slugs
      */
-    private function downloadAndMerge(SymfonyStyle $io, array $slugs, bool $force): int
+    private function downloadAndMerge(SymfonyStyle $io, array $slugs, bool $force, bool $importPostgis): int
     {
         $toDownload = [];
         foreach ($slugs as $slug) {
@@ -279,6 +291,21 @@ final class ProvisionCommand extends Command
             try {
                 $this->downloader->merge($pbfFiles, $this->mergedPbf);
             } catch (MergeFailedException $e) {
+                $io->newLine();
+                $io->error($e->getMessage());
+
+                return Command::FAILURE;
+            }
+
+            $io->writeln("\u{2713}");
+        }
+
+        if ($importPostgis) {
+            $io->write('  Importing Tier-1 features into PostGIS... ');
+
+            try {
+                $this->postgisImporter->run($this->mergedPbf, $this->filteredPbf);
+            } catch (ImportFailedException $e) {
                 $io->newLine();
                 $io->error($e->getMessage());
 

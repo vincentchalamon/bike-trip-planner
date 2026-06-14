@@ -6,12 +6,15 @@ namespace Provisioner\Tests;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Provisioner\OsmDataDownloader;
+use Provisioner\PostgisImporter;
 use Provisioner\ProvisionCommand;
 use Provisioner\RegionSelectionStore;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\Process\Process;
 
 final class ProvisionCommandTest extends TestCase
 {
@@ -55,17 +58,23 @@ final class ProvisionCommandTest extends TestCase
         rmdir($dir);
     }
 
-    private function buildTester(?MockHttpClient $httpClient = null): CommandTester
-    {
+    private function buildTester(
+        ?MockHttpClient $httpClient = null,
+        bool $runMerge = false,
+        ?\Closure $downloaderProcessFactory = null,
+        ?PostgisImporter $postgisImporter = null,
+    ): CommandTester {
         $command = new ProvisionCommand(
             regionsDir: $this->regionsDir,
             mergedPbf: $this->mergedPbf,
             selectionFile: $this->selectionFile,
-            downloader: new \Provisioner\OsmDataDownloader(
+            downloader: new OsmDataDownloader(
                 regionsDir: $this->regionsDir,
                 httpClient: $httpClient ?? new MockHttpClient(static fn (): MockResponse => new MockResponse('osm-bytes')),
+                processFactory: $downloaderProcessFactory,
             ),
-            runMerge: false,
+            runMerge: $runMerge,
+            postgisImporter: $postgisImporter,
         );
 
         $app = new Application();
@@ -220,5 +229,82 @@ final class ProvisionCommandTest extends TestCase
 
         self::assertSame(0, $exitCode);
         self::assertStringContainsString('No region selected', $tester->getDisplay());
+    }
+
+    #[Test]
+    public function withPostgisFlagRunsTheImport(): void
+    {
+        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
+
+        $calls = 0;
+        $importer = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: function (array $command) use (&$calls): Process {
+                ++$calls;
+
+                return new Process(['true']);
+            },
+        );
+
+        $tester = $this->buildTester(
+            runMerge: true,
+            downloaderProcessFactory: static fn (array $command): Process => new Process(['true']),
+            postgisImporter: $importer,
+        );
+
+        $exitCode = $tester->execute(['--with-postgis' => true], ['interactive' => false]);
+
+        self::assertSame(0, $exitCode, $tester->getDisplay());
+        self::assertStringContainsString('Importing Tier-1 features into PostGIS', $tester->getDisplay());
+        self::assertGreaterThan(0, $calls, 'PostgisImporter::run() should have been invoked');
+    }
+
+    #[Test]
+    public function postgisImportFailureReturnsFailure(): void
+    {
+        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
+
+        $importer = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: static fn (array $command): Process => new Process(['sh', '-c', 'echo "boom" 1>&2; exit 1']),
+        );
+
+        $tester = $this->buildTester(
+            runMerge: true,
+            downloaderProcessFactory: static fn (array $command): Process => new Process(['true']),
+            postgisImporter: $importer,
+        );
+
+        $exitCode = $tester->execute(['--with-postgis' => true], ['interactive' => false]);
+
+        self::assertSame(1, $exitCode);
+        self::assertStringContainsString('tags-filter failed', $tester->getDisplay());
+    }
+
+    #[Test]
+    public function withoutPostgisFlagSkipsImport(): void
+    {
+        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
+
+        $ran = false;
+        $importer = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: function (array $command) use (&$ran): Process {
+                $ran = true;
+
+                return new Process(['true']);
+            },
+        );
+
+        $tester = $this->buildTester(
+            runMerge: true,
+            downloaderProcessFactory: static fn (array $command): Process => new Process(['true']),
+            postgisImporter: $importer,
+        );
+
+        $exitCode = $tester->execute([], ['interactive' => false]);
+
+        self::assertSame(0, $exitCode, $tester->getDisplay());
+        self::assertFalse($ran, 'import must not run without --with-postgis');
     }
 }

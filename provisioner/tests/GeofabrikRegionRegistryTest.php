@@ -11,9 +11,26 @@ use Provisioner\GeofabrikRegionRegistry;
 final class GeofabrikRegionRegistryTest extends TestCase
 {
     #[Test]
-    public function allReturns28Regions(): void
+    public function allReturns31Regions(): void
     {
-        self::assertCount(28, GeofabrikRegionRegistry::all());
+        self::assertCount(31, GeofabrikRegionRegistry::all());
+    }
+
+    #[Test]
+    public function allIncludesBeneluxCountries(): void
+    {
+        $regions = GeofabrikRegionRegistry::all();
+        self::assertArrayHasKey('Belgique', $regions);
+        self::assertArrayHasKey('Pays-Bas', $regions);
+        self::assertArrayHasKey('Luxembourg', $regions);
+    }
+
+    #[Test]
+    public function downloadUrlForBeneluxUsesEuropeLevelExtract(): void
+    {
+        self::assertSame('https://download.geofabrik.de/europe/belgium-latest.osm.pbf', GeofabrikRegionRegistry::downloadUrl('belgium'));
+        self::assertSame('https://download.geofabrik.de/europe/netherlands-latest.osm.pbf', GeofabrikRegionRegistry::downloadUrl('netherlands'));
+        self::assertSame('https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf', GeofabrikRegionRegistry::downloadUrl('luxembourg'));
     }
 
     #[Test]
@@ -60,11 +77,17 @@ final class GeofabrikRegionRegistryTest extends TestCase
     #[Test]
     public function allSlugsProduceValidUrls(): void
     {
+        $europeLevel = ['france', 'belgium', 'netherlands', 'luxembourg'];
+
         foreach (GeofabrikRegionRegistry::all() as $name => $data) {
             $url = GeofabrikRegionRegistry::downloadUrl($data['slug']);
-            if ('france' === $data['slug']) {
-                // Whole-France extract lives one level up, not under /france/.
-                self::assertStringContainsString('/europe/france-latest.osm.pbf', $url, $name);
+            if (\in_array($data['slug'], $europeLevel, true)) {
+                // Whole countries live at the europe/ level, not under /france/.
+                self::assertSame(
+                    \sprintf('https://download.geofabrik.de/europe/%s-latest.osm.pbf', $data['slug']),
+                    $url,
+                    $name,
+                );
             } else {
                 self::assertStringStartsWith('https://download.geofabrik.de/europe/france/', $url, $name);
             }

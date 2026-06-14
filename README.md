@@ -223,6 +223,8 @@ make provision
 
 This runs the unified `provision` command inside the `provisioner` container (Compose profile `provisioning`). It downloads the configured Geofabrik regions, writes them atomically to the shared `/data` volume, and updates `/data/regions.json`. Re-running the same command later updates existing regions instead of re-installing them — the install vs update mode is detected from the presence of `/data/regions.json` and the `--no-interaction` flag.
 
+The Makefile targets also pass `--with-postgis`, which imports the bikepacking-relevant OSM features (POI, accommodations, water points) into the PostGIS `osm` schema via `osm2pgsql` (flex style `provisioner/osm2pgsql/tier1.lua`). The import builds a staging schema and swaps it onto the live `osm` schema in one transaction, so the previous dataset keeps serving until the new one is complete. This local-first reference index is what the API reads via `ST_DWithin` corridor queries — see [ADR-040](docs/adr/adr-040-local-first-reference-data-postgis.md).
+
 **Refresh (manual):**
 
 OSM data is refreshed manually — there is no scheduled job. Re-download the configured Geofabrik extracts and reload them into Valhalla on whatever cadence suits the deployment:
