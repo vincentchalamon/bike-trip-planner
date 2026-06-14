@@ -7,12 +7,21 @@ namespace Provisioner;
 final class GeofabrikRegionRegistry
 {
     /**
+     * Geofabrik slugs that live at the `europe/` level (whole countries) rather
+     * than under `europe/france/`. The Tier-1 beta perimeter is FR + Benelux.
+     */
+    private const array EUROPE_LEVEL_SLUGS = ['france', 'belgium', 'netherlands', 'luxembourg'];
+
+    /**
      * @return array<string, array{slug: string, size: string}>
      */
     public static function all(): array
     {
         return [
             'France (entiere)' => ['slug' => 'france', 'size' => '4400 MB'],
+            'Belgique' => ['slug' => 'belgium', 'size' => '500 MB'],
+            'Pays-Bas' => ['slug' => 'netherlands', 'size' => '1600 MB'],
+            'Luxembourg' => ['slug' => 'luxembourg', 'size' => '40 MB'],
             'Alsace' => ['slug' => 'alsace', 'size' => '122 MB'],
             'Aquitaine' => ['slug' => 'aquitaine', 'size' => '276 MB'],
             'Auvergne' => ['slug' => 'auvergne', 'size' => '141 MB'],
@@ -45,9 +54,10 @@ final class GeofabrikRegionRegistry
 
     public static function downloadUrl(string $slug): string
     {
-        // The whole-France extract lives one level above the per-region directory.
-        if ('france' === $slug) {
-            return 'https://download.geofabrik.de/europe/france-latest.osm.pbf';
+        // Whole countries (France + Benelux) live at the europe/ level; French
+        // regions live one level down under europe/france/.
+        if (\in_array($slug, self::EUROPE_LEVEL_SLUGS, true)) {
+            return \sprintf('https://download.geofabrik.de/europe/%s-latest.osm.pbf', $slug);
         }
 
         return \sprintf(

@@ -460,11 +460,23 @@ services:
       - .docker/osm/data:/data
     restart: "no"
     profiles: ["provisioning"]
-    # One-shot OSM extract job; osmium needs headroom to parse the PBF (#566).
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      # Tier-1 PostGIS import target (ADR-040). Standard libpq env, consumed by
+      # osm2pgsql and psql when the provisioner runs with --with-postgis.
+      PGHOST: "${DATABASE_HOST:-database}"
+      PGPORT: "5432"
+      PGUSER: "${DATABASE_USERNAME:-app}"
+      PGPASSWORD: "${DATABASE_PASSWORD:-!ChangeMe!}"
+      PGDATABASE: "${DATABASE_NAME:-bike_trip_planner}"
+    # One-shot OSM extract + PostGIS import; osm2pgsql needs more headroom than
+    # the osmium merge (in-RAM node cache bounded via --cache). See ADR-040.
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 2G
 
 volumes:
   caddy_data: ~

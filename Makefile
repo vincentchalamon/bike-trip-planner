@@ -191,11 +191,11 @@ coverage-ci: ## Run PHPUnit with coverage (Clover XML for CI)
 test: qa test-php test-e2e openapi-lint security-check ## Run full test suite (Requires QA to pass first)
 
 ## --- 🗺️ OSM Provisioning ---
-provision: ensure-default-pbf ## Provision OSM regions interactively
-	@docker compose --profile provisioning run --rm provisioner
+provision: ensure-default-pbf ## Provision OSM regions + import the Tier-1 PostGIS index
+	@docker compose --profile provisioning run --rm provisioner --with-postgis
 
-provision-update: ## Trigger a non-interactive provisioner update (re-download OSM regions)
-	@docker compose --profile provisioning run --rm provisioner --no-interaction
+provision-update: ## Trigger a non-interactive provisioner update (re-download OSM + re-import PostGIS)
+	@docker compose --profile provisioning run --rm provisioner --no-interaction --with-postgis
 
 ## --- 🗄️ Database ---
 migration: ## Generate a Doctrine migration

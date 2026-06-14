@@ -20,10 +20,13 @@ RUN composer dump-autoload --classmap-authoritative --no-dev
 # Stage 2: Dev (sources bind-mounted via compose.yaml)
 FROM php:8.5-cli-bookworm AS dev
 
+# osm2pgsql + postgresql-client (psql) drive the Tier-1 PostGIS import (ADR-040).
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     	osmium-tool \
+    	osm2pgsql \
+    	postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # xdebug enables `make coverage`/`coverage-ci` on the provisioner leg (same driver as
@@ -43,10 +46,13 @@ ENTRYPOINT ["php", "bin/provision"]
 # Stage 3: Production
 FROM php:8.5-cli-bookworm AS prod
 
+# osm2pgsql + postgresql-client (psql) drive the Tier-1 PostGIS import (ADR-040).
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     	osmium-tool \
+    	osm2pgsql \
+    	postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
