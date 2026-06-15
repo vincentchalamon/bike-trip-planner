@@ -8,6 +8,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -65,8 +66,9 @@ final class CheckBikeShopsHandlerTest extends TestCase
         TripUpdatePublisherInterface $publisher,
         BikeShopRepositoryInterface $bikeShopRepository,
         GeoDistanceInterface $haversine,
+        ?ComputationTrackerInterface $computationTracker = null,
     ): CheckBikeShopsHandler {
-        $computationTracker = $this->createStub(ComputationTrackerInterface::class);
+        $computationTracker ??= $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $translator = $this->createStub(TranslatorInterface::class);
@@ -201,17 +203,24 @@ final class CheckBikeShopsHandlerTest extends TestCase
     #[Test]
     public function tripWithFewStagesIsSkipped(): void
     {
-        // BR-06: trips of 5 days or fewer skip the bike-shop check entirely.
+        // BR-06: trips of 5 days or fewer skip the check entirely, but must still mark
+        // the computation done so trip generation does not hang waiting for a result.
         $tripStateManager = $this->tripStateManager('trip-1', 5);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
+
+        $computationTracker = $this->createMock(ComputationTrackerInterface::class);
+        $computationTracker->expects($this->once())
+            ->method('markDone')
+            ->with('trip-1', ComputationName::BIKE_SHOPS);
 
         $handler = $this->createHandler(
             $tripStateManager,
             $publisher,
             $this->bikeShopRepository([['name' => 'Cycles Repair', 'lat' => 48.5, 'lon' => 2.5, 'hasRepair' => true]]),
             $this->createStub(GeoDistanceInterface::class),
+            $computationTracker,
         );
         $handler(new CheckBikeShops('trip-1'));
     }

@@ -29,8 +29,8 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
 
     private const float BIKE_SHOP_PROXIMITY_METERS = 2000.0;
 
-    /** Corridor half-width (m) for the local-first bike-shop reads (ADR-040). */
-    private const int CORRIDOR_RADIUS_METERS = 2000;
+    /** Corridor half-width (m) for the local-first bike-shop reads (ADR-040); kept equal to BIKE_SHOP_PROXIMITY_METERS so the DB pre-filter always covers the per-stage proximity threshold. */
+    private const int CORRIDOR_RADIUS_METERS = (int) self::BIKE_SHOP_PROXIMITY_METERS;
 
     public function __construct(
         ComputationTrackerInterface $computationTracker,
