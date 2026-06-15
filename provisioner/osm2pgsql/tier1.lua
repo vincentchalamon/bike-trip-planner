@@ -5,7 +5,7 @@
 -- the live `osm` schema atomically. The API reads these tables via ST_DWithin
 -- corridor queries, replacing the runtime Overpass dependency.
 --
--- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations. The
+-- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations, charging_stations. The
 -- admin_boundaries (coverage polygon) and cycle_routes tables land later.
 
 -- MUST match PostgisImporter::STAGING_SCHEMA: osm2pgsql writes the output tables
@@ -134,6 +134,21 @@ local railway_stations = osm2pgsql.define_table({
     },
 })
 
+local charging_stations = osm2pgsql.define_table({
+    name = 'charging_stations',
+    schema = SCHEMA,
+    ids = { type = 'any', id_column = 'osm_id', type_column = 'osm_type' },
+    columns = {
+        { column = 'name', type = 'text' },
+        { column = 'category', type = 'text', not_null = true },
+        { column = 'tags', type = 'jsonb' },
+        { column = 'geom', type = 'point', projection = SRID, not_null = true },
+    },
+    indexes = {
+        { column = 'geom', method = 'gist' },
+    },
+})
+
 local function poi_category(tags)
     if tags.amenity and POI_AMENITY[tags.amenity] then return tags.amenity end
     if tags.shop and POI_SHOP[tags.shop] then return tags.shop end
@@ -183,6 +198,12 @@ local function railway_category(tags)
     return nil
 end
 
+-- E-bike charging stations (amenity=charging_station).
+local function charging_category(tags)
+    if tags.amenity == 'charging_station' then return 'charging_station' end
+    return nil
+end
+
 local function is_relevant(tags)
     return poi_category(tags) ~= nil
         or accommodation_category(tags) ~= nil
@@ -190,6 +211,7 @@ local function is_relevant(tags)
         or bike_shop_category(tags) ~= nil
         or health_category(tags) ~= nil
         or railway_category(tags) ~= nil
+        or charging_category(tags) ~= nil
 end
 
 -- Safe integer coercion (works on both Lua 5.x and LuaJIT builds of osm2pgsql).
@@ -263,6 +285,16 @@ local function insert_features(tags, geom)
         railway_stations:insert({
             name = tags.name,
             category = rcat,
+            tags = tags,
+            geom = geom,
+        })
+    end
+
+    local ccat = charging_category(tags)
+    if ccat then
+        charging_stations:insert({
+            name = tags.name,
+            category = ccat,
             tags = tags,
             geom = geom,
         })

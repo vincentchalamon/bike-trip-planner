@@ -9,6 +9,7 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
+use App\Osm\ChargingStationRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -20,12 +21,8 @@ final class EbikeRangeAnalyzerTest extends TestCase
     #[\Override]
     protected function setUp(): void
     {
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
-            static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
-        );
-
-        $this->analyzer = new EbikeRangeAnalyzer($translator);
+        // Default analyzer with no charger in range: exercises the distance-reduction fallback.
+        $this->analyzer = $this->analyzerWithNearestCharger(null);
     }
 
     #[Test]
@@ -55,6 +52,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
 
         $alerts = $this->analyzer->analyze($stage, ['ebikeMode' => true]);
 
+        // No charger in range: falls back to the distance-reduction auto-fix action.
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
         $this->assertNotNull($alerts[0]->action);
@@ -111,6 +109,35 @@ final class EbikeRangeAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function navigateActionPointsToNearestChargerInCorridor(): void
+    {
+        // The repository (corridor query) resolves the nearest charger; the analyzer
+        // points the cyclist to it.
+        $analyzer = $this->analyzerWithNearestCharger(
+            ['name' => 'Near Charger', 'category' => 'charging_station', 'lat' => 48.001, 'lon' => 2.0],
+        );
+
+        $stage = $this->createStage(distance: 90.0, elevation: 0.0, geometry: [
+            new Coordinate(48.0, 2.0),
+            new Coordinate(48.002, 2.0),
+        ]);
+
+        $alerts = $analyzer->analyze($stage, ['ebikeMode' => true]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertSame(AlertType::WARNING, $alerts[0]->type);
+        $this->assertSame(48.001, $alerts[0]->lat);
+        $this->assertSame(2.0, $alerts[0]->lon);
+
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::NAVIGATE, $alerts[0]->action->kind);
+        // Navigate target is the nearest charger; the maxDistance hint is preserved.
+        $this->assertSame(48.001, $alerts[0]->action->payload['lat']);
+        $this->assertSame(2.0, $alerts[0]->action->payload['lon']);
+        $this->assertSame(80.0, $alerts[0]->action->payload['maxDistance']);
+    }
+
+    #[Test]
     public function usesLocaleFromContext(): void
     {
         $translationKeys = [];
@@ -123,7 +150,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
             }
         );
 
-        $analyzer = new EbikeRangeAnalyzer($translator);
+        $analyzer = new EbikeRangeAnalyzer($translator, $this->chargingStationRepository(null));
         $stage = $this->createStage(distance: 90.0, elevation: 0.0);
 
         $alerts = $analyzer->analyze($stage, ['ebikeMode' => true, 'locale' => 'fr']);
@@ -138,7 +165,40 @@ final class EbikeRangeAnalyzerTest extends TestCase
         $this->assertSame(20, EbikeRangeAnalyzer::getPriority());
     }
 
-    private function createStage(float $distance, float $elevation): Stage
+    /**
+     * @param array{name: ?string, category: string, lat: float, lon: float}|null $charger
+     */
+    private function analyzerWithNearestCharger(?array $charger): EbikeRangeAnalyzer
+    {
+        $translator = $this->createStub(TranslatorInterface::class);
+        $translator->method('trans')->willReturnCallback(
+            static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
+        );
+
+        return new EbikeRangeAnalyzer($translator, $this->chargingStationRepository($charger));
+    }
+
+    /**
+     * @param array{name: ?string, category: string, lat: float, lon: float}|null $charger
+     */
+    private function chargingStationRepository(?array $charger): ChargingStationRepositoryInterface
+    {
+        $repository = $this->createStub(ChargingStationRepositoryInterface::class);
+        $repository->method('findNearestInCorridor')->willReturnCallback(
+            static function (array $route, int $radiusMeters) use ($charger): ?array {
+                self::assertSame(2000, $radiusMeters, 'findNearestInCorridor must use the 2 km charging-station corridor');
+
+                return $charger;
+            },
+        );
+
+        return $repository;
+    }
+
+    /**
+     * @param list<Coordinate> $geometry
+     */
+    private function createStage(float $distance, float $elevation, array $geometry = []): Stage
     {
         return new Stage(
             tripId: 'trip-1',
@@ -147,6 +207,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
             elevation: $elevation,
             startPoint: new Coordinate(45.0, 5.0),
             endPoint: new Coordinate(45.5, 5.5),
+            geometry: $geometry,
         );
     }
 }

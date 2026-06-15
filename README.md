@@ -125,7 +125,7 @@ Rules are executed in priority order (lower = higher priority):
 | **Traffic** | 20 | ![critical](https://img.shields.io/badge/-critical-d32f2f) | Primary/trunk road without cycle infrastructure >= 500 m |
 | **Traffic** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Secondary road, no cycleway, speed limit > 50 km/h |
 | **Traffic** | 20 | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Secondary road, speed limit <= 50 km/h |
-| **E-bike range** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Day distance > effective range (80 km - elevation / 25) |
+| **E-bike range** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Day distance > effective range (80 km - elevation / 25); action navigates to the nearest charging station within 2 km, else suggests shortening the stage |
 | **Sunset** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Estimated arrival time exceeds civil twilight end at stage end point |
 | **Calendar** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage falls on a French public holiday |
 | **Calendar** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage falls on a Sunday (businesses may be closed) |
