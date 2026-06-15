@@ -102,6 +102,7 @@ final class OsmRepositoriesTest extends KernelTestCase
         $this->seedBikeShop('bicycle', 49.61, 6.14, 'Repair Shop', '{"shop":"bicycle","service:bicycle:repair":"yes"}');
         $this->seedBikeShop('bicycle', 49.615, 6.145, 'Sale Only', '{"shop":"bicycle"}');
         $this->seedBikeShop('repair_station', 49.612, 6.142, 'Workshop', '{"service:bicycle:repair":"yes"}');
+        $this->seedBikeShop('repair_station', 49.613, 6.143, 'Self-Service Stand', '{"amenity":"bicycle_repair_station"}');
         $this->seedBikeShop('bicycle', 49.90, 6.80, 'Far Shop', '{"shop":"bicycle","service:bicycle:repair":"yes"}');
 
         $shops = new BikeShopRepository($this->connection)->findInCorridor([
@@ -109,16 +110,17 @@ final class OsmRepositoriesTest extends KernelTestCase
             ['lat' => 49.62, 'lon' => 6.15],
         ], 2000);
 
-        // Three shops in the corridor; the far one is excluded by ST_DWithin.
+        // Four shops in the corridor; the far one is excluded by ST_DWithin.
         $repairByName = [];
         foreach ($shops as $shop) {
             $repairByName[(string) $shop['name']] = $shop['hasRepair'];
         }
 
-        self::assertCount(3, $shops);
+        self::assertCount(4, $shops);
         self::assertTrue($repairByName['Repair Shop'], 'shop=bicycle with service:bicycle:repair=yes is a repair shop');
         self::assertFalse($repairByName['Sale Only'], 'shop=bicycle without the repair tag is sale-only');
         self::assertTrue($repairByName['Workshop'], 'a repair workshop without shop=bicycle still has repair');
+        self::assertTrue($repairByName['Self-Service Stand'], 'a self-service repair station (amenity=bicycle_repair_station) counts as repair');
         self::assertArrayNotHasKey('Far Shop', $repairByName);
     }
 

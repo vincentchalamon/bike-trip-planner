@@ -157,11 +157,13 @@ local function water_category(tags)
     return nil
 end
 
--- Bicycle shops and generic outlets advertising repair (service:bicycle:repair=yes);
--- the repair flag is preserved in the raw tags for the read side to distinguish them.
+-- Bicycle shops, generic outlets advertising repair (service:bicycle:repair=yes)
+-- and public self-service repair stations (amenity=bicycle_repair_station: pump +
+-- tools); the repair flag is preserved in the raw tags for the read side.
 local function bike_shop_category(tags)
     if tags.shop == 'bicycle' then return 'bicycle' end
     if tags['service:bicycle:repair'] == 'yes' then return 'repair_station' end
+    if tags.amenity == 'bicycle_repair_station' then return 'repair_station' end
     return nil
 end
 
