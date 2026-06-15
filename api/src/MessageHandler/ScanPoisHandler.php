@@ -19,10 +19,10 @@ use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
+use App\Osm\PoiRepositoryInterface;
+use App\Osm\WaterPointRepositoryInterface;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -32,6 +32,9 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 {
     private const float LUNCH_NUDGE_DISTANCE_KM = 40.0;
+
+    /** Corridor half-width (m) for the local-first POI/water reads (ADR-040), matching the former Overpass "around" radius. */
+    private const int CORRIDOR_RADIUS_METERS = 2000;
 
     /** @var list<string> */
     private const array RESUPPLY_CATEGORIES = [
@@ -46,8 +49,8 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
-        private ScannerInterface $scanner,
-        private QueryBuilderInterface $queryBuilder,
+        private PoiRepositoryInterface $poiRepository,
+        private WaterPointRepositoryInterface $waterPointRepository,
         private GeometryDistributorInterface $distributor,
         private SupplyTimelineBuilder $supplyTimelineBuilder,
         private RiderTimeEstimatorInterface $riderTimeEstimator,
@@ -73,7 +76,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         $averageSpeed = $request instanceof TripRequest ? $request->averageSpeed : 15.0;
 
         $this->executeWithTracking($tripId, ComputationName::POIS, function () use ($tripId, $stages, $locale, $departureHour, $averageSpeed): void {
-            // Use decimated route points so the POI query matches the one warmed by ScanAllOsmDataHandler
+            // Decode the route corridor from the decimated points (fallback: stage geometry).
             $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
             $allPoints = null !== $decimatedData
                 ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
@@ -82,67 +85,28 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     $stages,
                 ));
 
-            // Single POI query over all decimated points (cache-aligned with ScanAllOsmData)
-            // + one global cemetery query — both benefit from the warming cache
-            $results = $this->scanner->queryBatch([
-                'poi' => $this->queryBuilder->buildPoiQuery($allPoints),
-                'cemetery' => $this->queryBuilder->buildCemeteryQuery($allPoints),
-            ]);
+            $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $allPoints);
 
-            // Parse all POIs from the single global query, then distribute to stages via geometry
-            $poiResult = $results['poi'] ?? [];
-            /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
-            $elements = \is_array($poiResult['elements'] ?? null) ? $poiResult['elements'] : [];
-
-            /** @var list<array{name: string, category: string, lat: float, lon: float}> $allPois */
+            // Read POIs and real drinking-water points from the local-first index along the
+            // route corridor (ADR-040), then distribute them to stages by geometry. The local
+            // index returns deterministic results, so a long stage with genuinely no resupply
+            // POI is no longer indistinguishable from an Overpass failure (lunch-nudge fix).
             $allPois = [];
-            foreach ($elements as $element) {
-                $tags = $element['tags'] ?? [];
-                $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
-
-                if (null === $lat || null === $lon) {
-                    continue;
-                }
-
-                $category = $tags['amenity'] ?? $tags['shop'] ?? $tags['tourism'] ?? 'unknown';
-                $name = $tags['name'] ?? $category;
-
+            foreach ($this->poiRepository->findInCorridor($route, self::CORRIDOR_RADIUS_METERS) as $poi) {
                 $allPois[] = [
-                    'name' => $name,
-                    'category' => $category,
-                    'lat' => (float) $lat,
-                    'lon' => (float) $lon,
+                    'name' => $poi['name'] ?? $poi['category'],
+                    'category' => $poi['category'],
+                    'lat' => $poi['lat'],
+                    'lon' => $poi['lon'],
                 ];
             }
 
             /** @var array<int, list<array{name: string, category: string, lat: float, lon: float}>> $poisByStage */
             $poisByStage = $this->distributor->distributeByGeometry($allPois, $stages);
 
-            // Parse water points (cemeteries) for supply timeline
-            $cemeteryResult = $results['cemetery'] ?? [];
-            /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $cemeteryElements */
-            $cemeteryElements = \is_array($cemeteryResult['elements'] ?? null) ? $cemeteryResult['elements'] : [];
-            $allWaterPoints = [];
-            foreach ($cemeteryElements as $element) {
-                $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
-                $tags = $element['tags'] ?? [];
-                $name = $tags['name'] ?? null;
+            $allWaterPoints = $this->waterPointRepository->findInCorridor($route, self::CORRIDOR_RADIUS_METERS);
 
-                if (null === $lat || null === $lon) {
-                    continue;
-                }
-
-                $allWaterPoints[] = [
-                    'name' => $name,
-                    'lat' => (float) $lat,
-                    'lon' => (float) $lon,
-                ];
-            }
-
-            // Distribute water points to their nearest stage by geometry
-            /** @var array<int, list<array{name: string|null, lat: float, lon: float}>> $waterByStage */
+            /** @var array<int, list<array{name: string|null, category: string, lat: float, lon: float}>> $waterByStage */
             $waterByStage = $this->distributor->distributeByGeometry($allWaterPoints, $stages);
 
             foreach ($stages as $i => $stage) {

@@ -11,7 +11,7 @@ use Doctrine\DBAL\Connection;
  * Tier-1 index along the route corridor (ST_DWithin), replacing runtime Overpass
  * POI scans (ADR-040).
  */
-final readonly class PoiRepository
+final readonly class PoiRepository implements PoiRepositoryInterface
 {
     public function __construct(private Connection $connection)
     {
