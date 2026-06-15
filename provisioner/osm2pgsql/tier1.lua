@@ -5,7 +5,7 @@
 -- the live `osm` schema atomically. The API reads these tables via ST_DWithin
 -- corridor queries, replacing the runtime Overpass dependency.
 --
--- Scope of this style: pois, accommodations, water_points, bike_shops, health_services. The
+-- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations. The
 -- admin_boundaries (coverage polygon) and cycle_routes tables land later.
 
 -- MUST match PostgisImporter::STAGING_SCHEMA: osm2pgsql writes the output tables
@@ -119,6 +119,21 @@ local health_services = osm2pgsql.define_table({
     },
 })
 
+local railway_stations = osm2pgsql.define_table({
+    name = 'railway_stations',
+    schema = SCHEMA,
+    ids = { type = 'any', id_column = 'osm_id', type_column = 'osm_type' },
+    columns = {
+        { column = 'name', type = 'text' },
+        { column = 'category', type = 'text', not_null = true },
+        { column = 'tags', type = 'jsonb' },
+        { column = 'geom', type = 'point', projection = SRID, not_null = true },
+    },
+    indexes = {
+        { column = 'geom', method = 'gist' },
+    },
+})
+
 local function poi_category(tags)
     if tags.amenity and POI_AMENITY[tags.amenity] then return tags.amenity end
     if tags.shop and POI_SHOP[tags.shop] then return tags.shop end
@@ -158,12 +173,21 @@ local function health_category(tags)
     return nil
 end
 
+-- Mainline railway stations (excludes heritage/tourist railways via usage).
+local function railway_category(tags)
+    if tags.railway == 'station' and tags.usage ~= 'tourism' then
+        return 'station'
+    end
+    return nil
+end
+
 local function is_relevant(tags)
     return poi_category(tags) ~= nil
         or accommodation_category(tags) ~= nil
         or water_category(tags) ~= nil
         or bike_shop_category(tags) ~= nil
         or health_category(tags) ~= nil
+        or railway_category(tags) ~= nil
 end
 
 -- Safe integer coercion (works on both Lua 5.x and LuaJIT builds of osm2pgsql).
@@ -227,6 +251,16 @@ local function insert_features(tags, geom)
         health_services:insert({
             name = tags.name,
             category = hcat,
+            tags = tags,
+            geom = geom,
+        })
+    end
+
+    local rcat = railway_category(tags)
+    if rcat then
+        railway_stations:insert({
+            name = tags.name,
+            category = rcat,
             tags = tags,
             geom = geom,
         })
