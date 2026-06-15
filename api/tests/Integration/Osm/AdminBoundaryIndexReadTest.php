@@ -77,4 +77,21 @@ final class AdminBoundaryIndexReadTest extends KernelTestCase
     {
         self::assertNull(new AdminBoundaryRepository($this->connection)->findCountryAt(0.0, 0.0, 'en'));
     }
+
+    #[Test]
+    public function findCountryAtIsDeterministicWhenBoundariesOverlap(): void
+    {
+        // Two admin_level=2 polygons covering the exact same area (a disputed
+        // territory, or a point on a shared border where ST_Covers is true for
+        // both): the lower osm_id must win, stably across plan/vacuum changes.
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.admin_boundaries (osm_id, name, admin_level, tags, geom) VALUES
+              (11, 'Beta', 2, '{"name":"Beta","name:en":"Beta"}'::jsonb,
+                  ST_SetSRID(ST_GeomFromText('MULTIPOLYGON(((10 10, 12 10, 12 12, 10 12, 10 10)))'), 4326)),
+              (10, 'Alpha', 2, '{"name":"Alpha","name:en":"Alpha"}'::jsonb,
+                  ST_SetSRID(ST_GeomFromText('MULTIPOLYGON(((10 10, 12 10, 12 12, 10 12, 10 10)))'), 4326))
+            SQL);
+
+        self::assertSame('Alpha', new AdminBoundaryRepository($this->connection)->findCountryAt(11.0, 11.0, 'en'));
+    }
 }
