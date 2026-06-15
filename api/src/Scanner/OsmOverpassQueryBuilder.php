@@ -6,7 +6,6 @@ namespace App\Scanner;
 
 use App\ApiResource\TripRequest;
 use App\ApiResource\Model\Coordinate;
-use App\Geo\GeoPoint;
 
 final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
 {
@@ -148,71 +147,6 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
             '[out:json][timeout:15];(nwr["tourism"="museum"](around:%1$d,%2$s);nwr["tourism"="attraction"](around:%1$d,%2$s);nwr["tourism"="viewpoint"](around:%1$d,%2$s);nwr["historic"~"^(castle|monument|memorial|ruins|archaeological_site|church|cathedral|abbey|fort)$"](around:%1$d,%2$s););out center tags 100;',
             $radiusMeters,
             $polyline,
-        );
-    }
-
-    /**
-     * Builds an Overpass query for potable water sources (drinking_water amenities
-     * and public fountains) within a radius around a single geographic centre.
-     *
-     * Designed for in-ride POI scans: a tiny radius (≤ 5 km) keeps the response
-     * cheap and reactive.
-     */
-    public function buildDrinkingWaterQuery(GeoPoint $center, int $radiusM): string
-    {
-        return \sprintf(
-            '[out:json][timeout:15];(nwr["amenity"="drinking_water"](around:%1$d,%2$F,%3$F);nwr["amenity"="fountain"](around:%1$d,%2$F,%3$F););out center tags 50;',
-            $radiusM,
-            $center->lat,
-            $center->lon,
-        );
-    }
-
-    /**
-     * Builds an Overpass query for shelters (amenity=shelter) around a single
-     * geographic centre — useful for "I need to take refuge" in-ride intents.
-     */
-    public function buildShelterQuery(GeoPoint $center, int $radiusM): string
-    {
-        return \sprintf(
-            '[out:json][timeout:15];nwr["amenity"="shelter"](around:%d,%F,%F);out center tags 50;',
-            $radiusM,
-            $center->lat,
-            $center->lon,
-        );
-    }
-
-    /**
-     * Builds an Overpass query for food venues (fast_food, restaurant, cafe)
-     * around a single geographic centre.
-     *
-     * The original spec included an optional `cuisine` filter, but nothing in
-     * the in-ride pipeline currently extracts a cuisine hint from the rider
-     * prompt — adding the filter back will be a follow-up that wires the
-     * parameter end-to-end (PoiIntent → PoiIntentDetector → buildQuery).
-     */
-    public function buildFoodQuery(GeoPoint $center, int $radiusM): string
-    {
-        return \sprintf(
-            '[out:json][timeout:15];(nwr["amenity"="fast_food"](around:%1$d,%2$F,%3$F);nwr["amenity"="restaurant"](around:%1$d,%2$F,%3$F);nwr["amenity"="cafe"](around:%1$d,%2$F,%3$F););out center tags 50;',
-            $radiusM,
-            $center->lat,
-            $center->lon,
-        );
-    }
-
-    /**
-     * Builds an Overpass query for bicycle mechanic shops (shop=bicycle plus
-     * generic outlets advertising `service:bicycle:repair=yes`) around a single
-     * geographic centre.
-     */
-    public function buildMechanicQuery(GeoPoint $center, int $radiusM): string
-    {
-        return \sprintf(
-            '[out:json][timeout:15];(nwr["shop"="bicycle"](around:%1$d,%2$F,%3$F);nwr["service:bicycle:repair"="yes"](around:%1$d,%2$F,%3$F););out center tags 50;',
-            $radiusM,
-            $center->lat,
-            $center->lon,
         );
     }
 

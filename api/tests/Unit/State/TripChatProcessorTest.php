@@ -18,6 +18,7 @@ use App\Geo\HaversineDistance;
 use App\InRide\DeeplinkBuilder;
 use App\InRide\DetourCalculator;
 use App\InRide\InRideAssistant;
+use App\InRide\InRidePoiRepositoryInterface;
 use App\InRide\OpeningHoursParser;
 use App\InRide\PoiIntentDetector;
 use App\Llm\ChatActionInterpreter;
@@ -25,8 +26,6 @@ use App\Llm\ChatHistoryStore;
 use App\Llm\Exception\OllamaUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
-use App\Scanner\OsmOverpassQueryBuilder;
-use App\Scanner\ScannerInterface;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\TripChatProcessor;
@@ -516,18 +515,11 @@ final class TripChatProcessorTest extends TestCase
             });
         $entityManager->method('flush');
 
-        // Scanner returns one named water POI close to the rider so the
+        // The index returns one named water POI close to the rider so the
         // in-ride pipeline produces a non-empty $poisPayload that
         // `persistChatTurn` stores on the assistant turn.
-        $scannerResponse = [
-            'elements' => [
-                [
-                    'type' => 'node',
-                    'lat' => 48.8570,
-                    'lon' => 2.3530,
-                    'tags' => ['name' => 'Fontaine Wallace'],
-                ],
-            ],
+        $inRidePois = [
+            ['lat' => 48.8570, 'lon' => 2.3530, 'tags' => ['name' => 'Fontaine Wallace']],
         ];
 
         $processor = $this->newProcessor(
@@ -540,7 +532,7 @@ final class TripChatProcessorTest extends TestCase
             stagesCount: 3,
             messageBus: $this->newMessageBus(),
             entityManager: $entityManager,
-            scannerResponse: $scannerResponse,
+            inRidePois: $inRidePois,
         );
 
         $processor->process(
@@ -674,7 +666,7 @@ final class TripChatProcessorTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed>|null $scannerResponse optional Overpass payload returned by the in-ride scanner mock
+     * @param list<array{lat: float, lon: float, tags: array<string, string>}>|null $inRidePois optional features returned by the in-ride index mock
      */
     private function newProcessor(
         string $llmContent,
@@ -682,7 +674,7 @@ final class TripChatProcessorTest extends TestCase
         MessageBusInterface $messageBus,
         ?RateLimiterFactory $limiterFactory = null,
         ?EntityManagerInterface $entityManager = null,
-        ?array $scannerResponse = null,
+        ?array $inRidePois = null,
         ?LoggerInterface $logger = null,
         ?\Throwable $chatException = null,
     ): TripChatProcessor {
@@ -734,19 +726,17 @@ final class TripChatProcessorTest extends TestCase
         $security->method('getUser')->willReturn($user);
 
         $distance = new HaversineDistance();
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn($scannerResponse ?? ['elements' => []]);
+        $poiRepository = $this->createStub(InRidePoiRepositoryInterface::class);
+        $poiRepository->method('findNearby')->willReturn($inRidePois ?? []);
         $inRideAssistant = new InRideAssistant(
             intentDetector: new PoiIntentDetector($llmClient),
-            scanner: $scanner,
-            queryBuilder: new OsmOverpassQueryBuilder(),
+            poiRepository: $poiRepository,
             openingHoursParser: new OpeningHoursParser(),
             detourCalculator: new DetourCalculator($distance),
             deeplinkBuilder: new DeeplinkBuilder(),
             distance: $distance,
             llmClient: $llmClient,
             promptLoader: $promptLoader,
-            cache: new ArrayAdapter(),
         );
 
         return new TripChatProcessor(

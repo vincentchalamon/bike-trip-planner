@@ -17,6 +17,7 @@ use App\Geo\HaversineDistance;
 use App\InRide\DeeplinkBuilder;
 use App\InRide\DetourCalculator;
 use App\InRide\InRideAssistant;
+use App\InRide\InRidePoiRepositoryInterface;
 use App\InRide\OpeningHoursParser;
 use App\InRide\PoiIntentDetector;
 use App\InRide\PoiSuggestion;
@@ -27,8 +28,6 @@ use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\OsmOverpassQueryBuilder;
-use App\Scanner\ScannerInterface;
 use App\State\TripChatProcessor;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -73,34 +72,12 @@ final class TripChatInRideTest extends TestCase
     public function positionInPayloadDelegatesToInRideAssistantAndReturnsTopPois(): void
     {
         $bus = $this->newMessageBus();
-        $scanner = $this->createMock(ScannerInterface::class);
-        $scanner->expects($this->once())->method('query')->willReturn([
-            'elements' => [
-                [
-                    'type' => 'node',
-                    'lat' => 50.8504,
-                    'lon' => 4.3520,
-                    'tags' => ['name' => 'Fontaine du Sablon'],
-                ],
-                [
-                    'type' => 'node',
-                    'lat' => 50.8550,
-                    'lon' => 4.3600,
-                    'tags' => ['name' => 'Fontaine Royale'],
-                ],
-                [
-                    'type' => 'node',
-                    'lat' => 50.8600,
-                    'lon' => 4.3650,
-                    'tags' => ['name' => 'Fontaine de la Place'],
-                ],
-                [
-                    'type' => 'node',
-                    'lat' => 50.8700,
-                    'lon' => 4.3700,
-                    'tags' => ['name' => 'Fontaine du Parc'],
-                ],
-            ],
+        $poiRepository = $this->createMock(InRidePoiRepositoryInterface::class);
+        $poiRepository->expects($this->once())->method('findNearby')->willReturn([
+            ['lat' => 50.8504, 'lon' => 4.3520, 'tags' => ['name' => 'Fontaine du Sablon']],
+            ['lat' => 50.8550, 'lon' => 4.3600, 'tags' => ['name' => 'Fontaine Royale']],
+            ['lat' => 50.8600, 'lon' => 4.3650, 'tags' => ['name' => 'Fontaine de la Place']],
+            ['lat' => 50.8700, 'lon' => 4.3700, 'tags' => ['name' => 'Fontaine du Parc']],
         ]);
 
         $llm = $this->createMock(LlmClientInterface::class);
@@ -117,7 +94,7 @@ final class TripChatInRideTest extends TestCase
             },
         );
 
-        $processor = $this->newProcessor($llm, $scanner, $bus);
+        $processor = $this->newProcessor($llm, $poiRepository, $bus);
 
         $response = $processor->process(
             new TripChatRequest(
@@ -149,8 +126,8 @@ final class TripChatInRideTest extends TestCase
     #[Test]
     public function unknownIntentInInRideModeReturnsEmptyPoisAndExplanatoryResponse(): void
     {
-        $scanner = $this->createMock(ScannerInterface::class);
-        $scanner->expects($this->never())->method('query');
+        $poiRepository = $this->createMock(InRidePoiRepositoryInterface::class);
+        $poiRepository->expects($this->never())->method('findNearby');
 
         $llm = $this->createMock(LlmClientInterface::class);
         $llm->method('isEnabled')->willReturn(true);
@@ -158,7 +135,7 @@ final class TripChatInRideTest extends TestCase
             'response' => '{"category":"unknown","max_distance_m":3000}',
         ]);
 
-        $processor = $this->newProcessor($llm, $scanner, $this->newMessageBus());
+        $processor = $this->newProcessor($llm, $poiRepository, $this->newMessageBus());
 
         $response = $processor->process(
             new TripChatRequest(
@@ -200,8 +177,8 @@ final class TripChatInRideTest extends TestCase
             });
         $entityManager->expects(self::once())->method('flush');
 
-        $scanner = $this->createMock(ScannerInterface::class);
-        $scanner->method('query')->willReturn(['elements' => []]);
+        $poiRepository = $this->createMock(InRidePoiRepositoryInterface::class);
+        $poiRepository->method('findNearby')->willReturn([]);
 
         $llm = $this->createMock(LlmClientInterface::class);
         $llm->method('isEnabled')->willReturn(true);
@@ -209,7 +186,7 @@ final class TripChatInRideTest extends TestCase
             'response' => '{"category":"unknown","max_distance_m":3000}',
         ]);
 
-        $processor = $this->newProcessor($llm, $scanner, $this->newMessageBus(), $entityManager);
+        $processor = $this->newProcessor($llm, $poiRepository, $this->newMessageBus(), $entityManager);
 
         $processor->process(
             new TripChatRequest(
@@ -226,7 +203,7 @@ final class TripChatInRideTest extends TestCase
 
     private function newProcessor(
         LlmClientInterface $llm,
-        ScannerInterface $scanner,
+        InRidePoiRepositoryInterface $poiRepository,
         MessageBusInterface $messageBus,
         ?EntityManagerInterface $entityManager = null,
     ): TripChatProcessor {
@@ -260,15 +237,13 @@ final class TripChatInRideTest extends TestCase
         $distance = new HaversineDistance();
         $inRideAssistant = new InRideAssistant(
             intentDetector: new PoiIntentDetector($llm),
-            scanner: $scanner,
-            queryBuilder: new OsmOverpassQueryBuilder(),
+            poiRepository: $poiRepository,
             openingHoursParser: new OpeningHoursParser(),
             detourCalculator: new DetourCalculator($distance),
             deeplinkBuilder: new DeeplinkBuilder(),
             distance: $distance,
             llmClient: $llm,
             promptLoader: $promptLoader,
-            cache: new ArrayAdapter(),
         );
 
         return new TripChatProcessor(

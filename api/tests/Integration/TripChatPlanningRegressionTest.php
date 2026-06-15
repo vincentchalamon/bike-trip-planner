@@ -15,6 +15,7 @@ use App\Geo\HaversineDistance;
 use App\InRide\DeeplinkBuilder;
 use App\InRide\DetourCalculator;
 use App\InRide\InRideAssistant;
+use App\InRide\InRidePoiRepositoryInterface;
 use App\InRide\OpeningHoursParser;
 use App\InRide\PoiIntentDetector;
 use App\Llm\ChatActionInterpreter;
@@ -23,8 +24,6 @@ use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\OsmOverpassQueryBuilder;
-use App\Scanner\ScannerInterface;
 use App\State\TripChatProcessor;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -93,9 +92,9 @@ final class TripChatPlanningRegressionTest extends TestCase
     ): void {
         $bus = $this->newMessageBus();
 
-        $scanner = $this->createMock(ScannerInterface::class);
-        // In planning mode the in-ride scanner must never be queried.
-        $scanner->expects($this->never())->method('query');
+        $poiRepository = $this->createMock(InRidePoiRepositoryInterface::class);
+        // In planning mode the in-ride index must never be queried.
+        $poiRepository->expects($this->never())->method('findNearby');
 
         $envelope = json_encode([
             'action' => $action,
@@ -111,7 +110,7 @@ final class TripChatPlanningRegressionTest extends TestCase
         // generate() belongs to the in-ride pipeline — never expected here.
         $llm->expects($this->never())->method('generate');
 
-        $processor = $this->newProcessor($llm, $scanner, $bus);
+        $processor = $this->newProcessor($llm, $poiRepository, $bus);
 
         $response = $processor->process(
             new TripChatRequest(message: 'message planning'),
@@ -136,7 +135,7 @@ final class TripChatPlanningRegressionTest extends TestCase
 
     private function newProcessor(
         LlmClientInterface $llm,
-        ScannerInterface $scanner,
+        InRidePoiRepositoryInterface $poiRepository,
         MessageBusInterface $messageBus,
     ): TripChatProcessor {
         $tripRequest = new TripRequest();
@@ -170,15 +169,13 @@ final class TripChatPlanningRegressionTest extends TestCase
         $distance = new HaversineDistance();
         $inRideAssistant = new InRideAssistant(
             intentDetector: new PoiIntentDetector($llm),
-            scanner: $scanner,
-            queryBuilder: new OsmOverpassQueryBuilder(),
+            poiRepository: $poiRepository,
             openingHoursParser: new OpeningHoursParser(),
             detourCalculator: new DetourCalculator($distance),
             deeplinkBuilder: new DeeplinkBuilder(),
             distance: $distance,
             llmClient: $llm,
             promptLoader: $promptLoader,
-            cache: new ArrayAdapter(),
         );
 
         return new TripChatProcessor(
