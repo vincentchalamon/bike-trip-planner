@@ -45,7 +45,7 @@ final readonly class PostgisImporter
      * @var list<string>
      */
     private const array TAGS_FILTER_EXPRESSIONS = [
-        'nwr/amenity=restaurant,cafe,bar,pub,fast_food,marketplace,pharmacy,hospital,clinic,drinking_water,water_point,fountain,shelter,bicycle_repair_station,charging_station',
+        'nwr/amenity=restaurant,cafe,bar,pub,fast_food,marketplace,pharmacy,hospital,clinic,fuel,drinking_water,water_point,fountain,shelter,bicycle_repair_station,charging_station',
         'nwr/shop=supermarket,convenience,bakery,butcher,greengrocer,deli,general,pastry,farm,bicycle',
         'nwr/tourism=hotel,hostel,guest_house,motel,chalet,camp_site,alpine_hut,wilderness_hut,apartment,viewpoint,attraction,museum',
         'nwr/historic=castle,monument,memorial,ruins,archaeological_site,church,cathedral,abbey,fort',
