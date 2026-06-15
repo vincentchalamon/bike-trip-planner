@@ -1,6 +1,6 @@
 # ADR-040: Local-First Reference Data — Single PostgreSQL/PostGIS Source
 
-- **Status:** Proposed — flips to Accepted as the implementing PRs land (socle PostGIS first; provisioner import, enrichment, coverage/monitoring, and the API local-read cut-over follow)
+- **Status:** Accepted — the API local-read cut-over has landed (runtime Overpass removed); provisioner enrichment (DataTourisme) and coverage/monitoring follow
 - **Date:** 2026-06-11
 - **Depends on:** ADR-022 (Persistent storage), ADR-033 (OSM data refresh), ADR-036 (Manual OSM refresh), ADR-039 (Beta right-sizing)
 - **Reformulates:** ADR-005 (external-API caching), ADR-013 (accommodation discovery), ADR-025 (removal of self-hosted Overpass), ADR-026 (multi-source integration)
@@ -55,6 +55,8 @@ The existing `provisioner/` (already a Geofabrik PBF downloader/merger for Valha
 - The **in-ride assistant** is repointed onto the PostGIS repository (it was a 5-minute Overpass cache).
 - **Runtime Overpass dependency removed.** No more "empty-on-error", so `alert.lunch.nudge` can no longer be a false positive. Water uses the **real** `water_points` (end of the cemetery proxy).
 - **Out of zone:** `ST_Covers(coverage, trip)`. Outside the coverage polygon → a **non-blocking notice** in the preview **and** the edit actions that need Valhalla (split/merge/reroute) are **disabled** (no routing tiles out of zone) → display-only trip.
+
+**Implementation status (2026-06-15):** the cut-over is complete. Every reader was migrated to PostGIS repositories across a slice-per-category series (POIs, accommodations, water points, bike shops, health services, railway and charging stations, cultural POIs, terrain ways, admin boundaries), and the runtime Overpass machinery — `OsmScanner`, `OsmOverpassQueryBuilder`, the `ScannerInterface` / `QueryBuilderInterface` seams, the `ScanAllOsmData` pre-warm umbrella with its `OSM_SCAN` computation, and the `overpass.client` scoped HTTP client — has been deleted. Nominatim geocoding (also OSM data, but a request-time place lookup, not a Tier-1 index read) keeps the `cache.osm` pool. Remaining local-first work is tracked separately: the DataTourisme import and the coverage polygon / monitoring. The historical ADRs describing the runtime-Overpass design (ADR-017/020/025/033/036) are reconciled in a follow-up docs pass.
 
 ### Relationship to ADR-004
 

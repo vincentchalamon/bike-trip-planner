@@ -494,7 +494,7 @@
       "terrain_security": {
         "label": "Terrain analysis",
         "description": "Surface, traffic, slopes, continuity",
-        "running": "Querying OpenStreetMap…",
+        "running": "Analysing terrain…",
         "done": "Terrain analysed",
         "failed": "Terrain analysis unavailable"
       },

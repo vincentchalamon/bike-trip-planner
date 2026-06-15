@@ -370,7 +370,6 @@ export function tripCompleteEvent(): MercureEvent {
       computationStatus: {
         route: "done",
         stages: "done",
-        osm_scan: "done",
         weather: "done",
         terrain: "done",
         accommodations: "done",

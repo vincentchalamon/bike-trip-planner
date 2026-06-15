@@ -12,7 +12,6 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
 use App\State\AccommodationScanProcessor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -93,7 +92,7 @@ final class AccommodationScanProcessorTest extends TestCase
         $messageBus = $this->createMock(MessageBusInterface::class);
         $messageBus->expects($this->once())
             ->method('dispatch')
-            ->with($this->callback(static fn (ScanAccommodations $message): bool => QueryBuilderInterface::DEFAULT_ACCOMMODATION_RADIUS_METERS === $message->radiusMeters))
+            ->with($this->callback(static fn (ScanAccommodations $message): bool => AccommodationScanRequest::DEFAULT_ACCOMMODATION_RADIUS_METERS === $message->radiusMeters))
             ->willReturn(new Envelope(new ScanAccommodations($tripId)));
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);

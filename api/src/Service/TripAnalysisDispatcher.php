@@ -15,7 +15,6 @@ use App\Message\CheckRailwayStations;
 use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
 use App\Message\ScanAccommodations;
-use App\Message\ScanAllOsmData;
 use App\Message\ScanEvents;
 use App\Message\ScanPois;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -43,7 +42,6 @@ final readonly class TripAnalysisDispatcher
      */
     public function dispatch(string $tripId, TripRequest $request, ?int $generation = null): void
     {
-        $this->messageBus->dispatch(new ScanAllOsmData($tripId, $generation));
         $this->messageBus->dispatch(new ScanPois($tripId, $generation));
         $this->messageBus->dispatch(new ScanAccommodations(
             $tripId,

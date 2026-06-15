@@ -8,7 +8,6 @@ enum ComputationName: string
 {
     case ROUTE = 'route';
     case STAGES = 'stages';
-    case OSM_SCAN = 'osm_scan';
     case POIS = 'pois';
     case ACCOMMODATIONS = 'accommodations';
     case TERRAIN = 'terrain';
@@ -68,7 +67,7 @@ enum ComputationName: string
     {
         return match ($this) {
             self::ROUTE, self::STAGES, self::ROUTE_SEGMENT => 'route',
-            self::OSM_SCAN, self::POIS => 'points_of_interest',
+            self::POIS => 'points_of_interest',
             self::ACCOMMODATIONS => 'accommodations',
             self::TERRAIN, self::BIKE_SHOPS, self::WATER_POINTS,
             self::HEALTH_SERVICES, self::RAILWAY_STATIONS, self::BORDER_CROSSING => 'terrain_security',

@@ -15,7 +15,6 @@ use App\Message\CheckRailwayStations;
 use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
 use App\Message\ScanAccommodations;
-use App\Message\ScanAllOsmData;
 use App\Message\ScanEvents;
 use App\Message\ScanPois;
 use App\Service\TripAnalysisDispatcher;
@@ -35,7 +34,6 @@ final class TripAnalysisDispatcherTest extends TestCase
         $request->enabledAccommodationTypes = ['hotel', 'camp_site'];
 
         $expectedMessages = [
-            ScanAllOsmData::class,
             ScanPois::class,
             ScanAccommodations::class,
             AnalyzeTerrain::class,
