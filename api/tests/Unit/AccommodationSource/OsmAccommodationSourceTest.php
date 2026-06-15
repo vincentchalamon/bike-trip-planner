@@ -7,8 +7,7 @@ namespace App\Tests\Unit\AccommodationSource;
 use App\AccommodationSource\OsmAccommodationSource;
 use App\ApiResource\Model\Coordinate;
 use App\Engine\PricingHeuristicEngine;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
+use App\Osm\AccommodationRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -17,39 +16,20 @@ final class OsmAccommodationSourceTest extends TestCase
     #[Test]
     public function getNameReturnsOsm(): void
     {
-        $source = $this->createSource();
-
-        $this->assertSame('osm', $source->getName());
+        $this->assertSame('osm', $this->createSource()->getName());
     }
 
     #[Test]
     public function isEnabledAlwaysReturnsTrue(): void
     {
-        $source = $this->createSource();
-
-        $this->assertTrue($source->isEnabled());
+        $this->assertTrue($this->createSource()->isEnabled());
     }
 
     #[Test]
-    public function fetchParsesNodeElementWithTourismTag(): void
+    public function fetchMapsRepositoryRowToCandidate(): void
     {
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                [
-                    'id' => 123,
-                    'type' => 'node',
-                    'lat' => 48.6,
-                    'lon' => 2.6,
-                    'tags' => ['tourism' => 'hotel', 'name' => 'Hotel du Nord'],
-                ],
-            ],
-        ]);
+        $source = $this->createSource($this->repository([$this->row(category: 'hotel', name: 'Hotel du Nord')]));
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
-
-        $source = $this->createSource($scanner, $queryBuilder);
         $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
 
         $this->assertCount(1, $results);
@@ -58,159 +38,165 @@ final class OsmAccommodationSourceTest extends TestCase
         $this->assertSame(48.6, $results[0]['lat']);
         $this->assertSame(2.6, $results[0]['lon']);
         $this->assertSame('osm', $results[0]['source']);
+        $this->assertSame(0, $results[0]['tagCount']);
     }
 
     #[Test]
-    public function fetchExtractsWikidataIdFromTags(): void
+    public function fetchFallsBackToCategoryWhenNameIsNull(): void
     {
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                [
-                    'id' => 456,
-                    'type' => 'node',
-                    'lat' => 48.6,
-                    'lon' => 2.6,
-                    'tags' => ['tourism' => 'hotel', 'name' => 'Hotel Wikidata', 'wikidata' => 'Q12345'],
-                ],
-            ],
-        ]);
+        $source = $this->createSource($this->repository([$this->row(category: 'shelter', name: null)]));
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['shelter']);
 
-        $source = $this->createSource($scanner, $queryBuilder);
+        $this->assertSame('shelter', $results[0]['name']);
+    }
+
+    #[Test]
+    public function fetchUsesWikidataFromRepositoryRow(): void
+    {
+        $source = $this->createSource($this->repository([$this->row(wikidata: 'Q12345')]));
+
         $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
 
-        $this->assertCount(1, $results);
         $this->assertSame('Q12345', $results[0]['wikidataId']);
     }
 
     #[Test]
-    public function fetchSetsNullWikidataIdWhenTagAbsent(): void
+    public function fetchSetsNullWikidataIdWhenAbsent(): void
     {
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                [
-                    'id' => 789,
-                    'type' => 'node',
-                    'lat' => 48.6,
-                    'lon' => 2.6,
-                    'tags' => ['tourism' => 'hostel', 'name' => 'Hostel Central'],
-                ],
-            ],
-        ]);
+        $source = $this->createSource($this->repository([$this->row(wikidata: null)]));
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
 
-        $source = $this->createSource($scanner, $queryBuilder);
-        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hostel']);
-
-        $this->assertCount(1, $results);
         $this->assertNull($results[0]['wikidataId']);
     }
 
     #[Test]
-    public function fetchUsesWayCenterCoordinatesWhenLatLonAbsent(): void
+    public function fetchPricesShelterAtZero(): void
     {
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                [
-                    'id' => 101,
-                    'type' => 'way',
-                    'center' => ['lat' => 47.1, 'lon' => 3.2],
-                    'tags' => ['tourism' => 'camp_site', 'name' => 'Camping du Lac'],
-                ],
-            ],
-        ]);
+        $source = $this->createSource($this->repository([$this->row(category: 'shelter')]));
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
-
-        $source = $this->createSource($scanner, $queryBuilder);
-        $results = $source->fetch([new Coordinate(47.0, 3.0)], 5000, ['camp_site']);
-
-        $this->assertCount(1, $results);
-        $this->assertSame(47.1, $results[0]['lat']);
-        $this->assertSame(3.2, $results[0]['lon']);
-    }
-
-    #[Test]
-    public function fetchSkipsElementsWithoutCoordinates(): void
-    {
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                [
-                    'id' => 999,
-                    'type' => 'way',
-                    'tags' => ['tourism' => 'hotel', 'name' => 'No Coords Hotel'],
-                ],
-            ],
-        ]);
-
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
-
-        $source = $this->createSource($scanner, $queryBuilder);
-        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
-
-        $this->assertCount(0, $results);
-    }
-
-    #[Test]
-    public function fetchMapsAmenityShelterToShelterType(): void
-    {
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                [
-                    'id' => 200,
-                    'type' => 'node',
-                    'lat' => 46.0,
-                    'lon' => 1.0,
-                    'tags' => ['amenity' => 'shelter', 'shelter_type' => 'lean_to', 'name' => 'Lean-To'],
-                ],
-            ],
-        ]);
-
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
-
-        $source = $this->createSource($scanner, $queryBuilder);
         $results = $source->fetch([new Coordinate(46.0, 1.0)], 5000, ['shelter']);
 
-        $this->assertCount(1, $results);
         $this->assertSame('shelter', $results[0]['type']);
         $this->assertSame(0.0, $results[0]['priceMin']);
         $this->assertSame(0.0, $results[0]['priceMax']);
+        $this->assertFalse($results[0]['isExact']);
     }
 
     #[Test]
-    public function fetchReturnsEmptyArrayWhenNoElements(): void
+    public function fetchUsesExactPriceFromChargeTag(): void
     {
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn(['elements' => []]);
+        $source = $this->createSource($this->repository([$this->row(category: 'camp_site', tags: ['charge' => '15 EUR'])]));
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildAccommodationQuery')->willReturn('query');
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['camp_site']);
 
-        $source = $this->createSource($scanner, $queryBuilder);
+        $this->assertSame(15.0, $results[0]['priceMin']);
+        $this->assertSame(15.0, $results[0]['priceMax']);
+        $this->assertTrue($results[0]['isExact']);
+        $this->assertSame(1, $results[0]['tagCount']);
+    }
+
+    #[Test]
+    public function fetchDerivesUrlAndHasWebsiteFromWebsiteColumn(): void
+    {
+        $source = $this->createSource($this->repository([$this->row(website: 'https://hotel.example')]));
+
         $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertSame('https://hotel.example', $results[0]['url']);
+        $this->assertTrue($results[0]['hasWebsite']);
+    }
+
+    #[Test]
+    public function fetchFallsBackToContactWebsiteTagForUrl(): void
+    {
+        $source = $this->createSource($this->repository([$this->row(website: null, tags: ['contact:website' => 'https://contact.example'])]));
+
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertSame('https://contact.example', $results[0]['url']);
+        $this->assertTrue($results[0]['hasWebsite']);
+    }
+
+    #[Test]
+    public function fetchSetsNoUrlWhenNeitherWebsiteNorContactPresent(): void
+    {
+        $source = $this->createSource($this->repository([$this->row(website: null)]));
+
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+
+        $this->assertNull($results[0]['url']);
+        $this->assertFalse($results[0]['hasWebsite']);
+    }
+
+    #[Test]
+    public function fetchPassesPointsRadiusAndEnabledTypesToRepository(): void
+    {
+        $repository = $this->createStub(AccommodationRepositoryInterface::class);
+        $repository->method('findNear')->willReturnCallback(
+            static function (array $points, int $radiusMeters, array $categories): array {
+                self::assertSame([['lat' => 48.5, 'lon' => 2.5]], $points);
+                self::assertSame(5000, $radiusMeters);
+                self::assertSame(['hotel', 'hostel'], $categories);
+
+                return [];
+            },
+        );
+
+        $this->createSource($repository)->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel', 'hostel']);
+    }
+
+    #[Test]
+    public function fetchReturnsEmptyArrayWhenRepositoryReturnsNothing(): void
+    {
+        $results = $this->createSource($this->repository([]))->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
 
         $this->assertSame([], $results);
     }
 
-    private function createSource(
-        ?ScannerInterface $scanner = null,
-        ?QueryBuilderInterface $queryBuilder = null,
-    ): OsmAccommodationSource {
+    /**
+     * @param array<string, string> $tags
+     *
+     * @return array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, tags: array<string, string>}
+     */
+    private function row(
+        string $category = 'hotel',
+        ?string $name = 'Hotel du Nord',
+        ?string $website = null,
+        ?string $wikidata = null,
+        array $tags = [],
+    ): array {
+        return [
+            'name' => $name,
+            'category' => $category,
+            'lat' => 48.6,
+            'lon' => 2.6,
+            'stars' => null,
+            'capacity' => null,
+            'fee' => null,
+            'website' => $website,
+            'wikidata' => $wikidata,
+            'openingHours' => null,
+            'tags' => $tags,
+        ];
+    }
+
+    /**
+     * @param list<array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, tags: array<string, string>}> $rows
+     */
+    private function repository(array $rows): AccommodationRepositoryInterface
+    {
+        $repository = $this->createStub(AccommodationRepositoryInterface::class);
+        $repository->method('findNear')->willReturn($rows);
+
+        return $repository;
+    }
+
+    private function createSource(?AccommodationRepositoryInterface $repository = null): OsmAccommodationSource
+    {
         return new OsmAccommodationSource(
-            scanner: $scanner ?? $this->createStub(ScannerInterface::class),
-            queryBuilder: $queryBuilder ?? $this->createStub(QueryBuilderInterface::class),
+            accommodationRepository: $repository ?? $this->createStub(AccommodationRepositoryInterface::class),
             pricingEngine: new PricingHeuristicEngine(),
         );
     }
