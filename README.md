@@ -131,7 +131,7 @@ Rules are executed in priority order (lower = higher priority):
 | **Calendar** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage falls on a Sunday (businesses may be closed) |
 | **Wind** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Headwind >= 25 km/h on >= 60 % of stages with weather data |
 | **Comfort** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Poor comfort index (< 40/100) on at least one stage |
-| **Bike shops** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | No repair shop within 2 km of stage midpoint (trips > 5 stages) |
+| **Bike shops** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | No repair resource within 2 km of stage midpoint (trips > 5 stages) |
 | **Bike shops** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Nearby shop sells bikes but does not offer repair service |
 | **Resupply** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage >= 40 km with no food/resupply POI along the route |
 | **Resupply** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | All resupply POIs on the stage are closed at estimated passage time |

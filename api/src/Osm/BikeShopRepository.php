@@ -9,8 +9,8 @@ use Doctrine\DBAL\Connection;
 /**
  * Reads bike shops from the local-first Tier-1 index along the route corridor
  * (ST_DWithin), replacing the runtime Overpass bike-shop scan (ADR-040). The
- * repair flag is derived from the raw tags so the analyzer can tell repair shops
- * apart from sale-only outlets.
+ * repair flag is derived from the raw tags (or a self-service repair-station
+ * category) so the analyzer can tell repair resources apart from sale-only outlets.
  */
 final readonly class BikeShopRepository implements BikeShopRepositoryInterface
 {
@@ -35,7 +35,7 @@ final readonly class BikeShopRepository implements BikeShopRepositoryInterface
         $rows = $this->connection->fetchAllAssociative(
             <<<'SQL'
                 SELECT name, ST_Y(geom) AS lat, ST_X(geom) AS lon,
-                       (COALESCE(tags->>'service:bicycle:repair', '') = 'yes')::int AS has_repair
+                       (category = 'repair_station' OR COALESCE(tags->>'service:bicycle:repair', '') = 'yes')::int AS has_repair
                 FROM osm.bike_shops
                 WHERE ST_DWithin(
                     geom::geography,
