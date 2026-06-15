@@ -9,26 +9,24 @@ use App\Geo\HaversineDistance;
 use App\InRide\DeeplinkBuilder;
 use App\InRide\DetourCalculator;
 use App\InRide\InRideAssistant;
+use App\InRide\InRidePoiRepositoryInterface;
 use App\InRide\OpeningHoursParser;
 use App\InRide\PoiIntentDetector;
 use App\InRide\PoiSuggestion;
 use App\Llm\Exception\OllamaUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
-use App\Scanner\OsmOverpassQueryBuilder;
-use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 /**
  * Integration tests for {@see InRideAssistant} — exercises the full pipeline
- * (intent detection → Overpass query → opening-hours filter → ranking →
- * narrative generation) with in-memory mocks for the LLM client and the OSM
- * scanner.
+ * (intent detection → local-first POI read → opening-hours filter → ranking →
+ * narrative generation) with in-memory mocks for the LLM client and the POI
+ * repository.
  */
 #[AllowMockObjectsWithoutExpectations]
 final class InRideAssistantTest extends TestCase
@@ -65,10 +63,10 @@ final class InRideAssistantTest extends TestCase
             'response' => '{"category":"unknown","max_distance_m":3000}',
         ]);
 
-        $scanner = $this->createMock(ScannerInterface::class);
-        $scanner->expects($this->never())->method('query');
+        $poiRepository = $this->createMock(InRidePoiRepositoryInterface::class);
+        $poiRepository->expects($this->never())->method('findNearby');
 
-        $assistant = $this->buildAssistant($llm, $scanner);
+        $assistant = $this->buildAssistant($llm, $poiRepository);
 
         $response = $assistant->assist(
             message: 'Quel temps fait-il ?',
@@ -81,7 +79,7 @@ final class InRideAssistantTest extends TestCase
     }
 
     #[Test]
-    public function waterIntentQueriesOverpassAndReturnsTopPois(): void
+    public function waterIntentReadsIndexAndReturnsTopPois(): void
     {
         // Intent classification call → water, 3 km radius. Narrative call → markdown.
         $llm = $this->createMock(LlmClientInterface::class);
@@ -97,43 +95,17 @@ final class InRideAssistantTest extends TestCase
             },
         );
 
-        $scanner = $this->createMock(ScannerInterface::class);
-        $scanner->expects($this->once())->method('query')->willReturn([
-            'elements' => [
-                [
-                    'type' => 'node',
-                    'lat' => 50.8504,
-                    'lon' => 4.3520,
-                    'tags' => ['name' => 'Fontaine du Sablon'],
-                ],
-                [
-                    'type' => 'node',
-                    'lat' => 50.8550,
-                    'lon' => 4.3600,
-                    'tags' => ['name' => 'Fontaine Royale'],
-                ],
-                // Anonymous water POIs are still surfaced under a generic label
-                // because the coordinates alone are actionable (deeplink only
-                // needs lat/lon) — only food/mechanic queries drop unnamed nodes.
-                [
-                    'type' => 'node',
-                    'lat' => 50.8505,
-                    'lon' => 4.3521,
-                    'tags' => [],
-                ],
-                // Way / relation Overpass elements expose coordinates via the
-                // `center` sub-object rather than top-level lat/lon. Cover the
-                // extraction branch so a regression that drops it (e.g. a
-                // building-mapped fountain) cannot silently disappear.
-                [
-                    'type' => 'way',
-                    'center' => ['lat' => 50.8509, 'lon' => 4.3527],
-                    'tags' => ['name' => 'Fontaine Centrale'],
-                ],
-            ],
+        $poiRepository = $this->poiRepository([
+            ['lat' => 50.8504, 'lon' => 4.3520, 'tags' => ['name' => 'Fontaine du Sablon']],
+            ['lat' => 50.8550, 'lon' => 4.3600, 'tags' => ['name' => 'Fontaine Royale']],
+            // Anonymous water POIs are still surfaced under a generic label
+            // because the coordinates alone are actionable (the deeplink only
+            // needs lat/lon) — only food/mechanic queries drop unnamed rows.
+            ['lat' => 50.8505, 'lon' => 4.3521, 'tags' => []],
+            ['lat' => 50.8509, 'lon' => 4.3527, 'tags' => ['name' => 'Fontaine Centrale']],
         ]);
 
-        $assistant = $this->buildAssistant($llm, $scanner);
+        $assistant = $this->buildAssistant($llm, $poiRepository);
 
         $response = $assistant->assist(
             message: "Je cherche un point d'eau",
@@ -164,31 +136,12 @@ final class InRideAssistantTest extends TestCase
             },
         );
 
-        $scanner = $this->createMock(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                [
-                    'type' => 'node',
-                    'lat' => 50.8504,
-                    'lon' => 4.3520,
-                    'tags' => [
-                        'name' => 'Restaurant Fermé',
-                        'opening_hours' => 'Mo-Fr 09:00-12:00',
-                    ],
-                ],
-                [
-                    'type' => 'node',
-                    'lat' => 50.8510,
-                    'lon' => 4.3525,
-                    'tags' => [
-                        'name' => 'Frites 24/7',
-                        'opening_hours' => '24/7',
-                    ],
-                ],
-            ],
+        $poiRepository = $this->poiRepository([
+            ['lat' => 50.8504, 'lon' => 4.3520, 'tags' => ['name' => 'Restaurant Fermé', 'opening_hours' => 'Mo-Fr 09:00-12:00']],
+            ['lat' => 50.8510, 'lon' => 4.3525, 'tags' => ['name' => 'Frites 24/7', 'opening_hours' => '24/7']],
         ]);
 
-        $assistant = $this->buildAssistant($llm, $scanner);
+        $assistant = $this->buildAssistant($llm, $poiRepository);
 
         // Sunday 14:00 UTC — outside the Mo-Fr 09:00-12:00 window of the first POI.
         $response = $assistant->assist(
@@ -215,22 +168,18 @@ final class InRideAssistantTest extends TestCase
             },
         );
 
-        $elements = [];
+        $features = [];
         // 5 POIs at increasing distances along latitude.
         $offsets = [0.0002, 0.0005, 0.0010, 0.0015, 0.0020];
         foreach ($offsets as $i => $offset) {
-            $elements[] = [
-                'type' => 'node',
+            $features[] = [
                 'lat' => 50.8503 + $offset,
                 'lon' => 4.3517,
                 'tags' => ['name' => 'POI '.($i + 1)],
             ];
         }
 
-        $scanner = $this->createMock(ScannerInterface::class);
-        $scanner->method('query')->willReturn(['elements' => $elements]);
-
-        $assistant = $this->buildAssistant($llm, $scanner);
+        $assistant = $this->buildAssistant($llm, $this->poiRepository($features));
 
         $response = $assistant->assist(
             message: 'Restaurant',
@@ -244,7 +193,7 @@ final class InRideAssistantTest extends TestCase
     }
 
     #[Test]
-    public function emptyOverpassResultsProduceFallbackNarrative(): void
+    public function emptyIndexResultsProduceFallbackNarrative(): void
     {
         $llm = $this->createMock(LlmClientInterface::class);
         $llm->method('generate')->willReturnCallback(
@@ -253,10 +202,7 @@ final class InRideAssistantTest extends TestCase
             ],
         );
 
-        $scanner = $this->createMock(ScannerInterface::class);
-        $scanner->method('query')->willReturn(['elements' => []]);
-
-        $assistant = $this->buildAssistant($llm, $scanner);
+        $assistant = $this->buildAssistant($llm, $this->poiRepository([]));
 
         $response = $assistant->assist(
             message: 'Un abri pour la pluie',
@@ -289,14 +235,11 @@ final class InRideAssistantTest extends TestCase
         $logger->expects(self::once())->method('critical')
             ->with(self::stringContains('LLM unavailable for narrative'));
 
-        $scanner = $this->createMock(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                ['type' => 'node', 'lat' => 50.8504, 'lon' => 4.3520, 'tags' => ['name' => 'Fontaine']],
-            ],
+        $poiRepository = $this->poiRepository([
+            ['lat' => 50.8504, 'lon' => 4.3520, 'tags' => ['name' => 'Fontaine']],
         ]);
 
-        $assistant = $this->buildAssistant($llm, $scanner, $logger);
+        $assistant = $this->buildAssistant($llm, $poiRepository, $logger);
 
         $response = $assistant->assist(
             message: "Je cherche un point d'eau",
@@ -308,24 +251,33 @@ final class InRideAssistantTest extends TestCase
         self::assertNotEmpty($response->pois);
     }
 
+    /**
+     * @param list<array{lat: float, lon: float, tags: array<string, string>}> $features
+     */
+    private function poiRepository(array $features): InRidePoiRepositoryInterface
+    {
+        $repository = $this->createStub(InRidePoiRepositoryInterface::class);
+        $repository->method('findNearby')->willReturn($features);
+
+        return $repository;
+    }
+
     private function buildAssistant(
         LlmClientInterface $llm,
-        ScannerInterface $scanner,
+        InRidePoiRepositoryInterface $poiRepository,
         ?LoggerInterface $logger = null,
     ): InRideAssistant {
         $distance = new HaversineDistance();
 
         return new InRideAssistant(
             intentDetector: new PoiIntentDetector($llm),
-            scanner: $scanner,
-            queryBuilder: new OsmOverpassQueryBuilder(),
+            poiRepository: $poiRepository,
             openingHoursParser: new OpeningHoursParser(),
             detourCalculator: new DetourCalculator($distance),
             deeplinkBuilder: new DeeplinkBuilder(),
             distance: $distance,
             llmClient: $llm,
             promptLoader: new SystemPromptLoader($this->promptDir),
-            cache: new ArrayAdapter(),
             logger: $logger ?? new NullLogger(),
         );
     }

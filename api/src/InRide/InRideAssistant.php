@@ -10,13 +10,8 @@ use App\Geo\GeoPoint;
 use App\Llm\Exception\OllamaUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
-use App\Scanner\OsmOverpassQueryBuilder;
-use App\Scanner\ScannerInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
 
 /**
  * In-ride conversational assistant — the orchestrator that turns a free-text
@@ -26,11 +21,9 @@ use Symfony\Contracts\Cache\ItemInterface;
  * Pipeline:
  *  1. {@see PoiIntentDetector} classifies the user message into a structured
  *     intent (category + radius + optional opening-hours constraint).
- *  2. {@see OsmOverpassQueryBuilder} produces the matching Overpass QL query,
- *     which is fired through {@see ScannerInterface}. Results are cached for
- *     5 minutes in the `cache.in_ride_poi` Redis pool (key: rounded lat/lon,
- *     category, radius) so consecutive messages along the same area do not
- *     hammer Overpass.
+ *  2. {@see InRidePoiRepositoryInterface} reads the matching features from the
+ *     local-first Tier-1 PostGIS index (ADR-040) around the rider position — no
+ *     runtime Overpass call, so no cache is needed.
  *  3. Opening hours are validated via {@see OpeningHoursParser}. When the
  *     intent carries an `open_for_minutes` constraint, only POIs that remain
  *     open at least that long are kept.
@@ -44,19 +37,15 @@ use Symfony\Contracts\Cache\ItemInterface;
  *     `in-ride` system prompt) and returns a short markdown narrative shown in
  *     the chat bubble.
  *
- * The orchestrator is defensive: a missing/disabled LLM, an Overpass timeout
- * or an unparseable opening_hours tag never raise — they degrade to a sensible
- * narrative so the rider always gets a useful answer.
+ * The orchestrator is defensive: a missing/disabled LLM or an unparseable
+ * opening_hours tag never raise — they degrade to a sensible narrative so the
+ * rider always gets a useful answer.
  */
 final readonly class InRideAssistant
 {
     public const string NARRATIVE_MODEL = 'llama3.2:3b';
 
     private const int MAX_SUGGESTIONS = 3;
-
-    private const int CACHE_TTL_SECONDS = 300;
-
-    private const string CACHE_KEY_PREFIX = 'in_ride.poi.';
 
     /**
      * Detour weight in the ranking score. The score is
@@ -68,16 +57,13 @@ final readonly class InRideAssistant
 
     public function __construct(
         private PoiIntentDetector $intentDetector,
-        private ScannerInterface $scanner,
-        private OsmOverpassQueryBuilder $queryBuilder,
+        private InRidePoiRepositoryInterface $poiRepository,
         private OpeningHoursParser $openingHoursParser,
         private DetourCalculator $detourCalculator,
         private DeeplinkBuilder $deeplinkBuilder,
         private GeoDistanceInterface $distance,
         private LlmClientInterface $llmClient,
         private SystemPromptLoader $promptLoader,
-        #[Autowire(service: 'cache.in_ride_poi')]
-        private CacheInterface $cache,
         private LoggerInterface $logger = new NullLogger(),
     ) {
     }
@@ -131,60 +117,11 @@ final readonly class InRideAssistant
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array{lat: float, lon: float, tags: array<string, string>}>
      */
     private function fetchPois(GeoPoint $center, PoiIntent $intent): array
     {
-        $latRounded = round($center->lat, 3);
-        $lonRounded = round($center->lon, 3);
-        $cacheKey = self::CACHE_KEY_PREFIX.hash('xxh128', \sprintf(
-            '%s|%F|%F|%d',
-            $intent->category,
-            $latRounded,
-            $lonRounded,
-            $intent->maxDistanceMeters,
-        ));
-
-        try {
-            /** @var array<string, mixed> $payload */
-            $payload = $this->cache->get($cacheKey, function (ItemInterface $item) use ($center, $intent): array {
-                $item->expiresAfter(self::CACHE_TTL_SECONDS);
-
-                return $this->scanner->query($this->buildQuery($center, $intent));
-            });
-        } catch (\Throwable $throwable) {
-            $this->logger->warning('InRideAssistant: cache.get failed, falling back to direct query.', [
-                'error' => $throwable->getMessage(),
-            ]);
-
-            $payload = $this->scanner->query($this->buildQuery($center, $intent));
-        }
-
-        $elements = $payload['elements'] ?? [];
-        if (!\is_array($elements)) {
-            return [];
-        }
-
-        /** @var list<array<string, mixed>> $list */
-        $list = [];
-        foreach ($elements as $element) {
-            if (\is_array($element)) {
-                $list[] = $element;
-            }
-        }
-
-        return $list;
-    }
-
-    private function buildQuery(GeoPoint $center, PoiIntent $intent): string
-    {
-        return match ($intent->category) {
-            PoiSuggestion::CATEGORY_WATER => $this->queryBuilder->buildDrinkingWaterQuery($center, $intent->maxDistanceMeters),
-            PoiSuggestion::CATEGORY_SHELTER => $this->queryBuilder->buildShelterQuery($center, $intent->maxDistanceMeters),
-            PoiSuggestion::CATEGORY_FOOD => $this->queryBuilder->buildFoodQuery($center, $intent->maxDistanceMeters),
-            PoiSuggestion::CATEGORY_MECHANIC => $this->queryBuilder->buildMechanicQuery($center, $intent->maxDistanceMeters),
-            default => throw new \LogicException(\sprintf('Unsupported category "%s".', $intent->category)),
-        };
+        return $this->poiRepository->findNearby($center->lat, $center->lon, $intent->maxDistanceMeters, $intent->category);
     }
 
     /**
