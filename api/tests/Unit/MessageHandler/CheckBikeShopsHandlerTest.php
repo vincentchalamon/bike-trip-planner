@@ -68,8 +68,11 @@ final class CheckBikeShopsHandlerTest extends TestCase
         GeoDistanceInterface $haversine,
         ?ComputationTrackerInterface $computationTracker = null,
     ): CheckBikeShopsHandler {
-        $computationTracker ??= $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
+        if (null === $computationTracker) {
+            $stub = $this->createStub(ComputationTrackerInterface::class);
+            $stub->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
+            $computationTracker = $stub;
+        }
 
         $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturnCallback(
