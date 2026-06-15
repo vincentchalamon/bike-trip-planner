@@ -12,6 +12,8 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\AlertType;
+use App\Geo\HaversineDistance;
+use App\Osm\ChargingStationRepositoryInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -43,6 +45,18 @@ final class AlertScenarioTest extends TestCase
         );
 
         return $calculator;
+    }
+
+    /**
+     * No charging stations indexed for these scenarios: the e-bike-range alert
+     * then falls back to its distance-reduction action (the warning still fires).
+     */
+    private function createChargingStationRepository(): ChargingStationRepositoryInterface
+    {
+        $repository = $this->createStub(ChargingStationRepositoryInterface::class);
+        $repository->method('findInCorridor')->willReturn([]);
+
+        return $repository;
     }
 
     #[Test]
@@ -107,7 +121,7 @@ final class AlertScenarioTest extends TestCase
         $this->assertGreaterThan(60.0, $stage->distance, 'E-bike GPX should have distance > effective range.');
         $this->assertGreaterThan(400.0, $stage->elevation, 'E-bike GPX should have significant elevation.');
 
-        $analyzer = new EbikeRangeAnalyzer($this->createTranslator());
+        $analyzer = new EbikeRangeAnalyzer($this->createTranslator(), $this->createChargingStationRepository(), new HaversineDistance());
         $alerts = $analyzer->analyze($stage, ['ebikeMode' => true]);
 
         $this->assertCount(1, $alerts);
@@ -119,7 +133,7 @@ final class AlertScenarioTest extends TestCase
     {
         $stage = ScenarioStageBuilder::buildFromGpx(self::FIXTURES_DIR.'ebike-out-of-range.gpx');
 
-        $analyzer = new EbikeRangeAnalyzer($this->createTranslator());
+        $analyzer = new EbikeRangeAnalyzer($this->createTranslator(), $this->createChargingStationRepository(), new HaversineDistance());
         $alerts = $analyzer->analyze($stage, ['ebikeMode' => false]);
 
         $this->assertSame([], $alerts);
@@ -196,7 +210,7 @@ final class AlertScenarioTest extends TestCase
                 $this->createTranslator(),
             ),
             ElevationAlertAnalyzer::class => new ElevationAlertAnalyzer($this->createTranslator()),
-            EbikeRangeAnalyzer::class => new EbikeRangeAnalyzer($this->createTranslator()),
+            EbikeRangeAnalyzer::class => new EbikeRangeAnalyzer($this->createTranslator(), $this->createChargingStationRepository(), new HaversineDistance()),
             default => throw new \LogicException(\sprintf('Unknown analyzer class: %s', $analyzerClass)),
         };
 
