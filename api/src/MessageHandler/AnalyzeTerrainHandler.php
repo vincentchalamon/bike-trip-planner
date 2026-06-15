@@ -11,14 +11,12 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
-use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
+use App\Osm\WaysRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -26,6 +24,9 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AsMessageHandler]
 final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
 {
+    /** Corridor half-width (m) for the local-first ways reads (ADR-040). */
+    private const int WAYS_CORRIDOR_RADIUS_METERS = 100;
+
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
@@ -33,10 +34,8 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
         private AnalyzerRegistryInterface $analyzerRegistry,
-        private ScannerInterface $scanner,
-        private QueryBuilderInterface $queryBuilder,
+        private WaysRepositoryInterface $waysRepository,
         private GeometryDistributorInterface $distributor,
-        private GeoDistanceInterface $geoDistance,
         MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
@@ -102,7 +101,9 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
     }
 
     /**
-     * Fetches OSM ways along the route and distributes them to stages.
+     * Reads OSM ways along the route from the local-first index and distributes
+     * them to stages (ADR-040). The index already reduces each way to its centroid,
+     * length (m) and surface/traffic tags, so no per-way geometry math is needed here.
      *
      * @param list<Stage> $stages
      *
@@ -118,80 +119,10 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                 $stages,
             ));
 
-        $query = $this->queryBuilder->buildWaysQuery($points);
-        $result = $this->scanner->query($query);
+        $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $points);
 
-        /** @var list<array{tags?: array<string, string>, geometry?: list<array{lat: float, lon: float}>}> $elements */
-        $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
+        $ways = $this->waysRepository->findInCorridor($route, self::WAYS_CORRIDOR_RADIUS_METERS);
 
-        $parsedWays = [];
-        foreach ($elements as $element) {
-            $tags = $element['tags'] ?? [];
-            $geometry = $element['geometry'] ?? [];
-            $length = $this->computeWayLength($geometry);
-            $center = $this->computeWayCenter($geometry);
-
-            if (null === $center) {
-                continue;
-            }
-
-            $way = [
-                'lat' => $center['lat'],
-                'lon' => $center['lon'],
-                'surface' => $tags['surface'] ?? '',
-                'highway' => $tags['highway'] ?? '',
-                'cycleway' => $tags['cycleway'] ?? '',
-                'cycleway:right' => $tags['cycleway:right'] ?? '',
-                'cycleway:left' => $tags['cycleway:left'] ?? '',
-                'cycleway:both' => $tags['cycleway:both'] ?? '',
-                'bicycle' => $tags['bicycle'] ?? '',
-                'maxspeed' => $tags['maxspeed'] ?? '',
-                'length' => $length,
-            ];
-
-            $parsedWays[] = $way;
-        }
-
-        return $this->distributor->distributeByGeometry($parsedWays, $stages);
-    }
-
-    /**
-     * Computes the length of a way in meters from its geometry nodes.
-     *
-     * @param list<array{lat: float, lon: float}> $geometry
-     */
-    private function computeWayLength(array $geometry): float
-    {
-        $length = 0.0;
-
-        for ($i = 1, $count = \count($geometry); $i < $count; ++$i) {
-            $length += $this->geoDistance->inMeters(
-                $geometry[$i - 1]['lat'],
-                $geometry[$i - 1]['lon'],
-                $geometry[$i]['lat'],
-                $geometry[$i]['lon'],
-            );
-        }
-
-        return $length;
-    }
-
-    /**
-     * Returns the geometric centroid of a way geometry.
-     *
-     * @param list<array{lat: float, lon: float}> $geometry
-     *
-     * @return array{lat: float, lon: float}|null
-     */
-    private function computeWayCenter(array $geometry): ?array
-    {
-        if ([] === $geometry) {
-            return null;
-        }
-
-        $lat = array_sum(array_column($geometry, 'lat')) / \count($geometry);
-        $lon = array_sum(array_column($geometry, 'lon')) / \count($geometry);
-
-        return ['lat' => $lat, 'lon' => $lon];
+        return $this->distributor->distributeByGeometry($ways, $stages);
     }
 }

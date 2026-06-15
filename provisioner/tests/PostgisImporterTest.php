@@ -62,6 +62,7 @@ final class PostgisImporterTest extends TestCase
         self::assertStringContainsString('historic=', $joined);
         self::assertStringContainsString('attraction,museum', $joined);
         self::assertStringContainsString('farm,bicycle', $joined);
+        self::assertStringContainsString('w/highway=', $joined);
     }
 
     #[Test]
