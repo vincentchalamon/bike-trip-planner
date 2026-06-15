@@ -38,7 +38,7 @@ final class AccommodationIndexReadTest extends KernelTestCase
         // osm.* are not Doctrine entities, so the Foundry reset does not clear them.
         $this->connection->executeStatement('TRUNCATE osm.accommodations');
 
-        // Committed SQL fixtures (ADR-040 / #56). Two accommodations within 5 km of
+        // Committed SQL fixtures (ADR-040). Two accommodations within 5 km of
         // the stage end point (48.5, 2.5): a hotel (website + wikidata) and a camp
         // site (charge tag). A far hotel (~130 km) and a near hostel exercise the
         // radius and category filters respectively.
@@ -62,6 +62,24 @@ final class AccommodationIndexReadTest extends KernelTestCase
         // The near hotel and camp site are detected; the far hotel (out of radius)
         // and the near hostel (category not requested) are excluded.
         self::assertSame(['camp_site', 'hotel'], $types);
+    }
+
+    #[Test]
+    public function fetchMatchesAccommodationsAcrossMultipleEndpoints(): void
+    {
+        // A real trip passes one end point per stage: fetch() builds a MULTIPOINT of
+        // N vertices. Two end points, each near a different hotel, must both match —
+        // the far hotel (~130 km) is out of range of the first end point alone.
+        $results = $this->source()->fetch(
+            [new Coordinate(48.5, 2.5), new Coordinate(49.5, 3.5)],
+            5000,
+            ['hotel'],
+        );
+
+        $names = array_map(static fn (array $candidate): string => $candidate['name'], $results);
+        sort($names);
+
+        self::assertSame(['Auberge Lointaine', 'Hotel du Centre'], $names);
     }
 
     #[Test]
