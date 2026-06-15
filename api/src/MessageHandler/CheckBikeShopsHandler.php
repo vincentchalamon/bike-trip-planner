@@ -15,9 +15,8 @@ use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBikeShops;
+use App\Osm\BikeShopRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -30,14 +29,16 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
 
     private const float BIKE_SHOP_PROXIMITY_METERS = 2000.0;
 
+    /** Corridor half-width (m) for the local-first bike-shop reads (ADR-040). */
+    private const int CORRIDOR_RADIUS_METERS = 2000;
+
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
-        private ScannerInterface $scanner,
-        private QueryBuilderInterface $queryBuilder,
+        private BikeShopRepositoryInterface $bikeShopRepository,
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
@@ -65,7 +66,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::BIKE_SHOPS, function () use ($tripId, $stages, $locale): void {
-            // Single Overpass query using decimated route points (shared cache key with ScanAllOsmDataHandler)
+            // Read bike shops from the local-first index along the route corridor (ADR-040).
             $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
                 ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
@@ -74,30 +75,16 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                     $stages,
                 ));
 
-            $query = $this->queryBuilder->buildBikeShopQuery($points);
-            $result = $this->scanner->query($query);
-
-            /** @var list<array{lat?: float, lon?: float, center?: array{lat: float, lon: float}, tags?: array<string, string>}> $elements */
-            $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
+            $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $points);
 
             // Parse bike shop locations, distinguishing repair shops from sale-only shops
             $repairShopLocations = [];
             $saleOnlyShopLocations = [];
-            foreach ($elements as $element) {
-                $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
-
-                if (null === $lat || null === $lon) {
-                    continue;
-                }
-
-                $tags = $element['tags'] ?? [];
-                $hasRepair = isset($tags['service:bicycle:repair']) && 'yes' === $tags['service:bicycle:repair'];
-
-                if ($hasRepair) {
-                    $repairShopLocations[] = ['lat' => (float) $lat, 'lon' => (float) $lon];
+            foreach ($this->bikeShopRepository->findInCorridor($route, self::CORRIDOR_RADIUS_METERS) as $shop) {
+                if ($shop['hasRepair']) {
+                    $repairShopLocations[] = ['lat' => $shop['lat'], 'lon' => $shop['lon']];
                 } else {
-                    $saleOnlyShopLocations[] = ['lat' => (float) $lat, 'lon' => (float) $lon];
+                    $saleOnlyShopLocations[] = ['lat' => $shop['lat'], 'lon' => $shop['lon']];
                 }
             }
 
