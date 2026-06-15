@@ -16,9 +16,8 @@ use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckWaterPoints;
+use App\Osm\WaterPointRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -29,14 +28,16 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
 {
     private const float WATER_GAP_THRESHOLD_KM = 30.0;
 
+    /** Corridor half-width (m) for the local-first water reads (ADR-040). */
+    private const int CORRIDOR_RADIUS_METERS = 2000;
+
     public function __construct(
         ComputationTrackerInterface $computationTracker,
         TripUpdatePublisherInterface $publisher,
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
-        private ScannerInterface $scanner,
-        private QueryBuilderInterface $queryBuilder,
+        private WaterPointRepositoryInterface $waterPointRepository,
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
@@ -66,22 +67,12 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                     $stages,
                 ));
 
-            $query = $this->queryBuilder->buildCemeteryQuery($points);
-            $result = $this->scanner->query($query);
+            $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $points);
 
-            /** @var list<array{tags?: array<string, string>, lat?: float, lon?: float, center?: array{lat: float, lon: float}}> $elements */
-            $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
-
+            // Read drinking-water points from the local-first index along the route corridor (ADR-040).
             $allWaterPoints = [];
-            foreach ($elements as $element) {
-                $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
-
-                if (null === $lat || null === $lon) {
-                    continue;
-                }
-
-                $allWaterPoints[] = ['lat' => (float) $lat, 'lon' => (float) $lon];
+            foreach ($this->waterPointRepository->findInCorridor($route, self::CORRIDOR_RADIUS_METERS) as $waterPoint) {
+                $allWaterPoints[] = ['lat' => $waterPoint['lat'], 'lon' => $waterPoint['lon']];
             }
 
             /** @var array<int, list<array{lat: float, lon: float}>> $waterByStage */
@@ -105,14 +96,14 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                         'dayNumber' => $stage->dayNumber,
                         'type' => AlertType::NUDGE->value,
                         'message' => $this->translator->trans(
-                            'alert.cemetery.nudge',
+                            'alert.water.nudge',
                             ['%stage%' => $stage->dayNumber],
                             'alerts',
                             $locale,
                         ),
                         'action' => null !== $nearestWp ? [
                             'kind' => AlertActionKind::NAVIGATE->value,
-                            'label' => $this->translator->trans('alert.cemetery.action', [], 'alerts', $locale),
+                            'label' => $this->translator->trans('alert.water.action', [], 'alerts', $locale),
                             'payload' => ['lat' => $nearestWp['lat'], 'lon' => $nearestWp['lon']],
                         ] : null,
                     ];

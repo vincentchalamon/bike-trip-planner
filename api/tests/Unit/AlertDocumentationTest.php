@@ -34,7 +34,7 @@ final class AlertDocumentationTest extends TestCase
         'traffic' => 'Traffic',
         'bike_shop' => 'Bike shops',
         'ebike_range' => 'E-bike range',
-        'cemetery' => 'Water points',
+        'water' => 'Water points',
         'calendar' => 'Calendar',
         'resupply' => 'Resupply',
         'steep_gradient' => 'Steep gradient',
