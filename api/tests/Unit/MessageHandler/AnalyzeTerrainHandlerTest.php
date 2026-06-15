@@ -12,15 +12,13 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\AlertType;
-use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
 use App\MessageHandler\AnalyzeTerrainHandler;
+use App\Osm\WaysRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -45,14 +43,29 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         );
     }
 
+    /**
+     * @param list<array{lat: float, lon: float, surface: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float}> $ways
+     */
+    private function waysRepository(array $ways): WaysRepositoryInterface
+    {
+        $repository = $this->createStub(WaysRepositoryInterface::class);
+        $repository->method('findInCorridor')->willReturnCallback(
+            static function (array $route, int $radiusMeters) use ($ways): array {
+                self::assertSame(100, $radiusMeters, 'findInCorridor must use the 100 m ways corridor');
+
+                return $ways;
+            },
+        );
+
+        return $repository;
+    }
+
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         AnalyzerRegistryInterface $analyzerRegistry,
         TripUpdatePublisherInterface $publisher,
-        ScannerInterface $scanner,
-        QueryBuilderInterface $queryBuilder,
+        WaysRepositoryInterface $waysRepository,
         GeometryDistributorInterface $distributor,
-        GeoDistanceInterface $geoDistance,
     ): AnalyzeTerrainHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
@@ -66,10 +79,8 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $analyzerRegistry,
-            $scanner,
-            $queryBuilder,
+            $waysRepository,
             $distributor,
-            $geoDistance,
             $this->createStub(MessageBusInterface::class),
         );
     }
@@ -87,10 +98,8 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $tripStateManager,
             $this->createStub(AnalyzerRegistryInterface::class),
             $publisher,
-            $this->createStub(ScannerInterface::class),
-            $this->createStub(QueryBuilderInterface::class),
+            $this->createStub(WaysRepositoryInterface::class),
             $this->createStub(GeometryDistributorInterface::class),
-            $this->createStub(GeoDistanceInterface::class),
         );
 
         $handler(new AnalyzeTerrain('trip-1'));
@@ -112,38 +121,14 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
         ]);
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildWaysQuery')->willReturn('way-query');
-
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                [
-                    'tags' => ['highway' => 'primary', 'surface' => 'asphalt'],
-                    'geometry' => [
-                        ['lat' => 48.1, 'lon' => 2.1],
-                        ['lat' => 48.2, 'lon' => 2.2],
-                    ],
-                ],
-            ],
+        $waysRepository = $this->waysRepository([
+            ['lat' => 48.1, 'lon' => 2.1, 'surface' => 'asphalt', 'highway' => 'primary', 'cycleway' => '', 'cycleway:right' => '', 'cycleway:left' => '', 'cycleway:both' => '', 'bicycle' => '', 'maxspeed' => '', 'length' => 1000.0],
         ]);
-
-        $geoDistance = $this->createStub(GeoDistanceInterface::class);
-        $geoDistance->method('inMeters')->willReturn(1000.0);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([
             0 => [
-                [
-                    'lat' => 48.1,
-                    'lon' => 2.1,
-                    'surface' => 'asphalt',
-                    'highway' => 'primary',
-                    'cycleway' => '',
-                    'cycleway:right' => '',
-                    'cycleway:left' => '',
-                    'length' => 1000.0,
-                ],
+                ['lat' => 48.1, 'lon' => 2.1, 'surface' => 'asphalt', 'highway' => 'primary', 'length' => 1000.0],
             ],
         ]);
 
@@ -157,16 +142,12 @@ final class AnalyzeTerrainHandlerTest extends TestCase
                 return [];
             });
 
-        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-
         $handler = $this->createHandler(
             $tripStateManager,
             $analyzerRegistry,
-            $publisher,
-            $scanner,
-            $queryBuilder,
+            $this->createStub(TripUpdatePublisherInterface::class),
+            $waysRepository,
             $distributor,
-            $geoDistance,
         );
 
         $handler(new AnalyzeTerrain('trip-1'));
@@ -194,13 +175,6 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
         ]);
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildWaysQuery')->willReturn('query');
-
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn(['elements' => []]);
-
-        $geoDistance = $this->createStub(GeoDistanceInterface::class);
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
 
@@ -227,17 +201,15 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $tripStateManager,
             $analyzerRegistry,
             $publisher,
-            $scanner,
-            $queryBuilder,
+            $this->waysRepository([]),
             $distributor,
-            $geoDistance,
         );
 
         $handler(new AnalyzeTerrain('trip-1'));
     }
 
     #[Test]
-    public function fallsBackToStageGeometryWhenNoDecimatedPoints(): void
+    public function usesStageGeometryRouteWhenNoDecimatedPoints(): void
     {
         $stage = $this->createStage();
         $tripRequest = new TripRequest();
@@ -249,84 +221,33 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $tripStateManager->method('getRequest')->willReturn($tripRequest);
         $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
-        $queryBuilder = $this->createMock(QueryBuilderInterface::class);
-        $queryBuilder->expects($this->once())
-            ->method('buildWaysQuery')
-            ->with($this->callback(static fn (array $points): bool => 3 === \count($points) && $points[0] instanceof Coordinate))
-            ->willReturn('query');
+        // No decimated points → the corridor route is built from the stage geometry.
+        $waysRepository = $this->createStub(WaysRepositoryInterface::class);
+        $waysRepository->method('findInCorridor')->willReturnCallback(
+            static function (array $route, int $radiusMeters): array {
+                self::assertSame(100, $radiusMeters);
+                self::assertSame([
+                    ['lat' => 48.0, 'lon' => 2.0],
+                    ['lat' => 48.25, 'lon' => 2.25],
+                    ['lat' => 48.5, 'lon' => 2.5],
+                ], $route);
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn(['elements' => []]);
+                return [];
+            },
+        );
 
-        $geoDistance = $this->createStub(GeoDistanceInterface::class);
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
 
         $analyzerRegistry = $this->createStub(AnalyzerRegistryInterface::class);
         $analyzerRegistry->method('analyze')->willReturn([]);
 
-        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-
         $handler = $this->createHandler(
             $tripStateManager,
             $analyzerRegistry,
-            $publisher,
-            $scanner,
-            $queryBuilder,
+            $this->createStub(TripUpdatePublisherInterface::class),
+            $waysRepository,
             $distributor,
-            $geoDistance,
-        );
-
-        $handler(new AnalyzeTerrain('trip-1'));
-    }
-
-    #[Test]
-    public function skipsWayElementsWithEmptyGeometry(): void
-    {
-        $stage = $this->createStage();
-        $tripRequest = new TripRequest();
-        $tripRequest->ebikeMode = false;
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getRequest')->willReturn($tripRequest);
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
-            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
-        ]);
-
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildWaysQuery')->willReturn('query');
-
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                ['tags' => ['highway' => 'track'], 'geometry' => []],
-                ['tags' => ['highway' => 'primary']],
-            ],
-        ]);
-
-        $geoDistance = $this->createStub(GeoDistanceInterface::class);
-
-        $distributor = $this->createMock(GeometryDistributorInterface::class);
-        $distributor->expects($this->once())
-            ->method('distributeByGeometry')
-            ->with($this->callback(static fn (array $ways): bool => [] === $ways))
-            ->willReturn([]);
-
-        $analyzerRegistry = $this->createStub(AnalyzerRegistryInterface::class);
-        $analyzerRegistry->method('analyze')->willReturn([]);
-
-        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-
-        $handler = $this->createHandler(
-            $tripStateManager,
-            $analyzerRegistry,
-            $publisher,
-            $scanner,
-            $queryBuilder,
-            $distributor,
-            $geoDistance,
         );
 
         $handler(new AnalyzeTerrain('trip-1'));

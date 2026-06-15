@@ -53,6 +53,7 @@ final readonly class PostgisImporter
         'nwr/service:bicycle:repair=yes',
         'nwr/man_made=water_tap',
         'nwr/natural=spring',
+        'w/highway=primary,secondary,tertiary,unclassified,residential,living_street,service,track,path,cycleway,footway,bridleway',
     ];
 
     /**

@@ -5,7 +5,7 @@
 -- the live `osm` schema atomically. The API reads these tables via ST_DWithin
 -- corridor queries, replacing the runtime Overpass dependency.
 --
--- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations, charging_stations, cultural_pois. The
+-- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations, charging_stations, cultural_pois, ways. The
 -- admin_boundaries (coverage polygon) and cycle_routes tables land later.
 
 -- MUST match PostgisImporter::STAGING_SCHEMA: osm2pgsql writes the output tables
@@ -42,6 +42,13 @@ local CULTURAL_TOURISM = {
 local CULTURAL_HISTORIC = {
     castle = true, monument = true, memorial = true, ruins = true,
     archaeological_site = true, church = true, cathedral = true, abbey = true, fort = true,
+}
+
+-- Road/path highway values analysed for surface + traffic (stored as linestrings).
+local WAY_HIGHWAY = {
+    primary = true, secondary = true, tertiary = true, unclassified = true,
+    residential = true, living_street = true, service = true, track = true,
+    path = true, cycleway = true, footway = true, bridleway = true,
 }
 
 local pois = osm2pgsql.define_table({
@@ -175,6 +182,19 @@ local cultural_pois = osm2pgsql.define_table({
     },
 })
 
+local ways = osm2pgsql.define_table({
+    name = 'ways',
+    schema = SCHEMA,
+    ids = { type = 'way', id_column = 'osm_id' },
+    columns = {
+        { column = 'tags', type = 'jsonb' },
+        { column = 'geom', type = 'linestring', projection = SRID, not_null = true },
+    },
+    indexes = {
+        { column = 'geom', method = 'gist' },
+    },
+})
+
 local function poi_category(tags)
     if tags.amenity and POI_AMENITY[tags.amenity] then return tags.amenity end
     if tags.shop and POI_SHOP[tags.shop] then return tags.shop end
@@ -238,6 +258,11 @@ local function cultural_category(tags)
     return nil
 end
 
+-- True for the highway ways imported into the ways table (linestrings).
+local function way_highway(tags)
+    return tags.highway ~= nil and WAY_HIGHWAY[tags.highway] == true
+end
+
 local function is_relevant(tags)
     return poi_category(tags) ~= nil
         or accommodation_category(tags) ~= nil
@@ -247,6 +272,7 @@ local function is_relevant(tags)
         or railway_category(tags) ~= nil
         or charging_category(tags) ~= nil
         or cultural_category(tags) ~= nil
+        or way_highway(tags)
 end
 
 -- Safe integer coercion (works on both Lua 5.x and LuaJIT builds of osm2pgsql).
@@ -368,6 +394,19 @@ end
 
 function osm2pgsql.process_way(object)
     if not is_relevant(object.tags) then return end
+
+    -- The ways table keeps the full linestring for surface/traffic analysis.
+    -- Highway ways are never a mapped POI category, so skip the centroid +
+    -- insert_features work (a no-op for them) on country-sized extracts.
+    if way_highway(object.tags) then
+        local ok, line = pcall(function() return object:as_linestring() end)
+        if ok and line ~= nil then
+            ways:insert({ tags = object.tags, geom = line })
+        end
+        return
+    end
+
+    -- Point features (POI/accommodation/...) use the way centroid.
     local geom = way_centroid(object)
     if geom == nil then return end
     insert_features(object.tags, geom)
