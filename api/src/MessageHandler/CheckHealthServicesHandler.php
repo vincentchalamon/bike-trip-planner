@@ -14,9 +14,8 @@ use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckHealthServices;
+use App\Osm\HealthServiceRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -30,8 +29,10 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 #[AsMessageHandler]
 final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandler
 {
-    /** Must be ≤ OsmOverpassQueryBuilder::HEALTH_SERVICE_RADIUS_METERS to avoid false alerts. */
     private const float HEALTH_SERVICE_PROXIMITY_METERS = 15000.0;
+
+    /** Corridor half-width (m) for the local-first health-service reads (ADR-040); kept equal to HEALTH_SERVICE_PROXIMITY_METERS so the DB pre-filter always covers the per-stage proximity threshold. */
+    private const int CORRIDOR_RADIUS_METERS = (int) self::HEALTH_SERVICE_PROXIMITY_METERS;
 
     public function __construct(
         ComputationTrackerInterface $computationTracker,
@@ -39,8 +40,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
-        private ScannerInterface $scanner,
-        private QueryBuilderInterface $queryBuilder,
+        private HealthServiceRepositoryInterface $healthServiceRepository,
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
@@ -61,6 +61,7 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
         $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
 
         $this->executeWithTracking($tripId, ComputationName::HEALTH_SERVICES, function () use ($tripId, $stages, $locale): void {
+            // Read health services from the local-first index along the route corridor (ADR-040).
             $decimatedData = $this->tripStateManager->getDecimatedPoints($tripId);
             $points = null !== $decimatedData
                 ? array_map(static fn (array $p): Coordinate => new Coordinate($p['lat'], $p['lon'], $p['ele']), $decimatedData)
@@ -69,24 +70,12 @@ final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandl
                     $stages,
                 ));
 
-            $query = $this->queryBuilder->buildHealthServiceQuery($points);
-            $result = $this->scanner->query($query);
+            $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $points);
 
-            /** @var list<array{lat?: float, lon?: float, center?: array{lat: float, lon: float}, tags?: array<string, string>}> $elements */
-            $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
-
-            // Parse health service locations
             /** @var list<array{lat: float, lon: float}> $healthServiceLocations */
             $healthServiceLocations = [];
-            foreach ($elements as $element) {
-                $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
-
-                if (null === $lat || null === $lon) {
-                    continue;
-                }
-
-                $healthServiceLocations[] = ['lat' => (float) $lat, 'lon' => (float) $lon];
+            foreach ($this->healthServiceRepository->findInCorridor($route, self::CORRIDOR_RADIUS_METERS) as $service) {
+                $healthServiceLocations[] = ['lat' => $service['lat'], 'lon' => $service['lon']];
             }
 
             // Check each stage for nearby health services

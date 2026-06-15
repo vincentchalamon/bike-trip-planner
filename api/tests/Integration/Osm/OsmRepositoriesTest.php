@@ -6,6 +6,7 @@ namespace App\Tests\Integration\Osm;
 
 use App\Osm\AccommodationRepository;
 use App\Osm\BikeShopRepository;
+use App\Osm\HealthServiceRepository;
 use App\Osm\PoiRepository;
 use App\Osm\WaterPointRepository;
 use Doctrine\DBAL\Connection;
@@ -14,12 +15,9 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Zenstruck\Foundry\Test\ResetDatabase;
 
 /**
- * Integration coverage for the local-first Tier-1 read layer (ADR-040, #56):
- * exercises the real PostGIS `osm` schema (created by Version20260614120000)
- * with seeded rows and asserts the ST_DWithin corridor / radius filtering.
- *
- * The repositories are instantiated directly on the real DBAL connection: they
- * have no consumer until the cut-over PR, so the container would prune them.
+ * Integration coverage for the local-first Tier-1 read layer (ADR-040): exercises
+ * the real PostGIS `osm` schema with seeded rows and asserts the ST_DWithin
+ * corridor / radius / category filtering for each repository.
  */
 final class OsmRepositoriesTest extends KernelTestCase
 {
@@ -38,7 +36,7 @@ final class OsmRepositoriesTest extends KernelTestCase
         $this->connection = $connection;
 
         // osm.* are not Doctrine entities, so the reset does not clear them.
-        $this->connection->executeStatement('TRUNCATE osm.pois, osm.accommodations, osm.water_points, osm.bike_shops');
+        $this->connection->executeStatement('TRUNCATE osm.pois, osm.accommodations, osm.water_points, osm.bike_shops, osm.health_services');
     }
 
     #[Test]
@@ -124,6 +122,26 @@ final class OsmRepositoriesTest extends KernelTestCase
     }
 
     #[Test]
+    public function healthServiceRepositoryReturnsServicesWithinTheCorridor(): void
+    {
+        $this->seedHealthService('pharmacy', 49.61, 6.14, 'On Route Pharmacy');
+        $this->seedHealthService('clinic', 49.615, 6.145, 'On Route Clinic');
+        $this->seedHealthService('hospital', 49.90, 6.80, 'Far Hospital');
+
+        $services = new HealthServiceRepository($this->connection)->findInCorridor([
+            ['lat' => 49.60, 'lon' => 6.13],
+            ['lat' => 49.62, 'lon' => 6.15],
+        ], 2000);
+
+        // Both in-corridor services are returned (no category filter); the far
+        // hospital is excluded by ST_DWithin.
+        $categories = array_map(static fn (array $service): string => $service['category'], $services);
+        self::assertCount(2, $services);
+        self::assertContains('pharmacy', $categories);
+        self::assertContains('clinic', $categories);
+    }
+
+    #[Test]
     public function emptyRouteOrCategoriesYieldNoQuery(): void
     {
         $this->seedPoi('restaurant', 49.61, 6.14);
@@ -131,6 +149,7 @@ final class OsmRepositoriesTest extends KernelTestCase
         self::assertSame([], new PoiRepository($this->connection)->findInCorridor([], 2000));
         self::assertSame([], new WaterPointRepository($this->connection)->findInCorridor([], 2000));
         self::assertSame([], new BikeShopRepository($this->connection)->findInCorridor([], 2000));
+        self::assertSame([], new HealthServiceRepository($this->connection)->findInCorridor([], 2000));
         self::assertSame([], new AccommodationRepository($this->connection)->findNear([['lat' => 49.61, 'lon' => 6.14]], 5000, []));
         self::assertSame([], new AccommodationRepository($this->connection)->findNear([], 5000, ['hotel']));
     }
@@ -176,6 +195,17 @@ final class OsmRepositoriesTest extends KernelTestCase
                 VALUES ('n', :id, :name, :category, CAST(:tags AS jsonb), ST_SetSRID(ST_MakePoint(:lon, :lat), 4326))
                 SQL,
             ['id' => ++$this->osmId, 'name' => $name, 'category' => $category, 'tags' => $tagsJson, 'lon' => $lon, 'lat' => $lat],
+        );
+    }
+
+    private function seedHealthService(string $category, float $lat, float $lon, ?string $name): void
+    {
+        $this->connection->executeStatement(
+            <<<'SQL'
+                INSERT INTO osm.health_services (osm_type, osm_id, name, category, tags, geom)
+                VALUES ('n', :id, :name, :category, '{}'::jsonb, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326))
+                SQL,
+            ['id' => ++$this->osmId, 'name' => $name, 'category' => $category, 'lon' => $lon, 'lat' => $lat],
         );
     }
 }
