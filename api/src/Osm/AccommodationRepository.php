@@ -12,7 +12,7 @@ use Doctrine\DBAL\Connection;
  * stage end points (ST_DWithin), replacing the runtime Overpass accommodation
  * source (ADR-040). DataTourisme/Wikidata enrichment stays in their own sources.
  */
-final readonly class AccommodationRepository
+final readonly class AccommodationRepository implements AccommodationRepositoryInterface
 {
     public function __construct(private Connection $connection)
     {
