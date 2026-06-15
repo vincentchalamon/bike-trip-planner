@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Osm;
 
 use App\Osm\AccommodationRepository;
+use App\Osm\BikeShopRepository;
 use App\Osm\PoiRepository;
 use App\Osm\WaterPointRepository;
 use Doctrine\DBAL\Connection;
@@ -37,7 +38,7 @@ final class OsmRepositoriesTest extends KernelTestCase
         $this->connection = $connection;
 
         // osm.* are not Doctrine entities, so the reset does not clear them.
-        $this->connection->executeStatement('TRUNCATE osm.pois, osm.accommodations, osm.water_points');
+        $this->connection->executeStatement('TRUNCATE osm.pois, osm.accommodations, osm.water_points, osm.bike_shops');
     }
 
     #[Test]
@@ -97,12 +98,39 @@ final class OsmRepositoriesTest extends KernelTestCase
     }
 
     #[Test]
+    public function bikeShopRepositoryDerivesRepairFlagAndFiltersByCorridor(): void
+    {
+        $this->seedBikeShop('bicycle', 49.61, 6.14, 'Repair Shop', '{"shop":"bicycle","service:bicycle:repair":"yes"}');
+        $this->seedBikeShop('bicycle', 49.615, 6.145, 'Sale Only', '{"shop":"bicycle"}');
+        $this->seedBikeShop('repair_station', 49.612, 6.142, 'Workshop', '{"service:bicycle:repair":"yes"}');
+        $this->seedBikeShop('bicycle', 49.90, 6.80, 'Far Shop', '{"shop":"bicycle","service:bicycle:repair":"yes"}');
+
+        $shops = new BikeShopRepository($this->connection)->findInCorridor([
+            ['lat' => 49.60, 'lon' => 6.13],
+            ['lat' => 49.62, 'lon' => 6.15],
+        ], 2000);
+
+        // Three shops in the corridor; the far one is excluded by ST_DWithin.
+        $repairByName = [];
+        foreach ($shops as $shop) {
+            $repairByName[(string) $shop['name']] = $shop['hasRepair'];
+        }
+
+        self::assertCount(3, $shops);
+        self::assertTrue($repairByName['Repair Shop'], 'shop=bicycle with service:bicycle:repair=yes is a repair shop');
+        self::assertFalse($repairByName['Sale Only'], 'shop=bicycle without the repair tag is sale-only');
+        self::assertTrue($repairByName['Workshop'], 'a repair workshop without shop=bicycle still has repair');
+        self::assertArrayNotHasKey('Far Shop', $repairByName);
+    }
+
+    #[Test]
     public function emptyRouteOrCategoriesYieldNoQuery(): void
     {
         $this->seedPoi('restaurant', 49.61, 6.14);
 
         self::assertSame([], new PoiRepository($this->connection)->findInCorridor([], 2000));
         self::assertSame([], new WaterPointRepository($this->connection)->findInCorridor([], 2000));
+        self::assertSame([], new BikeShopRepository($this->connection)->findInCorridor([], 2000));
         self::assertSame([], new AccommodationRepository($this->connection)->findNear([['lat' => 49.61, 'lon' => 6.14]], 5000, []));
         self::assertSame([], new AccommodationRepository($this->connection)->findNear([], 5000, ['hotel']));
     }
@@ -137,6 +165,17 @@ final class OsmRepositoriesTest extends KernelTestCase
                 VALUES ('n', :id, :name, :category, :stars, '{}'::jsonb, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326))
                 SQL,
             ['id' => ++$this->osmId, 'name' => $name, 'category' => $category, 'stars' => $stars, 'lon' => $lon, 'lat' => $lat],
+        );
+    }
+
+    private function seedBikeShop(string $category, float $lat, float $lon, ?string $name, string $tagsJson): void
+    {
+        $this->connection->executeStatement(
+            <<<'SQL'
+                INSERT INTO osm.bike_shops (osm_type, osm_id, name, category, tags, geom)
+                VALUES ('n', :id, :name, :category, CAST(:tags AS jsonb), ST_SetSRID(ST_MakePoint(:lon, :lat), 4326))
+                SQL,
+            ['id' => ++$this->osmId, 'name' => $name, 'category' => $category, 'tags' => $tagsJson, 'lon' => $lon, 'lat' => $lat],
         );
     }
 }

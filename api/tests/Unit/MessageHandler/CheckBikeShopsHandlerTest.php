@@ -8,14 +8,14 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Enum\ComputationName;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBikeShops;
 use App\MessageHandler\CheckBikeShopsHandler;
+use App\Osm\BikeShopRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -44,15 +44,35 @@ final class CheckBikeShopsHandlerTest extends TestCase
         return $stages;
     }
 
+    /**
+     * @param list<array{name: ?string, lat: float, lon: float, hasRepair: bool}> $shops
+     */
+    private function bikeShopRepository(array $shops): BikeShopRepositoryInterface
+    {
+        $repository = $this->createStub(BikeShopRepositoryInterface::class);
+        $repository->method('findInCorridor')->willReturnCallback(
+            static function (array $route, int $radiusMeters) use ($shops): array {
+                self::assertSame(2000, $radiusMeters, 'findInCorridor must use the 2 km corridor radius');
+
+                return $shops;
+            },
+        );
+
+        return $repository;
+    }
+
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
-        ScannerInterface $scanner,
-        QueryBuilderInterface $queryBuilder,
+        BikeShopRepositoryInterface $bikeShopRepository,
         GeoDistanceInterface $haversine,
+        ?ComputationTrackerInterface $computationTracker = null,
     ): CheckBikeShopsHandler {
-        $computationTracker = $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
+        if (!$computationTracker instanceof ComputationTrackerInterface) {
+            $stub = $this->createStub(ComputationTrackerInterface::class);
+            $stub->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
+            $computationTracker = $stub;
+        }
 
         $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturnCallback(
@@ -71,36 +91,29 @@ final class CheckBikeShopsHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
-            $scanner,
-            $queryBuilder,
+            $bikeShopRepository,
             $haversine,
             $translator,
             $this->createStub(MessageBusInterface::class),
         );
     }
 
-    #[Test]
-    public function shopWithRepairServiceEmitsNoAlert(): void
+    private function tripStateManager(string $tripId, int $stageCount = 6): TripRequestRepositoryInterface
     {
-        $stages = $this->createStages('trip-1');
-
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
+        $tripStateManager->method('getStages')->willReturn($this->createStages($tripId, $stageCount));
         $tripStateManager->method('getLocale')->willReturn('en');
         $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildBikeShopQuery')->willReturn('query');
+        return $tripStateManager;
+    }
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                [
-                    'lat' => 48.5,
-                    'lon' => 2.5,
-                    'tags' => ['shop' => 'bicycle', 'service:bicycle:repair' => 'yes'],
-                ],
-            ],
+    #[Test]
+    public function repairShopNearbyEmitsNoAlert(): void
+    {
+        $tripStateManager = $this->tripStateManager('trip-1');
+        $bikeShopRepository = $this->bikeShopRepository([
+            ['name' => 'Cycles Repair', 'lat' => 48.5, 'lon' => 2.5, 'hasRepair' => true],
         ]);
 
         // Shop is close to every stage's midpoint (endPoint: 48.5, 2.5)
@@ -116,32 +129,16 @@ final class CheckBikeShopsHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $bikeShopRepository, $haversine);
         $handler(new CheckBikeShops('trip-1'));
     }
 
     #[Test]
-    public function shopWithoutRepairServiceEmitsNoRepairNudge(): void
+    public function saleOnlyShopNearbyEmitsNoRepairNudge(): void
     {
-        $stages = $this->createStages('trip-1');
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
-
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildBikeShopQuery')->willReturn('query');
-
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                [
-                    'lat' => 48.5,
-                    'lon' => 2.5,
-                    'tags' => ['shop' => 'bicycle'],
-                ],
-            ],
+        $tripStateManager = $this->tripStateManager('trip-1');
+        $bikeShopRepository = $this->bikeShopRepository([
+            ['name' => 'Cycles Sale', 'lat' => 48.5, 'lon' => 2.5, 'hasRepair' => false],
         ]);
 
         // Sale-only shop is close to every stage's midpoint
@@ -174,25 +171,15 @@ final class CheckBikeShopsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $bikeShopRepository, $haversine);
         $handler(new CheckBikeShops('trip-1'));
     }
 
     #[Test]
     public function noShopNearbyEmitsStandardNudge(): void
     {
-        $stages = $this->createStages('trip-1');
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
-
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildBikeShopQuery')->willReturn('query');
-
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn(['elements' => []]);
+        $tripStateManager = $this->tripStateManager('trip-1');
+        $bikeShopRepository = $this->bikeShopRepository([]);
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
 
@@ -212,49 +199,32 @@ final class CheckBikeShopsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $bikeShopRepository, $haversine);
         $handler(new CheckBikeShops('trip-1'));
     }
 
     #[Test]
-    public function repairServiceWithoutBicycleShopTagEmitsNoAlert(): void
+    public function tripWithFewStagesIsSkipped(): void
     {
-        $stages = $this->createStages('trip-1');
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
-
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildBikeShopQuery')->willReturn('query');
-
-        // Associative workshop: has repair tag but no shop=bicycle
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                [
-                    'lat' => 48.5,
-                    'lon' => 2.5,
-                    'tags' => ['service:bicycle:repair' => 'yes'],
-                ],
-            ],
-        ]);
-
-        // Repair workshop is close to every stage's midpoint
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inMeters')->willReturn(100.0);
+        // BR-06: trips of 5 days or fewer skip the check entirely, but must still mark
+        // the computation done so trip generation does not hang waiting for a result.
+        $tripStateManager = $this->tripStateManager('trip-1', 5);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->once())
-            ->method('publish')
-            ->with(
-                'trip-1',
-                MercureEventType::BIKE_SHOP_ALERTS,
-                $this->callback(static fn (array $data): bool => [] === $data['alerts']),
-            );
+        $publisher->expects($this->never())->method('publish');
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $haversine);
+        $computationTracker = $this->createMock(ComputationTrackerInterface::class);
+        $computationTracker->expects($this->once())
+            ->method('markDone')
+            ->with('trip-1', ComputationName::BIKE_SHOPS);
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $publisher,
+            $this->bikeShopRepository([['name' => 'Cycles Repair', 'lat' => 48.5, 'lon' => 2.5, 'hasRepair' => true]]),
+            $this->createStub(GeoDistanceInterface::class),
+            $computationTracker,
+        );
         $handler(new CheckBikeShops('trip-1'));
     }
 }
