@@ -58,16 +58,6 @@ interface QueryBuilderInterface
     public function buildCemeteryQuery(array $decimatedPoints): string;
 
     /**
-     * Queries railway stations (excluding tourist railways) around stage endpoints.
-     *
-     * Used to detect whether a cyclist can reach a train station in case of
-     * emergency (mechanical failure, injury, extreme weather).
-     *
-     * @param list<Coordinate> $endPoints stage start/end points
-     */
-    public function buildRailwayStationQuery(array $endPoints, int $radiusMeters = 10000): string;
-
-    /**
      * Queries pharmacies, hospitals and clinics along the route.
      *
      * Used by the health-services checker to detect stages with no
