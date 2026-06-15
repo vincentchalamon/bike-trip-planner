@@ -37,15 +37,20 @@ final readonly class PostgisImporter
 
     /**
      * Tag expressions for `osmium tags-filter`; together they keep every feature
-     * the flex style maps. osmium keeps referenced nodes/members by default, so
-     * way geometries stay complete.
+     * osm2pgsql/tier1.lua maps (its `is_relevant`). This list MUST stay in sync
+     * with the flex style: a category mapped there but missing here is silently
+     * dropped from the PBF before import, leaving its table empty. osmium keeps
+     * referenced nodes/members by default, so way geometries stay complete.
      *
      * @var list<string>
      */
     private const array TAGS_FILTER_EXPRESSIONS = [
-        'nwr/amenity=restaurant,cafe,bar,pub,fast_food,marketplace,pharmacy,drinking_water,water_point,fountain,shelter',
-        'nwr/shop=supermarket,convenience,bakery,butcher,greengrocer,deli,general,pastry,farm',
-        'nwr/tourism=hotel,hostel,guest_house,motel,chalet,camp_site,alpine_hut,wilderness_hut,apartment,viewpoint,attraction',
+        'nwr/amenity=restaurant,cafe,bar,pub,fast_food,marketplace,pharmacy,hospital,clinic,drinking_water,water_point,fountain,shelter,bicycle_repair_station,charging_station',
+        'nwr/shop=supermarket,convenience,bakery,butcher,greengrocer,deli,general,pastry,farm,bicycle',
+        'nwr/tourism=hotel,hostel,guest_house,motel,chalet,camp_site,alpine_hut,wilderness_hut,apartment,viewpoint,attraction,museum',
+        'nwr/historic=castle,monument,memorial,ruins,archaeological_site,church,cathedral,abbey,fort',
+        'nwr/railway=station',
+        'nwr/service:bicycle:repair=yes',
         'nwr/man_made=water_tap',
         'nwr/natural=spring',
     ];
