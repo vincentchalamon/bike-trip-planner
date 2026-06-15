@@ -24,7 +24,7 @@ local ACCOMMODATION_TOURISM = {
 -- Resupply / point-of-interest categories (food, shops, services, sights).
 local POI_AMENITY = {
     restaurant = true, cafe = true, bar = true, pub = true, fast_food = true,
-    marketplace = true, pharmacy = true,
+    marketplace = true, pharmacy = true, fuel = true,
 }
 local POI_SHOP = {
     supermarket = true, convenience = true, bakery = true, butcher = true,

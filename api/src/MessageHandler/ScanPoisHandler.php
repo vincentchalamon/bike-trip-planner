@@ -40,7 +40,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
     private const array RESUPPLY_CATEGORIES = [
         'restaurant', 'cafe', 'bar', 'supermarket', 'convenience',
         'bakery', 'fast_food', 'marketplace', 'butcher', 'pastry',
-        'deli', 'greengrocer', 'general', 'farm',
+        'deli', 'greengrocer', 'general', 'farm', 'fuel',
     ];
 
     public function __construct(

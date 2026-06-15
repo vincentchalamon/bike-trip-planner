@@ -55,11 +55,14 @@ final class ScanPoisCorridorTest extends KernelTestCase
 
         // Committed SQL fixtures (ADR-040 / #56). Corridor A (49.61, 6.14) carries a
         // resupply POI + drinking water; corridor B (50.00, 7.00) carries only a
-        // non-resupply POI. The tests pick a corridor by routing a stage near A or B.
+        // non-resupply POI; corridor C (48.50, 5.00) carries only a fuel station
+        // (resupply via its convenience shop). The tests pick a corridor by routing
+        // a stage near A, B or C.
         $this->connection->executeStatement(<<<'SQL'
             INSERT INTO osm.pois (osm_type, osm_id, name, category, tags, geom) VALUES
               ('n', 9001, 'Le Bistrot', 'restaurant', '{}'::jsonb, ST_SetSRID(ST_MakePoint(6.14, 49.61), 4326)),
-              ('n', 9002, 'Belvedere', 'viewpoint', '{}'::jsonb, ST_SetSRID(ST_MakePoint(7.00, 50.00), 4326))
+              ('n', 9002, 'Belvedere', 'viewpoint', '{}'::jsonb, ST_SetSRID(ST_MakePoint(7.00, 50.00), 4326)),
+              ('n', 9004, 'Station Total', 'fuel', '{}'::jsonb, ST_SetSRID(ST_MakePoint(5.00, 48.50), 4326))
             SQL);
         $this->connection->executeStatement(<<<'SQL'
             INSERT INTO osm.water_points (osm_type, osm_id, name, category, tags, geom) VALUES
@@ -109,6 +112,30 @@ final class ScanPoisCorridorTest extends KernelTestCase
         self::assertTrue(
             array_any($stage->alerts, static fn (Alert $alert): bool => AlertType::NUDGE === $alert->type),
             'A long stage with no resupply POI in the corridor must raise the lunch nudge',
+        );
+    }
+
+    #[Test]
+    public function fuelStationInCorridorSuppressesLunchNudge(): void
+    {
+        // Corridor C carries only a fuel station → it counts as resupply (convenience
+        // shop), so the 50 km stage must NOT get a lunch nudge.
+        $route = [
+            ['lat' => 48.49, 'lon' => 4.99],
+            ['lat' => 48.50, 'lon' => 5.00],
+            ['lat' => 48.51, 'lon' => 5.01],
+        ];
+        $stage = $this->stageOnRoute($route);
+        $this->runScan($route, $stage);
+
+        self::assertContains(
+            'fuel',
+            array_map(static fn (PointOfInterest $poi): string => $poi->category, $stage->pois),
+            'The seeded fuel station in the corridor must be detected from the local index',
+        );
+        self::assertFalse(
+            array_any($stage->alerts, static fn (Alert $alert): bool => AlertType::NUDGE === $alert->type),
+            'A long stage with a fuel station in the corridor must not raise the lunch nudge',
         );
     }
 
