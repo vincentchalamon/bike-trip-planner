@@ -49,6 +49,19 @@ final class PostgisImporterTest extends TestCase
         );
         self::assertContains('nwr/man_made=water_tap', $this->captured[0]);
         self::assertContains('nwr/natural=spring', $this->captured[0]);
+
+        // Categories added by later cut-over slices must stay in the filter, else
+        // their tables import empty (tier1.lua maps them but osmium would drop them).
+        self::assertContains('nwr/railway=station', $this->captured[0]);
+        self::assertContains('nwr/service:bicycle:repair=yes', $this->captured[0]);
+        $joined = implode(' ', $this->captured[0]);
+        self::assertStringContainsString('hospital', $joined);
+        self::assertStringContainsString('bicycle_repair_station', $joined);
+        self::assertStringContainsString('charging_station', $joined);
+        self::assertStringContainsString(',fuel,', $joined);
+        self::assertStringContainsString('historic=', $joined);
+        self::assertStringContainsString('attraction,museum', $joined);
+        self::assertStringContainsString('farm,bicycle', $joined);
     }
 
     #[Test]
