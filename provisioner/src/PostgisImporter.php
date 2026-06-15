@@ -54,6 +54,7 @@ final readonly class PostgisImporter
         'nwr/man_made=water_tap',
         'nwr/natural=spring',
         'w/highway=primary,secondary,tertiary,unclassified,residential,living_street,service,track,path,cycleway,footway,bridleway',
+        'r/admin_level=2',
     ];
 
     /**

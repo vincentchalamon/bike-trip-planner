@@ -13,9 +13,8 @@ use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBorderCrossing;
+use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -24,10 +23,10 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 /**
  * Detects international border crossings along the route.
  *
- * For each stage, queries the country at start and end points via Overpass `is_in`.
- * When consecutive points belong to different countries, a nudge is emitted
- * indicating the border crossing. Deduplicates: each unique country pair
- * (A→B) produces at most one nudge.
+ * For each stage, resolves the country at start and end points via a ST_Covers
+ * lookup against the local admin_level=2 boundaries (ADR-040). When consecutive
+ * points belong to different countries, a nudge is emitted indicating the border
+ * crossing. Deduplicates: each unique country pair (A→B) produces at most one nudge.
  */
 #[AsMessageHandler]
 final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandler
@@ -38,8 +37,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
-        private ScannerInterface $scanner,
-        private QueryBuilderInterface $queryBuilder,
+        private AdminBoundaryRepositoryInterface $adminBoundaryRepository,
         private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
     ) {
@@ -70,7 +68,7 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
                 return;
             }
 
-            // Resolve country for each checkpoint via Overpass is_in
+            // Resolve country for each checkpoint via ST_Covers against the local boundaries
             $countries = $this->resolveCountries($checkPoints, $locale);
 
             // Detect border crossings: when consecutive countries differ
@@ -154,7 +152,8 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
     }
 
     /**
-     * Resolves the country name for each coordinate via Overpass is_in queries.
+     * Resolves the country name for each coordinate via a ST_Covers lookup against
+     * the local admin_level=2 boundaries.
      *
      * @param list<Coordinate> $points
      *
@@ -162,52 +161,11 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
      */
     private function resolveCountries(array $points, string $locale): array
     {
-        $queries = [];
-        foreach ($points as $i => $point) {
-            $queries['point_'.$i] = $this->queryBuilder->buildCountryQuery($point);
-        }
-
-        $results = $this->scanner->queryBatch($queries);
-
         $countries = [];
-        foreach (array_keys($points) as $i) {
-            $result = $results['point_'.$i] ?? [];
-            $countries[] = $this->extractCountryName($result, $locale);
+        foreach ($points as $point) {
+            $countries[] = $this->adminBoundaryRepository->findCountryAt($point->lat, $point->lon, $locale);
         }
 
         return $countries;
-    }
-
-    /**
-     * Extracts the country name from an Overpass is_in result.
-     *
-     * Tries locale-specific name first (e.g. name:fr → "Belgique"),
-     * then falls back to name:en, then the generic name tag.
-     *
-     * @param array<string, mixed> $result
-     */
-    private function extractCountryName(array $result, string $locale): ?string
-    {
-        /** @var list<array{tags?: array<string, string>}> $elements */
-        $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
-
-        foreach ($elements as $element) {
-            $tags = $element['tags'] ?? [];
-
-            $localeKey = 'name:'.$locale;
-            if (isset($tags[$localeKey])) {
-                return $tags[$localeKey];
-            }
-
-            if (isset($tags['name:en'])) {
-                return $tags['name:en'];
-            }
-
-            if (isset($tags['name'])) {
-                return $tags['name'];
-            }
-        }
-
-        return null;
     }
 }

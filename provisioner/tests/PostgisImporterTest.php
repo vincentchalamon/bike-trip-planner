@@ -63,6 +63,8 @@ final class PostgisImporterTest extends TestCase
         self::assertStringContainsString('attraction,museum', $joined);
         self::assertStringContainsString('farm,bicycle', $joined);
         self::assertStringContainsString('w/highway=', $joined);
+        // Country boundaries (relations) for the admin_boundaries table.
+        self::assertContains('r/admin_level=2', $this->captured[0]);
     }
 
     #[Test]

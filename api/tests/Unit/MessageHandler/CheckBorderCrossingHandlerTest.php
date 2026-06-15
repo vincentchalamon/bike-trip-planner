@@ -12,9 +12,8 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckBorderCrossing;
 use App\MessageHandler\CheckBorderCrossingHandler;
+use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -26,8 +25,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
-        ScannerInterface $scanner,
-        QueryBuilderInterface $queryBuilder,
+        AdminBoundaryRepositoryInterface $adminBoundaryRepository,
     ): CheckBorderCrossingHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
@@ -48,11 +46,29 @@ final class CheckBorderCrossingHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
-            $scanner,
-            $queryBuilder,
+            $adminBoundaryRepository,
             $translator,
             $this->createStub(MessageBusInterface::class),
         );
+    }
+
+    /**
+     * Resolves the checkpoint countries in call order: start of stage 0, then the
+     * end of each stage. A null entry models a point outside every stored boundary.
+     *
+     * @param list<string|null> $countriesInOrder
+     */
+    private function adminBoundaryRepository(array $countriesInOrder): AdminBoundaryRepositoryInterface
+    {
+        $repository = $this->createStub(AdminBoundaryRepositoryInterface::class);
+        $index = 0;
+        $repository->method('findCountryAt')->willReturnCallback(
+            static function () use ($countriesInOrder, &$index): ?string {
+                return $countriesInOrder[$index++] ?? null;
+            },
+        );
+
+        return $repository;
     }
 
     /** @param list<Stage>|null $stages */
@@ -90,16 +106,8 @@ final class CheckBorderCrossingHandlerTest extends TestCase
 
         $tripStateManager = $this->createTripStateManager($stages);
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCountryQuery')->willReturn('query');
-
-        // Overpass queryBatch returns: point_0 = France, point_1 = Belgium, point_2 = Belgium
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'point_0' => ['elements' => [['tags' => ['name:en' => 'France', 'admin_level' => '2']]]],
-            'point_1' => ['elements' => [['tags' => ['name:en' => 'Belgium', 'admin_level' => '2']]]],
-            'point_2' => ['elements' => [['tags' => ['name:en' => 'Belgium', 'admin_level' => '2']]]],
-        ]);
+        // Checkpoints: Lille (France), Courtrai (Belgium), Renaix (Belgium)
+        $adminBoundaryRepository = $this->adminBoundaryRepository(['France', 'Belgium', 'Belgium']);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -118,7 +126,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder);
+        $handler = $this->createHandler($tripStateManager, $publisher, $adminBoundaryRepository);
         $handler(new CheckBorderCrossing('trip-1'));
     }
 
@@ -147,16 +155,8 @@ final class CheckBorderCrossingHandlerTest extends TestCase
 
         $tripStateManager = $this->createTripStateManager($stages);
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCountryQuery')->willReturn('query');
-
-        // All points are in France
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'point_0' => ['elements' => [['tags' => ['name:en' => 'France', 'admin_level' => '2']]]],
-            'point_1' => ['elements' => [['tags' => ['name:en' => 'France', 'admin_level' => '2']]]],
-            'point_2' => ['elements' => [['tags' => ['name:en' => 'France', 'admin_level' => '2']]]],
-        ]);
+        // All checkpoints resolve to France
+        $adminBoundaryRepository = $this->adminBoundaryRepository(['France', 'France', 'France']);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -167,7 +167,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder);
+        $handler = $this->createHandler($tripStateManager, $publisher, $adminBoundaryRepository);
         $handler(new CheckBorderCrossing('trip-1'));
     }
 
@@ -206,17 +206,8 @@ final class CheckBorderCrossingHandlerTest extends TestCase
 
         $tripStateManager = $this->createTripStateManager($stages);
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCountryQuery')->willReturn('query');
-
-        // France → Belgium → France → Belgium
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'point_0' => ['elements' => [['tags' => ['name:en' => 'France']]]],
-            'point_1' => ['elements' => [['tags' => ['name:en' => 'Belgium']]]],
-            'point_2' => ['elements' => [['tags' => ['name:en' => 'France']]]],
-            'point_3' => ['elements' => [['tags' => ['name:en' => 'Belgium']]]],
-        ]);
+        // Checkpoints: France → Belgium → France → Belgium
+        $adminBoundaryRepository = $this->adminBoundaryRepository(['France', 'Belgium', 'France', 'Belgium']);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -234,7 +225,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder);
+        $handler = $this->createHandler($tripStateManager, $publisher, $adminBoundaryRepository);
         $handler(new CheckBorderCrossing('trip-1'));
     }
 
@@ -246,15 +237,14 @@ final class CheckBorderCrossingHandlerTest extends TestCase
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
+        $adminBoundaryRepository = $this->createStub(AdminBoundaryRepositoryInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder);
+        $handler = $this->createHandler($tripStateManager, $publisher, $adminBoundaryRepository);
         $handler(new CheckBorderCrossing('trip-1'));
     }
 
     #[Test]
-    public function nullCountryFromOverpassIsIgnored(): void
+    public function nullCountryFromBoundaryLookupIsIgnored(): void
     {
         $stages = [
             new Stage(
@@ -269,15 +259,8 @@ final class CheckBorderCrossingHandlerTest extends TestCase
 
         $tripStateManager = $this->createTripStateManager($stages);
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCountryQuery')->willReturn('query');
-
-        // One point resolves to France, the other has no country data
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'point_0' => ['elements' => [['tags' => ['name:en' => 'France']]]],
-            'point_1' => ['elements' => []],
-        ]);
+        // One point resolves to France, the other lies outside every stored boundary
+        $adminBoundaryRepository = $this->adminBoundaryRepository(['France', null]);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -288,7 +271,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder);
+        $handler = $this->createHandler($tripStateManager, $publisher, $adminBoundaryRepository);
         $handler(new CheckBorderCrossing('trip-1'));
     }
 
@@ -308,14 +291,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
 
         $tripStateManager = $this->createTripStateManager($stages);
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCountryQuery')->willReturn('query');
-
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'point_0' => ['elements' => [['tags' => ['name:en' => 'France']]]],
-            'point_1' => ['elements' => [['tags' => ['name:en' => 'Belgium']]]],
-        ]);
+        $adminBoundaryRepository = $this->adminBoundaryRepository(['France', 'Belgium']);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
@@ -336,88 +312,7 @@ final class CheckBorderCrossingHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder);
-        $handler(new CheckBorderCrossing('trip-1'));
-    }
-
-    #[Test]
-    public function fallsBackToNameTagWhenNameEnNotAvailable(): void
-    {
-        $stages = [
-            new Stage(
-                tripId: 'trip-1',
-                dayNumber: 1,
-                distance: 80.0,
-                elevation: 200.0,
-                startPoint: new Coordinate(50.6292, 3.0573),
-                endPoint: new Coordinate(50.8279, 3.2646),
-            ),
-        ];
-
-        $tripStateManager = $this->createTripStateManager($stages);
-
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCountryQuery')->willReturn('query');
-
-        // name:en missing, falls back to name tag
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'point_0' => ['elements' => [['tags' => ['name' => 'France']]]],
-            'point_1' => ['elements' => [['tags' => ['name' => 'Belgique / België']]]],
-        ]);
-
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->once())
-            ->method('publish')
-            ->with(
-                'trip-1',
-                MercureEventType::BORDER_CROSSING_ALERTS,
-                $this->callback(static fn (array $data): bool => 1 === \count($data['alerts'])
-                    && str_contains((string) $data['alerts'][0]['message'], 'Belgique')),
-            );
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder);
-        $handler(new CheckBorderCrossing('trip-1'));
-    }
-
-    #[Test]
-    public function localeAwareCountryNameUsesLocalizedName(): void
-    {
-        $stages = [
-            new Stage(
-                tripId: 'trip-1',
-                dayNumber: 1,
-                distance: 80.0,
-                elevation: 200.0,
-                startPoint: new Coordinate(50.6292, 3.0573),
-                endPoint: new Coordinate(50.8279, 3.2646),
-            ),
-        ];
-
-        // French locale: should prefer name:fr over name:en
-        $tripStateManager = $this->createTripStateManager($stages, 'fr');
-
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCountryQuery')->willReturn('query');
-
-        // Both name:fr and name:en available — should pick name:fr
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'point_0' => ['elements' => [['tags' => ['name:fr' => 'France', 'name:en' => 'France']]]],
-            'point_1' => ['elements' => [['tags' => ['name:fr' => 'Belgique', 'name:en' => 'Belgium']]]],
-        ]);
-
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->once())
-            ->method('publish')
-            ->with(
-                'trip-1',
-                MercureEventType::BORDER_CROSSING_ALERTS,
-                $this->callback(static fn (array $data): bool => 1 === \count($data['alerts'])
-                    && str_contains((string) $data['alerts'][0]['message'], 'Belgique')),
-            );
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder);
+        $handler = $this->createHandler($tripStateManager, $publisher, $adminBoundaryRepository);
         $handler(new CheckBorderCrossing('trip-1'));
     }
 }

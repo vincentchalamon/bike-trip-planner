@@ -5,8 +5,8 @@
 -- the live `osm` schema atomically. The API reads these tables via ST_DWithin
 -- corridor queries, replacing the runtime Overpass dependency.
 --
--- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations, charging_stations, cultural_pois, ways. The
--- admin_boundaries (coverage polygon) and cycle_routes tables land later.
+-- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations, charging_stations, cultural_pois, ways, admin_boundaries. The
+-- cycle_routes table lands later.
 
 -- MUST match PostgisImporter::STAGING_SCHEMA: osm2pgsql writes the output tables
 -- here, and the importer creates/swaps this exact schema onto the live `osm`.
@@ -195,6 +195,24 @@ local ways = osm2pgsql.define_table({
     },
 })
 
+-- Country boundaries (admin_level=2), stored as multipolygons. The API resolves
+-- the country at a point via ST_Covers, replacing the runtime Overpass is_in
+-- query; their union also forms the coverage polygon.
+local admin_boundaries = osm2pgsql.define_table({
+    name = 'admin_boundaries',
+    schema = SCHEMA,
+    ids = { type = 'relation', id_column = 'osm_id' },
+    columns = {
+        { column = 'name', type = 'text' },
+        { column = 'admin_level', type = 'int' },
+        { column = 'tags', type = 'jsonb' },
+        { column = 'geom', type = 'multipolygon', projection = SRID, not_null = true },
+    },
+    indexes = {
+        { column = 'geom', method = 'gist' },
+    },
+})
+
 local function poi_category(tags)
     if tags.amenity and POI_AMENITY[tags.amenity] then return tags.amenity end
     if tags.shop and POI_SHOP[tags.shop] then return tags.shop end
@@ -261,6 +279,11 @@ end
 -- True for the highway ways imported into the ways table (linestrings).
 local function way_highway(tags)
     return tags.highway ~= nil and WAY_HIGHWAY[tags.highway] == true
+end
+
+-- True for country-level administrative boundary relations.
+local function is_country_boundary(tags)
+    return tags.boundary == 'administrative' and tags.admin_level == '2'
 end
 
 local function is_relevant(tags)
@@ -410,4 +433,20 @@ function osm2pgsql.process_way(object)
     local geom = way_centroid(object)
     if geom == nil then return end
     insert_features(object.tags, geom)
+end
+
+function osm2pgsql.process_relation(object)
+    if not is_country_boundary(object.tags) then return end
+
+    -- as_multipolygon() builds the area from the boundary's member ways; a
+    -- broken/incomplete relation yields nil and is skipped.
+    local ok, geom = pcall(function() return object:as_multipolygon() end)
+    if not ok or geom == nil then return end
+
+    admin_boundaries:insert({
+        name = object.tags.name,
+        admin_level = to_int(object.tags.admin_level),
+        tags = object.tags,
+        geom = geom,
+    })
 end
