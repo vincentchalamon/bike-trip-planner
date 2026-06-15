@@ -7,12 +7,13 @@ namespace App\Osm;
 interface ChargingStationRepositoryInterface
 {
     /**
-     * E-bike charging stations whose geometry is within $radiusMeters of the
-     * route corridor.
+     * The charging station nearest to the route corridor, within $radiusMeters,
+     * or null if none. Resolved by the DB (GIST index + ST_Distance) since the
+     * e-bike-range alert only needs the single closest charger.
      *
      * @param list<array{lat: float, lon: float}> $route
      *
-     * @return list<array{name: ?string, category: string, lat: float, lon: float}>
+     * @return array{name: ?string, category: string, lat: float, lon: float}|null
      */
-    public function findInCorridor(array $route, int $radiusMeters): array;
+    public function findNearestInCorridor(array $route, int $radiusMeters): ?array;
 }

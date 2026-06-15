@@ -18,20 +18,24 @@ final readonly class ChargingStationRepository implements ChargingStationReposit
     }
 
     /**
-     * Charging stations whose geometry is within $radiusMeters of the route corridor.
+     * The charging station nearest to the route corridor, within $radiusMeters,
+     * or null if none. ORDER BY ST_Distance + LIMIT 1 lets the GIST index find the
+     * single closest charger, instead of fetching every station and scanning in PHP.
      *
      * @param list<array{lat: float, lon: float}> $route
      *
-     * @return list<array{name: ?string, category: string, lat: float, lon: float}>
+     * @return array{name: ?string, category: string, lat: float, lon: float}|null
      */
-    public function findInCorridor(array $route, int $radiusMeters): array
+    public function findNearestInCorridor(array $route, int $radiusMeters): ?array
     {
         if ([] === $route) {
-            return [];
+            return null;
         }
 
-        /** @var list<array<string, scalar|null>> $rows */
-        $rows = $this->connection->fetchAllAssociative(
+        $wkt = WktGeometry::lineStringOrPoint($route);
+
+        /** @var array<string, scalar|null>|false $row */
+        $row = $this->connection->fetchAssociative(
             <<<'SQL'
                 SELECT name, category, ST_Y(geom) AS lat, ST_X(geom) AS lon
                 FROM osm.charging_stations
@@ -40,23 +44,27 @@ final readonly class ChargingStationRepository implements ChargingStationReposit
                     ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
                     :radius
                 )
+                ORDER BY ST_Distance(
+                    geom::geography,
+                    ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography
+                )
+                LIMIT 1
                 SQL,
             [
-                'wkt' => WktGeometry::lineStringOrPoint($route),
+                'wkt' => $wkt,
                 'radius' => $radiusMeters,
             ],
         );
 
-        $stations = [];
-        foreach ($rows as $row) {
-            $stations[] = [
-                'name' => null !== $row['name'] ? (string) $row['name'] : null,
-                'category' => (string) $row['category'],
-                'lat' => (float) $row['lat'],
-                'lon' => (float) $row['lon'],
-            ];
+        if (false === $row) {
+            return null;
         }
 
-        return $stations;
+        return [
+            'name' => null !== $row['name'] ? (string) $row['name'] : null,
+            'category' => (string) $row['category'],
+            'lat' => (float) $row['lat'],
+            'lon' => (float) $row['lon'],
+        ];
     }
 }

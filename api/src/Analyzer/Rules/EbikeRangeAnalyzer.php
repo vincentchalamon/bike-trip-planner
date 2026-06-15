@@ -11,7 +11,6 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
-use App\Geo\GeoDistanceInterface;
 use App\Osm\ChargingStationRepositoryInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -27,7 +26,6 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
     public function __construct(
         private TranslatorInterface $translator,
         private ChargingStationRepositoryInterface $chargingStationRepository,
-        private GeoDistanceInterface $haversine,
     ) {
     }
 
@@ -99,29 +97,16 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
     }
 
     /**
-     * Finds the charging station nearest to the stage geometry, restricted to the
-     * stage corridor via the local-first index.
+     * The charging station nearest to the stage corridor, via the local-first index
+     * (the DB resolves the closest one — see ChargingStationRepository).
      *
-     * @return array{lat: float, lon: float}|null
+     * @return array{name: ?string, category: string, lat: float, lon: float}|null
      */
     private function findNearestCharger(Stage $stage): ?array
     {
         $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
         $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $geometry);
 
-        $minDist = PHP_FLOAT_MAX;
-        $nearest = null;
-
-        foreach ($this->chargingStationRepository->findInCorridor($route, self::CORRIDOR_RADIUS_METERS) as $charger) {
-            foreach ($geometry as $point) {
-                $dist = $this->haversine->inMeters($point->lat, $point->lon, $charger['lat'], $charger['lon']);
-                if ($dist < $minDist) {
-                    $minDist = $dist;
-                    $nearest = ['lat' => $charger['lat'], 'lon' => $charger['lon']];
-                }
-            }
-        }
-
-        return $nearest;
+        return $this->chargingStationRepository->findNearestInCorridor($route, self::CORRIDOR_RADIUS_METERS);
     }
 }

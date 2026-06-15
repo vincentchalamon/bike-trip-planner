@@ -34,7 +34,7 @@ final class ChargingStationIndexReadTest extends KernelTestCase
     }
 
     #[Test]
-    public function returnsChargingStationsWithinTheCorridor(): void
+    public function returnsNearestChargingStationWithinTheCorridor(): void
     {
         // Near charger sits on the route corridor; the far one (~60 km away) is excluded.
         $this->connection->executeStatement(
@@ -50,16 +50,21 @@ final class ChargingStationIndexReadTest extends KernelTestCase
                 SQL,
         );
 
-        $stations = new ChargingStationRepository($this->connection)->findInCorridor([
+        $repository = new ChargingStationRepository($this->connection);
+
+        $nearest = $repository->findNearestInCorridor([
             ['lat' => 49.60, 'lon' => 6.13],
             ['lat' => 49.62, 'lon' => 6.15],
         ], 2000);
 
-        // The far charger is excluded by ST_DWithin.
-        self::assertCount(1, $stations);
-        self::assertSame('On Route Charger', $stations[0]['name']);
-        self::assertSame('charging_station', $stations[0]['category']);
-        self::assertEqualsWithDelta(49.61, $stations[0]['lat'], 0.0001);
-        self::assertEqualsWithDelta(6.14, $stations[0]['lon'], 0.0001);
+        // The nearest in-corridor charger is returned; the far one is excluded by ST_DWithin.
+        self::assertNotNull($nearest);
+        self::assertSame('On Route Charger', $nearest['name']);
+        self::assertSame('charging_station', $nearest['category']);
+        self::assertEqualsWithDelta(49.61, $nearest['lat'], 0.0001);
+        self::assertEqualsWithDelta(6.14, $nearest['lon'], 0.0001);
+
+        // A corridor with no charger in range yields null.
+        self::assertNull($repository->findNearestInCorridor([['lat' => 48.0, 'lon' => 2.0]], 2000));
     }
 }

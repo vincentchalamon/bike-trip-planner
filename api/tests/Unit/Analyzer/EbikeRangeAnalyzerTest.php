@@ -9,7 +9,6 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
-use App\Geo\HaversineDistance;
 use App\Osm\ChargingStationRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -22,8 +21,8 @@ final class EbikeRangeAnalyzerTest extends TestCase
     #[\Override]
     protected function setUp(): void
     {
-        // Default analyzer with no chargers in range: exercises the distance-reduction fallback.
-        $this->analyzer = $this->analyzerWithChargers([]);
+        // Default analyzer with no charger in range: exercises the distance-reduction fallback.
+        $this->analyzer = $this->analyzerWithNearestCharger(null);
     }
 
     #[Test]
@@ -112,11 +111,11 @@ final class EbikeRangeAnalyzerTest extends TestCase
     #[Test]
     public function navigateActionPointsToNearestChargerInCorridor(): void
     {
-        // Stage geometry runs near (48.001, 2.0); the near charger sits on the route,
-        // the far one is ~50 km away and the repository (corridor query) excludes it.
-        $analyzer = $this->analyzerWithChargers([
+        // The repository (corridor query) resolves the nearest charger; the analyzer
+        // points the cyclist to it.
+        $analyzer = $this->analyzerWithNearestCharger(
             ['name' => 'Near Charger', 'category' => 'charging_station', 'lat' => 48.001, 'lon' => 2.0],
-        ]);
+        );
 
         $stage = $this->createStage(distance: 90.0, elevation: 0.0, geometry: [
             new Coordinate(48.0, 2.0),
@@ -151,7 +150,7 @@ final class EbikeRangeAnalyzerTest extends TestCase
             }
         );
 
-        $analyzer = new EbikeRangeAnalyzer($translator, $this->chargingStationRepository([]), new HaversineDistance());
+        $analyzer = new EbikeRangeAnalyzer($translator, $this->chargingStationRepository(null));
         $stage = $this->createStage(distance: 90.0, elevation: 0.0);
 
         $alerts = $analyzer->analyze($stage, ['ebikeMode' => true, 'locale' => 'fr']);
@@ -167,29 +166,29 @@ final class EbikeRangeAnalyzerTest extends TestCase
     }
 
     /**
-     * @param list<array{name: ?string, category: string, lat: float, lon: float}> $chargers
+     * @param array{name: ?string, category: string, lat: float, lon: float}|null $charger
      */
-    private function analyzerWithChargers(array $chargers): EbikeRangeAnalyzer
+    private function analyzerWithNearestCharger(?array $charger): EbikeRangeAnalyzer
     {
         $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturnCallback(
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        return new EbikeRangeAnalyzer($translator, $this->chargingStationRepository($chargers), new HaversineDistance());
+        return new EbikeRangeAnalyzer($translator, $this->chargingStationRepository($charger));
     }
 
     /**
-     * @param list<array{name: ?string, category: string, lat: float, lon: float}> $chargers
+     * @param array{name: ?string, category: string, lat: float, lon: float}|null $charger
      */
-    private function chargingStationRepository(array $chargers): ChargingStationRepositoryInterface
+    private function chargingStationRepository(?array $charger): ChargingStationRepositoryInterface
     {
         $repository = $this->createStub(ChargingStationRepositoryInterface::class);
-        $repository->method('findInCorridor')->willReturnCallback(
-            static function (array $route, int $radiusMeters) use ($chargers): array {
-                self::assertSame(2000, $radiusMeters, 'findInCorridor must use the 2 km charging-station corridor');
+        $repository->method('findNearestInCorridor')->willReturnCallback(
+            static function (array $route, int $radiusMeters) use ($charger): ?array {
+                self::assertSame(2000, $radiusMeters, 'findNearestInCorridor must use the 2 km charging-station corridor');
 
-                return $chargers;
+                return $charger;
             },
         );
 
