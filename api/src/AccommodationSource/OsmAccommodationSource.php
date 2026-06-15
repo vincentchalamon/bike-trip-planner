@@ -26,7 +26,7 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
     public function fetch(array $endPoints, int $radiusMeters, array $enabledTypes = TripRequest::ALL_ACCOMMODATION_TYPES): array
     {
         // Read accommodations from the local-first index within the radius of the
-        // stage end points (where the rider sleeps), no longer around Overpass (ADR-040).
+        // stage end points, where the rider sleeps (ADR-040).
         $points = array_map(
             static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon],
             array_values($endPoints),
