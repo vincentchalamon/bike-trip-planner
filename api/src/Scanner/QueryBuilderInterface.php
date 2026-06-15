@@ -68,13 +68,6 @@ interface QueryBuilderInterface
     public function buildHealthServiceQuery(array $decimatedPoints): string;
 
     /**
-     * Build a single Overpass query for cultural POIs along all stages.
-     *
-     * @param list<list<Coordinate>> $stageGeometries geometry points per stage
-     */
-    public function buildBatchCulturalPoiQuery(array $stageGeometries, int $radiusMeters = 500): string;
-
-    /**
      * Queries the country (admin_level=2) for a given coordinate using Overpass is_in.
      *
      * Returns relations with admin_level=2 and boundary=administrative that contain the point,

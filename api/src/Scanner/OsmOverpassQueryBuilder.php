@@ -132,24 +132,6 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
         );
     }
 
-    /**
-     * @param list<list<Coordinate>> $stageGeometries
-     *
-     * Note: 'out center tags 100' caps the result set globally across all stages.
-     * Acceptable for typical bikepacking trips (≤7 stages, sparse cultural POIs).
-     */
-    public function buildBatchCulturalPoiQuery(array $stageGeometries, int $radiusMeters = 500): string
-    {
-        $allPoints = array_merge(...$stageGeometries);
-        $polyline = $this->buildPolyline($allPoints);
-
-        return \sprintf(
-            '[out:json][timeout:15];(nwr["tourism"="museum"](around:%1$d,%2$s);nwr["tourism"="attraction"](around:%1$d,%2$s);nwr["tourism"="viewpoint"](around:%1$d,%2$s);nwr["historic"~"^(castle|monument|memorial|ruins|archaeological_site|church|cathedral|abbey|fort)$"](around:%1$d,%2$s););out center tags 100;',
-            $radiusMeters,
-            $polyline,
-        );
-    }
-
     public function buildCountryQuery(Coordinate $point): string
     {
         return \sprintf(
