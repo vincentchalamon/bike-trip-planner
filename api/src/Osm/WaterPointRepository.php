@@ -17,7 +17,7 @@ use Doctrine\DBAL\Connection;
  * query therefore returns all categories rather than filtering to a single one,
  * which would drop valid taps and springs.
  */
-final readonly class WaterPointRepository
+final readonly class WaterPointRepository implements WaterPointRepositoryInterface
 {
     public function __construct(private Connection $connection)
     {

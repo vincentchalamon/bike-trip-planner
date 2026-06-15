@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
-use PHPUnit\Framework\MockObject\Stub;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -17,11 +16,12 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
 use App\MessageHandler\ScanPoisHandler;
+use App\Osm\PoiRepositoryInterface;
+use App\Osm\WaterPointRepositoryInterface;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -52,8 +52,8 @@ final class ScanPoisHandlerTest extends TestCase
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
-        ScannerInterface $scanner,
-        QueryBuilderInterface $queryBuilder,
+        PoiRepositoryInterface $poiRepository,
+        WaterPointRepositoryInterface $waterPointRepository,
         GeometryDistributorInterface $distributor,
         GeoDistanceInterface $haversine,
         RiderTimeEstimatorInterface $riderTimeEstimator,
@@ -74,8 +74,8 @@ final class ScanPoisHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
-            $scanner,
-            $queryBuilder,
+            $poiRepository,
+            $waterPointRepository,
             $distributor,
             new SupplyTimelineBuilder($haversine),
             $riderTimeEstimator,
@@ -105,14 +105,32 @@ final class ScanPoisHandlerTest extends TestCase
     }
 
     /**
-     * @return array{QueryBuilderInterface&Stub, GeoDistanceInterface&Stub, RiderTimeEstimatorInterface&Stub}
+     * @param list<array{name: ?string, category: string, lat: float, lon: float}> $pois
+     */
+    private function poiRepository(array $pois): PoiRepositoryInterface
+    {
+        $repository = $this->createStub(PoiRepositoryInterface::class);
+        $repository->method('findInCorridor')->willReturn($pois);
+
+        return $repository;
+    }
+
+    /**
+     * @param list<array{name: ?string, category: string, lat: float, lon: float}> $waterPoints
+     */
+    private function waterPointRepository(array $waterPoints = []): WaterPointRepositoryInterface
+    {
+        $repository = $this->createStub(WaterPointRepositoryInterface::class);
+        $repository->method('findInCorridor')->willReturn($waterPoints);
+
+        return $repository;
+    }
+
+    /**
+     * @return array{GeoDistanceInterface&Stub, RiderTimeEstimatorInterface&Stub}
      */
     private function createDefaultStubs(): array
     {
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildPoiQuery')->willReturn('query');
-        $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
-
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inKilometers')->willReturn(10.0);
         $haversine->method('inMeters')->willReturnCallback(
@@ -121,26 +139,18 @@ final class ScanPoisHandlerTest extends TestCase
 
         $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
 
-        return [$queryBuilder, $haversine, $riderTimeEstimator];
+        return [$haversine, $riderTimeEstimator];
     }
 
     #[Test]
     public function allResupplyPoisClosedAtEstimatedTimeEmitsWarning(): void
     {
         $stage = $this->createStage('trip-1', 1, 80.0);
-
-        // Pre-populate with two resupply POIs (restaurant category)
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'poi' => [
-                'elements' => [
-                    ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Le Bistrot']],
-                    ['lat' => 48.3, 'lon' => 2.3, 'tags' => ['amenity' => 'restaurant', 'name' => 'Chez Paul']],
-                ],
-            ],
-            'cemetery' => ['elements' => []],
+        $poiRepository = $this->poiRepository([
+            ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
+            ['name' => 'Chez Paul', 'category' => 'restaurant', 'lat' => 48.3, 'lon' => 2.3],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -152,10 +162,9 @@ final class ScanPoisHandlerTest extends TestCase
             [],
         );
 
-        [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
-        // Return a time outside restaurant hours (restaurants: 12-14, 19-22)
-        // Return 16.0 (4 PM) → closed for both restaurants
+        // 16:00 → both restaurants closed (restaurants: 12-14, 19-22)
         $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(16.0);
 
         $publishedEvents = [];
@@ -165,7 +174,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -182,18 +191,11 @@ final class ScanPoisHandlerTest extends TestCase
     public function atLeastOneOpenResupplyPoiEmitsNoTimingWarning(): void
     {
         $stage = $this->createStage('trip-1', 1, 80.0);
-
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'poi' => [
-                'elements' => [
-                    ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Le Bistrot']],
-                    ['lat' => 48.3, 'lon' => 2.3, 'tags' => ['shop' => 'supermarket', 'name' => 'Carrefour']],
-                ],
-            ],
-            'cemetery' => ['elements' => []],
+        $poiRepository = $this->poiRepository([
+            ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
+            ['name' => 'Carrefour', 'category' => 'supermarket', 'lat' => 48.3, 'lon' => 2.3],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -205,9 +207,9 @@ final class ScanPoisHandlerTest extends TestCase
             [],
         );
 
-        [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
-        // Return 15.0 (3 PM) → restaurant closed, but supermarket open (9-20)
+        // 15:00 → restaurant closed, supermarket open (9-20)
         $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(15.0);
 
         $publishedEvents = [];
@@ -217,7 +219,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -233,19 +235,11 @@ final class ScanPoisHandlerTest extends TestCase
     #[Test]
     public function noResupplyPoisEmitsNoTimingWarning(): void
     {
-        // Stage with only non-resupply POIs (tourism category)
         $stage = $this->createStage('trip-1', 1, 80.0);
-
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'poi' => [
-                'elements' => [
-                    ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['tourism' => 'viewpoint', 'name' => 'Belvedere']],
-                ],
-            ],
-            'cemetery' => ['elements' => []],
+        $poiRepository = $this->poiRepository([
+            ['name' => 'Belvedere', 'category' => 'viewpoint', 'lat' => 48.2, 'lon' => 2.2],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -256,7 +250,7 @@ final class ScanPoisHandlerTest extends TestCase
             [],
         );
 
-        [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -265,7 +259,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -286,32 +280,24 @@ final class ScanPoisHandlerTest extends TestCase
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
         $distributor = $this->createStub(GeometryDistributorInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->poiRepository([]), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
     }
 
     #[Test]
     public function lunchNudgeEmittedForLongStageWithoutResupplyPois(): void
     {
-        // Stage >= 40km with no resupply POIs → lunch nudge
+        // Stage >= 40km with no resupply POIs in the local index → lunch nudge
         $stage = $this->createStage('trip-1', 1, 50.0);
-
         $tripStateManager = $this->createTripStateManager([$stage]);
-
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'poi' => ['elements' => []],
-            'cemetery' => ['elements' => []],
-        ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
 
-        [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -320,7 +306,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->poiRepository([]), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -334,19 +320,11 @@ final class ScanPoisHandlerTest extends TestCase
     #[Test]
     public function resolveScheduleMapsBakeryCorrectly(): void
     {
-        // Bakery open 7-13 and 15-19; test at 10:00 → open, no warning
         $stage = $this->createStage('trip-1', 1, 80.0);
-
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'poi' => [
-                'elements' => [
-                    ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['shop' => 'bakery', 'name' => 'Boulangerie']],
-                ],
-            ],
-            'cemetery' => ['elements' => []],
+        $poiRepository = $this->poiRepository([
+            ['name' => 'Boulangerie', 'category' => 'bakery', 'lat' => 48.2, 'lon' => 2.2],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -357,9 +335,9 @@ final class ScanPoisHandlerTest extends TestCase
             [],
         );
 
-        [$queryBuilder, $haversine, $riderTimeEstimator] = $this->createDefaultStubs();
+        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
-        // 10:00 AM → bakery open (7-13 slot)
+        // 10:00 → bakery open (7-13 slot)
         $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(10.0);
 
         $publishedEvents = [];
@@ -369,7 +347,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -385,22 +363,13 @@ final class ScanPoisHandlerTest extends TestCase
     #[Test]
     public function poisWithin500mAreClusteredIntoSingleMarker(): void
     {
-        // Two restaurants very close (< 500m apart) → grouped into one marker
-        // One restaurant far away (> 500m from the others) → distinct marker
         $stage = $this->createStage('trip-1', 1, 80.0);
-
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'poi' => [
-                'elements' => [
-                    ['lat' => 48.2, 'lon' => 2.2, 'tags' => ['amenity' => 'restaurant', 'name' => 'Bistrot A']],
-                    ['lat' => 48.2, 'lon' => 2.2001, 'tags' => ['amenity' => 'restaurant', 'name' => 'Bistrot B']],
-                    ['lat' => 48.5, 'lon' => 2.5, 'tags' => ['amenity' => 'restaurant', 'name' => 'Remote Bistrot']],
-                ],
-            ],
-            'cemetery' => ['elements' => []],
+        $poiRepository = $this->poiRepository([
+            ['name' => 'Bistrot A', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
+            ['name' => 'Bistrot B', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2001],
+            ['name' => 'Remote Bistrot', 'category' => 'restaurant', 'lat' => 48.5, 'lon' => 2.5],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -413,25 +382,19 @@ final class ScanPoisHandlerTest extends TestCase
             [],
         );
 
-        [$queryBuilder, $riderTimeEstimator] = [$this->createStub(QueryBuilderInterface::class), $this->createStub(RiderTimeEstimatorInterface::class)];
-        $queryBuilder->method('buildPoiQuery')->willReturn('query');
-        $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
-
         $haversine = $this->createStub(GeoDistanceInterface::class);
-        // inKilometers used for cumulative distances along geometry
         $haversine->method('inKilometers')->willReturn(10.0);
-        // inMeters: return < 500 for nearby POIs, > 500 for distant ones
         $haversine->method('inMeters')->willReturnCallback(
             static function (float $lat1, float $lon1, float $lat2, float $lon2): float {
-                // Same coordinates or very close (Bistrot A & B)
                 if ($lat1 === $lat2 && abs($lon1 - $lon2) < 0.001) {
                     return 10.0; // within 500m
                 }
 
-                // Distance between close cluster and remote POI
-                return 40000.0; // far apart (> 500m)
+                return 40000.0; // far apart
             },
         );
+
+        $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -440,15 +403,13 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $timelineEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::SUPPLY_TIMELINE === $e['type']);
         self::assertCount(1, $timelineEvents);
 
         $markers = array_first($timelineEvents)['payload']['markers'];
-
-        // Bistrot A and B are within 500m → one marker; Remote Bistrot is far → another marker
         self::assertCount(2, $markers, 'Expected 2 markers: one cluster for close POIs, one for the remote POI');
         self::assertSame('food', $markers[0]['type']);
         self::assertCount(2, $markers[0]['food'], 'Expected 2 food items in the clustered marker');
@@ -457,52 +418,32 @@ final class ScanPoisHandlerTest extends TestCase
     }
 
     #[Test]
-    public function poiQueryUsesDecimatedPointsForCacheAlignment(): void
+    public function poiRepositoryQueriedWithDecimatedRouteCorridor(): void
     {
         $stage1 = $this->createStage('trip-1', 1, 50.0);
         $stage2 = $this->createStage('trip-1', 2, 50.0);
-
         $tripStateManager = $this->createTripStateManager([$stage1, $stage2]);
 
-        $queryBuilder = $this->createMock(QueryBuilderInterface::class);
-        // buildPoiQuery should be called once with all decimated points (cache-aligned with ScanAllOsmData)
-        $queryBuilder->expects($this->once())
-            ->method('buildPoiQuery')
-            ->with($this->callback(static fn (array $points): bool => 2 === \count($points)
-                && $points[0] instanceof Coordinate
-                && 48.0 === $points[0]->lat
-                && 2.0 === $points[0]->lon
-                && $points[1] instanceof Coordinate
-                && 48.5 === $points[1]->lat
-                && 2.5 === $points[1]->lon))
-            ->willReturn('global_poi_query');
-        $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
-
-        $scanner = $this->createMock(ScannerInterface::class);
-        $scanner->expects($this->once())
-            ->method('queryBatch')
-            ->with($this->callback(
-                // Must have a single 'poi' key and 'cemetery' key (not per-stage keys)
-                static fn (array $queries): bool => isset($queries['poi'], $queries['cemetery'])
-                && 2 === \count($queries)
-            ))
-            ->willReturn([
-                'poi' => ['elements' => []],
-                'cemetery' => ['elements' => []],
-            ]);
+        // The corridor read uses the decimated points as a {lat, lon} route.
+        $poiRepository = $this->createMock(PoiRepositoryInterface::class);
+        $poiRepository->expects($this->once())
+            ->method('findInCorridor')
+            ->with(
+                $this->callback(static fn (array $route): bool => [
+                    ['lat' => 48.0, 'lon' => 2.0],
+                    ['lat' => 48.5, 'lon' => 2.5],
+                ] === $route),
+                $this->greaterThan(0),
+            )
+            ->willReturn([]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
 
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inKilometers')->willReturn(10.0);
-        $haversine->method('inMeters')->willReturn(10000.0);
-
-        $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
-
+        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
     }
 
@@ -517,32 +458,21 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager->method('getRequest')->willReturn(new TripRequest());
         $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'poi' => ['elements' => []],
-            'cemetery' => ['elements' => []],
-        ]);
+        // No decimated points → corridor falls back to the 6-point stage geometry.
+        $poiRepository = $this->createMock(PoiRepositoryInterface::class);
+        $poiRepository->expects($this->once())
+            ->method('findInCorridor')
+            ->with(
+                $this->callback(static fn (array $route): bool => 6 === \count($route)
+                    && ['lat' => 48.0, 'lon' => 2.0] === $route[0]),
+                $this->greaterThan(0),
+            )
+            ->willReturn([]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
 
-        $queryBuilder = $this->createMock(QueryBuilderInterface::class);
-        $queryBuilder->expects($this->once())
-            ->method('buildPoiQuery')
-            ->with($this->callback(static fn (array $points): bool => 6 === \count($points)
-                && $points[0] instanceof Coordinate
-                && 48.0 === $points[0]->lat
-                && 2.0 === $points[0]->lon))
-            ->willReturn('fallback_query');
-        $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
-
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inKilometers')->willReturn(10.0);
-        $haversine->method('inMeters')->willReturnCallback(
-            static fn (float $lat1, float $lon1, float $lat2, float $lon2): float => ($lat1 === $lat2 && $lon1 === $lon2) ? 0.0 : 10000.0,
-        );
-
-        $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
+        [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -551,10 +481,9 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
-        // Handler should complete normally using stage geometry as fallback
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
         self::assertCount(1, $poisScannedEvents);
     }
@@ -562,22 +491,14 @@ final class ScanPoisHandlerTest extends TestCase
     #[Test]
     public function chainedPoisBeyondAnchorRadiusAreNotMerged(): void
     {
-        // Scenario: A (anchor, 0 km) → B (490m from A, within cluster) → C (490m from B but 980m from A)
-        // Anchor-based: C must NOT join A's cluster (980m > 500m from anchor).
-        // A pairwise/chain algorithm would incorrectly merge C because it is within 500m of B.
+        // A (anchor) → B (490m, within cluster) → C (980m from A, beyond anchor radius).
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('queryBatch')->willReturn([
-            'poi' => [
-                'elements' => [
-                    ['lat' => 48.0, 'lon' => 2.0, 'tags' => ['amenity' => 'restaurant', 'name' => 'POI A']],
-                    ['lat' => 48.0, 'lon' => 2.005, 'tags' => ['amenity' => 'restaurant', 'name' => 'POI B']],
-                    ['lat' => 48.0, 'lon' => 2.010, 'tags' => ['amenity' => 'restaurant', 'name' => 'POI C']],
-                ],
-            ],
-            'cemetery' => ['elements' => []],
+        $poiRepository = $this->poiRepository([
+            ['name' => 'POI A', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.0],
+            ['name' => 'POI B', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.005],
+            ['name' => 'POI C', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.010],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -590,26 +511,20 @@ final class ScanPoisHandlerTest extends TestCase
             [],
         );
 
-        [$queryBuilder, $riderTimeEstimator] = [
-            $this->createStub(QueryBuilderInterface::class),
-            $this->createStub(RiderTimeEstimatorInterface::class),
-        ];
-        $queryBuilder->method('buildPoiQuery')->willReturn('query');
-        $queryBuilder->method('buildCemeteryQuery')->willReturn('cemetery_query');
-
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inKilometers')->willReturn(10.0);
         $haversine->method('inMeters')->willReturnCallback(
             static function (float $lat1, float $lon1, float $lat2, float $lon2): float {
                 $lonDiff = abs($lon1 - $lon2);
-                // A→B ≈ 490m (within 500m radius), A→C ≈ 980m (exceeds anchor radius)
                 if ($lonDiff < 0.006) {
-                    return 490.0;
+                    return 490.0; // A→B within radius
                 }
 
-                return 980.0;
+                return 980.0; // A→C beyond anchor radius
             },
         );
+
+        $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
 
         $publishedEvents = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
@@ -618,16 +533,14 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $timelineEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::SUPPLY_TIMELINE === $e['type']);
         self::assertCount(1, $timelineEvents);
 
         $markers = array_first($timelineEvents)['payload']['markers'];
-
-        // Anchor-based: A+B cluster together (490m from anchor A), C is 980m from anchor A → separate cluster
-        self::assertCount(2, $markers, "C must not chain into A's cluster: anchor-based check only, not pairwise");
+        self::assertCount(2, $markers, "C must not chain into A's cluster: anchor-based check only");
         self::assertCount(2, $markers[0]['food'], 'A and B should be in the same cluster');
         self::assertCount(1, $markers[1]['food'], 'C must be isolated in its own cluster');
     }
