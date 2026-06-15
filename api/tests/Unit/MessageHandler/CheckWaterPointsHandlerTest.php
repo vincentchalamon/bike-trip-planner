@@ -15,9 +15,8 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckWaterPoints;
 use App\MessageHandler\CheckWaterPointsHandler;
+use App\Osm\WaterPointRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -49,8 +48,7 @@ final class CheckWaterPointsHandlerTest extends TestCase
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
-        ScannerInterface $scanner,
-        QueryBuilderInterface $queryBuilder,
+        WaterPointRepositoryInterface $waterPointRepository,
         GeometryDistributorInterface $distributor,
         GeoDistanceInterface $haversine,
     ): CheckWaterPointsHandler {
@@ -59,7 +57,7 @@ final class CheckWaterPointsHandlerTest extends TestCase
 
         $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturnCallback(
-            static fn (string $id, array $params): string => \sprintf('No cemetery on stage %s for 30+ km.', $params['%stage%']),
+            static fn (string $id, array $params): string => \sprintf('No water on stage %s for 30+ km.', $params['%stage%'] ?? ''),
         );
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
@@ -70,8 +68,7 @@ final class CheckWaterPointsHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
-            $scanner,
-            $queryBuilder,
+            $waterPointRepository,
             $distributor,
             $haversine,
             $translator,
@@ -79,12 +76,35 @@ final class CheckWaterPointsHandlerTest extends TestCase
         );
     }
 
-    #[Test]
-    public function stageWithWaterPointsEmitsNoAlert(): void
+    /**
+     * @param list<array{lat: float, lon: float}> $points
+     */
+    private function waterPointRepository(array $points): WaterPointRepositoryInterface
     {
-        // Stage of 50km with 3 water points evenly spread → no 30km gap
-        $stages = [$this->createStage('trip-1', 1, 50.0)];
+        // Pin the corridor radius (CheckWaterPointsHandler::CORRIDOR_RADIUS_METERS) so an
+        // accidental change is caught. willReturnCallback asserts the argument without the
+        // deprecated any()/with() mock expectation, and does not run when (as in
+        // noStagesReturnsEarly) the handler returns before querying the repository.
+        $repository = $this->createStub(WaterPointRepositoryInterface::class);
+        $repository->method('findInCorridor')->willReturnCallback(
+            static function (array $route, int $radiusMeters) use ($points): array {
+                self::assertSame(2000, $radiusMeters, 'findInCorridor must use the 2 km corridor radius');
 
+                return array_map(
+                    static fn (array $point): array => ['name' => null, 'category' => 'drinking_water', 'lat' => $point['lat'], 'lon' => $point['lon']],
+                    $points,
+                );
+            },
+        );
+
+        return $repository;
+    }
+
+    /**
+     * @param list<Stage>|null $stages
+     */
+    private function tripStateManager(?array $stages): TripRequestRepositoryInterface
+    {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getLocale')->willReturn('en');
@@ -93,16 +113,19 @@ final class CheckWaterPointsHandlerTest extends TestCase
             ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
         ]);
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCemeteryQuery')->willReturn('query');
+        return $tripStateManager;
+    }
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                ['lat' => 48.1, 'lon' => 2.1],
-                ['lat' => 48.3, 'lon' => 2.3],
-                ['lat' => 48.4, 'lon' => 2.4],
-            ],
+    #[Test]
+    public function stageWithWaterPointsEmitsNoAlert(): void
+    {
+        // Stage of 50km with 3 water points evenly spread → no 30km gap
+        $tripStateManager = $this->tripStateManager([$this->createStage('trip-1', 1, 50.0)]);
+
+        $waterPointRepository = $this->waterPointRepository([
+            ['lat' => 48.1, 'lon' => 2.1],
+            ['lat' => 48.3, 'lon' => 2.3],
+            ['lat' => 48.4, 'lon' => 2.4],
         ]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
@@ -115,13 +138,9 @@ final class CheckWaterPointsHandlerTest extends TestCase
         ]);
 
         // Each geometry segment is 10km → cumulative: 0, 10, 20, 30, 40, 50
-        // Water points at indices 1 (10km), 3 (30km), 4 (40km)
-        // Gaps: 0→10=10, 10→30=20, 30→40=10, 40→50=10 → all < 30km
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inKilometers')->willReturn(10.0);
         $haversine->method('inMeters')->willReturnCallback(
-
-            // Return 0 for exact match, large value otherwise
             static fn (float $lat1, float $lon1, float $lat2, float $lon2): float => ($lat1 === $lat2 && $lon1 === $lon2) ? 0.0 : 10000.0,
         );
 
@@ -134,28 +153,14 @@ final class CheckWaterPointsHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $waterPointRepository, $distributor, $haversine);
         $handler(new CheckWaterPoints('trip-1'));
     }
 
     #[Test]
     public function longStageWithoutWaterPointEmitsNudge(): void
     {
-        $stages = [$this->createStage('trip-1', 1, 50.0)];
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
-            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
-            ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
-        ]);
-
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCemeteryQuery')->willReturn('query');
-
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn(['elements' => []]);
+        $tripStateManager = $this->tripStateManager([$this->createStage('trip-1', 1, 50.0)]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
@@ -179,28 +184,14 @@ final class CheckWaterPointsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->waterPointRepository([]), $distributor, $haversine);
         $handler(new CheckWaterPoints('trip-1'));
     }
 
     #[Test]
     public function shortStageWithoutWaterPointEmitsNoAlert(): void
     {
-        $stages = [$this->createStage('trip-1', 1, 25.0)];
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
-            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
-            ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
-        ]);
-
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCemeteryQuery')->willReturn('query');
-
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn(['elements' => []]);
+        $tripStateManager = $this->tripStateManager([$this->createStage('trip-1', 1, 25.0)]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
@@ -216,7 +207,7 @@ final class CheckWaterPointsHandlerTest extends TestCase
                 $this->callback(static fn (array $data): bool => [] === $data['alerts']),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->waterPointRepository([]), $distributor, $haversine);
         $handler(new CheckWaterPoints('trip-1'));
     }
 
@@ -229,45 +220,24 @@ final class CheckWaterPointsHandlerTest extends TestCase
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
-        $scanner = $this->createStub(ScannerInterface::class);
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $haversine = $this->createStub(GeoDistanceInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->waterPointRepository([]), $distributor, $haversine);
         $handler(new CheckWaterPoints('trip-1'));
     }
 
     #[Test]
     public function longStageWithoutNearbyWaterPointEmitsNudgeWithNavigateAction(): void
     {
-        $stages = [$this->createStage('trip-1', 1, 50.0)];
+        $tripStateManager = $this->tripStateManager([$this->createStage('trip-1', 1, 50.0)]);
 
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
-            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
-            ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
-        ]);
+        // One water point globally, but the distributor assigns none to the stage → water gap.
+        $waterPointRepository = $this->waterPointRepository([['lat' => 48.25, 'lon' => 2.25]]);
 
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCemeteryQuery')->willReturn('query');
-
-        // Scanner returns one water point globally
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                ['lat' => 48.25, 'lon' => 2.25],
-            ],
-        ]);
-
-        // Distributor assigns no water points to stage 0 → triggers water gap
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
 
-        // findNearestWaterPoint uses midpoint = geometry[3] = (48.3, 2.3)
-        // and computes distance from midpoint to the global water point
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturn(5000.0);
 
@@ -291,32 +261,16 @@ final class CheckWaterPointsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $waterPointRepository, $distributor, $haversine);
         $handler(new CheckWaterPoints('trip-1'));
     }
 
     #[Test]
     public function waterPointsIncludeDistanceFromStart(): void
     {
-        $stages = [$this->createStage('trip-1', 1)];
+        $tripStateManager = $this->tripStateManager([$this->createStage('trip-1', 1)]);
 
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getDecimatedPoints')->willReturn([
-            ['lat' => 48.0, 'lon' => 2.0, 'ele' => 0.0],
-            ['lat' => 48.5, 'lon' => 2.5, 'ele' => 0.0],
-        ]);
-
-        $queryBuilder = $this->createStub(QueryBuilderInterface::class);
-        $queryBuilder->method('buildCemeteryQuery')->willReturn('query');
-
-        $scanner = $this->createStub(ScannerInterface::class);
-        $scanner->method('query')->willReturn([
-            'elements' => [
-                ['lat' => 48.3, 'lon' => 2.3],
-            ],
-        ]);
+        $waterPointRepository = $this->waterPointRepository([['lat' => 48.3, 'lon' => 2.3]]);
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([
@@ -326,7 +280,6 @@ final class CheckWaterPointsHandlerTest extends TestCase
         // Each segment is 10km → cumulative: 0, 10, 20, 30, 40, 50
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inKilometers')->willReturn(10.0);
-        // Water point is closest to index 3 (48.3, 2.3)
         $haversine->method('inMeters')->willReturnCallback(
             static fn (float $lat1, float $lon1, float $lat2, float $lon2): float => 48.3 === $lat1 && 2.3 === $lon1 ? 0.0 : 10000.0,
         );
@@ -347,7 +300,7 @@ final class CheckWaterPointsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $scanner, $queryBuilder, $distributor, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $waterPointRepository, $distributor, $haversine);
         $handler(new CheckWaterPoints('trip-1'));
     }
 }
