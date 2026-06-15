@@ -244,14 +244,8 @@ final readonly class InRideAssistant
      */
     private function extractCoordinates(array $element): ?array
     {
-        // Overpass returns "lat"/"lon" for nodes and "center.lat"/"center.lon" for ways/relations.
         if (isset($element['lat'], $element['lon']) && \is_numeric($element['lat']) && \is_numeric($element['lon'])) {
             return [(float) $element['lat'], (float) $element['lon']];
-        }
-
-        $center = $element['center'] ?? null;
-        if (\is_array($center) && isset($center['lat'], $center['lon']) && \is_numeric($center['lat']) && \is_numeric($center['lon'])) {
-            return [(float) $center['lat'], (float) $center['lon']];
         }
 
         return null;
