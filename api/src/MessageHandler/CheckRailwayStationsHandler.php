@@ -14,9 +14,8 @@ use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckRailwayStations;
+use App\Osm\RailwayStationRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Scanner\QueryBuilderInterface;
-use App\Scanner\ScannerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -41,8 +40,7 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
-        private ScannerInterface $scanner,
-        private QueryBuilderInterface $queryBuilder,
+        private RailwayStationRepositoryInterface $railwayStationRepository,
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
@@ -72,23 +70,12 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
                 return;
             }
 
-            $query = $this->queryBuilder->buildRailwayStationQuery($endPoints, self::STATION_PROXIMITY_METERS);
-            $result = $this->scanner->query($query);
+            // Read railway stations from the local-first index near the stage endpoints (ADR-040).
+            $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $endPoints);
 
-            /** @var list<array{lat?: float, lon?: float, center?: array{lat: float, lon: float}, tags?: array<string, string>}> $elements */
-            $elements = \is_array($result['elements'] ?? null) ? $result['elements'] : [];
-
-            // Parse station locations
             $stationLocations = [];
-            foreach ($elements as $element) {
-                $lat = $element['lat'] ?? ($element['center']['lat'] ?? null);
-                $lon = $element['lon'] ?? ($element['center']['lon'] ?? null);
-
-                if (null === $lat || null === $lon) {
-                    continue;
-                }
-
-                $stationLocations[] = ['lat' => (float) $lat, 'lon' => (float) $lon];
+            foreach ($this->railwayStationRepository->findInCorridor($route, self::STATION_PROXIMITY_METERS) as $station) {
+                $stationLocations[] = ['lat' => $station['lat'], 'lon' => $station['lon']];
             }
 
             // Check each stage for nearby stations and build alerts

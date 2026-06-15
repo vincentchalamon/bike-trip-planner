@@ -120,20 +120,6 @@ final readonly class OsmOverpassQueryBuilder implements QueryBuilderInterface
     }
 
     /**
-     * @param list<Coordinate> $endPoints
-     */
-    public function buildRailwayStationQuery(array $endPoints, int $radiusMeters = 10000): string
-    {
-        $polyline = $this->buildPolyline($endPoints);
-
-        return \sprintf(
-            '[out:json][timeout:15];nwr["railway"="station"]["usage"!="tourism"](around:%d,%s);out center tags 500;',
-            $radiusMeters,
-            $polyline,
-        );
-    }
-
-    /**
      * @param list<Coordinate> $decimatedPoints
      */
     public function buildHealthServiceQuery(array $decimatedPoints): string

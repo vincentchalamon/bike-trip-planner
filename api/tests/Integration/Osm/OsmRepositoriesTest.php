@@ -8,6 +8,7 @@ use App\Osm\AccommodationRepository;
 use App\Osm\BikeShopRepository;
 use App\Osm\HealthServiceRepository;
 use App\Osm\PoiRepository;
+use App\Osm\RailwayStationRepository;
 use App\Osm\WaterPointRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
@@ -36,7 +37,7 @@ final class OsmRepositoriesTest extends KernelTestCase
         $this->connection = $connection;
 
         // osm.* are not Doctrine entities, so the reset does not clear them.
-        $this->connection->executeStatement('TRUNCATE osm.pois, osm.accommodations, osm.water_points, osm.bike_shops, osm.health_services');
+        $this->connection->executeStatement('TRUNCATE osm.pois, osm.accommodations, osm.water_points, osm.bike_shops, osm.health_services, osm.railway_stations');
     }
 
     #[Test]
@@ -142,6 +143,23 @@ final class OsmRepositoriesTest extends KernelTestCase
     }
 
     #[Test]
+    public function railwayStationRepositoryReturnsStationsWithinTheCorridor(): void
+    {
+        $this->seedRailwayStation(49.61, 6.14, 'On Route Station');
+        $this->seedRailwayStation(49.90, 6.80, 'Far Station');
+
+        $stations = new RailwayStationRepository($this->connection)->findInCorridor([
+            ['lat' => 49.60, 'lon' => 6.13],
+            ['lat' => 49.62, 'lon' => 6.15],
+        ], 10000);
+
+        // The far station (~50 km) is excluded by ST_DWithin.
+        self::assertCount(1, $stations);
+        self::assertSame('On Route Station', $stations[0]['name']);
+        self::assertSame('station', $stations[0]['category']);
+    }
+
+    #[Test]
     public function emptyRouteOrCategoriesYieldNoQuery(): void
     {
         $this->seedPoi('restaurant', 49.61, 6.14);
@@ -150,6 +168,7 @@ final class OsmRepositoriesTest extends KernelTestCase
         self::assertSame([], new WaterPointRepository($this->connection)->findInCorridor([], 2000));
         self::assertSame([], new BikeShopRepository($this->connection)->findInCorridor([], 2000));
         self::assertSame([], new HealthServiceRepository($this->connection)->findInCorridor([], 2000));
+        self::assertSame([], new RailwayStationRepository($this->connection)->findInCorridor([], 10000));
         self::assertSame([], new AccommodationRepository($this->connection)->findNear([['lat' => 49.61, 'lon' => 6.14]], 5000, []));
         self::assertSame([], new AccommodationRepository($this->connection)->findNear([], 5000, ['hotel']));
     }
@@ -206,6 +225,17 @@ final class OsmRepositoriesTest extends KernelTestCase
                 VALUES ('n', :id, :name, :category, '{}'::jsonb, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326))
                 SQL,
             ['id' => ++$this->osmId, 'name' => $name, 'category' => $category, 'lon' => $lon, 'lat' => $lat],
+        );
+    }
+
+    private function seedRailwayStation(float $lat, float $lon, ?string $name): void
+    {
+        $this->connection->executeStatement(
+            <<<'SQL'
+                INSERT INTO osm.railway_stations (osm_type, osm_id, name, category, tags, geom)
+                VALUES ('n', :id, :name, 'station', '{}'::jsonb, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326))
+                SQL,
+            ['id' => ++$this->osmId, 'name' => $name, 'lon' => $lon, 'lat' => $lat],
         );
     }
 }
