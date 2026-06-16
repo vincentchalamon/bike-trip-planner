@@ -66,6 +66,7 @@ final readonly class TripDetail
                     'geometry' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['lat' => ['type' => 'number'], 'lon' => ['type' => 'number'], 'ele' => ['type' => 'number']]]],
                     'label' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
                     'isRestDay' => ['type' => 'boolean'],
+                    'onCycleNetwork' => ['type' => 'number', 'format' => 'float', 'minimum' => 0, 'maximum' => 1],
                     'weather' => ['oneOf' => [['type' => 'object', 'properties' => [
                         'icon' => ['type' => 'string'],
                         'description' => ['type' => 'string'],

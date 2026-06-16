@@ -15,6 +15,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripDetail;
 use App\ApiResource\TripRequest;
 use App\Osm\CoverageRepositoryInterface;
+use App\Osm\CycleRouteRepositoryInterface;
 use App\Repository\DoctrineTripRequestRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
@@ -29,10 +30,14 @@ use Symfony\Component\Uid\Uuid;
  */
 final readonly class TripDetailProvider implements ProviderInterface
 {
+    /** Tolerance (m) between the stage line and a cycle route to count as "on network". */
+    private const int CYCLE_NETWORK_TOLERANCE_METERS = 30;
+
     public function __construct(
         private DoctrineTripRequestRepository $tripStateManager,
         private TripLocker $tripLocker,
         private CoverageRepositoryInterface $coverageRepository,
+        private CycleRouteRepositoryInterface $cycleRouteRepository,
     ) {
     }
 
@@ -119,6 +124,10 @@ final readonly class TripDetailProvider implements ProviderInterface
             'geometry' => array_map($this->serializeCoord(...), $stage->geometry),
             'label' => $stage->label,
             'isRestDay' => $stage->isRestDay,
+            'onCycleNetwork' => $this->cycleRouteRepository->onNetworkFraction(
+                array_map(static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon], $stage->geometry),
+                self::CYCLE_NETWORK_TOLERANCE_METERS,
+            ),
             'weather' => $stage->weather instanceof WeatherForecast ? $this->serializeWeather($stage->weather) : null,
             'alerts' => array_map($this->serializeAlert(...), $stage->alerts),
             'pois' => array_map($this->serializePoi(...), $stage->pois),
