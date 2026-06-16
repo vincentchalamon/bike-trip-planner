@@ -70,12 +70,15 @@ final readonly class NearbyNameDeduplicator
             return false;
         }
 
-        return $this->haversine->inMeters(
-            $this->coord($a, 'lat'),
-            $this->coord($a, 'lon'),
-            $this->coord($b, 'lat'),
-            $this->coord($b, 'lon'),
-        ) <= self::PROXIMITY_METERS;
+        $latA = $this->coord($a, 'lat');
+        $lonA = $this->coord($a, 'lon');
+        $latB = $this->coord($b, 'lat');
+        $lonB = $this->coord($b, 'lon');
+        if (null === $latA || null === $lonA || null === $latB || null === $lonB) {
+            return false;
+        }
+
+        return $this->haversine->inMeters($latA, $lonA, $latB, $lonB) <= self::PROXIMITY_METERS;
     }
 
     /**
@@ -96,10 +99,10 @@ final readonly class NearbyNameDeduplicator
     /**
      * @param array<string, mixed> $item
      */
-    private function coord(array $item, string $key): float
+    private function coord(array $item, string $key): ?float
     {
         $value = $item[$key] ?? null;
 
-        return is_numeric($value) ? (float) $value : 0.0;
+        return is_numeric($value) ? (float) $value : null;
     }
 }
