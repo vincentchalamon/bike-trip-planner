@@ -57,6 +57,7 @@ final readonly class PostgisImporter
         'r/admin_level=2',
         'r/route=bicycle',
         'w/route=ferry',
+        'r/route=ferry',
     ];
 
     /**

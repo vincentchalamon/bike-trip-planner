@@ -194,16 +194,19 @@ local ways = osm2pgsql.define_table({
     },
 })
 
--- Ferry crossings (ways tagged route=ferry), stored as linestrings. The API
--- flags stages whose route runs along one (the ferry-crossing alert).
+-- Ferry crossings, stored as a generic geometry to hold both way LineStrings
+-- (route=ferry on the way) and relation MultiLineStrings (type=route,
+-- route=ferry, whose member ways may not repeat the tag). The `ids` use the
+-- 'any' type so way and relation ids share the table. The API flags stages
+-- whose route runs along one (the ferry-crossing alert).
 local ferries = osm2pgsql.define_table({
     name = 'ferries',
     schema = SCHEMA,
-    ids = { type = 'way', id_column = 'osm_id' },
+    ids = { type = 'any', id_column = 'osm_id', type_column = 'osm_type' },
     columns = {
         { column = 'name', type = 'text' },
         { column = 'tags', type = 'jsonb' },
-        { column = 'geom', type = 'linestring', projection = SRID, not_null = true },
+        { column = 'geom', type = 'geometry', projection = SRID, not_null = true },
     },
     indexes = {
         { column = 'geom', method = 'gist' },
@@ -326,7 +329,8 @@ local function is_cycle_route(tags)
     return tags.type == 'route' and tags.route == 'bicycle'
 end
 
--- True for ferry crossing ways (route=ferry).
+-- True for ferry crossings (route=ferry), tagged on a way directly or on a
+-- type=route relation whose member ways may not repeat the tag.
 local function is_ferry(tags)
     return tags.route == 'ferry'
 end
@@ -516,6 +520,21 @@ function osm2pgsql.process_relation(object)
             name = object.tags.name,
             network = object.tags.network,
             ref = object.tags.ref,
+            tags = object.tags,
+            geom = geom,
+        })
+
+        return
+    end
+
+    if is_ferry(object.tags) then
+        -- as_multilinestring() stitches the ferry relation's member ways; a
+        -- broken relation yields nil and is skipped.
+        local ok, geom = pcall(function() return object:as_multilinestring() end)
+        if not ok or geom == nil then return end
+
+        ferries:insert({
+            name = object.tags.name,
             tags = object.tags,
             geom = geom,
         })
