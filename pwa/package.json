@@ -67,6 +67,7 @@
   "overrides": {
     "undici": "^6.24.0",
     "tmp": "^0.2.6",
+    "hono": "^4.12.25",
     "jsdom": {
       "undici": "^7.25.0"
     }
