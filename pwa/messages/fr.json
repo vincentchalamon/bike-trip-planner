@@ -426,6 +426,9 @@
     "banner": "Cet itinéraire sort de notre zone couverte (France, Belgique, Pays-Bas, Luxembourg). Les distances et points d'intérêt restent affichés, mais tu ne peux pas modifier ni recalculer ce voyage.",
     "editDisabled": "Ce voyage est hors zone couverte et ne peut pas être modifié."
   },
+  "cycleNetwork": {
+    "badge": "Voie cyclable · {percent} %"
+  },
   "tripList": {
     "title": "Mes voyages",
     "newTrip": "Nouveau voyage",

@@ -1458,6 +1458,8 @@ export interface components {
                 }[];
                 label?: string | null;
                 isRestDay?: boolean;
+                /** Format: float */
+                onCycleNetwork?: number;
                 weather?: {
                     icon?: string;
                     description?: string;
@@ -1628,6 +1630,8 @@ export interface components {
                 }[];
                 label?: string | null;
                 isRestDay?: boolean;
+                /** Format: float */
+                onCycleNetwork?: number;
                 weather?: {
                     icon?: string;
                     description?: string;

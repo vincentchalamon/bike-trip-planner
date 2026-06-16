@@ -12,6 +12,7 @@ import { AccommodationPanel } from "@/components/accommodation-panel";
 import { EventsPanel } from "@/components/events-panel";
 import { StageDownloads } from "@/components/stage-downloads";
 import { DiffHighlight } from "@/components/diff-highlight";
+import { StageCycleNetworkBadge } from "@/components/stage-cycle-network-badge";
 import { SupplyTimeline } from "@/components/SupplyTimeline/SupplyTimeline";
 import {
   StageAiSummary as StageAiSummaryLegacy,
@@ -212,6 +213,12 @@ export function StageCard({
             (forward-compatible: see StageDataSchema.surfaceBreakdown). */}
         {stage.surfaceBreakdown && stage.surfaceBreakdown.length > 0 && (
           <StageSurfaceBreakdown breakdown={stage.surfaceBreakdown} />
+        )}
+
+        {/* 4c. On-cycle-network badge — shown when the stage largely follows a
+            signed cycle route (ADR-040). Self-hides below its threshold. */}
+        {!stage.isRestDay && (
+          <StageCycleNetworkBadge fraction={stage.onCycleNetwork ?? 0} />
         )}
 
         {/* 5. Enriched weather card */}
