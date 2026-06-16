@@ -79,8 +79,6 @@ services:
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
       FRONTEND_URL: "${FRONTEND_URL:-https://localhost}"
       MAILER_DSN: "${MAILER_DSN}"
-      DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
-      DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
       # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
@@ -182,8 +180,6 @@ services:
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
       FRONTEND_URL: "${FRONTEND_URL:-https://localhost}"
       MAILER_DSN: "${MAILER_DSN}"
-      DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
-      DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
       # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
@@ -271,8 +267,6 @@ services:
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
       FRONTEND_URL: "${FRONTEND_URL:-https://localhost}"
       MAILER_DSN: "${MAILER_DSN}"
-      DATATOURISME_API_KEY: "${DATATOURISME_API_KEY:-}"
-      DATATOURISME_ENABLED: "${DATATOURISME_ENABLED:-false}"
       # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
