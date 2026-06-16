@@ -89,6 +89,9 @@ final readonly class HealthController
             $pending['ollama_analysis'] = $this->startHttpCheck('GET', '/api/tags', $this->ollamaAnalysisClient);
         }
 
+        // The two metadata DB round-trips run while the HTTP probes are in flight.
+        $deps['reference_data'] = $this->checkReferenceData();
+
         foreach ($pending as $name => $pair) {
             $deps[$name] = $this->finishHttpCheck($pair);
         }
@@ -97,6 +100,8 @@ final readonly class HealthController
         // LLM tier is down (AI features disabled, not a 5xx) — see ADR-028 "Degraded Mode"
         // update. When enabled, ollama_chat/ollama_analysis are surfaced in `deps` (and
         // logged `critical`) so operators can see/alert on the outage.
+        // reference_data is likewise non-required: a stale or unprovisioned PostGIS
+        // index degrades features (fewer/no POI), it never takes readiness down (ADR-040).
         $required = ['postgres', 'redis', 'mercure', 'valhalla'];
         $status = 'ok';
         foreach ($required as $dep) {
@@ -186,6 +191,86 @@ final readonly class HealthController
                 'error' => $this->sanitizeError($throwable),
             ];
         }
+    }
+
+    /**
+     * Reports the freshness of the local-first PostGIS reference index (ADR-040):
+     * the last successful refresh timestamp and per-table feature counts the
+     * provisioner records in osm.metadata / tourism.metadata. Non-critical: a
+     * missing/empty index reports `down` (never provisioned) without flipping
+     * readiness, since it only degrades features.
+     *
+     * @return array<string, mixed>
+     */
+    private function checkReferenceData(): array
+    {
+        $start = hrtime(true);
+
+        try {
+            $this->connection->executeStatement('SET statement_timeout = 1000');
+
+            $osm = $this->fetchProvisioningMetadata('osm');
+            $tourism = $this->fetchProvisioningMetadata('tourism');
+
+            return [
+                'status' => null === $osm && null === $tourism ? 'down' : 'ok',
+                'latency_ms' => $this->elapsedMs($start),
+                'osm' => $osm,
+                'tourism' => $tourism,
+            ];
+        } catch (\Throwable $throwable) {
+            return [
+                'status' => 'down',
+                'latency_ms' => $this->elapsedMs($start),
+                'error' => $this->sanitizeError($throwable),
+            ];
+        } finally {
+            // Reset the per-check ceiling so a persistent connection (FrankenPHP
+            // worker mode) does not inherit the 1s limit on later queries.
+            try {
+                $this->connection->executeStatement('RESET statement_timeout');
+            } catch (\Throwable) {
+            }
+        }
+    }
+
+    /**
+     * @return array{refreshed_at: ?string, feature_counts: array<string, int>}|null null when the schema was never provisioned (no metadata row)
+     */
+    private function fetchProvisioningMetadata(string $schema): ?array
+    {
+        // The schema name is interpolated into SQL; allowlist it so a future
+        // caller can never turn this into an injection point.
+        if (!\in_array($schema, ['osm', 'tourism'], true)) {
+            return null;
+        }
+
+        try {
+            $row = $this->connection->fetchAssociative(
+                \sprintf('SELECT refreshed_at, feature_counts FROM %s.metadata LIMIT 1', $schema),
+            );
+        } catch (\Throwable) {
+            // Schema/table absent (never migrated on this instance): treat as unprovisioned.
+            return null;
+        }
+
+        if (false === $row) {
+            return null;
+        }
+
+        $counts = [];
+        if (\is_string($row['feature_counts'])) {
+            $decoded = json_decode($row['feature_counts'], true);
+            if (\is_array($decoded)) {
+                /** @var array<string, int> $decoded */
+                $counts = $decoded;
+            }
+        }
+
+        return [
+            'refreshed_at' => \is_string($row['refreshed_at']) ? $row['refreshed_at'] : null,
+            'feature_counts' => $counts,
+        ];
     }
 
     /**

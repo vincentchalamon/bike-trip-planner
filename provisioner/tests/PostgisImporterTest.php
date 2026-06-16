@@ -99,6 +99,32 @@ final class PostgisImporterTest extends TestCase
     }
 
     #[Test]
+    public function buildDerivedCreatesCoveragePolygonAndMetadataInStaging(): void
+    {
+        $importer = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: $this->capturingFactory(),
+        );
+
+        $importer->buildDerived();
+
+        self::assertCount(2, $this->captured);
+
+        $coverage = implode(' ', $this->captured[0]);
+        self::assertStringContainsString('CREATE TABLE osm_staging.coverage AS', $coverage);
+        self::assertStringContainsString('ST_Multi(ST_Union(geom))', $coverage);
+        self::assertStringContainsString('WHERE admin_level = 2', $coverage);
+        self::assertStringContainsString('USING gist (geom)', $coverage);
+
+        $metadata = implode(' ', $this->captured[1]);
+        self::assertStringContainsString('CREATE TABLE osm_staging.metadata AS', $metadata);
+        self::assertStringContainsString('now() AS refreshed_at', $metadata);
+        // Counts cover every flex feature table so /health reports each one.
+        self::assertStringContainsString("'pois', (SELECT count(*) FROM osm_staging.pois)", $metadata);
+        self::assertStringContainsString("'admin_boundaries', (SELECT count(*) FROM osm_staging.admin_boundaries)", $metadata);
+    }
+
+    #[Test]
     public function swapRenamesStagingOntoLiveInOneTransaction(): void
     {
         $importer = new PostgisImporter(
