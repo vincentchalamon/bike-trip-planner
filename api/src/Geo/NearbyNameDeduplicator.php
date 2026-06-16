@@ -18,7 +18,7 @@ final readonly class NearbyNameDeduplicator
 {
     private const int PROXIMITY_METERS = 75;
 
-    private readonly ?\Transliterator $transliterator;
+    private ?\Transliterator $transliterator;
 
     public function __construct(private GeoDistanceInterface $haversine)
     {
