@@ -47,10 +47,12 @@ terrain, accommodations) across five Messenger workers backed by Redis. A two-ph
 
 GPX is parsed with a streaming XMLReader (constant memory), elevation-smoothed, then decimated
 with Douglas-Peucker (~25k -> ~1.5k points). Routing uses a self-hosted Valhalla engine fed by
-Geofabrik extracts; OSM features come from the public Overpass API (cached in Redis). See
+Geofabrik extracts; OSM features come from a local PostGIS reference index imported by the
+provisioner, which the API queries directly — no runtime Overpass dependency. See
 [ADR-004](adr/adr-004-spatial-engineering-gpx-parsing-and-data-decimation.md),
-[ADR-017](adr/adr-017-valhalla-routing-engine-and-self-hosted-overpass-integration.md) and
-[ADR-033](adr/adr-033-osm-data-refresh-strategy.md).
+[ADR-017](adr/adr-017-valhalla-routing-engine-and-self-hosted-overpass-integration.md),
+[ADR-033](adr/adr-033-osm-data-refresh-strategy.md) and
+[ADR-040](adr/adr-040-local-first-reference-data-postgis.md).
 
 ## Alert engine
 

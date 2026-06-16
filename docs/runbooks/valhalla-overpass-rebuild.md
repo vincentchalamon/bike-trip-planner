@@ -7,7 +7,7 @@ Valhalla provides routing (ADR-017); Overpass usage was moved off the self-hoste
 - `/api/health` reports `valhalla: 503` or routing requests return 5xx
 - Valhalla logs: `tile not found`, `unable to load tile`, `corrupted`
 - New regions are missing routes after a fresh provision (Lille stub only)
-- POI extension queries fail because Overpass returns 504 / 429 from the public endpoint
+- POI / accommodation / event results are empty because the `osm` / `tourism` PostGIS schemas were never provisioned
 
 ## Diagnostic
 
@@ -64,10 +64,7 @@ ls -lh .docker/default.osm.pbf
      -d '{"locations":[{"lat":50.63,"lon":3.06},{"lat":50.64,"lon":3.07}],"costing":"bicycle"}'
    ```
 
-5. **Overpass** — the project relies on the public Overpass mirrors via scoped HTTP clients (ADR-025). If those are rate-limited, no rebuild is possible; the only mitigations are:
-   - Wait out the 429 (typically minutes)
-   - Lower request rate temporarily by reducing concurrent trip computations (scale workers down via Coolify)
-   - Switch the configured Overpass endpoint to an alternate mirror in the relevant env var
+5. **Reference data** — POI / accommodation / event data is no longer fetched from Overpass at runtime; it is served from the local `osm` / `tourism` PostGIS schemas populated by the `provisioner` (ADR-040). If those queries return nothing, it is a provisioning gap, not a routing one: re-run the provisioner (`make provision` with `--with-postgis` / `--with-datatourisme`) rather than rebuilding tiles here.
 
 ## Post-action
 
