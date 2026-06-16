@@ -13,7 +13,7 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Message\RecalculateStages;
-use App\Message\ScanAllOsmData;
+use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Service\ComputationDependencyResolver;
 use App\Service\TripAnalysisDispatcher;
@@ -87,7 +87,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         // enrichment pipeline must be re-dispatched instead (recette #649).
         $dispatched = $this->recomputeWithProgress(['completed' => 7, 'failed' => 0, 'total' => 16]);
 
-        self::assertContains(ScanAllOsmData::class, $dispatched, 'Full pipeline must run while the analysis is in flight.');
+        self::assertContains(ScanPois::class, $dispatched, 'Full pipeline must run while the analysis is in flight.');
         self::assertNotContains(RecalculateStages::class, $dispatched, 'Minimal resolver path must be skipped while in flight.');
     }
 
@@ -99,7 +99,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         $dispatched = $this->recomputeWithProgress(['completed' => 16, 'failed' => 0, 'total' => 16]);
 
         self::assertContains(RecalculateStages::class, $dispatched, 'Settled trip uses the minimal resolver (RecalculateStages for pacing).');
-        self::assertNotContains(ScanAllOsmData::class, $dispatched, 'Full pipeline must not run for a settled trip.');
+        self::assertNotContains(ScanPois::class, $dispatched, 'Full pipeline must not run for a settled trip.');
     }
 
     #[Test]
@@ -111,6 +111,6 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         $dispatched = $this->recomputeWithProgress(['completed' => 0, 'failed' => 0, 'total' => 0]);
 
         self::assertContains(RecalculateStages::class, $dispatched, 'Uninitialized tracker must use the minimal resolver.');
-        self::assertNotContains(ScanAllOsmData::class, $dispatched, 'Full pipeline must not run when total=0.');
+        self::assertNotContains(ScanPois::class, $dispatched, 'Full pipeline must not run when total=0.');
     }
 }

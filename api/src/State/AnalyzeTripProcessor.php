@@ -37,7 +37,6 @@ final readonly class AnalyzeTripProcessor implements ProcessorInterface
      * @var list<ComputationName>
      */
     private const array ANALYSIS_COMPUTATIONS = [
-        ComputationName::OSM_SCAN,
         ComputationName::POIS,
         ComputationName::ACCOMMODATIONS,
         ComputationName::TERRAIN,

@@ -15,7 +15,6 @@ use App\Enum\SourceType;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\GenerateStages;
-use App\Message\ScanAllOsmData;
 use App\Repository\TripRequestRepositoryInterface;
 use App\RouteParser\GpxRouteParserInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -137,7 +136,6 @@ final readonly class GpxUploadService
     private function dispatchDownstreamMessages(string $tripId): void
     {
         $this->messageBus->dispatch(new GenerateStages($tripId));
-        $this->messageBus->dispatch(new ScanAllOsmData($tripId));
     }
 
     /**

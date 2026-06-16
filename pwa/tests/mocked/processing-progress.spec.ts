@@ -116,15 +116,15 @@ test.describe("ProcessingProgress — category progression", () => {
     mockedPage,
   }) => {
     await enterAnalysingState(submitUrl, injectEvent, mockedPage);
-    // Accommodations has a single step — an in-flight computation_step_completed
-    // for "accommodations" would actually flip it to done, so we simulate the
-    // currently-running step via the "terrain_security" row (osm_scan + terrain):
-    // sending only osm_scan leaves terrain undone → the row is in_progress.
+    // Single-step acts (accommodations, terrain_security) flip straight to done,
+    // so we exercise in_progress via the multi-step "supply" row
+    // (pois + water_points + cultural_pois): completing only pois leaves the
+    // other two undone → the row is in_progress.
     await injectEvent(
-      computationStepCompletedEvent("osm_scan", "points_of_interest", 1, 16),
+      computationStepCompletedEvent("pois", "points_of_interest", 1, 16),
     );
     await expect(
-      mockedPage.getByTestId("processing-category-terrain_security"),
+      mockedPage.getByTestId("processing-category-supply"),
     ).toHaveAttribute("data-status", "in_progress");
   });
 
@@ -187,19 +187,17 @@ test.describe("ProcessingProgress — ActDescription sub-descriptions", () => {
     mockedPage,
   }) => {
     await enterAnalysingState(submitUrl, injectEvent, mockedPage);
-    // Reporting `osm_scan` as the current step (without completing `terrain`)
-    // flips terrain_security to in_progress and surfaces the `running` copy.
+    // Completing only `pois` (1 of supply's 3 steps) flips the multi-step
+    // "supply" row to in_progress and surfaces its `running` copy.
     await injectEvent(
-      computationStepCompletedEvent("osm_scan", "terrain_security", 1, 16),
+      computationStepCompletedEvent("pois", "points_of_interest", 1, 16),
     );
     await expect(
-      mockedPage.getByTestId("processing-category-terrain_security"),
+      mockedPage.getByTestId("processing-category-supply"),
     ).toHaveAttribute("data-status", "in_progress");
     await expect(
-      mockedPage.getByTestId(
-        "processing-category-terrain_security-description",
-      ),
-    ).toHaveText("Interrogation d'OpenStreetMap…");
+      mockedPage.getByTestId("processing-category-supply-description"),
+    ).toHaveText("Recherche des points d'intérêt…");
   });
 
   test("shows done text once all act steps complete", async ({
@@ -208,12 +206,9 @@ test.describe("ProcessingProgress — ActDescription sub-descriptions", () => {
     mockedPage,
   }) => {
     await enterAnalysingState(submitUrl, injectEvent, mockedPage);
-    // Both backing steps completed → terrain_security is done.
+    // terrain_security has a single backing step now (`terrain`).
     await injectEvent(
-      computationStepCompletedEvent("osm_scan", "terrain_security", 1, 16),
-    );
-    await injectEvent(
-      computationStepCompletedEvent("terrain", "terrain_security", 2, 16),
+      computationStepCompletedEvent("terrain", "terrain_security", 1, 16),
     );
     await expect(
       mockedPage.getByTestId("processing-category-terrain_security"),
@@ -234,8 +229,8 @@ test.describe("ProcessingProgress — ActDescription sub-descriptions", () => {
     await injectEvent({
       type: "computation_error",
       data: {
-        computation: "osm_scan",
-        message: "Overpass timed out",
+        computation: "terrain",
+        message: "Terrain analysis failed",
         retryable: true,
       },
     });

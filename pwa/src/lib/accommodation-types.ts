@@ -1,6 +1,7 @@
 /**
  * All supported accommodation types for filtering.
- * Mirrors OSM tags used in App\Scanner\OsmOverpassQueryBuilder on the backend.
+ * Mirrors the OSM tourism tags imported by the Tier-1 provisioner
+ * (provisioner/osm2pgsql/tier1.lua, ACCOMMODATION_TOURISM).
  * Keep in sync with the PHP source (TripRequest::ALL_ACCOMMODATION_TYPES).
  */
 export const ACCOMMODATION_TYPES = [

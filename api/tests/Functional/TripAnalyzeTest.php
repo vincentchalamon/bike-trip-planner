@@ -24,7 +24,6 @@ use App\Message\CheckRailwayStations;
 use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
 use App\Message\ScanAccommodations;
-use App\Message\ScanAllOsmData;
 use App\Message\ScanEvents;
 use App\Message\ScanPois;
 use App\Repository\TripRequestRepositoryInterface;
@@ -169,7 +168,6 @@ final class TripAnalyzeTest extends ApiTestCase
         );
 
         $expected = [
-            ScanAllOsmData::class,
             ScanPois::class,
             ScanAccommodations::class,
             AnalyzeTerrain::class,
@@ -205,7 +203,6 @@ final class TripAnalyzeTest extends ApiTestCase
         $this->assertSame('done', $data['computationStatus']['route']);
         $this->assertSame('done', $data['computationStatus']['stages']);
         // Enrichment computations are re-armed
-        $this->assertSame('pending', $data['computationStatus']['osm_scan']);
         $this->assertSame('pending', $data['computationStatus']['pois']);
         $this->assertSame('pending', $data['computationStatus']['weather']);
         $this->assertSame('pending', $data['computationStatus']['terrain']);

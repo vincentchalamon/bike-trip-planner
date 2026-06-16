@@ -59,7 +59,7 @@ interface ActDefinition {
 
 /**
  * Seven narrative acts mapped onto the backend `ComputationName` enum:
- *   1. Analyse du terrain & sécurité — `osm_scan`, `terrain`
+ *   1. Analyse du terrain & sécurité — `terrain`
  *   2. Points d'intérêt & ravitaillement — `pois`, `water_points`, `cultural_pois`
  *   3. Hébergements — `accommodations`
  *   4. Météo & conditions — `weather`, `wind`
@@ -77,7 +77,7 @@ const ACTS: { key: ActKey; def: ActDefinition }[] = [
     def: {
       translationKey: "terrain_security",
       icon: Mountain,
-      steps: ["osm_scan", "terrain"],
+      steps: ["terrain"],
     },
   },
   {
@@ -153,9 +153,8 @@ interface ProcessingProgressProps {
  * arrive. A global percentage bar sits at the bottom.
  *
  * Each act exposes a **dynamic sub-description** computed from the latest
- * SSE payload (e.g. "Interrogation d'OpenStreetMap…" while
- * `osm_scan` runs, then "Terrain analysé" once both `osm_scan` and `terrain`
- * are done).
+ * SSE payload (e.g. "Recherche des points d'intérêt…" while `pois` runs,
+ * then "Points d'intérêt collectés" once every step of the act is done).
  *
  * Rules:
  * - The only interactive affordance is the trip title. Every other action is
@@ -358,7 +357,7 @@ interface ActDescriptionProps {
  * locale without touching this component:
  *
  *   - `pending`     → `description` (default static)
- *   - `in_progress` → `running`     (e.g. "Interrogation d'OpenStreetMap…")
+ *   - `in_progress` → `running`     (e.g. "Recherche des points d'intérêt…")
  *   - `done`        → `done`        (e.g. "Terrain analysé")
  *   - `failed`      → `failed`      (short "ne pas pu" message)
  *

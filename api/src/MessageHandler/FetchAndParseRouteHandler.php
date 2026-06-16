@@ -16,7 +16,6 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\FetchAndParseRoute;
 use App\Message\GenerateStages;
-use App\Message\ScanAllOsmData;
 use App\Repository\TripRequestRepositoryInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
 use Psr\Log\LoggerInterface;
@@ -112,7 +111,6 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
             }
 
             $this->messageBus->dispatch(new GenerateStages($tripId, $generation));
-            $this->messageBus->dispatch(new ScanAllOsmData($tripId, $generation));
         }, $generation);
     }
 }

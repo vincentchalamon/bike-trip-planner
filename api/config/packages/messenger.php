@@ -20,7 +20,6 @@ use App\Message\GenerateStages;
 use App\Message\RecalculateRouteSegment;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
-use App\Message\ScanAllOsmData;
 use App\Message\ScanEvents;
 use App\Message\ScanPois;
 use App\Messenger\HandleCorrelationIdMiddleware;
@@ -66,7 +65,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             'routing' => [
                 FetchAndParseRoute::class => 'async',
                 GenerateStages::class => 'async',
-                ScanAllOsmData::class => 'async',
                 ScanPois::class => 'async',
                 ScanAccommodations::class => 'async',
                 AnalyzeTerrain::class => 'async',

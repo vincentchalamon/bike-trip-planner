@@ -48,10 +48,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'User-Agent' => 'BikeTripPlanner/1.0',
                     ],
                 ],
-                'overpass.client' => [
-                    'base_uri' => 'https://overpass-api.de',
-                    'timeout' => 15,
-                ],
                 'open_meteo.client' => [
                     'base_uri' => 'https://api.open-meteo.com',
                     'timeout' => 10,

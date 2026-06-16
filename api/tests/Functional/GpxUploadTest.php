@@ -9,7 +9,6 @@ use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\Controller\GpxUploadController;
 use App\Enum\ComputationName;
 use App\Message\GenerateStages;
-use App\Message\ScanAllOsmData;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
@@ -115,9 +114,8 @@ final class GpxUploadTest extends ApiTestCase
         $transport = self::getContainer()->get('messenger.transport.async');
         $sentMessages = $transport->getSent();
 
-        $this->assertCount(2, $sentMessages);
+        $this->assertCount(1, $sentMessages);
         $this->assertInstanceOf(GenerateStages::class, $sentMessages[0]->getMessage());
-        $this->assertInstanceOf(ScanAllOsmData::class, $sentMessages[1]->getMessage());
     }
 
     #[Test]
