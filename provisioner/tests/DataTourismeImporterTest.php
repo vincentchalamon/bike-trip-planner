@@ -181,6 +181,7 @@ final class DataTourismeImporterTest extends TestCase
             'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '48.0', 'schema:longitude' => '2.0']]],
         ]));
         $zip->close();
+
         $bytes = (string) file_get_contents($zipPath);
         unlink($zipPath);
 

@@ -245,6 +245,13 @@ final readonly class DataTourismeImporter
                 \sprintf('CREATE INDEX ON %s.%s USING gist (geom);', self::STAGING_SCHEMA, $table),
             ], \sprintf('psql index %s', $table));
         }
+
+        // Date-range index for the events read path (matches Version20260616120000);
+        // recreated in staging so the atomic swap doesn't drop it.
+        $this->runProcess([
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+            \sprintf('CREATE INDEX ON %s.events (start_date, end_date);', self::STAGING_SCHEMA),
+        ], 'psql index events dates');
     }
 
     /**
@@ -270,8 +277,8 @@ final readonly class DataTourismeImporter
 
         try {
             $process->run();
-        } catch (ProcessTimedOutException $e) {
-            throw new ImportFailedException(\sprintf('%s timed out after %.1fs', $label, $this->timeoutSeconds), 0, $e);
+        } catch (ProcessTimedOutException $processTimedOutException) {
+            throw new ImportFailedException(\sprintf('%s timed out after %.1fs', $label, $this->timeoutSeconds), 0, $processTimedOutException);
         }
 
         if (!$process->isSuccessful()) {

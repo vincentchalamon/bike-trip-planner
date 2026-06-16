@@ -123,8 +123,8 @@ final class ProvisionCommand extends Command
 
         try {
             $importer->run($this->dataTourismeDir);
-        } catch (ImportFailedException $e) {
-            $io->error($e->getMessage());
+        } catch (ImportFailedException $importFailedException) {
+            $io->error($importFailedException->getMessage());
 
             return Command::FAILURE;
         }
