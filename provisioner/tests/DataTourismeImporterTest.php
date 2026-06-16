@@ -117,13 +117,19 @@ final class DataTourismeImporterTest extends TestCase
 
         $importer->run($this->workDir);
 
-        // 1 staging DDL + 3 \copy + 3 GIST index + 1 events-date index + 1 swap.
-        self::assertCount(9, $this->captured);
+        // 1 staging DDL + 3 \copy + 3 GIST index + 1 events-date index + 1 metadata + 1 swap.
+        self::assertCount(10, $this->captured);
 
         $ddl = implode(' ', $this->captured[0]);
         self::assertStringContainsString('CREATE SCHEMA tourism_staging', $ddl);
         self::assertStringContainsString('CREATE TABLE tourism_staging.cultural_pois', $ddl);
         self::assertStringContainsString('CREATE TABLE tourism_staging.events', $ddl);
+
+        $joinedAll = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
+        self::assertTrue(
+            (bool) array_filter($joinedAll, static fn (string $c): bool => str_contains($c, 'CREATE TABLE tourism_staging.metadata AS') && str_contains($c, "'events', (SELECT count(*) FROM tourism_staging.events)")),
+            'a metadata command records per-table counts before the swap',
+        );
 
         $joined = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
         self::assertTrue(

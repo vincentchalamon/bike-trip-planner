@@ -257,6 +257,17 @@ final readonly class DataTourismeImporter
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf('CREATE INDEX ON %s.events (start_date, end_date);', self::STAGING_SCHEMA),
         ], 'psql index events dates');
+
+        // Provisioning metadata (refresh timestamp + per-table counts), surfaced
+        // by /api/health so operators see the DataTourisme index freshness.
+        $counts = implode(', ', array_map(
+            static fn (string $table): string => \sprintf("'%1\$s', (SELECT count(*) FROM %2\$s.%1\$s)", $table, self::STAGING_SCHEMA),
+            array_keys(self::TABLE_COLUMNS),
+        ));
+        $this->runProcess([
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+            \sprintf('CREATE TABLE %1$s.metadata AS SELECT now() AS refreshed_at, jsonb_build_object(%2$s) AS feature_counts;', self::STAGING_SCHEMA, $counts),
+        ], 'psql build tourism metadata');
     }
 
     /**

@@ -245,6 +245,64 @@ final class HealthControllerTest extends ApiTestCase
         $this->assertArrayNotHasKey('ollama_analysis', $data['deps']);
     }
 
+    #[Test]
+    public function readinessReportsUnprovisionedReferenceDataWithoutFlippingStatus(): void
+    {
+        // An empty PostGIS index (no provisioning run yet) surfaces as down in
+        // reference_data but is non-required, so the aggregate stays ok (ADR-040).
+        $this->truncateProvisioningMetadata();
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $response = $this->client->request('GET', '/api/health');
+
+        $this->assertResponseStatusCodeSame(200);
+        $data = $response->toArray();
+        $this->assertSame('ok', $data['status']);
+        $this->assertArrayHasKey('reference_data', $data['deps']);
+        $this->assertSame('down', $data['deps']['reference_data']['status']);
+    }
+
+    #[Test]
+    public function readinessReportsReferenceDataFreshnessAndCounts(): void
+    {
+        $this->truncateProvisioningMetadata();
+        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        \assert($connection instanceof Connection);
+        $connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.metadata (refreshed_at, feature_counts)
+            VALUES (now(), '{"pois": 12, "admin_boundaries": 4}'::jsonb)
+            SQL);
+
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $response = $this->client->request('GET', '/api/health');
+
+        $this->assertResponseStatusCodeSame(200);
+        $data = $response->toArray();
+        $reference = $data['deps']['reference_data'];
+        $this->assertSame('ok', $reference['status']);
+        $this->assertNotNull($reference['osm']);
+        $this->assertIsString($reference['osm']['refreshed_at']);
+        $this->assertSame(12, $reference['osm']['feature_counts']['pois']);
+        $this->assertSame(4, $reference['osm']['feature_counts']['admin_boundaries']);
+        $this->assertNull($reference['tourism'], 'tourism index still unprovisioned');
+    }
+
+    private function truncateProvisioningMetadata(): void
+    {
+        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        \assert($connection instanceof Connection);
+        $connection->executeStatement('TRUNCATE osm.metadata, tourism.metadata');
+    }
+
     /**
      * Reboot the kernel with OLLAMA_ENABLED=1 so the readiness probe surfaces the LLM
      * tier. Must be called before mocking the HTTP clients (the reboot rebuilds the

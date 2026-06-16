@@ -58,6 +58,18 @@ final readonly class PostgisImporter
     ];
 
     /**
+     * Feature tables osm2pgsql/tier1.lua writes; their row counts go into the
+     * provisioning metadata surfaced by /api/health. Must stay in sync with the
+     * flex style's `define_table` calls.
+     *
+     * @var list<string>
+     */
+    private const array FEATURE_TABLES = [
+        'pois', 'accommodations', 'water_points', 'bike_shops', 'health_services',
+        'railway_stations', 'charging_stations', 'cultural_pois', 'ways', 'admin_boundaries',
+    ];
+
+    /**
      * @var \Closure(list<string>): Process
      */
     private \Closure $processFactory;
@@ -82,6 +94,7 @@ final readonly class PostgisImporter
     {
         $this->filter($mergedPbf, $filteredPbf);
         $this->import($filteredPbf);
+        $this->buildDerived();
         $this->swap();
     }
 
@@ -118,6 +131,39 @@ final readonly class PostgisImporter
             '--middle-schema', self::STAGING_SCHEMA,
             $filteredPbf,
         ], 'osm2pgsql import');
+    }
+
+    /**
+     * Builds the derived tables in the staging schema (so the atomic swap ships
+     * them with the data): the coverage polygon (union of the admin_level=2
+     * country boundaries, tested by the API via ST_Covers to flag out-of-zone
+     * trips) and the provisioning metadata (refresh timestamp + per-table feature
+     * counts, surfaced by /api/health).
+     *
+     * @throws ImportFailedException
+     */
+    public function buildDerived(): void
+    {
+        $this->runProcess([
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+            \sprintf(
+                'CREATE TABLE %1$s.coverage AS SELECT ST_Multi(ST_Union(geom))::geometry(MultiPolygon, 4326) AS geom FROM %1$s.admin_boundaries WHERE admin_level = 2; CREATE INDEX ON %1$s.coverage USING gist (geom);',
+                self::STAGING_SCHEMA,
+            ),
+        ], 'psql build coverage');
+
+        $counts = implode(', ', array_map(
+            static fn (string $table): string => \sprintf("'%1\$s', (SELECT count(*) FROM %2\$s.%1\$s)", $table, self::STAGING_SCHEMA),
+            self::FEATURE_TABLES,
+        ));
+        $this->runProcess([
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+            \sprintf(
+                'CREATE TABLE %1$s.metadata AS SELECT now() AS refreshed_at, jsonb_build_object(%2$s) AS feature_counts;',
+                self::STAGING_SCHEMA,
+                $counts,
+            ),
+        ], 'psql build metadata');
     }
 
     /**
