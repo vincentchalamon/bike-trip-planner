@@ -18,7 +18,9 @@ final class DataTourismeMapperTest extends TestCase
     }
 
     /**
-     * @param array{lat?: string, lon?: string} $geo
+     * @param list<string>                    $type
+     * @param array<string, mixed>            $extra
+     * @param array{lat: string, lon: string} $geo
      *
      * @return array<string, mixed>
      */

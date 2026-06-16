@@ -37,8 +37,6 @@ final class ProvisionCommand extends Command
 
     private readonly PostgisImporter $postgisImporter;
 
-    private readonly ?DataTourismeImporter $dataTourismeImporter;
-
     public function __construct(
         private readonly string $regionsDir = self::DEFAULT_REGIONS_DIR,
         private readonly string $mergedPbf = self::DEFAULT_MERGED_PBF,
@@ -49,7 +47,8 @@ final class ProvisionCommand extends Command
         private readonly string $filteredPbf = self::DEFAULT_FILTERED_PBF,
         ?PostgisImporter $postgisImporter = null,
         private readonly string $dataTourismeDir = self::DEFAULT_DATATOURISME_DIR,
-        ?DataTourismeImporter $dataTourismeImporter = null,
+        // Built lazily in runDataTourisme() from DATATOURISME_* env when not injected.
+        private readonly ?DataTourismeImporter $dataTourismeImporter = null,
     ) {
         parent::__construct();
 
@@ -58,8 +57,6 @@ final class ProvisionCommand extends Command
         $this->postgisImporter = $postgisImporter ?? new PostgisImporter(
             flexStylePath: \dirname(__DIR__).'/osm2pgsql/tier1.lua',
         );
-        // Built lazily in runDataTourisme() from DATATOURISME_* env when not injected.
-        $this->dataTourismeImporter = $dataTourismeImporter;
     }
 
     protected function configure(): void
@@ -102,7 +99,7 @@ final class ProvisionCommand extends Command
     private function runDataTourisme(SymfonyStyle $io): int
     {
         $importer = $this->dataTourismeImporter;
-        if (null === $importer) {
+        if (!$importer instanceof DataTourismeImporter) {
             $fluxId = getenv('DATATOURISME_FLUX_ID') ?: '';
             $appKey = getenv('DATATOURISME_APP_KEY') ?: '';
             if ('' === $fluxId || '' === $appKey) {

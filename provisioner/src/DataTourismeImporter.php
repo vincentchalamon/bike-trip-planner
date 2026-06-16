@@ -49,9 +49,9 @@ final readonly class DataTourismeImporter
     ];
 
     private const array STAGING_DDL = [
-        'cultural_pois' => 'id text, name text, category text NOT NULL, opening_hours text, description text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
-        'accommodations' => 'id text, name text, category text NOT NULL, capacity int, price numeric(10, 2), description text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
-        'events' => 'id text, name text, category text NOT NULL, start_date date, end_date date, url text, description text, price_min numeric(10, 2), tags jsonb, geom geometry(Point, 4326) NOT NULL',
+        'cultural_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
+        'accommodations' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, capacity int, price numeric(10, 2), description text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
+        'events' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, start_date date, end_date date, url text, description text, price_min numeric(10, 2), tags jsonb, geom geometry(Point, 4326) NOT NULL',
     ];
 
     private HttpClientInterface $httpClient;
@@ -71,7 +71,7 @@ final readonly class DataTourismeImporter
         ?\Closure $processFactory = null,
         private float $timeoutSeconds = 1800.0,
     ) {
-        $this->httpClient = $httpClient ?? HttpClient::create(['max_redirects' => 2]);
+        $this->httpClient = $httpClient ?? HttpClient::create(['max_redirects' => 2, 'timeout' => $this->timeoutSeconds]);
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
     }
 
@@ -109,10 +109,10 @@ final readonly class DataTourismeImporter
                     throw new ImportFailedException(\sprintf('Failed to write the flux to "%s"', $zipPath));
                 }
             }
-        } catch (HttpClientExceptionInterface $e) {
+        } catch (HttpClientExceptionInterface $httpClientException) {
             fclose($handle);
 
-            throw new ImportFailedException(\sprintf('DataTourisme flux download failed: %s', $e->getMessage()), 0, $e);
+            throw new ImportFailedException(\sprintf('DataTourisme flux download failed: %s', $httpClientException->getMessage()), 0, $httpClientException);
         } finally {
             if (\is_resource($handle)) {
                 fclose($handle);
@@ -196,7 +196,7 @@ final readonly class DataTourismeImporter
     private function copyLine(string $table, array $row): string
     {
         $geom = \sprintf('SRID=4326;POINT(%.7F %.7F)', $row['lon'], $row['lat']);
-        $tags = json_encode(['type' => $row['type']], \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES);
+        $tags = json_encode(['type' => $row['type']], \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}';
 
         $values = match ($table) {
             'cultural_pois' => [$row['id'], $row['name'], $row['category'], $row['openingHours'], $row['description'], $row['wikidata'], $tags, $geom],

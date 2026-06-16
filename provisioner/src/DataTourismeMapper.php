@@ -151,7 +151,7 @@ final class DataTourismeMapper
             return [];
         }
 
-        return array_values(array_filter($raw, 'is_string'));
+        return array_values(array_filter($raw, is_string(...)));
     }
 
     /**

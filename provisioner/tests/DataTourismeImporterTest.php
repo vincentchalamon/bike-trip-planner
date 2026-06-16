@@ -167,6 +167,38 @@ final class DataTourismeImporterTest extends TestCase
     }
 
     #[Test]
+    public function escapesSpecialCharactersInCopyFields(): void
+    {
+        // The real flux has labels with tabs/newlines; unescaped they would split
+        // or break COPY rows and abort the whole load under ON_ERROR_STOP=1.
+        $zipPath = $this->workDir.'/special.zip';
+        $zip = new \ZipArchive();
+        $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+        $zip->addFromString('objects/0/00/special.json', (string) json_encode([
+            '@id' => 'https://data.datatourisme.fr/10/special',
+            '@type' => ['CulturalSite', 'Museum', 'PointOfInterest'],
+            'rdfs:label' => ['fr' => ["Name\twith\ttabs\nand newline\\backslash"]],
+            'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '48.0', 'schema:longitude' => '2.0']]],
+        ]));
+        $zip->close();
+        $bytes = (string) file_get_contents($zipPath);
+        unlink($zipPath);
+
+        $importer = new DataTourismeImporter(
+            fluxUrl: 'https://example.test/flux',
+            httpClient: new MockHttpClient(new MockResponse($bytes)),
+            processFactory: $this->capturingFactory(),
+        );
+        $importer->run($this->workDir);
+
+        $cultural = (string) file_get_contents($this->workDir.'/tourism-cultural_pois.copy');
+        self::assertStringNotContainsString("\t\t", $cultural, 'a literal tab in the name would split into extra columns');
+        self::assertStringContainsString('\t', $cultural, 'tab escaped as backslash-t');
+        self::assertStringContainsString('\n', $cultural, 'newline escaped as backslash-n');
+        self::assertStringContainsString('\\\\', $cultural, 'backslash escaped as double backslash');
+    }
+
+    #[Test]
     public function downloadFailureRaisesImportFailedException(): void
     {
         $httpClient = new MockHttpClient(new MockResponse('not found', ['http_code' => 404]));
