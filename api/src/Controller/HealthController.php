@@ -232,6 +232,12 @@ final readonly class HealthController
      */
     private function fetchProvisioningMetadata(string $schema): ?array
     {
+        // The schema name is interpolated into SQL; allowlist it so a future
+        // caller can never turn this into an injection point.
+        if (!\in_array($schema, ['osm', 'tourism'], true)) {
+            return null;
+        }
+
         try {
             $row = $this->connection->fetchAssociative(
                 \sprintf('SELECT refreshed_at, feature_counts FROM %s.metadata LIMIT 1', $schema),
