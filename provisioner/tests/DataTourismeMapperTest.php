@@ -110,11 +110,66 @@ final class DataTourismeMapperTest extends TestCase
     }
 
     #[Test]
+    public function mapsFoodEstablishmentToTheFoodHead(): void
+    {
+        $restaurant = $this->mapper->map($this->object(['schema:FoodEstablishment', 'schema:Restaurant', 'FoodEstablishment', 'Restaurant']));
+        self::assertNotNull($restaurant);
+        self::assertSame('food', $restaurant['head']);
+        self::assertSame('restaurant', $restaurant['category']);
+
+        $bar = $this->mapper->map($this->object(['FoodEstablishment', 'BarOrPub']));
+        self::assertNotNull($bar);
+        self::assertSame('food', $bar['head']);
+        self::assertSame('bar', $bar['category']);
+
+        $fastFood = $this->mapper->map($this->object(['FastFoodRestaurant', 'FoodEstablishment', 'Restaurant']));
+        self::assertNotNull($fastFood);
+        self::assertSame('fast_food', $fastFood['category']);
+
+        // A bare FoodEstablishment with no known subtype defaults to restaurant.
+        $bare = $this->mapper->map($this->object(['FoodEstablishment', 'PlaceOfInterest']));
+        self::assertNotNull($bare);
+        self::assertSame('restaurant', $bare['category']);
+    }
+
+    #[Test]
+    public function mapsFoodShopsButSkipsNonFoodStores(): void
+    {
+        // A bakery shop (Store + Bakery) and a local-products shop are resupply-relevant.
+        $bakery = $this->mapper->map($this->object(['Bakery', 'BoutiqueOrLocalShop', 'FoodEstablishment', 'Store']));
+        self::assertNotNull($bakery);
+        self::assertSame('food', $bakery['head']);
+        self::assertSame('bakery', $bakery['category']);
+
+        $farm = $this->mapper->map($this->object(['LocalProductsShop', 'Store']));
+        self::assertNotNull($farm);
+        self::assertSame('food', $farm['head']);
+        self::assertSame('farm', $farm['category']);
+
+        // Non-food stores (boutiques, craftsmen, parking, taxis) carry no resupply
+        // value and must be skipped.
+        self::assertNull($this->mapper->map($this->object(['Store', 'BoutiqueOrLocalShop'])));
+        self::assertNull($this->mapper->map($this->object(['Store', 'CraftsmanShop'])));
+        self::assertNull($this->mapper->map($this->object(['Store', 'Parking', 'Transport'])));
+    }
+
+    #[Test]
+    public function classifiesHotelRestaurantAsAccommodationNotFood(): void
+    {
+        // A HotelRestaurant carries both Accommodation and FoodEstablishment; lodging wins.
+        $row = $this->mapper->map($this->object(['Accommodation', 'FoodEstablishment', 'Hotel', 'HotelRestaurant', 'Restaurant']));
+
+        self::assertNotNull($row);
+        self::assertSame('accommodation', $row['head']);
+        self::assertSame('hotel', $row['category']);
+    }
+
+    #[Test]
     public function ignoresUnsupportedCategories(): void
     {
-        // Food establishments and shops are out of the import scope.
-        self::assertNull($this->mapper->map($this->object(['FoodEstablishment', 'Restaurant'])));
-        self::assertNull($this->mapper->map($this->object(['Store', 'BoutiqueOrLocalShop'])));
+        // A type list with no place/event/food head we map is skipped.
+        self::assertNull($this->mapper->map($this->object(['PlaceOfInterest', 'PointOfInterest'])));
+        self::assertNull($this->mapper->map($this->object(['ServiceProvider', 'ActivityProvider'])));
     }
 
     #[Test]

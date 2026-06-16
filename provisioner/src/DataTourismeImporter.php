@@ -45,12 +45,14 @@ final readonly class DataTourismeImporter
      */
     private const array TABLE_COLUMNS = [
         'cultural_pois' => ['id', 'name', 'category', 'opening_hours', 'description', 'wikidata', 'tags', 'geom'],
+        'food_pois' => ['id', 'name', 'category', 'opening_hours', 'description', 'wikidata', 'tags', 'geom'],
         'accommodations' => ['id', 'name', 'category', 'capacity', 'price', 'description', 'tags', 'geom'],
         'events' => ['id', 'name', 'category', 'start_date', 'end_date', 'url', 'description', 'price_min', 'tags', 'geom'],
     ];
 
     private const array STAGING_DDL = [
         'cultural_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
+        'food_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
         'accommodations' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, capacity int, price numeric(10, 2), description text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
         'events' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, start_date date, end_date date, url text, description text, price_min numeric(10, 2), tags jsonb, geom geometry(Point, 4326) NOT NULL',
     ];
@@ -152,7 +154,7 @@ final readonly class DataTourismeImporter
             $files[$table] = $path;
         }
 
-        $heads = ['cultural' => 'cultural_pois', 'accommodation' => 'accommodations', 'event' => 'events'];
+        $heads = ['cultural' => 'cultural_pois', 'food' => 'food_pois', 'accommodation' => 'accommodations', 'event' => 'events'];
 
         for ($i = 0, $n = $zip->numFiles; $i < $n; ++$i) {
             $name = $zip->getNameIndex($i);
@@ -204,7 +206,7 @@ final readonly class DataTourismeImporter
         $tags = json_encode(['type' => $row['type']], \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}';
 
         $values = match ($table) {
-            'cultural_pois' => [$row['id'], $row['name'], $row['category'], $row['openingHours'], $row['description'], $row['wikidata'], $tags, $geom],
+            'cultural_pois', 'food_pois' => [$row['id'], $row['name'], $row['category'], $row['openingHours'], $row['description'], $row['wikidata'], $tags, $geom],
             'accommodations' => [$row['id'], $row['name'], $row['category'], $row['capacity'], $row['price'], $row['description'], $tags, $geom],
             'events' => [$row['id'], $row['name'], $row['category'], $row['startDate'], $row['endDate'], null, $row['description'], $row['price'], $tags, $geom],
             default => [],

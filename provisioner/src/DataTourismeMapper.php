@@ -15,7 +15,7 @@ namespace Provisioner;
  * runtime REST API shape, so this is a flux-specific mapper. The raw type list
  * is preserved in the row's tags so nothing is lost.
  *
- * @phpstan-type Row array{head: 'cultural'|'accommodation'|'event', id: string, name: string|null, category: string, lat: float, lon: float, description: string|null, openingHours: string|null, wikidata: string|null, capacity: int|null, price: float|null, startDate: string|null, endDate: string|null, type: list<string>}
+ * @phpstan-type Row array{head: 'cultural'|'accommodation'|'event'|'food', id: string, name: string|null, category: string, lat: float, lon: float, description: string|null, openingHours: string|null, wikidata: string|null, capacity: int|null, price: float|null, startDate: string|null, endDate: string|null, type: list<string>}
  */
 final class DataTourismeMapper
 {
@@ -43,6 +43,28 @@ final class DataTourismeMapper
         'ParkAndGarden' => 'viewpoint', 'Forest' => 'viewpoint', 'Beach' => 'viewpoint', 'Lake' => 'viewpoint',
         'Dune' => 'viewpoint', 'Glacier' => 'viewpoint', 'CaveSinkholeOrAven' => 'viewpoint', 'Source' => 'viewpoint',
     ];
+
+    /**
+     * Food establishment / food shop subtype (unprefixed ontology type) → app
+     * resupply category (must stay within ScanPoisHandler::RESUPPLY_CATEGORIES).
+     */
+    private const array FOOD_CATEGORY = [
+        'FastFoodRestaurant' => 'fast_food', 'StreetFood' => 'fast_food',
+        'BarOrPub' => 'bar', 'BistroOrWineBar' => 'bar',
+        'CafeOrTeahouse' => 'cafe',
+        'Bakery' => 'bakery',
+        'Restaurant' => 'restaurant', 'GourmetRestaurant' => 'restaurant',
+        'BrasserieOrTavern' => 'restaurant', 'FarmhouseInn' => 'restaurant',
+        'LocalProductsShop' => 'farm',
+    ];
+
+    /**
+     * Store subtypes that are food/resupply relevant. A `Store` without one of
+     * these is skipped: DataTourisme tags many non-food businesses as Store
+     * (boutiques, craftsmen, parking, taxis, tourist offices), which carry no
+     * resupply value and would pollute the supply timeline.
+     */
+    private const array FOOD_STORE_TYPES = ['Bakery', 'LocalProductsShop'];
 
     /** Event subtype (unprefixed ontology type) → app event category. */
     private const array EVENT_CATEGORY = [
@@ -104,7 +126,7 @@ final class DataTourismeMapper
     /**
      * @param list<string> $types
      *
-     * @return array{'cultural'|'accommodation'|'event'|null, string}
+     * @return array{'cultural'|'accommodation'|'event'|'food'|null, string}
      */
     private function classify(array $types): array
     {
@@ -113,12 +135,22 @@ final class DataTourismeMapper
             return ['event', $this->resolve($types, self::EVENT_CATEGORY, 'event')];
         }
 
+        // Accommodation before food: a HotelRestaurant is primarily lodging.
         if (\in_array('Accommodation', $types, true)) {
             return ['accommodation', $this->resolve($types, self::ACCOMMODATION_CATEGORY, 'apartment')];
         }
 
         if (\in_array('CulturalSite', $types, true) || \in_array('NaturalHeritage', $types, true)) {
             return ['cultural', $this->resolve($types, self::CULTURAL_CATEGORY, 'attraction')];
+        }
+
+        // Eateries (any FoodEstablishment) and food shops (Store with a food subtype).
+        if (\in_array('FoodEstablishment', $types, true)) {
+            return ['food', $this->resolve($types, self::FOOD_CATEGORY, 'restaurant')];
+        }
+
+        if (\in_array('Store', $types, true) && [] !== array_intersect(self::FOOD_STORE_TYPES, $types)) {
+            return ['food', $this->resolve($types, self::FOOD_CATEGORY, 'general')];
         }
 
         return [null, ''];
