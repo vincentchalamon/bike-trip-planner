@@ -141,7 +141,7 @@ Rules are executed in priority order (lower = higher priority):
 | **Cultural POI** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Museum, monument, castle, church, viewpoint, or attraction within 500 m of route — enriched with opening hours, price and description when sourced from DataTourisme |
 | **Railway station** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | No train station within 10 km of a stage endpoint (emergency evacuation) |
 | **Health services** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | No pharmacy, hospital, or clinic within 15 km of a stage |
-| **Border crossing** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Route crosses an international border (country change detected via Overpass is_in) |
+| **Border crossing** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Route crosses an international border (country change detected via the local PostGIS admin-boundary index) |
 
 **Terrain rules** (Continuity, Elevation, Steep gradient, Surface, Traffic, E-bike range, Sunset, Rest day) implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`. Rules with `--` priority (Calendar, Wind + Comfort, Bike shops, Resupply, Accommodation, Water points, Cultural POI, Railway station, Health services, Border crossing) are separate async Symfony Message handlers; Comfort is co-located with Wind inside `AnalyzeWindHandler`.
 
@@ -154,7 +154,7 @@ Rules are executed in priority order (lower = higher priority):
 Browser (Next.js 16)           PHP Backend (API Platform 4.3)
   Zustand + Immer (in-memory)    Stateless computation
   Zod validation                 GPX parsing + pacing engine
-  openapi-fetch (typed)          OSM Overpass + weather APIs
+  openapi-fetch (typed)          Local PostGIS reference index + weather
   Mercure SSE (real-time)  <--   Async workers (Symfony Messenger)
                                  Redis cache + Mercure publisher
 ```
@@ -207,7 +207,7 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 
 ### OpenStreetMap
 
-All geographic and infrastructure data is sourced from [OpenStreetMap](https://www.openstreetmap.org) via the public Overpass API. OSM data is cached in Redis for 24 hours per query.
+All geographic and infrastructure data is derived from [OpenStreetMap](https://www.openstreetmap.org). The provisioner imports OSM extracts into a local PostGIS reference index that the API queries directly with spatial predicates (`ST_DWithin` / `ST_Covers`); there is no runtime Overpass dependency. See [ADR-040](docs/adr/adr-040-local-first-reference-data-postgis.md).
 
 **Licence:** [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) — attribution required: "© OpenStreetMap contributors".
 

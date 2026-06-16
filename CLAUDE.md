@@ -73,7 +73,7 @@ Commit messages **must** follow [Conventional Commits](https://www.conventionalc
 ```
 
 - **Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
-- **Scopes** (optional): subsystem or area, e.g. `feat(overpass):`, `fix(pacing):`, `chore(deps):`
+- **Scopes** (optional): subsystem or area, e.g. `feat(datatourisme):`, `fix(pacing):`, `chore(deps):`
 - **Description:** imperative mood, lowercase, no trailing period
 - Breaking changes: add `!` after type/scope, e.g. `feat!: remove legacy endpoint`
 

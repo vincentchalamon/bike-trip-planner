@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-04-09
 - **Supersedes:** ADR-017 §17.1 (Overpass Docker service), §17.4 (Overpass fallback strategy), §17.5 (OSM data update strategy), ADR-020 (Dynamic Overpass Region Provisioning)
+- **Partially superseded by:** [ADR-040](adr-040-local-first-reference-data-postgis.md) — the public Overpass runtime this kept is removed; OSM features now come from a local PostGIS index imported by the provisioner.
 
 ## Context and Problem Statement
 
