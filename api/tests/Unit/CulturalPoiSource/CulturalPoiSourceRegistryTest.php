@@ -6,11 +6,24 @@ namespace App\Tests\Unit\CulturalPoiSource;
 
 use App\CulturalPoiSource\CulturalPoiSourceInterface;
 use App\CulturalPoiSource\CulturalPoiSourceRegistry;
+use App\Geo\GeoDistanceInterface;
+use App\Geo\NearbyNameDeduplicator;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 final class CulturalPoiSourceRegistryTest extends TestCase
 {
+    private NearbyNameDeduplicator $deduplicator;
+
+    protected function setUp(): void
+    {
+        // A large constant distance so only the wikidata key dedups here; the
+        // proximity+name pass is exercised in NearbyNameDeduplicatorTest.
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inMeters')->willReturn(100_000.0);
+        $this->deduplicator = new NearbyNameDeduplicator($haversine);
+    }
+
     /**
      * @return list<list<array{lat: float, lon: float}>>
      */
@@ -21,23 +34,30 @@ final class CulturalPoiSourceRegistryTest extends TestCase
         ];
     }
 
+    /**
+     * @param list<CulturalPoiSourceInterface> $sources
+     */
+    private function registry(array $sources): CulturalPoiSourceRegistry
+    {
+        return new CulturalPoiSourceRegistry($sources, $this->deduplicator);
+    }
+
     #[Test]
     public function fetchAllForStagesMergesResultsFromEnabledSources(): void
     {
         $sourceA = $this->createStub(CulturalPoiSourceInterface::class);
         $sourceA->method('isEnabled')->willReturn(true);
         $sourceA->method('fetchForStages')->willReturn([
-            ['name' => 'Museum A', 'type' => 'museum', 'lat' => 48.1, 'lon' => 2.1, 'source' => 'osm'],
+            ['name' => 'Museum A', 'type' => 'museum', 'lat' => 48.1, 'lon' => 2.1, 'source' => 'osm', 'wikidataId' => null, 'openingHours' => null, 'estimatedPrice' => null, 'description' => null],
         ]);
 
         $sourceB = $this->createStub(CulturalPoiSourceInterface::class);
         $sourceB->method('isEnabled')->willReturn(true);
         $sourceB->method('fetchForStages')->willReturn([
-            ['name' => 'Museum B', 'type' => 'museum', 'lat' => 48.2, 'lon' => 2.2, 'source' => 'datatourisme'],
+            ['name' => 'Museum B', 'type' => 'museum', 'lat' => 48.2, 'lon' => 2.2, 'source' => 'datatourisme', 'wikidataId' => null, 'openingHours' => null, 'estimatedPrice' => null, 'description' => null],
         ]);
 
-        $registry = new CulturalPoiSourceRegistry([$sourceA, $sourceB]);
-        $result = $registry->fetchAllForStages($this->stageGeometries(), 500);
+        $result = $this->registry([$sourceA, $sourceB])->fetchAllForStages($this->stageGeometries(), 500);
 
         self::assertCount(2, $result);
         self::assertSame('Museum A', $result[0]['name']);
@@ -50,15 +70,14 @@ final class CulturalPoiSourceRegistryTest extends TestCase
         $enabled = $this->createStub(CulturalPoiSourceInterface::class);
         $enabled->method('isEnabled')->willReturn(true);
         $enabled->method('fetchForStages')->willReturn([
-            ['name' => 'Active POI', 'type' => 'museum', 'lat' => 48.1, 'lon' => 2.1, 'source' => 'osm'],
+            ['name' => 'Active POI', 'type' => 'museum', 'lat' => 48.1, 'lon' => 2.1, 'source' => 'osm', 'wikidataId' => null, 'openingHours' => null, 'estimatedPrice' => null, 'description' => null],
         ]);
 
         $disabled = $this->createMock(CulturalPoiSourceInterface::class);
         $disabled->method('isEnabled')->willReturn(false);
         $disabled->expects($this->never())->method('fetchForStages');
 
-        $registry = new CulturalPoiSourceRegistry([$enabled, $disabled]);
-        $result = $registry->fetchAllForStages($this->stageGeometries(), 500);
+        $result = $this->registry([$enabled, $disabled])->fetchAllForStages($this->stageGeometries(), 500);
 
         self::assertCount(1, $result);
     }
@@ -66,10 +85,7 @@ final class CulturalPoiSourceRegistryTest extends TestCase
     #[Test]
     public function emptySourcesReturnsEmptyArray(): void
     {
-        $registry = new CulturalPoiSourceRegistry([]);
-        $result = $registry->fetchAllForStages($this->stageGeometries(), 500);
-
-        self::assertSame([], $result);
+        self::assertSame([], $this->registry([])->fetchAllForStages($this->stageGeometries(), 500));
     }
 
     #[Test]
@@ -82,8 +98,7 @@ final class CulturalPoiSourceRegistryTest extends TestCase
             ->with($this->stageGeometries(), 1000)
             ->willReturn([]);
 
-        $registry = new CulturalPoiSourceRegistry([$source]);
-        $registry->fetchAllForStages($this->stageGeometries(), 1000);
+        $this->registry([$source])->fetchAllForStages($this->stageGeometries(), 1000);
     }
 
     #[Test]
@@ -105,8 +120,7 @@ final class CulturalPoiSourceRegistryTest extends TestCase
                 'openingHours' => 'Mon–Sun 09:00–18:00', 'estimatedPrice' => 17.0, 'description' => null],
         ]);
 
-        $registry = new CulturalPoiSourceRegistry([$osm, $dt]);
-        $result = $registry->fetchAllForStages($this->stageGeometries(), 500);
+        $result = $this->registry([$osm, $dt])->fetchAllForStages($this->stageGeometries(), 500);
 
         self::assertCount(1, $result);
         self::assertSame('datatourisme', $result[0]['source']);
@@ -125,8 +139,7 @@ final class CulturalPoiSourceRegistryTest extends TestCase
                 'openingHours' => null, 'estimatedPrice' => null, 'description' => null],
         ]);
 
-        $registry = new CulturalPoiSourceRegistry([$source]);
-        $result = $registry->fetchAllForStages($this->stageGeometries(), 500);
+        $result = $this->registry([$source])->fetchAllForStages($this->stageGeometries(), 500);
 
         self::assertCount(2, $result);
     }

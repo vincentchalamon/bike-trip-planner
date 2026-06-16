@@ -7,29 +7,46 @@ namespace App\Tests\Unit\AccommodationSource;
 use App\AccommodationSource\AccommodationSourceInterface;
 use App\AccommodationSource\AccommodationSourceRegistry;
 use App\ApiResource\Model\Coordinate;
+use App\Geo\GeoDistanceInterface;
+use App\Geo\NearbyNameDeduplicator;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 final class AccommodationSourceRegistryTest extends TestCase
 {
+    private NearbyNameDeduplicator $deduplicator;
+
+    protected function setUp(): void
+    {
+        // Large constant distance: distinct-name candidates never dedup here; the
+        // proximity+name pass is covered in NearbyNameDeduplicatorTest.
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inMeters')->willReturn(100_000.0);
+        $this->deduplicator = new NearbyNameDeduplicator($haversine);
+    }
+
+    /**
+     * @param list<AccommodationSourceInterface> $sources
+     */
+    private function registry(array $sources): AccommodationSourceRegistry
+    {
+        return new AccommodationSourceRegistry($sources, $this->deduplicator);
+    }
+
     #[Test]
     public function fetchAllConcatenatesResultsFromAllEnabledSources(): void
     {
         $endPoints = [new Coordinate(48.5, 2.5)];
 
-        $candidateA = $this->makeCandidate('Hotel A', 'osm');
-        $candidateB = $this->makeCandidate('Hotel B', 'datatourisme');
-
         $sourceA = $this->createStub(AccommodationSourceInterface::class);
         $sourceA->method('isEnabled')->willReturn(true);
-        $sourceA->method('fetch')->willReturn([$candidateA]);
+        $sourceA->method('fetch')->willReturn([$this->makeCandidate('Hotel A', 'osm')]);
 
         $sourceB = $this->createStub(AccommodationSourceInterface::class);
         $sourceB->method('isEnabled')->willReturn(true);
-        $sourceB->method('fetch')->willReturn([$candidateB]);
+        $sourceB->method('fetch')->willReturn([$this->makeCandidate('Hotel B', 'datatourisme')]);
 
-        $registry = new AccommodationSourceRegistry([$sourceA, $sourceB]);
-        $results = $registry->fetchAll($endPoints, 5000, ['hotel']);
+        $results = $this->registry([$sourceA, $sourceB])->fetchAll($endPoints, 5000, ['hotel']);
 
         $this->assertCount(2, $results);
         $this->assertSame('Hotel A', $results[0]['name']);
@@ -41,18 +58,15 @@ final class AccommodationSourceRegistryTest extends TestCase
     {
         $endPoints = [new Coordinate(48.5, 2.5)];
 
-        $candidateA = $this->makeCandidate('Hotel A', 'osm');
-
         $sourceA = $this->createStub(AccommodationSourceInterface::class);
         $sourceA->method('isEnabled')->willReturn(true);
-        $sourceA->method('fetch')->willReturn([$candidateA]);
+        $sourceA->method('fetch')->willReturn([$this->makeCandidate('Hotel A', 'osm')]);
 
         $sourceB = $this->createMock(AccommodationSourceInterface::class);
         $sourceB->method('isEnabled')->willReturn(false);
         $sourceB->expects($this->never())->method('fetch');
 
-        $registry = new AccommodationSourceRegistry([$sourceA, $sourceB]);
-        $results = $registry->fetchAll($endPoints, 5000, ['hotel']);
+        $results = $this->registry([$sourceA, $sourceB])->fetchAll($endPoints, 5000, ['hotel']);
 
         $this->assertCount(1, $results);
         $this->assertSame('Hotel A', $results[0]['name']);
@@ -64,8 +78,7 @@ final class AccommodationSourceRegistryTest extends TestCase
         $source = $this->createStub(AccommodationSourceInterface::class);
         $source->method('isEnabled')->willReturn(false);
 
-        $registry = new AccommodationSourceRegistry([$source]);
-        $results = $registry->fetchAll([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
+        $results = $this->registry([$source])->fetchAll([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
 
         $this->assertSame([], $results);
     }
@@ -73,10 +86,7 @@ final class AccommodationSourceRegistryTest extends TestCase
     #[Test]
     public function fetchAllReturnsEmptyArrayWhenNoSources(): void
     {
-        $registry = new AccommodationSourceRegistry([]);
-        $results = $registry->fetchAll([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
-
-        $this->assertSame([], $results);
+        $this->assertSame([], $this->registry([])->fetchAll([new Coordinate(48.5, 2.5)], 5000, ['hotel']));
     }
 
     #[Test]
@@ -93,8 +103,36 @@ final class AccommodationSourceRegistryTest extends TestCase
             ->with($endPoints, $radiusMeters, $enabledTypes)
             ->willReturn([]);
 
-        $registry = new AccommodationSourceRegistry([$source]);
-        $registry->fetchAll($endPoints, $radiusMeters, $enabledTypes);
+        $this->registry([$source])->fetchAll($endPoints, $radiusMeters, $enabledTypes);
+    }
+
+    #[Test]
+    public function deduplicatesTheSameNameWithinProximityPreferringDataTourisme(): void
+    {
+        // Real proximity check: same name + same coordinates → one entry, DataTourisme wins.
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inMeters')->willReturn(10.0);
+        $registry = new AccommodationSourceRegistry(
+            [$this->sourceReturning($this->makeCandidate('Camping du Lac', 'osm')), $this->sourceReturning($this->makeCandidate('Camping du Lac', 'datatourisme'))],
+            new NearbyNameDeduplicator($haversine),
+        );
+
+        $results = $registry->fetchAll([new Coordinate(48.5, 2.5)], 5000, ['camp_site']);
+
+        $this->assertCount(1, $results);
+        $this->assertSame('datatourisme', $results[0]['source']);
+    }
+
+    /**
+     * @param array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string} $candidate
+     */
+    private function sourceReturning(array $candidate): AccommodationSourceInterface
+    {
+        $source = $this->createStub(AccommodationSourceInterface::class);
+        $source->method('isEnabled')->willReturn(true);
+        $source->method('fetch')->willReturn([$candidate]);
+
+        return $source;
     }
 
     /**
