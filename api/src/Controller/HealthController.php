@@ -224,6 +224,13 @@ final readonly class HealthController
                 'latency_ms' => $this->elapsedMs($start),
                 'error' => $this->sanitizeError($throwable),
             ];
+        } finally {
+            // Reset the per-check ceiling so a persistent connection (FrankenPHP
+            // worker mode) does not inherit the 1s limit on later queries.
+            try {
+                $this->connection->executeStatement('RESET statement_timeout');
+            } catch (\Throwable) {
+            }
         }
     }
 
