@@ -39,7 +39,8 @@ final readonly class DataTourismeImporter
 
     /**
      * Target tables and their COPY column order. `geom` always comes last and is
-     * fed EWKT. Must match Version20260616120000 (the live-schema bootstrap).
+     * fed EWKT. Must match Version20260616120000 / Version20260616140000 (the
+     * live-schema bootstraps).
      *
      * @var array<string, list<string>>
      */

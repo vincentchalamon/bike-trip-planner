@@ -130,6 +130,11 @@ final class DataTourismeMapperTest extends TestCase
         $bare = $this->mapper->map($this->object(['FoodEstablishment', 'PlaceOfInterest']));
         self::assertNotNull($bare);
         self::assertSame('restaurant', $bare['category']);
+
+        // CulturalSite wins over FoodEstablishment (cultural check runs first in classify()).
+        $cultural = $this->mapper->map($this->object(['CulturalSite', 'FoodEstablishment', 'Restaurant']));
+        self::assertNotNull($cultural);
+        self::assertSame('cultural', $cultural['head']);
     }
 
     #[Test]
