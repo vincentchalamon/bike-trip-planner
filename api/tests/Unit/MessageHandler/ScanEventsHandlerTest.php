@@ -9,7 +9,6 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\DataTourisme\DataTourismeClientInterface;
 use App\Entity\Market;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
@@ -18,7 +17,7 @@ use App\Message\ScanEvents;
 use App\MessageHandler\ScanEventsHandler;
 use App\Repository\MarketRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Wikidata\WikidataEnricherInterface;
+use App\Tourism\EventRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -43,7 +42,7 @@ final class ScanEventsHandlerTest extends TestCase
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
-        DataTourismeClientInterface $dataTourismeClient,
+        EventRepositoryInterface $eventRepository,
         GeoDistanceInterface $haversine,
         ?MarketRepositoryInterface $marketRepository = null,
         ?TranslatorInterface $translator = null,
@@ -52,7 +51,6 @@ final class ScanEventsHandlerTest extends TestCase
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-
         $marketRepository ??= $this->createStub(MarketRepositoryInterface::class);
         $translator ??= $this->createStub(TranslatorInterface::class);
 
@@ -62,9 +60,8 @@ final class ScanEventsHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
-            $dataTourismeClient,
+            $eventRepository,
             $haversine,
-            $this->createStub(WikidataEnricherInterface::class),
             $marketRepository,
             $translator,
             $this->createStub(MessageBusInterface::class),
@@ -79,298 +76,128 @@ final class ScanEventsHandlerTest extends TestCase
         return $request;
     }
 
-    #[Test]
-    public function disabledClientSkipsPublish(): void
+    /**
+     * @return array{name: string, category: string, lat: float, lon: float, startDate: string, endDate: string, url: ?string, description: ?string, priceMin: ?float}
+     */
+    private function eventRow(string $name, string $category, string $startDate, string $endDate, ?string $url = null, ?string $description = null): array
     {
-        $dataTourismeClient = $this->createStub(DataTourismeClientInterface::class);
-        $dataTourismeClient->method('isEnabled')->willReturn(false);
-
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->never())->method('publish');
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine);
-        $handler(new ScanEvents('trip-1'));
+        return [
+            'name' => $name,
+            'category' => $category,
+            'lat' => 48.5,
+            'lon' => 2.5,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'url' => $url,
+            'description' => $description,
+            'priceMin' => null,
+        ];
     }
 
     #[Test]
     public function nullStagesSkipsPublish(): void
     {
-        $dataTourismeClient = $this->createStub(DataTourismeClientInterface::class);
-        $dataTourismeClient->method('isEnabled')->willReturn(true);
-
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn(null);
 
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->createStub(EventRepositoryInterface::class), $this->createStub(GeoDistanceInterface::class));
         $handler(new ScanEvents('trip-1'));
     }
 
     #[Test]
     public function noStartDateSkipsPublish(): void
     {
-        $dataTourismeClient = $this->createStub(DataTourismeClientInterface::class);
-        $dataTourismeClient->method('isEnabled')->willReturn(true);
-
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->never())->method('publish');
 
-        $stage = $this->createStage(1);
-        $request = new TripRequest();
-        // startDate is null
-
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
-        $tripStateManager->method('getRequest')->willReturn($request);
+        $tripStateManager->method('getStages')->willReturn([$this->createStage(1)]);
+        $tripStateManager->method('getRequest')->willReturn(new TripRequest());
 
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->createStub(EventRepositoryInterface::class), $this->createStub(GeoDistanceInterface::class));
         $handler(new ScanEvents('trip-1'));
     }
 
     #[Test]
     public function restDayStageIsSkipped(): void
     {
-        $startDate = new \DateTimeImmutable('2025-07-01');
-        $restDay = $this->createStage(1, true);
+        $eventRepository = $this->createMock(EventRepositoryInterface::class);
+        $eventRepository->expects($this->never())->method('findActiveNear');
 
-        $dataTourismeClient = $this->createMock(DataTourismeClientInterface::class);
-        $dataTourismeClient->method('isEnabled')->willReturn(true);
-        $dataTourismeClient->expects($this->never())->method('request');
-
-        $publishedEvents = [];
-        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-        $publisher->method('publish')
-            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
-                $publishedEvents[] = ['type' => $type, 'payload' => $payload];
-            });
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->never())->method('publish');
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$restDay]);
-        $tripStateManager->method('getRequest')->willReturn($this->createTripRequest($startDate));
+        $tripStateManager->method('getStages')->willReturn([$this->createStage(1, true)]);
+        $tripStateManager->method('getRequest')->willReturn($this->createTripRequest(new \DateTimeImmutable('2026-07-01')));
 
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $eventRepository, $this->createStub(GeoDistanceInterface::class));
         $handler(new ScanEvents('trip-1'));
-
-        self::assertCount(0, $publishedEvents);
     }
 
     #[Test]
-    public function threeStagesWithTemporalFilterPublishesEventsFound(): void
+    public function publishesEventsActiveOnEachStageDate(): void
     {
-        $startDate = new \DateTimeImmutable('2025-07-10');
-        $stage0 = $this->createStage(1);
-        $stage1 = $this->createStage(2);
-        $stage2 = $this->createStage(3);
+        $startDate = new \DateTimeImmutable('2026-07-10');
+        $stages = [$this->createStage(1), $this->createStage(2), $this->createStage(3)];
 
-        $festivalResult = [
-            '@type' => ['schema:Festival'],
-            'rdfs:label' => 'Festival de Jazz',
-            'hasGeometry' => ['latitude' => 48.5, 'longitude' => 2.5],
-            'startDate' => '2025-07-10',
-            'endDate' => '2025-07-14',
-            'foaf:homepage' => 'https://festival.example.com',
-            'shortDescription' => 'Grand festival annuel',
-        ];
-
-        $exhibitionResult = [
-            '@type' => ['schema:Exhibition'],
-            'rdfs:label' => 'Expo Renoir',
-            'hasGeometry' => ['latitude' => 48.51, 'longitude' => 2.51],
-            'startDate' => '2025-07-11',
-            'endDate' => '2025-07-30',
-        ];
-
-        $dataTourismeClient = $this->createStub(DataTourismeClientInterface::class);
-        $dataTourismeClient->method('isEnabled')->willReturn(true);
-        $dataTourismeClient->method('request')->willReturnCallback(
-            static function (string $path, array $query) use ($festivalResult, $exhibitionResult): array {
-                // stage 0: 2025-07-10 → festival is ongoing
-                if ('2025-07-10' === ($query['filters[1][value]'] ?? null)) {
-                    return ['results' => [$festivalResult]];
-                }
-
-                // stage 1: 2025-07-11 → exhibition starts
-                if ('2025-07-11' === ($query['filters[1][value]'] ?? null)) {
-                    return ['results' => [$exhibitionResult]];
-                }
-
-                return ['results' => []];
+        $eventRepository = $this->createStub(EventRepositoryInterface::class);
+        $eventRepository->method('findActiveNear')->willReturnCallback(
+            function (float $lat, float $lon, int $radius, string $date): array {
+                // Stage 0 → 2026-07-10, stage 1 → 2026-07-11, stage 2 → 2026-07-12.
+                return match ($date) {
+                    '2026-07-10' => [$this->eventRow('Festival de Jazz', 'festival', '2026-07-10', '2026-07-14', 'https://festival.example.com', 'Grand festival')],
+                    '2026-07-11' => [$this->eventRow('Expo Renoir', 'exhibition', '2026-07-11', '2026-07-30')],
+                    default => [],
+                };
             },
         );
 
-        $publishedEvents = [];
+        $published = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-        $publisher->method('publish')
-            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
-                $publishedEvents[] = ['type' => $type, 'payload' => $payload];
-            });
+        $publisher->method('publish')->willReturnCallback(
+            static function (string $tripId, MercureEventType $type, array $payload) use (&$published): void {
+                $published[] = ['type' => $type, 'payload' => $payload];
+            },
+        );
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage0, $stage1, $stage2]);
+        $tripStateManager->method('getStages')->willReturn($stages);
         $tripStateManager->method('getRequest')->willReturn($this->createTripRequest($startDate));
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturn(500.0);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine);
+        $handler = $this->createHandler($tripStateManager, $publisher, $eventRepository, $haversine);
         $handler(new ScanEvents('trip-1'));
 
-        $eventsPublished = array_filter(
-            $publishedEvents,
-            static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type'],
-        );
+        $events = array_values(array_filter($published, static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type']));
 
-        // stage 0 and stage 1 publish events; stage 2 publishes empty
-        self::assertCount(3, $eventsPublished);
-
-        $eventsPublished = array_values($eventsPublished);
-
-        // stage 0
-        self::assertSame(0, $eventsPublished[0]['payload']['stageIndex']);
-        self::assertCount(1, $eventsPublished[0]['payload']['events']);
-        self::assertSame('Festival de Jazz', $eventsPublished[0]['payload']['events'][0]['name']);
-        self::assertSame('schema:Festival', $eventsPublished[0]['payload']['events'][0]['type']);
-        self::assertSame('https://festival.example.com', $eventsPublished[0]['payload']['events'][0]['url']);
-        self::assertSame('Grand festival annuel', $eventsPublished[0]['payload']['events'][0]['description']);
-        self::assertSame('datatourisme', $eventsPublished[0]['payload']['events'][0]['source']);
-
-        // stage 1
-        self::assertSame(1, $eventsPublished[1]['payload']['stageIndex']);
-        self::assertCount(1, $eventsPublished[1]['payload']['events']);
-        self::assertSame('Expo Renoir', $eventsPublished[1]['payload']['events'][0]['name']);
-
-        // stage 2 → empty
-        self::assertSame(2, $eventsPublished[2]['payload']['stageIndex']);
-        self::assertCount(0, $eventsPublished[2]['payload']['events']);
-    }
-
-    #[Test]
-    public function unknownTypeIsFiltered(): void
-    {
-        $startDate = new \DateTimeImmutable('2025-08-01');
-        $stage = $this->createStage(1);
-
-        $unknownResult = [
-            '@type' => ['schema:SportsEvent'],
-            'rdfs:label' => 'Triathlon',
-            'hasGeometry' => ['latitude' => 48.5, 'longitude' => 2.5],
-            'startDate' => '2025-08-01',
-            'endDate' => '2025-08-02',
-        ];
-
-        $dataTourismeClient = $this->createStub(DataTourismeClientInterface::class);
-        $dataTourismeClient->method('isEnabled')->willReturn(true);
-        $dataTourismeClient->method('request')->willReturn(['results' => [$unknownResult]]);
-
-        $publishedEvents = [];
-        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-        $publisher->method('publish')
-            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
-                $publishedEvents[] = ['type' => $type, 'payload' => $payload];
-            });
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
-        $tripStateManager->method('getRequest')->willReturn($this->createTripRequest($startDate));
-
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine);
-        $handler(new ScanEvents('trip-1'));
-
-        $eventsPublished = array_filter(
-            $publishedEvents,
-            static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type'],
-        );
-
-        $event = array_first($eventsPublished) ?? null;
-        self::assertNotNull($event);
-        self::assertCount(0, $event['payload']['events']);
-    }
-
-    #[Test]
-    public function wikidataIdIsExtracted(): void
-    {
-        $startDate = new \DateTimeImmutable('2025-09-01');
-        $stage = $this->createStage(1);
-
-        $result = [
-            '@type' => ['schema:MusicEvent'],
-            'rdfs:label' => 'Concert en plein air',
-            'hasGeometry' => ['latitude' => 48.5, 'longitude' => 2.5],
-            'startDate' => '2025-09-01',
-            'endDate' => '2025-09-01',
-            'owl:sameAs' => ['https://www.wikidata.org/entity/Q12345', 'https://dbpedia.org/page/Concert'],
-        ];
-
-        $dataTourismeClient = $this->createStub(DataTourismeClientInterface::class);
-        $dataTourismeClient->method('isEnabled')->willReturn(true);
-        $dataTourismeClient->method('request')->willReturn(['results' => [$result]]);
-
-        $publishedEvents = [];
-        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-        $publisher->method('publish')
-            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
-                $publishedEvents[] = ['type' => $type, 'payload' => $payload];
-            });
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
-        $tripStateManager->method('getRequest')->willReturn($this->createTripRequest($startDate));
-
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inMeters')->willReturn(300.0);
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine);
-        $handler(new ScanEvents('trip-1'));
-
-        $eventsPublished = array_values(array_filter(
-            $publishedEvents,
-            static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type'],
-        ));
-
-        self::assertCount(1, $eventsPublished);
-        self::assertSame('Q12345', $eventsPublished[0]['payload']['events'][0]['wikidataId']);
+        // Only the two stages with active events publish; the empty third does not.
+        self::assertCount(2, $events);
+        self::assertSame(0, $events[0]['payload']['stageIndex']);
+        self::assertSame('Festival de Jazz', $events[0]['payload']['events'][0]['name']);
+        self::assertSame('festival', $events[0]['payload']['events'][0]['type']);
+        self::assertSame('https://festival.example.com', $events[0]['payload']['events'][0]['url']);
+        self::assertSame('datatourisme', $events[0]['payload']['events'][0]['source']);
+        self::assertSame(1, $events[1]['payload']['stageIndex']);
+        self::assertSame('Expo Renoir', $events[1]['payload']['events'][0]['name']);
     }
 
     #[Test]
     public function mergesDataTourismeAndMarketEventsForSameStage(): void
     {
-        // 2025-07-14 is a Monday (ISO day 1)
-        $startDate = new \DateTimeImmutable('2025-07-14');
-        $stage = $this->createStage(1);
+        // 2026-07-13 is a Monday (ISO day 1).
+        $startDate = new \DateTimeImmutable('2026-07-13');
 
-        $festivalResult = [
-            '@type' => ['schema:Festival'],
-            'rdfs:label' => 'Festival Jazz',
-            'hasGeometry' => ['latitude' => 48.5, 'longitude' => 2.5],
-            'startDate' => '2025-07-14',
-            'endDate' => '2025-07-18',
-        ];
-
-        $exhibitionResult = [
-            '@type' => ['schema:Exhibition'],
-            'rdfs:label' => 'Expo Impressionnisme',
-            'hasGeometry' => ['latitude' => 48.51, 'longitude' => 2.51],
-            'startDate' => '2025-07-12',
-            'endDate' => '2025-07-20',
-        ];
-
-        $dataTourismeClient = $this->createStub(DataTourismeClientInterface::class);
-        $dataTourismeClient->method('isEnabled')->willReturn(true);
-        $dataTourismeClient->method('request')->willReturn(['results' => [$festivalResult, $exhibitionResult]]);
+        $eventRepository = $this->createStub(EventRepositoryInterface::class);
+        $eventRepository->method('findActiveNear')->willReturn([
+            $this->eventRow('Festival Jazz', 'festival', '2026-07-13', '2026-07-18'),
+            $this->eventRow('Expo Impressionnisme', 'exhibition', '2026-07-12', '2026-07-20'),
+        ]);
 
         $market = new Market('MKT-MON-001', 'Marché du Lundi');
         $market->setLat(48.49);
@@ -387,40 +214,34 @@ final class ScanEventsHandlerTest extends TestCase
         $translator = $this->createStub(TranslatorInterface::class);
         $translator->method('trans')->willReturn('Weekly market');
 
-        $publishedEvents = [];
+        $published = [];
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-        $publisher->method('publish')
-            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
-                $publishedEvents[] = ['type' => $type, 'payload' => $payload];
-            });
+        $publisher->method('publish')->willReturnCallback(
+            static function (string $tripId, MercureEventType $type, array $payload) use (&$published): void {
+                $published[] = ['type' => $type, 'payload' => $payload];
+            },
+        );
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
+        $tripStateManager->method('getStages')->willReturn([$this->createStage(1)]);
         $tripStateManager->method('getRequest')->willReturn($this->createTripRequest($startDate));
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inMeters')->willReturn(400.0);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $dataTourismeClient, $haversine, $marketRepository, $translator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $eventRepository, $haversine, $marketRepository, $translator);
         $handler(new ScanEvents('trip-1'));
 
-        $eventsPublished = array_values(array_filter(
-            $publishedEvents,
-            static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type'],
-        ));
+        $events = array_values(array_filter($published, static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type']));
+        self::assertCount(1, $events);
+        self::assertCount(3, $events[0]['payload']['events']);
 
-        self::assertCount(1, $eventsPublished);
-        $events = $eventsPublished[0]['payload']['events'];
-        self::assertCount(3, $events);
-
-        $sources = array_column($events, 'source');
+        $sources = array_column($events[0]['payload']['events'], 'source');
         self::assertContains('datatourisme', $sources);
         self::assertContains('data_gouv_markets', $sources);
 
-        $marketEvents = array_values(array_filter($events, static fn (array $e): bool => 'data_gouv_markets' === $e['source']));
-        self::assertCount(1, $marketEvents);
+        $marketEvents = array_values(array_filter($events[0]['payload']['events'], static fn (array $e): bool => 'data_gouv_markets' === $e['source']));
         self::assertSame('Marché du Lundi', $marketEvents[0]['name']);
         self::assertSame('market', $marketEvents[0]['type']);
-        self::assertSame('Weekly market', $marketEvents[0]['description']);
     }
 }

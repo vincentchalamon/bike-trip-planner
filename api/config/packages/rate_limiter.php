@@ -37,12 +37,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '60 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
-            'datatourisme' => [
-                'policy' => 'fixed_window',
-                'limit' => 1000,
-                'interval' => '3600 seconds',
-                'cache_pool' => 'cache.rate_limiter',
-            ],
             'trip_chat' => [
                 'policy' => 'sliding_window',
                 'limit' => 20,
