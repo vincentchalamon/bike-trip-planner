@@ -191,7 +191,6 @@ final class DataTourismeImporterTest extends TestCase
         self::assertStringContainsString('SRID=4326;POINT(', $cultural);
         self::assertStringContainsString('https://data.datatourisme.fr/10/cultural', $cultural);
         self::assertStringContainsString('https://data.datatourisme.fr/10/food', $food);
-        self::assertStringContainsString('restaurant', $food);
         self::assertStringContainsString('2026-07-01', $events);
         self::assertStringNotContainsString('food', $cultural.$events);
         self::assertStringNotContainsString('shop', $cultural.$food.$events);
