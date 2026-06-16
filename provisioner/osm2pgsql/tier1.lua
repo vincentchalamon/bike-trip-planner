@@ -5,8 +5,7 @@
 -- the live `osm` schema atomically. The API reads these tables via ST_DWithin
 -- corridor queries, replacing the runtime Overpass dependency.
 --
--- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations, charging_stations, cultural_pois, ways, admin_boundaries. The
--- cycle_routes table lands later.
+-- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations, charging_stations, cultural_pois, ways, admin_boundaries, cycle_routes.
 
 -- MUST match PostgisImporter::STAGING_SCHEMA: osm2pgsql writes the output tables
 -- here, and the importer creates/swaps this exact schema onto the live `osm`.
@@ -213,6 +212,26 @@ local admin_boundaries = osm2pgsql.define_table({
     },
 })
 
+-- Signed cycle routes (relations type=route, route=bicycle: EuroVelo, national
+-- (ncn) / regional (rcn) / local (lcn) networks, voies vertes), stored as
+-- multilinestrings. The API measures how much of a stage follows one (the
+-- "on cycle network" indicator).
+local cycle_routes = osm2pgsql.define_table({
+    name = 'cycle_routes',
+    schema = SCHEMA,
+    ids = { type = 'relation', id_column = 'osm_id' },
+    columns = {
+        { column = 'name', type = 'text' },
+        { column = 'network', type = 'text' },
+        { column = 'ref', type = 'text' },
+        { column = 'tags', type = 'jsonb' },
+        { column = 'geom', type = 'multilinestring', projection = SRID, not_null = true },
+    },
+    indexes = {
+        { column = 'geom', method = 'gist' },
+    },
+})
+
 local function poi_category(tags)
     if tags.amenity and POI_AMENITY[tags.amenity] then return tags.amenity end
     if tags.shop and POI_SHOP[tags.shop] then return tags.shop end
@@ -284,6 +303,11 @@ end
 -- True for country-level administrative boundary relations.
 local function is_country_boundary(tags)
     return tags.boundary == 'administrative' and tags.admin_level == '2'
+end
+
+-- True for signed cycle route relations (EuroVelo / national / regional / local).
+local function is_cycle_route(tags)
+    return tags.type == 'route' and tags.route == 'bicycle'
 end
 
 local function is_relevant(tags)
@@ -436,17 +460,33 @@ function osm2pgsql.process_way(object)
 end
 
 function osm2pgsql.process_relation(object)
-    if not is_country_boundary(object.tags) then return end
+    if is_country_boundary(object.tags) then
+        -- as_multipolygon() builds the area from the boundary's member ways; a
+        -- broken/incomplete relation yields nil and is skipped.
+        local ok, geom = pcall(function() return object:as_multipolygon() end)
+        if not ok or geom == nil then return end
 
-    -- as_multipolygon() builds the area from the boundary's member ways; a
-    -- broken/incomplete relation yields nil and is skipped.
-    local ok, geom = pcall(function() return object:as_multipolygon() end)
-    if not ok or geom == nil then return end
+        admin_boundaries:insert({
+            name = object.tags.name,
+            admin_level = to_int(object.tags.admin_level),
+            tags = object.tags,
+            geom = geom,
+        })
+        return
+    end
 
-    admin_boundaries:insert({
-        name = object.tags.name,
-        admin_level = to_int(object.tags.admin_level),
-        tags = object.tags,
-        geom = geom,
-    })
+    if is_cycle_route(object.tags) then
+        -- as_multilinestring() stitches the route's member ways; a broken
+        -- relation yields nil and is skipped.
+        local ok, geom = pcall(function() return object:as_multilinestring() end)
+        if not ok or geom == nil then return end
+
+        cycle_routes:insert({
+            name = object.tags.name,
+            network = object.tags.network,
+            ref = object.tags.ref,
+            tags = object.tags,
+            geom = geom,
+        })
+    end
 end
