@@ -422,6 +422,10 @@
   "tripLocked": {
     "banner": "This trip is underway or has passed — view only. Use \"Duplicate\" to plan a new variant."
   },
+  "outOfZone": {
+    "banner": "This route lies outside our covered area (France, Belgium, Netherlands, Luxembourg). Distances and points of interest are shown, but the trip can't be edited or re-routed.",
+    "editDisabled": "This trip is outside the covered area and can't be edited."
+  },
   "tripList": {
     "title": "My Trips",
     "newTrip": "New trip",

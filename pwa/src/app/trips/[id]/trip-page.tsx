@@ -41,6 +41,7 @@ function TripLoader({ tripId }: { tripId: string }) {
     (s) => s.setEnabledAccommodationTypes,
   );
   const setIsLocked = useTripStore((s) => s.setIsLocked);
+  const setOutOfZone = useTripStore((s) => s.setOutOfZone);
   const clearTrip = useTripStore((s) => s.clearTrip);
 
   useEffect(() => {
@@ -87,6 +88,7 @@ function TripLoader({ tripId }: { tripId: string }) {
           (data.enabledAccommodationTypes ?? []) as AccommodationType[],
         );
         setIsLocked(data.isLocked === true);
+        setOutOfZone(data.outOfZone === true);
 
         // Convert stages to Zustand StageData shape
         const stages: StageData[] = (data.stages ?? []).map((s) => {
@@ -171,6 +173,7 @@ function TripLoader({ tripId }: { tripId: string }) {
     setDepartureHour,
     setEnabledAccommodationTypes,
     setIsLocked,
+    setOutOfZone,
     clearTrip,
   ]);
 

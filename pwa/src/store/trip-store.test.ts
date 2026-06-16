@@ -111,6 +111,28 @@ describe("getUndoableSlice", () => {
   });
 });
 
+describe("outOfZone", () => {
+  it("defaults to false", () => {
+    useTripStore.getState().clearTrip();
+    expect(useTripStore.getState().outOfZone).toBe(false);
+  });
+
+  it("is set and reset by setOutOfZone", () => {
+    const store = useTripStore.getState();
+    store.setOutOfZone(true);
+    expect(useTripStore.getState().outOfZone).toBe(true);
+    store.setOutOfZone(false);
+    expect(useTripStore.getState().outOfZone).toBe(false);
+  });
+
+  it("is reset to false by clearTrip", () => {
+    const store = useTripStore.getState();
+    store.setOutOfZone(true);
+    store.clearTrip();
+    expect(useTripStore.getState().outOfZone).toBe(false);
+  });
+});
+
 describe("selectedStageIndex (master/detail)", () => {
   it("defaults to 0", () => {
     useTripStore.getState().clearTrip();

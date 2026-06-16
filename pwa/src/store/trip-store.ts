@@ -47,6 +47,8 @@ interface TripIdentity {
 interface TripState {
   trip: TripIdentity | null;
   isLocked: boolean;
+  /** Route falls outside the provisioned coverage area: display-only (no Valhalla rerouting). */
+  outOfZone: boolean;
   totalDistance: number | null;
   totalElevation: number | null;
   totalElevationLoss: number | null;
@@ -161,6 +163,7 @@ interface TripState {
   setEnabledAccommodationTypes: (types: AccommodationType[]) => void;
   setComputationStatus: (status: Record<string, string>) => void;
   setIsLocked: (isLocked: boolean) => void;
+  setOutOfZone: (outOfZone: boolean) => void;
   deleteStage: (stageIndex: number) => void;
   insertRestDay: (afterIndex: number) => void;
   /** Optimistically inserts a stage placeholder at `afterIndex + 1`. Undoable. */
@@ -250,6 +253,7 @@ interface TripState {
 const initialState = {
   trip: null,
   isLocked: false,
+  outOfZone: false,
   totalDistance: null,
   totalElevation: null,
   totalElevationLoss: null,
@@ -540,6 +544,11 @@ export const useTripStore = create<TripState>()(
     setIsLocked: (isLocked) =>
       set((state) => {
         state.isLocked = isLocked;
+      }),
+
+    setOutOfZone: (outOfZone) =>
+      set((state) => {
+        state.outOfZone = outOfZone;
       }),
 
     deleteStage: (stageIndex) => {
