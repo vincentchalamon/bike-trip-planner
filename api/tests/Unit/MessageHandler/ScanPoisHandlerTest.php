@@ -113,14 +113,14 @@ final class ScanPoisHandlerTest extends TestCase
      * optional callback captures the corridor route the source receives.
      *
      * @param list<array{name: ?string, category: string, lat: float, lon: float}> $pois
-     * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null       $captureRoute
+     * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null      $captureRoute
      */
     private function poiSourceRegistry(array $pois, ?\Closure $captureRoute = null): PoiSourceRegistry
     {
-        $source = new class($pois, $captureRoute) implements PoiSourceInterface {
+        $source = new readonly class ($pois, $captureRoute) implements PoiSourceInterface {
             /**
-             * @param list<array{name: ?string, category: string, lat: float, lon: float}>     $pois
-             * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null $captureRoute
+             * @param list<array{name: ?string, category: string, lat: float, lon: float}> $pois
+             * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null      $captureRoute
              */
             public function __construct(private array $pois, private ?\Closure $captureRoute)
             {
@@ -128,7 +128,7 @@ final class ScanPoisHandlerTest extends TestCase
 
             public function fetchInCorridor(array $route, int $radiusMeters): array
             {
-                if (null !== $this->captureRoute) {
+                if ($this->captureRoute instanceof \Closure) {
                     ($this->captureRoute)($route, $radiusMeters);
                 }
 

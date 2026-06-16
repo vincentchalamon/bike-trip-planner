@@ -26,7 +26,7 @@ final class PoiSourceRegistryTest extends TestCase
      */
     private function source(array $pois): PoiSourceInterface
     {
-        return new class($pois) implements PoiSourceInterface {
+        return new readonly class ($pois) implements PoiSourceInterface {
             /** @param list<array{name: string, category: string, lat: float, lon: float, wikidataId: string|null, source: string}> $pois */
             public function __construct(private array $pois)
             {
