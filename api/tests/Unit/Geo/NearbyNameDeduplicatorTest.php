@@ -97,4 +97,17 @@ final class NearbyNameDeduplicatorTest extends TestCase
 
         self::assertCount(2, $result);
     }
+
+    #[Test]
+    public function doesNotMergeItemsWithMissingCoordinates(): void
+    {
+        // Same name + colocated distance, but no lat/lon → coord() yields null and
+        // isSamePlace() bails, so the entries are kept apart.
+        $result = $this->deduplicator(5.0)->dedupe([
+            ['name' => 'Camping', 'source' => 'osm', 'wikidataId' => null],
+            ['name' => 'Camping', 'source' => 'datatourisme', 'wikidataId' => null],
+        ]);
+
+        self::assertCount(2, $result);
+    }
 }
