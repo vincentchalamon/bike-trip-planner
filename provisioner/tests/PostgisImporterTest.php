@@ -67,6 +67,8 @@ final class PostgisImporterTest extends TestCase
         self::assertContains('r/admin_level=2', $this->captured[0]);
         // Signed cycle route relations for the cycle_routes table.
         self::assertContains('r/route=bicycle', $this->captured[0]);
+        // Ferry crossings (ways) for the ferries table.
+        self::assertContains('w/route=ferry', $this->captured[0]);
     }
 
     #[Test]
@@ -125,6 +127,7 @@ final class PostgisImporterTest extends TestCase
         self::assertStringContainsString("'pois', (SELECT count(*) FROM osm_staging.pois)", $metadata);
         self::assertStringContainsString("'admin_boundaries', (SELECT count(*) FROM osm_staging.admin_boundaries)", $metadata);
         self::assertStringContainsString("'cycle_routes', (SELECT count(*) FROM osm_staging.cycle_routes)", $metadata);
+        self::assertStringContainsString("'ferries', (SELECT count(*) FROM osm_staging.ferries)", $metadata);
     }
 
     #[Test]
