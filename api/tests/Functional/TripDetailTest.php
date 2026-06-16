@@ -77,6 +77,9 @@ final class TripDetailTest extends ApiTestCase
         $this->assertArrayHasKey('stages', $data);
         $this->assertArrayHasKey('fatigueFactor', $data);
         $this->assertArrayHasKey('enabledAccommodationTypes', $data);
+        // Coverage polygon is unprovisioned in the test DB, so a valid trip is in zone.
+        $this->assertArrayHasKey('outOfZone', $data);
+        $this->assertFalse($data['outOfZone']);
         $this->assertNotEmpty($data['stages']);
         $stage = $data['stages'][0];
         $this->assertArrayHasKey('dayNumber', $stage);
