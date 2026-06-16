@@ -47,6 +47,9 @@ class AccommodationSourceRegistry
             }
         }
 
-        return $this->deduplicator->dedupe($all);
+        /** @var list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string}> $deduped */
+        $deduped = $this->deduplicator->dedupe($all);
+
+        return $deduped;
     }
 }

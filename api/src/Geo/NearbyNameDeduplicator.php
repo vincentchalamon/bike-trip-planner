@@ -7,12 +7,12 @@ namespace App\Geo;
 /**
  * Collapses near-duplicate places coming from several sources (OSM + DataTourisme).
  *
- * Two entries are the same place when they share a non-null wikidata id, or when
+ * Two entries are the same place when they share a non-empty wikidata id, or when
  * their normalised names are equal and they sit within {@see PROXIMITY_METERS}.
- * The DataTourisme entry wins on a tie (curated name, opening hours, description),
- * mirroring the previous wikidata-only preference. Most flux objects carry no
- * `owl:sameAs`, so the spatial+name pass is what actually removes the OSM/DataTourisme
- * doubles that the wikidata key alone misses (ADR-040).
+ * The DataTourisme entry wins on a tie (curated name, opening hours, description).
+ * Most flux objects carry no `owl:sameAs`, so the proximity+name pass is what
+ * actually removes the OSM/DataTourisme doubles the wikidata key alone misses
+ * (ADR-040). Each entry's full payload is preserved; callers re-pin the row shape.
  */
 final readonly class NearbyNameDeduplicator
 {
@@ -23,11 +23,9 @@ final readonly class NearbyNameDeduplicator
     }
 
     /**
-     * @template T of array{name: string, lat: float, lon: float, wikidataId: string|null, source: string}
+     * @param list<array<string, mixed>> $items
      *
-     * @param list<T> $items
-     *
-     * @return list<T>
+     * @return list<array<string, mixed>>
      */
     public function dedupe(array $items): array
     {
@@ -48,8 +46,9 @@ final readonly class NearbyNameDeduplicator
                 continue;
             }
 
-            // Same place from two sources: keep the curated DataTourisme entry.
-            if ('datatourisme' === $item['source'] && 'datatourisme' !== $kept[$match]['source']) {
+            // Same place from two sources, in its first-seen position: keep the
+            // curated DataTourisme entry.
+            if ('datatourisme' === ($item['source'] ?? null) && 'datatourisme' !== ($kept[$match]['source'] ?? null)) {
                 $kept[$match] = $item;
             }
         }
@@ -58,28 +57,52 @@ final readonly class NearbyNameDeduplicator
     }
 
     /**
-     * @param array{name: string, lat: float, lon: float, wikidataId: string|null, source: string} $a
-     * @param array{name: string, lat: float, lon: float, wikidataId: string|null, source: string} $b
+     * @param array<string, mixed> $a
+     * @param array<string, mixed> $b
      */
     private function isSamePlace(array $a, array $b): bool
     {
-        if (null !== $a['wikidataId'] && $a['wikidataId'] === $b['wikidataId']) {
+        $wikidata = $a['wikidataId'] ?? null;
+        if (\is_string($wikidata) && '' !== $wikidata && $wikidata === ($b['wikidataId'] ?? null)) {
             return true;
         }
 
-        $name = $this->normalize($a['name']);
-        if ('' === $name || $name !== $this->normalize($b['name'])) {
+        $name = $this->normalizeName($a);
+        if ('' === $name || $name !== $this->normalizeName($b)) {
             return false;
         }
 
-        return $this->haversine->inMeters($a['lat'], $a['lon'], $b['lat'], $b['lon']) <= self::PROXIMITY_METERS;
+        return $this->haversine->inMeters(
+            $this->coord($a, 'lat'),
+            $this->coord($a, 'lon'),
+            $this->coord($b, 'lat'),
+            $this->coord($b, 'lon'),
+        ) <= self::PROXIMITY_METERS;
     }
 
-    private function normalize(string $name): string
+    /**
+     * @param array<string, mixed> $item
+     */
+    private function normalizeName(array $item): string
     {
+        $name = $item['name'] ?? null;
+        if (!\is_string($name)) {
+            return '';
+        }
+
         $transliterator = \Transliterator::create('Any-Latin; Latin-ASCII; Lower()');
         $ascii = $transliterator?->transliterate($name);
 
-        return preg_replace('/[^a-z0-9]/', '', false !== $ascii && null !== $ascii ? $ascii : strtolower($name)) ?? '';
+        return preg_replace('/[^a-z0-9]/', '', \is_string($ascii) ? $ascii : strtolower($name)) ?? '';
+    }
+
+    /**
+     * @param array<string, mixed> $item
+     */
+    private function coord(array $item, string $key): float
+    {
+        $value = $item[$key] ?? null;
+
+        return is_numeric($value) ? (float) $value : 0.0;
     }
 }

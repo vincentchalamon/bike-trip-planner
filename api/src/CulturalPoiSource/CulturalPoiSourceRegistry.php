@@ -46,6 +46,9 @@ readonly class CulturalPoiSourceRegistry
             }
         }
 
-        return $this->deduplicator->dedupe($all);
+        /** @var list<array{name: string, type: string, lat: float, lon: float, openingHours: string|null, estimatedPrice: float|null, description: string|null, wikidataId: string|null, source: string}> $deduped */
+        $deduped = $this->deduplicator->dedupe($all);
+
+        return $deduped;
     }
 }
