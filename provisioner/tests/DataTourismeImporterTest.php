@@ -74,12 +74,27 @@ final class DataTourismeImporterTest extends TestCase
                 'schema:endDate' => ['2026-07-03'],
                 'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '45.0', 'schema:longitude' => '5.0']]],
             ]),
-            // Out of scope (food) → must be skipped, not written to any COPY file.
+            // Eatery → mapped to the food head (food_pois COPY file).
             $this->place('objects/0/00/food.json', [
                 '@id' => 'https://data.datatourisme.fr/10/food',
                 '@type' => ['FoodEstablishment', 'Restaurant'],
                 'rdfs:label' => ['fr' => ['Resto test']],
                 'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '44.0', 'schema:longitude' => '4.0']]],
+            ]),
+            // Food shop (Store + LocalProductsShop) → also the food head, exercising
+            // the Store branch end-to-end through the COPY pipeline.
+            $this->place('objects/0/00/farm.json', [
+                '@id' => 'https://data.datatourisme.fr/10/farm',
+                '@type' => ['LocalProductsShop', 'Store'],
+                'rdfs:label' => ['fr' => ['Épicerie locale']],
+                'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '43.5', 'schema:longitude' => '3.5']]],
+            ]),
+            // Non-food store → still skipped, not written to any COPY file.
+            $this->place('objects/0/00/shop.json', [
+                '@id' => 'https://data.datatourisme.fr/10/shop',
+                '@type' => ['Store', 'BoutiqueOrLocalShop'],
+                'rdfs:label' => ['fr' => ['Boutique test']],
+                'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '43.0', 'schema:longitude' => '3.0']]],
             ]),
         ];
         foreach ($entries as [$name, $contents]) {
@@ -117,12 +132,13 @@ final class DataTourismeImporterTest extends TestCase
 
         $importer->run($this->workDir);
 
-        // 1 staging DDL + 3 \copy + 3 GIST index + 1 events-date index + 1 metadata + 1 swap.
-        self::assertCount(10, $this->captured);
+        // 1 staging DDL + 4 \copy + 4 GIST index + 1 events-date index + 1 metadata + 1 swap.
+        self::assertCount(12, $this->captured);
 
         $ddl = implode(' ', $this->captured[0]);
         self::assertStringContainsString('CREATE SCHEMA tourism_staging', $ddl);
         self::assertStringContainsString('CREATE TABLE tourism_staging.cultural_pois', $ddl);
+        self::assertStringContainsString('CREATE TABLE tourism_staging.food_pois', $ddl);
         self::assertStringContainsString('CREATE TABLE tourism_staging.events', $ddl);
 
         $joinedAll = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
@@ -158,18 +174,26 @@ final class DataTourismeImporterTest extends TestCase
         $importer->run($this->workDir);
 
         $cultural = (string) file_get_contents($this->workDir.'/tourism-cultural_pois.copy');
+        $food = (string) file_get_contents($this->workDir.'/tourism-food_pois.copy');
         $events = (string) file_get_contents($this->workDir.'/tourism-events.copy');
         $accommodations = (string) file_get_contents($this->workDir.'/tourism-accommodations.copy');
 
         self::assertSame(1, substr_count($cultural, "\n"), 'one cultural row');
+        self::assertSame(2, substr_count($food, "\n"), 'two food rows (eatery + food store)');
         self::assertSame(1, substr_count($events, "\n"), 'one event row');
         self::assertSame('', $accommodations, 'no accommodation in the fixture');
 
-        // The geometry column carries EWKT and the food POI was skipped.
+        // The eatery (restaurant) and the food store (LocalProductsShop → farm) both
+        // land in food_pois; the non-food store is skipped.
+        self::assertStringContainsString('restaurant', $food);
+        self::assertStringContainsString('farm', $food);
+        self::assertStringContainsString('https://data.datatourisme.fr/10/farm', $food);
         self::assertStringContainsString('SRID=4326;POINT(', $cultural);
         self::assertStringContainsString('https://data.datatourisme.fr/10/cultural', $cultural);
+        self::assertStringContainsString('https://data.datatourisme.fr/10/food', $food);
         self::assertStringContainsString('2026-07-01', $events);
         self::assertStringNotContainsString('food', $cultural.$events);
+        self::assertStringNotContainsString('shop', $cultural.$food.$events);
     }
 
     #[Test]
