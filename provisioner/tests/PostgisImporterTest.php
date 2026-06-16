@@ -65,6 +65,8 @@ final class PostgisImporterTest extends TestCase
         self::assertStringContainsString('w/highway=', $joined);
         // Country boundaries (relations) for the admin_boundaries table.
         self::assertContains('r/admin_level=2', $this->captured[0]);
+        // Signed cycle route relations for the cycle_routes table.
+        self::assertContains('r/route=bicycle', $this->captured[0]);
     }
 
     #[Test]
@@ -122,6 +124,7 @@ final class PostgisImporterTest extends TestCase
         // Counts cover every flex feature table so /health reports each one.
         self::assertStringContainsString("'pois', (SELECT count(*) FROM osm_staging.pois)", $metadata);
         self::assertStringContainsString("'admin_boundaries', (SELECT count(*) FROM osm_staging.admin_boundaries)", $metadata);
+        self::assertStringContainsString("'cycle_routes', (SELECT count(*) FROM osm_staging.cycle_routes)", $metadata);
     }
 
     #[Test]
