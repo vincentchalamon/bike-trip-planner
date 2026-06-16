@@ -73,7 +73,6 @@ final readonly class HealthController
         $deps = [];
         $deps['postgres'] = $this->checkPostgres();
         $deps['redis'] = $this->checkRedis();
-        $deps['reference_data'] = $this->checkReferenceData();
 
         // Launch HTTP-based checks in parallel by issuing their requests up front.
         $pending = [
@@ -89,6 +88,9 @@ final readonly class HealthController
             $pending['ollama_chat'] = $this->startHttpCheck('GET', '/api/tags', $this->ollamaChatClient);
             $pending['ollama_analysis'] = $this->startHttpCheck('GET', '/api/tags', $this->ollamaAnalysisClient);
         }
+
+        // The two metadata DB round-trips run while the HTTP probes are in flight.
+        $deps['reference_data'] = $this->checkReferenceData();
 
         foreach ($pending as $name => $pair) {
             $deps[$name] = $this->finishHttpCheck($pair);

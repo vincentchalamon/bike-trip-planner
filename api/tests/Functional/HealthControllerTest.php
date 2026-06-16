@@ -80,7 +80,7 @@ final class HealthControllerTest extends ApiTestCase
         $data = $response->toArray();
         $this->assertSame('ok', $data['status']);
         $this->assertArrayHasKey('deps', $data);
-        foreach (['postgres', 'redis', 'mercure', 'valhalla', 'ollama_chat', 'ollama_analysis'] as $dep) {
+        foreach (['postgres', 'redis', 'mercure', 'valhalla', 'ollama_chat', 'ollama_analysis', 'reference_data'] as $dep) {
             $this->assertArrayHasKey($dep, $data['deps'], \sprintf('Missing dep %s', $dep));
             $this->assertArrayHasKey('status', $data['deps'][$dep]);
             $this->assertArrayHasKey('latency_ms', $data['deps'][$dep]);
