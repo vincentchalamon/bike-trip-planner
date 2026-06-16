@@ -117,8 +117,8 @@ final class DataTourismeImporterTest extends TestCase
 
         $importer->run($this->workDir);
 
-        // 1 staging DDL + 3 \copy + 3 index + 1 swap.
-        self::assertCount(8, $this->captured);
+        // 1 staging DDL + 3 \copy + 3 GIST index + 1 events-date index + 1 swap.
+        self::assertCount(9, $this->captured);
 
         $ddl = implode(' ', $this->captured[0]);
         self::assertStringContainsString('CREATE SCHEMA tourism_staging', $ddl);
