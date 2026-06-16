@@ -191,11 +191,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Download a stage as GPX or FIT file.
-         * @description Download a stage as GPX or FIT file.
-         */
-        get: operations["api_trips_tripIdstages_index_get"];
+        get?: never;
         put?: never;
         post?: never;
         /**
@@ -230,6 +226,26 @@ export interface paths {
          * @description Select or deselect an accommodation for a stage. Selecting updates stage endPoint and next stage startPoint.
          */
         patch: operations["api_trips_tripIdstages_indexaccommodation_patch"];
+        trace?: never;
+    };
+    "/trips/{tripId}/stages/{index}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a stage as GPX or FIT file.
+         * @description Download a stage as GPX or FIT file.
+         */
+        get: operations["api_trips_tripIdstages_indexexport_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/trips/{tripId}/stages/{index}/move": {
@@ -344,8 +360,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Download the full trip as a single GPX file containing all stages.
-         * @description Download the full trip as a single GPX file containing all stages.
+         * Download the full trip as a single GPX or FIT file containing all stages.
+         * @description Download the full trip as a single GPX or FIT file containing all stages.
          */
         get: operations["api_trips_id_get"];
         put?: never;
@@ -496,6 +512,26 @@ export interface paths {
          * @description View a shared trip via short code (anonymous).
          */
         get: operations["api_s_shortCode_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/s/{shortCode}.fit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download shared trip as FIT via short code.
+         * @description Download shared trip as FIT via short code.
+         */
+        get: operations["api_s_shortCode.fit_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1293,6 +1329,14 @@ export interface components {
             title?: string | null;
             readonly aiOverview?: components["schemas"]["TripAiOverview"] | null;
         };
+        "Trip.fit": {
+            id?: string;
+            /** @description Map of ComputationName->value to status string */
+            computationStatus?: {
+                [key: string]: string;
+            };
+            isLocked?: boolean;
+        };
         "Trip.gpx": {
             id?: string;
             /** @description Map of ComputationName->value to status string */
@@ -1386,6 +1430,8 @@ export interface components {
             departureHour?: number;
             enabledAccommodationTypes?: string[];
             isLocked?: boolean;
+            /** @description True when the route falls outside the provisioned coverage area: the trip is display-only (no Valhalla rerouting). */
+            outOfZone?: boolean;
             /** @description Serialized stage DTOs */
             stages?: {
                 dayNumber?: number;
@@ -1522,6 +1568,14 @@ export interface components {
             elevationLoss?: number;
             isRestDay?: boolean;
         };
+        "TripShare.Trip.fit": {
+            id?: string;
+            /** @description Map of ComputationName->value to status string */
+            computationStatus?: {
+                [key: string]: string;
+            };
+            isLocked?: boolean;
+        };
         "TripShare.Trip.gpx": {
             id?: string;
             /** @description Map of ComputationName->value to status string */
@@ -1546,6 +1600,8 @@ export interface components {
             departureHour?: number;
             enabledAccommodationTypes?: string[];
             isLocked?: boolean;
+            /** @description True when the route falls outside the provisioned coverage area: the trip is display-only (no Valhalla rerouting). */
+            outOfZone?: boolean;
             /** @description Serialized stage DTOs */
             stages?: {
                 dayNumber?: number;
@@ -2097,54 +2153,6 @@ export interface operations {
             };
         };
     };
-    api_trips_tripIdstages_index_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Stage identifier */
-                tripId: string;
-                /** @description Stage identifier */
-                index: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Stage resource */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/gpx+xml": components["schemas"]["Stage.gpx"];
-                    "application/vnd.ant.fit": components["schemas"]["Stage.fit"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/ld+json": components["schemas"]["Error.jsonld"];
-                    "application/problem+json": components["schemas"]["Error"];
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
     api_trips_tripIdstages_index_delete: {
         parameters: {
             query?: never;
@@ -2334,6 +2342,54 @@ export interface operations {
                     "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_trips_tripIdstages_indexexport_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stage identifier */
+                tripId: string;
+                /** @description Stage identifier */
+                index: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stage resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/gpx+xml": components["schemas"]["Stage.gpx"];
+                    "application/vnd.ant.fit": components["schemas"]["Stage.fit"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -2743,6 +2799,7 @@ export interface operations {
                 };
                 content: {
                     "application/gpx+xml": components["schemas"]["Trip.gpx"];
+                    "application/vnd.ant.fit": components["schemas"]["Trip.fit"];
                 };
             };
             /** @description Forbidden */
@@ -3236,6 +3293,17 @@ export interface operations {
                     "application/ld+json": components["schemas"]["TripDetail.jsonld"];
                 };
             };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description Not found */
             404: {
                 headers: {
@@ -3268,6 +3336,51 @@ export interface operations {
                 };
                 content: {
                     "application/ld+json": components["schemas"]["TripShare.TripDetail.jsonld"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    "api_s_shortCode.fit_get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description TripShare identifier */
+                shortCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description TripShare resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.ant.fit": components["schemas"]["TripShare.Trip.fit"];
                 };
             };
             /** @description Forbidden */

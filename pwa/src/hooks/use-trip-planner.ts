@@ -72,6 +72,7 @@ export function useTripPlanner() {
     startDate,
     endDate,
     isLocked,
+    outOfZone,
   } = useTripStore(
     useShallow((s) => ({
       trip: s.trip,
@@ -82,6 +83,7 @@ export function useTripPlanner() {
       startDate: s.startDate,
       endDate: s.endDate,
       isLocked: s.isLocked,
+      outOfZone: s.outOfZone,
     })),
   );
 
@@ -672,6 +674,14 @@ export function useTripPlanner() {
   ) {
     if (!tripId) return;
 
+    // Inserting a POI waypoint re-routes the stage via Valhalla, which has no
+    // tiles outside the provisioned coverage area — block it for out-of-zone trips.
+    if (outOfZone) {
+      toast.error(t("outOfZone.editDisabled"));
+
+      return;
+    }
+
     try {
       const ok = await addPoiWaypointToRoute(
         tripId,
@@ -1089,6 +1099,7 @@ export function useTripPlanner() {
   return {
     trip,
     isLocked,
+    outOfZone,
     totalDistance,
     totalElevation,
     totalElevationLoss,

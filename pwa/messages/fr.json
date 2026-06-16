@@ -422,6 +422,10 @@
   "tripLocked": {
     "banner": "Ce trip est en cours ou passé — consultation uniquement. Utilisez « Dupliquer » pour planifier une nouvelle variante."
   },
+  "outOfZone": {
+    "banner": "Cet itinéraire sort de notre zone couverte (France, Belgique, Pays-Bas, Luxembourg). Les distances et points d'intérêt restent affichés, mais tu ne peux pas modifier ni recalculer ce voyage.",
+    "editDisabled": "Ce voyage est hors zone couverte et ne peut pas être modifié."
+  },
   "tripList": {
     "title": "Mes voyages",
     "newTrip": "Nouveau voyage",

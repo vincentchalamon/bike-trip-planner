@@ -15,6 +15,7 @@ import { Loader2, X } from "lucide-react";
 import { CardSelection } from "@/components/card-selection";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
 import { TripLockedBanner } from "@/components/trip-locked-banner";
+import { OutOfZoneBanner } from "@/components/out-of-zone-banner";
 import { TripPreview } from "@/components/trip-preview";
 import { ProcessingProgress } from "@/components/processing-progress";
 import { TripSummary } from "@/components/trip-summary";
@@ -81,6 +82,7 @@ export function TripPlanner({
   const {
     trip,
     isLocked,
+    outOfZone,
     totalDistance,
     totalElevation,
     totalElevationLoss,
@@ -650,6 +652,14 @@ export function TripPlanner({
               </div>
             )}
 
+            {/* Out-of-zone banner — route outside the provisioned coverage area:
+                display-only, no Valhalla rerouting (ADR-040). */}
+            {outOfZone && (
+              <div className="mt-4">
+                <OutOfZoneBanner />
+              </div>
+            )}
+
             <div className="mt-8 space-y-8">
               {/* Summary */}
               <TripSummary
@@ -741,7 +751,7 @@ export function TripPlanner({
                       stages={stages}
                       startDate={startDate}
                       isProcessing={isProcessing}
-                      readOnly={isLocked || !isOnline}
+                      readOnly={isLocked || !isOnline || outOfZone}
                       onDeleteStage={handleDeleteStage}
                       onAddStage={handleAddStage}
                       onInsertRestDay={handleInsertRestDay}
@@ -833,7 +843,7 @@ export function TripPlanner({
           onEbikeModeChange={handleEbikeModeChange}
           onDepartureHourChange={handleDepartureHourChange}
           onAccommodationTypesChange={handleAccommodationTypesChange}
-          readOnly={isLocked || !isOnline}
+          readOnly={isLocked || !isOnline || outOfZone}
           hasTripLoaded={!!trip}
           tripTitle={trip?.title}
           onDuplicate={handleDuplicateTrip}
