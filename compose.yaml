@@ -471,6 +471,10 @@ services:
       PGUSER: "${DATABASE_USERNAME:-app}"
       PGPASSWORD: "${DATABASE_PASSWORD:-!ChangeMe!}"
       PGDATABASE: "${DATABASE_NAME:-bike_trip_planner}"
+      # DataTourisme flux credentials, consumed when the provisioner runs with
+      # --with-datatourisme to download the flux ZIP into the tourism schema.
+      DATATOURISME_FLUX_ID: "${DATATOURISME_FLUX_ID:-}"
+      DATATOURISME_APP_KEY: "${DATATOURISME_APP_KEY:-}"
     # One-shot OSM extract + PostGIS import; osm2pgsql needs more headroom than
     # the osmium merge (in-RAM node cache bounded via --cache). See ADR-040.
     deploy:
