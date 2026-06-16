@@ -15,7 +15,7 @@ namespace Provisioner;
  * runtime REST API shape, so this is a flux-specific mapper. The raw type list
  * is preserved in the row's tags so nothing is lost.
  *
- * @phpstan-type Row array{head: string, id: string, name: string|null, category: string, lat: float, lon: float, description: string|null, openingHours: string|null, wikidata: string|null, capacity: int|null, price: float|null, startDate: string|null, endDate: string|null, type: list<string>}
+ * @phpstan-type Row array{head: 'cultural'|'accommodation'|'event', id: string, name: string|null, category: string, lat: float, lon: float, description: string|null, openingHours: string|null, wikidata: string|null, capacity: int|null, price: float|null, startDate: string|null, endDate: string|null, type: list<string>}
  */
 final class DataTourismeMapper
 {
@@ -104,7 +104,7 @@ final class DataTourismeMapper
     /**
      * @param list<string> $types
      *
-     * @return array{string|null, string}
+     * @return array{'cultural'|'accommodation'|'event'|null, string}
      */
     private function classify(array $types): array
     {

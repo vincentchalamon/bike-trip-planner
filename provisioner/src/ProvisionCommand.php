@@ -29,11 +29,15 @@ final class ProvisionCommand extends Command
 
     private const string DEFAULT_FILTERED_PBF = '/data/tier1-filtered.osm.pbf';
 
+    private const string DEFAULT_DATATOURISME_DIR = '/data/datatourisme';
+
     private readonly RegionSelectionStore $selectionStore;
 
     private readonly OsmDataDownloader $downloader;
 
     private readonly PostgisImporter $postgisImporter;
+
+    private readonly ?DataTourismeImporter $dataTourismeImporter;
 
     public function __construct(
         private readonly string $regionsDir = self::DEFAULT_REGIONS_DIR,
@@ -44,6 +48,8 @@ final class ProvisionCommand extends Command
         private readonly bool $runMerge = true,
         private readonly string $filteredPbf = self::DEFAULT_FILTERED_PBF,
         ?PostgisImporter $postgisImporter = null,
+        private readonly string $dataTourismeDir = self::DEFAULT_DATATOURISME_DIR,
+        ?DataTourismeImporter $dataTourismeImporter = null,
     ) {
         parent::__construct();
 
@@ -52,12 +58,15 @@ final class ProvisionCommand extends Command
         $this->postgisImporter = $postgisImporter ?? new PostgisImporter(
             flexStylePath: \dirname(__DIR__).'/osm2pgsql/tier1.lua',
         );
+        // Built lazily in runDataTourisme() from DATATOURISME_* env when not injected.
+        $this->dataTourismeImporter = $dataTourismeImporter;
     }
 
     protected function configure(): void
     {
         $this->addOption('dry-run', null, InputOption::VALUE_NONE, 'Show what would be downloaded without executing');
         $this->addOption('with-postgis', null, InputOption::VALUE_NONE, 'After merging, import the Tier-1 features into PostGIS (requires PG* env)');
+        $this->addOption('with-datatourisme', null, InputOption::VALUE_NONE, 'Download the DataTourisme flux and import it into the tourism schema (requires DATATOURISME_FLUX_ID + DATATOURISME_APP_KEY + PG* env)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -67,6 +76,7 @@ final class ProvisionCommand extends Command
 
         $dryRun = (bool) $input->getOption('dry-run');
         $importPostgis = (bool) $input->getOption('with-postgis');
+        $importDataTourisme = (bool) $input->getOption('with-datatourisme');
         $interactive = $input->isInteractive();
         $hasSelection = $this->selectionStore->exists();
 
@@ -76,11 +86,55 @@ final class ProvisionCommand extends Command
             return Command::FAILURE;
         }
 
-        if ($hasSelection) {
-            return $this->runUpdateFlow($io, $dryRun, $interactive, $importPostgis);
+        $result = $hasSelection
+            ? $this->runUpdateFlow($io, $dryRun, $interactive, $importPostgis)
+            : $this->runInstallFlow($io, $dryRun, $importPostgis);
+
+        // DataTourisme is FR-only and independent of the OSM region selection,
+        // so it runs as its own step (its own download, schema and atomic swap).
+        if (Command::SUCCESS === $result && $importDataTourisme && !$dryRun) {
+            $result = $this->runDataTourisme($io);
         }
 
-        return $this->runInstallFlow($io, $dryRun, $importPostgis);
+        return $result;
+    }
+
+    private function runDataTourisme(SymfonyStyle $io): int
+    {
+        $importer = $this->dataTourismeImporter;
+        if (null === $importer) {
+            $fluxId = getenv('DATATOURISME_FLUX_ID') ?: '';
+            $appKey = getenv('DATATOURISME_APP_KEY') ?: '';
+            if ('' === $fluxId || '' === $appKey) {
+                $io->error('DataTourisme import requires DATATOURISME_FLUX_ID and DATATOURISME_APP_KEY.');
+
+                return Command::FAILURE;
+            }
+
+            $importer = new DataTourismeImporter(
+                \sprintf('https://diffuseur.datatourisme.fr/webservice/%s/%s', $fluxId, $appKey),
+            );
+        }
+
+        if (!is_dir($this->dataTourismeDir) && !mkdir($this->dataTourismeDir, 0o755, true) && !is_dir($this->dataTourismeDir)) {
+            $io->error(\sprintf('Cannot create DataTourisme work directory "%s"', $this->dataTourismeDir));
+
+            return Command::FAILURE;
+        }
+
+        $io->section('Importing DataTourisme into PostGIS');
+
+        try {
+            $importer->run($this->dataTourismeDir);
+        } catch (ImportFailedException $e) {
+            $io->error($e->getMessage());
+
+            return Command::FAILURE;
+        }
+
+        $io->success('DataTourisme import complete.');
+
+        return Command::SUCCESS;
     }
 
     private function runInstallFlow(SymfonyStyle $io, bool $dryRun, bool $importPostgis): int

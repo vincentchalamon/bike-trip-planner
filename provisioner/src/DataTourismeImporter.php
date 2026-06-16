@@ -27,6 +27,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * backslash-escaped); the geometry column receives EWKT (`SRID=4326;POINT(lon
  * lat)`) which PostGIS parses on input. The DB connection comes from the libpq
  * environment (PG*), inherited by psql.
+ *
+ * @phpstan-import-type Row from DataTourismeMapper
  */
 final readonly class DataTourismeImporter
 {
@@ -189,7 +191,7 @@ final readonly class DataTourismeImporter
     }
 
     /**
-     * @param array<string, mixed> $row
+     * @phpstan-param Row $row
      */
     private function copyLine(string $table, array $row): string
     {
@@ -206,13 +208,13 @@ final readonly class DataTourismeImporter
         return implode("\t", array_map($this->copyValue(...), $values))."\n";
     }
 
-    private function copyValue(mixed $value): string
+    private function copyValue(string|int|float|null $value): string
     {
-        if (null === $value || false === $value) {
+        if (null === $value) {
             return '\N';
         }
 
-        $string = \is_bool($value) ? '1' : (string) $value;
+        $string = \is_string($value) ? $value : (string) $value;
 
         return str_replace(['\\', "\t", "\n", "\r"], ['\\\\', '\\t', '\\n', '\\r'], $string);
     }
