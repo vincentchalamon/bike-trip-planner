@@ -6,6 +6,7 @@ namespace Provisioner;
 
 use Provisioner\Exception\ImportFailedException;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpClient\ScopingHttpClient;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
@@ -71,7 +72,11 @@ final readonly class DataTourismeImporter
         ?\Closure $processFactory = null,
         private float $timeoutSeconds = 1800.0,
     ) {
-        $this->httpClient = $httpClient ?? HttpClient::create(['max_redirects' => 2, 'timeout' => $this->timeoutSeconds]);
+        // Scoped to the DataTourisme origin (SSRF policy, see CLAUDE.md).
+        $this->httpClient = $httpClient ?? ScopingHttpClient::forBaseUri(
+            HttpClient::create(['max_redirects' => 2, 'timeout' => $this->timeoutSeconds]),
+            'https://diffuseur.datatourisme.fr/',
+        );
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
     }
 
