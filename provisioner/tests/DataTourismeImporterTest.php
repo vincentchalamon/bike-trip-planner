@@ -81,6 +81,14 @@ final class DataTourismeImporterTest extends TestCase
                 'rdfs:label' => ['fr' => ['Resto test']],
                 'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '44.0', 'schema:longitude' => '4.0']]],
             ]),
+            // Food shop (Store + LocalProductsShop) → also the food head, exercising
+            // the Store branch end-to-end through the COPY pipeline.
+            $this->place('objects/0/00/farm.json', [
+                '@id' => 'https://data.datatourisme.fr/10/farm',
+                '@type' => ['LocalProductsShop', 'Store'],
+                'rdfs:label' => ['fr' => ['Épicerie locale']],
+                'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '43.5', 'schema:longitude' => '3.5']]],
+            ]),
             // Non-food store → still skipped, not written to any COPY file.
             $this->place('objects/0/00/shop.json', [
                 '@id' => 'https://data.datatourisme.fr/10/shop',
@@ -171,11 +179,15 @@ final class DataTourismeImporterTest extends TestCase
         $accommodations = (string) file_get_contents($this->workDir.'/tourism-accommodations.copy');
 
         self::assertSame(1, substr_count($cultural, "\n"), 'one cultural row');
-        self::assertSame(1, substr_count($food, "\n"), 'one food row (the eatery)');
+        self::assertSame(2, substr_count($food, "\n"), 'two food rows (eatery + food store)');
         self::assertSame(1, substr_count($events, "\n"), 'one event row');
         self::assertSame('', $accommodations, 'no accommodation in the fixture');
 
-        // The eatery lands in food_pois (with its category) and the non-food store is skipped.
+        // The eatery (restaurant) and the food store (LocalProductsShop → farm) both
+        // land in food_pois; the non-food store is skipped.
+        self::assertStringContainsString('restaurant', $food);
+        self::assertStringContainsString('farm', $food);
+        self::assertStringContainsString('https://data.datatourisme.fr/10/farm', $food);
         self::assertStringContainsString('SRID=4326;POINT(', $cultural);
         self::assertStringContainsString('https://data.datatourisme.fr/10/cultural', $cultural);
         self::assertStringContainsString('https://data.datatourisme.fr/10/food', $food);
