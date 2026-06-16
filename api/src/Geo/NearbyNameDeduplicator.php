@@ -32,13 +32,7 @@ final readonly class NearbyNameDeduplicator
         $kept = [];
 
         foreach ($items as $item) {
-            $match = null;
-            foreach ($kept as $index => $existing) {
-                if ($this->isSamePlace($item, $existing)) {
-                    $match = $index;
-                    break;
-                }
-            }
+            $match = array_find_key($kept, fn (array $existing): bool => $this->isSamePlace($item, $existing));
 
             if (null === $match) {
                 $kept[] = $item;
