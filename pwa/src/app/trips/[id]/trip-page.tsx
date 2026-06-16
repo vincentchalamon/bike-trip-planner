@@ -121,6 +121,7 @@ function TripLoader({ tripId }: { tripId: string }) {
               null,
             accommodationSearchRadiusKm: 5,
             isRestDay: s.isRestDay ?? false,
+            onCycleNetwork: s.onCycleNetwork ?? 0,
             supplyTimeline: [],
             events: [],
           };

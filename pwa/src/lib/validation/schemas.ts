@@ -174,6 +174,12 @@ export const StageDataSchema = z.object({
     .positive()
     .default(DEFAULT_ACCOMMODATION_RADIUS_KM),
   isRestDay: z.boolean().default(false),
+  /**
+   * Fraction (0..1) of the stage that follows a signed cycle route (ADR-040).
+   * Optional/forward-compatible: present on the persisted trip detail, absent
+   * from the live SSE payloads (treated as 0).
+   */
+  onCycleNetwork: z.number().min(0).max(1).optional(),
   supplyTimeline: z.array(SupplyMarkerSchema).default([]),
   events: z.array(EventSchema).default([]),
   /**
