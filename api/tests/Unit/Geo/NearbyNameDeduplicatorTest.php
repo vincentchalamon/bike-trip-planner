@@ -37,7 +37,7 @@ final class NearbyNameDeduplicatorTest extends TestCase
             ]);
 
             self::assertCount(1, $result);
-            self::assertSame('datatourisme', $result[0]['source'], "order: $first, $second");
+            self::assertSame('datatourisme', $result[0]['source'], \sprintf('order: %s, %s', $first, $second));
         }
     }
 

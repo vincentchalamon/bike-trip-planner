@@ -31,7 +31,6 @@ final readonly class NearbyNameDeduplicator
      */
     public function dedupe(array $items): array
     {
-        /** @var list<T> $kept */
         $kept = [];
 
         foreach ($items as $item) {
