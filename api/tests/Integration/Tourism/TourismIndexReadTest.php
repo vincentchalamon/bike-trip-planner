@@ -7,6 +7,7 @@ namespace App\Tests\Integration\Tourism;
 use App\Tourism\AccommodationRepository;
 use App\Tourism\CulturalPoiRepository;
 use App\Tourism\EventRepository;
+use App\Tourism\FoodPoiRepository;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -31,7 +32,15 @@ final class TourismIndexReadTest extends KernelTestCase
         $connection = self::getContainer()->get('doctrine.dbal.default_connection');
         $this->connection = $connection;
 
-        $this->connection->executeStatement('TRUNCATE tourism.cultural_pois, tourism.accommodations, tourism.events');
+        $this->connection->executeStatement('TRUNCATE tourism.cultural_pois, tourism.food_pois, tourism.accommodations, tourism.events');
+
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO tourism.food_pois (id, name, category, opening_hours, description, wikidata, tags, geom) VALUES
+              ('f1', 'Boulangerie du Lac', 'bakery', NULL, NULL, NULL, '{}'::jsonb,
+                  ST_SetSRID(ST_MakePoint(6.14, 49.61), 4326)),
+              ('f2', 'Far Restaurant', 'restaurant', NULL, NULL, NULL, '{}'::jsonb,
+                  ST_SetSRID(ST_MakePoint(6.80, 50.90), 4326))
+            SQL);
 
         $this->connection->executeStatement(<<<'SQL'
             INSERT INTO tourism.cultural_pois (id, name, category, opening_hours, description, wikidata, tags, geom) VALUES
@@ -71,6 +80,19 @@ final class TourismIndexReadTest extends KernelTestCase
         self::assertSame('Mo-Fr 09:00-17:00', $pois[0]['openingHours']);
         self::assertSame('Un musée.', $pois[0]['description']);
         self::assertSame('Q42', $pois[0]['wikidata']);
+    }
+
+    #[Test]
+    public function foodPoisAreFilteredByCorridor(): void
+    {
+        $pois = new FoodPoiRepository($this->connection)->findInCorridor([
+            ['lat' => 49.60, 'lon' => 6.13],
+            ['lat' => 49.62, 'lon' => 6.15],
+        ], 5000);
+
+        self::assertCount(1, $pois, 'the far restaurant is excluded by ST_DWithin');
+        self::assertSame('Boulangerie du Lac', $pois[0]['name']);
+        self::assertSame('bakery', $pois[0]['category']);
     }
 
     #[Test]

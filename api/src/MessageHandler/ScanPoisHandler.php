@@ -19,8 +19,8 @@ use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
-use App\Osm\PoiRepositoryInterface;
 use App\Osm\WaterPointRepositoryInterface;
+use App\Poi\PoiSourceRegistry;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
@@ -49,7 +49,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
         TripGenerationTrackerInterface $generationTracker,
         LoggerInterface $logger,
         private TripRequestRepositoryInterface $tripStateManager,
-        private PoiRepositoryInterface $poiRepository,
+        private PoiSourceRegistry $poiSourceRegistry,
         private WaterPointRepositoryInterface $waterPointRepository,
         private GeometryDistributorInterface $distributor,
         private SupplyTimelineBuilder $supplyTimelineBuilder,
@@ -88,13 +88,14 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             $route = array_map(static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon], $allPoints);
 
             // Read POIs and real drinking-water points from the local-first index along the
-            // route corridor (ADR-040), then distribute them to stages by geometry. The local
+            // route corridor (ADR-040), then distribute them to stages by geometry. POIs come
+            // from every source (OSM + DataTourisme food), merged by proximity + name. The local
             // index returns deterministic results, so a long stage with genuinely no resupply
             // POI is no longer indistinguishable from an Overpass failure (lunch-nudge fix).
             $allPois = [];
-            foreach ($this->poiRepository->findInCorridor($route, self::CORRIDOR_RADIUS_METERS) as $poi) {
+            foreach ($this->poiSourceRegistry->fetchAllInCorridor($route, self::CORRIDOR_RADIUS_METERS) as $poi) {
                 $allPois[] = [
-                    'name' => $poi['name'] ?? $poi['category'],
+                    'name' => $poi['name'],
                     'category' => $poi['category'],
                     'lat' => $poi['lat'],
                     'lon' => $poi['lon'],

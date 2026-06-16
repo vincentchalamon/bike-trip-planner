@@ -12,12 +12,15 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\RiderTimeEstimatorInterface;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeometryDistributorInterface;
+use App\Geo\HaversineDistance;
+use App\Geo\NearbyNameDeduplicator;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
 use App\MessageHandler\ScanPoisHandler;
-use App\Osm\PoiRepositoryInterface;
 use App\Osm\WaterPointRepositoryInterface;
+use App\Poi\PoiSourceInterface;
+use App\Poi\PoiSourceRegistry;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -52,7 +55,7 @@ final class ScanPoisHandlerTest extends TestCase
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
-        PoiRepositoryInterface $poiRepository,
+        PoiSourceRegistry $poiSourceRegistry,
         WaterPointRepositoryInterface $waterPointRepository,
         GeometryDistributorInterface $distributor,
         GeoDistanceInterface $haversine,
@@ -74,7 +77,7 @@ final class ScanPoisHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
-            $poiRepository,
+            $poiSourceRegistry,
             $waterPointRepository,
             $distributor,
             new SupplyTimelineBuilder($haversine),
@@ -105,14 +108,42 @@ final class ScanPoisHandlerTest extends TestCase
     }
 
     /**
+     * Real registry wrapping a single fake source returning $pois. Uses the real
+     * deduplicator (transparent here: every fixture has a distinct name). An
+     * optional callback captures the corridor route the source receives.
+     *
      * @param list<array{name: ?string, category: string, lat: float, lon: float}> $pois
+     * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null       $captureRoute
      */
-    private function poiRepository(array $pois): PoiRepositoryInterface
+    private function poiSourceRegistry(array $pois, ?\Closure $captureRoute = null): PoiSourceRegistry
     {
-        $repository = $this->createStub(PoiRepositoryInterface::class);
-        $repository->method('findInCorridor')->willReturn($pois);
+        $source = new class($pois, $captureRoute) implements PoiSourceInterface {
+            /**
+             * @param list<array{name: ?string, category: string, lat: float, lon: float}>     $pois
+             * @param (\Closure(list<array{lat: float, lon: float}>, int): void)|null $captureRoute
+             */
+            public function __construct(private array $pois, private ?\Closure $captureRoute)
+            {
+            }
 
-        return $repository;
+            public function fetchInCorridor(array $route, int $radiusMeters): array
+            {
+                if (null !== $this->captureRoute) {
+                    ($this->captureRoute)($route, $radiusMeters);
+                }
+
+                return array_map(static fn (array $p): array => [
+                    'name' => $p['name'] ?? $p['category'],
+                    'category' => $p['category'],
+                    'lat' => $p['lat'],
+                    'lon' => $p['lon'],
+                    'wikidataId' => null,
+                    'source' => 'osm',
+                ], $this->pois);
+            }
+        };
+
+        return new PoiSourceRegistry([$source], new NearbyNameDeduplicator(new HaversineDistance()));
     }
 
     /**
@@ -148,7 +179,7 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiRepository([
+        $poiRepository = $this->poiSourceRegistry([
             ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
             ['name' => 'Chez Paul', 'category' => 'restaurant', 'lat' => 48.3, 'lon' => 2.3],
         ]);
@@ -193,7 +224,7 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiRepository([
+        $poiRepository = $this->poiSourceRegistry([
             ['name' => 'Le Bistrot', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
             ['name' => 'Carrefour', 'category' => 'supermarket', 'lat' => 48.3, 'lon' => 2.3],
         ]);
@@ -238,7 +269,7 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiRepository([
+        $poiRepository = $this->poiSourceRegistry([
             ['name' => 'Belvedere', 'category' => 'viewpoint', 'lat' => 48.2, 'lon' => 2.2],
         ]);
 
@@ -283,7 +314,7 @@ final class ScanPoisHandlerTest extends TestCase
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
         $distributor = $this->createStub(GeometryDistributorInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->poiRepository([]), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->poiSourceRegistry([]), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
     }
 
@@ -306,7 +337,7 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $this->poiRepository([]), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->poiSourceRegistry([]), $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
@@ -323,7 +354,7 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiRepository([
+        $poiRepository = $this->poiSourceRegistry([
             ['name' => 'Boulangerie', 'category' => 'bakery', 'lat' => 48.2, 'lon' => 2.2],
         ]);
 
@@ -366,7 +397,7 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiRepository([
+        $poiRepository = $this->poiSourceRegistry([
             ['name' => 'Bistrot A', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2],
             ['name' => 'Bistrot B', 'category' => 'restaurant', 'lat' => 48.2, 'lon' => 2.2001],
             ['name' => 'Remote Bistrot', 'category' => 'restaurant', 'lat' => 48.5, 'lon' => 2.5],
@@ -425,17 +456,10 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager = $this->createTripStateManager([$stage1, $stage2]);
 
         // The corridor read uses the decimated points as a {lat, lon} route.
-        $poiRepository = $this->createMock(PoiRepositoryInterface::class);
-        $poiRepository->expects($this->once())
-            ->method('findInCorridor')
-            ->with(
-                $this->callback(static fn (array $route): bool => [
-                    ['lat' => 48.0, 'lon' => 2.0],
-                    ['lat' => 48.5, 'lon' => 2.5],
-                ] === $route),
-                $this->greaterThan(0),
-            )
-            ->willReturn([]);
+        $capturedRoute = null;
+        $registry = $this->poiSourceRegistry([], static function (array $route) use (&$capturedRoute): void {
+            $capturedRoute = $route;
+        });
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
@@ -443,8 +467,13 @@ final class ScanPoisHandlerTest extends TestCase
         [$haversine, $riderTimeEstimator] = $this->createDefaultStubs();
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
+
+        self::assertSame([
+            ['lat' => 48.0, 'lon' => 2.0],
+            ['lat' => 48.5, 'lon' => 2.5],
+        ], $capturedRoute);
     }
 
     #[Test]
@@ -459,15 +488,10 @@ final class ScanPoisHandlerTest extends TestCase
         $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
         // No decimated points → corridor falls back to the 6-point stage geometry.
-        $poiRepository = $this->createMock(PoiRepositoryInterface::class);
-        $poiRepository->expects($this->once())
-            ->method('findInCorridor')
-            ->with(
-                $this->callback(static fn (array $route): bool => 6 === \count($route)
-                    && ['lat' => 48.0, 'lon' => 2.0] === $route[0]),
-                $this->greaterThan(0),
-            )
-            ->willReturn([]);
+        $capturedRoute = null;
+        $registry = $this->poiSourceRegistry([], static function (array $route) use (&$capturedRoute): void {
+            $capturedRoute = $route;
+        });
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByGeometry')->willReturn([]);
@@ -481,8 +505,12 @@ final class ScanPoisHandlerTest extends TestCase
                 $publishedEvents[] = ['tripId' => $tripId, 'type' => $type, 'payload' => $payload];
             });
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $poiRepository, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $this->waterPointRepository(), $distributor, $haversine, $riderTimeEstimator);
         $handler(new ScanPois('trip-1'));
+
+        self::assertIsArray($capturedRoute);
+        self::assertCount(6, $capturedRoute);
+        self::assertSame(['lat' => 48.0, 'lon' => 2.0], $capturedRoute[0]);
 
         $poisScannedEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::POIS_SCANNED === $e['type']);
         self::assertCount(1, $poisScannedEvents);
@@ -495,7 +523,7 @@ final class ScanPoisHandlerTest extends TestCase
         $stage = $this->createStage('trip-1', 1, 80.0);
         $tripStateManager = $this->createTripStateManager([$stage]);
 
-        $poiRepository = $this->poiRepository([
+        $poiRepository = $this->poiSourceRegistry([
             ['name' => 'POI A', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.0],
             ['name' => 'POI B', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.005],
             ['name' => 'POI C', 'category' => 'restaurant', 'lat' => 48.0, 'lon' => 2.010],
