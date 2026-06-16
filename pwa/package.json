@@ -17,7 +17,7 @@
   "dependencies": {
     "@api-platform/api-doc-parser": "^0.15.9",
     "@capacitor/core": "^7.6.2",
-    "@sentry/nextjs": "^10.53.1",
+    "@sentry/nextjs": "^10.58.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
