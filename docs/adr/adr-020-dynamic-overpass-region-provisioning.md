@@ -2,10 +2,9 @@
 
 - **Status:** Superseded
 - **Date:** 2026-03-05
-- **Superseded by:** [ADR-025](adr-025-removal-of-self-hosted-overpass.md) (self-hosted Overpass removed) and [ADR-040](adr-040-local-first-reference-data-postgis.md) (runtime Overpass replaced by a local PostGIS reference index)
 - **Extends:** ADR-017 (Valhalla Routing Engine and Self-Hosted Overpass Integration)
 - **Depends on:** ADR-016 Option F (Self-hosted Overpass — foundation implemented)
-- **Superseded by:** [ADR-025](adr-025-removal-of-self-hosted-overpass.md) — Self-hosted Overpass removed. The provisioner and PBF pipeline remain active for Valhalla only.
+- **Superseded by:** [ADR-025](adr-025-removal-of-self-hosted-overpass.md) — Self-hosted Overpass removed; runtime Overpass dependency later fully replaced by the local PostGIS index ([ADR-040](adr-040-local-first-reference-data-postgis.md)). The PBF provisioner pipeline remains active for Valhalla only.
 
 ## Context and Problem Statement
 
