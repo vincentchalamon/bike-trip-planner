@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\AccommodationSource;
 
 use App\ApiResource\Model\Coordinate;
+use App\Geo\NearbyNameDeduplicator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 class AccommodationSourceRegistry
@@ -18,12 +19,14 @@ class AccommodationSourceRegistry
     public function __construct(
         #[AutowireIterator('app.accommodation_source')]
         iterable $sources,
+        private readonly NearbyNameDeduplicator $deduplicator,
     ) {
         $this->sources = iterator_to_array($sources, false);
     }
 
     /**
-     * Fetches candidates from all enabled sources and concatenates results.
+     * Fetches candidates from all enabled sources and deduplicates the
+     * OSM/DataTourisme overlap by wikidataId, then by proximity + name.
      *
      * @param array<int, Coordinate> $endPoints
      * @param list<string>           $enabledTypes
@@ -44,6 +47,6 @@ class AccommodationSourceRegistry
             }
         }
 
-        return $all;
+        return $this->deduplicator->dedupe($all);
     }
 }
