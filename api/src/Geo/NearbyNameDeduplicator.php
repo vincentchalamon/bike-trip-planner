@@ -74,7 +74,7 @@ final readonly class NearbyNameDeduplicator
         $lonA = $this->coord($a, 'lon');
         $latB = $this->coord($b, 'lat');
         $lonB = $this->coord($b, 'lon');
-        if (null === $latA || null === $lonA || null === $latB || null === $lonB) {
+        if (\in_array(null, [$latA, $lonA, $latB, $lonB], true)) {
             return false;
         }
 
