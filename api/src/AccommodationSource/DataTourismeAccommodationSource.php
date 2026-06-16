@@ -39,7 +39,8 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
         $candidates = [];
         foreach ($this->accommodationRepository->findNear($points, $radiusMeters, $enabledTypes) as $accommodation) {
             if (null !== $accommodation['price']) {
-                $priceMin = $priceMax = $accommodation['price'];
+                $priceMin = $accommodation['price'];
+                $priceMax = $accommodation['price'];
                 $isExact = true;
             } else {
                 $pricing = $this->pricingEngine->estimatePrice($accommodation['category'], []);

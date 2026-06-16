@@ -43,6 +43,7 @@ final readonly class AccommodationRepository implements AccommodationRepositoryI
                       ST_SetSRID(ST_GeomFromText(:wkt), 4326)::geography,
                       :radius
                   )
+                LIMIT 200
                 SQL,
             [
                 'wkt' => WktGeometry::multiPoint($points),

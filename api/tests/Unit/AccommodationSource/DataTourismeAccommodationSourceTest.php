@@ -20,10 +20,11 @@ final class DataTourismeAccommodationSourceTest extends TestCase
         $repository->method('findNear')->willReturn([
             ['name' => 'Gîte du Lac', 'category' => 'apartment', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => 4, 'price' => 75.0, 'description' => null],
         ]);
-        $pricing = $this->createMock(PricingHeuristicEngine::class);
-        $pricing->expects($this->never())->method('estimatePrice');
 
-        $result = new DataTourismeAccommodationSource($repository, $pricing)->fetch([new Coordinate(48.0, 2.0)], 5000, ['apartment']);
+        // The heuristic engine is final and cannot be doubled, so we pass a real
+        // one; with an exact flux price it is not consulted.
+        $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['apartment']);
 
         self::assertCount(1, $result);
         self::assertSame('Gîte du Lac', $result[0]['name']);
@@ -41,14 +42,16 @@ final class DataTourismeAccommodationSourceTest extends TestCase
         $repository->method('findNear')->willReturn([
             ['name' => null, 'category' => 'hotel', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => null, 'price' => null, 'description' => null],
         ]);
-        $pricing = $this->createStub(PricingHeuristicEngine::class);
-        $pricing->method('estimatePrice')->willReturn(['min' => 60.0, 'max' => 90.0, 'isExact' => false]);
 
-        $result = new DataTourismeAccommodationSource($repository, $pricing)->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel']);
+        $engine = new PricingHeuristicEngine();
+        $expected = $engine->estimatePrice('hotel', []);
+
+        $result = new DataTourismeAccommodationSource($repository, $engine)
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel']);
 
         self::assertSame('hotel', $result[0]['name'], 'a null name falls back to the category');
-        self::assertSame(60.0, $result[0]['priceMin']);
-        self::assertSame(90.0, $result[0]['priceMax']);
+        self::assertSame($expected['min'], $result[0]['priceMin']);
+        self::assertSame($expected['max'], $result[0]['priceMax']);
         self::assertFalse($result[0]['isExact']);
     }
 }

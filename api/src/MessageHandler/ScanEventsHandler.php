@@ -87,6 +87,8 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                     continue;
                 }
 
+                usort($events, static fn (Event $a, Event $b): int => $a->startDate <=> $b->startDate);
+
                 foreach ($events as $event) {
                     $stage->addEvent($event);
                 }

@@ -145,14 +145,12 @@ final class ScanEventsHandlerTest extends TestCase
         $stages = [$this->createStage(1), $this->createStage(2), $this->createStage(3)];
 
         $eventRepository = $this->createStub(EventRepositoryInterface::class);
+        // Stage 0 → 2026-07-10, stage 1 → 2026-07-11, stage 2 → 2026-07-12.
         $eventRepository->method('findActiveNear')->willReturnCallback(
-            function (float $lat, float $lon, int $radius, string $date): array {
-                // Stage 0 → 2026-07-10, stage 1 → 2026-07-11, stage 2 → 2026-07-12.
-                return match ($date) {
-                    '2026-07-10' => [$this->eventRow('Festival de Jazz', 'festival', '2026-07-10', '2026-07-14', 'https://festival.example.com', 'Grand festival')],
-                    '2026-07-11' => [$this->eventRow('Expo Renoir', 'exhibition', '2026-07-11', '2026-07-30')],
-                    default => [],
-                };
+            fn (float $lat, float $lon, int $radius, string $date): array => match ($date) {
+                '2026-07-10' => [$this->eventRow('Festival de Jazz', 'festival', '2026-07-10', '2026-07-14', 'https://festival.example.com', 'Grand festival')],
+                '2026-07-11' => [$this->eventRow('Expo Renoir', 'exhibition', '2026-07-11', '2026-07-30')],
+                default => [],
             },
         );
 
