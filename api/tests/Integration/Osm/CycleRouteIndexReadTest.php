@@ -41,49 +41,63 @@ final class CycleRouteIndexReadTest extends KernelTestCase
             SQL);
     }
 
+    /**
+     * @param list<array{lat: float, lon: float}> $points
+     */
+    private function fractionFor(array $points): float
+    {
+        return new CycleRouteRepository($this->connection)->onNetworkFractions([$points], self::TOLERANCE)[0];
+    }
+
     #[Test]
     public function aStageFollowingACycleRouteIsFullyOnNetwork(): void
     {
-        $fraction = new CycleRouteRepository($this->connection)->onNetworkFraction([
+        self::assertGreaterThan(0.95, $this->fractionFor([
             ['lat' => 48.1, 'lon' => 2.0],
             ['lat' => 48.5, 'lon' => 2.0],
             ['lat' => 48.9, 'lon' => 2.0],
-        ], self::TOLERANCE);
-
-        self::assertGreaterThan(0.95, $fraction);
+        ]));
     }
 
     #[Test]
     public function aStageAwayFromAnyCycleRouteIsNotOnNetwork(): void
     {
-        $fraction = new CycleRouteRepository($this->connection)->onNetworkFraction([
+        self::assertEqualsWithDelta(0.0, $this->fractionFor([
             ['lat' => 48.1, 'lon' => 10.0],
             ['lat' => 48.9, 'lon' => 10.0],
-        ], self::TOLERANCE);
-
-        self::assertEqualsWithDelta(0.0, $fraction, 0.0001);
+        ]), 0.0001);
     }
 
     #[Test]
     public function aStageHalfOnNetworkIsAroundOneHalf(): void
     {
-        // First half follows the route (lon 2), second half veers away (lon 2.05 ~3.7km off).
-        $fraction = new CycleRouteRepository($this->connection)->onNetworkFraction([
+        // Segment 1 (lon 2, lat 48→48.5) follows the route (~55.7 km on network).
+        // Segment 2 (lat 48.5, lon 2→2.755) is perpendicular and far off route (~55.7 km off).
+        $fraction = $this->fractionFor([
             ['lat' => 48.0, 'lon' => 2.0],
             ['lat' => 48.5, 'lon' => 2.0],
-            ['lat' => 48.5, 'lon' => 2.05],
-        ], self::TOLERANCE);
+            ['lat' => 48.5, 'lon' => 2.755],
+        ]);
 
         self::assertGreaterThan(0.3, $fraction);
         self::assertLessThan(0.7, $fraction);
     }
 
     #[Test]
-    public function aDegenerateStageIsNotOnNetwork(): void
+    public function degenerateStagesAreNotOnNetwork(): void
     {
-        $repository = new CycleRouteRepository($this->connection);
+        $fractions = new CycleRouteRepository($this->connection)->onNetworkFractions(
+            [[], [['lat' => 48.0, 'lon' => 2.0]]],
+            self::TOLERANCE,
+        );
 
-        self::assertSame(0.0, $repository->onNetworkFraction([], self::TOLERANCE));
-        self::assertSame(0.0, $repository->onNetworkFraction([['lat' => 48.0, 'lon' => 2.0]], self::TOLERANCE));
+        self::assertEqualsWithDelta(0.0, $fractions[0], 0.0001);
+        self::assertEqualsWithDelta(0.0, $fractions[1], 0.0001);
+    }
+
+    #[Test]
+    public function emptyInputReturnsEmptyArray(): void
+    {
+        self::assertSame([], new CycleRouteRepository($this->connection)->onNetworkFractions([], self::TOLERANCE));
     }
 }

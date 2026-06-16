@@ -59,6 +59,18 @@ final readonly class TripDetailProvider implements ProviderInterface
 
         $stages = $this->tripStateManager->getStages($id) ?? [];
 
+        // One batched query for the on-cycle-network fraction of every stage.
+        $cycleNetwork = $this->cycleRouteRepository->onNetworkFractions(
+            array_map(
+                static fn (Stage $stage): array => array_map(
+                    static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
+                    $stage->geometry,
+                ),
+                $stages,
+            ),
+            self::CYCLE_NETWORK_TOLERANCE_METERS,
+        );
+
         return new TripDetail(
             id: $request->id->toRfc4122(),
             title: $request->title,
@@ -74,7 +86,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             enabledAccommodationTypes: $request->enabledAccommodationTypes,
             isLocked: $this->tripLocker->isLocked($request),
             outOfZone: $this->coverageRepository->isRouteOutOfZone($this->routePoints($stages)),
-            stages: array_map($this->serializeStage(...), $stages),
+            stages: array_map($this->serializeStage(...), $stages, $cycleNetwork),
         );
     }
 
@@ -112,7 +124,7 @@ final readonly class TripDetailProvider implements ProviderInterface
      *
      * @return array<string, mixed>
      */
-    private function serializeStage(Stage $stage): array
+    private function serializeStage(Stage $stage, float $onCycleNetwork): array
     {
         return [
             'dayNumber' => $stage->dayNumber,
@@ -124,10 +136,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             'geometry' => array_map($this->serializeCoord(...), $stage->geometry),
             'label' => $stage->label,
             'isRestDay' => $stage->isRestDay,
-            'onCycleNetwork' => $this->cycleRouteRepository->onNetworkFraction(
-                array_map(static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon], $stage->geometry),
-                self::CYCLE_NETWORK_TOLERANCE_METERS,
-            ),
+            'onCycleNetwork' => $onCycleNetwork,
             'weather' => $stage->weather instanceof WeatherForecast ? $this->serializeWeather($stage->weather) : null,
             'alerts' => array_map($this->serializeAlert(...), $stage->alerts),
             'pois' => array_map($this->serializePoi(...), $stage->pois),
