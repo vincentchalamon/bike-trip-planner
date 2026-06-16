@@ -11,6 +11,7 @@ use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\DoctrineTripRequestRepository;
+use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 use Zenstruck\Foundry\Test\Factories;
@@ -87,6 +88,41 @@ final class TripDetailTest extends ApiTestCase
         $this->assertArrayHasKey('geometry', $stage);
         $this->assertArrayHasKey('alerts', $stage);
         $this->assertArrayHasKey('accommodations', $stage);
+    }
+
+    #[Test]
+    public function detailFlagsOutOfZoneFromStageEndpointsWhenGeometryIsEmpty(): void
+    {
+        // Exercises the routePoints() fallback (no stage geometry → start/end points)
+        // against the real ST_Covers query: endpoints sit at lon 10, outside the
+        // seeded coverage polygon (2..4 lon, 48..50 lat), so the trip is out of zone.
+        $repo = $this->seedTrip(self::TRIP_ID);
+
+        $stage = new StageDto(
+            tripId: self::TRIP_ID,
+            dayNumber: 1,
+            distance: 40.0,
+            elevation: 300.0,
+            startPoint: new Coordinate(48.5, 10.0, 0.0),
+            endPoint: new Coordinate(48.6, 10.1, 0.0),
+        );
+        $repo->storeStages(self::TRIP_ID, [$stage]);
+
+        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        \assert($connection instanceof Connection);
+        $connection->executeStatement('TRUNCATE osm.coverage');
+        $connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.coverage (geom) VALUES (
+                ST_Multi(ST_SetSRID(ST_GeomFromText('POLYGON((2 48, 4 48, 4 50, 2 50, 2 48))'), 4326))
+            )
+            SQL);
+
+        $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $this->assertTrue($response->toArray(false)['outOfZone']);
     }
 
     #[Test]
