@@ -88,6 +88,9 @@ final class TripDetailTest extends ApiTestCase
         $this->assertArrayHasKey('geometry', $stage);
         $this->assertArrayHasKey('alerts', $stage);
         $this->assertArrayHasKey('accommodations', $stage);
+        // No cycle routes provisioned in the test DB → stage is not on a network.
+        $this->assertArrayHasKey('onCycleNetwork', $stage);
+        $this->assertEqualsWithDelta(0.0, $stage['onCycleNetwork'], 0.0001);
     }
 
     #[Test]
