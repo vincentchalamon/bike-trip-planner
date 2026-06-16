@@ -15,12 +15,17 @@ use App\Engine\RiderTimeEstimatorInterface;
 use App\Enum\AlertType;
 use App\Geo\GeometryBasedDistributor;
 use App\Geo\HaversineDistance;
+use App\Geo\NearbyNameDeduplicator;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanPois;
 use App\MessageHandler\ScanPoisHandler;
 use App\Osm\PoiRepository;
 use App\Osm\WaterPointRepository;
+use App\Poi\DataTourismeFoodPoiSource;
+use App\Poi\OsmPoiSource;
+use App\Poi\PoiSourceRegistry;
 use App\Poi\SupplyTimelineBuilder;
+use App\Tourism\FoodPoiRepository;
 use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\Test;
@@ -189,7 +194,13 @@ final class ScanPoisCorridorTest extends KernelTestCase
             $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
-            new PoiRepository($this->connection),
+            new PoiSourceRegistry(
+                [
+                    new OsmPoiSource(new PoiRepository($this->connection)),
+                    new DataTourismeFoodPoiSource(new FoodPoiRepository($this->connection)),
+                ],
+                new NearbyNameDeduplicator($haversine),
+            ),
             new WaterPointRepository($this->connection),
             new GeometryBasedDistributor($haversine),
             new SupplyTimelineBuilder($haversine),
