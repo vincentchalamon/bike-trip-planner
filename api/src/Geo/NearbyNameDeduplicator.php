@@ -18,8 +18,12 @@ final readonly class NearbyNameDeduplicator
 {
     private const int PROXIMITY_METERS = 75;
 
+    private readonly ?\Transliterator $transliterator;
+
     public function __construct(private GeoDistanceInterface $haversine)
     {
+        // Built once: dedupe() is O(n²) and normalizeName() runs twice per pair.
+        $this->transliterator = \Transliterator::create('Any-Latin; Latin-ASCII; Lower()');
     }
 
     /**
@@ -84,8 +88,7 @@ final readonly class NearbyNameDeduplicator
             return '';
         }
 
-        $transliterator = \Transliterator::create('Any-Latin; Latin-ASCII; Lower()');
-        $ascii = $transliterator?->transliterate($name);
+        $ascii = $this->transliterator?->transliterate($name);
 
         return preg_replace('/[^a-z0-9]/', '', \is_string($ascii) ? $ascii : strtolower($name)) ?? '';
     }
