@@ -60,6 +60,7 @@ final class TripShareShortCodeProviderTest extends TestCase
             departureHour: 8,
             enabledAccommodationTypes: [],
             isLocked: false,
+            outOfZone: false,
             stages: [],
         );
         $this->tripDetailProvider->expects($this->once())->method('provide')->willReturn($detail);

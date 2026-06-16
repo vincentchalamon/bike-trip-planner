@@ -50,6 +50,8 @@ final readonly class TripDetail
         /** @var string[] */
         public array $enabledAccommodationTypes,
         public bool $isLocked,
+        /** True when the route falls outside the provisioned coverage area: the trip is display-only (no Valhalla rerouting). */
+        public bool $outOfZone,
         #[ApiProperty(openapiContext: [
             'type' => 'array',
             'items' => [

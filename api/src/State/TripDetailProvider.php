@@ -14,6 +14,7 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripDetail;
 use App\ApiResource\TripRequest;
+use App\Osm\CoverageRepositoryInterface;
 use App\Repository\DoctrineTripRequestRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
@@ -31,6 +32,7 @@ final readonly class TripDetailProvider implements ProviderInterface
     public function __construct(
         private DoctrineTripRequestRepository $tripStateManager,
         private TripLocker $tripLocker,
+        private CoverageRepositoryInterface $coverageRepository,
     ) {
     }
 
@@ -66,8 +68,38 @@ final readonly class TripDetailProvider implements ProviderInterface
             departureHour: $request->departureHour,
             enabledAccommodationTypes: $request->enabledAccommodationTypes,
             isLocked: $this->tripLocker->isLocked($request),
+            outOfZone: $this->coverageRepository->isRouteOutOfZone($this->routePoints($stages)),
             stages: array_map($this->serializeStage(...), $stages),
         );
+    }
+
+    /**
+     * Flattens the stage geometries into the route's coordinates for the coverage
+     * test, falling back to stage start/end points when geometry is unavailable.
+     *
+     * @param list<Stage> $stages
+     *
+     * @return list<array{lat: float, lon: float}>
+     */
+    private function routePoints(array $stages): array
+    {
+        $points = [];
+        foreach ($stages as $stage) {
+            foreach ($stage->geometry as $coord) {
+                $points[] = ['lat' => $coord->lat, 'lon' => $coord->lon];
+            }
+        }
+
+        if ([] !== $points) {
+            return $points;
+        }
+
+        foreach ($stages as $stage) {
+            $points[] = ['lat' => $stage->startPoint->lat, 'lon' => $stage->startPoint->lon];
+            $points[] = ['lat' => $stage->endPoint->lat, 'lon' => $stage->endPoint->lon];
+        }
+
+        return $points;
     }
 
     /**
