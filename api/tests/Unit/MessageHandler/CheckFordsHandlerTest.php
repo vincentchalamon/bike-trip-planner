@@ -149,6 +149,25 @@ final class CheckFordsHandlerTest extends TestCase
     }
 
     #[Test]
+    public function escalatesToAWarningAtExactThreshold(): void
+    {
+        // precipitationProbability == RAIN_THRESHOLD_PERCENT (50) must trigger a warning, not a nudge.
+        $tripStateManager = $this->createTripStateManager([$this->stage(1, precipitationProbability: 50)]);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::FORD_ALERTS,
+                $this->callback(static fn (array $data): bool => 'warning' === $data['alerts'][0]['type']),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->fordRepository());
+        $handler(new CheckFords('trip-1'));
+    }
+
+    #[Test]
     public function treatsMissingForecastAsDry(): void
     {
         // No weather on the stage → no rain info → nudge, not warning.
