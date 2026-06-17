@@ -25,6 +25,12 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'base_uri' => 'https://www.komoot.com',
                     'max_redirects' => 2,
                     'timeout' => 10,
+                    // On-demand route fetch (Tier 3): retry transient failures
+                    // (429/5xx + transport errors) with back-off; permanent client
+                    // errors (404/403) are not retried, so they fail fast.
+                    'retry_failed' => [
+                        'max_retries' => 2,
+                    ],
                     'headers' => [
                         'Accept' => 'text/html',
                         'User-Agent' => 'BikeTripPlanner/1.0',
@@ -34,6 +40,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'base_uri' => 'https://www.strava.com',
                     'max_redirects' => 2,
                     'timeout' => 10,
+                    'retry_failed' => [
+                        'max_retries' => 2,
+                    ],
                     'headers' => [
                         'Accept' => 'application/gpx+xml',
                         'User-Agent' => 'BikeTripPlanner/1.0',
@@ -43,6 +52,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'base_uri' => 'https://ridewithgps.com',
                     'max_redirects' => 2,
                     'timeout' => 10,
+                    'retry_failed' => [
+                        'max_retries' => 2,
+                    ],
                     'headers' => [
                         'Accept' => 'application/json',
                         'User-Agent' => 'BikeTripPlanner/1.0',

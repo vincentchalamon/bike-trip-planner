@@ -53,8 +53,23 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
         $sourceUrl = $request->sourceUrl;
 
         $this->executeWithTracking($tripId, ComputationName::ROUTE, function () use ($tripId, $sourceUrl, $generation): void {
-            $fetcher = $this->routeFetcherRegistry->get($sourceUrl);
-            $result = $fetcher->fetch($sourceUrl);
+            // The route source is a live, on-demand third party (Tier 3). HTTP-level
+            // transient failures are already retried with back-off by the scoped
+            // client; a RuntimeException here is therefore a clear, terminal fetch
+            // failure (private/removed tour, unreachable source, unparseable
+            // response). Surface it to the user as a validation error and stop —
+            // re-throwing would only trigger pointless Messenger retries.
+            try {
+                $fetcher = $this->routeFetcherRegistry->get($sourceUrl);
+                $result = $fetcher->fetch($sourceUrl);
+            } catch (\RuntimeException $runtimeException) {
+                // Keep the technical detail (incl. raw cURL/transport messages) in
+                // the logs; show the user a stable, friendly message.
+                $this->logger->warning('Route fetch failed.', ['url' => $sourceUrl, 'error' => $runtimeException->getMessage()]);
+                $this->publisher->publishValidationError($tripId, 'ROUTE_FETCH_FAILED', 'The route could not be fetched. Please check the URL and try again.');
+
+                return;
+            }
 
             if ([] === $result->tracks) {
                 $this->publisher->publishValidationError($tripId, 'EMPTY_ROUTE', 'Empty route.');
