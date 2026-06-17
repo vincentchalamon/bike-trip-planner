@@ -33,8 +33,16 @@ final readonly class WikidataEnricher
         ?HttpClientInterface $httpClient = null,
         private float $timeoutSeconds = 60.0,
     ) {
+        // Wikidata's SPARQL endpoint throttles unidentified agents aggressively
+        // (the generic Symfony default), and enrichment failures are swallowed as
+        // best-effort, so a block would silently disable enrichment: send a
+        // descriptive User-Agent per Wikidata's bot policy.
         $this->httpClient = $httpClient ?? ScopingHttpClient::forBaseUri(
-            HttpClient::create(['max_redirects' => 2, 'timeout' => $this->timeoutSeconds]),
+            HttpClient::create([
+                'max_redirects' => 2,
+                'timeout' => $this->timeoutSeconds,
+                'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
+            ]),
             'https://query.wikidata.org/',
         );
     }

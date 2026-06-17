@@ -62,8 +62,8 @@ final class WikidataEnricherTest extends TestCase
     public function skipsInvalidQIdsAndSendsOnlySafeValues(): void
     {
         $captured = null;
-        $enricher = $this->enricher([], function (string $method, string $url) use (&$captured): void {
-            $captured = $url;
+        $enricher = $this->enricher([], function (string $method, string $url, array $options) use (&$captured): void {
+            $captured = $options['query']['query'] ?? $url;
         });
 
         $result = $enricher->enrich(['Q1', 'not-a-qid', 'Q2; DROP TABLE'], 'en');
