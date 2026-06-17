@@ -50,7 +50,7 @@ final readonly class AiTokenEncryptor
     public function decrypt(string $encrypted): ?string
     {
         $decoded = base64_decode($encrypted, true);
-        if (false === $decoded || \strlen($decoded) <= \SODIUM_CRYPTO_SECRETBOX_NONCEBYTES) {
+        if (false === $decoded || \strlen($decoded) < \SODIUM_CRYPTO_SECRETBOX_NONCEBYTES + \SODIUM_CRYPTO_SECRETBOX_MACBYTES) {
             return null;
         }
 

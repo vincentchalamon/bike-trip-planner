@@ -84,9 +84,11 @@ final class LlmClientFactoryTest extends TestCase
     #[Test]
     public function forUserReturnsNullWhenTheTokenCannotBeDecrypted(): void
     {
-        // e.g. encryption key rotated since the token was stored.
+        // e.g. encryption key rotated since the token was stored: a real blob
+        // built under a different key, so decrypt() walks nonce extraction + MAC
+        // failure rather than the malformed-base64 early return.
         $user = new User('rider@example.test');
-        $user->setAiProvider('anthropic')->setAiToken('not-decryptable-under-this-key');
+        $user->setAiProvider('anthropic')->setAiToken(new AiTokenEncryptor('different-key')->encrypt('sk-ant-secret'));
 
         self::assertNull($this->factory()->forUser($user));
     }

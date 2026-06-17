@@ -147,6 +147,9 @@ class User implements UserInterface
         return $this->aiToken;
     }
 
+    /**
+     * Ciphertext, or null. Encrypt with AiTokenEncryptor before setting.
+     */
     public function setAiToken(?string $aiToken): self
     {
         $this->aiToken = $aiToken;
