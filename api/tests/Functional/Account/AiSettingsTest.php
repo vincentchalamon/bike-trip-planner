@@ -69,7 +69,7 @@ final class AiSettingsTest extends ApiTestCase
         $userId = $fixtures['user']->getId()->toRfc4122();
 
         $response = self::createClient()->request('PUT', '/users/me/ai-settings', [
-            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
             'json' => ['provider' => 'anthropic', 'token' => 'sk-ant-secret-token'],
         ]);
 
@@ -99,7 +99,7 @@ final class AiSettingsTest extends ApiTestCase
         $fixtures = $this->createUser('ai-bad-provider@example.com');
 
         self::createClient()->request('PUT', '/users/me/ai-settings', [
-            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
             'json' => ['provider' => 'ollama', 'token' => 'whatever'],
         ]);
 
@@ -113,7 +113,7 @@ final class AiSettingsTest extends ApiTestCase
         $fixtures = $this->createUser('ai-bad-token@example.com');
 
         self::createClient()->request('PUT', '/users/me/ai-settings', [
-            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
             'json' => ['provider' => 'openai', 'token' => 'not-an-openai-key'],
         ]);
 
@@ -126,7 +126,7 @@ final class AiSettingsTest extends ApiTestCase
         $fixtures = $this->createUser('ai-no-token@example.com');
 
         self::createClient()->request('PUT', '/users/me/ai-settings', [
-            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
             'json' => ['provider' => 'anthropic'],
         ]);
 
@@ -141,7 +141,7 @@ final class AiSettingsTest extends ApiTestCase
 
         $client = self::createClient();
         $client->request('PUT', '/users/me/ai-settings', [
-            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
             'json' => ['provider' => 'anthropic', 'token' => 'sk-ant-secret-token'],
         ]);
         $this->assertResponseIsSuccessful();
@@ -169,7 +169,10 @@ final class AiSettingsTest extends ApiTestCase
         $client->request('GET', '/users/me/ai-settings');
         $this->assertResponseStatusCodeSame(401);
 
-        $client->request('PUT', '/users/me/ai-settings', ['json' => []]);
+        $client->request('PUT', '/users/me/ai-settings', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => [],
+        ]);
         $this->assertResponseStatusCodeSame(401);
 
         $client->request('DELETE', '/users/me/ai-settings');
