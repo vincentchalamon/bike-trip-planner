@@ -51,6 +51,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'open_meteo.client' => [
                     'base_uri' => 'https://api.open-meteo.com',
                     'timeout' => 10,
+                    'max_redirects' => 2,
                     // Live, on-demand source (Tier 3): retry transient failures
                     // (429/5xx + transport errors) with exponential back-off rather
                     // than dropping the forecast on the first hiccup.
