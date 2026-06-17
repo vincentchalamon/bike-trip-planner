@@ -40,10 +40,6 @@ final readonly class WikidataEnrichmentPass
 
     private const string CACHE_TABLE = 'provisioner.wikidata_cache';
 
-    private const string CANDIDATES_TABLE = 'provisioner.wikidata_candidates';
-
-    private const string FETCH_TABLE = 'provisioner.wikidata_fetch';
-
     /**
      * @var \Closure(list<string>): Process
      */
@@ -74,6 +70,12 @@ final readonly class WikidataEnrichmentPass
             return;
         }
 
+        // Scratch tables are scoped to the staging schema so concurrent passes
+        // (osm vs tourism) never drop each other's data, independent of the
+        // run-level lock (ADR-041).
+        $candidatesTable = $this->scratchTable('candidates', $stagingSchema);
+        $fetchTable = $this->scratchTable('fetch', $stagingSchema);
+
         // Ensure the persistent cache (the API migration may not have run here) and
         // fresh per-run scratch tables (drop any leftover from a prior crash; they
         // live in the stable schema, never in the swapped one).
@@ -81,8 +83,8 @@ final readonly class WikidataEnrichmentPass
             'CREATE SCHEMA IF NOT EXISTS %1$s; CREATE TABLE IF NOT EXISTS %2$s (qid text PRIMARY KEY, payload jsonb NOT NULL, fetched_at timestamptz NOT NULL); DROP TABLE IF EXISTS %3$s, %4$s; CREATE TABLE %3$s (qid text); CREATE TABLE %4$s (qid text, payload jsonb);',
             self::CACHE_SCHEMA,
             self::CACHE_TABLE,
-            self::CANDIDATES_TABLE,
-            self::FETCH_TABLE,
+            $candidatesTable,
+            $fetchTable,
         ), 'psql prepare wikidata cache');
 
         // Collect the distinct Q-IDs straight from the staging tables.
@@ -90,13 +92,13 @@ final readonly class WikidataEnrichmentPass
             static fn (string $table): string => \sprintf('SELECT DISTINCT wikidata FROM %s.%s WHERE wikidata IS NOT NULL', $stagingSchema, $table),
             $tables,
         ));
-        $this->psql(\sprintf('INSERT INTO %s (qid) %s;', self::CANDIDATES_TABLE, $union), 'psql collect wikidata candidates');
+        $this->psql(\sprintf('INSERT INTO %s (qid) %s;', $candidatesTable, $union), 'psql collect wikidata candidates');
 
         // Export those missing or older than the TTL.
         $missingPath = $workDir.'/wikidata-missing.copy';
         $this->psql(\sprintf(
             "\\copy (SELECT cand.qid FROM %1\$s cand WHERE NOT EXISTS (SELECT 1 FROM %2\$s c WHERE c.qid = cand.qid AND c.fetched_at > now() - make_interval(days => %3\$d))) TO '%4\$s'",
-            self::CANDIDATES_TABLE,
+            $candidatesTable,
             self::CACHE_TABLE,
             $this->cacheTtlDays,
             $missingPath,
@@ -121,11 +123,11 @@ final readonly class WikidataEnrichmentPass
                 fclose($handle);
             }
 
-            $this->psql(\sprintf("\\copy %s (qid, payload) FROM '%s'", self::FETCH_TABLE, $fetchPath), 'psql copy wikidata fetched');
+            $this->psql(\sprintf("\\copy %s (qid, payload) FROM '%s'", $fetchTable, $fetchPath), 'psql copy wikidata fetched');
             $this->psql(\sprintf(
                 'INSERT INTO %1$s (qid, payload, fetched_at) SELECT qid, payload, now() FROM %2$s ON CONFLICT (qid) DO UPDATE SET payload = excluded.payload, fetched_at = excluded.fetched_at;',
                 self::CACHE_TABLE,
-                self::FETCH_TABLE,
+                $fetchTable,
             ), 'psql upsert wikidata cache');
         }
 
@@ -140,7 +142,16 @@ final readonly class WikidataEnrichmentPass
             ), \sprintf('psql enrich %s.%s', $stagingSchema, $table));
         }
 
-        $this->psql(\sprintf('DROP TABLE IF EXISTS %s, %s;', self::CANDIDATES_TABLE, self::FETCH_TABLE), 'psql drop wikidata scratch tables');
+        $this->psql(\sprintf('DROP TABLE IF EXISTS %s, %s;', $candidatesTable, $fetchTable), 'psql drop wikidata scratch tables');
+    }
+
+    /**
+     * Scratch table name scoped to the staging schema (sanitised to a safe
+     * identifier), so concurrent passes never collide on a shared name.
+     */
+    private function scratchTable(string $kind, string $stagingSchema): string
+    {
+        return \sprintf('%s.wikidata_%s_%s', self::CACHE_SCHEMA, $kind, (string) preg_replace('/[^a-z0-9_]/i', '_', $stagingSchema));
     }
 
     /**

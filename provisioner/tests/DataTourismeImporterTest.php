@@ -291,14 +291,14 @@ final class DataTourismeImporterTest extends TestCase
             'candidate Q-IDs are collected straight from the staging tables',
         );
         self::assertTrue($has('TO ', 'SELECT cand.qid', 'NOT EXISTS', 'make_interval'), 'missing/stale Q-IDs are selected against the TTL');
-        self::assertTrue($has('\copy provisioner.wikidata_fetch (qid, payload) FROM'), 'fetched enrichments are staged');
+        self::assertTrue($has('\copy provisioner.wikidata_fetch_tourism_staging (qid, payload) FROM'), 'fetched enrichments are staged');
         self::assertTrue($has('INSERT INTO provisioner.wikidata_cache', 'ON CONFLICT (qid) DO UPDATE'), 'fetched enrichments are upserted into the cache');
         self::assertTrue(
             $has('UPDATE tourism_staging.cultural_pois t SET', "COALESCE(t.website, c.payload->>'website')", "COALESCE(t.description, c.payload->>'description')", 'FROM provisioner.wikidata_cache c'),
             'cultural_pois is enriched from the cache, keeping source-set fields',
         );
         self::assertTrue($has('UPDATE tourism_staging.food_pois t SET', 'FROM provisioner.wikidata_cache c'), 'food_pois is enriched from the cache');
-        self::assertTrue($has('DROP TABLE IF EXISTS provisioner.wikidata_candidates, provisioner.wikidata_fetch'), 'scratch tables are dropped');
+        self::assertTrue($has('DROP TABLE IF EXISTS provisioner.wikidata_candidates_tourism_staging, provisioner.wikidata_fetch_tourism_staging'), 'scratch tables are dropped');
 
         $fetch = (string) file_get_contents($this->workDir.'/wikidata-fetch.copy');
         self::assertStringContainsString('Q243', $fetch);
