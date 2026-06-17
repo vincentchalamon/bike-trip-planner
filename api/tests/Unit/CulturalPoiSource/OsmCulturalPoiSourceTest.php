@@ -121,7 +121,7 @@ final class OsmCulturalPoiSourceTest extends TestCase
     {
         // Default the provisioner-enriched columns the read layer now returns.
         $rows = array_map(
-            static fn (array $row): array => $row + ['openingHours' => null, 'description' => null, 'website' => null, 'imageUrl' => null, 'wikipediaUrl' => null],
+            static fn (array $row): array => $row + ['openingHours' => null, 'description' => null, 'imageUrl' => null, 'wikipediaUrl' => null],
             $rows,
         );
 

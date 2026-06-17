@@ -16,8 +16,8 @@ final class DataTourismeCulturalPoiSourceTest extends TestCase
     {
         $repository = $this->createStub(CulturalPoiRepositoryInterface::class);
         $repository->method('findInCorridor')->willReturn([
-            ['name' => 'Musée X', 'category' => 'museum', 'lat' => 48.5, 'lon' => 2.3, 'openingHours' => 'Mo-Fr 09:00-17:00', 'description' => 'Un musée.', 'wikidata' => 'Q42', 'website' => 'https://musee.test', 'imageUrl' => 'https://img.test/m.jpg', 'wikipediaUrl' => 'https://fr.wikipedia.org/wiki/Musee'],
-            ['name' => null, 'category' => 'monument', 'lat' => 49.0, 'lon' => 3.0, 'openingHours' => null, 'description' => null, 'wikidata' => null, 'website' => null, 'imageUrl' => null, 'wikipediaUrl' => null],
+            ['name' => 'Musée X', 'category' => 'museum', 'lat' => 48.5, 'lon' => 2.3, 'openingHours' => 'Mo-Fr 09:00-17:00', 'description' => 'Un musée.', 'wikidata' => 'Q42', 'imageUrl' => 'https://img.test/m.jpg', 'wikipediaUrl' => 'https://fr.wikipedia.org/wiki/Musee'],
+            ['name' => null, 'category' => 'monument', 'lat' => 49.0, 'lon' => 3.0, 'openingHours' => null, 'description' => null, 'wikidata' => null, 'imageUrl' => null, 'wikipediaUrl' => null],
         ]);
 
         $pois = new DataTourismeCulturalPoiSource($repository)->fetchForStages([[['lat' => 48.5, 'lon' => 2.3]]], 5000);
