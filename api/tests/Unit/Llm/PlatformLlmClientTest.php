@@ -8,15 +8,23 @@ use App\Llm\Exception\AiUnavailableException;
 use App\Llm\PlatformLlmClient;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
+use Symfony\AI\Platform\Exception\ExceptionInterface as PlatformExceptionInterface;
+use Symfony\AI\Platform\PlatformInterface;
 use Symfony\AI\Platform\Test\InMemoryPlatform;
 use Symfony\Component\HttpClient\Exception\TransportException;
 
 final class PlatformLlmClientTest extends TestCase
 {
+    private function client(PlatformInterface $platform): PlatformLlmClient
+    {
+        return new PlatformLlmClient($platform, new NullLogger());
+    }
+
     #[Test]
     public function generateWrapsThePlatformTextResponse(): void
     {
-        $client = new PlatformLlmClient(new InMemoryPlatform('{"narrative":"ok"}'));
+        $client = $this->client(new InMemoryPlatform('{"narrative":"ok"}'));
 
         self::assertSame(['response' => '{"narrative":"ok"}'], $client->generate('claude-3-5-haiku-latest', 'hello'));
     }
@@ -25,7 +33,7 @@ final class PlatformLlmClientTest extends TestCase
     public function chatMapsRolesAndWrapsTheAssistantMessage(): void
     {
         $captured = null;
-        $client = new PlatformLlmClient(new InMemoryPlatform(static function (object $model, object $input) use (&$captured): string {
+        $client = $this->client(new InMemoryPlatform(static function (object $model, object $input) use (&$captured): string {
             $captured = $input;
 
             return 'pong';
@@ -40,24 +48,35 @@ final class PlatformLlmClientTest extends TestCase
     #[Test]
     public function isEnabledIsAlwaysTrueForAConstructedClient(): void
     {
-        self::assertTrue(new PlatformLlmClient(new InMemoryPlatform('x'))->isEnabled());
+        self::assertTrue($this->client(new InMemoryPlatform('x'))->isEnabled());
     }
 
     #[Test]
     public function rejectsAnEmptyModelName(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        new PlatformLlmClient(new InMemoryPlatform('x'))->generate('', 'hello');
+        $this->client(new InMemoryPlatform('x'))->generate('', 'hello');
     }
 
     #[Test]
     public function wrapsTransportErrorsIntoAiUnavailableException(): void
     {
-        $client = new PlatformLlmClient(new InMemoryPlatform(static function (): string {
+        $client = $this->client(new InMemoryPlatform(static function (): string {
             throw new TransportException('connection refused');
         }));
 
         $this->expectException(AiUnavailableException::class);
         $client->generate('claude-3-5-haiku-latest', 'hello');
+    }
+
+    #[Test]
+    public function wrapsPlatformErrorsIntoAiUnavailableException(): void
+    {
+        // Platform-layer failure (provider 5xx / malformed body), distinct from transport.
+        $platform = $this->createStub(PlatformInterface::class);
+        $platform->method('invoke')->willThrowException($this->createStub(PlatformExceptionInterface::class));
+
+        $this->expectException(AiUnavailableException::class);
+        $this->client($platform)->generate('claude-3-5-haiku-latest', 'hello');
     }
 }

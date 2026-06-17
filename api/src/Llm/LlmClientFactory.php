@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Llm;
 
+use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Bridge\Anthropic\Factory as AnthropicFactory;
 use Symfony\AI\Platform\Bridge\Gemini\Factory as GeminiFactory;
 use Symfony\AI\Platform\Bridge\OpenAi\Factory as OpenAiFactory;
@@ -25,6 +26,7 @@ final readonly class LlmClientFactory
         private HttpClientInterface $anthropicClient,
         private HttpClientInterface $openAiClient,
         private HttpClientInterface $geminiClient,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -36,6 +38,6 @@ final readonly class LlmClientFactory
             AiProvider::GEMINI => GeminiFactory::createPlatform($token, $this->geminiClient),
         };
 
-        return new PlatformLlmClient($platform);
+        return new PlatformLlmClient($platform, $this->logger);
     }
 }

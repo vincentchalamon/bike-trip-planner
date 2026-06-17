@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Llm;
 
 use App\Llm\Exception\AiUnavailableException;
+use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Exception\ExceptionInterface as PlatformExceptionInterface;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
@@ -29,6 +30,7 @@ final readonly class PlatformLlmClient implements LlmClientInterface
 {
     public function __construct(
         private PlatformInterface $platform,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -82,6 +84,10 @@ final readonly class PlatformLlmClient implements LlmClientInterface
         try {
             return $this->platform->invoke($model, new MessageBag(...$messages), $options)->asText();
         } catch (PlatformExceptionInterface|HttpExceptionInterface $exception) {
+            // Log before throwing so failures are visible in monitoring even when
+            // AiUnavailableException is caught and degraded gracefully upstream.
+            $this->logger->warning('AI provider request failed.', ['model' => $model, 'error' => $exception->getMessage()]);
+
             throw new AiUnavailableException(\sprintf('AI request for model "%s" failed: %s', $model, $exception->getMessage()), $exception->getCode(), previous: $exception);
         }
     }

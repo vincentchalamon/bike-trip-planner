@@ -71,6 +71,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             service('anthropic.client'),
             service('openai.client'),
             service('gemini.client'),
+            service('logger'),
         ]);
 
     // Async analysis handlers (pass-1 per stage, pass-2 overview) use the analysis client.

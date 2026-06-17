@@ -10,6 +10,7 @@ use App\Llm\PlatformLlmClient;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\MockHttpClient;
 
 final class LlmClientFactoryTest extends TestCase
@@ -31,7 +32,7 @@ final class LlmClientFactoryTest extends TestCase
     public function buildsAPlatformClientForEachProviderWithoutCallingTheNetwork(AiProvider $provider, string $token): void
     {
         // MockHttpClient with no queued responses: construction must not hit the wire.
-        $factory = new LlmClientFactory(new MockHttpClient(), new MockHttpClient(), new MockHttpClient());
+        $factory = new LlmClientFactory(new MockHttpClient(), new MockHttpClient(), new MockHttpClient(), new NullLogger());
 
         self::assertInstanceOf(PlatformLlmClient::class, $factory->create($provider, $token));
     }
