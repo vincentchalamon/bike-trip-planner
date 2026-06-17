@@ -291,9 +291,41 @@ final class HealthControllerTest extends ApiTestCase
         $this->assertSame('ok', $reference['status']);
         $this->assertNotNull($reference['osm']);
         $this->assertIsString($reference['osm']['refreshed_at']);
+        $this->assertFalse($reference['osm']['stale'], 'a just-refreshed index is fresh');
+        $this->assertLessThan(60, $reference['osm']['age_seconds']);
         $this->assertSame(12, $reference['osm']['feature_counts']['pois']);
         $this->assertSame(4, $reference['osm']['feature_counts']['admin_boundaries']);
         $this->assertNull($reference['tourism'], 'tourism index still unprovisioned');
+    }
+
+    #[Test]
+    public function readinessFlagsAStaleReferenceIndexWithoutFailingReadiness(): void
+    {
+        $this->truncateProvisioningMetadata();
+        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        \assert($connection instanceof Connection);
+        // OSM refreshed 10 days ago — past the 8-day weekly-cadence threshold.
+        $connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.metadata (refreshed_at, feature_counts)
+            VALUES (now() - interval '10 days', '{"pois": 12}'::jsonb)
+            SQL);
+
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $response = $this->client->request('GET', '/api/health');
+
+        // Stale data degrades features only — readiness stays 200 (ADR-040/041).
+        $this->assertResponseStatusCodeSame(200);
+        $data = $response->toArray();
+        $this->assertSame('ok', $data['status'], 'reference_data is non-required');
+        $reference = $data['deps']['reference_data'];
+        $this->assertSame('stale', $reference['status']);
+        $this->assertTrue($reference['osm']['stale']);
+        $this->assertGreaterThan(8 * 86400, $reference['osm']['age_seconds']);
     }
 
     private function truncateProvisioningMetadata(): void

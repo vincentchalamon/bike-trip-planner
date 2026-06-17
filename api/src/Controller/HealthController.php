@@ -194,11 +194,27 @@ final readonly class HealthController
     }
 
     /**
-     * Reports the freshness of the local-first PostGIS reference index (ADR-040):
-     * the last successful refresh timestamp and per-table feature counts the
-     * provisioner records in osm.metadata / tourism.metadata. Non-critical: a
-     * missing/empty index reports `down` (never provisioned) without flipping
-     * readiness, since it only degrades features.
+     * Maximum age (seconds) before a source's last refresh is considered stale,
+     * derived from each source's provisioning cadence (ADR-041): OSM is refreshed
+     * weekly, DataTourisme daily — so a comfortable buffer above each cadence
+     * flags a silently-failing or unscheduled cron without false positives.
+     *
+     * @var array<string, int>
+     */
+    private const array STALE_THRESHOLDS = [
+        'osm' => 8 * 86400,      // 8 days (weekly cadence)
+        'tourism' => 36 * 3600,  // 36 hours (daily cadence)
+    ];
+
+    /**
+     * Reports the freshness of the local-first PostGIS reference index
+     * (ADR-040/041): the last refresh timestamp, its age, a per-source `stale`
+     * flag (refresh older than the source cadence) and per-table feature counts
+     * the provisioner records in osm.metadata / tourism.metadata.
+     *
+     * Non-critical: `down` (never provisioned) or `stale` (refresh overdue, so an
+     * operator/uptime probe can alert on dated data) degrade features only — they
+     * never flip readiness, so the probe stays 200 (ADR-040).
      *
      * @return array<string, mixed>
      */
@@ -212,8 +228,15 @@ final readonly class HealthController
             $osm = $this->fetchProvisioningMetadata('osm');
             $tourism = $this->fetchProvisioningMetadata('tourism');
 
+            $present = array_filter([$osm, $tourism]);
+            $status = match (true) {
+                [] === $present => 'down',
+                array_any($present, static fn (array $source): bool => $source['stale']) => 'stale',
+                default => 'ok',
+            };
+
             return [
-                'status' => null === $osm && null === $tourism ? 'down' : 'ok',
+                'status' => $status,
                 'latency_ms' => $this->elapsedMs($start),
                 'osm' => $osm,
                 'tourism' => $tourism,
@@ -235,19 +258,20 @@ final readonly class HealthController
     }
 
     /**
-     * @return array{refreshed_at: ?string, feature_counts: array<string, int>}|null null when the schema was never provisioned (no metadata row)
+     * @return array{refreshed_at: ?string, age_seconds: ?int, stale: bool, feature_counts: array<string, int>}|null null when the schema was never provisioned (no metadata row)
      */
     private function fetchProvisioningMetadata(string $schema): ?array
     {
         // The schema name is interpolated into SQL; allowlist it so a future
         // caller can never turn this into an injection point.
-        if (!\in_array($schema, ['osm', 'tourism'], true)) {
+        if (!\array_key_exists($schema, self::STALE_THRESHOLDS)) {
             return null;
         }
 
         try {
+            // Age is computed in SQL (now() - refreshed_at) to stay timezone-safe.
             $row = $this->connection->fetchAssociative(
-                \sprintf('SELECT refreshed_at, feature_counts FROM %s.metadata LIMIT 1', $schema),
+                \sprintf('SELECT refreshed_at, EXTRACT(EPOCH FROM (now() - refreshed_at))::bigint AS age_seconds, feature_counts FROM %s.metadata LIMIT 1', $schema),
             );
         } catch (\Throwable) {
             // Schema/table absent (never migrated on this instance): treat as unprovisioned.
@@ -267,8 +291,12 @@ final readonly class HealthController
             }
         }
 
+        $ageSeconds = is_numeric($row['age_seconds']) ? (int) $row['age_seconds'] : null;
+
         return [
             'refreshed_at' => \is_string($row['refreshed_at']) ? $row['refreshed_at'] : null,
+            'age_seconds' => $ageSeconds,
+            'stale' => null !== $ageSeconds && $ageSeconds > self::STALE_THRESHOLDS[$schema],
             'feature_counts' => $counts,
         ];
     }

@@ -1,6 +1,6 @@
 # ADR-041: Provisioner Resilience — Failure Isolation, Resumable Enrichment, Detailed Logging
 
-- **Status:** Accepted — orchestration hardening, the resumable Wikidata cache and network timeouts/retries have landed; staleness alerting and the remaining memory budget work follow
+- **Status:** Accepted — all five workstreams (R1–R5) have landed: orchestration hardening, the resumable Wikidata cache, network timeouts/retries, the memory budget guard, and staleness alerting
 - **Date:** 2026-06-17
 - **Depends on:** ADR-040 (Local-first reference data — single PostGIS source), ADR-039 (Beta right-sizing)
 
@@ -37,18 +37,19 @@ Harden the provisioner so third-party and resource failures degrade only the aff
 - **Explicit timeouts.** OSM PBF and DataTourisme flux downloads cap both the per-chunk idle wait and the total transfer (`max_duration`), so a stalled mirror fails fast instead of hanging the run.
 - **Retry with backoff.** Wikidata SPARQL batches retry on transient failures (HTTP 429/5xx, transport errors) with exponential backoff before being skipped.
 
-### R4 — Memory budget (partially implemented, rest deferred)
+### R4 — Memory budget (implemented)
 
-The streaming enricher (R2) removes the largest avoidable PHP allocation. Remaining work: document and validate the `osm2pgsql --cache` vs container-limit budget, and set an explicit PHP `memory_limit`.
+The streaming enricher (R2) removes the largest avoidable PHP allocation. On top of that, the provisioner entrypoint caps PHP at `memory_limit=512M` so a regression in the streaming / enrichment paths fails with a clean PHP fatal instead of a silent container OOM-kill. The heavy import processes run **outside** PHP: `osm2pgsql` is bounded by `--cache 800` (MB) plus its node cache, and `psql` by the DB config — together they fit the provisioner's 2 GB container alongside the bounded PHP process. The container limit stays the backstop for the native tools.
 
-### R5 — Staleness alerting (deferred)
+### R5 — Staleness alerting (implemented)
 
-`/api/health` already exposes `osm.metadata` / `tourism.metadata` `refreshed_at`. Planned: age thresholds per source (and a Wikidata refresh marker) surfaced as a degraded-feature signal, plus an uptime probe and runbook — so a silently-failing cron is detected by data age, not only by a failed run.
+`/api/health` `reference_data` now reports, per source, the refresh `age_seconds` and a `stale` flag (refresh older than the source cadence: OSM 8 days, DataTourisme 36 hours), and an overall `stale` status when any source is overdue. It stays **non-required** — stale data degrades features only, never flipping readiness — so an uptime probe (Uptime Kuma) can alert on `deps.reference_data.status == "stale"` (or a per-source `stale` flag) and catch a silently-failing or unscheduled cron by data age, not only by a failed run. Wikidata freshness rides on the OSM/tourism refresh that re-runs the cache-backed enrichment.
 
 ## Consequences
 
 - A Wikidata/DataTourisme/mirror outage degrades only the next refresh of that source; the live dataset and the other sources are unaffected.
 - The daily DataTourisme refresh no longer pays the full Wikidata cost; enrichment resumes from the cache after any interruption.
-- Provisioner memory stays bounded on the enrichment path; the import path budget is the remaining R4 item.
+- Provisioner memory is bounded: the PHP process is capped at 512 MB, and the native import tools fit the 2 GB container under their own caps.
+- A silently-failing or unscheduled refresh is detectable by data age via `/api/health` (`reference_data` stale flag), not only by a failed run.
 - Failures leave a persistent, detailed trace (command + stderr) for later diagnosis.
 - The cache adds a stable `provisioner` schema, bootstrapped by a migration and self-created by the provisioner if absent.

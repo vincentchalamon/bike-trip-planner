@@ -51,6 +51,7 @@ sync with the deployed configuration.
 | 3 | Keyword  | `https://biketrip.mooo.com/`, keyword `Bike Trip Planner`           | 300 s    | 2       | **P1**   | Detects PWA shell regressions (blank page, SSR crash).      |
 | 4 | DNS      | `biketrip.mooo.com`, resolver `1.1.1.1`, record type `A`            | 300 s    | 2       | **P2**   | Detects FreeDNS / DynDNS expiration.                        |
 | 5 | HTTP(s)  | `https://biketrip.mooo.com/.well-known/mercure?topic=test`          | 300 s    | 2       | **P2**   | Accept HTTP status `200,401`. Anything `5xx` = down.        |
+| 6 | JSON query | `https://biketrip.mooo.com/api/health`                            | 3600 s   | 1       | **P3**   | Reference-data freshness: alert when the local index is stale (ADR-041). |
 
 ### Per-monitor configuration tips
 
@@ -65,6 +66,13 @@ sync with the deployed configuration.
 - **Monitor 5 (Mercure)** — `Accepted Status Codes: 200-299, 401`. Mercure
   returns `401` for unauthenticated subscribers, which is the healthy answer
   here. Any `502/503/504` indicates the hub is unreachable.
+- **Monitor 6 (reference-data freshness)** — type **HTTP(s) - JSON Query**,
+  `JSON Query: $.deps.reference_data.status`, `Expected Value: stale`,
+  `Condition: !=`. The provisioner refreshes the local PostGIS index on a cron
+  (OSM weekly, DataTourisme daily); `/api/health` flags the index `stale` once a
+  refresh is overdue (ADR-041). This is a **low-severity (P3)** data-freshness
+  alarm, **not** an availability alarm — the probe deliberately returns `200`
+  even when stale, so only the JSON query (not the status code) detects it.
 
 ## 3. Notification webhook (prepares P1.3)
 
