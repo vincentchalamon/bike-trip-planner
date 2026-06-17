@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Llm;
 
+use App\Entity\User;
 use App\Llm\AiProvider;
+use App\Llm\AiTokenEncryptor;
 use App\Llm\LlmClientFactory;
 use App\Llm\PlatformLlmClient;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -15,6 +17,19 @@ use Symfony\Component\HttpClient\MockHttpClient;
 
 final class LlmClientFactoryTest extends TestCase
 {
+    private AiTokenEncryptor $encryptor;
+
+    protected function setUp(): void
+    {
+        $this->encryptor = new AiTokenEncryptor('test-key');
+    }
+
+    private function factory(): LlmClientFactory
+    {
+        // MockHttpClient with no queued responses: construction must not hit the wire.
+        return new LlmClientFactory(new MockHttpClient(), new MockHttpClient(), new MockHttpClient(), new NullLogger(), $this->encryptor);
+    }
+
     /**
      * @return iterable<string, array{AiProvider, string}>
      */
@@ -29,11 +44,50 @@ final class LlmClientFactoryTest extends TestCase
 
     #[Test]
     #[DataProvider('providers')]
-    public function buildsAPlatformClientForEachProviderWithoutCallingTheNetwork(AiProvider $provider, string $token): void
+    public function createBuildsAPlatformClientForEachProvider(AiProvider $provider, string $token): void
     {
-        // MockHttpClient with no queued responses: construction must not hit the wire.
-        $factory = new LlmClientFactory(new MockHttpClient(), new MockHttpClient(), new MockHttpClient(), new NullLogger());
+        self::assertInstanceOf(PlatformLlmClient::class, $this->factory()->create($provider, $token));
+    }
 
-        self::assertInstanceOf(PlatformLlmClient::class, $factory->create($provider, $token));
+    #[Test]
+    public function forUserBuildsAClientWhenConfigured(): void
+    {
+        $user = new User('rider@example.test');
+        $user->setAiProvider('anthropic')->setAiToken($this->encryptor->encrypt('sk-ant-secret'));
+
+        self::assertInstanceOf(PlatformLlmClient::class, $this->factory()->forUser($user));
+    }
+
+    #[Test]
+    public function forUserReturnsNullWhenNotConfigured(): void
+    {
+        self::assertNull($this->factory()->forUser(new User('rider@example.test')));
+    }
+
+    #[Test]
+    public function forUserReturnsNullWhenTokenMissing(): void
+    {
+        $user = new User('rider@example.test')->setAiProvider('anthropic');
+
+        self::assertNull($this->factory()->forUser($user));
+    }
+
+    #[Test]
+    public function forUserReturnsNullForAnUnknownProvider(): void
+    {
+        $user = new User('rider@example.test');
+        $user->setAiProvider('ollama')->setAiToken($this->encryptor->encrypt('x'));
+
+        self::assertNull($this->factory()->forUser($user));
+    }
+
+    #[Test]
+    public function forUserReturnsNullWhenTheTokenCannotBeDecrypted(): void
+    {
+        // e.g. encryption key rotated since the token was stored.
+        $user = new User('rider@example.test');
+        $user->setAiProvider('anthropic')->setAiToken('not-decryptable-under-this-key');
+
+        self::assertNull($this->factory()->forUser($user));
     }
 }

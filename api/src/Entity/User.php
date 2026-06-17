@@ -33,6 +33,21 @@ class User implements UserInterface
     #[ORM\Column(length: 5, options: ['default' => 'fr'])]
     private string $locale = 'fr';
 
+    /**
+     * Optional bring-your-own AI provider (ADR-042): the {@see App\Llm\AiProvider}
+     * value the user picked, or null when AI is not configured.
+     */
+    #[ORM\Column(length: 32, nullable: true)]
+    private ?string $aiProvider = null;
+
+    /**
+     * The user's provider API token stored as ciphertext (see AiTokenEncryptor),
+     * never the plaintext: encrypted at the write boundary, decrypted only at
+     * call time.
+     */
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $aiToken = null;
+
     /** @var Collection<int, TripRequest> */
     #[ORM\OneToMany(targetEntity: TripRequest::class, mappedBy: 'user', fetch: 'EXTRA_LAZY')]
     private Collection $trips;
@@ -108,6 +123,35 @@ class User implements UserInterface
         $this->email = \sprintf('deleted-%s@deleted.invalid', $this->id->toRfc4122());
         $this->roles = [];
         $this->locale = 'fr';
+        $this->aiProvider = null;
+        $this->aiToken = null;
+    }
+
+    public function getAiProvider(): ?string
+    {
+        return $this->aiProvider;
+    }
+
+    public function setAiProvider(?string $aiProvider): self
+    {
+        $this->aiProvider = $aiProvider;
+
+        return $this;
+    }
+
+    /**
+     * Ciphertext, or null. Encrypt with AiTokenEncryptor before setting.
+     */
+    public function getAiToken(): ?string
+    {
+        return $this->aiToken;
+    }
+
+    public function setAiToken(?string $aiToken): self
+    {
+        $this->aiToken = $aiToken;
+
+        return $this;
     }
 
     public function getLocale(): string
