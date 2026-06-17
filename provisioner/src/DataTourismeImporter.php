@@ -66,7 +66,20 @@ final readonly class DataTourismeImporter
      */
     private const array WIKIDATA_TABLES = ['cultural_pois', 'food_pois'];
 
-    private const string WIKIDATA_ENRICH_TABLE = 'wikidata_enrich';
+    /**
+     * Persistent enrichment cache (ADR-041), in a stable schema that survives the
+     * tourism swap. Only Q-IDs absent or older than the TTL are re-queried, so
+     * enrichment resumes after a crash and the daily refresh reuses the cache
+     * (Wikidata's effective cadence stays monthly). Scratch tables hold the
+     * per-run candidate / fetched sets; both live here and are dropped each run.
+     */
+    private const string CACHE_SCHEMA = 'provisioner';
+
+    private const string CACHE_TABLE = 'provisioner.wikidata_cache';
+
+    private const string CANDIDATES_TABLE = 'provisioner.wikidata_candidates';
+
+    private const string FETCH_TABLE = 'provisioner.wikidata_fetch';
 
     private HttpClientInterface $httpClient;
 
@@ -86,10 +99,17 @@ final readonly class DataTourismeImporter
         private float $timeoutSeconds = 1800.0,
         private WikidataEnricher $enricher = new WikidataEnricher(),
         private string $locale = 'fr',
+        private int $cacheTtlDays = 30,
     ) {
-        // Scoped to the DataTourisme origin (SSRF policy, see CLAUDE.md).
+        // Scoped to the DataTourisme origin (SSRF policy, see CLAUDE.md). Cap the
+        // total transfer (ADR-041) so a stalled flux endpoint fails fast rather
+        // than blocking the run; `timeout` is the per-chunk idle wait.
         $this->httpClient = $httpClient ?? ScopingHttpClient::forBaseUri(
-            HttpClient::create(['max_redirects' => 2, 'timeout' => $this->timeoutSeconds]),
+            HttpClient::create([
+                'max_redirects' => 2,
+                'timeout' => 120.0,
+                'max_duration' => $this->timeoutSeconds,
+            ]),
             'https://diffuseur.datatourisme.fr/',
         );
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
@@ -296,14 +316,19 @@ final readonly class DataTourismeImporter
     }
 
     /**
-     * Enriches the staged Wikidata-bearing tables from Wikidata (ADR-040): batch
-     * SPARQL over the distinct Q-IDs seen during extraction, then a single
-     * UPDATE per table joining on the `wikidata` column. Runs after {@see load}
-     * (rows are in staging) and before {@see swap} so the enrichment lands in the
-     * dataset that goes live atomically.
+     * Enriches the staged Wikidata-bearing tables from the persistent cache
+     * (ADR-040/041). Runs after {@see load} (rows are in staging) and before
+     * {@see swap} so the enrichment lands in the dataset that goes live
+     * atomically.
      *
-     * Best-effort: an empty enrichment (Wikidata outage handled in
-     * {@see WikidataEnricher}) simply leaves the source rows untouched.
+     * Resumable + memory-bounded: only the Q-IDs absent from the cache or older
+     * than the TTL are queried from Wikidata, streamed one batch at a time into a
+     * COPY file (never the whole set in memory), upserted into the cache, then
+     * the live tables are UPDATEd by joining the cache — so previously cached
+     * Q-IDs enrich the fresh staging tables without any network call.
+     *
+     * Best-effort: a Wikidata outage leaves the missing Q-IDs uncached (retried
+     * next run) and the rows enriched only from whatever the cache already held.
      *
      * @param list<string> $wikidataIds
      *
@@ -315,59 +340,131 @@ final readonly class DataTourismeImporter
             return;
         }
 
-        $enrichments = $this->enricher->enrich($wikidataIds, $this->locale);
-        if ([] === $enrichments) {
-            return;
-        }
-
-        $path = $workDir.'/tourism-wikidata.copy';
-        $handle = fopen($path, 'w');
-        if (false === $handle) {
-            throw new ImportFailedException(\sprintf('Cannot open enrichment COPY file "%s"', $path));
-        }
-
-        foreach ($enrichments as $qId => $entry) {
-            fwrite($handle, implode("\t", array_map($this->copyValue(...), [
-                $qId,
-                $entry['description'] ?? null,
-                $entry['openingHours'] ?? null,
-                $entry['website'] ?? null,
-                $entry['imageUrl'] ?? null,
-                $entry['wikipediaUrl'] ?? null,
-            ]))."\n");
-        }
-
-        fclose($handle);
-
-        $table = \sprintf('%s.%s', self::STAGING_SCHEMA, self::WIKIDATA_ENRICH_TABLE);
+        // Self-contained: create the cache schema/table if the API migration has
+        // not run on this DB, plus fresh per-run scratch tables (drop any leftover
+        // from a prior crash — they live in the stable schema, not the swap).
         $this->runProcess([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf('CREATE TABLE %s (wikidata text PRIMARY KEY, description text, opening_hours text, website text, image_url text, wikipedia_url text);', $table),
-        ], 'psql create wikidata enrich table');
+            \sprintf(
+                'CREATE SCHEMA IF NOT EXISTS %1$s; CREATE TABLE IF NOT EXISTS %2$s (qid text PRIMARY KEY, payload jsonb NOT NULL, fetched_at timestamptz NOT NULL); DROP TABLE IF EXISTS %3$s, %4$s; CREATE TABLE %3$s (qid text); CREATE TABLE %4$s (qid text, payload jsonb);',
+                self::CACHE_SCHEMA,
+                self::CACHE_TABLE,
+                self::CANDIDATES_TABLE,
+                self::FETCH_TABLE,
+            ),
+        ], 'psql prepare wikidata cache');
 
+        // Load the candidate Q-IDs, then export those missing/stale in the cache.
+        $candidatesPath = $workDir.'/tourism-wikidata-candidates.copy';
+        $this->writeColumn($candidatesPath, $wikidataIds);
         $this->runProcess([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf("\\copy %s (wikidata, description, opening_hours, website, image_url, wikipedia_url) FROM '%s'", $table, $path),
-        ], 'psql copy wikidata enrich');
+            \sprintf("\\copy %s (qid) FROM '%s'", self::CANDIDATES_TABLE, $candidatesPath),
+        ], 'psql copy wikidata candidates');
 
-        foreach (self::WIKIDATA_TABLES as $target) {
-            // description / opening_hours come from DataTourisme first, so keep the
-            // source value when present; the other columns are Wikidata-only.
+        $missingPath = $workDir.'/tourism-wikidata-missing.copy';
+        $this->runProcess([
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+            \sprintf(
+                "\\copy (SELECT cand.qid FROM %1\$s cand WHERE NOT EXISTS (SELECT 1 FROM %2\$s c WHERE c.qid = cand.qid AND c.fetched_at > now() - make_interval(days => %3\$d))) TO '%4\$s'",
+                self::CANDIDATES_TABLE,
+                self::CACHE_TABLE,
+                $this->cacheTtlDays,
+                $missingPath,
+            ),
+        ], 'psql select missing wikidata');
+
+        // Query only the missing Q-IDs, streaming each batch straight to the COPY
+        // file, then upsert them into the cache (negative cache for no-data Q-IDs).
+        $missing = $this->readColumn($missingPath);
+        if ([] !== $missing) {
+            $fetchPath = $workDir.'/tourism-wikidata-fetch.copy';
+            $handle = fopen($fetchPath, 'w');
+            if (false === $handle) {
+                throw new ImportFailedException(\sprintf('Cannot open enrichment COPY file "%s"', $fetchPath));
+            }
+
+            foreach ($this->enricher->enrich($missing, $this->locale) as $row) {
+                $payload = json_encode((object) ($row['enrichment'] ?? []), \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}';
+                fwrite($handle, $this->copyValue($row['qid'])."\t".$this->copyValue($payload)."\n");
+            }
+
+            fclose($handle);
+
+            $this->runProcess([
+                'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+                \sprintf("\\copy %s (qid, payload) FROM '%s'", self::FETCH_TABLE, $fetchPath),
+            ], 'psql copy wikidata fetched');
+
             $this->runProcess([
                 'psql', '-v', 'ON_ERROR_STOP=1', '-c',
                 \sprintf(
-                    'UPDATE %1$s.%2$s t SET description = COALESCE(t.description, e.description), opening_hours = COALESCE(t.opening_hours, e.opening_hours), website = e.website, image_url = e.image_url, wikipedia_url = e.wikipedia_url FROM %3$s e WHERE t.wikidata = e.wikidata;',
+                    'INSERT INTO %1$s (qid, payload, fetched_at) SELECT qid, payload, now() FROM %2$s ON CONFLICT (qid) DO UPDATE SET payload = excluded.payload, fetched_at = excluded.fetched_at;',
+                    self::CACHE_TABLE,
+                    self::FETCH_TABLE,
+                ),
+            ], 'psql upsert wikidata cache');
+        }
+
+        // Enrich the live tables from the cache (fresh + previously cached). The
+        // source fields (description, opening_hours) win when present; the rest are
+        // Wikidata-only.
+        foreach (self::WIKIDATA_TABLES as $target) {
+            $this->runProcess([
+                'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+                \sprintf(
+                    "UPDATE %1\$s.%2\$s t SET description = COALESCE(t.description, c.payload->>'description'), opening_hours = COALESCE(t.opening_hours, c.payload->>'openingHours'), website = c.payload->>'website', image_url = c.payload->>'imageUrl', wikipedia_url = c.payload->>'wikipediaUrl' FROM %3\$s c WHERE t.wikidata = c.qid;",
                     self::STAGING_SCHEMA,
                     $target,
-                    $table,
+                    self::CACHE_TABLE,
                 ),
             ], \sprintf('psql enrich %s', $target));
         }
 
         $this->runProcess([
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
-            \sprintf('DROP TABLE %s;', $table),
-        ], 'psql drop wikidata enrich table');
+            \sprintf('DROP TABLE IF EXISTS %s, %s;', self::CANDIDATES_TABLE, self::FETCH_TABLE),
+        ], 'psql drop wikidata scratch tables');
+    }
+
+    /**
+     * Writes a single-column COPY file (one escaped value per line).
+     *
+     * @param list<string> $values
+     *
+     * @throws ImportFailedException
+     */
+    private function writeColumn(string $path, array $values): void
+    {
+        $handle = fopen($path, 'w');
+        if (false === $handle) {
+            throw new ImportFailedException(\sprintf('Cannot open COPY file "%s"', $path));
+        }
+
+        foreach ($values as $value) {
+            fwrite($handle, $this->copyValue($value)."\n");
+        }
+
+        fclose($handle);
+    }
+
+    /**
+     * Reads a single-column psql COPY-out file back into a list.
+     *
+     * @return list<string>
+     */
+    private function readColumn(string $path): array
+    {
+        if (!is_file($path)) {
+            return [];
+        }
+
+        $contents = file_get_contents($path);
+        if (false === $contents || '' === trim($contents)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(trim(...), explode("\n", $contents)), static fn (string $line): bool => '' !== $line));
     }
 
     /**
@@ -398,7 +495,7 @@ final readonly class DataTourismeImporter
         }
 
         if (!$process->isSuccessful()) {
-            throw new ImportFailedException(\sprintf('%s failed (exit %s): %s', $label, (string) $process->getExitCode(), $process->getErrorOutput()));
+            throw new ImportFailedException(\sprintf("%s failed (exit %s).\nCommand: %s\nStderr: %s", $label, (string) $process->getExitCode(), implode(' ', $command), $process->getErrorOutput()));
         }
     }
 }

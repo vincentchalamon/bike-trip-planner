@@ -198,7 +198,7 @@ final readonly class PostgisImporter
         }
 
         if (!$process->isSuccessful()) {
-            throw new ImportFailedException(\sprintf('%s failed (exit %s): %s', $label, (string) $process->getExitCode(), $process->getErrorOutput()));
+            throw new ImportFailedException(\sprintf("%s failed (exit %s).\nCommand: %s\nStderr: %s", $label, (string) $process->getExitCode(), implode(' ', $command), $process->getErrorOutput()));
         }
     }
 }

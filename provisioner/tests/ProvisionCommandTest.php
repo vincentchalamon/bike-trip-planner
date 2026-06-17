@@ -6,6 +6,7 @@ namespace Provisioner\Tests;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Provisioner\DataTourismeImporter;
 use Provisioner\OsmDataDownloader;
 use Provisioner\PostgisImporter;
 use Provisioner\ProvisionCommand;
@@ -63,6 +64,7 @@ final class ProvisionCommandTest extends TestCase
         bool $runMerge = false,
         ?\Closure $downloaderProcessFactory = null,
         ?PostgisImporter $postgisImporter = null,
+        ?DataTourismeImporter $dataTourismeImporter = null,
     ): CommandTester {
         $command = new ProvisionCommand(
             regionsDir: $this->regionsDir,
@@ -75,6 +77,10 @@ final class ProvisionCommandTest extends TestCase
             ),
             runMerge: $runMerge,
             postgisImporter: $postgisImporter,
+            dataTourismeDir: $this->tmpDir.'/datatourisme',
+            dataTourismeImporter: $dataTourismeImporter,
+            lockFile: $this->tmpDir.'/provision.lock',
+            logFile: $this->tmpDir.'/provisioner.log',
         );
 
         $app = new Application();
@@ -279,6 +285,53 @@ final class ProvisionCommandTest extends TestCase
 
         self::assertSame(1, $exitCode);
         self::assertStringContainsString('tags-filter failed', $tester->getDisplay());
+    }
+
+    #[Test]
+    public function aFailedDataTourismeSourceDoesNotMaskTheSucceededOsmSource(): void
+    {
+        // Continue-on-error (ADR-041): OSM succeeds, DataTourisme fails; the run
+        // attempts both, the summary records each, and the aggregate exit is a
+        // failure without aborting the OSM source.
+        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
+
+        $failingDataTourisme = new DataTourismeImporter(
+            fluxUrl: 'https://example.test/flux',
+            httpClient: new MockHttpClient(new MockResponse('nope', ['http_code' => 500])),
+            processFactory: static fn (array $command): Process => new Process(['true']),
+        );
+
+        $tester = $this->buildTester(dataTourismeImporter: $failingDataTourisme);
+
+        $exitCode = $tester->execute(['--with-datatourisme' => true], ['interactive' => false]);
+
+        self::assertSame(1, $exitCode, $tester->getDisplay());
+        $output = $tester->getDisplay();
+        self::assertStringContainsString('Update complete', $output, 'the OSM source still completed');
+        self::assertStringContainsString('Provisioning summary', $output);
+        self::assertMatchesRegularExpression('/\x{2713}\s*osm/u', $output, 'osm reported as succeeded');
+        self::assertMatchesRegularExpression('/\x{2717}\s*datatourisme/u', $output, 'datatourisme reported as failed');
+    }
+
+    #[Test]
+    public function aConcurrentRunIsRefusedWhileTheLockIsHeld(): void
+    {
+        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
+
+        // Hold the lock the command tries to acquire.
+        $lockFile = $this->tmpDir.'/provision.lock';
+        $handle = fopen($lockFile, 'c');
+        self::assertNotFalse($handle);
+        self::assertTrue(flock($handle, \LOCK_EX | \LOCK_NB));
+
+        $tester = $this->buildTester();
+        $exitCode = $tester->execute([], ['interactive' => false]);
+
+        self::assertSame(1, $exitCode);
+        self::assertStringContainsString('Another provisioning run is already in progress', $tester->getDisplay());
+
+        flock($handle, \LOCK_UN);
+        fclose($handle);
     }
 
     #[Test]

@@ -116,6 +116,16 @@ final class DataTourismeImporterTest extends TestCase
             $cmd = $command;
             $this->captured[] = $cmd;
 
+            // Emulate psql `\copy (SELECT … missing …) TO 'file'`: with an empty
+            // cache every candidate is missing, so copy the candidates COPY file
+            // into the destination so the enrichment fetch path runs in tests.
+            if (1 === preg_match("/TO '([^']+)'/", implode(' ', $cmd), $matches)) {
+                $candidates = $this->workDir.'/tourism-wikidata-candidates.copy';
+                if (is_file($candidates)) {
+                    copy($candidates, $matches[1]);
+                }
+            }
+
             return new Process(['true']);
         };
     }
@@ -231,10 +241,10 @@ final class DataTourismeImporterTest extends TestCase
     }
 
     #[Test]
-    public function enrichesWikidataBearingRowsBetweenLoadAndSwap(): void
+    public function enrichesWikidataBearingRowsFromTheCacheBetweenLoadAndSwap(): void
     {
         // A cultural POI carrying a Wikidata Q-ID (owl:sameAs) triggers the
-        // post-load enrichment pass before the atomic swap.
+        // post-load, cache-backed enrichment pass before the atomic swap.
         $zipPath = $this->workDir.'/enriched.zip';
         $zip = new \ZipArchive();
         $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
@@ -267,31 +277,31 @@ final class DataTourismeImporterTest extends TestCase
         $importer->run($this->workDir);
 
         $joined = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
-
-        self::assertTrue(
-            (bool) array_filter($joined, static fn (string $c): bool => str_contains($c, 'CREATE TABLE tourism_staging.wikidata_enrich')),
-            'an enrichment staging table is created',
-        );
-        self::assertTrue(
-            (bool) array_filter($joined, static fn (string $c): bool => str_contains($c, 'UPDATE tourism_staging.cultural_pois t SET') && str_contains($c, 'website = e.website') && str_contains($c, 'COALESCE(t.description, e.description)')),
-            'cultural_pois is updated from the enrichment table, keeping the source description',
-        );
-        self::assertTrue(
-            (bool) array_filter($joined, static fn (string $c): bool => str_contains($c, 'UPDATE tourism_staging.food_pois t SET')),
-            'food_pois is updated from the enrichment table',
-        );
-        self::assertTrue(
-            (bool) array_filter($joined, static fn (string $c): bool => str_contains($c, 'DROP TABLE tourism_staging.wikidata_enrich')),
-            'the enrichment staging table is dropped before the swap',
+        $has = static fn (string ...$needles): bool => (bool) array_filter(
+            $joined,
+            static fn (string $c): bool => array_all($needles, static fn (string $n): bool => str_contains($c, $n)),
         );
 
-        $enrich = (string) file_get_contents($this->workDir.'/tourism-wikidata.copy');
-        self::assertStringContainsString('Q243', $enrich);
-        self::assertStringContainsString('https://museum.test', $enrich);
-        self::assertStringContainsString('https://fr.wikipedia.org/wiki/Musee', $enrich);
+        self::assertTrue($has('CREATE TABLE IF NOT EXISTS provisioner.wikidata_cache'), 'the persistent cache is ensured');
+        self::assertTrue($has('CREATE TABLE provisioner.wikidata_candidates'), 'a candidates scratch table is created');
+        self::assertTrue($has('\copy provisioner.wikidata_candidates (qid) FROM'), 'candidate Q-IDs are loaded');
+        self::assertTrue($has('TO ', 'SELECT cand.qid', 'NOT EXISTS', 'make_interval'), 'missing/stale Q-IDs are selected against the TTL');
+        self::assertTrue($has('\copy provisioner.wikidata_fetch (qid, payload) FROM'), 'fetched enrichments are staged');
+        self::assertTrue($has('INSERT INTO provisioner.wikidata_cache', 'ON CONFLICT (qid) DO UPDATE'), 'fetched enrichments are upserted into the cache');
+        self::assertTrue(
+            $has('UPDATE tourism_staging.cultural_pois t SET', "website = c.payload->>'website'", "COALESCE(t.description, c.payload->>'description')", 'FROM provisioner.wikidata_cache c'),
+            'cultural_pois is enriched from the cache, keeping the source description',
+        );
+        self::assertTrue($has('UPDATE tourism_staging.food_pois t SET', 'FROM provisioner.wikidata_cache c'), 'food_pois is enriched from the cache');
+        self::assertTrue($has('DROP TABLE IF EXISTS provisioner.wikidata_candidates, provisioner.wikidata_fetch'), 'scratch tables are dropped');
 
-        // The DROP of the enrichment table must precede the schema swap.
-        $dropIndex = $this->commandIndex('DROP TABLE tourism_staging.wikidata_enrich');
+        $fetch = (string) file_get_contents($this->workDir.'/tourism-wikidata-fetch.copy');
+        self::assertStringContainsString('Q243', $fetch);
+        self::assertStringContainsString('https://museum.test', $fetch);
+        self::assertStringContainsString('https://fr.wikipedia.org/wiki/Musee', $fetch);
+
+        // The scratch tables are dropped before the schema swap.
+        $dropIndex = $this->commandIndex('DROP TABLE IF EXISTS provisioner.wikidata_candidates');
         $swapIndex = $this->commandIndex('ALTER SCHEMA tourism_staging RENAME TO tourism');
         self::assertGreaterThan(-1, $dropIndex);
         self::assertGreaterThan($dropIndex, $swapIndex);
