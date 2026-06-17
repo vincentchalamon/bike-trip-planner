@@ -74,6 +74,21 @@ final class OsmCulturalPoiSourceTest extends TestCase
     }
 
     #[Test]
+    public function propagatesEnrichmentColumnsFromRepository(): void
+    {
+        $source = $this->makeSource($this->repository([
+            ['name' => 'Louvre', 'category' => 'museum', 'lat' => 48.2, 'lon' => 2.2, 'wikidata' => 'Q19675', 'openingHours' => '09:00-18:00', 'description' => 'Art museum', 'imageUrl' => 'https://img.test/louvre.jpg', 'wikipediaUrl' => 'https://fr.wikipedia.org/wiki/Louvre'],
+        ]));
+
+        $poi = $source->fetchForStages($this->stageGeometries(), 500)[0];
+
+        self::assertSame('09:00-18:00', $poi['openingHours']);
+        self::assertSame('Art museum', $poi['description']);
+        self::assertSame('https://img.test/louvre.jpg', $poi['imageUrl']);
+        self::assertSame('https://fr.wikipedia.org/wiki/Louvre', $poi['wikipediaUrl']);
+    }
+
+    #[Test]
     public function nameFallsBackToTypeWhenNull(): void
     {
         $source = $this->makeSource($this->repository([

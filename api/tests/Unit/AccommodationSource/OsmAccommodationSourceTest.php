@@ -131,6 +131,23 @@ final class OsmAccommodationSourceTest extends TestCase
     }
 
     #[Test]
+    public function propagatesEnrichmentColumnsFromRepository(): void
+    {
+        $row = $this->row(name: 'Hotel Enrichi', category: 'hotel', wikidata: 'Q99');
+        $row['description'] = 'Bel hôtel';
+        $row['imageUrl'] = 'https://img.test/hotel.jpg';
+        $row['wikipediaUrl'] = 'https://fr.wikipedia.org/wiki/Hotel';
+        $row['openingHours'] = 'Mo-Fr 08:00-22:00';
+
+        $results = $this->createSource($this->repository([$row]))->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel']);
+
+        self::assertSame('Bel hôtel', $results[0]['description']);
+        self::assertSame('https://img.test/hotel.jpg', $results[0]['imageUrl']);
+        self::assertSame('https://fr.wikipedia.org/wiki/Hotel', $results[0]['wikipediaUrl']);
+        self::assertSame('Mo-Fr 08:00-22:00', $results[0]['openingHours']);
+    }
+
+    #[Test]
     public function fetchPassesPointsRadiusAndEnabledTypesToRepository(): void
     {
         $repository = $this->createStub(AccommodationRepositoryInterface::class);
