@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Llm\LlmClientFactory;
 use App\Llm\LlmClientInterface;
 use App\Llm\OllamaClient;
 use App\Mercure\NullTripUpdatePublisher;
@@ -62,6 +63,16 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ]);
 
     $services->alias(LlmClientInterface::class, OllamaClient::class);
+
+    // Per-user multi-provider client factory (ADR-042): the 3 HttpClientInterface
+    // args are ambiguous for autowiring, so bind each provider's scoped client.
+    $services->set(LlmClientFactory::class)
+        ->args([
+            service('anthropic.client'),
+            service('openai.client'),
+            service('gemini.client'),
+            service('logger'),
+        ]);
 
     // Async analysis handlers (pass-1 per stage, pass-2 overview) use the analysis client.
     $services->get(AnalyzeStageWithLlmHandler::class)

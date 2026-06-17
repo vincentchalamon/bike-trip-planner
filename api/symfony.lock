@@ -109,6 +109,18 @@
             "ref": "aac2bc5220e9ab5b9e3838a7a4da90e7f74e6148"
         }
     },
+    "symfony/ai-anthropic-platform": {
+        "version": "0.9",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "0.1",
+            "ref": "169d966953a6b9aeca111cb7f0ac2da72e050159"
+        },
+        "files": [
+            "config/packages/ai_anthropic_platform.yaml"
+        ]
+    },
     "symfony/ai-bundle": {
         "version": "0.9",
         "recipe": {
@@ -121,6 +133,18 @@
             "config/packages/ai.yaml"
         ]
     },
+    "symfony/ai-gemini-platform": {
+        "version": "0.9",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "0.1",
+            "ref": "a6953d134a46a78354003b4dddf682f03ef886b2"
+        },
+        "files": [
+            "config/packages/ai_gemini_platform.yaml"
+        ]
+    },
     "symfony/ai-ollama-platform": {
         "version": "0.9",
         "recipe": {
@@ -131,6 +155,18 @@
         },
         "files": [
             "config/packages/ai_ollama_platform.yaml"
+        ]
+    },
+    "symfony/ai-open-ai-platform": {
+        "version": "0.9",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "0.1",
+            "ref": "4f925d48b69c145cde2286e2cabfc7bd5eb4aca9"
+        },
+        "files": [
+            "config/packages/ai_open_ai_platform.yaml"
         ]
     },
     "symfony/console": {

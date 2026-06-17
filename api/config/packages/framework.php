@@ -125,6 +125,28 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'max_redirects' => 0,
                     'timeout' => 2,
                 ],
+                // Per-user BYO-token AI providers (ADR-042). The symfony/ai-platform
+                // bridge sends the user's key per request; these scoped clients add a
+                // descriptive User-Agent + timeout and lock each one to its provider
+                // host (SSRF). Selective retry is layered on with the error taxonomy.
+                'anthropic.client' => [
+                    'scope' => '^https://api\\.anthropic\\.com',
+                    'max_redirects' => 2,
+                    'timeout' => 30,
+                    'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
+                ],
+                'openai.client' => [
+                    'scope' => '^https://api\\.openai\\.com',
+                    'max_redirects' => 2,
+                    'timeout' => 30,
+                    'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
+                ],
+                'gemini.client' => [
+                    'scope' => '^https://generativelanguage\\.googleapis\\.com',
+                    'max_redirects' => 2,
+                    'timeout' => 30,
+                    'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
+                ],
             ],
         ],
     ]);

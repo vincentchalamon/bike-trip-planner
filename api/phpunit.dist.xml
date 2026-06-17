@@ -40,6 +40,18 @@
         <!-- postgresql+advisory://db_user:db_password@localhost/db_name -->
         <env name="LOCK_DSN" value="flock"/>
         <!-- ###- symfony/lock ### -->
+
+        <!-- ###+ symfony/ai-anthropic-platform ### -->
+        <env name="ANTHROPIC_API_KEY" value=""/>
+        <!-- ###- symfony/ai-anthropic-platform ### -->
+
+        <!-- ###+ symfony/ai-gemini-platform ### -->
+        <env name="GEMINI_API_KEY" value=""/>
+        <!-- ###- symfony/ai-gemini-platform ### -->
+
+        <!-- ###+ symfony/ai-open-ai-platform ### -->
+        <env name="OPENAI_API_KEY" value=""/>
+        <!-- ###- symfony/ai-open-ai-platform ### -->
     </php>
 
     <testsuites>
