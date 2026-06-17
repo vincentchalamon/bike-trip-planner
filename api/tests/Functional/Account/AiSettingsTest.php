@@ -164,8 +164,15 @@ final class AiSettingsTest extends ApiTestCase
     #[Test]
     public function endpointsRequireAuthentication(): void
     {
-        self::createClient()->request('GET', '/users/me/ai-settings');
+        $client = self::createClient();
 
+        $client->request('GET', '/users/me/ai-settings');
+        $this->assertResponseStatusCodeSame(401);
+
+        $client->request('PUT', '/users/me/ai-settings', ['json' => []]);
+        $this->assertResponseStatusCodeSame(401);
+
+        $client->request('DELETE', '/users/me/ai-settings');
         $this->assertResponseStatusCodeSame(401);
     }
 }

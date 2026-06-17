@@ -55,8 +55,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 final class AiSettings
 {
     /**
-     * Chosen provider, or null when AI is not configured.
+     * Chosen provider. Required on write; null only when AI is not configured.
      */
+    #[Assert\NotBlank]
     #[Assert\Choice(callback: [AiProvider::class, 'values'], message: 'Unknown AI provider.')]
     public ?string $provider = null;
 
@@ -64,6 +65,7 @@ final class AiSettings
      * Write-only: the stored token is never serialised back, only whether one is set.
      */
     #[ApiProperty(readable: false)]
+    #[Assert\NotBlank]
     #[Assert\Length(max: 500)]
     public ?string $token = null;
 
