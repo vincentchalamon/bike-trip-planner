@@ -10,14 +10,19 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExcep
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Enriches reference places from Wikidata at provisioning time (ADR-040),
+ * Enriches reference places from Wikidata at provisioning time (ADR-040/041),
  * replacing the former runtime enrichment: a batched SPARQL query over the
  * bounded set of Q-IDs imported into PostGIS, returning label / description /
  * image / website / opening hours / Wikipedia URL per item.
  *
- * Best-effort: a failed batch (Wikidata outage, timeout, malformed JSON) yields
- * no enrichment for that batch rather than aborting the import — stale or absent
- * enrichment never blocks provisioning.
+ * Streams one batch at a time (yields per Q-ID) so the caller never holds the
+ * whole enrichment set in memory — the persistent cache, not a PHP map, is the
+ * join source for the UPDATE (ADR-041 memory budget).
+ *
+ * Resilient (ADR-041): each batch is retried with backoff on transient failures
+ * (HTTP 429/5xx, transport errors). A batch that still fails is simply skipped —
+ * its Q-IDs are NOT yielded, so they stay uncached and are retried on the next
+ * run rather than being negatively cached after a transient Wikidata outage.
  *
  * @phpstan-type Enrichment array{label?: string, description?: string, imageUrl?: string, website?: string, openingHours?: string, wikipediaUrl?: string}
  */
@@ -25,16 +30,22 @@ final readonly class WikidataEnricher
 {
     private const int BATCH_SIZE = 50;
 
+    private const int MAX_ATTEMPTS = 3;
+
     private const string SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql';
 
     private HttpClientInterface $httpClient;
 
+    /**
+     * @param (\Closure(int): void)|null $sleep injectable sleeper (seconds) so tests don't wait on backoff
+     */
     public function __construct(
         ?HttpClientInterface $httpClient = null,
         private float $timeoutSeconds = 60.0,
+        private ?\Closure $sleep = null,
     ) {
         // Wikidata's SPARQL endpoint throttles unidentified agents aggressively
-        // (the generic Symfony default), and enrichment failures are swallowed as
+        // (the generic Symfony default), and enrichment failures are tolerated as
         // best-effort, so a block would silently disable enrichment: send a
         // descriptive User-Agent per Wikidata's bot policy.
         $this->httpClient = $httpClient ?? ScopingHttpClient::forBaseUri(
@@ -48,34 +59,40 @@ final readonly class WikidataEnricher
     }
 
     /**
+     * Yields one entry per Q-ID of every batch that completed, with its
+     * enrichment (or null when Wikidata holds no data for it — a negative-cache
+     * marker). Q-IDs of a batch that failed all attempts are not yielded.
+     *
      * @param list<string> $qIds
      *
-     * @return array<string, Enrichment>
+     * @return \Generator<int, array{qid: string, enrichment: Enrichment|null}>
      */
-    public function enrich(array $qIds, string $locale): array
+    public function enrich(array $qIds, string $locale): \Generator
     {
-        $result = [];
         foreach (array_chunk($qIds, self::BATCH_SIZE) as $batch) {
-            foreach ($this->fetchBatch($batch, $locale) as $qId => $entry) {
-                $result[$qId] = $entry;
+            $safeIds = array_values(array_filter($batch, static fn (string $id): bool => 1 === preg_match('/^Q\d+$/', $id)));
+            if ([] === $safeIds) {
+                continue;
+            }
+
+            $enrichments = $this->fetchBatch($safeIds, $locale);
+            if (null === $enrichments) {
+                continue;
+            }
+
+            foreach ($safeIds as $qId) {
+                yield ['qid' => $qId, 'enrichment' => $enrichments[$qId] ?? null];
             }
         }
-
-        return $result;
     }
 
     /**
-     * @param list<string> $qIds
+     * @param list<string> $safeIds pre-validated Q-IDs (^Q\d+$)
      *
-     * @return array<string, Enrichment>
+     * @return array<string, Enrichment>|null null when the batch failed every attempt
      */
-    private function fetchBatch(array $qIds, string $locale): array
+    private function fetchBatch(array $safeIds, string $locale): ?array
     {
-        $safeIds = array_values(array_filter($qIds, static fn (string $id): bool => 1 === preg_match('/^Q\d+$/', $id)));
-        if ([] === $safeIds) {
-            return [];
-        }
-
         $values = implode(' ', array_map(static fn (string $id): string => 'wd:'.$id, $safeIds));
         $lang = strtolower(substr($locale, 0, 2));
 
@@ -93,34 +110,43 @@ final readonly class WikidataEnricher
             }
             SPARQL;
 
-        return $this->parseBindings($this->query($sparql));
+        $bindings = $this->query($sparql);
+
+        return null === $bindings ? null : $this->parseBindings($bindings);
     }
 
     /**
-     * @return list<array<string, array{value?: string}>>
+     * @return list<array<string, array{value?: string}>>|null null when every attempt failed
      */
-    private function query(string $sparql): array
+    private function query(string $sparql): ?array
     {
-        try {
-            $response = $this->httpClient->request('GET', self::SPARQL_ENDPOINT, [
-                'query' => ['query' => $sparql, 'format' => 'json'],
-            ]);
+        for ($attempt = 1;; ++$attempt) {
+            try {
+                $response = $this->httpClient->request('GET', self::SPARQL_ENDPOINT, [
+                    'query' => ['query' => $sparql, 'format' => 'json'],
+                ]);
 
-            $data = $response->toArray();
-        } catch (HttpClientExceptionInterface|\JsonException) {
-            return [];
+                $data = $response->toArray();
+
+                $results = $data['results'] ?? null;
+                $bindings = \is_array($results) ? ($results['bindings'] ?? null) : null;
+                if (!\is_array($bindings)) {
+                    return [];
+                }
+
+                /** @var list<array<string, array{value?: string}>> $list */
+                $list = array_values(array_filter($bindings, is_array(...)));
+
+                return $list;
+            } catch (HttpClientExceptionInterface|\JsonException) {
+                if ($attempt >= self::MAX_ATTEMPTS) {
+                    return null;
+                }
+
+                // Exponential backoff (1s, 2s, …) before retrying a transient failure.
+                $this->doSleep(2 ** ($attempt - 1));
+            }
         }
-
-        $results = $data['results'] ?? null;
-        $bindings = \is_array($results) ? ($results['bindings'] ?? null) : null;
-        if (!\is_array($bindings)) {
-            return [];
-        }
-
-        /** @var list<array<string, array{value?: string}>> $list */
-        $list = array_values(array_filter($bindings, is_array(...)));
-
-        return $list;
     }
 
     /**
@@ -182,5 +208,16 @@ final readonly class WikidataEnricher
         $separator = str_contains($cleaned, '?') ? '&' : '?';
 
         return $cleaned.$separator.'width=400';
+    }
+
+    private function doSleep(int $seconds): void
+    {
+        if ($this->sleep instanceof \Closure) {
+            ($this->sleep)($seconds);
+
+            return;
+        }
+
+        sleep($seconds);
     }
 }

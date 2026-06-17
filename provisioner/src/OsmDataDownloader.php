@@ -29,8 +29,17 @@ final readonly class OsmDataDownloader
         ?HttpClientInterface $httpClient = null,
         ?\Closure $processFactory = null,
         private float $mergeTimeoutSeconds = 600.0,
+        float $idleTimeoutSeconds = 120.0,
+        float $maxDurationSeconds = 7200.0,
     ) {
-        $this->httpClient = $httpClient ?? HttpClient::create(['max_redirects' => 2]);
+        // Multi-GB PBF downloads must not hang forever (ADR-041): cap both the
+        // per-chunk idle wait and the total transfer so a stalled Geofabrik
+        // mirror fails fast instead of blocking the whole provisioning run.
+        $this->httpClient = $httpClient ?? HttpClient::create([
+            'max_redirects' => 2,
+            'timeout' => $idleTimeoutSeconds,
+            'max_duration' => $maxDurationSeconds,
+        ]);
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
     }
 

@@ -31,6 +31,16 @@ final class ProvisionCommand extends Command
 
     private const string DEFAULT_DATATOURISME_DIR = '/data/datatourisme';
 
+    private const string DEFAULT_LOCK_FILE = '/data/provision.lock';
+
+    private const string DEFAULT_LOG_FILE = '/data/provisioner.log';
+
+    /**
+     * @var resource|null held for the whole command so the flock is released only
+     *                    when the process ends (incl. a crash: the OS drops it)
+     */
+    private $lockHandle;
+
     private readonly RegionSelectionStore $selectionStore;
 
     private readonly OsmDataDownloader $downloader;
@@ -49,6 +59,8 @@ final class ProvisionCommand extends Command
         private readonly string $dataTourismeDir = self::DEFAULT_DATATOURISME_DIR,
         // Built lazily in runDataTourisme() from DATATOURISME_* env when not injected.
         private readonly ?DataTourismeImporter $dataTourismeImporter = null,
+        private readonly string $lockFile = self::DEFAULT_LOCK_FILE,
+        private readonly string $logFile = self::DEFAULT_LOG_FILE,
     ) {
         parent::__construct();
 
@@ -83,17 +95,103 @@ final class ProvisionCommand extends Command
             return Command::FAILURE;
         }
 
-        $result = $hasSelection
-            ? $this->runUpdateFlow($io, $dryRun, $interactive, $importPostgis)
-            : $this->runInstallFlow($io, $dryRun, $importPostgis);
-
-        // DataTourisme is FR-only and independent of the OSM region selection,
-        // so it runs as its own step (its own download, schema and atomic swap).
-        if (Command::SUCCESS === $result && $importDataTourisme && !$dryRun) {
-            $result = $this->runDataTourisme($io);
+        // Serialise concurrent runs (cron + manual overlap): two provisioners
+        // writing the same staging schema would race destructively (ADR-041).
+        if (!$this->acquireLock($io)) {
+            return Command::FAILURE;
         }
 
-        return $result;
+        try {
+            // Each reference source runs as its own step (own download, schema and
+            // atomic swap) and is attempted independently: one source failing must
+            // not abort the others, so a single bad refresh degrades only its own
+            // dataset (ADR-041). Outcomes are aggregated into the final exit code.
+            $outcomes = [];
+
+            $outcomes['osm'] = $hasSelection
+                ? $this->runUpdateFlow($io, $dryRun, $interactive, $importPostgis)
+                : $this->runInstallFlow($io, $dryRun, $importPostgis);
+
+            if ($importDataTourisme && !$dryRun) {
+                $outcomes['datatourisme'] = $this->runDataTourisme($io);
+            }
+
+            $this->summarize($io, $outcomes);
+
+            return \in_array(Command::FAILURE, $outcomes, true) ? Command::FAILURE : Command::SUCCESS;
+        } finally {
+            $this->releaseLock();
+        }
+    }
+
+    /**
+     * Acquires an exclusive, non-blocking file lock held for the whole run. The
+     * OS releases it when the process ends — including a crash — so a killed run
+     * never leaves a stale lock behind.
+     */
+    private function acquireLock(SymfonyStyle $io): bool
+    {
+        $handle = @fopen($this->lockFile, 'c');
+        if (false === $handle) {
+            // No lock file location (e.g. /data not mounted): proceed rather than
+            // block provisioning on an inability to lock.
+            $io->warning(\sprintf('Cannot open lock file "%s"; proceeding without a concurrency lock.', $this->lockFile));
+
+            return true;
+        }
+
+        if (!flock($handle, \LOCK_EX | \LOCK_NB)) {
+            fclose($handle);
+            $message = 'Another provisioning run is already in progress; aborting.';
+            $io->error($message);
+            $this->logLine('ERROR', $message);
+
+            return false;
+        }
+
+        $this->lockHandle = $handle;
+
+        return true;
+    }
+
+    private function releaseLock(): void
+    {
+        if (\is_resource($this->lockHandle)) {
+            flock($this->lockHandle, \LOCK_UN);
+            fclose($this->lockHandle);
+            $this->lockHandle = null;
+        }
+    }
+
+    /**
+     * @param array<string, int> $outcomes source label => Command exit code
+     */
+    private function summarize(SymfonyStyle $io, array $outcomes): void
+    {
+        $io->section('Provisioning summary');
+        foreach ($outcomes as $source => $code) {
+            $ok = Command::SUCCESS === $code;
+            $io->writeln(\sprintf('  %s %s', $ok ? "\u{2713}" : "\u{2717}", $source));
+            $this->logLine($ok ? 'INFO' : 'ERROR', \sprintf('source %s -> %s', $source, $ok ? 'ok' : 'failed'));
+        }
+    }
+
+    /**
+     * Reports a failure both to the console and to the persistent log file, so
+     * the detailed cause (command + stderr) survives for later diagnosis even
+     * when the container logs are gone (ADR-041).
+     */
+    private function fail(SymfonyStyle $io, string $message): void
+    {
+        $io->error($message);
+        $this->logLine('ERROR', $message);
+    }
+
+    private function logLine(string $level, string $message): void
+    {
+        $line = \sprintf("[%s] [%s] %s\n", new \DateTimeImmutable()->format('Y-m-d H:i:s'), $level, $message);
+        // Best-effort: never let logging failure mask the real outcome.
+        @file_put_contents($this->logFile, $line, \FILE_APPEND);
     }
 
     private function runDataTourisme(SymfonyStyle $io): int
@@ -124,7 +222,7 @@ final class ProvisionCommand extends Command
         try {
             $importer->run($this->dataTourismeDir);
         } catch (ImportFailedException $importFailedException) {
-            $io->error($importFailedException->getMessage());
+            $this->fail($io, $importFailedException->getMessage());
 
             return Command::FAILURE;
         }
@@ -323,7 +421,7 @@ final class ProvisionCommand extends Command
                 $this->downloader->download($slug);
             } catch (DownloadFailedException $e) {
                 $io->newLine();
-                $io->error($e->getMessage());
+                $this->fail($io, $e->getMessage());
 
                 return Command::FAILURE;
             }
@@ -343,7 +441,7 @@ final class ProvisionCommand extends Command
                 $this->downloader->merge($pbfFiles, $this->mergedPbf);
             } catch (MergeFailedException $e) {
                 $io->newLine();
-                $io->error($e->getMessage());
+                $this->fail($io, $e->getMessage());
 
                 return Command::FAILURE;
             }
@@ -358,7 +456,7 @@ final class ProvisionCommand extends Command
                 $this->postgisImporter->run($this->mergedPbf, $this->filteredPbf);
             } catch (ImportFailedException $e) {
                 $io->newLine();
-                $io->error($e->getMessage());
+                $this->fail($io, $e->getMessage());
 
                 return Command::FAILURE;
             }
