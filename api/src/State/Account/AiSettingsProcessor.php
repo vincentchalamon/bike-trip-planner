@@ -42,15 +42,10 @@ final readonly class AiSettingsProcessor implements ProcessorInterface
 
         \assert($user instanceof User);
 
-        $provider = AiProvider::tryFrom((string) $data->provider);
-        if (null === $provider) {
-            throw new UnprocessableEntityHttpException('Unknown AI provider.');
-        }
-
+        // Provider + token are guaranteed present and valid by the DTO's
+        // Assert\NotBlank + Assert\Choice constraints (validation runs first).
+        $provider = AiProvider::from((string) $data->provider);
         $token = (string) $data->token;
-        if ('' === $token) {
-            throw new UnprocessableEntityHttpException('An API token is required.');
-        }
 
         // Format validation only (e.g. OpenAI rejects keys without the sk- prefix
         // at construction); a real provider ping is deferred to A3.
