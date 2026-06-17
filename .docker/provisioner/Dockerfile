@@ -42,7 +42,10 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-ENTRYPOINT ["php", "bin/provision"]
+# Cap PHP memory so a regression in the streaming/enrichment paths fails with a
+# clean PHP fatal instead of a silent container OOM-kill (ADR-041 R4). osm2pgsql
+# and psql run as separate processes, bounded by --cache and the DB config.
+ENTRYPOINT ["php", "-d", "memory_limit=512M", "bin/provision"]
 
 # Stage 3: Production
 FROM php:8.5-cli-bookworm AS prod
@@ -64,4 +67,7 @@ RUN install-php-extensions zip
 WORKDIR /app
 COPY --from=deps /app/ ./
 
-ENTRYPOINT ["php", "bin/provision"]
+# Cap PHP memory so a regression in the streaming/enrichment paths fails with a
+# clean PHP fatal instead of a silent container OOM-kill (ADR-041 R4). osm2pgsql
+# and psql run as separate processes, bounded by --cache and the DB config.
+ENTRYPOINT ["php", "-d", "memory_limit=512M", "bin/provision"]
