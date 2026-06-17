@@ -53,8 +53,7 @@ docker compose exec redis redis-cli --scan --pattern 'in_ride_poi:*' | wc -l
 
    ```bash
    docker compose exec php bin/console cache:pool:clear \
-     cache.osm cache.weather cache.route_fetch cache.routing \
-     cache.datatourisme cache.wikidata cache.trip_chat cache.in_ride_poi
+     cache.osm cache.weather cache.route_fetch cache.routing cache.trip_chat
    ```
 
    Note: `cache.app` (Symfony default pool) does **not** include the project's
