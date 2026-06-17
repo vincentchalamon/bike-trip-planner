@@ -133,7 +133,7 @@ final class OsmAccommodationSourceTest extends TestCase
     #[Test]
     public function propagatesEnrichmentColumnsFromRepository(): void
     {
-        $row = $this->row(name: 'Hotel Enrichi', category: 'hotel', wikidata: 'Q99');
+        $row = $this->row(category: 'hotel', name: 'Hotel Enrichi', wikidata: 'Q99');
         $row['description'] = 'Bel hôtel';
         $row['imageUrl'] = 'https://img.test/hotel.jpg';
         $row['wikipediaUrl'] = 'https://fr.wikipedia.org/wiki/Hotel';
