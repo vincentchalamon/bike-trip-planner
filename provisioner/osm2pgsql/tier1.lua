@@ -5,7 +5,7 @@
 -- the live `osm` schema atomically. The API reads these tables via ST_DWithin
 -- corridor queries, replacing the runtime Overpass dependency.
 --
--- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations, charging_stations, cultural_pois, ways, admin_boundaries, cycle_routes, ferries.
+-- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations, charging_stations, cultural_pois, ways, admin_boundaries, cycle_routes, ferries, fords.
 
 -- MUST match PostgisImporter::STAGING_SCHEMA: osm2pgsql writes the output tables
 -- here, and the importer creates/swaps this exact schema onto the live `osm`.
@@ -213,6 +213,23 @@ local ferries = osm2pgsql.define_table({
     },
 })
 
+-- Fords (ford=yes/stream/... on a node or a highway way), stored as points
+-- (node position, or way centroid). The API flags stages passing close to one
+-- (the ford alert, escalated to a warning when rain is forecast).
+local fords = osm2pgsql.define_table({
+    name = 'fords',
+    schema = SCHEMA,
+    ids = { type = 'any', id_column = 'osm_id', type_column = 'osm_type' },
+    columns = {
+        { column = 'name', type = 'text' },
+        { column = 'tags', type = 'jsonb' },
+        { column = 'geom', type = 'point', projection = SRID, not_null = true },
+    },
+    indexes = {
+        { column = 'geom', method = 'gist' },
+    },
+})
+
 -- Country boundaries (admin_level=2), stored as multipolygons. The API resolves
 -- the country at a point via ST_Covers, replacing the runtime Overpass is_in
 -- query; their union also forms the coverage polygon.
@@ -333,6 +350,11 @@ end
 -- type=route relation whose member ways may not repeat the tag.
 local function is_ferry(tags)
     return tags.route == 'ferry'
+end
+
+-- True for fords (ford=yes/stream/tidal/...), on a node or a highway way.
+local function is_ford(tags)
+    return tags.ford ~= nil and tags.ford ~= 'no'
 end
 
 local function is_relevant(tags)
@@ -459,12 +481,26 @@ local function way_centroid(object)
 end
 
 function osm2pgsql.process_node(object)
+    -- Fords are commonly mapped as a node on the crossing; not a POI category.
+    if is_ford(object.tags) then
+        fords:insert({ name = object.tags.name, tags = object.tags, geom = object:as_point() })
+    end
+
     -- tags-filter keeps untagged nodes referenced by ways; skip them here.
     if not is_relevant(object.tags) then return end
     insert_features(object.tags, object:as_point())
 end
 
 function osm2pgsql.process_way(object)
+    -- A ford may be tagged on a highway way; store its centroid (the way is also
+    -- kept in `ways` below as a highway, so do not return here).
+    if is_ford(object.tags) then
+        local centroid = way_centroid(object)
+        if centroid ~= nil then
+            fords:insert({ name = object.tags.name, tags = object.tags, geom = centroid })
+        end
+    end
+
     -- Ferry crossings are not highways/POIs (is_relevant skips them); handle first.
     if is_ferry(object.tags) then
         local ok, line = pcall(function() return object:as_linestring() end)
