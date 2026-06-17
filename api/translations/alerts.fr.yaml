@@ -39,6 +39,8 @@ alert.health_service.nudge: "Aucune pharmacie, hôpital ni clinique détecté da
 alert.sunset.action: "Avancer l'heure de départ"
 alert.cultural_poi.suggestion: "Point d'intérêt culturel à proximité de l'étape %stage% : %name% (%type%, %distance%m du tracé). L'ajouter à votre itinéraire ?"
 alert.border_crossing.nudge: "Vous passez en %country%. Vérifiez la couverture téléphonique, les moyens de paiement et la réglementation locale."
+alert.ferry.warning: "L'étape %stage% emprunte une traversée en ferry. Vérifiez les horaires et l'éventuelle réservation."
+alert.ferry.action: "Traversée en ferry"
 stage.label: "Étape %day%"
 weather.clear_sky: "Ciel dégagé"
 weather.mainly_clear: "Plutôt dégagé"

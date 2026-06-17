@@ -45,6 +45,7 @@
         "railway_stations",
         "health_services",
         "border_crossing",
+        "ferries",
         "events"
       ],
       "additionalProperties": false,
@@ -167,6 +168,15 @@
           ]
         },
         "border_crossing": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "ferries": {
           "type": "string",
           "enum": [
             "pending",

@@ -10,6 +10,7 @@ use App\Message\CheckBikeShops;
 use App\Message\CheckBorderCrossing;
 use App\Message\CheckCalendar;
 use App\Message\CheckCulturalPois;
+use App\Message\CheckFerries;
 use App\Message\CheckHealthServices;
 use App\Message\CheckRailwayStations;
 use App\Message\CheckWaterPoints;
@@ -57,6 +58,7 @@ final readonly class TripAnalysisDispatcher
         $this->messageBus->dispatch(new CheckCulturalPois($tripId, $generation));
         $this->messageBus->dispatch(new CheckRailwayStations($tripId, $generation));
         $this->messageBus->dispatch(new CheckBorderCrossing($tripId, $generation));
+        $this->messageBus->dispatch(new CheckFerries($tripId, $generation));
         $this->messageBus->dispatch(new ScanEvents($tripId, $generation));
     }
 }

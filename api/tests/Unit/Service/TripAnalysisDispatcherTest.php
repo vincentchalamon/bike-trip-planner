@@ -10,6 +10,7 @@ use App\Message\CheckBikeShops;
 use App\Message\CheckBorderCrossing;
 use App\Message\CheckCalendar;
 use App\Message\CheckCulturalPois;
+use App\Message\CheckFerries;
 use App\Message\CheckHealthServices;
 use App\Message\CheckRailwayStations;
 use App\Message\CheckWaterPoints;
@@ -45,6 +46,7 @@ final class TripAnalysisDispatcherTest extends TestCase
             CheckCulturalPois::class,
             CheckRailwayStations::class,
             CheckBorderCrossing::class,
+            CheckFerries::class,
             ScanEvents::class,
         ];
 
