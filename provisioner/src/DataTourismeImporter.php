@@ -52,11 +52,21 @@ final readonly class DataTourismeImporter
     ];
 
     private const array STAGING_DDL = [
-        'cultural_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
-        'food_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
+        'cultural_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, website text, image_url text, wikipedia_url text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
+        'food_pois' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, opening_hours text, description text, website text, image_url text, wikipedia_url text, wikidata text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
         'accommodations' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, capacity int, price numeric(10, 2), description text, tags jsonb, geom geometry(Point, 4326) NOT NULL',
         'events' => 'id text NOT NULL PRIMARY KEY, name text, category text NOT NULL, start_date date, end_date date, url text, description text, price_min numeric(10, 2), tags jsonb, geom geometry(Point, 4326) NOT NULL',
     ];
+
+    /**
+     * Tables enriched from Wikidata (those carrying a `wikidata` Q-ID column),
+     * with the columns the {@see WikidataEnricher} fills. Source-provided fields
+     * (description, opening_hours) are kept when present (COALESCE); the rest are
+     * Wikidata-only.
+     */
+    private const array WIKIDATA_TABLES = ['cultural_pois', 'food_pois'];
+
+    private const string WIKIDATA_ENRICH_TABLE = 'wikidata_enrich';
 
     private HttpClientInterface $httpClient;
 
@@ -74,6 +84,8 @@ final readonly class DataTourismeImporter
         ?HttpClientInterface $httpClient = null,
         ?\Closure $processFactory = null,
         private float $timeoutSeconds = 1800.0,
+        private WikidataEnricher $enricher = new WikidataEnricher(),
+        private string $locale = 'fr',
     ) {
         // Scoped to the DataTourisme origin (SSRF policy, see CLAUDE.md).
         $this->httpClient = $httpClient ?? ScopingHttpClient::forBaseUri(
@@ -90,8 +102,9 @@ final readonly class DataTourismeImporter
     {
         $zipPath = $workDir.'/datatourisme-flux.zip';
         $this->download($zipPath);
-        $copyFiles = $this->extract($zipPath, $workDir);
+        ['files' => $copyFiles, 'wikidataIds' => $wikidataIds] = $this->extract($zipPath, $workDir);
         $this->load($copyFiles);
+        $this->enrich($workDir, $wikidataIds);
         $this->swap();
     }
 
@@ -129,9 +142,11 @@ final readonly class DataTourismeImporter
     }
 
     /**
-     * Streams the flux ZIP and writes one text-format COPY file per table.
+     * Streams the flux ZIP and writes one text-format COPY file per table,
+     * collecting the distinct Wikidata Q-IDs seen on enrichable rows for the
+     * post-load enrichment pass.
      *
-     * @return array<string, string> table name => COPY file path
+     * @return array{files: array<string, string>, wikidataIds: list<string>}
      *
      * @throws ImportFailedException
      */
@@ -156,6 +171,9 @@ final readonly class DataTourismeImporter
         }
 
         $heads = ['cultural' => 'cultural_pois', 'food' => 'food_pois', 'accommodation' => 'accommodations', 'event' => 'events'];
+
+        /** @var array<string, true> $wikidataIds */
+        $wikidataIds = [];
 
         for ($i = 0, $n = $zip->numFiles; $i < $n; ++$i) {
             $name = $zip->getNameIndex($i);
@@ -187,6 +205,10 @@ final readonly class DataTourismeImporter
 
             $table = $heads[$row['head']];
             fwrite($handles[$table], $this->copyLine($table, $row));
+
+            if (\in_array($table, self::WIKIDATA_TABLES, true) && null !== $row['wikidata']) {
+                $wikidataIds[$row['wikidata']] = true;
+            }
         }
 
         foreach ($handles as $handle) {
@@ -195,7 +217,7 @@ final readonly class DataTourismeImporter
 
         $zip->close();
 
-        return $files;
+        return ['files' => $files, 'wikidataIds' => array_keys($wikidataIds)];
     }
 
     /**
@@ -271,6 +293,81 @@ final readonly class DataTourismeImporter
             'psql', '-v', 'ON_ERROR_STOP=1', '-c',
             \sprintf('CREATE TABLE %1$s.metadata AS SELECT now() AS refreshed_at, jsonb_build_object(%2$s) AS feature_counts;', self::STAGING_SCHEMA, $counts),
         ], 'psql build tourism metadata');
+    }
+
+    /**
+     * Enriches the staged Wikidata-bearing tables from Wikidata (ADR-040): batch
+     * SPARQL over the distinct Q-IDs seen during extraction, then a single
+     * UPDATE per table joining on the `wikidata` column. Runs after {@see load}
+     * (rows are in staging) and before {@see swap} so the enrichment lands in the
+     * dataset that goes live atomically.
+     *
+     * Best-effort: an empty enrichment (Wikidata outage handled in
+     * {@see WikidataEnricher}) simply leaves the source rows untouched.
+     *
+     * @param list<string> $wikidataIds
+     *
+     * @throws ImportFailedException
+     */
+    private function enrich(string $workDir, array $wikidataIds): void
+    {
+        if ([] === $wikidataIds) {
+            return;
+        }
+
+        $enrichments = $this->enricher->enrich($wikidataIds, $this->locale);
+        if ([] === $enrichments) {
+            return;
+        }
+
+        $path = $workDir.'/tourism-wikidata.copy';
+        $handle = fopen($path, 'w');
+        if (false === $handle) {
+            throw new ImportFailedException(\sprintf('Cannot open enrichment COPY file "%s"', $path));
+        }
+
+        foreach ($enrichments as $qId => $entry) {
+            fwrite($handle, implode("\t", array_map($this->copyValue(...), [
+                $qId,
+                $entry['description'] ?? null,
+                $entry['openingHours'] ?? null,
+                $entry['website'] ?? null,
+                $entry['imageUrl'] ?? null,
+                $entry['wikipediaUrl'] ?? null,
+            ]))."\n");
+        }
+
+        fclose($handle);
+
+        $table = \sprintf('%s.%s', self::STAGING_SCHEMA, self::WIKIDATA_ENRICH_TABLE);
+        $this->runProcess([
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+            \sprintf('CREATE TABLE %s (wikidata text PRIMARY KEY, description text, opening_hours text, website text, image_url text, wikipedia_url text);', $table),
+        ], 'psql create wikidata enrich table');
+
+        $this->runProcess([
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+            \sprintf("\\copy %s (wikidata, description, opening_hours, website, image_url, wikipedia_url) FROM '%s'", $table, $path),
+        ], 'psql copy wikidata enrich');
+
+        foreach (self::WIKIDATA_TABLES as $target) {
+            // description / opening_hours come from DataTourisme first, so keep the
+            // source value when present; the other columns are Wikidata-only.
+            $this->runProcess([
+                'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+                \sprintf(
+                    'UPDATE %1$s.%2$s t SET description = COALESCE(t.description, e.description), opening_hours = COALESCE(t.opening_hours, e.opening_hours), website = e.website, image_url = e.image_url, wikipedia_url = e.wikipedia_url FROM %3$s e WHERE t.wikidata = e.wikidata;',
+                    self::STAGING_SCHEMA,
+                    $target,
+                    $table,
+                ),
+            ], \sprintf('psql enrich %s', $target));
+        }
+
+        $this->runProcess([
+            'psql', '-v', 'ON_ERROR_STOP=1', '-c',
+            \sprintf('DROP TABLE %s;', $table),
+        ], 'psql drop wikidata enrich table');
     }
 
     /**
