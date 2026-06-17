@@ -42,9 +42,11 @@ final class FetchAndParseRouteHandlerTest extends TestCase
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        // The raw exception detail stays in the logs; the user gets a stable,
+        // friendly message (no leaked cURL/transport internals).
         $publisher->expects($this->once())
             ->method('publishValidationError')
-            ->with('trip-1', 'ROUTE_FETCH_FAILED', 'Komoot tour 123 is private or access denied (403).');
+            ->with('trip-1', 'ROUTE_FETCH_FAILED', 'The route could not be fetched. Please check the URL and try again.');
 
         // A terminal fetch failure must not re-dispatch: no GenerateStages, no retry.
         $messageBus = $this->createMock(MessageBusInterface::class);

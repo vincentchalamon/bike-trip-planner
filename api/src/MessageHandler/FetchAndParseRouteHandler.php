@@ -63,8 +63,10 @@ final readonly class FetchAndParseRouteHandler extends AbstractTripMessageHandle
                 $fetcher = $this->routeFetcherRegistry->get($sourceUrl);
                 $result = $fetcher->fetch($sourceUrl);
             } catch (\RuntimeException $runtimeException) {
+                // Keep the technical detail (incl. raw cURL/transport messages) in
+                // the logs; show the user a stable, friendly message.
                 $this->logger->warning('Route fetch failed.', ['url' => $sourceUrl, 'error' => $runtimeException->getMessage()]);
-                $this->publisher->publishValidationError($tripId, 'ROUTE_FETCH_FAILED', $runtimeException->getMessage());
+                $this->publisher->publishValidationError($tripId, 'ROUTE_FETCH_FAILED', 'The route could not be fetched. Please check the URL and try again.');
 
                 return;
             }
