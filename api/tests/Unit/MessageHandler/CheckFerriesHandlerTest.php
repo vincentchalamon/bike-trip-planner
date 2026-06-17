@@ -113,7 +113,10 @@ final class CheckFerriesHandlerTest extends TestCase
                         && 'warning' === $alerts[0]['type']
                         && 0 === $alerts[0]['stageIndex']
                         && str_contains((string) $alerts[0]['message'], 'ferry')
-                        && abs($alerts[0]['lat'] - 47.05) < 0.001;
+                        && abs($alerts[0]['lat'] - 47.05) < 0.001
+                        && abs($alerts[0]['lon'] - (-2.05)) < 0.001
+                        && 'navigate' === $alerts[0]['action']['kind']
+                        && ['lat' => 47.05, 'lon' => -2.05] === $alerts[0]['action']['payload'];
                 }),
             );
 
