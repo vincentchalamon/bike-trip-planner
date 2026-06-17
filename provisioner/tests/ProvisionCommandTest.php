@@ -65,6 +65,7 @@ final class ProvisionCommandTest extends TestCase
         ?\Closure $downloaderProcessFactory = null,
         ?PostgisImporter $postgisImporter = null,
         ?DataTourismeImporter $dataTourismeImporter = null,
+        ?string $lockFile = null,
     ): CommandTester {
         $command = new ProvisionCommand(
             regionsDir: $this->regionsDir,
@@ -79,7 +80,7 @@ final class ProvisionCommandTest extends TestCase
             postgisImporter: $postgisImporter,
             dataTourismeDir: $this->tmpDir.'/datatourisme',
             dataTourismeImporter: $dataTourismeImporter,
-            lockFile: $this->tmpDir.'/provision.lock',
+            lockFile: $lockFile ?? $this->tmpDir.'/provision.lock',
             logFile: $this->tmpDir.'/provisioner.log',
         );
 
@@ -311,6 +312,22 @@ final class ProvisionCommandTest extends TestCase
         self::assertStringContainsString('Provisioning summary', $output);
         self::assertMatchesRegularExpression('/\x{2713}\s*osm/u', $output, 'osm reported as succeeded');
         self::assertMatchesRegularExpression('/\x{2717}\s*datatourisme/u', $output, 'datatourisme reported as failed');
+    }
+
+    #[Test]
+    public function proceedsWithWarningWhenLockFileCannotBeOpened(): void
+    {
+        // /data not mounted (fopen returns false): the run proceeds with a warning
+        // rather than blocking on an inability to lock (ADR-041 R1).
+        new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
+
+        // A path under a non-directory makes fopen('…', 'c') fail.
+        $tester = $this->buildTester(lockFile: '/dev/null/no-such-path');
+        $exitCode = $tester->execute([], ['interactive' => false]);
+
+        self::assertSame(0, $exitCode, $tester->getDisplay());
+        // The warning block word-wraps, so assert a single non-splittable token.
+        self::assertStringContainsString('concurrency', $tester->getDisplay());
     }
 
     #[Test]

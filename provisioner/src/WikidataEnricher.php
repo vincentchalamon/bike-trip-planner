@@ -37,12 +37,12 @@ final readonly class WikidataEnricher
     private HttpClientInterface $httpClient;
 
     /**
-     * @param (callable(int): void)|null $sleep injectable sleeper (seconds) so tests don't wait on backoff
+     * @param (\Closure(int): void)|null $sleep injectable sleeper (seconds) so tests don't wait on backoff
      */
     public function __construct(
         ?HttpClientInterface $httpClient = null,
         private float $timeoutSeconds = 60.0,
-        private mixed $sleep = null,
+        private ?\Closure $sleep = null,
     ) {
         // Wikidata's SPARQL endpoint throttles unidentified agents aggressively
         // (the generic Symfony default), and enrichment failures are tolerated as
@@ -212,7 +212,7 @@ final readonly class WikidataEnricher
 
     private function doSleep(int $seconds): void
     {
-        if (null !== $this->sleep) {
+        if ($this->sleep instanceof \Closure) {
             ($this->sleep)($seconds);
 
             return;
