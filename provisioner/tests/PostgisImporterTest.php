@@ -8,6 +8,9 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Provisioner\Exception\ImportFailedException;
 use Provisioner\PostgisImporter;
+use Provisioner\WikidataEnricher;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
@@ -153,6 +156,89 @@ final class PostgisImporterTest extends TestCase
         $sql = end($cmd);
         self::assertStringContainsString('DROP SCHEMA IF EXISTS osm CASCADE', $sql);
         self::assertStringContainsString('ALTER SCHEMA osm_staging RENAME TO osm', $sql);
+    }
+
+    #[Test]
+    public function runEnrichesWikidataBearingOsmTablesBeforeSwap(): void
+    {
+        $workDir = sys_get_temp_dir().'/postgis-enrich-'.uniqid('', true);
+        mkdir($workDir, 0o755, true);
+
+        $sparql = new MockHttpClient(new MockResponse((string) json_encode([
+            'results' => ['bindings' => [[
+                'item' => ['value' => 'http://www.wikidata.org/entity/Q42'],
+                'website' => ['value' => 'https://w.test'],
+            ]]],
+        ])));
+
+        // Empty cache: emulate psql exporting Q42 as the missing Q-ID so the
+        // enrichment fetch path runs against the mocked SPARQL endpoint.
+        $factory = function (array $command): Process {
+            /** @var list<string> $cmd */
+            $cmd = $command;
+            $this->captured[] = $cmd;
+            if (1 === preg_match("/TO '([^']+)'/", implode(' ', $cmd), $matches)) {
+                file_put_contents($matches[1], "Q42\n");
+            }
+
+            return new Process(['true']);
+        };
+
+        $importer = new PostgisImporter(
+            flexStylePath: '/app/osm2pgsql/tier1.lua',
+            processFactory: $factory,
+            enricher: new WikidataEnricher($sparql),
+        );
+
+        try {
+            $importer->run($workDir.'/default.osm.pbf', $workDir.'/tier1-filtered.osm.pbf');
+
+            $joined = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
+            $has = static fn (string ...$needles): bool => (bool) array_filter(
+                $joined,
+                static fn (string $c): bool => array_all($needles, static fn (string $n): bool => str_contains($c, $n)),
+            );
+
+            self::assertTrue(
+                $has('INSERT INTO provisioner.wikidata_candidates', 'SELECT DISTINCT wikidata FROM osm_staging.cultural_pois', 'SELECT DISTINCT wikidata FROM osm_staging.accommodations'),
+                'candidate Q-IDs are collected from the OSM staging tables',
+            );
+            self::assertTrue(
+                $has('UPDATE osm_staging.cultural_pois t SET', 'FROM provisioner.wikidata_cache c'),
+                'osm.cultural_pois is enriched from the cache',
+            );
+            self::assertTrue(
+                $has('UPDATE osm_staging.accommodations t SET', "COALESCE(t.website, c.payload->>'website')", 'FROM provisioner.wikidata_cache c'),
+                'osm.accommodations is enriched from the cache, keeping the OSM website',
+            );
+
+            $fetch = (string) file_get_contents($workDir.'/wikidata-fetch.copy');
+            self::assertStringContainsString('Q42', $fetch);
+            self::assertStringContainsString('https://w.test', $fetch);
+
+            // Enrichment (scratch drop) precedes the schema swap.
+            $dropIndex = $this->commandIndex('DROP TABLE IF EXISTS provisioner.wikidata_candidates');
+            $swapIndex = $this->commandIndex('ALTER SCHEMA osm_staging RENAME TO osm');
+            self::assertGreaterThan(-1, $dropIndex);
+            self::assertGreaterThan($dropIndex, $swapIndex);
+        } finally {
+            foreach (glob($workDir.'/*') ?: [] as $file) {
+                unlink($file);
+            }
+
+            rmdir($workDir);
+        }
+    }
+
+    private function commandIndex(string $needle): int
+    {
+        foreach ($this->captured as $index => $command) {
+            if (str_contains(implode(' ', $command), $needle)) {
+                return $index;
+            }
+        }
+
+        return -1;
     }
 
     #[Test]

@@ -74,9 +74,19 @@ final readonly class PostgisImporter
     ];
 
     /**
+     * OSM tables carrying a `wikidata` Q-ID column, enriched from Wikidata via the
+     * shared {@see WikidataEnrichmentPass} after import and before the swap.
+     *
+     * @var list<string>
+     */
+    private const array WIKIDATA_TABLES = ['cultural_pois', 'accommodations'];
+
+    /**
      * @var \Closure(list<string>): Process
      */
     private \Closure $processFactory;
+
+    private WikidataEnrichmentPass $enrichmentPass;
 
     /**
      * @param (\Closure(list<string>): Process)|null $processFactory factory used to build the osmium/osm2pgsql/psql processes; defaults to a real {@see Process}
@@ -87,8 +97,12 @@ final readonly class PostgisImporter
         private int $cacheMb = 800,
         ?\Closure $processFactory = null,
         private float $timeoutSeconds = 1800.0,
+        WikidataEnricher $enricher = new WikidataEnricher(),
+        string $locale = 'fr',
+        int $cacheTtlDays = 30,
     ) {
         $this->processFactory = $processFactory ?? static fn (array $command): Process => new Process($command);
+        $this->enrichmentPass = new WikidataEnrichmentPass($this->processFactory, $enricher, $locale, $cacheTtlDays, $this->timeoutSeconds);
     }
 
     /**
@@ -98,6 +112,10 @@ final readonly class PostgisImporter
     {
         $this->filter($mergedPbf, $filteredPbf);
         $this->import($filteredPbf);
+        // Enrich the Wikidata-bearing tables before deriving coverage/metadata and
+        // swapping, so the enrichment ships with the dataset that goes live. The
+        // COPY scratch files go next to the filtered PBF (the /data work dir).
+        $this->enrichmentPass->run(\dirname($filteredPbf), self::STAGING_SCHEMA, self::WIKIDATA_TABLES);
         $this->buildDerived();
         $this->swap();
     }

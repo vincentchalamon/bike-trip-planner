@@ -81,6 +81,10 @@ local accommodations = osm2pgsql.define_table({
         { column = 'website', type = 'text' },
         { column = 'wikidata', type = 'text' },
         { column = 'opening_hours', type = 'text' },
+        -- Filled by the Wikidata enrichment pass (WikidataEnrichmentPass).
+        { column = 'description', type = 'text' },
+        { column = 'image_url', type = 'text' },
+        { column = 'wikipedia_url', type = 'text' },
         { column = 'tags', type = 'jsonb' },
         { column = 'geom', type = 'point', projection = SRID, not_null = true },
     },
@@ -173,6 +177,12 @@ local cultural_pois = osm2pgsql.define_table({
         { column = 'name', type = 'text' },
         { column = 'category', type = 'text', not_null = true },
         { column = 'wikidata', type = 'text' },
+        -- Filled by the Wikidata enrichment pass (WikidataEnrichmentPass), not from OSM tags.
+        { column = 'description', type = 'text' },
+        { column = 'opening_hours', type = 'text' },
+        { column = 'website', type = 'text' },
+        { column = 'image_url', type = 'text' },
+        { column = 'wikipedia_url', type = 'text' },
         { column = 'tags', type = 'jsonb' },
         { column = 'geom', type = 'point', projection = SRID, not_null = true },
     },
