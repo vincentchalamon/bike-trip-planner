@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Provisioner\DataTourismeImporter;
 use Provisioner\Exception\ImportFailedException;
+use Provisioner\WikidataEnricher;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\Process\Process;
@@ -227,6 +228,84 @@ final class DataTourismeImporterTest extends TestCase
         self::assertStringContainsString('\t', $cultural, 'tab escaped as backslash-t');
         self::assertStringContainsString('\n', $cultural, 'newline escaped as backslash-n');
         self::assertStringContainsString('\\\\', $cultural, 'backslash escaped as double backslash');
+    }
+
+    #[Test]
+    public function enrichesWikidataBearingRowsBetweenLoadAndSwap(): void
+    {
+        // A cultural POI carrying a Wikidata Q-ID (owl:sameAs) triggers the
+        // post-load enrichment pass before the atomic swap.
+        $zipPath = $this->workDir.'/enriched.zip';
+        $zip = new \ZipArchive();
+        $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+        $zip->addFromString('objects/0/00/cultural.json', (string) json_encode([
+            '@id' => 'https://data.datatourisme.fr/10/cultural',
+            '@type' => ['CulturalSite', 'Museum', 'PointOfInterest'],
+            'rdfs:label' => ['fr' => ['Musee test']],
+            'owl:sameAs' => ['https://www.wikidata.org/entity/Q243'],
+            'isLocatedAt' => [['schema:geo' => ['schema:latitude' => '48.5', 'schema:longitude' => '2.3']]],
+        ]));
+        $zip->close();
+
+        $bytes = (string) file_get_contents($zipPath);
+        unlink($zipPath);
+
+        $sparql = new MockHttpClient(new MockResponse((string) json_encode([
+            'results' => ['bindings' => [[
+                'item' => ['value' => 'http://www.wikidata.org/entity/Q243'],
+                'website' => ['value' => 'https://museum.test'],
+                'article' => ['value' => 'https://fr.wikipedia.org/wiki/Musee'],
+            ]]],
+        ])));
+
+        $importer = new DataTourismeImporter(
+            fluxUrl: 'https://example.test/flux',
+            httpClient: new MockHttpClient(new MockResponse($bytes)),
+            processFactory: $this->capturingFactory(),
+            enricher: new WikidataEnricher($sparql),
+        );
+        $importer->run($this->workDir);
+
+        $joined = array_map(static fn (array $c): string => implode(' ', $c), $this->captured);
+
+        self::assertTrue(
+            (bool) array_filter($joined, static fn (string $c): bool => str_contains($c, 'CREATE TABLE tourism_staging.wikidata_enrich')),
+            'an enrichment staging table is created',
+        );
+        self::assertTrue(
+            (bool) array_filter($joined, static fn (string $c): bool => str_contains($c, 'UPDATE tourism_staging.cultural_pois t SET') && str_contains($c, 'website = e.website') && str_contains($c, 'COALESCE(t.description, e.description)')),
+            'cultural_pois is updated from the enrichment table, keeping the source description',
+        );
+        self::assertTrue(
+            (bool) array_filter($joined, static fn (string $c): bool => str_contains($c, 'UPDATE tourism_staging.food_pois t SET')),
+            'food_pois is updated from the enrichment table',
+        );
+        self::assertTrue(
+            (bool) array_filter($joined, static fn (string $c): bool => str_contains($c, 'DROP TABLE tourism_staging.wikidata_enrich')),
+            'the enrichment staging table is dropped before the swap',
+        );
+
+        $enrich = (string) file_get_contents($this->workDir.'/tourism-wikidata.copy');
+        self::assertStringContainsString('Q243', $enrich);
+        self::assertStringContainsString('https://museum.test', $enrich);
+        self::assertStringContainsString('https://fr.wikipedia.org/wiki/Musee', $enrich);
+
+        // The DROP of the enrichment table must precede the schema swap.
+        $dropIndex = $this->commandIndex('DROP TABLE tourism_staging.wikidata_enrich');
+        $swapIndex = $this->commandIndex('ALTER SCHEMA tourism_staging RENAME TO tourism');
+        self::assertGreaterThan(-1, $dropIndex);
+        self::assertGreaterThan($dropIndex, $swapIndex);
+    }
+
+    private function commandIndex(string $needle): int
+    {
+        foreach ($this->captured as $index => $command) {
+            if (str_contains(implode(' ', $command), $needle)) {
+                return $index;
+            }
+        }
+
+        return -1;
     }
 
     #[Test]
