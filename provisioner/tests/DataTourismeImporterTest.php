@@ -109,21 +109,21 @@ final class DataTourismeImporterTest extends TestCase
         return $bytes;
     }
 
-    private function capturingFactory(): \Closure
+    /**
+     * @param list<string> $missingQids written to the `\copy (… missing …) TO 'file'`
+     *                                  destination so the enrichment fetch path runs in tests
+     */
+    private function capturingFactory(array $missingQids = []): \Closure
     {
-        return function (array $command): Process {
+        return function (array $command) use ($missingQids): Process {
             /** @var list<string> $cmd */
             $cmd = $command;
             $this->captured[] = $cmd;
 
-            // Emulate psql `\copy (SELECT … missing …) TO 'file'`: with an empty
-            // cache every candidate is missing, so copy the candidates COPY file
-            // into the destination so the enrichment fetch path runs in tests.
-            if (1 === preg_match("/TO '([^']+)'/", implode(' ', $cmd), $matches)) {
-                $candidates = $this->workDir.'/tourism-wikidata-candidates.copy';
-                if (is_file($candidates)) {
-                    copy($candidates, $matches[1]);
-                }
+            // Emulate psql exporting the missing Q-IDs (the enrichment pass reads
+            // this file back); the no-op `true` process never writes it itself.
+            if ([] !== $missingQids && 1 === preg_match("/TO '([^']+)'/", implode(' ', $cmd), $matches)) {
+                file_put_contents($matches[1], implode("\n", $missingQids)."\n");
             }
 
             return new Process(['true']);
@@ -143,8 +143,9 @@ final class DataTourismeImporterTest extends TestCase
 
         $importer->run($this->workDir);
 
-        // 1 staging DDL + 4 \copy + 4 GIST index + 1 events-date index + 1 metadata + 1 swap.
-        self::assertCount(12, $this->captured);
+        // 1 staging DDL + 4 \copy + 4 GIST index + 1 events-date index + 1 metadata
+        // + 6 enrichment-pass psql calls (no Q-IDs to fetch in this fixture) + 1 swap.
+        self::assertCount(18, $this->captured);
 
         $ddl = implode(' ', $this->captured[0]);
         self::assertStringContainsString('CREATE SCHEMA tourism_staging', $ddl);
@@ -271,7 +272,8 @@ final class DataTourismeImporterTest extends TestCase
         $importer = new DataTourismeImporter(
             fluxUrl: 'https://example.test/flux',
             httpClient: new MockHttpClient(new MockResponse($bytes)),
-            processFactory: $this->capturingFactory(),
+            // The cache is empty, so emulate psql exporting Q243 as the missing Q-ID.
+            processFactory: $this->capturingFactory(['Q243']),
             enricher: new WikidataEnricher($sparql),
         );
         $importer->run($this->workDir);
@@ -284,18 +286,21 @@ final class DataTourismeImporterTest extends TestCase
 
         self::assertTrue($has('CREATE TABLE IF NOT EXISTS provisioner.wikidata_cache'), 'the persistent cache is ensured');
         self::assertTrue($has('CREATE TABLE provisioner.wikidata_candidates'), 'a candidates scratch table is created');
-        self::assertTrue($has('\copy provisioner.wikidata_candidates (qid) FROM'), 'candidate Q-IDs are loaded');
+        self::assertTrue(
+            $has('INSERT INTO provisioner.wikidata_candidates', 'SELECT DISTINCT wikidata FROM tourism_staging.cultural_pois', 'SELECT DISTINCT wikidata FROM tourism_staging.food_pois'),
+            'candidate Q-IDs are collected straight from the staging tables',
+        );
         self::assertTrue($has('TO ', 'SELECT cand.qid', 'NOT EXISTS', 'make_interval'), 'missing/stale Q-IDs are selected against the TTL');
         self::assertTrue($has('\copy provisioner.wikidata_fetch (qid, payload) FROM'), 'fetched enrichments are staged');
         self::assertTrue($has('INSERT INTO provisioner.wikidata_cache', 'ON CONFLICT (qid) DO UPDATE'), 'fetched enrichments are upserted into the cache');
         self::assertTrue(
-            $has('UPDATE tourism_staging.cultural_pois t SET', "website = c.payload->>'website'", "COALESCE(t.description, c.payload->>'description')", 'FROM provisioner.wikidata_cache c'),
-            'cultural_pois is enriched from the cache, keeping the source description',
+            $has('UPDATE tourism_staging.cultural_pois t SET', "COALESCE(t.website, c.payload->>'website')", "COALESCE(t.description, c.payload->>'description')", 'FROM provisioner.wikidata_cache c'),
+            'cultural_pois is enriched from the cache, keeping source-set fields',
         );
         self::assertTrue($has('UPDATE tourism_staging.food_pois t SET', 'FROM provisioner.wikidata_cache c'), 'food_pois is enriched from the cache');
         self::assertTrue($has('DROP TABLE IF EXISTS provisioner.wikidata_candidates, provisioner.wikidata_fetch'), 'scratch tables are dropped');
 
-        $fetch = (string) file_get_contents($this->workDir.'/tourism-wikidata-fetch.copy');
+        $fetch = (string) file_get_contents($this->workDir.'/wikidata-fetch.copy');
         self::assertStringContainsString('Q243', $fetch);
         self::assertStringContainsString('https://museum.test', $fetch);
         self::assertStringContainsString('https://fr.wikipedia.org/wiki/Musee', $fetch);
