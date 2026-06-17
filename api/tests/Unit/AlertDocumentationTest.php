@@ -48,6 +48,7 @@ final class AlertDocumentationTest extends TestCase
         'health_service' => 'Health services',
         'border_crossing' => 'Border crossing',
         'ferry' => 'Ferry',
+        'ford' => 'Ford',
     ];
 
     /**

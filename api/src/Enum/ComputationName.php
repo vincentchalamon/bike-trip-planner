@@ -22,6 +22,7 @@ enum ComputationName: string
     case HEALTH_SERVICES = 'health_services';
     case BORDER_CROSSING = 'border_crossing';
     case FERRIES = 'ferries';
+    case FORDS = 'fords';
     case EVENTS = 'events';
     /**
      * LLaMA 8B pass-1 — per-stage AI analysis (issue #303).
@@ -71,7 +72,7 @@ enum ComputationName: string
             self::POIS => 'points_of_interest',
             self::ACCOMMODATIONS => 'accommodations',
             self::TERRAIN, self::BIKE_SHOPS, self::WATER_POINTS,
-            self::HEALTH_SERVICES, self::RAILWAY_STATIONS, self::BORDER_CROSSING, self::FERRIES => 'terrain_security',
+            self::HEALTH_SERVICES, self::RAILWAY_STATIONS, self::BORDER_CROSSING, self::FERRIES, self::FORDS => 'terrain_security',
             self::WEATHER, self::WIND => 'weather',
             self::CALENDAR, self::EVENTS, self::CULTURAL_POIS => 'context',
             self::STAGE_AI_ANALYSIS, self::TRIP_AI_OVERVIEW => 'ai_analysis',

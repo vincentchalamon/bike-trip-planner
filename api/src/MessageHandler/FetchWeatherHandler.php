@@ -13,6 +13,7 @@ use App\Enum\ComputationName;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
+use App\Message\CheckFords;
 use App\Message\FetchWeather;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Weather\RelativeWindCalculator;
@@ -182,6 +183,8 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
             ]);
 
             $this->messageBus->dispatch(new AnalyzeWind($tripId, $generation));
+            // Ford severity depends on the per-stage forecast, so run it after weather.
+            $this->messageBus->dispatch(new CheckFords($tripId, $generation));
         }, $generation);
     }
 }

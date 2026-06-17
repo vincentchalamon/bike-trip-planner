@@ -36,7 +36,7 @@ const stageDiffTimers = new Map<number, ReturnType<typeof setTimeout>>();
  * - `accommodations_found` — accommodation options per stage
  * - `events_found` — DataTourisme dated events per stage
  * - `supply_timeline` — clustered supply markers per stage (water + food POIs)
- * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` / `water_point_alerts` / `railway_station_alerts` / `health_service_alerts` / `border_crossing_alerts` / `ferry_alerts` — alert categories
+ * - `terrain_alerts` / `calendar_alerts` / `wind_alerts` / `bike_shop_alerts` / `water_point_alerts` / `railway_station_alerts` / `health_service_alerts` / `border_crossing_alerts` / `ferry_alerts` / `ford_alerts` — alert categories
  * - `computation_step_completed` — Mode 1 progress tick (drives progress bar)
  * - `trip_ready` — Mode 1 atomic enriched payload (final analysis swap)
  * - `stage_updated` — Mode 2 per-stage update (inline modifications)
@@ -426,6 +426,34 @@ function dispatchEvent(event: MercureEvent): void {
             },
           })),
           "ferry",
+        );
+      }
+      break;
+    }
+
+    case "ford_alerts": {
+      const fordByStage = new Map<number, typeof event.data.alerts>();
+      for (const alert of event.data.alerts) {
+        const existing = fordByStage.get(alert.stageIndex) ?? [];
+        existing.push(alert);
+        fordByStage.set(alert.stageIndex, existing);
+      }
+      for (const [stageIndex, alerts] of fordByStage) {
+        store.updateStageAlerts(
+          stageIndex,
+          alerts.map((a) => ({
+            type: a.type,
+            message: a.message,
+            lat: a.lat,
+            lon: a.lon,
+            source: "ford",
+            action: {
+              kind: a.action.kind,
+              label: a.action.label,
+              payload: a.action.payload,
+            },
+          })),
+          "ford",
         );
       }
       break;

@@ -329,6 +329,24 @@ export type MercureEvent =
       };
     }
   | {
+      type: "ford_alerts";
+      data: {
+        alerts: {
+          stageIndex: number;
+          dayNumber: number;
+          type: "nudge" | "warning";
+          message: string;
+          action: {
+            kind: "navigate";
+            label: string;
+            payload: { lat: number; lon: number };
+          };
+          lat: number;
+          lon: number;
+        }[];
+      };
+    }
+  | {
       type: "route_segment_recalculated";
       data: {
         stageIndex: number;
