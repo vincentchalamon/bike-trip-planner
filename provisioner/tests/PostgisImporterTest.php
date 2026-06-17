@@ -70,6 +70,8 @@ final class PostgisImporterTest extends TestCase
         // Ferry crossings (ways + route relations) for the ferries table.
         self::assertContains('w/route=ferry', $this->captured[0]);
         self::assertContains('r/route=ferry', $this->captured[0]);
+        // Fords (nodes + ways) for the fords table.
+        self::assertContains('nw/ford', $this->captured[0]);
     }
 
     #[Test]
@@ -129,6 +131,7 @@ final class PostgisImporterTest extends TestCase
         self::assertStringContainsString("'admin_boundaries', (SELECT count(*) FROM osm_staging.admin_boundaries)", $metadata);
         self::assertStringContainsString("'cycle_routes', (SELECT count(*) FROM osm_staging.cycle_routes)", $metadata);
         self::assertStringContainsString("'ferries', (SELECT count(*) FROM osm_staging.ferries)", $metadata);
+        self::assertStringContainsString("'fords', (SELECT count(*) FROM osm_staging.fords)", $metadata);
     }
 
     #[Test]

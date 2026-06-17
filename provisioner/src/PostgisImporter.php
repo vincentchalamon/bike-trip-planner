@@ -58,6 +58,7 @@ final readonly class PostgisImporter
         'r/route=bicycle',
         'w/route=ferry',
         'r/route=ferry',
+        'nw/ford',
     ];
 
     /**
@@ -69,7 +70,7 @@ final readonly class PostgisImporter
      */
     private const array FEATURE_TABLES = [
         'pois', 'accommodations', 'water_points', 'bike_shops', 'health_services',
-        'railway_stations', 'charging_stations', 'cultural_pois', 'ways', 'admin_boundaries', 'cycle_routes', 'ferries',
+        'railway_stations', 'charging_stations', 'cultural_pois', 'ways', 'admin_boundaries', 'cycle_routes', 'ferries', 'fords',
     ];
 
     /**
