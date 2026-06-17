@@ -99,6 +99,12 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                     $forecasts = $this->weatherProvider->fetchForecasts($locations, $locale);
 
                     foreach ($forecasts as $idx => $forecast) {
+                        // No usable forecast for this location: leave the stage
+                        // weather absent and do not cache a fabricated value.
+                        if (null === $forecast) {
+                            continue;
+                        }
+
                         $stageIndex = $uncachedIndices[$idx];
                         $stages[$stageIndex]->weather = $forecast;
 
