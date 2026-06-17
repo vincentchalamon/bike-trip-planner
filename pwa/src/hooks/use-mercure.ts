@@ -419,6 +419,11 @@ function dispatchEvent(event: MercureEvent): void {
             lat: a.lat,
             lon: a.lon,
             source: "ferry",
+            action: {
+              kind: a.action.kind,
+              label: a.action.label,
+              payload: a.action.payload,
+            },
           })),
           "ferry",
         );

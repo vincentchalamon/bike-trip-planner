@@ -318,6 +318,11 @@ export type MercureEvent =
           dayNumber: number;
           type: "warning";
           message: string;
+          action: {
+            kind: "navigate";
+            label: string;
+            payload: { lat: number; lon: number };
+          };
           lat: number;
           lon: number;
         }[];
