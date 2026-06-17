@@ -18,7 +18,7 @@ final class DataTourismeAccommodationSourceTest extends TestCase
     {
         $repository = $this->createStub(AccommodationRepositoryInterface::class);
         $repository->method('findNear')->willReturn([
-            ['name' => 'Gîte du Lac', 'category' => 'apartment', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => 4, 'price' => 75.0, 'description' => null],
+            ['name' => 'Gîte du Lac', 'category' => 'apartment', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => 4, 'price' => 75.0, 'description' => 'Joli gîte'],
         ]);
 
         // The heuristic engine is final and cannot be doubled, so we pass a real
@@ -33,6 +33,12 @@ final class DataTourismeAccommodationSourceTest extends TestCase
         self::assertTrue($result[0]['isExact']);
         self::assertSame('datatourisme', $result[0]['source']);
         self::assertNull($result[0]['wikidataId']);
+        // description comes from the DataTourisme flux; tourism.accommodations is
+        // not Wikidata-enriched, so the Wikidata-only fields stay null by design.
+        self::assertSame('Joli gîte', $result[0]['description']);
+        self::assertNull($result[0]['imageUrl']);
+        self::assertNull($result[0]['wikipediaUrl']);
+        self::assertNull($result[0]['openingHours']);
     }
 
     #[Test]

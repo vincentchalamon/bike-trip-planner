@@ -31,17 +31,18 @@ final class CulturalPoiIndexReadTest extends KernelTestCase
 
         $this->connection->executeStatement('TRUNCATE osm.cultural_pois');
 
-        // A museum (with wikidata) and a castle on the corridor; a far museum (~50 km).
+        // A museum (with wikidata + provisioner-enriched columns) and a castle on
+        // the corridor; a far museum (~50 km).
         $this->connection->executeStatement(<<<'SQL'
-            INSERT INTO osm.cultural_pois (osm_type, osm_id, name, category, wikidata, tags, geom) VALUES
-              ('n', 1, 'Louvre', 'museum', 'Q19675', '{}'::jsonb, ST_SetSRID(ST_MakePoint(6.14, 49.61), 4326)),
-              ('n', 2, 'Château', 'castle', NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(6.145, 49.615), 4326)),
-              ('n', 3, 'Musée Lointain', 'museum', NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(6.80, 49.90), 4326))
+            INSERT INTO osm.cultural_pois (osm_type, osm_id, name, category, wikidata, description, opening_hours, image_url, wikipedia_url, tags, geom) VALUES
+              ('n', 1, 'Louvre', 'museum', 'Q19675', 'Art museum', '09:00-18:00', 'https://img.test/louvre.jpg', 'https://fr.wikipedia.org/wiki/Louvre', '{}'::jsonb, ST_SetSRID(ST_MakePoint(6.14, 49.61), 4326)),
+              ('n', 2, 'Château', 'castle', NULL, NULL, NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(6.145, 49.615), 4326)),
+              ('n', 3, 'Musée Lointain', 'museum', NULL, NULL, NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(6.80, 49.90), 4326))
             SQL);
     }
 
     #[Test]
-    public function findInCorridorReturnsCulturalPoisWithWikidata(): void
+    public function findInCorridorReturnsCulturalPoisWithWikidataAndEnrichment(): void
     {
         $pois = new CulturalPoiRepository($this->connection)->findInCorridor([
             ['lat' => 49.60, 'lon' => 6.13],
@@ -57,8 +58,14 @@ final class CulturalPoiIndexReadTest extends KernelTestCase
         self::assertCount(2, $pois);
         self::assertSame('museum', $byName['Louvre']['category']);
         self::assertSame('Q19675', $byName['Louvre']['wikidata']);
+        // Provisioner-enriched columns are surfaced by the read layer (ADR-041).
+        self::assertSame('Art museum', $byName['Louvre']['description']);
+        self::assertSame('09:00-18:00', $byName['Louvre']['openingHours']);
+        self::assertSame('https://img.test/louvre.jpg', $byName['Louvre']['imageUrl']);
+        self::assertSame('https://fr.wikipedia.org/wiki/Louvre', $byName['Louvre']['wikipediaUrl']);
         self::assertSame('castle', $byName['Château']['category']);
         self::assertNull($byName['Château']['wikidata']);
+        self::assertNull($byName['Château']['imageUrl']);
         self::assertArrayNotHasKey('Musée Lointain', $byName);
     }
 

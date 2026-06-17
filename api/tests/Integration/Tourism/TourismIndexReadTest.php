@@ -43,10 +43,10 @@ final class TourismIndexReadTest extends KernelTestCase
             SQL);
 
         $this->connection->executeStatement(<<<'SQL'
-            INSERT INTO tourism.cultural_pois (id, name, category, opening_hours, description, wikidata, tags, geom) VALUES
-              ('c1', 'Musée du Lac', 'museum', 'Mo-Fr 09:00-17:00', 'Un musée.', 'Q42', '{}'::jsonb,
+            INSERT INTO tourism.cultural_pois (id, name, category, opening_hours, description, wikidata, image_url, wikipedia_url, tags, geom) VALUES
+              ('c1', 'Musée du Lac', 'museum', 'Mo-Fr 09:00-17:00', 'Un musée.', 'Q42', 'https://img.test/musee.jpg', 'https://fr.wikipedia.org/wiki/Musee', '{}'::jsonb,
                   ST_SetSRID(ST_MakePoint(6.14, 49.61), 4326)),
-              ('c2', 'Far Museum', 'museum', NULL, NULL, NULL, '{}'::jsonb,
+              ('c2', 'Far Museum', 'museum', NULL, NULL, NULL, NULL, NULL, '{}'::jsonb,
                   ST_SetSRID(ST_MakePoint(6.80, 50.90), 4326))
             SQL);
 
@@ -80,6 +80,9 @@ final class TourismIndexReadTest extends KernelTestCase
         self::assertSame('Mo-Fr 09:00-17:00', $pois[0]['openingHours']);
         self::assertSame('Un musée.', $pois[0]['description']);
         self::assertSame('Q42', $pois[0]['wikidata']);
+        // Provisioner-enriched columns are surfaced by the read layer (ADR-041).
+        self::assertSame('https://img.test/musee.jpg', $pois[0]['imageUrl']);
+        self::assertSame('https://fr.wikipedia.org/wiki/Musee', $pois[0]['wikipediaUrl']);
     }
 
     #[Test]

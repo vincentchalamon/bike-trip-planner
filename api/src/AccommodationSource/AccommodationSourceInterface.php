@@ -14,7 +14,7 @@ interface AccommodationSourceInterface
      * @param array<int, Coordinate> $endPoints
      * @param list<string>           $enabledTypes
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>
      */
     public function fetch(array $endPoints, int $radiusMeters, array $enabledTypes): array;
 

@@ -21,12 +21,13 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
      * @param array<int, Coordinate> $endPoints
      * @param list<string>           $enabledTypes
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>
      */
     public function fetch(array $endPoints, int $radiusMeters, array $enabledTypes = TripRequest::ALL_ACCOMMODATION_TYPES): array
     {
         // Read accommodations from the local-first index within the radius of the
-        // stage end points, where the rider sleeps (ADR-040).
+        // stage end points, where the rider sleeps (ADR-040). description /
+        // imageUrl / wikipediaUrl are enriched from Wikidata at provision time.
         $points = array_map(
             static fn (Coordinate $point): array => ['lat' => $point->lat, 'lon' => $point->lon],
             array_values($endPoints),
@@ -51,6 +52,10 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
                 'tags' => $tags,
                 'source' => 'osm',
                 'wikidataId' => $accommodation['wikidata'],
+                'description' => $accommodation['description'],
+                'imageUrl' => $accommodation['imageUrl'],
+                'wikipediaUrl' => $accommodation['wikipediaUrl'],
+                'openingHours' => $accommodation['openingHours'],
             ];
         }
 

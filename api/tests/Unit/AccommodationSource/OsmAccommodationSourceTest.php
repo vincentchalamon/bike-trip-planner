@@ -131,6 +131,23 @@ final class OsmAccommodationSourceTest extends TestCase
     }
 
     #[Test]
+    public function propagatesEnrichmentColumnsFromRepository(): void
+    {
+        $row = $this->row(category: 'hotel', name: 'Hotel Enrichi', wikidata: 'Q99');
+        $row['description'] = 'Bel hôtel';
+        $row['imageUrl'] = 'https://img.test/hotel.jpg';
+        $row['wikipediaUrl'] = 'https://fr.wikipedia.org/wiki/Hotel';
+        $row['openingHours'] = 'Mo-Fr 08:00-22:00';
+
+        $results = $this->createSource($this->repository([$row]))->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel']);
+
+        self::assertSame('Bel hôtel', $results[0]['description']);
+        self::assertSame('https://img.test/hotel.jpg', $results[0]['imageUrl']);
+        self::assertSame('https://fr.wikipedia.org/wiki/Hotel', $results[0]['wikipediaUrl']);
+        self::assertSame('Mo-Fr 08:00-22:00', $results[0]['openingHours']);
+    }
+
+    #[Test]
     public function fetchPassesPointsRadiusAndEnabledTypesToRepository(): void
     {
         $repository = $this->createStub(AccommodationRepositoryInterface::class);
@@ -158,7 +175,7 @@ final class OsmAccommodationSourceTest extends TestCase
     /**
      * @param array<string, string> $tags
      *
-     * @return array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, tags: array<string, string>}
+     * @return array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}
      */
     private function row(
         string $category = 'hotel',
@@ -178,12 +195,15 @@ final class OsmAccommodationSourceTest extends TestCase
             'website' => $website,
             'wikidata' => $wikidata,
             'openingHours' => null,
+            'description' => null,
+            'imageUrl' => null,
+            'wikipediaUrl' => null,
             'tags' => $tags,
         ];
     }
 
     /**
-     * @param list<array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, tags: array<string, string>}> $rows
+     * @param list<array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}> $rows
      */
     private function repository(array $rows): AccommodationRepositoryInterface
     {

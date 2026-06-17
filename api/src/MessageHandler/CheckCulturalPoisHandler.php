@@ -17,7 +17,6 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Wikidata\WikidataEnricherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -55,7 +54,6 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
         private GeometryDistributorInterface $distributor,
         private GeoDistanceInterface $haversine,
         private TranslatorInterface $translator,
-        private WikidataEnricherInterface $wikidataEnricher,
         MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
@@ -103,23 +101,10 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
                 return;
             }
 
-            // Fetch all POIs from all enabled sources
+            // Fetch all POIs from all enabled sources. Wikidata enrichment
+            // (image, description, opening hours, Wikipedia URL) is baked into the
+            // local index at provision time (ADR-041), so the rows arrive enriched.
             $allCulturalPois = $this->registry->fetchAllForStages($stageGeometries, self::CULTURAL_POI_RADIUS_METERS);
-
-            // Wikidata enrichment pass over all POIs (batch SPARQL)
-            $qIds = array_values(array_filter(array_unique(array_column($allCulturalPois, 'wikidataId'))));
-            $wikidataEnrichments = [] !== $qIds ? $this->wikidataEnricher->enrichBatch($qIds, $locale) : [];
-
-            if ([] !== $wikidataEnrichments) {
-                foreach ($allCulturalPois as $k => $poi) {
-                    $qId = $poi['wikidataId'] ?? null;
-                    if (null !== $qId && isset($wikidataEnrichments[$qId])) {
-                        $wikidata = $wikidataEnrichments[$qId];
-                        // Wikidata never overwrites an already-filled field
-                        $allCulturalPois[$k] = array_merge($wikidata, $poi);
-                    }
-                }
-            }
 
             // Distribute POIs to the nearest active stage via geometry
             /** @var array<int, list<array>> $poisByActiveStage */
