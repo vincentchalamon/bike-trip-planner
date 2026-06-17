@@ -56,6 +56,8 @@ final readonly class PostgisImporter
         'w/highway=primary,secondary,tertiary,unclassified,residential,living_street,service,track,path,cycleway,footway,bridleway',
         'r/admin_level=2',
         'r/route=bicycle',
+        'w/route=ferry',
+        'r/route=ferry',
     ];
 
     /**
@@ -67,7 +69,7 @@ final readonly class PostgisImporter
      */
     private const array FEATURE_TABLES = [
         'pois', 'accommodations', 'water_points', 'bike_shops', 'health_services',
-        'railway_stations', 'charging_stations', 'cultural_pois', 'ways', 'admin_boundaries', 'cycle_routes',
+        'railway_stations', 'charging_stations', 'cultural_pois', 'ways', 'admin_boundaries', 'cycle_routes', 'ferries',
     ];
 
     /**

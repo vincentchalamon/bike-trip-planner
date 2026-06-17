@@ -5,7 +5,7 @@
 -- the live `osm` schema atomically. The API reads these tables via ST_DWithin
 -- corridor queries, replacing the runtime Overpass dependency.
 --
--- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations, charging_stations, cultural_pois, ways, admin_boundaries, cycle_routes.
+-- Scope of this style: pois, accommodations, water_points, bike_shops, health_services, railway_stations, charging_stations, cultural_pois, ways, admin_boundaries, cycle_routes, ferries.
 
 -- MUST match PostgisImporter::STAGING_SCHEMA: osm2pgsql writes the output tables
 -- here, and the importer creates/swaps this exact schema onto the live `osm`.
@@ -194,6 +194,25 @@ local ways = osm2pgsql.define_table({
     },
 })
 
+-- Ferry crossings, stored as a generic geometry to hold both way LineStrings
+-- (route=ferry on the way) and relation MultiLineStrings (type=route,
+-- route=ferry, whose member ways may not repeat the tag). The `ids` use the
+-- 'any' type so way and relation ids share the table. The API flags stages
+-- whose route runs along one (the ferry-crossing alert).
+local ferries = osm2pgsql.define_table({
+    name = 'ferries',
+    schema = SCHEMA,
+    ids = { type = 'any', id_column = 'osm_id', type_column = 'osm_type' },
+    columns = {
+        { column = 'name', type = 'text' },
+        { column = 'tags', type = 'jsonb' },
+        { column = 'geom', type = 'geometry', projection = SRID, not_null = true },
+    },
+    indexes = {
+        { column = 'geom', method = 'gist' },
+    },
+})
+
 -- Country boundaries (admin_level=2), stored as multipolygons. The API resolves
 -- the country at a point via ST_Covers, replacing the runtime Overpass is_in
 -- query; their union also forms the coverage polygon.
@@ -308,6 +327,12 @@ end
 -- True for signed cycle route relations (EuroVelo / national / regional / local).
 local function is_cycle_route(tags)
     return tags.type == 'route' and tags.route == 'bicycle'
+end
+
+-- True for ferry crossings (route=ferry), tagged on a way directly or on a
+-- type=route relation whose member ways may not repeat the tag.
+local function is_ferry(tags)
+    return tags.route == 'ferry'
 end
 
 local function is_relevant(tags)
@@ -440,6 +465,16 @@ function osm2pgsql.process_node(object)
 end
 
 function osm2pgsql.process_way(object)
+    -- Ferry crossings are not highways/POIs (is_relevant skips them); handle first.
+    if is_ferry(object.tags) then
+        local ok, line = pcall(function() return object:as_linestring() end)
+        if ok and line ~= nil then
+            ferries:insert({ name = object.tags.name, tags = object.tags, geom = line })
+        end
+
+        return
+    end
+
     if not is_relevant(object.tags) then return end
 
     -- The ways table keeps the full linestring for surface/traffic analysis.
@@ -485,6 +520,21 @@ function osm2pgsql.process_relation(object)
             name = object.tags.name,
             network = object.tags.network,
             ref = object.tags.ref,
+            tags = object.tags,
+            geom = geom,
+        })
+
+        return
+    end
+
+    if is_ferry(object.tags) then
+        -- as_multilinestring() stitches the ferry relation's member ways; a
+        -- broken relation yields nil and is skipped.
+        local ok, geom = pcall(function() return object:as_multilinestring() end)
+        if not ok or geom == nil then return end
+
+        ferries:insert({
+            name = object.tags.name,
             tags = object.tags,
             geom = geom,
         })
