@@ -311,6 +311,19 @@ export type MercureEvent =
       };
     }
   | {
+      type: "ferry_alerts";
+      data: {
+        alerts: {
+          stageIndex: number;
+          dayNumber: number;
+          type: "warning";
+          message: string;
+          lat: number;
+          lon: number;
+        }[];
+      };
+    }
+  | {
       type: "route_segment_recalculated";
       data: {
         stageIndex: number;

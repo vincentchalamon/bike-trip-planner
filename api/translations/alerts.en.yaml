@@ -39,6 +39,8 @@ alert.health_service.nudge: "No pharmacy, hospital, or clinic detected within 15
 alert.sunset.action: "Advance departure time"
 alert.cultural_poi.suggestion: "Cultural POI nearby on stage %stage%: %name% (%type%, %distance%m from route). Add it to your itinerary?"
 alert.border_crossing.nudge: "You are entering %country%. Check phone coverage, payment methods, and local regulations."
+alert.ferry.warning: "Stage %stage% takes a ferry crossing. Check the schedule and whether booking is required."
+alert.ferry.action: "Ferry crossing"
 stage.label: "Stage %day%"
 weather.clear_sky: "Clear sky"
 weather.mainly_clear: "Mainly clear"
