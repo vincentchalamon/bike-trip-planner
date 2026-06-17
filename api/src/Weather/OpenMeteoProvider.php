@@ -19,7 +19,7 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
     ) {
     }
 
-    public function fetchForecast(float $lat, float $lon, string $locale = 'en'): WeatherForecast
+    public function fetchForecast(float $lat, float $lon, string $locale = 'en'): ?WeatherForecast
     {
         $response = $this->httpClient->request('GET', '/v1/forecast', [
             'query' => [
@@ -31,30 +31,10 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
             ],
         ]);
 
-        /** @var array{daily?: array{weather_code?: list<int>, temperature_2m_max?: list<float>, temperature_2m_min?: list<float>, precipitation_probability_max?: list<int>, wind_speed_10m_max?: list<float>, wind_direction_10m_dominant?: list<int>, relative_humidity_2m_mean?: list<int>}} $data */
+        /** @var array{daily?: array<string, list<float|int>>} $data */
         $data = $response->toArray();
 
-        $daily = $data['daily'] ?? [];
-        $weatherCode = ($daily['weather_code'] ?? [0])[0];
-        $tempMax = ($daily['temperature_2m_max'] ?? [0.0])[0];
-        $tempMin = ($daily['temperature_2m_min'] ?? [0.0])[0];
-        $precipProb = ($daily['precipitation_probability_max'] ?? [0])[0];
-        $windSpeed = ($daily['wind_speed_10m_max'] ?? [0.0])[0];
-        $windDeg = (int) ($daily['wind_direction_10m_dominant'] ?? [0])[0];
-        $humidity = (int) ($daily['relative_humidity_2m_mean'] ?? [50])[0];
-
-        return new WeatherForecast(
-            icon: $this->wmoToIcon($weatherCode),
-            description: $this->wmoToDescription($weatherCode, $locale),
-            tempMin: (float) $tempMin,
-            tempMax: (float) $tempMax,
-            windSpeed: (float) $windSpeed,
-            windDirection: $this->degToDirection($windDeg),
-            precipitationProbability: (int) $precipProb,
-            humidity: $humidity,
-            comfortIndex: $this->comfortIndexCalculator->compute((float) $tempMax, (float) $windSpeed, $humidity, (int) $precipProb),
-            relativeWindDirection: WeatherForecast::RELATIVE_WIND_UNKNOWN,
-        );
+        return $this->parseForecast($data['daily'] ?? [], $locale);
     }
 
     /**
@@ -62,7 +42,7 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
      *
      * @param list<array{lat: float, lon: float}> $locations
      *
-     * @return list<WeatherForecast>
+     * @return list<?WeatherForecast>
      */
     public function fetchForecasts(array $locations, string $locale = 'en'): array
     {
@@ -88,36 +68,47 @@ final readonly class OpenMeteoProvider implements WeatherProviderInterface
             ],
         ]);
 
-        /** @var list<array{daily?: array{weather_code?: list<int>, temperature_2m_max?: list<float>, temperature_2m_min?: list<float>, precipitation_probability_max?: list<int>, wind_speed_10m_max?: list<float>, wind_direction_10m_dominant?: list<int>, relative_humidity_2m_mean?: list<int>}}> $dataList */
+        /** @var list<array{daily?: array<string, list<float|int>>}> $dataList */
         $dataList = $response->toArray();
 
-        // @todo #89 SRP: extract parseForecastData() to eliminate duplication with fetchForecast()
-        $forecasts = [];
-        foreach ($dataList as $data) {
-            $daily = $data['daily'] ?? [];
-            $weatherCode = ($daily['weather_code'] ?? [0])[0];
-            $tempMax = ($daily['temperature_2m_max'] ?? [0.0])[0];
-            $tempMin = ($daily['temperature_2m_min'] ?? [0.0])[0];
-            $precipProb = ($daily['precipitation_probability_max'] ?? [0])[0];
-            $windSpeed = ($daily['wind_speed_10m_max'] ?? [0.0])[0];
-            $windDeg = (int) ($daily['wind_direction_10m_dominant'] ?? [0])[0];
-            $humidity = (int) ($daily['relative_humidity_2m_mean'] ?? [50])[0];
+        return array_map(fn (array $data): ?WeatherForecast => $this->parseForecast($data['daily'] ?? [], $locale), $dataList);
+    }
 
-            $forecasts[] = new WeatherForecast(
-                icon: $this->wmoToIcon($weatherCode),
-                description: $this->wmoToDescription($weatherCode, $locale),
-                tempMin: (float) $tempMin,
-                tempMax: (float) $tempMax,
-                windSpeed: (float) $windSpeed,
-                windDirection: $this->degToDirection($windDeg),
-                precipitationProbability: (int) $precipProb,
-                humidity: $humidity,
-                comfortIndex: $this->comfortIndexCalculator->compute((float) $tempMax, (float) $windSpeed, $humidity, (int) $precipProb),
-                relativeWindDirection: WeatherForecast::RELATIVE_WIND_UNKNOWN,
-            );
+    /**
+     * Builds a forecast from one open-meteo `daily` block, or null when the core
+     * fields (weather code + both temperatures) are absent — so a 200 response
+     * with an empty/partial body yields no weather rather than a fabricated 0 °C
+     * clear-sky forecast (ADR — Tier 3 "no fake data").
+     *
+     * @param array<string, list<float|int>> $daily
+     */
+    private function parseForecast(array $daily, string $locale): ?WeatherForecast
+    {
+        if (!isset($daily['weather_code'][0], $daily['temperature_2m_max'][0], $daily['temperature_2m_min'][0])) {
+            return null;
         }
 
-        return $forecasts;
+        $weatherCode = (int) $daily['weather_code'][0];
+        $tempMax = (float) $daily['temperature_2m_max'][0];
+        $tempMin = (float) $daily['temperature_2m_min'][0];
+        // Secondary fields keep conservative defaults when absent (dry, calm).
+        $precipProb = (int) ($daily['precipitation_probability_max'][0] ?? 0);
+        $windSpeed = (float) ($daily['wind_speed_10m_max'][0] ?? 0.0);
+        $windDeg = (int) ($daily['wind_direction_10m_dominant'][0] ?? 0);
+        $humidity = (int) ($daily['relative_humidity_2m_mean'][0] ?? 50);
+
+        return new WeatherForecast(
+            icon: $this->wmoToIcon($weatherCode),
+            description: $this->wmoToDescription($weatherCode, $locale),
+            tempMin: $tempMin,
+            tempMax: $tempMax,
+            windSpeed: $windSpeed,
+            windDirection: $this->degToDirection($windDeg),
+            precipitationProbability: $precipProb,
+            humidity: $humidity,
+            comfortIndex: $this->comfortIndexCalculator->compute($tempMax, $windSpeed, $humidity, $precipProb),
+            relativeWindDirection: WeatherForecast::RELATIVE_WIND_UNKNOWN,
+        );
     }
 
     private function wmoToIcon(int $code): string
