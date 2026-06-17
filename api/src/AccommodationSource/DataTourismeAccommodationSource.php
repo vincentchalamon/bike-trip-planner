@@ -64,6 +64,9 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
                 'source' => 'datatourisme',
                 'wikidataId' => null,
                 'description' => $accommodation['description'],
+                // tourism.accommodations carries no `wikidata` Q-ID column, so it is
+                // not Wikidata-enriched at provision time (ADR-041 enriches only
+                // tourism.cultural_pois / food_pois): these stay null by design.
                 'imageUrl' => null,
                 'wikipediaUrl' => null,
                 'openingHours' => null,
