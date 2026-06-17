@@ -112,12 +112,14 @@ final readonly class WikidataEnrichmentPass
                 throw new ImportFailedException(\sprintf('Cannot open enrichment COPY file "%s"', $fetchPath));
             }
 
-            foreach ($this->enricher->enrich($missing, $this->locale) as $row) {
-                $payload = json_encode((object) ($row['enrichment'] ?? []), \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}';
-                fwrite($handle, $this->copyValue($row['qid'])."\t".$this->copyValue($payload)."\n");
+            try {
+                foreach ($this->enricher->enrich($missing, $this->locale) as $row) {
+                    $payload = json_encode((object) ($row['enrichment'] ?? []), \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES) ?: '{}';
+                    fwrite($handle, $this->copyValue($row['qid'])."\t".$this->copyValue($payload)."\n");
+                }
+            } finally {
+                fclose($handle);
             }
-
-            fclose($handle);
 
             $this->psql(\sprintf("\\copy %s (qid, payload) FROM '%s'", self::FETCH_TABLE, $fetchPath), 'psql copy wikidata fetched');
             $this->psql(\sprintf(
