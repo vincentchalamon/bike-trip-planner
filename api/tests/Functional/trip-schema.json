@@ -46,6 +46,7 @@
         "health_services",
         "border_crossing",
         "ferries",
+        "fords",
         "events"
       ],
       "additionalProperties": false,
@@ -177,6 +178,15 @@
           ]
         },
         "ferries": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "running",
+            "done",
+            "failed"
+          ]
+        },
+        "fords": {
           "type": "string",
           "enum": [
             "pending",

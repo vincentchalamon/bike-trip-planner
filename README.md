@@ -143,8 +143,10 @@ Rules are executed in priority order (lower = higher priority):
 | **Health services** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | No pharmacy, hospital, or clinic within 15 km of a stage |
 | **Border crossing** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Route crosses an international border (country change detected via the local PostGIS admin-boundary index) |
 | **Ferry** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Stage takes a ferry crossing (route runs within 100 m of an `osm.ferries` line; check schedule/booking) |
+| **Ford** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage crosses a ford (`osm.fords` within 25 m of the route), dry weather |
+| **Ford** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Stage crosses a ford and rain is forecast (precipitation probability >= 50 %): possibly impassable in high water |
 
-**Terrain rules** (Continuity, Elevation, Steep gradient, Surface, Traffic, E-bike range, Sunset, Rest day) implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`. Rules with `--` priority (Calendar, Wind + Comfort, Bike shops, Resupply, Accommodation, Water points, Cultural POI, Railway station, Health services, Border crossing, Ferry) are separate async Symfony Message handlers; Comfort is co-located with Wind inside `AnalyzeWindHandler`.
+**Terrain rules** (Continuity, Elevation, Steep gradient, Surface, Traffic, E-bike range, Sunset, Rest day) implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`. Rules with `--` priority (Calendar, Wind + Comfort, Bike shops, Resupply, Accommodation, Water points, Cultural POI, Railway station, Health services, Border crossing, Ferry, Ford) are separate async Symfony Message handlers; Comfort is co-located with Wind inside `AnalyzeWindHandler`. Ford runs after the weather computation (its severity depends on the per-stage forecast).
 
 ---
 

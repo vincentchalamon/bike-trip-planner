@@ -23,6 +23,7 @@ enum MercureEventType: string
     case HEALTH_SERVICE_ALERTS = 'health_service_alerts';
     case BORDER_CROSSING_ALERTS = 'border_crossing_alerts';
     case FERRY_ALERTS = 'ferry_alerts';
+    case FORD_ALERTS = 'ford_alerts';
     case EVENTS_FOUND = 'events_found';
     case VALIDATION_ERROR = 'validation_error';
     case COMPUTATION_ERROR = 'computation_error';
