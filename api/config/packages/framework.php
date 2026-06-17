@@ -73,15 +73,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'User-Agent' => 'Mozilla/5.0 (compatible; BikeTripPlanner/1.0)',
                     ],
                 ],
-                'wikidata.client' => [
-                    'scope' => '^https://query\\.wikidata\\.org',
-                    'max_redirects' => 2,
-                    'timeout' => 10,
-                    'headers' => [
-                        'User-Agent' => '%env(WIKIDATA_USER_AGENT)%',
-                        'Accept' => 'application/sparql-results+json',
-                    ],
-                ],
                 'markets.client' => [
                     'scope' => '^https://www\\.data\\.gouv\\.fr',
                     'max_redirects' => 2,

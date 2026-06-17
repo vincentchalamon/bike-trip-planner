@@ -22,7 +22,7 @@ final readonly class CulturalPoiRepository implements CulturalPoiRepositoryInter
      *
      * @param list<array{lat: float, lon: float}> $route
      *
-     * @return list<array{name: ?string, category: string, lat: float, lon: float, wikidata: ?string}>
+     * @return list<array{name: ?string, category: string, lat: float, lon: float, wikidata: ?string, openingHours: ?string, description: ?string, website: ?string, imageUrl: ?string, wikipediaUrl: ?string}>
      */
     public function findInCorridor(array $route, int $radiusMeters): array
     {
@@ -34,10 +34,12 @@ final readonly class CulturalPoiRepository implements CulturalPoiRepositoryInter
 
         // `ORDER BY geom <-> route LIMIT 100` (GiST KNN) caps the result like the
         // old Overpass `out center tags 100;`, fetching the nearest cultural POIs.
+        // The enrichment columns are filled at provision time from Wikidata (ADR-041).
         /** @var list<array<string, scalar|null>> $rows */
         $rows = $this->connection->fetchAllAssociative(
             <<<'SQL'
-                SELECT name, category, wikidata, ST_Y(geom) AS lat, ST_X(geom) AS lon
+                SELECT name, category, wikidata, opening_hours, description, website, image_url, wikipedia_url,
+                       ST_Y(geom) AS lat, ST_X(geom) AS lon
                 FROM osm.cultural_pois
                 WHERE ST_DWithin(
                     geom::geography,
@@ -61,6 +63,11 @@ final readonly class CulturalPoiRepository implements CulturalPoiRepositoryInter
                 'lat' => (float) $row['lat'],
                 'lon' => (float) $row['lon'],
                 'wikidata' => null !== $row['wikidata'] && '' !== $row['wikidata'] ? (string) $row['wikidata'] : null,
+                'openingHours' => null !== $row['opening_hours'] && '' !== $row['opening_hours'] ? (string) $row['opening_hours'] : null,
+                'description' => null !== $row['description'] && '' !== $row['description'] ? (string) $row['description'] : null,
+                'website' => null !== $row['website'] && '' !== $row['website'] ? (string) $row['website'] : null,
+                'imageUrl' => null !== $row['image_url'] && '' !== $row['image_url'] ? (string) $row['image_url'] : null,
+                'wikipediaUrl' => null !== $row['wikipedia_url'] && '' !== $row['wikipedia_url'] ? (string) $row['wikipedia_url'] : null,
             ];
         }
 

@@ -22,7 +22,7 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
     /**
      * @param list<list<array{lat: float, lon: float}>> $stageGeometries
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, openingHours: string|null, estimatedPrice: float|null, description: string|null, wikidataId: string|null, source: string}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, openingHours: string|null, estimatedPrice: float|null, description: string|null, wikidataId: string|null, source: string, imageUrl: string|null, wikipediaUrl: string|null}>
      */
     public function fetchForStages(array $stageGeometries, int $radiusMeters): array
     {
@@ -40,6 +40,8 @@ final readonly class DataTourismeCulturalPoiSource implements CulturalPoiSourceI
                 'description' => $poi['description'],
                 'wikidataId' => $poi['wikidata'],
                 'source' => 'datatourisme',
+                'imageUrl' => $poi['imageUrl'],
+                'wikipediaUrl' => $poi['wikipediaUrl'],
             ];
         }
 

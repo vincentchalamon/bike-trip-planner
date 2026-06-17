@@ -31,7 +31,7 @@ class AccommodationSourceRegistry
      * @param array<int, Coordinate> $endPoints
      * @param list<string>           $enabledTypes
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>
      */
     public function fetchAll(array $endPoints, int $radiusMeters, array $enabledTypes): array
     {
@@ -47,7 +47,7 @@ class AccommodationSourceRegistry
             }
         }
 
-        /** @var list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string}> $deduped */
+        /** @var list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}> $deduped */
         $deduped = $this->deduplicator->dedupe($all);
 
         return $deduped;

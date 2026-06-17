@@ -12,7 +12,7 @@ interface AccommodationRepositoryInterface
      * @param list<array{lat: float, lon: float}> $points
      * @param list<string>                        $categories
      *
-     * @return list<array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, tags: array<string, string>}>
+     * @return list<array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}>
      */
     public function findNear(array $points, int $radiusMeters, array $categories): array;
 }

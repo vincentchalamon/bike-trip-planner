@@ -158,7 +158,7 @@ final class OsmAccommodationSourceTest extends TestCase
     /**
      * @param array<string, string> $tags
      *
-     * @return array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, tags: array<string, string>}
+     * @return array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}
      */
     private function row(
         string $category = 'hotel',
@@ -178,12 +178,15 @@ final class OsmAccommodationSourceTest extends TestCase
             'website' => $website,
             'wikidata' => $wikidata,
             'openingHours' => null,
+            'description' => null,
+            'imageUrl' => null,
+            'wikipediaUrl' => null,
             'tags' => $tags,
         ];
     }
 
     /**
-     * @param list<array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, tags: array<string, string>}> $rows
+     * @param list<array{name: ?string, category: string, lat: float, lon: float, stars: ?int, capacity: ?int, fee: ?string, website: ?string, wikidata: ?string, openingHours: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, tags: array<string, string>}> $rows
      */
     private function repository(array $rows): AccommodationRepositoryInterface
     {

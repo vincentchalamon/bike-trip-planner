@@ -22,7 +22,6 @@ use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Wikidata\WikidataEnricherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -51,7 +50,6 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         private TranslatorInterface $translator,
         #[Autowire(service: 'accommodation_scraper.client')]
         private HttpClientInterface $scraperClient,
-        private WikidataEnricherInterface $wikidataEnricher,
         MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
@@ -87,7 +85,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             $allCandidates = $this->registry->fetchAll($endPoints, $radiusMeters, $enabledAccommodationTypes);
 
             // Distribute candidates to their nearest stage endpoint (output keys match $stagesToProcess keys)
-            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string}>> $candidatesByStage */
+            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>> $candidatesByStage */
             $candidatesByStage = $this->distributor->distributeByEndpoint($allCandidates, $stagesToProcess);
 
             // Deduplicate + limit per stage BEFORE any scraping
@@ -101,21 +99,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             // Async scraping: 2 waves of parallel HTTP requests
             $retainedByStage = $this->scrapeAsync($retainedByStage);
 
-            // Wikidata enrichment: one batch SPARQL query for all retained candidates
-            $allRetained = [] !== $retainedByStage ? array_merge(...array_values($retainedByStage)) : [];
-            $qIds = array_values(array_filter(array_unique(array_column($allRetained, 'wikidataId'))));
-            $wikidataEnrichments = [] !== $qIds ? $this->wikidataEnricher->enrichBatch($qIds, $locale) : [];
-
-            foreach ($retainedByStage as $i => $candidates) {
-                foreach ($candidates as $j => $candidate) {
-                    $qId = $candidate['wikidataId'] ?? null;
-                    if (null !== $qId && isset($wikidataEnrichments[$qId])) {
-                        $wikidata = $wikidataEnrichments[$qId];
-                        // Wikidata never overwrites an already-filled field
-                        $retainedByStage[$i][$j] = array_merge($wikidata, $candidate);
-                    }
-                }
-            }
+            // Wikidata enrichment (description, image, Wikipedia URL) is baked into
+            // the local index at provision time (ADR-041); the candidates already
+            // carry it, so there is no runtime SPARQL pass here.
 
             // Build Accommodation DTOs, publish per stage, and store
             $startDate = $request?->startDate;
@@ -249,9 +235,9 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
      * Wave 1: main-page requests for all candidates with a website URL.
      * Wave 2: price-page requests for candidates whose main page had no price.
      *
-     * @param array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string}>> $retainedByStage
+     * @param array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>> $retainedByStage
      *
-     * @return array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string}>>
+     * @return array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>>
      */
     private function scrapeAsync(array $retainedByStage): array
     {
@@ -319,7 +305,7 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
         }
 
         if ([] === $needsPricePage) {
-            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string}>> $result */
+            /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>> $result */
             $result = $retainedByStage;
 
             return $result;
@@ -367,16 +353,16 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
             }
         }
 
-        /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string}>> $result */
+        /** @var array<int, list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>> $result */
         $result = $retainedByStage;
 
         return $result;
     }
 
     /**
-     * @param list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string}> $accommodations
+     * @param list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}> $accommodations
      *
-     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string}>
+     * @return list<array{name: string, type: string, lat: float, lon: float, priceMin: float, priceMax: float, isExact: bool, url: ?string, tagCount: int, hasWebsite: bool, tags: array<string, string>, source: string, wikidataId: ?string, description: ?string, imageUrl: ?string, wikipediaUrl: ?string, openingHours: ?string}>
      */
     private function deduplicate(array $accommodations): array
     {

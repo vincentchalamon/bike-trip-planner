@@ -119,6 +119,12 @@ final class OsmCulturalPoiSourceTest extends TestCase
      */
     private function repository(array $rows): CulturalPoiRepositoryInterface
     {
+        // Default the provisioner-enriched columns the read layer now returns.
+        $rows = array_map(
+            static fn (array $row): array => $row + ['openingHours' => null, 'description' => null, 'website' => null, 'imageUrl' => null, 'wikipediaUrl' => null],
+            $rows,
+        );
+
         $repository = $this->createStub(CulturalPoiRepositoryInterface::class);
         $repository->method('findInCorridor')->willReturn($rows);
 

@@ -43,11 +43,11 @@ final class AccommodationIndexReadTest extends KernelTestCase
         // site (charge tag). A far hotel (~130 km) and a near hostel exercise the
         // radius and category filters respectively.
         $this->connection->executeStatement(<<<'SQL'
-            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, website, wikidata, tags, geom) VALUES
-              ('n', 8001, 'Hotel du Centre', 'hotel', 'https://hotel.example', 'Q42', '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326)),
-              ('n', 8002, 'Camping du Lac', 'camp_site', NULL, NULL, '{"charge": "18 EUR"}'::jsonb, ST_SetSRID(ST_MakePoint(2.51, 48.51), 4326)),
-              ('n', 8003, 'Auberge Lointaine', 'hotel', NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.5, 49.5), 4326)),
-              ('n', 8004, 'Auberge de Jeunesse', 'hostel', NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326))
+            INSERT INTO osm.accommodations (osm_type, osm_id, name, category, website, wikidata, description, image_url, wikipedia_url, tags, geom) VALUES
+              ('n', 8001, 'Hotel du Centre', 'hotel', 'https://hotel.example', 'Q42', 'Cosy hotel', 'https://img.test/hotel.jpg', 'https://fr.wikipedia.org/wiki/Hotel', '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326)),
+              ('n', 8002, 'Camping du Lac', 'camp_site', NULL, NULL, NULL, NULL, NULL, '{"charge": "18 EUR"}'::jsonb, ST_SetSRID(ST_MakePoint(2.51, 48.51), 4326)),
+              ('n', 8003, 'Auberge Lointaine', 'hotel', NULL, NULL, NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(3.5, 49.5), 4326)),
+              ('n', 8004, 'Auberge de Jeunesse', 'hostel', NULL, NULL, NULL, NULL, NULL, '{}'::jsonb, ST_SetSRID(ST_MakePoint(2.5, 48.5), 4326))
             SQL);
     }
 
@@ -98,6 +98,10 @@ final class AccommodationIndexReadTest extends KernelTestCase
         self::assertTrue($byType['hotel']['hasWebsite']);
         self::assertSame('Q42', $byType['hotel']['wikidataId']);
         self::assertSame('osm', $byType['hotel']['source']);
+        // Provisioner-enriched Wikidata columns flow through to the candidate (ADR-041).
+        self::assertSame('Cosy hotel', $byType['hotel']['description']);
+        self::assertSame('https://img.test/hotel.jpg', $byType['hotel']['imageUrl']);
+        self::assertSame('https://fr.wikipedia.org/wiki/Hotel', $byType['hotel']['wikipediaUrl']);
 
         self::assertArrayHasKey('camp_site', $byType);
         self::assertSame(18.0, $byType['camp_site']['priceMin']);

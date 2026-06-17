@@ -16,8 +16,8 @@ final class DataTourismeCulturalPoiSourceTest extends TestCase
     {
         $repository = $this->createStub(CulturalPoiRepositoryInterface::class);
         $repository->method('findInCorridor')->willReturn([
-            ['name' => 'Musée X', 'category' => 'museum', 'lat' => 48.5, 'lon' => 2.3, 'openingHours' => 'Mo-Fr 09:00-17:00', 'description' => 'Un musée.', 'wikidata' => 'Q42'],
-            ['name' => null, 'category' => 'monument', 'lat' => 49.0, 'lon' => 3.0, 'openingHours' => null, 'description' => null, 'wikidata' => null],
+            ['name' => 'Musée X', 'category' => 'museum', 'lat' => 48.5, 'lon' => 2.3, 'openingHours' => 'Mo-Fr 09:00-17:00', 'description' => 'Un musée.', 'wikidata' => 'Q42', 'website' => 'https://musee.test', 'imageUrl' => 'https://img.test/m.jpg', 'wikipediaUrl' => 'https://fr.wikipedia.org/wiki/Musee'],
+            ['name' => null, 'category' => 'monument', 'lat' => 49.0, 'lon' => 3.0, 'openingHours' => null, 'description' => null, 'wikidata' => null, 'website' => null, 'imageUrl' => null, 'wikipediaUrl' => null],
         ]);
 
         $pois = new DataTourismeCulturalPoiSource($repository)->fetchForStages([[['lat' => 48.5, 'lon' => 2.3]]], 5000);
@@ -29,6 +29,8 @@ final class DataTourismeCulturalPoiSourceTest extends TestCase
         self::assertSame('Un musée.', $pois[0]['description']);
         self::assertSame('Q42', $pois[0]['wikidataId']);
         self::assertSame('datatourisme', $pois[0]['source']);
+        self::assertSame('https://img.test/m.jpg', $pois[0]['imageUrl']);
+        self::assertSame('https://fr.wikipedia.org/wiki/Musee', $pois[0]['wikipediaUrl']);
         self::assertNull($pois[0]['estimatedPrice']);
         // A null name falls back to the category.
         self::assertSame('monument', $pois[1]['name']);
