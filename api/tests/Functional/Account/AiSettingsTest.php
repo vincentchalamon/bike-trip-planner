@@ -54,12 +54,14 @@ final class AiSettingsTest extends ApiTestCase
     {
         $fixtures = $this->createUser('ai-unconfigured@example.com');
 
-        self::createClient()->request('GET', '/users/me/ai-settings', [
+        $response = self::createClient()->request('GET', '/users/me/ai-settings', [
             'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
         ]);
 
         $this->assertResponseIsSuccessful();
-        $this->assertJsonContains(['provider' => null, 'tokenConfigured' => false]);
+        $this->assertJsonContains(['tokenConfigured' => false]);
+        // A null provider is omitted from the payload (skip_null_values).
+        $this->assertArrayNotHasKey('provider', $response->toArray());
     }
 
     #[Test]
@@ -159,6 +161,39 @@ final class AiSettingsTest extends ApiTestCase
 
         $this->assertNull($user->getAiProvider());
         $this->assertNull($user->getAiToken());
+    }
+
+    #[Test]
+    public function putOverwritesExistingSettings(): void
+    {
+        $fixtures = $this->createUser('ai-overwrite@example.com');
+        $userId = $fixtures['user']->getId()->toRfc4122();
+        $client = self::createClient();
+        $headers = ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']];
+
+        $client->request('PUT', '/users/me/ai-settings', [
+            'headers' => $headers,
+            'json' => ['provider' => 'anthropic', 'token' => 'sk-ant-initial'],
+        ]);
+        $this->assertResponseIsSuccessful();
+
+        $client->request('PUT', '/users/me/ai-settings', [
+            'headers' => $headers,
+            'json' => ['provider' => 'openai', 'token' => 'sk-updated'],
+        ]);
+        $this->assertResponseIsSuccessful();
+        $this->assertJsonContains(['provider' => 'openai', 'tokenConfigured' => true]);
+
+        $em = $this->getEntityManager();
+        $em->clear();
+
+        $user = $em->find(User::class, Uuid::fromString($userId));
+        \assert($user instanceof User);
+
+        /** @var AiTokenEncryptor $encryptor */
+        $encryptor = self::getContainer()->get(AiTokenEncryptor::class);
+        $this->assertSame('openai', $user->getAiProvider());
+        $this->assertSame('sk-updated', $encryptor->decrypt((string) $user->getAiToken()));
     }
 
     #[Test]
