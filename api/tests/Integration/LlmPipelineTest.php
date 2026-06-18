@@ -9,11 +9,14 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
+use App\Llm\AiProvider;
 use App\Llm\Dto\StageAiAnalysis;
 use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
+use App\Llm\ResolvedLlmClient;
 use App\Llm\StageAnalysisSummaryBuilder;
 use App\Llm\SystemPromptLoader;
+use App\Llm\TripLlmResolverInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\StagePayloadMapper;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -108,7 +111,7 @@ final class LlmPipelineTest extends TestCase
 
         $stageHandler = new AnalyzeStageWithLlmHandler(
             tripStateManager: $repository,
-            llmClient: $this->stageLlmClient(),
+            llmResolver: $this->resolver($this->stageLlmClient()),
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
             summaryBuilder: new StageAnalysisSummaryBuilder(),
             logger: new NullLogger(),
@@ -119,7 +122,7 @@ final class LlmPipelineTest extends TestCase
 
         $overviewHandler = new AnalyzeTripOverviewWithLlmHandler(
             tripStateManager: $repository,
-            llmClient: $this->overviewLlmClient(),
+            llmResolver: $this->resolver($this->overviewLlmClient()),
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
             logger: new NullLogger(),
             llmTracker: $llmTracker,
@@ -150,7 +153,7 @@ final class LlmPipelineTest extends TestCase
             tripRequestRepository: $repository,
             logger: new NullLogger(),
             messageBus: $bus,
-            llmClient: $this->stageLlmClient(),
+            llmResolver: $this->resolver($this->stageLlmClient()),
             llmTracker: $llmTracker,
         );
 
@@ -208,23 +211,20 @@ final class LlmPipelineTest extends TestCase
 
         $bus = new InMemoryBus();
 
-        $disabledLlm = $this->createStub(LlmClientInterface::class);
-        $disabledLlm->method('isEnabled')->willReturn(false);
-
         $terminalHandler = new AllEnrichmentsCompletedHandler(
             computationTracker: $this->stubComputationTracker(['route' => 'done']),
             publisher: $publisher,
             tripRequestRepository: $repository,
             logger: new NullLogger(),
             messageBus: $bus,
-            llmClient: $disabledLlm,
+            llmResolver: $this->unconfiguredResolver(),
             llmTracker: new InMemoryLlmAnalysisTracker(),
         );
 
         $terminalHandler(new AllEnrichmentsCompleted(self::TRIP_ID));
 
         // No LLM message dispatched.
-        self::assertSame(0, $bus->dispatchCount(), 'No LLM message must be dispatched when Ollama is disabled.');
+        self::assertSame(0, $bus->dispatchCount(), 'No LLM message must be dispatched when AI is not configured.');
 
         // Exactly one TRIP_READY published, no ai_overview.
         $tripReadyEvents = $publisher->byType(MercureEventType::TRIP_READY);
@@ -259,16 +259,13 @@ final class LlmPipelineTest extends TestCase
 
         $bus = new InMemoryBus();
 
-        $enabledLlm = $this->createStub(LlmClientInterface::class);
-        $enabledLlm->method('isEnabled')->willReturn(true);
-
         $terminalHandler = new AllEnrichmentsCompletedHandler(
             computationTracker: $this->stubComputationTracker(['route' => 'done']),
             publisher: $publisher,
             tripRequestRepository: $repository,
             logger: new NullLogger(),
             messageBus: $bus,
-            llmClient: $enabledLlm,
+            llmResolver: $this->resolver($this->stageLlmClient()),
             llmTracker: new InMemoryLlmAnalysisTracker(),
         );
 
@@ -306,13 +303,27 @@ final class LlmPipelineTest extends TestCase
         return $request;
     }
 
+    private function resolver(LlmClientInterface $client): TripLlmResolverInterface
+    {
+        $resolver = $this->createStub(TripLlmResolverInterface::class);
+        $resolver->method('resolveForTrip')->willReturn(new ResolvedLlmClient($client, AiProvider::ANTHROPIC));
+
+        return $resolver;
+    }
+
+    private function unconfiguredResolver(): TripLlmResolverInterface
+    {
+        $resolver = $this->createStub(TripLlmResolverInterface::class);
+        $resolver->method('resolveForTrip')->willReturn(null);
+
+        return $resolver;
+    }
+
     private function stageLlmClient(): LlmClientInterface
     {
         $client = $this->createStub(LlmClientInterface::class);
-        $client->method('isEnabled')->willReturn(true);
         $client->method('generate')->willReturn([
             'response' => "## Synthèse\nÉtape exigeante.\n\n## Insights\n- Long sans eau\n\n## Recommandations\n- Faire le plein.\n",
-            'done' => true,
         ]);
 
         return $client;
@@ -321,10 +332,8 @@ final class LlmPipelineTest extends TestCase
     private function overviewLlmClient(): LlmClientInterface
     {
         $client = $this->createStub(LlmClientInterface::class);
-        $client->method('isEnabled')->willReturn(true);
         $client->method('generate')->willReturn([
             'response' => "## Vue d'ensemble\nTrip exigeant.\n\n## Charge et fatigue cumulative\nJ2 plus dure.\n\n## Patterns transversaux\n- Zones sans eau\n\n## Recommandations globales\n- Pause à mi-parcours.\n",
-            'done' => true,
         ]);
 
         return $client;

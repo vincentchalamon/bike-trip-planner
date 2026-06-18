@@ -7,8 +7,11 @@ namespace App\Tests\Unit\MessageHandler;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
+use App\Llm\AiProvider;
 use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
+use App\Llm\ResolvedLlmClient;
+use App\Llm\TripLlmResolverInterface;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AllEnrichmentsCompleted;
 use App\Message\AnalyzeStageWithLlmMessage;
@@ -69,7 +72,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             $tripStateManager,
             new NullLogger(),
             $this->createStub(MessageBusInterface::class),
-            $this->disabledLlmClient(),
+            $this->unconfiguredResolver(),
             $this->createStub(LlmAnalysisTrackerInterface::class),
         );
 
@@ -95,7 +98,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             $tripStateManager,
             new NullLogger(),
             $this->createStub(MessageBusInterface::class),
-            $this->disabledLlmClient(),
+            $this->unconfiguredResolver(),
             $this->createStub(LlmAnalysisTrackerInterface::class),
         );
 
@@ -129,7 +132,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             $tripStateManager,
             new NullLogger(),
             $this->createStub(MessageBusInterface::class),
-            $this->disabledLlmClient(),
+            $this->unconfiguredResolver(),
             $this->createStub(LlmAnalysisTrackerInterface::class),
         );
 
@@ -185,9 +188,6 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             ))
             ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
 
-        $llmClient = $this->createStub(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
-
         $llmAnalysisTracker = $this->createMock(LlmAnalysisTrackerInterface::class);
         $llmAnalysisTracker->expects(self::once())
             ->method('initializeStageAnalyses')
@@ -199,7 +199,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             $tripStateManager,
             new NullLogger(),
             $bus,
-            $llmClient,
+            $this->configuredResolver(),
             $llmAnalysisTracker,
         );
 
@@ -238,7 +238,7 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             $tripStateManager,
             new NullLogger(),
             $bus,
-            $this->disabledLlmClient(),
+            $this->unconfiguredResolver(),
             $this->createStub(LlmAnalysisTrackerInterface::class),
         );
 
@@ -266,9 +266,6 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn([$stage]);
 
-        $llmClient = $this->createStub(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
-
         $llmAnalysisTracker = $this->createMock(LlmAnalysisTrackerInterface::class);
         $llmAnalysisTracker->expects(self::once())
             ->method('consumeSkipAiAnalysis')
@@ -288,18 +285,28 @@ final class AllEnrichmentsCompletedHandlerTest extends TestCase
             $tripStateManager,
             new NullLogger(),
             $bus,
-            $llmClient,
+            $this->configuredResolver(),
             $llmAnalysisTracker,
         );
 
         $handler(new AllEnrichmentsCompleted($tripId));
     }
 
-    private function disabledLlmClient(): LlmClientInterface
+    private function configuredResolver(): TripLlmResolverInterface
     {
-        $llmClient = $this->createStub(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(false);
+        $resolver = $this->createStub(TripLlmResolverInterface::class);
+        $resolver->method('resolveForTrip')->willReturn(
+            new ResolvedLlmClient($this->createStub(LlmClientInterface::class), AiProvider::ANTHROPIC),
+        );
 
-        return $llmClient;
+        return $resolver;
+    }
+
+    private function unconfiguredResolver(): TripLlmResolverInterface
+    {
+        $resolver = $this->createStub(TripLlmResolverInterface::class);
+        $resolver->method('resolveForTrip')->willReturn(null);
+
+        return $resolver;
     }
 }
