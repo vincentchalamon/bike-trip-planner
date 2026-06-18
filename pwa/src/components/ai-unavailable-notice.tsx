@@ -40,7 +40,10 @@ export function AiUnavailableNotice({
         )}
       >
         <span className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+          <Sparkles
+            className="h-4 w-4 shrink-0 text-brand"
+            aria-hidden="true"
+          />
           <span>{t("notConfigured")}</span>
         </span>
         <Link

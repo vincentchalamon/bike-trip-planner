@@ -314,9 +314,7 @@ test.describe("AI provider settings (ADR-042)", () => {
     await page.goto("/account/settings");
     await page.waitForLoadState("networkidle");
 
-    await page
-      .getByTestId("ai-provider-select")
-      .selectOption("openai");
+    await page.getByTestId("ai-provider-select").selectOption("openai");
     await page.getByTestId("ai-token-input").fill("sk-test-key");
     await page.getByTestId("ai-settings-save").click();
 
@@ -351,9 +349,7 @@ test.describe("AI provider settings (ADR-042)", () => {
     await page.goto("/account/settings");
     await page.waitForLoadState("networkidle");
 
-    await page
-      .getByTestId("ai-provider-select")
-      .selectOption("anthropic");
+    await page.getByTestId("ai-provider-select").selectOption("anthropic");
     await page.getByTestId("ai-token-input").fill("bad");
     await page.getByTestId("ai-settings-save").click();
 
