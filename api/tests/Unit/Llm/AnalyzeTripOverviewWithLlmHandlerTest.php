@@ -213,6 +213,26 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
         $handler(new AnalyzeTripOverviewWithLlmMessage(self::TRIP_ID));
     }
 
+    #[Test]
+    public function skipsPersistenceWhenClientReturnsNull(): void
+    {
+        // A client may still return null per the interface contract (e.g. a disabled
+        // OllamaClient configured as the provider); the handler must not persist.
+        $stage = $this->makeStage(dayNumber: 1);
+        $stage->aiAnalysis = $this->makeAiAnalysis('A');
+
+        $repo = $this->createMock(TripRequestRepositoryInterface::class);
+        $repo->method('getStages')->willReturn([$stage]);
+        $repo->method('getRequest')->willReturn($this->makeTripRequest());
+        $repo->expects(self::never())->method('updateTripAiOverview');
+
+        $llmClient = $this->createMock(LlmClientInterface::class);
+        $llmClient->method('generate')->willReturn(null);
+
+        $handler = $this->makeHandler(repo: $repo, resolver: $this->resolver($llmClient));
+        $handler(new AnalyzeTripOverviewWithLlmMessage(self::TRIP_ID));
+    }
+
     // -------------------------------------------------------------------------
     // Happy paths
     // -------------------------------------------------------------------------
