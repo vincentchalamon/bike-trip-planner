@@ -65,11 +65,12 @@
     "vitest": "^4.1.5"
   },
   "overrides": {
-    "undici": "^6.24.0",
+    "undici": "^6.27.0",
     "tmp": "^0.2.6",
     "hono": "^4.12.25",
+    "postcss": "^8.5.15",
     "jsdom": {
-      "undici": "^7.25.0"
+      "undici": "^7.28.0"
     }
   }
 }
