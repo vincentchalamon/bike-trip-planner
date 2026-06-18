@@ -17,6 +17,13 @@ export interface MockApiOptions {
    * (bubble, chat) keep passing; set `false` to exercise the degraded mode (#304).
    */
   aiAvailable?: boolean;
+  /**
+   * Whether the account has a configured AI provider, surfaced by the mocked
+   * `GET /users/me/ai-settings` (ADR-042). Defaults to `true` so existing AI
+   * specs (bubble, chat, generation card) keep exercising the active path; set
+   * `false` to exercise the disabled-but-visible "not configured" affordances.
+   */
+  aiConfigured?: boolean;
 }
 
 const TRIP_ID = "test-trip-abc-123";
@@ -52,6 +59,7 @@ export async function mockAllApis(
     deleteStageFail = false,
     addStageFail = false,
     aiAvailable = true,
+    aiConfigured = true,
   } = options;
 
   // POST /auth/refresh — return fake JWT so AuthGuard's silentRefresh succeeds
@@ -84,6 +92,22 @@ export async function mockAllApis(
           ollama_analysis: { status: ollamaStatus },
         },
       }),
+    });
+  });
+
+  // GET /users/me/ai-settings — per-user AI config the PWA reads to gate AI
+  // surfaces (ADR-042). `aiConfigured` toggles whether a provider is set; the
+  // token is never echoed back (write-only).
+  await page.route("**/users/me/ai-settings", (route, request) => {
+    if (request.method() !== "GET") return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/ld+json",
+      body: JSON.stringify(
+        aiConfigured
+          ? { provider: "anthropic", tokenConfigured: true }
+          : { tokenConfigured: false },
+      ),
     });
   });
 

@@ -40,6 +40,11 @@ interface AiRefinementCardProps {
    * disabled and an explicit "unavailable" notice is shown inline.
    */
   unavailable?: boolean;
+  /**
+   * When `true`, AI is enabled but no provider is configured on the account
+   * (ADR-042): the card is disabled-but-visible with a "Configurez une IA" CTA.
+   */
+  notConfigured?: boolean;
   className?: string;
 }
 
@@ -64,6 +69,7 @@ export function AiRefinementCard({
   onApply,
   disabled = false,
   unavailable = false,
+  notConfigured = false,
   className,
 }: AiRefinementCardProps) {
   const t = useTranslations("aiRefinement");
@@ -72,7 +78,7 @@ export function AiRefinementCard({
   const [suggestion, setSuggestion] = useState("");
   const [isApplying, setIsApplying] = useState(false);
 
-  const isDisabled = disabled || unavailable;
+  const isDisabled = disabled || unavailable || notConfigured;
   const trimmed = suggestion.trim();
   const remaining = MAX_SUGGESTION_LENGTH - suggestion.length;
   const canApply = trimmed.length > 0 && !isApplying && !isDisabled;
@@ -131,7 +137,11 @@ export function AiRefinementCard({
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
-        {unavailable && <AiUnavailableNotice context="refinement" />}
+        {notConfigured ? (
+          <AiUnavailableNotice variant="notConfigured" context="refinement" />
+        ) : (
+          unavailable && <AiUnavailableNotice context="refinement" />
+        )}
         <label htmlFor={textareaId} className="sr-only">
           {t("textareaLabel")}
         </label>

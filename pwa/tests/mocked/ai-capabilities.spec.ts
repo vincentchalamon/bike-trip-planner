@@ -15,7 +15,7 @@ import { mockAllApis } from "../fixtures/api-mocks";
 
 function setAiCapability(
   page: import("@playwright/test").Page,
-  capability: { enabled: boolean; available: boolean },
+  capability: { enabled: boolean; available: boolean; configured?: boolean },
 ): Promise<void> {
   return page.evaluate((detail) => {
     window.dispatchEvent(
@@ -132,5 +132,64 @@ test.describe("AI generation card gating (#304)", () => {
 
     await expect(page.getByTestId("card-ai")).toHaveCount(0);
     await expect(page.getByTestId("card-link")).toBeVisible();
+  });
+
+  test("no provider configured: the generation card is disabled-but-visible with a configure CTA", async ({
+    page,
+  }) => {
+    await mockAllApis(page, { aiConfigured: false });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    const card = page.getByTestId("card-ai");
+    await expect(card).toBeVisible();
+    await expect(card).toHaveAttribute("data-disabled", "true");
+
+    // The disabled-but-visible affordance carries an actionable settings CTA.
+    const notice = page.getByTestId("ai-not-configured-notice");
+    await expect(notice).toBeVisible();
+    await expect(page.getByTestId("ai-configure-cta")).toHaveAttribute(
+      "href",
+      "/account/settings#ai",
+    );
+
+    // Disabled → a forced click must not expand the chat composer.
+    await card.click({ force: true });
+    await expect(page.getByTestId("ai-chat-card")).toHaveCount(0);
+  });
+});
+
+/**
+ * ADR-042 — disabled-but-visible AI surfaces in Acte 3 ("Mon voyage") when the
+ * account has no AI provider configured. The capability is driven via the test
+ * hook with `configured: false`.
+ */
+test.describe("AI not-configured gating (ADR-042)", () => {
+  // Drive the account GET so the `configured` capability resolves to false from
+  // the real `useAiSettings` fetch (no race with the test-hook dispatch).
+  test.use({ mockOptions: { aiConfigured: false } });
+
+  test("the chat bubble links to the settings instead of opening the panel", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+    await setAiCapability(mockedPage, {
+      enabled: true,
+      available: true,
+      configured: false,
+    });
+
+    const bubble = mockedPage.getByTestId("ai-bubble");
+    await expect(bubble).toBeVisible();
+    await expect(bubble).toHaveAttribute("data-not-configured", "");
+    await expect(bubble).toHaveAttribute("href", "/account/settings#ai");
+    // It must not open the chat panel.
+    await expect(mockedPage.getByTestId("ai-chat-panel")).toHaveCount(0);
+
+    // The Acte 3 analysis zone surfaces the configure CTA.
+    await expect(
+      mockedPage.getByTestId("ai-not-configured-notice"),
+    ).toBeVisible();
   });
 });

@@ -116,13 +116,16 @@ export function CardSelection({
         )}
 
         {/* Card: AI Assistant — multi-turn chat shell (#392). Gated on AI
-            availability (#304): hidden when AI is off by config, disabled with
-            an inline notice when enabled but the LLM tier is unreachable. */}
+            availability: hidden when AI is off by config (#304), disabled with
+            an inline notice when enabled but the LLM tier is unreachable, or
+            disabled-but-visible with a "Configurez une IA" CTA when no provider
+            is set on the account (ADR-042). */}
         {aiCapability.enabled && (selected === null || selected === "ai") && (
           <AiCard
             expanded={selected === "ai"}
             disabled={disabled}
             unavailable={!aiCapability.available}
+            notConfigured={!aiCapability.configured}
             onSelect={() => handleSelect("ai")}
             onSubmitConversation={onSubmitAiConversation}
           />
@@ -397,6 +400,7 @@ interface AiCardProps {
   expanded: boolean;
   disabled: boolean;
   unavailable?: boolean;
+  notConfigured?: boolean;
   onSelect: () => void;
   onSubmitConversation?: (messages: ReadonlyArray<AiChatMessage>) => void;
 }
@@ -405,6 +409,7 @@ function AiCard({
   expanded,
   disabled,
   unavailable = false,
+  notConfigured = false,
   onSelect,
   onSubmitConversation,
 }: AiCardProps) {
@@ -415,13 +420,15 @@ function AiCard({
       testId="card-ai"
       ariaLabel={t("ariaSelectAi")}
       expanded={expanded}
-      disabled={disabled || unavailable}
+      disabled={disabled || unavailable || notConfigured}
       onSelect={onSelect}
       icon={<Sparkles className="h-6 w-6" aria-hidden="true" />}
       title={t("aiTitle")}
       description={t("aiDescription")}
     >
-      {unavailable ? (
+      {notConfigured ? (
+        <AiUnavailableNotice variant="notConfigured" context="chat" />
+      ) : unavailable ? (
         <AiUnavailableNotice context="chat" />
       ) : (
         expanded && (
