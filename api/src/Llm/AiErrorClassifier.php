@@ -84,6 +84,19 @@ final class AiErrorClassifier
     {
         $value = $headers['retry-after'][0] ?? null;
 
-        return null !== $value && ctype_digit($value) ? (int) $value : null;
+        if (null === $value) {
+            return null;
+        }
+
+        if (ctype_digit($value)) {
+            return (int) $value;
+        }
+
+        // HTTP-date form (RFC 9110 §10.2.3, e.g. "Wed, 21 Oct 2015 07:28:00 GMT"):
+        // convert to a delay-seconds offset so a dated throttle is still classified
+        // as a transient rate-limit rather than an exhausted quota.
+        $timestamp = strtotime($value);
+
+        return false !== $timestamp ? max(0, $timestamp - time()) : null;
     }
 }

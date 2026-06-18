@@ -70,6 +70,16 @@ final class AiErrorClassifierTest extends TestCase
     }
 
     #[Test]
+    public function http429WithHttpDateRetryAfterHeaderIsRateLimited(): void
+    {
+        // RFC 9110 allows an HTTP-date instead of delay-seconds.
+        $failure = $this->classifier->classify($this->httpError(429, ['retry-after' => ['Wed, 21 Oct 2099 07:28:00 GMT']]), 'm');
+
+        self::assertSame(AiFailureReason::RATE_LIMITED, $failure->getReason());
+        self::assertIsInt($failure->getRetryAfter());
+    }
+
+    #[Test]
     public function http429WithoutRetryAfterHeaderIsAnExhaustedQuota(): void
     {
         $failure = $this->classifier->classify($this->httpError(429), 'm');
