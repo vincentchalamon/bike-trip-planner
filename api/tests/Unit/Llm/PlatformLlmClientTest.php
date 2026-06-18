@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Llm;
 
+use App\Llm\Exception\AiFailureReason;
 use App\Llm\Exception\AiUnavailableException;
 use App\Llm\PlatformLlmClient;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\AI\Platform\Exception\AuthenticationException;
 use Symfony\AI\Platform\Exception\ExceptionInterface as PlatformExceptionInterface;
 use Symfony\AI\Platform\PlatformInterface;
 use Symfony\AI\Platform\Test\InMemoryPlatform;
@@ -65,8 +67,30 @@ final class PlatformLlmClientTest extends TestCase
             throw new TransportException('connection refused');
         }));
 
-        $this->expectException(AiUnavailableException::class);
-        $client->generate('claude-3-5-haiku-latest', 'hello');
+        try {
+            $client->generate('claude-3-5-haiku-latest', 'hello');
+            self::fail('Expected AiUnavailableException.');
+        } catch (AiUnavailableException $aiUnavailableException) {
+            // The transport failure is classified as a transient outage.
+            self::assertSame(AiFailureReason::UNAVAILABLE, $aiUnavailableException->getReason());
+            self::assertTrue($aiUnavailableException->isTransient());
+        }
+    }
+
+    #[Test]
+    public function classifiesAnAuthenticationFailureAsInvalidToken(): void
+    {
+        $client = $this->client(new InMemoryPlatform(static function (): string {
+            throw new AuthenticationException('invalid api key');
+        }));
+
+        try {
+            $client->generate('claude-3-5-haiku-latest', 'hello');
+            self::fail('Expected AiUnavailableException.');
+        } catch (AiUnavailableException $aiUnavailableException) {
+            self::assertSame(AiFailureReason::INVALID_TOKEN, $aiUnavailableException->getReason());
+            self::assertFalse($aiUnavailableException->isTransient());
+        }
     }
 
     #[Test]

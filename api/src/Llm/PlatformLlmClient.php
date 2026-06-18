@@ -31,6 +31,7 @@ final readonly class PlatformLlmClient implements LlmClientInterface
     public function __construct(
         private PlatformInterface $platform,
         private LoggerInterface $logger,
+        private AiErrorClassifier $errorClassifier = new AiErrorClassifier(),
     ) {
     }
 
@@ -41,6 +42,9 @@ final readonly class PlatformLlmClient implements LlmClientInterface
         return true;
     }
 
+    /**
+     * @throws AiUnavailableException when the provider request fails
+     */
     public function generate(string $model, string $prompt, ?string $systemPrompt = null, array $options = []): array
     {
         $messages = [];
@@ -53,6 +57,9 @@ final readonly class PlatformLlmClient implements LlmClientInterface
         return ['response' => $this->invoke($model, $messages, $options)];
     }
 
+    /**
+     * @throws AiUnavailableException when the provider request fails
+     */
     public function chat(string $model, array $messages, ?string $systemPrompt = null, array $options = []): array
     {
         $bag = [];
@@ -74,6 +81,8 @@ final readonly class PlatformLlmClient implements LlmClientInterface
     /**
      * @param list<MessageInterface> $messages
      * @param array<string, mixed>   $options
+     *
+     * @throws AiUnavailableException when the provider request fails
      */
     private function invoke(string $model, array $messages, array $options): string
     {
@@ -84,11 +93,17 @@ final readonly class PlatformLlmClient implements LlmClientInterface
         try {
             return $this->platform->invoke($model, new MessageBag(...$messages), $options)->asText();
         } catch (PlatformExceptionInterface|HttpExceptionInterface $exception) {
+            $failure = $this->errorClassifier->classify($exception, $model);
+
             // Log before throwing so failures are visible in monitoring even when
             // AiUnavailableException is caught and degraded gracefully upstream.
-            $this->logger->warning('AI provider request failed.', ['model' => $model, 'error' => $exception->getMessage()]);
+            $this->logger->warning('AI provider request failed.', [
+                'model' => $model,
+                'reason' => $failure->getReason()->value,
+                'error' => $exception->getMessage(),
+            ]);
 
-            throw new AiUnavailableException(\sprintf('AI request for model "%s" failed: %s', $model, $exception->getMessage()), $exception->getCode(), previous: $exception);
+            throw $failure;
         }
     }
 }
