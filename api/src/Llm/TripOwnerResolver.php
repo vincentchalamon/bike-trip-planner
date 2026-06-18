@@ -6,7 +6,6 @@ namespace App\Llm;
 
 use App\ApiResource\TripRequest;
 use App\Entity\User;
-use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -26,7 +25,6 @@ final readonly class TripOwnerResolver
     public function __construct(
         #[Autowire(service: 'cache.trip_state')]
         private CacheItemPoolInterface $tripStateCache,
-        private UserRepository $userRepository,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -39,7 +37,7 @@ final readonly class TripOwnerResolver
 
         $item = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));
         if ($item->isHit() && \is_string($userId = $item->get()) && Uuid::isValid($userId)) {
-            $user = $this->userRepository->find(Uuid::fromString($userId));
+            $user = $this->entityManager->find(User::class, Uuid::fromString($userId));
             if ($user instanceof User) {
                 return $user;
             }
