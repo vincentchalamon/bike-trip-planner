@@ -65,6 +65,27 @@ final class AiSettingsTest extends ApiTestCase
     }
 
     #[Test]
+    public function getReturnsConfiguredStateAfterPut(): void
+    {
+        $fixtures = $this->createUser('ai-get-configured@example.com');
+        $client = self::createClient();
+
+        $client->request('PUT', '/users/me/ai-settings', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
+            'json' => ['provider' => 'anthropic', 'token' => 'sk-ant-secret-token'],
+        ]);
+        $this->assertResponseIsSuccessful();
+
+        $response = $client->request('GET', '/users/me/ai-settings', [
+            'headers' => ['Authorization' => 'Bearer '.$fixtures['jwt']],
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $this->assertJsonContains(['provider' => 'anthropic', 'tokenConfigured' => true]);
+        $this->assertArrayNotHasKey('token', $response->toArray());
+    }
+
+    #[Test]
     public function putStoresProviderAndEncryptedToken(): void
     {
         $fixtures = $this->createUser('ai-store@example.com');
