@@ -447,7 +447,7 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Memory limit PHP 128 MB | Protection OOM |
 | 📅 | Headers sécurité Caddy | CSP, HSTS, X-Frame-Options. Sprint 30 |
 | 📅 | Audit isolation Mercure | Sprint 30 |
-| ✅ | Rate limiting | Magic link, trip create, chat, scrape (`config/packages/rate_limiter.php`). Sprint 30 |
+| ✅ | Rate limiting | Magic link, trip create, chat (`config/packages/rate_limiter.php`). Sprint 30 |
 
 ### Tests
 

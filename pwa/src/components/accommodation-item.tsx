@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import {
   X,
@@ -11,16 +11,12 @@ import {
   MapPin,
   Euro,
   ExternalLink,
-  Loader2,
   CheckCircle2,
   Circle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AccommodationData } from "@/lib/validation/schemas";
-import { scrapeAccommodation } from "@/lib/api/client";
-import { isValidHttpsUrl } from "@/lib/validation/url";
-import { SCRAPE_DEBOUNCE_MS } from "@/lib/constants";
 import { formatPrice, formatDistanceKm } from "@/lib/formatters";
 
 const typeIcons: Record<string, React.ElementType> = {
@@ -78,8 +74,6 @@ export function AccommodationItem({
   const [editPriceMax, setEditPriceMax] = useState(
     String(accommodation.estimatedPriceMax),
   );
-  const [isScraping, setIsScraping] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
 
   // Focus URL field when initially editing
@@ -88,30 +82,6 @@ export function AccommodationItem({
       urlInputRef.current.focus();
     }
   }, [initialEditing]);
-
-  const handleScrape = useCallback(async (url: string) => {
-    if (!isValidHttpsUrl(url)) return;
-    setIsScraping(true);
-    try {
-      const data = await scrapeAccommodation(url);
-      if (data) {
-        if (data.name) setEditName(data.name);
-        if (data.type) setEditType(data.type);
-        if (data.priceMin != null) setEditPriceMin(String(data.priceMin));
-        if (data.priceMax != null) setEditPriceMax(String(data.priceMax));
-      }
-    } finally {
-      setIsScraping(false);
-    }
-  }, []);
-
-  function handleUrlChange(value: string) {
-    setEditUrl(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      void handleScrape(value);
-    }, SCRAPE_DEBOUNCE_MS);
-  }
 
   const TypeIcon = typeIcons[accommodation.type] ?? MapPin;
   const typeKey =
@@ -164,15 +134,12 @@ export function AccommodationItem({
           <Input
             ref={urlInputRef}
             value={editUrl}
-            onChange={(e) => handleUrlChange(e.target.value)}
+            onChange={(e) => setEditUrl(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t("urlPlaceholder")}
             className="h-7 text-sm"
             aria-label={t("urlLabel")}
           />
-          {isScraping && (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
-          )}
         </div>
         {/* Name */}
         <div className="flex items-center gap-2 pr-8">

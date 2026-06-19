@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\MessageHandler;
 
-use App\Accommodation\AccommodationMetadataExtractor;
 use App\Accommodation\SeasonalityCheckerInterface;
 use App\AccommodationSource\AccommodationSourceRegistry;
 use App\ApiResource\Model\Accommodation;
@@ -22,10 +21,7 @@ use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
-use Symfony\Component\HttpClient\Exception\TimeoutException;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ScanAccommodationsHandlerTest extends TestCase
@@ -48,12 +44,9 @@ final class ScanAccommodationsHandlerTest extends TestCase
         AccommodationSourceRegistry $registry,
         GeoDistanceInterface $haversine,
         GeometryDistributorInterface $distributor,
-        ?HttpClientInterface $scraperClient = null,
     ): ScanAccommodationsHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
-
-        $metadataExtractor = new AccommodationMetadataExtractor();
 
         $seasonalityChecker = $this->createStub(SeasonalityCheckerInterface::class);
         $seasonalityChecker->method('isLikelyOpen')->willReturn(null);
@@ -62,8 +55,6 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $translator->method('trans')->willReturnCallback(
             static fn (string $id, array $params): string => $id.': '.json_encode($params),
         );
-
-        $scraperClient ??= $this->createStub(HttpClientInterface::class);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
@@ -76,10 +67,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
             $registry,
             $haversine,
             $distributor,
-            $metadataExtractor,
             $seasonalityChecker,
             $translator,
-            $scraperClient,
             $this->createStub(MessageBusInterface::class),
         );
     }
@@ -411,9 +400,11 @@ final class ScanAccommodationsHandlerTest extends TestCase
     }
 
     #[Test]
-    public function scraperClientUsesThreeSecondTimeoutForWaveOne(): void
+    public function candidateWithWebsiteKeepsHeuristicPriceWithoutScraping(): void
     {
-        $stage = $this->createStage('trip-timeout', 48.5, 2.5);
+        // A candidate that advertises a website is no longer scraped (ADR-040):
+        // it keeps the heuristic price from its source, with isExactPrice=false.
+        $stage = $this->createStage('trip-no-scrape', 48.5, 2.5);
 
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn([$stage]);
@@ -425,144 +416,39 @@ final class ScanAccommodationsHandlerTest extends TestCase
 
         $distributor = $this->createStub(GeometryDistributorInterface::class);
         $distributor->method('distributeByEndpoint')->willReturn([
-            0 => [['name' => 'Hotel Test', 'type' => 'hotel', 'lat' => 48.6, 'lon' => 2.6,
+            0 => [['name' => 'Hotel With Site', 'type' => 'hotel', 'lat' => 48.6, 'lon' => 2.6,
                 'priceMin' => 50.0, 'priceMax' => 100.0, 'isExact' => false,
-                'url' => 'https://example.com', 'tagCount' => 3, 'hasWebsite' => true,
-                'tags' => ['tourism' => 'hotel', 'name' => 'Hotel Test', 'website' => 'https://example.com'],
-                'source' => 'osm', 'wikidataId' => null]],
-        ]);
-
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inKilometers')->willReturn(1.0);
-
-        $scraperClient = $this->createMock(HttpClientInterface::class);
-        $response = $this->createStub(ResponseInterface::class);
-        $response->method('getContent')->willReturn('<html></html>');
-
-        $scraperClient->expects($this->once())
-            ->method('request')
-            ->with('GET', 'https://example.com', ['timeout' => 3])
-            ->willReturn($response);
-
-        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor, $scraperClient);
-        $handler(new ScanAccommodations('trip-timeout'));
-    }
-
-    #[Test]
-    public function wave1TimeoutPreservesSourceDataAndDoesNotThrow(): void
-    {
-        $stage = $this->createStage('trip-fallback', 48.5, 2.5);
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getRequest')->willReturn(null);
-
-        $registry = $this->createStub(AccommodationSourceRegistry::class);
-        $registry->method('fetchAll')->willReturn([]);
-
-        $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByEndpoint')->willReturn([
-            0 => [['name' => 'Hotel Timeout', 'type' => 'hotel', 'lat' => 48.6, 'lon' => 2.6,
-                'priceMin' => 50.0, 'priceMax' => 100.0, 'isExact' => false,
-                'url' => 'https://slow-site.example.com', 'tagCount' => 3, 'hasWebsite' => true,
-                'tags' => ['tourism' => 'hotel', 'name' => 'Hotel Timeout', 'website' => 'https://slow-site.example.com'],
+                'url' => 'https://hotel.example.com', 'tagCount' => 3, 'hasWebsite' => true,
+                'tags' => ['tourism' => 'hotel', 'name' => 'Hotel With Site', 'website' => 'https://hotel.example.com'],
                 'source' => 'osm', 'wikidataId' => null]],
         ]);
 
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inKilometers')->willReturn(2.5);
 
-        $response = $this->createStub(ResponseInterface::class);
-        $response->method('getContent')->willThrowException(new TimeoutException('Idle timeout reached'));
-
-        $scraperClient = $this->createStub(HttpClientInterface::class);
-        $scraperClient->method('request')->willReturn($response);
-
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
             ->method('publish')
             ->with(
-                'trip-fallback',
+                'trip-no-scrape',
                 MercureEventType::ACCOMMODATIONS_FOUND,
                 $this->callback(static function (array $data): bool {
                     $accommodations = $data['accommodations'];
 
                     return 1 === \count($accommodations)
-                        && 'Hotel Timeout' === $accommodations[0]['name']
-                        && 'hotel' === $accommodations[0]['type']
-                        && 48.6 === $accommodations[0]['lat']
-                        && 2.6 === $accommodations[0]['lon']
+                        && 'Hotel With Site' === $accommodations[0]['name']
                         && 50.0 === $accommodations[0]['estimatedPriceMin']
                         && 100.0 === $accommodations[0]['estimatedPriceMax']
                         && false === $accommodations[0]['isExactPrice']
-                        && 'https://slow-site.example.com' === $accommodations[0]['url'];
+                        && 'https://hotel.example.com' === $accommodations[0]['url'];
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor, $scraperClient);
-        $handler(new ScanAccommodations('trip-fallback'));
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
+        $handler(new ScanAccommodations('trip-no-scrape'));
 
         $this->assertCount(1, $stage->accommodations);
-        $this->assertSame('Hotel Timeout', $stage->accommodations[0]->name);
-        $this->assertFalse($stage->accommodations[0]->possibleClosed);
-    }
-
-    #[Test]
-    public function scraperClientUsesTwoSecondTimeoutForWaveTwo(): void
-    {
-        $stage = $this->createStage('trip-timeout2', 48.5, 2.5);
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getRequest')->willReturn(null);
-
-        $registry = $this->createStub(AccommodationSourceRegistry::class);
-        $registry->method('fetchAll')->willReturn([]);
-
-        $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByEndpoint')->willReturn([
-            0 => [['name' => 'Hotel Test', 'type' => 'hotel', 'lat' => 48.6, 'lon' => 2.6,
-                'priceMin' => 50.0, 'priceMax' => 100.0, 'isExact' => false,
-                'url' => 'https://example.com', 'tagCount' => 3, 'hasWebsite' => true,
-                'tags' => ['tourism' => 'hotel', 'name' => 'Hotel Test', 'website' => 'https://example.com'],
-                'source' => 'osm', 'wikidataId' => null]],
-        ]);
-
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inKilometers')->willReturn(1.0);
-
-        $wave1Response = $this->createStub(ResponseInterface::class);
-        $wave1Response->method('getContent')->willReturn('<html><body><a href="https://example.com/tarifs">Tarifs</a></body></html>');
-
-        $wave2Response = $this->createStub(ResponseInterface::class);
-        $wave2Response->method('getContent')->willReturn('<html><body>65€ per night</body></html>');
-
-        $scraperClient = $this->createMock(HttpClientInterface::class);
-        $scraperClient->expects($this->exactly(2))
-            ->method('request')
-            ->willReturnCallback(
-                function (string $method, string $url, array $options) use ($wave1Response, $wave2Response): ResponseInterface {
-                    if ('https://example.com' === $url) {
-                        $this->assertSame(['timeout' => 3], $options);
-
-                        return $wave1Response;
-                    }
-
-                    $this->assertSame('https://example.com/tarifs', $url);
-                    $this->assertSame(['timeout' => 2], $options);
-
-                    return $wave2Response;
-                },
-            );
-
-        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor, $scraperClient);
-        $handler(new ScanAccommodations('trip-timeout2'));
+        $this->assertFalse($stage->accommodations[0]->isExactPrice);
     }
 
     #[Test]
@@ -737,69 +623,6 @@ final class ScanAccommodationsHandlerTest extends TestCase
     }
 
     #[Test]
-    public function wave2TimeoutPreservesHeuristicPriceAndDoesNotThrow(): void
-    {
-        $stage = $this->createStage('trip-wave2', 48.5, 2.5);
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$stage]);
-        $tripStateManager->method('getLocale')->willReturn('en');
-        $tripStateManager->method('getRequest')->willReturn(null);
-
-        $registry = $this->createStub(AccommodationSourceRegistry::class);
-        $registry->method('fetchAll')->willReturn([]);
-
-        $distributor = $this->createStub(GeometryDistributorInterface::class);
-        $distributor->method('distributeByEndpoint')->willReturn([
-            0 => [['name' => 'Hotel Wave2', 'type' => 'hotel', 'lat' => 48.6, 'lon' => 2.6,
-                'priceMin' => 50.0, 'priceMax' => 100.0, 'isExact' => false,
-                'url' => 'https://wave2.example.com', 'tagCount' => 3, 'hasWebsite' => true,
-                'tags' => ['tourism' => 'hotel', 'name' => 'Hotel Wave2', 'website' => 'https://wave2.example.com'],
-                'source' => 'osm', 'wikidataId' => null]],
-        ]);
-
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inKilometers')->willReturn(1.5);
-
-        $wave1Response = $this->createStub(ResponseInterface::class);
-        $wave1Response->method('getContent')->willReturn('<html><body><a href="https://wave2.example.com/tarifs">Tarifs</a></body></html>');
-
-        $wave2Response = $this->createStub(ResponseInterface::class);
-        $wave2Response->method('getContent')->willThrowException(new TimeoutException('Idle timeout reached'));
-
-        $scraperClient = $this->createStub(HttpClientInterface::class);
-        $callCount = 0;
-        $scraperClient->method('request')->willReturnCallback(
-            function () use (&$callCount, $wave1Response, $wave2Response): ResponseInterface {
-                return 0 === $callCount++ ? $wave1Response : $wave2Response;
-            },
-        );
-
-        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
-        $publisher->expects($this->once())
-            ->method('publish')
-            ->with(
-                'trip-wave2',
-                MercureEventType::ACCOMMODATIONS_FOUND,
-                $this->callback(static function (array $data): bool {
-                    $accommodations = $data['accommodations'];
-
-                    return 1 === \count($accommodations)
-                        && 'Hotel Wave2' === $accommodations[0]['name']
-                        && 50.0 === $accommodations[0]['estimatedPriceMin']
-                        && 100.0 === $accommodations[0]['estimatedPriceMax']
-                        && false === $accommodations[0]['isExactPrice'];
-                }),
-            );
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor, $scraperClient);
-        $handler(new ScanAccommodations('trip-wave2'));
-
-        $this->assertCount(1, $stage->accommodations);
-        $this->assertFalse($stage->accommodations[0]->isExactPrice);
-    }
-
-    #[Test]
     public function sourceFieldIsPublishedInMercurePayload(): void
     {
         $stage = $this->createStage('trip-source', 48.5, 2.5);
@@ -836,11 +659,6 @@ final class ScanAccommodationsHandlerTest extends TestCase
         $haversine = $this->createStub(GeoDistanceInterface::class);
         $haversine->method('inKilometers')->willReturn(1.0);
 
-        $scraperClient = $this->createStub(HttpClientInterface::class);
-        $response = $this->createStub(ResponseInterface::class);
-        $response->method('getContent')->willReturn('<html></html>');
-        $scraperClient->method('request')->willReturn($response);
-
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
             ->method('publish')
@@ -854,7 +672,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
                 }),
             );
 
-        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor, $scraperClient);
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor);
         $handler(new ScanAccommodations('trip-source'));
     }
 }

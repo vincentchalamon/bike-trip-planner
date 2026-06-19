@@ -61,7 +61,7 @@ function getAuthHeader(): string | undefined {
  * Lightweight wrapper around `fetch` that injects the Accept-Language header
  * and the Authorization bearer token (when available).
  *
- * Used for non-OpenAPI calls (GPX upload, accommodation scrape, etc.) where
+ * Used for non-OpenAPI calls (GPX upload, accommodation scan, etc.) where
  * the openapi-fetch middleware pipeline is bypassed.
  */
 export async function apiFetch(
@@ -276,13 +276,6 @@ export function isNetworkError(error: unknown): error is TypeError {
   return error instanceof TypeError && error.message === "Failed to fetch";
 }
 
-export interface ScrapedData {
-  name: string | null;
-  type: string | null;
-  priceMin: number | null;
-  priceMax: number | null;
-}
-
 /**
  * Trigger a route segment recalculation with a POI waypoint insertion.
  * Returns `true` on success, `false` when the trip is not found or the request fails.
@@ -325,22 +318,6 @@ export async function scanAccommodations(
     },
   );
   return res.ok;
-}
-
-/**
- * Scrape accommodation metadata from the given URL via the backend proxy.
- * @returns Scraped data, or `null` when the URL is unsupported or the request fails.
- */
-export async function scrapeAccommodation(
-  url: string,
-): Promise<ScrapedData | null> {
-  const res = await apiFetch(`${API_URL}/accommodations/scrape`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }),
-  });
-  if (!res.ok) return null;
-  return res.json() as Promise<ScrapedData>;
 }
 
 /**
@@ -831,8 +808,7 @@ export async function saveAiSettings(
   provider: string,
   token: string,
 ): Promise<
-  | { data: AiSettingsResponse; error: null }
-  | { data: null; error: ApiError }
+  { data: AiSettingsResponse; error: null } | { data: null; error: ApiError }
 > {
   const res = await apiFetch(`${API_URL}/users/me/ai-settings`, {
     method: "PUT",

@@ -336,20 +336,6 @@ export async function mockAllApis(
   // GET /.well-known/mercure — abort real SSE (we use __test_mercure_event)
   await page.route("**/.well-known/mercure*", (route) => route.abort());
 
-  // POST /accommodations/scrape
-  await page.route("**/accommodations/scrape", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        name: "Camping du Soleil",
-        type: "camp_site",
-        priceMin: 15,
-        priceMax: 22,
-      }),
-    }),
-  );
-
   // POST /trips/{id}/accommodations/scan — re-scan accommodations with custom radius
   await page.route("**/trips/*/accommodations/scan", (route, request) => {
     if (request.method() !== "POST") return route.fallback();

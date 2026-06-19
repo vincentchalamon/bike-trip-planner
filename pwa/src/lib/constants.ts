@@ -33,9 +33,6 @@ export function getDifficulty(
   return "hard";
 }
 
-/** Debounce delay for accommodation URL scraping (ms) */
-export const SCRAPE_DEBOUNCE_MS = 500;
-
 /** Backend API base URL */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://localhost";
 
