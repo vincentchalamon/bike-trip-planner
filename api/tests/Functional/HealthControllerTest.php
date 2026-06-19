@@ -32,11 +32,8 @@ final class HealthControllerTest extends ApiTestCase
     #[\Override]
     protected function tearDown(): void
     {
-        // A test may flip OLLAMA_ENABLED and reboot the kernel (see
-        // bootWithOllamaEnabled): restore the default (0) and drop the kernel so the
-        // next test boots fresh with a clean env and no leaked service overrides
-        // (broken Postgres/Redis, mocked HTTP clients).
-        $_SERVER['OLLAMA_ENABLED'] = $_ENV['OLLAMA_ENABLED'] = '0';
+        // Drop the kernel so the next test boots fresh with no leaked service
+        // overrides (broken Postgres/Redis, mocked HTTP clients).
         self::ensureKernelShutdown();
         parent::tearDown();
     }
@@ -66,10 +63,8 @@ final class HealthControllerTest extends ApiTestCase
     #[Test]
     public function readinessReturns200WhenAllDependenciesAreUp(): void
     {
-        $this->bootWithOllamaEnabled();
         $this->mockHealthHttpClients(
             valhalla: new MockResponse('OK', ['http_code' => 200]),
-            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
             mercure: new MockResponse('', ['http_code' => 200]),
         );
 
@@ -80,7 +75,7 @@ final class HealthControllerTest extends ApiTestCase
         $data = $response->toArray();
         $this->assertSame('ok', $data['status']);
         $this->assertArrayHasKey('deps', $data);
-        foreach (['postgres', 'redis', 'mercure', 'valhalla', 'ollama_chat', 'ollama_analysis', 'reference_data'] as $dep) {
+        foreach (['postgres', 'redis', 'mercure', 'valhalla', 'reference_data'] as $dep) {
             $this->assertArrayHasKey($dep, $data['deps'], \sprintf('Missing dep %s', $dep));
             $this->assertArrayHasKey('status', $data['deps'][$dep]);
             $this->assertArrayHasKey('latency_ms', $data['deps'][$dep]);
@@ -88,11 +83,28 @@ final class HealthControllerTest extends ApiTestCase
     }
 
     #[Test]
+    public function readinessNeverProbesTheAiTier(): void
+    {
+        // AI is an optional per-user cloud provider (ADR-042), not a server
+        // dependency — it must never appear in the readiness payload.
+        $this->mockHealthHttpClients(
+            valhalla: new MockResponse('OK', ['http_code' => 200]),
+            mercure: new MockResponse('', ['http_code' => 200]),
+        );
+
+        $response = $this->client->request('GET', '/api/health');
+
+        $this->assertResponseStatusCodeSame(200);
+        $data = $response->toArray();
+        $this->assertArrayNotHasKey('ollama_chat', $data['deps']);
+        $this->assertArrayNotHasKey('ollama_analysis', $data['deps']);
+    }
+
+    #[Test]
     public function readinessReturns503WhenValhallaIsDown(): void
     {
         $this->mockHealthHttpClients(
             valhalla: new MockResponse('boom', ['http_code' => 500]),
-            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
             mercure: new MockResponse('', ['http_code' => 200]),
         );
 
@@ -110,7 +122,6 @@ final class HealthControllerTest extends ApiTestCase
     {
         $this->mockHealthHttpClients(
             valhalla: new MockResponse('OK', ['http_code' => 200]),
-            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
             mercure: new MockResponse('', ['http_code' => 0, 'error' => 'connection refused']),
         );
 
@@ -128,7 +139,6 @@ final class HealthControllerTest extends ApiTestCase
     {
         $this->mockHealthHttpClients(
             valhalla: new MockResponse('OK', ['http_code' => 200]),
-            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
             mercure: new MockResponse('', ['http_code' => 200]),
         );
 
@@ -161,7 +171,6 @@ final class HealthControllerTest extends ApiTestCase
     {
         $this->mockHealthHttpClients(
             valhalla: new MockResponse('OK', ['http_code' => 200]),
-            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
             mercure: new MockResponse('', ['http_code' => 200]),
         );
 
@@ -185,67 +194,6 @@ final class HealthControllerTest extends ApiTestCase
     }
 
     #[Test]
-    public function readinessReturns200WhenOllamaIsDown(): void
-    {
-        // Ollama is intentionally excluded from $required, so its outage must
-        // not flip the aggregate status — pin that contract here.
-        $this->bootWithOllamaEnabled();
-        $this->mockHealthHttpClients(
-            valhalla: new MockResponse('OK', ['http_code' => 200]),
-            ollama: new MockResponse('error', ['http_code' => 500]),
-            mercure: new MockResponse('', ['http_code' => 200]),
-        );
-
-        $response = $this->client->request('GET', '/api/health');
-
-        $this->assertResponseStatusCodeSame(200);
-        $data = $response->toArray();
-        $this->assertSame('ok', $data['status']);
-        $this->assertSame('down', $data['deps']['ollama_chat']['status']);
-    }
-
-    #[Test]
-    public function readinessReturns200WhenOllamaAnalysisIsDown(): void
-    {
-        // The analysis client is also excluded from $required; an analysis-only
-        // outage surfaces in deps.ollama_analysis but must not flip the aggregate.
-        $this->bootWithOllamaEnabled();
-        $this->mockHealthHttpClients(
-            valhalla: new MockResponse('OK', ['http_code' => 200]),
-            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
-            mercure: new MockResponse('', ['http_code' => 200]),
-            ollamaAnalysis: new MockResponse('error', ['http_code' => 503]),
-        );
-
-        $response = $this->client->request('GET', '/api/health');
-
-        $this->assertResponseStatusCodeSame(200);
-        $data = $response->toArray();
-        $this->assertSame('ok', $data['status']);
-        $this->assertSame('down', $data['deps']['ollama_analysis']['status']);
-    }
-
-    #[Test]
-    public function readinessOmitsOllamaWhenAiDisabled(): void
-    {
-        // OLLAMA_ENABLED=0 (the test-suite default): the LLM tier is neither probed
-        // nor surfaced — its very absence from `deps` is the "AI disabled" signal.
-        $this->mockHealthHttpClients(
-            valhalla: new MockResponse('OK', ['http_code' => 200]),
-            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
-            mercure: new MockResponse('', ['http_code' => 200]),
-        );
-
-        $response = $this->client->request('GET', '/api/health');
-
-        $this->assertResponseStatusCodeSame(200);
-        $data = $response->toArray();
-        $this->assertSame('ok', $data['status']);
-        $this->assertArrayNotHasKey('ollama_chat', $data['deps']);
-        $this->assertArrayNotHasKey('ollama_analysis', $data['deps']);
-    }
-
-    #[Test]
     public function readinessReportsUnprovisionedReferenceDataWithoutFlippingStatus(): void
     {
         // An empty PostGIS index (no provisioning run yet) surfaces as down in
@@ -253,7 +201,6 @@ final class HealthControllerTest extends ApiTestCase
         $this->truncateProvisioningMetadata();
         $this->mockHealthHttpClients(
             valhalla: new MockResponse('OK', ['http_code' => 200]),
-            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
             mercure: new MockResponse('', ['http_code' => 200]),
         );
 
@@ -279,7 +226,6 @@ final class HealthControllerTest extends ApiTestCase
 
         $this->mockHealthHttpClients(
             valhalla: new MockResponse('OK', ['http_code' => 200]),
-            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
             mercure: new MockResponse('', ['http_code' => 200]),
         );
 
@@ -312,7 +258,6 @@ final class HealthControllerTest extends ApiTestCase
 
         $this->mockHealthHttpClients(
             valhalla: new MockResponse('OK', ['http_code' => 200]),
-            ollama: new MockResponse('{"models":[]}', ['http_code' => 200]),
             mercure: new MockResponse('', ['http_code' => 200]),
         );
 
@@ -335,28 +280,12 @@ final class HealthControllerTest extends ApiTestCase
         $connection->executeStatement('TRUNCATE osm.metadata, tourism.metadata');
     }
 
-    /**
-     * Reboot the kernel with OLLAMA_ENABLED=1 so the readiness probe surfaces the LLM
-     * tier. Must be called before mocking the HTTP clients (the reboot rebuilds the
-     * container). tearDown restores the default (0) and drops the kernel.
-     */
-    private function bootWithOllamaEnabled(): void
-    {
-        $_SERVER['OLLAMA_ENABLED'] = $_ENV['OLLAMA_ENABLED'] = '1';
-        self::ensureKernelShutdown();
-        $this->client = self::createClient();
-    }
-
     private function mockHealthHttpClients(
         MockResponse $valhalla,
-        MockResponse $ollama,
         MockResponse $mercure,
-        ?MockResponse $ollamaAnalysis = null,
     ): void {
         $container = self::getContainer();
         $container->set('routing.client', new MockHttpClient($valhalla));
-        $container->set('ollama_chat.client', new MockHttpClient($ollama));
-        $container->set('ollama_analysis.client', new MockHttpClient($ollamaAnalysis ?? new MockResponse('{"models":[]}', ['http_code' => 200])));
         $container->set('mercure.health.client', new MockHttpClient($mercure));
     }
 }

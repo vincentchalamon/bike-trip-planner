@@ -9,7 +9,7 @@ use App\Llm\Exception\AiUnavailableException;
 /**
  * LLM client abstraction (Dependency Inversion Principle).
  *
- * Allows swapping Ollama for another local/remote LLM backend without touching
+ * Allows swapping the LLM backend without touching
  * call sites. When the underlying client is disabled (feature flag off), implementations
  * should return null so callers can short-circuit gracefully.
  */

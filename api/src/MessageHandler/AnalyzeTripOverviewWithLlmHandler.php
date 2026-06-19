@@ -122,7 +122,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
         $model = $resolved->provider->analysisModel();
 
         try {
-            // Options are intentionally left to provider defaults: Ollama-only knobs
+            // Options are intentionally left to provider defaults: provider-specific knobs
             // (format, num_ctx, num_predict) are not portable across cloud providers.
             $response = $resolved->client->generate(
                 model: $model,
@@ -349,7 +349,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
     }
 
     /**
-     * @param array<string, mixed> $response Ollama API response (either /api/generate or /api/chat)
+     * @param array<string, mixed> $response provider response envelope (generate- or chat-shaped)
      */
     private function extractText(array $response): ?string
     {

@@ -27,10 +27,10 @@ use Symfony\Component\Messenger\MessageBusInterface;
  *
  * From this point, two strategies coexist (issue #303 wires them):
  *
- *  - **Ollama disabled** (or no non-rest stage to analyse) — the handler is
+ *  - **AI not configured** (or no non-rest stage to analyse) — the handler is
  *    self-terminating: it publishes the `TRIP_READY` Mercure event directly
  *    so the frontend swaps state atomically with the enriched payload.
- *  - **Ollama enabled** — the handler initialises the dedicated LLM tracker
+ *  - **AI configured** — the handler initialises the dedicated LLM tracker
  *    ({@see LlmAnalysisTrackerInterface}) with the number of expected pass-1
  *    analyses, then dispatches one {@see AnalyzeStageWithLlmMessage} per
  *    non-rest stage. TRIP_READY is published later, by

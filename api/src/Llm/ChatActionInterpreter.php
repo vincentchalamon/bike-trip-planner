@@ -31,7 +31,7 @@ final readonly class ChatActionInterpreter
     }
 
     /**
-     * Parses the raw assistant content (already extracted from the Ollama envelope).
+     * Parses the raw assistant content (already extracted from the provider envelope).
      *
      * @param string $rawContent Raw text emitted by the model (expected to be a JSON object)
      */
