@@ -75,8 +75,12 @@ final readonly class TripAiGenerateProcessor implements ProcessorInterface
         }
 
         $limiter = $this->aiGenerateLimiter->create($user->getId()->toRfc4122());
-        if (!$limiter->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException(message: 'AI generation rate limit reached. Please wait a moment before retrying.');
+        $rateLimit = $limiter->consume();
+        if (!$rateLimit->isAccepted()) {
+            $retryAfter = $rateLimit->getRetryAfter();
+            $secondsUntilRetry = max(0, $retryAfter->getTimestamp() - new \DateTimeImmutable()->getTimestamp());
+
+            throw new TooManyRequestsHttpException(retryAfter: $secondsUntilRetry, message: 'AI generation rate limit reached. Please wait a moment before retrying.');
         }
 
         $tripId = Uuid::v7()->toRfc4122();
