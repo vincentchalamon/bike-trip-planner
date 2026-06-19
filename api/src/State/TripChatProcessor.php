@@ -39,19 +39,21 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 /**
- * Handles `POST /trips/{id}/chat`: orchestrates the LLaMA 3B dialogue assistant.
+ * Handles `POST /trips/{id}/chat`: orchestrates the AI dialogue assistant using
+ * the trip owner's configured provider (ADR-042).
  *
  * Pipeline:
- * 1. Enforce a per-user rate limit (20 req/min) to protect the local LLM.
+ * 1. Resolve the user's provider; enforce a per-user rate limit (20 req/min).
  * 2. Verify the trip exists; load minimal context for the dialogue prompt.
  * 3. Build the chat history (last {@see ChatHistoryStore::MAX_MESSAGES} turns)
- *    plus the new user message, and call {@see LlmClientInterface::chat()}.
+ *    plus the new user message, and call the resolved client's `chat()`.
  * 4. Parse the JSON envelope into a {@see ChatAction} via {@see ChatActionInterpreter}.
- * 5. Flag the response as `dispatched` for actions that require recomputation
- *    (the actual Messenger wiring is delivered by a follow-up issue).
+ * 5. Flag the response as `dispatched` for actions that require recomputation.
  *
- * When the LLM is disabled or unreachable, the endpoint returns 503 so the
- * frontend can show a clear error instead of a vague fallback message.
+ * Degradation: when AI is not configured (or the AI_ENABLED kill-switch is off)
+ * the endpoint returns 200 with an `info` action hinting the rider to configure
+ * a provider; when the configured provider is unreachable it returns 503 with a
+ * reason-aware message so the frontend can react precisely.
  *
  * @implements ProcessorInterface<TripChatRequest, TripChatResponse>
  */
@@ -172,7 +174,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
 
         $rawContent = $this->extractText($response);
         if (null === $rawContent) {
-            $this->logger->warning('Ollama chat response missing message content.', ['tripId' => $tripId]);
+            $this->logger->warning('AI chat response missing message content.', ['tripId' => $tripId]);
 
             throw new ServiceUnavailableHttpException(retryAfter: null, message: 'AI assistant returned an invalid response. Please retry.');
         }

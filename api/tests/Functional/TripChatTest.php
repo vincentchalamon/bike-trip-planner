@@ -9,6 +9,7 @@ use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Llm\AiProvider;
+use App\Llm\Exception\AiFailureReason;
 use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\ResolvedLlmClient;
@@ -248,6 +249,46 @@ final class TripChatTest extends ApiTestCase
     }
 
     #[Test]
+    public function chatReturns503WithInvalidTokenMessageWhenTokenRejected(): void
+    {
+        $this->seedTrip(self::TRIP_ID);
+
+        $this->installLlmClient(new FakeLlmClient(throwUnavailable: true, unavailableReason: AiFailureReason::INVALID_TOKEN));
+
+        $response = $this->client->request(
+            'POST',
+            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            [
+                'json' => ['message' => 'Bonjour'],
+                'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
+            ],
+        );
+
+        $this->assertResponseStatusCodeSame(503);
+        $this->assertStringContainsString('clé IA', $response->getContent(false));
+    }
+
+    #[Test]
+    public function chatPropagatesRetryAfterHeader(): void
+    {
+        $this->seedTrip(self::TRIP_ID);
+
+        $this->installLlmClient(new FakeLlmClient(throwUnavailable: true, unavailableReason: AiFailureReason::RATE_LIMITED, retryAfter: 60));
+
+        $this->client->request(
+            'POST',
+            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            [
+                'json' => ['message' => 'Bonjour'],
+                'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
+            ],
+        );
+
+        $this->assertResponseStatusCodeSame(503);
+        $this->assertResponseHeaderSame('Retry-After', '60');
+    }
+
+    #[Test]
     public function chatRejectsUnauthenticatedRequests(): void
     {
         $this->seedTrip(self::TRIP_ID);
@@ -311,6 +352,8 @@ final readonly class FakeLlmClient implements LlmClientInterface
     public function __construct(
         private ?array $response = null,
         private bool $throwUnavailable = false,
+        private AiFailureReason $unavailableReason = AiFailureReason::UNAVAILABLE,
+        private ?int $retryAfter = null,
     ) {
     }
 
@@ -335,7 +378,7 @@ final readonly class FakeLlmClient implements LlmClientInterface
     private function respond(): ?array
     {
         if ($this->throwUnavailable) {
-            throw new AiUnavailableException('Simulated outage.');
+            throw new AiUnavailableException('Simulated outage.', $this->unavailableReason, $this->retryAfter);
         }
 
         return $this->response;
