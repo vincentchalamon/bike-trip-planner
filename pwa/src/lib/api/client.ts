@@ -782,6 +782,85 @@ export async function deleteAccount(): Promise<boolean> {
 }
 
 /**
+ * Per-user AI configuration (ADR-042): the cloud provider chosen for the
+ * bring-your-own-token model. Mirrors `App\Llm\AiProvider`. Kept as a const
+ * tuple so the settings dropdown and the typed payloads stay in lockstep.
+ */
+export const AI_PROVIDERS = ["anthropic", "gemini", "openai"] as const;
+export type AiProvider = (typeof AI_PROVIDERS)[number];
+
+/**
+ * Shape of `GET /users/me/ai-settings` (`App\ApiResource\Account\AiSettings`).
+ *
+ * Declared locally until `make typegen` ingests the schema change introduced by
+ * ADR-042 — the resource is absent from the current generated `schema.d.ts`
+ * (the spec export needs the backend DB, unavailable at build time here). Once
+ * the typegen catches up this can be swapped for
+ * `components["schemas"]["AiSettings.jsonld"]`.
+ *
+ * `provider` is omitted from the payload when AI is unconfigured, hence
+ * optional/null here.
+ */
+export interface AiSettingsResponse {
+  provider?: AiProvider | null;
+  tokenConfigured: boolean;
+}
+
+/**
+ * Fetch the current user's AI settings. Returns `null` on any failure so the
+ * caller treats a transient error as "unconfigured" (fail-closed: AI surfaces
+ * stay disabled-but-visible until the settings load confirms a provider).
+ */
+export async function fetchAiSettings(): Promise<AiSettingsResponse | null> {
+  const res = await apiFetch(`${API_URL}/users/me/ai-settings`, {
+    headers: { Accept: "application/ld+json" },
+  });
+  if (!res.ok) return null;
+  return res.json() as Promise<AiSettingsResponse>;
+}
+
+/**
+ * Persist the user's AI provider + token (`PUT /users/me/ai-settings`). The
+ * token is write-only — the response never echoes it back.
+ *
+ * @returns the updated settings on 200, or the parsed {@link ApiError} on 422
+ * (structured `violations[]` for blank/unknown provider or blank token; a
+ * `detail`-only message for an invalid token format).
+ */
+export async function saveAiSettings(
+  provider: string,
+  token: string,
+): Promise<
+  | { data: AiSettingsResponse; error: null }
+  | { data: null; error: ApiError }
+> {
+  const res = await apiFetch(`${API_URL}/users/me/ai-settings`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/ld+json",
+      Accept: "application/ld+json",
+    },
+    body: JSON.stringify({ provider, token }),
+  });
+  if (res.ok) {
+    return { data: (await res.json()) as AiSettingsResponse, error: null };
+  }
+  const body = (await res.json().catch(() => null)) as unknown;
+  return { data: null, error: parseApiError(res.status, body) };
+}
+
+/**
+ * Clear the user's AI settings (`DELETE /users/me/ai-settings`).
+ * @returns true on HTTP 204, false otherwise.
+ */
+export async function clearAiSettings(): Promise<boolean> {
+  const res = await apiFetch(`${API_URL}/users/me/ai-settings`, {
+    method: "DELETE",
+  });
+  return res.ok;
+}
+
+/**
  * Build the frontend share URL from a short code.
  */
 export function buildShareUrl(shortCode: string): string {

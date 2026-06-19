@@ -20,9 +20,33 @@ async function mockAuthenticated(page: import("@playwright/test").Page) {
   await page.route("**/.well-known/mercure*", (route) => route.abort());
 }
 
+/**
+ * Mock GET /users/me/ai-settings (ADR-042). Defaults to unconfigured so the
+ * AI section renders its "not configured" baseline; pass `provider` to simulate
+ * an account that already has an AI provider set.
+ */
+async function mockAiSettingsGet(
+  page: import("@playwright/test").Page,
+  provider: string | null = null,
+) {
+  await page.route("**/users/me/ai-settings", (route, request) => {
+    if (request.method() !== "GET") return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/ld+json",
+      body: JSON.stringify(
+        provider
+          ? { provider, tokenConfigured: true }
+          : { tokenConfigured: false },
+      ),
+    });
+  });
+}
+
 test.describe("Account settings", () => {
   test("renders all sections for an authenticated user", async ({ page }) => {
     await mockAuthenticated(page);
+    await mockAiSettingsGet(page);
 
     await page.goto("/account/settings");
     await page.waitForLoadState("networkidle");
@@ -30,6 +54,7 @@ test.describe("Account settings", () => {
     await expect(page.getByTestId("account-settings-page")).toBeVisible();
     await expect(page.getByTestId("account-section")).toBeVisible();
     await expect(page.getByTestId("preferences-section")).toBeVisible();
+    await expect(page.getByTestId("ai-provider-section")).toBeVisible();
     await expect(page.getByTestId("data-section")).toBeVisible();
     await expect(page.getByTestId("danger-zone-section")).toBeVisible();
     await expect(page.getByTestId("logout-section")).toBeVisible();
@@ -241,5 +266,119 @@ test.describe("Account settings", () => {
     await expect(button).toBeEnabled();
     // URL must not change — user stays on the settings page.
     await expect(page).toHaveURL(/\/account\/settings$/);
+  });
+});
+
+test.describe("AI provider settings (ADR-042)", () => {
+  test("loads the current provider + token-configured indicator", async ({
+    page,
+  }) => {
+    await mockAuthenticated(page);
+    await mockAiSettingsGet(page, "anthropic");
+
+    await page.goto("/account/settings");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByTestId("ai-provider-select")).toHaveValue(
+      "anthropic",
+    );
+    await expect(page.getByTestId("ai-token-status")).toHaveText(
+      "Une clé API est enregistrée.",
+    );
+    // The token itself is never returned, so the input stays empty.
+    await expect(page.getByTestId("ai-token-input")).toHaveValue("");
+    // RGPD disclosure is always shown.
+    await expect(page.getByTestId("ai-settings-rgpd")).toBeVisible();
+  });
+
+  test("saving sends PUT and confirms the configured state", async ({
+    page,
+  }) => {
+    await mockAuthenticated(page);
+    await mockAiSettingsGet(page, null);
+
+    let putBody: Record<string, unknown> | null = null;
+    await page.route("**/users/me/ai-settings", (route, request) => {
+      if (request.method() !== "PUT") return route.fallback();
+      putBody = JSON.parse(request.postData() ?? "{}") as Record<
+        string,
+        unknown
+      >;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/ld+json",
+        body: JSON.stringify({ provider: "openai", tokenConfigured: true }),
+      });
+    });
+
+    await page.goto("/account/settings");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByTestId("ai-provider-select").selectOption("openai");
+    await page.getByTestId("ai-token-input").fill("sk-test-key");
+    await page.getByTestId("ai-settings-save").click();
+
+    await expect.poll(() => putBody).toEqual({
+      provider: "openai",
+      token: "sk-test-key",
+    });
+    await expect(page.getByTestId("ai-token-status")).toHaveText(
+      "Une clé API est enregistrée.",
+    );
+    // Token is cleared from the input after a successful save.
+    await expect(page.getByTestId("ai-token-input")).toHaveValue("");
+  });
+
+  test("surfaces a 422 validation error inline", async ({ page }) => {
+    await mockAuthenticated(page);
+    await mockAiSettingsGet(page, null);
+
+    await page.route("**/users/me/ai-settings", (route, request) => {
+      if (request.method() !== "PUT") return route.fallback();
+      return route.fulfill({
+        status: 422,
+        contentType: "application/ld+json",
+        body: JSON.stringify({
+          violations: [
+            { propertyPath: "token", message: "Invalid token format." },
+          ],
+        }),
+      });
+    });
+
+    await page.goto("/account/settings");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByTestId("ai-provider-select").selectOption("anthropic");
+    await page.getByTestId("ai-token-input").fill("bad");
+    await page.getByTestId("ai-settings-save").click();
+
+    await expect(page.getByTestId("ai-settings-error")).toHaveText(
+      "Invalid token format.",
+    );
+  });
+
+  test("clearing sends DELETE and resets the form", async ({ page }) => {
+    await mockAuthenticated(page);
+    await mockAiSettingsGet(page, "gemini");
+
+    let deleteCalled = false;
+    await page.route("**/users/me/ai-settings", (route, request) => {
+      if (request.method() !== "DELETE") return route.fallback();
+      deleteCalled = true;
+      return route.fulfill({ status: 204, body: "" });
+    });
+
+    await page.goto("/account/settings");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByTestId("ai-provider-select")).toHaveValue("gemini");
+    await page.getByTestId("ai-settings-clear").click();
+
+    await expect.poll(() => deleteCalled).toBe(true);
+    await expect(page.getByTestId("ai-provider-select")).toHaveValue("");
+    await expect(page.getByTestId("ai-token-status")).toHaveText(
+      "Aucune clé API enregistrée.",
+    );
   });
 });

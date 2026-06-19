@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Sparkles } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
@@ -59,58 +60,86 @@ export function AiBubble() {
   // AI disabled by config (NEXT_PUBLIC_AI_ENABLED=0) — hide the assistant entirely.
   if (!aiCapability.enabled) return null;
 
-  // Disabled affordance when the network is down OR the (enabled) AI tier is
-  // unreachable: same visual treatment, distinct title + data attribute (#304).
+  // Disabled-but-visible affordance when the network is down, the (enabled) AI
+  // tier is unreachable (#304), or no provider is configured on the account
+  // (ADR-042): same visual treatment, distinct title + data attribute. The
+  // not-configured state links to the settings via its title.
   const isAiDown = !aiCapability.available;
-  const isUnavailable = !isOnline || isAiDown;
+  const isNotConfigured = !aiCapability.configured;
+  const isUnavailable = !isOnline || isAiDown || isNotConfigured;
+
+  // When the only reason the bubble is unavailable is a missing provider
+  // (online + tier reachable), render it as a link to the account settings so
+  // the CTA is actionable rather than a dead button.
+  const linksToSettings = isNotConfigured && isOnline && !isAiDown;
+
+  const bubbleClassName = cn(
+    "fixed bottom-6 right-6 z-30 inline-flex items-center justify-center",
+    "h-14 w-14 rounded-full bg-brand-fill text-white shadow-lg",
+    "hover:bg-brand-fill-hover transition-transform hover:scale-105",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-hover focus-visible:ring-offset-2",
+    isUnavailable &&
+      !linksToSettings &&
+      "cursor-not-allowed opacity-60 hover:scale-100 hover:bg-brand-fill",
+    linksToSettings && "opacity-80",
+  );
+
+  const title = !isOnline
+    ? tOffline("label")
+    : isAiDown
+      ? t("unavailableTitle")
+      : isNotConfigured
+        ? t("notConfiguredTitle")
+        : undefined;
 
   return (
     <>
-      <button
-        type="button"
-        onClick={isUnavailable ? undefined : handleToggle}
-        aria-disabled={isUnavailable}
-        aria-label={isBubbleOpen ? t("closeAria") : t("openAria")}
-        aria-expanded={isBubbleOpen}
-        aria-controls="ai-chat-panel"
-        data-testid="ai-bubble"
-        data-open={isBubbleOpen || undefined}
-        data-offline={!isOnline || undefined}
-        data-ai-down={(isOnline && isAiDown) || undefined}
-        title={
-          !isOnline
-            ? tOffline("label")
-            : isAiDown
-              ? t("unavailableTitle")
-              : undefined
-        }
-        className={cn(
-          "fixed bottom-6 right-6 z-30 inline-flex items-center justify-center",
-          "h-14 w-14 rounded-full bg-brand-fill text-white shadow-lg",
-          "hover:bg-brand-fill-hover transition-transform hover:scale-105",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-hover focus-visible:ring-offset-2",
-          isUnavailable &&
-            "cursor-not-allowed opacity-60 hover:scale-100 hover:bg-brand-fill",
-        )}
-      >
-        <Sparkles className="h-6 w-6" aria-hidden="true" />
-        {!isOnline && <ChatOfflineBadge />}
-        {isOnline && !isAiDown && !hasSeenBubble && (
-          <span
-            data-testid="ai-bubble-badge"
-            className={cn(
-              "absolute -top-1 -right-1 inline-flex items-center justify-center",
-              "rounded-full bg-red-500 text-white text-[10px] font-semibold",
-              "px-1.5 py-0.5 shadow-sm",
-            )}
-          >
-            {t("newBadge")}
-          </span>
-        )}
-        <span className="sr-only">{t("label")}</span>
-      </button>
+      {linksToSettings ? (
+        <Link
+          href="/account/settings#ai"
+          aria-label={t("notConfiguredTitle")}
+          data-testid="ai-bubble"
+          data-not-configured=""
+          title={title}
+          className={bubbleClassName}
+        >
+          <Sparkles className="h-6 w-6" aria-hidden="true" />
+          <span className="sr-only">{t("label")}</span>
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={isUnavailable ? undefined : handleToggle}
+          aria-disabled={isUnavailable}
+          aria-label={isBubbleOpen ? t("closeAria") : t("openAria")}
+          aria-expanded={isBubbleOpen}
+          aria-controls="ai-chat-panel"
+          data-testid="ai-bubble"
+          data-open={isBubbleOpen || undefined}
+          data-offline={!isOnline || undefined}
+          data-ai-down={(isOnline && isAiDown) || undefined}
+          title={title}
+          className={bubbleClassName}
+        >
+          <Sparkles className="h-6 w-6" aria-hidden="true" />
+          {!isOnline && <ChatOfflineBadge />}
+          {isOnline && !isAiDown && !hasSeenBubble && (
+            <span
+              data-testid="ai-bubble-badge"
+              className={cn(
+                "absolute -top-1 -right-1 inline-flex items-center justify-center",
+                "rounded-full bg-red-500 text-white text-[10px] font-semibold",
+                "px-1.5 py-0.5 shadow-sm",
+              )}
+            >
+              {t("newBadge")}
+            </span>
+          )}
+          <span className="sr-only">{t("label")}</span>
+        </button>
+      )}
 
-      {isBubbleOpen && <AiChatPanel onClose={closeBubble} />}
+      {isBubbleOpen && !isUnavailable && <AiChatPanel onClose={closeBubble} />}
     </>
   );
 }

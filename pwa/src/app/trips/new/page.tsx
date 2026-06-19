@@ -177,7 +177,10 @@ function WizardContent() {
           hideStepper
           previewSlot={
             aiCapability.enabled ? (
-              <AiRefinementCard unavailable={!aiCapability.available} />
+              <AiRefinementCard
+                unavailable={!aiCapability.available}
+                notConfigured={!aiCapability.configured}
+              />
             ) : undefined
           }
         />

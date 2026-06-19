@@ -175,13 +175,20 @@ interface UiState {
    */
   hasSeenBubble: boolean;
   /**
-   * AI tier availability driving the explicit degraded-mode gating (#304).
+   * AI tier availability driving the explicit gating (#304, ADR-042).
    * - `enabled`: build-time config (`AI_ENABLED`); when false, AI features are hidden.
    * - `available`: runtime reachability of the LLM tier, read from `/api/health`
    *   (`deps.ollama_chat`). Starts optimistic (`true`) to avoid a disabled→enabled
-   *   flash; flipped to `false` only once an outage is confirmed.
+   *   flash; flipped to `false` only once an outage is confirmed. For the
+   *   bring-your-own-token cloud providers (ADR-042) there is no self-hosted tier
+   *   to probe, so this stays `true`.
+   * - `configured`: whether the account has an AI provider + token set
+   *   (`GET /users/me/ai-settings`). When false, AI surfaces are shown
+   *   disabled-but-visible with a "Configurez une IA" CTA. Starts `false`
+   *   (fail-closed) so the controls stay disabled until the settings confirm
+   *   a provider.
    */
-  aiCapability: { enabled: boolean; available: boolean };
+  aiCapability: { enabled: boolean; available: boolean; configured: boolean };
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -244,10 +251,13 @@ interface UiState {
   setChatSending: (value: boolean) => void;
   /** Update the runtime AI availability (from the `/api/health` probe, #304). */
   setAiAvailable: (value: boolean) => void;
-  /** Replace the whole AI capability — E2E override hook for the 3 states (#304). */
+  /** Update whether the account has a configured AI provider (ADR-042). */
+  setAiConfigured: (value: boolean) => void;
+  /** Replace the whole AI capability — E2E override hook for the states. */
   setAiCapability: (capability: {
     enabled: boolean;
     available: boolean;
+    configured: boolean;
   }) => void;
 }
 
@@ -323,7 +333,7 @@ export const useUiStore = create<UiState>()(
     currentContext: { currentStage: null },
     isChatSending: false,
     hasSeenBubble: readBubbleSeenFromStorage(),
-    aiCapability: { enabled: AI_ENABLED, available: true },
+    aiCapability: { enabled: AI_ENABLED, available: true, configured: false },
 
     setProcessing: (value) =>
       set((state) => {
@@ -491,6 +501,11 @@ export const useUiStore = create<UiState>()(
     setAiAvailable: (value) =>
       set((state) => {
         state.aiCapability.available = value;
+      }),
+
+    setAiConfigured: (value) =>
+      set((state) => {
+        state.aiCapability.configured = value;
       }),
 
     setAiCapability: (capability) =>

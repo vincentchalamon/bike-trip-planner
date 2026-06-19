@@ -633,7 +633,8 @@
     "errorGeneric": "Une erreur est survenue. Réessayez plus tard.",
     "fullAnalysisHint": "Cette modification nécessite une nouvelle analyse complète.",
     "relaunchAnalysis": "Relancer l'analyse",
-    "unavailableTitle": "Assistant IA indisponible"
+    "unavailableTitle": "Assistant IA indisponible",
+    "notConfiguredTitle": "Configurez une IA pour activer l'assistant"
   },
   "chat": {
     "offline": {
@@ -682,7 +683,9 @@
   "aiUnavailable": {
     "analysis": "Analyse IA indisponible : le service IA est actuellement hors ligne.",
     "refinement": "Assistant IA indisponible, réessayez plus tard.",
-    "chat": "Assistant IA indisponible."
+    "chat": "Assistant IA indisponible.",
+    "notConfigured": "Configurez une IA pour profiter d'une analyse plus approfondie.",
+    "configureCta": "Configurer une IA"
   },
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
@@ -956,6 +959,30 @@
       "description": "Vous serez déconnecté de cet appareil.",
       "button": "Se déconnecter",
       "logoutFailed": "Échec de la déconnexion. Veuillez réessayer."
+    },
+    "ai": {
+      "title": "Assistant IA",
+      "description": "Activez les fonctionnalités d'IA en renseignant un fournisseur et votre propre clé API.",
+      "providerLabel": "Fournisseur",
+      "providerPlaceholder": "Choisissez un fournisseur",
+      "providers": {
+        "anthropic": "Anthropic (Claude)",
+        "gemini": "Google (Gemini)",
+        "openai": "OpenAI"
+      },
+      "tokenLabel": "Clé API",
+      "tokenPlaceholder": "Collez votre clé API",
+      "tokenConfigured": "Une clé API est enregistrée.",
+      "tokenNotConfigured": "Aucune clé API enregistrée.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "clear": "Supprimer la configuration",
+      "clearing": "Suppression…",
+      "saved": "Configuration IA enregistrée.",
+      "saveFailed": "Impossible d'enregistrer la configuration IA.",
+      "cleared": "Configuration IA supprimée.",
+      "clearFailed": "Impossible de supprimer la configuration IA.",
+      "rgpd": "Vos données de voyage (itinéraire, villes, dates) sont transmises au fournisseur choisi avec votre clé API. Consultez sa politique de confidentialité avant d'activer l'IA."
     }
   },
   "errorPages": {

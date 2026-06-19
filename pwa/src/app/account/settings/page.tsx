@@ -5,6 +5,7 @@ import { TopBar } from "@/components/top-bar";
 import { AccountRail } from "@/components/account/account-rail";
 import { AccountSection } from "@/components/account/account-section";
 import { PreferencesSection } from "@/components/account/preferences-section";
+import { AiProviderSection } from "@/components/account/ai-provider-section";
 import { DataSection } from "@/components/account/data-section";
 import { DangerZoneSection } from "@/components/account/danger-zone-section";
 import { LandingFooter } from "@/components/landing/footer";
@@ -48,6 +49,7 @@ export default function AccountSettingsPage() {
           <div className="flex flex-col gap-6 min-w-0">
             <AccountSection />
             <PreferencesSection />
+            <AiProviderSection />
             <DataSection />
             <DangerZoneSection />
           </div>

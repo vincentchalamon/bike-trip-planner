@@ -633,7 +633,8 @@
     "errorGeneric": "Something went wrong. Please try again later.",
     "fullAnalysisHint": "This change requires a brand-new full analysis.",
     "relaunchAnalysis": "Relaunch analysis",
-    "unavailableTitle": "AI assistant unavailable"
+    "unavailableTitle": "AI assistant unavailable",
+    "notConfiguredTitle": "Configure an AI provider to enable the assistant"
   },
   "chat": {
     "offline": {
@@ -682,7 +683,9 @@
   "aiUnavailable": {
     "analysis": "AI analysis unavailable: the AI service is currently offline.",
     "refinement": "AI assistant unavailable, try again later.",
-    "chat": "AI assistant unavailable."
+    "chat": "AI assistant unavailable.",
+    "notConfigured": "Configure an AI provider for a deeper analysis.",
+    "configureCta": "Configure an AI provider"
   },
   "errors": {
     "networkError": "Network error. Please check your connection.",
@@ -956,6 +959,30 @@
       "description": "You will be logged out of this device.",
       "button": "Log out",
       "logoutFailed": "Logout failed. Please try again."
+    },
+    "ai": {
+      "title": "AI assistant",
+      "description": "Enable AI features by setting a provider and your own API key.",
+      "providerLabel": "Provider",
+      "providerPlaceholder": "Choose a provider",
+      "providers": {
+        "anthropic": "Anthropic (Claude)",
+        "gemini": "Google (Gemini)",
+        "openai": "OpenAI"
+      },
+      "tokenLabel": "API key",
+      "tokenPlaceholder": "Paste your API key",
+      "tokenConfigured": "An API key is stored.",
+      "tokenNotConfigured": "No API key stored.",
+      "save": "Save",
+      "saving": "Saving…",
+      "clear": "Clear configuration",
+      "clearing": "Clearing…",
+      "saved": "AI configuration saved.",
+      "saveFailed": "Could not save the AI configuration.",
+      "cleared": "AI configuration cleared.",
+      "clearFailed": "Could not clear the AI configuration.",
+      "rgpd": "Your trip data (route, towns, dates) is sent to the chosen provider with your API key. Review its privacy policy before enabling AI."
     }
   },
   "errorPages": {

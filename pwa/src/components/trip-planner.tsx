@@ -23,6 +23,7 @@ import { TripAiOverview } from "@/components/trip-ai-overview";
 import { AiUnavailableNotice } from "@/components/ai-unavailable-notice";
 import { TripHeader } from "@/components/trip-header";
 import { AiBubble } from "@/components/ai-bubble";
+import { useAiSettings } from "@/hooks/use-ai-settings";
 import { RoadbookMasterDetail } from "@/components/Timeline";
 import { ConfigPanel } from "@/components/config-panel";
 import { HelpModal } from "@/components/help-modal";
@@ -148,6 +149,7 @@ export function TripPlanner({
   const isAnalysisPhaseActive = useUiStore((s) => s.isAnalysisPhaseActive);
   const aiEnabled = useUiStore((s) => s.aiCapability.enabled);
   const aiAvailable = useUiStore((s) => s.aiCapability.available);
+  const aiConfigured = useUiStore((s) => s.aiCapability.configured);
   const setAiAvailable = useUiStore((s) => s.setAiAvailable);
 
   // Probe the LLM tier once on mount so AI features can be gated explicitly when it
@@ -162,6 +164,10 @@ export function TripPlanner({
       cancelled = true;
     };
   }, [aiEnabled, setAiAvailable]);
+
+  // Sync the `configured` signal from the account (ADR-042): AI surfaces stay
+  // disabled-but-visible until a provider + token is set.
+  useAiSettings();
 
   const activeStages = useMemo(
     () => stages.filter((s) => !s.isRestDay),
@@ -245,9 +251,21 @@ export function TripPlanner({
     };
     const onSetAiCapability = (e: Event) => {
       const detail = (
-        e as CustomEvent<{ enabled: boolean; available: boolean }>
+        e as CustomEvent<{
+          enabled: boolean;
+          available: boolean;
+          configured?: boolean;
+        }>
       ).detail;
-      if (detail) useUiStore.getState().setAiCapability(detail);
+      if (detail) {
+        // `configured` defaults to true so the pre-ADR-042 capability tests
+        // (which only drive enabled/available) keep exercising the active path.
+        useUiStore.getState().setAiCapability({
+          enabled: detail.enabled,
+          available: detail.available,
+          configured: detail.configured ?? true,
+        });
+      }
     };
     window.addEventListener("__test_set_ai_capability", onSetAiCapability);
     window.addEventListener("__test_set_processing", onProcessing);
@@ -685,8 +703,14 @@ export function TripPlanner({
                   silently when the LLM pipeline is disabled or did not produce
                   an overview. Placed above the stage timeline so it gives the
                   user a high-level view before they dive into per-stage data. */}
-              {aiEnabled && !aiAvailable && (
-                <AiUnavailableNotice context="analysis" />
+              {aiEnabled && !aiConfigured ? (
+                <AiUnavailableNotice
+                  variant="notConfigured"
+                  context="analysis"
+                />
+              ) : (
+                aiEnabled &&
+                !aiAvailable && <AiUnavailableNotice context="analysis" />
               )}
               <TripAiOverview />
 
