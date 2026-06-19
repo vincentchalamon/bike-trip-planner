@@ -11,4 +11,5 @@ enum SourceType: string
     case GPX_UPLOAD = 'gpx_upload';
     case STRAVA_ROUTE = 'strava_route';
     case RIDE_WITH_GPS = 'ride_with_gps';
+    case AI_GENERATED = 'ai_generated';
 }
