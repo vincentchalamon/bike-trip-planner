@@ -191,7 +191,7 @@ ROUTE ──┬── STAGES ──── [7 leaves] (Overpass queries → insta
 
 **Principle:** Replace the sequential `foreach` loop in `KomootCollectionRouteFetcher::fetch()` (lines 50-65) with Symfony HttpClient multiplexing: fire all tour requests concurrently, then collect results. Combined with Option D's cache, each tour is cached individually and reused across collections.
 
-**Pattern reference:** Already implemented in `ScanAccommodationsHandler::scrapeAsync()` (lines 240-248) — fire all non-blocking requests, then iterate results.
+**Pattern reference:** Symfony HttpClient multiplexing — fire all non-blocking requests, then iterate the responses (they resolve concurrently).
 
 **Before (7 tours):** 7 x ~200ms = 1.4s sequential.
 **After:** max(200ms) + overhead = ~400ms parallel. 0ms if all tours are cached.
@@ -297,7 +297,7 @@ Target pipeline (critical path ~2.5s):
 ROUTE (350ms) ──┬── STAGES (400ms) ──── [7 leaves] (Overpass = cache hit)
                 └── ScanAllOsm (3-5s, background, warms cache)
 
-Dominant leaf: ScanAccommodations scraping (~1-3s after cache hit)
+Dominant leaf: ScanAccommodations local-index reads (scraping removed in PR2b)
 ```
 
 | Scenario | Typical E2E | Reduction |

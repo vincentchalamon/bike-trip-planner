@@ -83,15 +83,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'User-Agent' => 'BikeTripPlanner/1.0',
                     ],
                 ],
-                'accommodation_scraper.client' => [
-                    'scope' => 'https?://.*',
-                    'max_redirects' => 3,
-                    'timeout' => 15,
-                    'headers' => [
-                        'Accept' => 'text/html',
-                        'User-Agent' => 'Mozilla/5.0 (compatible; BikeTripPlanner/1.0)',
-                    ],
-                ],
                 'markets.client' => [
                     'scope' => '^https://www\\.data\\.gouv\\.fr',
                     'max_redirects' => 2,
