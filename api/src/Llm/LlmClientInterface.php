@@ -9,17 +9,17 @@ use App\Llm\Exception\AiUnavailableException;
 /**
  * LLM client abstraction (Dependency Inversion Principle).
  *
- * Allows swapping the LLM backend without touching
- * call sites. When the underlying client is disabled (feature flag off), implementations
- * should return null so callers can short-circuit gracefully.
+ * Allows swapping the LLM backend without touching call sites. Whether AI is
+ * available is decided per-user upstream (ADR-042): the factory returns null when
+ * no provider/token is configured (or the token cannot be decrypted), so a client
+ * instance always corresponds to a usable provider.
  */
 interface LlmClientInterface
 {
     /**
-     * Returns true when the underlying LLM is configured and ready to serve requests.
-     *
-     * Implementations MUST return false when the corresponding feature flag is off,
-     * so that callers can avoid issuing any HTTP traffic.
+     * Returns true when the client is ready to serve requests. A constructed
+     * client always is (the "is AI configured?" decision lives in the factory),
+     * so this is retained only for the interface contract.
      */
     public function isEnabled(): bool;
 
