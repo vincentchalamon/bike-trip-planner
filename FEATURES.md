@@ -360,20 +360,20 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Adoption `symfony/ai` | `symfony/ai-platform` + bridges cloud (ADR-030, migré en ADR-042). |
 | 🗑️ | Service OllamaClient + Docker Ollama | Retiré (ADR-042) ; remplacé par les bridges cloud par-utilisateur. Anciennement Sprint 25 #298 / ADR-028 |
 
-### Analyse 2 passes (LLaMA 8B)
+### Analyse 2 passes (IA — modèle d'analyse du fournisseur)
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
 | ✅ | Passe 1 — analyse par étape | Message Messenger parallélisable (`AnalyzeStageWithLlmHandler`). Sprint 26 #301 |
 | ✅ | Passe 2 — vue d'ensemble du trip | Résumé global (`AnalyzeTripOverviewWithLlmHandler`). Sprint 26 #302 |
-| ✅ | Pipeline gate → LLaMA → TRIP_READY | Orchestration Mercure. Sprint 26 #303 |
+| ✅ | Pipeline gate → IA → TRIP_READY | Orchestration Mercure. Sprint 26 #303 |
 | ✅ | Fallback gracieux sans IA | Dégradation propre (`AiUnavailableException` + raison). Sprint 26 #304 / ADR-042 |
 
 ### Frontend IA
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| ✅ | Résumé IA global dans Mon voyage | Passe 2 LLaMA 8B (`TripAiOverview`). Sprint 27 #305 |
+| ✅ | Résumé IA global dans Mon voyage | Passe 2 d'analyse (`TripAiOverview`). Sprint 27 #305 |
 | ✅ | Résumé IA par étape + layout hybride | Résumé + alertes repliables (`StageAiSummary`). Sprint 27 #306 |
 | ✅ | Bandeau « Actualiser l'analyse IA » | Si différé ou désactivé. Sprint 27 #307 |
 | ✅ | Fallback frontend sans LLaMA | Alertes dépliées, résumé masqué. Sprint 27 #308 |

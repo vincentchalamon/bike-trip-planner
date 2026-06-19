@@ -74,7 +74,7 @@ Each provider HTTP client is **SSRF-scoped to that provider's host** (per ADR-00
 
 ### 5. Availability is decided per-user, never by an env flag
 
-The AI features are **always present in the build** — they are part of the product, not a deployment option. What is optional is **per-user activation**: a feature is usable only once *that user* has chosen a provider and saved their token. The application therefore does **not** enable or disable AI through an environment variable. The old global `OLLAMA_ENABLED` server flag (which answered "is the self-hosted tier reachable?") is removed and **not replaced** by any equivalent toggle.
+The AI features are **always present in the build** — they are part of the product, not a deployment option. What is optional is **per-user activation**: a feature is usable only once *that user* has chosen a provider and saved their token. The application therefore does **not** enable or disable AI through an environment variable. Two env-var flags are removed and **not replaced**: the Ollama-specific `OLLAMA_ENABLED` (which answered "is the self-hosted tier reachable?") and the instance-wide `AI_ENABLED` kill-switch on `LlmClientFactory`/`services.php` (which answered "is AI enabled for all users on this server?").
 
 Two states, generalising the ADR-028 degraded-mode contract:
 
