@@ -57,10 +57,8 @@ export function AiBubble() {
   };
 
   if (!trip || isAnalysisPhaseActive) return null;
-  // AI disabled by config (NEXT_PUBLIC_AI_ENABLED=0) — hide the assistant entirely.
-  if (!aiCapability.enabled) return null;
 
-  // Disabled-but-visible affordance when the network is down, the (enabled) AI
+  // Disabled-but-visible affordance when the network is down, the AI
   // tier is unreachable (#304), or no provider is configured on the account
   // (ADR-042): same visual treatment, distinct title + data attribute. The
   // not-configured state links to the settings via its title.

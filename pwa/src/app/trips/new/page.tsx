@@ -176,12 +176,10 @@ function WizardContent() {
         <TripPlanner
           hideStepper
           previewSlot={
-            aiCapability.enabled ? (
-              <AiRefinementCard
-                unavailable={!aiCapability.available}
-                notConfigured={!aiCapability.configured}
-              />
-            ) : undefined
+            <AiRefinementCard
+              unavailable={!aiCapability.available}
+              notConfigured={!aiCapability.configured}
+            />
           }
         />
       </div>

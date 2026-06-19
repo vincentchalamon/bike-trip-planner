@@ -3,7 +3,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { enableMapSet } from "immer";
-import { AI_ENABLED } from "@/lib/constants";
 
 // Required for Immer to allow mutating Set/Map drafts (used by completedSteps).
 enableMapSet();
@@ -176,7 +175,6 @@ interface UiState {
   hasSeenBubble: boolean;
   /**
    * AI tier availability driving the explicit gating (#304, ADR-042).
-   * - `enabled`: build-time config (`AI_ENABLED`); when false, AI features are hidden.
    * - `available`: runtime reachability of the LLM tier, read from `/api/health`
    *   (`deps.ollama_chat`). Starts optimistic (`true`) to avoid a disabled→enabled
    *   flash; flipped to `false` only once an outage is confirmed. For the
@@ -188,7 +186,7 @@ interface UiState {
    *   (fail-closed) so the controls stay disabled until the settings confirm
    *   a provider.
    */
-  aiCapability: { enabled: boolean; available: boolean; configured: boolean };
+  aiCapability: { available: boolean; configured: boolean };
 
   setProcessing: (value: boolean) => void;
   setAccommodationScanning: (value: boolean) => void;
@@ -255,7 +253,6 @@ interface UiState {
   setAiConfigured: (value: boolean) => void;
   /** Replace the whole AI capability — E2E override hook for the states. */
   setAiCapability: (capability: {
-    enabled: boolean;
     available: boolean;
     configured: boolean;
   }) => void;
@@ -333,7 +330,7 @@ export const useUiStore = create<UiState>()(
     currentContext: { currentStage: null },
     isChatSending: false,
     hasSeenBubble: readBubbleSeenFromStorage(),
-    aiCapability: { enabled: AI_ENABLED, available: true, configured: false },
+    aiCapability: { available: true, configured: false },
 
     setProcessing: (value) =>
       set((state) => {

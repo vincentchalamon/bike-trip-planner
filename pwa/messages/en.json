@@ -1015,6 +1015,7 @@
     "categoryProject": "The project",
     "categoryHowItWorks": "How it works",
     "categoryAccess": "Access",
+    "categoryAi": "AI assistant",
     "q1": "What sets Bike Trip Planner apart from Komoot or RideWithGPS?",
     "a1": "Komoot and RideWithGPS are GPS navigation platforms. Bike Trip Planner is a multi-day itinerary planning tool: it automatically splits your route into daily stages based on your cyclist profile (speed, accumulated fatigue, elevation), suggests accommodations at each stage endpoint, and generates contextual alerts (weather, resupply, health services, etc.). It complements your navigation apps rather than replacing them.",
     "q2": "Why use this tool instead of planning manually on a map?",
@@ -1032,7 +1033,11 @@
     "q8": "How do I get access to the app?",
     "a8": "The app uses a magic link sign-in system: enter your email address on the sign-in page and you will receive a secure sign-in link. No password is required.",
     "q9": "Is the app free and open source?",
-    "a9": "The source code is open source and available on GitHub. The hosted app is free to use. Infrastructure costs may eventually justify a freemium model, but no paid access is planned at this stage."
+    "a9": "The source code is open source and available on GitHub. The hosted app is free to use. Infrastructure costs may eventually justify a freemium model, but no paid access is planned at this stage.",
+    "q10": "How do I enable the AI assistant?",
+    "a10": "The AI assistant is enabled from your account settings: choose a provider (Anthropic/Claude, Google/Gemini, or OpenAI) and enter your own API key. As long as no key is provided, AI stays disabled and the related features are shown in a disabled state.",
+    "q11": "Is my data shared with the AI?",
+    "a11": "Only if you enable AI. In that case, your trip data is sent to the provider you chose, using your own API key (billed to your account). Your key is encrypted and is never shared in any other way. You can remove it at any time from your account settings."
   },
   "events": {
     "type_festival": "Festival",

@@ -81,6 +81,14 @@ export function HelpModal() {
         { question: tFaq("q9"), answer: tFaq("a9") },
       ],
     },
+    {
+      id: "ai",
+      label: tFaq("categoryAi"),
+      items: [
+        { question: tFaq("q10"), answer: tFaq("a10") },
+        { question: tFaq("q11"), answer: tFaq("a11") },
+      ],
+    },
   ];
 
   return (

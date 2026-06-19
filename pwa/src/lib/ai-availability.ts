@@ -13,9 +13,8 @@ interface HealthResponse {
 /**
  * Runtime AI-tier availability probe (#304).
  *
- * Orthogonal to the build-time {@link AI_ENABLED} flag (which decides whether AI
- * features should exist at all): this answers "is the LLM tier reachable right
- * now?" by reading `/api/health` → `deps.ollama_chat.status`. When the backend
+ * Answers "is the LLM tier reachable right now?" by reading `/api/health` →
+ * `deps.ollama_chat.status`. When the backend
  * runs with `OLLAMA_ENABLED=0` it omits the key entirely, which resolves to
  * unavailable (covers a front-enabled / API-disabled misconfiguration).
  *

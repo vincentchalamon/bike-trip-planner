@@ -170,7 +170,7 @@ async function enterRefinementPreview(
   await page.evaluate((avail) => {
     window.dispatchEvent(
       new CustomEvent("__test_set_ai_capability", {
-        detail: { enabled: true, available: avail },
+        detail: { available: avail },
       }),
     );
     window.dispatchEvent(
