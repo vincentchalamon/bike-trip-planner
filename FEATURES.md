@@ -25,7 +25,7 @@ Inventaire complet des fonctionnalités de **Bike Trip Planner** — livrées et
 | ✅ | Import URL RideWithGPS | `ridewithgps.com/routes/{id}` |
 | ✅ | Création via query param `?link=...` | Démarrage direct depuis un lien partagé. Sprint 9 |
 | ✅ | Card Selection mutuellement exclusive | 3 cartes : Lien / GPX / Assistant IA (IA grisée « bientôt »). Sprint 22 |
-| 📅 | Génération d'itinéraire par IA | LLaMA 3B génère un tracé à partir d'une description texte. Sprint 28 / Hors sprint #67 |
+| 📅 | Génération d'itinéraire par IA | L'IA génère un tracé à partir d'une description texte (modèle du fournisseur). Sprint 28 / Hors sprint #67 |
 
 ### Wizard 4 étapes
 
@@ -54,7 +54,7 @@ Inventaire complet des fonctionnalités de **Bike Trip Planner** — livrées et
 | ✅ | Insertion jours de repos | Décale les dates des étapes suivantes. Sprint 4 |
 | ✅ | Dates de voyage | Picker start/end, influence météo et événements |
 | ✅ | Panneau de configuration latéral | Drawer accessible depuis le roadbook. Sprint 4 |
-| ✅ | Affinage par IA (prompt texte) | Text area pour demander ajustements (LLaMA). Sprint 27 |
+| ✅ | Affinage par IA (prompt texte) | Text area pour demander ajustements (modèle de chat du fournisseur). Sprint 27 |
 
 ---
 
@@ -169,7 +169,7 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Events panel | Fêtes, jours fériés, festivals datés |
 | ✅ | Téléchargements par étape | GPX, GeoJSON, texte |
 | ✅ | Export FIT par étape | Format Garmin natif (`FitEncoder`/`FitNormalizer`). Sprint 31 |
-| ✅ | Résumé IA par étape | Narratif + insights + suggestions, LLaMA 8B passe 1 (`StageAiSummary`). Sprint 27 #306 |
+| ✅ | Résumé IA par étape | Narratif + insights + suggestions, passe 1 d'analyse (`StageAiSummary`). Sprint 27 #306 |
 | 📅 | Shimmer/skeleton recalcul | État visuel pendant recomputation. Sprint 24 |
 | 📅 | Diff post-recalcul | Surbrillance des changements. Sprint 24 |
 
@@ -376,13 +376,13 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Résumé IA global dans Mon voyage | Passe 2 d'analyse (`TripAiOverview`). Sprint 27 #305 |
 | ✅ | Résumé IA par étape + layout hybride | Résumé + alertes repliables (`StageAiSummary`). Sprint 27 #306 |
 | ✅ | Bandeau « Actualiser l'analyse IA » | Si différé ou désactivé. Sprint 27 #307 |
-| ✅ | Fallback frontend sans LLaMA | Alertes dépliées, résumé masqué. Sprint 27 #308 |
+| ✅ | Fallback frontend sans IA | Alertes dépliées, résumé masqué. Sprint 27 #308 |
 
-### Bulle IA conversationnelle (LLaMA 3B)
+### Bulle IA conversationnelle (modèle de chat du fournisseur)
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| ✅ | Endpoint chat IA | LLaMA 3B context-aware. Sprint 28 #309 |
+| ✅ | Endpoint chat IA | Context-aware (modèle de chat du fournisseur). Sprint 28 #309 |
 | ✅ | Composant AiBubble | Bulle flottante + panneau chat. Sprint 28 #310 |
 | ✅ | Intégration ↔ recomputation inline | `skipAiAnalysis` flag. Sprint 28 #311 |
 | ✅ | Chat in-ride (POI à proximité) | Détection d'intention + calcul de détour avec géolocalisation (`InRide/*`), historique persisté (`TripChatMessage`). Sprint 32 |
