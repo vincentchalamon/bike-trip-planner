@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Llm\ResolvedLlmClient;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Llm\LlmAnalysisTrackerInterface;
-use App\Llm\LlmClientInterface;
+use App\Llm\TripLlmResolverInterface;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AllEnrichmentsCompleted;
 use App\Message\AnalyzeStageWithLlmMessage;
@@ -50,7 +51,7 @@ final readonly class AllEnrichmentsCompletedHandler
         private TripRequestRepositoryInterface $tripRequestRepository,
         private LoggerInterface $logger,
         private MessageBusInterface $messageBus,
-        private LlmClientInterface $llmClient,
+        private TripLlmResolverInterface $llmResolver,
         private LlmAnalysisTrackerInterface $llmTracker,
     ) {
     }
@@ -87,11 +88,12 @@ final readonly class AllEnrichmentsCompletedHandler
         // do not invalidate the existing AI overview / per-stage briefings.
         $skipAiAnalysis = $this->llmTracker->consumeSkipAiAnalysis($tripId);
 
-        // Short-circuit: when the LLM is disabled, when the rider explicitly opted
-        // out of re-analysis via the chat bubble, or when there is no stage to
-        // analyse (e.g. all rest days), publish TRIP_READY directly — no AI
-        // overview to await.
-        if (!$this->llmClient->isEnabled() || $skipAiAnalysis || 0 === $analysableStages) {
+        // Short-circuit: when the rider opted out of re-analysis via the chat bubble,
+        // when there is no stage to analyse (e.g. all rest days), or when the trip
+        // owner has no AI configured (kill-switch off / no token), publish TRIP_READY
+        // directly — no AI overview to await. Owner resolution (Redis + DB + token
+        // decryption) is evaluated last, only when the cheap guards pass.
+        if ($skipAiAnalysis || 0 === $analysableStages || !($this->llmResolver->resolveForTrip($tripId) instanceof ResolvedLlmClient)) {
             $this->publisher->publishTripReady($tripId, $stages, [
                 'status' => $statuses,
             ]);

@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Llm\ResolvedLlmClient;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\Enum\ComputationName;
 use App\Llm\Dto\StageAiAnalysis;
-use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmAnalysisTrackerInterface;
-use App\Llm\LlmClientInterface;
 use App\Llm\StageAnalysisSummaryBuilder;
 use App\Llm\SystemPromptLoader;
+use App\Llm\TripLlmResolverInterface;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeStageWithLlmMessage;
 use App\Message\AnalyzeTripOverviewWithLlmMessage;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
 
@@ -30,13 +30,11 @@ use Symfony\Component\Messenger\MessageBusInterface;
  * {@see AllEnrichmentsCompletedHandler} so the 5-worker pool can pipeline them.
  *
  * Behaviour:
- * - When Ollama is disabled (feature flag off): the handler returns silently.
- * - When the LLM is unreachable: the {@see OllamaUnavailableException} is logged
- *   and swallowed. AI analysis is best-effort enrichment, never blocking.
+ * - When the trip owner has not configured an AI provider (or the AI_ENABLED
+ *   kill-switch is off): the handler returns silently.
+ * - When the LLM is unreachable: the {@see AiUnavailableException} is logged and
+ *   swallowed. AI analysis is best-effort enrichment, never blocking.
  * - When the response cannot be parsed: the handler logs and skips persistence.
- *
- * Each request stays under 4K tokens (compact summary + system prompt + completion),
- * the optimal window for LLaMA 8B inference on CPU.
  */
 #[AsMessageHandler]
 final readonly class AnalyzeStageWithLlmHandler
@@ -45,31 +43,23 @@ final readonly class AnalyzeStageWithLlmHandler
 
     public const int PROMPT_VERSION = 1;
 
-    public const int MAX_RESPONSE_TOKENS = 600;
-
-    public const string DEFAULT_MODEL = 'llama3.1:8b';
-
-    private string $model;
-
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
-        private LlmClientInterface $llmClient,
+        private TripLlmResolverInterface $llmResolver,
         private SystemPromptLoader $promptLoader,
         private StageAnalysisSummaryBuilder $summaryBuilder,
         private LoggerInterface $logger,
         private LlmAnalysisTrackerInterface $llmTracker,
         private MessageBusInterface $messageBus,
         private TripUpdatePublisherInterface $publisher,
-        #[Autowire(env: 'default::OLLAMA_STAGE_MODEL')]
-        ?string $model = null,
     ) {
-        $this->model = (null === $model || '' === $model) ? self::DEFAULT_MODEL : $model;
     }
 
     public function __invoke(AnalyzeStageWithLlmMessage $message): void
     {
-        if (!$this->llmClient->isEnabled()) {
-            $this->logger->debug('LLM disabled — skipping stage analysis.', [
+        $resolved = $this->llmResolver->resolveForTrip($message->tripId);
+        if (!$resolved instanceof ResolvedLlmClient) {
+            $this->logger->debug('AI not configured for trip owner — skipping stage analysis.', [
                 'tripId' => $message->tripId,
                 'dayNumber' => $message->dayNumber,
             ]);
@@ -129,22 +119,22 @@ final readonly class AnalyzeStageWithLlmHandler
             return;
         }
 
+        $model = $resolved->provider->analysisModel();
+
         try {
-            $response = $this->llmClient->generate(
-                model: $this->model,
+            // Options are intentionally left to provider defaults: Ollama-only knobs
+            // (format, num_predict) are not portable across cloud providers.
+            $response = $resolved->client->generate(
+                model: $model,
                 prompt: $userPrompt,
                 systemPrompt: $systemPrompt,
-                options: [
-                    // The system prompt asks for a Markdown briefing — disable Ollama's JSON mode.
-                    'format' => '',
-                    'num_predict' => self::MAX_RESPONSE_TOKENS,
-                ],
             );
-        } catch (OllamaUnavailableException $ollamaUnavailableException) {
-            $this->logger->critical('Ollama unreachable — skipping stage analysis.', [
+        } catch (AiUnavailableException $aiUnavailableException) {
+            $this->logger->critical('AI provider unreachable — skipping stage analysis.', [
                 'tripId' => $message->tripId,
                 'dayNumber' => $message->dayNumber,
-                'error' => $ollamaUnavailableException->getMessage(),
+                'reason' => $aiUnavailableException->getReason()->value,
+                'error' => $aiUnavailableException->getMessage(),
             ]);
             $this->settle($message->tripId, success: false);
 
@@ -168,7 +158,7 @@ final readonly class AnalyzeStageWithLlmHandler
             return;
         }
 
-        $analysis = $this->parseMarkdownResponse($rawText);
+        $analysis = $this->parseMarkdownResponse($rawText, $model);
 
         $this->tripStateManager->updateStageAiAnalysis(
             $message->tripId,
@@ -309,7 +299,7 @@ final readonly class AnalyzeStageWithLlmHandler
      * so the persisted DTO stays well-typed. Bullets ("- ...", "* ...") are normalised
      * into a list; the narrative section is stripped of leading/trailing whitespace.
      */
-    private function parseMarkdownResponse(string $markdown): StageAiAnalysis
+    private function parseMarkdownResponse(string $markdown, string $model): StageAiAnalysis
     {
         $sections = $this->splitMarkdownSections($markdown);
 
@@ -327,7 +317,7 @@ final readonly class AnalyzeStageWithLlmHandler
             narrative: $narrative,
             insights: $insights,
             suggestions: $suggestions,
-            model: $this->model,
+            model: $model,
             promptVersion: self::PROMPT_VERSION,
             generatedAt: new \DateTimeImmutable('now', new \DateTimeZone('UTC'))->format(\DATE_ATOM),
         );

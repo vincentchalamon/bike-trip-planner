@@ -102,7 +102,7 @@ final readonly class OllamaClient implements LlmClientInterface
                 'error' => $exception->getMessage(),
             ]);
 
-            throw new OllamaUnavailableException(\sprintf('Ollama request for model "%s" failed: %s', $model, $exception->getMessage()), $exception->getCode(), previous: $exception);
+            throw new OllamaUnavailableException(\sprintf('Ollama request for model "%s" failed: %s', $model, $exception->getMessage()), previous: $exception);
         }
     }
 

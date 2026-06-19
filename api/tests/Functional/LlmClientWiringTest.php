@@ -5,37 +5,39 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use App\Llm\LlmClientInterface;
-use App\Llm\OllamaClient;
+use App\Llm\TripLlmResolver;
+use App\Llm\TripLlmResolverInterface;
+use App\MessageHandler\AllEnrichmentsCompletedHandler;
 use App\MessageHandler\AnalyzeStageWithLlmHandler;
 use App\MessageHandler\AnalyzeTripOverviewWithLlmHandler;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
- * Guards the DI override that wires the analysis-scoped Ollama client into the
- * async analysis handlers (#564). Without this, renaming the `$llmClient`
- * constructor arg would silently fall back to the default chat-aliased client
- * and analysis would hit the chat endpoint once OLLAMA_ANALYSIS_URL diverges —
- * no compile error, no other test failure.
+ * Guards the per-user analysis wiring (ADR-042): the async handlers resolve the
+ * LLM client from the trip owner via {@see TripLlmResolverInterface}, not from a
+ * global Ollama client. A silent fallback to a different collaborator would skip
+ * AI analysis with no compile error and no other test failure.
  */
 final class LlmClientWiringTest extends ApiTestCase
 {
     #[Test]
-    public function analyzeHandlersReceiveTheAnalysisScopedClient(): void
+    public function analysisHandlersResolveTheClientPerTripOwner(): void
     {
         self::bootKernel();
         $container = self::getContainer();
 
-        $analysisClient = $container->get('app.llm.ollama_client.analysis');
-        $chatClient = $container->get(LlmClientInterface::class);
+        self::assertInstanceOf(TripLlmResolver::class, $container->get(TripLlmResolverInterface::class));
 
-        self::assertInstanceOf(OllamaClient::class, $analysisClient);
-        self::assertNotSame($chatClient, $analysisClient, 'Analysis and chat clients must be distinct instances.');
+        $handlerIds = [
+            AnalyzeStageWithLlmHandler::class,
+            AnalyzeTripOverviewWithLlmHandler::class,
+            AllEnrichmentsCompletedHandler::class,
+        ];
 
-        foreach ([AnalyzeStageWithLlmHandler::class, AnalyzeTripOverviewWithLlmHandler::class] as $handlerId) {
+        foreach ($handlerIds as $handlerId) {
             $handler = $container->get($handlerId);
-            $injected = new \ReflectionProperty($handler, 'llmClient')->getValue($handler);
-            self::assertSame($analysisClient, $injected, \sprintf('%s must receive the analysis-scoped client.', $handlerId));
+            $injected = new \ReflectionProperty($handler, 'llmResolver')->getValue($handler);
+            self::assertInstanceOf(TripLlmResolverInterface::class, $injected, \sprintf('%s must receive the per-trip LLM resolver.', $handlerId));
         }
     }
 }

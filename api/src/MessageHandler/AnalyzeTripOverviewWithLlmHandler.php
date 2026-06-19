@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Llm\ResolvedLlmClient;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Llm\Dto\StageAiAnalysis;
 use App\Llm\Dto\TripAiOverview;
-use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmAnalysisTrackerInterface;
-use App\Llm\LlmClientInterface;
 use App\Llm\SystemPromptLoader;
+use App\Llm\TripLlmResolverInterface;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTripOverviewWithLlmMessage;
 use App\Repository\TripRequestRepositoryInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 /**
@@ -29,9 +29,10 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
  * cross-stage patterns and trip-level recommendations.
  *
  * Behaviour:
- * - When Ollama is disabled (feature flag off): the handler returns silently.
- * - When the LLM is unreachable: the {@see OllamaUnavailableException} is logged
- *   and swallowed. AI overview is best-effort enrichment, never blocking.
+ * - When the trip owner has not configured an AI provider (or the AI_ENABLED
+ *   kill-switch is off): the handler returns silently.
+ * - When the LLM is unreachable: the {@see AiUnavailableException} is logged and
+ *   swallowed. AI overview is best-effort enrichment, never blocking.
  * - When the response cannot be parsed: the handler logs and skips persistence.
  * - When NO stage has a pass-1 analysis yet (e.g. every per-stage handler failed
  *   or LLM was disabled): the handler skips, since there is nothing to summarise.
@@ -49,42 +50,28 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
 
     public const int PROMPT_VERSION = 1;
 
-    public const int MAX_RESPONSE_TOKENS = 800;
-
-    public const string DEFAULT_MODEL = 'llama3.1:8b';
-
-    /**
-     * Pass 2 takes ~2000-3000 tokens of input plus ~800 tokens of output, so a
-     * 8K window leaves comfortable headroom for the system prompt.
-     */
-    public const int OVERVIEW_NUM_CTX = 8192;
-
-    private string $model;
-
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
-        private LlmClientInterface $llmClient,
+        private TripLlmResolverInterface $llmResolver,
         private SystemPromptLoader $promptLoader,
         private LoggerInterface $logger,
         private LlmAnalysisTrackerInterface $llmTracker,
         private ComputationTrackerInterface $computationTracker,
         private TripUpdatePublisherInterface $publisher,
-        #[Autowire(env: 'default::OLLAMA_OVERVIEW_MODEL')]
-        ?string $model = null,
     ) {
-        $this->model = (null === $model || '' === $model) ? self::DEFAULT_MODEL : $model;
     }
 
     public function __invoke(AnalyzeTripOverviewWithLlmMessage $message): void
     {
         $tripId = $message->tripId;
 
-        if (!$this->llmClient->isEnabled()) {
+        $resolved = $this->llmResolver->resolveForTrip($tripId);
+        if (!$resolved instanceof ResolvedLlmClient) {
             // The dispatcher (AllEnrichmentsCompletedHandler) already short-circuits
-            // and publishes TRIP_READY directly when the LLM is disabled. Reaching
-            // this handler with a disabled LLM means a stale / replayed message —
-            // skip silently to avoid a double publish.
-            $this->logger->debug('LLM disabled — skipping trip overview synthesis.', [
+            // and publishes TRIP_READY directly when AI is unavailable. Reaching this
+            // handler unconfigured means a stale / replayed message — skip silently
+            // to avoid a double publish.
+            $this->logger->debug('AI not configured for trip owner — skipping trip overview synthesis.', [
                 'tripId' => $tripId,
             ]);
 
@@ -132,22 +119,21 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
             return;
         }
 
+        $model = $resolved->provider->analysisModel();
+
         try {
-            $response = $this->llmClient->generate(
-                model: $this->model,
+            // Options are intentionally left to provider defaults: Ollama-only knobs
+            // (format, num_ctx, num_predict) are not portable across cloud providers.
+            $response = $resolved->client->generate(
+                model: $model,
                 prompt: $userPrompt,
                 systemPrompt: $systemPrompt,
-                options: [
-                    // The system prompt asks for a Markdown briefing — disable Ollama's JSON mode.
-                    'format' => '',
-                    'num_ctx' => self::OVERVIEW_NUM_CTX,
-                    'num_predict' => self::MAX_RESPONSE_TOKENS,
-                ],
             );
-        } catch (OllamaUnavailableException $ollamaUnavailableException) {
-            $this->logger->critical('Ollama unreachable — skipping trip overview synthesis.', [
+        } catch (AiUnavailableException $aiUnavailableException) {
+            $this->logger->critical('AI provider unreachable — skipping trip overview synthesis.', [
                 'tripId' => $tripId,
-                'error' => $ollamaUnavailableException->getMessage(),
+                'reason' => $aiUnavailableException->getReason()->value,
+                'error' => $aiUnavailableException->getMessage(),
             ]);
             $this->finalize($tripId, overview: null);
 
@@ -170,7 +156,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
             return;
         }
 
-        $overview = $this->parseMarkdownResponse($rawText);
+        $overview = $this->parseMarkdownResponse($rawText, $model);
 
         $this->tripStateManager->updateTripAiOverview(
             $tripId,
@@ -394,7 +380,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
      * containing keywords ("attention", "warning", "danger", "risque") is
      * additionally surfaced under crossStageAlerts.
      */
-    private function parseMarkdownResponse(string $markdown): TripAiOverview
+    private function parseMarkdownResponse(string $markdown, string $model): TripAiOverview
     {
         $sections = $this->splitMarkdownSections($markdown);
 
@@ -418,7 +404,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
             patterns: $patterns,
             recommendations: $recommendations,
             crossStageAlerts: $crossStageAlerts,
-            model: $this->model,
+            model: $model,
             promptVersion: self::PROMPT_VERSION,
             generatedAt: new \DateTimeImmutable('now', new \DateTimeZone('UTC'))->format(\DATE_ATOM),
         );

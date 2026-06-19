@@ -7,11 +7,14 @@ namespace App\Tests\Unit\Llm;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
-use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\AiProvider;
+use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
+use App\Llm\ResolvedLlmClient;
 use App\Llm\StageAnalysisSummaryBuilder;
 use App\Llm\SystemPromptLoader;
+use App\Llm\TripLlmResolverInterface;
 use App\Mercure\NullTripUpdatePublisher;
 use App\Message\AnalyzeStageWithLlmMessage;
 use App\Message\AnalyzeTripOverviewWithLlmMessage;
@@ -30,6 +33,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 final class AnalyzeStageWithLlmHandlerTest extends TestCase
 {
     private const string TRIP_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+
+    private const string ANALYSIS_MODEL = 'claude-3-7-sonnet-latest';
 
     private string $tmpPromptDir = '';
 
@@ -68,16 +73,13 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
     // -------------------------------------------------------------------------
 
     #[Test]
-    public function skipsSilentlyWhenLlmIsDisabled(): void
+    public function skipsSilentlyWhenAiIsNotConfigured(): void
     {
-        $llmClient = $this->createMock(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(false);
-
         $repo = $this->createMock(TripRequestRepositoryInterface::class);
         $repo->expects(self::never())->method('getStages');
         $repo->expects(self::never())->method('updateStageAiAnalysis');
 
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
+        $handler = $this->makeHandler(repo: $repo, resolver: $this->resolver(null));
         $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 1));
     }
 
@@ -89,11 +91,10 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         $repo->expects(self::never())->method('updateStageAiAnalysis');
 
         $llmClient = $this->createMock(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
-        // The Ollama client must NOT be called when there are no stages.
+        // The client must NOT be called when there are no stages.
         $llmClient->expects(self::never())->method('generate');
 
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
+        $handler = $this->makeHandler(repo: $repo, resolver: $this->resolver($llmClient));
         $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 1));
     }
 
@@ -105,10 +106,7 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         $repo->method('getStages')->willReturn([$stage]);
         $repo->expects(self::never())->method('updateStageAiAnalysis');
 
-        $llmClient = $this->createMock(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
-
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
+        $handler = $this->makeHandler(repo: $repo, resolver: $this->resolver($this->createStub(LlmClientInterface::class)));
         // Day number 99 — no match.
         $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 99));
     }
@@ -123,15 +121,14 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         $repo->expects(self::never())->method('updateStageAiAnalysis');
 
         $llmClient = $this->createMock(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
         $llmClient->expects(self::never())->method('generate');
 
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
+        $handler = $this->makeHandler(repo: $repo, resolver: $this->resolver($llmClient));
         $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 2));
     }
 
     #[Test]
-    public function skipsAnalysisWhenOllamaUnreachable(): void
+    public function skipsAnalysisWhenProviderUnreachable(): void
     {
         $stage = $this->makeStage(dayNumber: 1);
 
@@ -140,31 +137,13 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         $repo->expects(self::never())->method('updateStageAiAnalysis');
 
         $llmClient = $this->createMock(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
-        $llmClient->method('generate')->willThrowException(new OllamaUnavailableException('boom'));
+        $llmClient->method('generate')->willThrowException(new AiUnavailableException('boom'));
 
-        // AI enabled but Ollama unreachable must be logged at `critical` for ops alerting (#304).
+        // AI configured but provider unreachable must be logged at `critical` for ops alerting (#304).
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('critical')->with(self::stringContains('Ollama unreachable'));
+        $logger->expects(self::once())->method('critical')->with(self::stringContains('AI provider unreachable'));
 
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient, logger: $logger);
-        $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 1));
-    }
-
-    #[Test]
-    public function skipsPersistenceWhenLlmReturnsNull(): void
-    {
-        $stage = $this->makeStage(dayNumber: 1);
-
-        $repo = $this->createMock(TripRequestRepositoryInterface::class);
-        $repo->method('getStages')->willReturn([$stage]);
-        $repo->expects(self::never())->method('updateStageAiAnalysis');
-
-        $llmClient = $this->createMock(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
-        $llmClient->method('generate')->willReturn(null);
-
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
+        $handler = $this->makeHandler(repo: $repo, resolver: $this->resolver($llmClient), logger: $logger);
         $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 1));
     }
 
@@ -178,10 +157,27 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         $repo->expects(self::never())->method('updateStageAiAnalysis');
 
         $llmClient = $this->createMock(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
-        $llmClient->method('generate')->willReturn(['response' => '   ', 'done' => true]);
+        $llmClient->method('generate')->willReturn(['response' => '   ']);
 
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
+        $handler = $this->makeHandler(repo: $repo, resolver: $this->resolver($llmClient));
+        $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 1));
+    }
+
+    #[Test]
+    public function skipsPersistenceWhenClientReturnsNull(): void
+    {
+        // A client may still return null per the interface contract (e.g. a disabled
+        // OllamaClient configured as the provider); the handler must not persist.
+        $stage = $this->makeStage(dayNumber: 1);
+
+        $repo = $this->createMock(TripRequestRepositoryInterface::class);
+        $repo->method('getStages')->willReturn([$stage]);
+        $repo->expects(self::never())->method('updateStageAiAnalysis');
+
+        $llmClient = $this->createMock(LlmClientInterface::class);
+        $llmClient->method('generate')->willReturn(null);
+
+        $handler = $this->makeHandler(repo: $repo, resolver: $this->resolver($llmClient));
         $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 1));
     }
 
@@ -190,7 +186,7 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
     // -------------------------------------------------------------------------
 
     #[Test]
-    public function buildsCompactJsonSummaryAndCallsOllamaWithSystemPrompt(): void
+    public function buildsCompactJsonSummaryAndCallsTheProviderModelWithSystemPrompt(): void
     {
         $stage = $this->makeStage(dayNumber: 3);
 
@@ -200,27 +196,25 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         $repo->expects(self::once())->method('updateStageAiAnalysis');
 
         $llmClient = $this->createMock(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
 
         $captured = [];
         $llmClient->expects(self::once())
             ->method('generate')
-            ->willReturnCallback(static function (string $model, string $prompt, ?string $systemPrompt, array $options) use (&$captured): array {
+            ->willReturnCallback(static function (string $model, string $prompt, ?string $systemPrompt = null, array $options = []) use (&$captured): array {
                 $captured['model'] = $model;
                 $captured['prompt'] = $prompt;
                 $captured['systemPrompt'] = $systemPrompt;
-                $captured['options'] = $options;
 
                 return [
                     'response' => "## Synthèse\nA short narrative.\n\n## Insights\n- First insight\n\n## Recommandations\n- Drink more water\n",
-                    'done' => true,
                 ];
             });
 
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
+        $handler = $this->makeHandler(repo: $repo, resolver: $this->resolver($llmClient));
         $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 3));
 
-        self::assertSame(AnalyzeStageWithLlmHandler::DEFAULT_MODEL, $captured['model']);
+        // The model comes from the resolved provider, not an Ollama env.
+        self::assertSame(self::ANALYSIS_MODEL, $captured['model']);
 
         // The user prompt MUST be a valid compact JSON dump of the stage summary.
         self::assertIsString($captured['prompt']);
@@ -231,10 +225,6 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         // System prompt must have placeholders substituted (no remaining {{...}}).
         self::assertIsString($captured['systemPrompt']);
         self::assertStringNotContainsString('{{', $captured['systemPrompt']);
-
-        // Format must be disabled (markdown response, not JSON-mode).
-        self::assertIsArray($captured['options']);
-        self::assertSame('', $captured['options']['format']);
     }
 
     #[Test]
@@ -267,10 +257,9 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
             MD;
 
         $llmClient = $this->createMock(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
-        $llmClient->method('generate')->willReturn(['response' => $markdown, 'done' => true]);
+        $llmClient->method('generate')->willReturn(['response' => $markdown]);
 
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
+        $handler = $this->makeHandler(repo: $repo, resolver: $this->resolver($llmClient));
         $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 2));
 
         self::assertSame(self::TRIP_ID, $captured['tripId']);
@@ -283,7 +272,7 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         self::assertSame('Long segment sans eau de 45 km.', $analysis['insights'][0]);
         self::assertCount(2, $analysis['suggestions']);
         self::assertSame("Faire le plein d'eau à Florac.", $analysis['suggestions'][0]);
-        self::assertSame(AnalyzeStageWithLlmHandler::DEFAULT_MODEL, $analysis['model']);
+        self::assertSame(self::ANALYSIS_MODEL, $analysis['model']);
         self::assertSame(AnalyzeStageWithLlmHandler::PROMPT_VERSION, $analysis['promptVersion']);
         self::assertNotSame('', $analysis['generatedAt']);
     }
@@ -304,13 +293,11 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
             });
 
         $llmClient = $this->createMock(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
         $llmClient->method('generate')->willReturn([
             'response' => 'Just a plain text answer with no markdown headings at all.',
-            'done' => true,
         ]);
 
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
+        $handler = $this->makeHandler(repo: $repo, resolver: $this->resolver($llmClient));
         $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 1));
 
         self::assertIsArray($captured);
@@ -335,13 +322,11 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
             });
 
         $llmClient = $this->createMock(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
         $llmClient->method('generate')->willReturn([
             'message' => ['role' => 'assistant', 'content' => "## Synthèse\nText.\n\n## Insights\n- A\n\n## Recommandations\n- B"],
-            'done' => true,
         ]);
 
-        $handler = $this->makeHandler(repo: $repo, llmClient: $llmClient);
+        $handler = $this->makeHandler(repo: $repo, resolver: $this->resolver($llmClient));
         $handler(new AnalyzeStageWithLlmMessage(self::TRIP_ID, 4));
 
         self::assertIsArray($captured);
@@ -361,10 +346,8 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
         $repo->method('updateStageAiAnalysis');
 
         $llmClient = $this->createMock(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
         $llmClient->method('generate')->willReturn([
             'response' => "## Synthèse\nOK.",
-            'done' => true,
         ]);
 
         $messageBus = $this->createMock(MessageBusInterface::class);
@@ -375,7 +358,7 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
 
         $handler = $this->makeHandler(
             repo: $repo,
-            llmClient: $llmClient,
+            resolver: $this->resolver($llmClient),
             claimsOverviewDispatch: true,
             messageBus: $messageBus,
         );
@@ -386,15 +369,24 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
     // Helpers
     // -------------------------------------------------------------------------
 
+    private function resolver(?LlmClientInterface $client): TripLlmResolverInterface
+    {
+        $resolver = $this->createMock(TripLlmResolverInterface::class);
+        $resolver->method('resolveForTrip')->willReturn(
+            $client instanceof LlmClientInterface ? new ResolvedLlmClient($client, AiProvider::ANTHROPIC) : null,
+        );
+
+        return $resolver;
+    }
+
     /**
      * @param TripRequestRepositoryInterface&MockObject $repo
-     * @param LlmClientInterface&MockObject             $llmClient
      * @param (MessageBusInterface&MockObject)|null     $messageBus override the bus when the test asserts pass-2 dispatch
      * @param (LoggerInterface&MockObject)|null         $logger     override the logger when the test asserts a log level
      */
     private function makeHandler(
         TripRequestRepositoryInterface $repo,
-        LlmClientInterface $llmClient,
+        TripLlmResolverInterface $resolver,
         bool $claimsOverviewDispatch = false,
         ?MessageBusInterface $messageBus = null,
         ?LoggerInterface $logger = null,
@@ -405,7 +397,7 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
 
         return new AnalyzeStageWithLlmHandler(
             tripStateManager: $repo,
-            llmClient: $llmClient,
+            llmResolver: $resolver,
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
             summaryBuilder: new StageAnalysisSummaryBuilder(),
             logger: $logger ?? new NullLogger(),

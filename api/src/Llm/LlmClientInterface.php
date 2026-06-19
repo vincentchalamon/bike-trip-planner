@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Llm;
 
-use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\Exception\AiUnavailableException;
 
 /**
  * LLM client abstraction (Dependency Inversion Principle).
@@ -33,7 +33,7 @@ interface LlmClientInterface
      *
      * @return array<string, mixed>|null parsed JSON response, or null when the client is disabled
      *
-     * @throws OllamaUnavailableException when the LLM is enabled but unreachable or returns an invalid response
+     * @throws AiUnavailableException when the provider is reachable-but-failing or returns an invalid response
      */
     public function generate(string $model, string $prompt, ?string $systemPrompt = null, array $options = []): ?array;
 
@@ -47,7 +47,7 @@ interface LlmClientInterface
      *
      * @return array<string, mixed>|null parsed JSON response, or null when the client is disabled
      *
-     * @throws OllamaUnavailableException when the LLM is enabled but unreachable or returns an invalid response
+     * @throws AiUnavailableException when the provider is reachable-but-failing or returns an invalid response
      */
     public function chat(string $model, array $messages, ?string $systemPrompt = null, array $options = []): ?array;
 }
