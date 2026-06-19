@@ -44,7 +44,7 @@
     "@capacitor/cli": "^7.6.2",
     "@eslint/eslintrc": "^3.3.5",
     "@lhci/cli": "^0.15.1",
-    "@playwright/test": "^1.60.0",
+    "@playwright/test": "1.60.0",
     "@tailwindcss/postcss": "^4.2.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -69,6 +69,7 @@
     "tmp": "^0.2.6",
     "hono": "^4.12.25",
     "postcss": "^8.5.15",
+    "playwright-core": "1.60.0",
     "jsdom": {
       "undici": "^7.28.0"
     }
