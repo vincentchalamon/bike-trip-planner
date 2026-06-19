@@ -2,20 +2,22 @@ import { test, expect } from "../fixtures/base.fixture";
 import { mockAllApis } from "../fixtures/api-mocks";
 
 /**
- * Issue #304 — explicit degraded-mode gating of the AI features.
+ * Issue #304 / ADR-042 — explicit gating of the AI features.
  *
- * `NEXT_PUBLIC_AI_ENABLED` defaults to enabled and runtime availability comes
- * from `/api/health`. To pin all three states deterministically — and prod-safely,
- * since the E2E build hides `window.__zustand_ui_store` — the tests drive the
- * capability via the `__test_set_ai_capability` CustomEvent:
- *  - enabled + reachable   → AI features active
- *  - enabled + unreachable → features disabled with an explicit notice
- *  - disabled by config    → features hidden (no notice)
+ * AI is per-user (no build-time env gate): the controls are always present and
+ * driven solely by runtime signals. Availability comes from `/api/health`, and
+ * `configured` from the account `GET /users/me/ai-settings`. To pin the states
+ * deterministically — and prod-safely, since the E2E build hides
+ * `window.__zustand_ui_store` — the tests drive the capability via the
+ * `__test_set_ai_capability` CustomEvent:
+ *  - reachable + configured   → AI features active
+ *  - unreachable              → features disabled with an explicit notice
+ *  - not configured           → disabled-but-visible with a configure CTA
  */
 
 function setAiCapability(
   page: import("@playwright/test").Page,
-  capability: { enabled: boolean; available: boolean; configured?: boolean },
+  capability: { available: boolean; configured?: boolean },
 ): Promise<void> {
   return page.evaluate((detail) => {
     window.dispatchEvent(
@@ -30,7 +32,7 @@ test.describe("AI capabilities gating (#304)", () => {
     mockedPage,
   }) => {
     await createFullTrip();
-    await setAiCapability(mockedPage, { enabled: true, available: true });
+    await setAiCapability(mockedPage, { available: true });
 
     const bubble = mockedPage.getByTestId("ai-bubble");
     await expect(bubble).toBeVisible();
@@ -43,12 +45,12 @@ test.describe("AI capabilities gating (#304)", () => {
     await expect(mockedPage.getByTestId("ai-chat-panel")).toBeVisible();
   });
 
-  test("tier enabled but unreachable: the assistant is disabled and the notice shows", async ({
+  test("tier unreachable: the assistant is disabled and the notice shows", async ({
     createFullTrip,
     mockedPage,
   }) => {
     await createFullTrip();
-    await setAiCapability(mockedPage, { enabled: true, available: false });
+    await setAiCapability(mockedPage, { available: false });
 
     const bubble = mockedPage.getByTestId("ai-bubble");
     await expect(bubble).toBeVisible();
@@ -63,25 +65,27 @@ test.describe("AI capabilities gating (#304)", () => {
     await expect(mockedPage.getByTestId("ai-unavailable-notice")).toBeVisible();
   });
 
-  test("disabled by config: AI features are hidden with no notice", async ({
+  test("not configured: the assistant is visible-but-disabled with a configure CTA", async ({
     createFullTrip,
     mockedPage,
   }) => {
     await createFullTrip();
-    await setAiCapability(mockedPage, { enabled: false, available: false });
+    await setAiCapability(mockedPage, { available: true, configured: false });
 
-    await expect(mockedPage.getByTestId("ai-bubble")).toHaveCount(0);
-    await expect(mockedPage.getByTestId("ai-unavailable-notice")).toHaveCount(
-      0,
-    );
+    const bubble = mockedPage.getByTestId("ai-bubble");
+    await expect(bubble).toBeVisible();
+    await expect(bubble).toHaveAttribute("data-not-configured", "");
+    await expect(
+      mockedPage.getByTestId("ai-not-configured-notice"),
+    ).toBeVisible();
   });
 });
 
 /**
- * Same three states for the Acte 1 AI generation card (card-selection): hidden
- * when AI is off by config, disabled with an inline notice when enabled but the
- * LLM tier is unreachable, active otherwise. Availability is driven via the
- * mocked `/api/health` probe; the build-time "disabled" state via the test hook.
+ * Same states for the Acte 1 AI generation card (card-selection): always
+ * visible, disabled with an inline notice when the LLM tier is unreachable or no
+ * provider is configured, active otherwise. Availability is driven via the
+ * mocked `/api/health` probe; `configured` via the account mock.
  */
 test.describe("AI generation card gating (#304)", () => {
   test("tier reachable: the generation card is active and expands to the chat", async ({
@@ -99,7 +103,7 @@ test.describe("AI generation card gating (#304)", () => {
     await expect(page.getByTestId("ai-chat-card")).toBeVisible();
   });
 
-  test("tier enabled but unreachable: the generation card is disabled with a notice", async ({
+  test("tier unreachable: the generation card is disabled with a notice", async ({
     page,
   }) => {
     await mockAllApis(page, { aiAvailable: false });
@@ -116,21 +120,15 @@ test.describe("AI generation card gating (#304)", () => {
     await expect(page.getByTestId("ai-chat-card")).toHaveCount(0);
   });
 
-  test("disabled by config: the generation card is hidden", async ({ page }) => {
+  test("always visible: the generation card stays present alongside the link card", async ({
+    page,
+  }) => {
     await mockAllApis(page);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    // Build-time AI_ENABLED can't be flipped at runtime; drive it via the hook.
-    await page.evaluate(() =>
-      window.dispatchEvent(
-        new CustomEvent("__test_set_ai_capability", {
-          detail: { enabled: false, available: false },
-        }),
-      ),
-    );
-
-    await expect(page.getByTestId("card-ai")).toHaveCount(0);
+    // AI is per-user (no env gate): the card is always rendered.
+    await expect(page.getByTestId("card-ai")).toBeVisible();
     await expect(page.getByTestId("card-link")).toBeVisible();
   });
 
@@ -175,7 +173,6 @@ test.describe("AI not-configured gating (ADR-042)", () => {
   }) => {
     await createFullTrip();
     await setAiCapability(mockedPage, {
-      enabled: true,
       available: true,
       configured: false,
     });

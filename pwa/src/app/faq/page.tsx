@@ -36,6 +36,14 @@ export default async function FaqPage() {
         { question: t("q9"), answer: t("a9") },
       ],
     },
+    {
+      id: "ai",
+      label: t("categoryAi"),
+      items: [
+        { question: t("q10"), answer: t("a10") },
+        { question: t("q11"), answer: t("a11") },
+      ],
+    },
   ];
 
   return (

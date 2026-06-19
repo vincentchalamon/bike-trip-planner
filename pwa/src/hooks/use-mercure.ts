@@ -517,15 +517,11 @@ function dispatchEvent(event: MercureEvent): void {
         event.data.aiOverview,
       );
       store.setAiOverview(parsedOverview.success ? parsedOverview.data : null);
-      // If AI is enabled and looked reachable at mount but no overview arrived, the
-      // tier may have gone down mid-Phase 2. Re-probe so the UI can explicitly flag
-      // the outage instead of silently showing no analysis (#304).
+      // If AI looked reachable at mount but no overview arrived, the tier may
+      // have gone down mid-Phase 2. Re-probe so the UI can explicitly flag the
+      // outage instead of silently showing no analysis (#304).
       const ui = useUiStore.getState();
-      if (
-        ui.aiCapability.enabled &&
-        ui.aiCapability.available &&
-        !parsedOverview.success
-      ) {
+      if (ui.aiCapability.available && !parsedOverview.success) {
         void fetchAiAvailability().then((available) =>
           ui.setAiAvailable(available),
         );

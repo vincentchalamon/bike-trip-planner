@@ -1015,6 +1015,7 @@
     "categoryProject": "Le projet",
     "categoryHowItWorks": "Fonctionnement",
     "categoryAccess": "Accès",
+    "categoryAi": "Assistant IA",
     "q1": "Qu'est-ce qui différencie Bike Trip Planner de Komoot ou RideWithGPS ?",
     "a1": "Komoot et RideWithGPS sont des plateformes de navigation GPS. Bike Trip Planner est un outil de planification d'itinéraire multi-étapes : il découpe automatiquement votre parcours en étapes journalières en tenant compte de votre profil cycliste (vitesse, fatigue accumulée, dénivelé), suggère des hébergements au point d'arrivée de chaque étape, et génère des alertes contextuelles (météo, ravitaillement, services de santé, etc.). Il complète vos outils de navigation plutôt qu'il ne les remplace.",
     "q2": "Pourquoi utiliser cet outil plutôt que de planifier manuellement sur une carte ?",
@@ -1032,7 +1033,11 @@
     "q8": "Comment obtenir un accès à l'application ?",
     "a8": "L'application utilise un système de connexion par lien magique : entrez votre adresse email sur la page de connexion et vous recevrez un lien de connexion sécurisé. Aucun mot de passe n'est requis.",
     "q9": "L'application est-elle gratuite et open source ?",
-    "a9": "Le code source est open source et disponible sur GitHub. L'application hébergée est accessible gratuitement. Des coûts d'infrastructure peuvent à terme justifier une offre freemium, mais aucun accès payant n'est prévu à ce stade."
+    "a9": "Le code source est open source et disponible sur GitHub. L'application hébergée est accessible gratuitement. Des coûts d'infrastructure peuvent à terme justifier une offre freemium, mais aucun accès payant n'est prévu à ce stade.",
+    "q10": "Comment activer l'assistant IA ?",
+    "a10": "L'assistant IA s'active depuis les réglages de votre compte : choisissez un fournisseur (Anthropic/Claude, Google/Gemini ou OpenAI) et renseignez votre propre clé API. Tant qu'aucune clé n'est fournie, l'IA reste désactivée et les fonctionnalités correspondantes s'affichent en mode désactivé.",
+    "q11": "Mes données sont-elles partagées avec l'IA ?",
+    "a11": "Uniquement si vous activez l'IA. Dans ce cas, vos données de voyage sont envoyées au fournisseur que vous avez choisi, avec votre propre clé API (facturée sur votre compte). Votre clé est chiffrée et n'est jamais partagée d'aucune autre manière. Vous pouvez la retirer à tout moment depuis les réglages du compte."
   },
   "events": {
     "type_festival": "Festival",

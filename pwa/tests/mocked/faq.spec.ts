@@ -26,12 +26,12 @@ test.describe("/faq page", () => {
     await expect(page.getByTestId("section-footer")).toBeVisible();
   });
 
-  test("displays all three FAQ categories", async ({ page }) => {
+  test("displays all four FAQ categories", async ({ page }) => {
     await page.goto("/faq");
     await page.waitForLoadState("networkidle");
 
     const headings = page.getByRole("heading", { level: 2 });
-    await expect(headings).toHaveCount(3);
+    await expect(headings).toHaveCount(4);
   });
 
   test("accordion items are collapsed by default", async ({ page }) => {

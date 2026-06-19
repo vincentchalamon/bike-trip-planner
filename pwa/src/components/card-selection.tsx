@@ -115,12 +115,11 @@ export function CardSelection({
           />
         )}
 
-        {/* Card: AI Assistant — multi-turn chat shell (#392). Gated on AI
-            availability: hidden when AI is off by config (#304), disabled with
-            an inline notice when enabled but the LLM tier is unreachable, or
-            disabled-but-visible with a "Configurez une IA" CTA when no provider
-            is set on the account (ADR-042). */}
-        {aiCapability.enabled && (selected === null || selected === "ai") && (
+        {/* Card: AI Assistant — multi-turn chat shell (#392). Always visible:
+            disabled with an inline notice when the LLM tier is unreachable
+            (#304), or disabled-but-visible with a "Configurez une IA" CTA when
+            no provider is set on the account (ADR-042). */}
+        {(selected === null || selected === "ai") && (
           <AiCard
             expanded={selected === "ai"}
             disabled={disabled}
