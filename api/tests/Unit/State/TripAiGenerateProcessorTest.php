@@ -82,8 +82,14 @@ final class TripAiGenerateProcessorTest extends TestCase
         // First call consumes the only token.
         $processor->process(new TripAiGenerateRequest('boucle au départ de Lille'), new Post());
 
-        $this->expectException(TooManyRequestsHttpException::class);
-        $processor->process(new TripAiGenerateRequest('boucle au départ de Tours'), new Post());
+        try {
+            $processor->process(new TripAiGenerateRequest('boucle au départ de Tours'), new Post());
+            self::fail('Expected TooManyRequestsHttpException.');
+        } catch (TooManyRequestsHttpException $tooManyRequestsHttpException) {
+            // The 429 must carry a Retry-After header so clients can back off.
+            self::assertArrayHasKey('Retry-After', $tooManyRequestsHttpException->getHeaders());
+            self::assertGreaterThanOrEqual(0, $tooManyRequestsHttpException->getHeaders()['Retry-After']);
+        }
     }
 
     private function newProcessor(
