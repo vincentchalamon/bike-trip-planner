@@ -335,6 +335,11 @@ export function TripPlanner({
       completeStep("preview");
       completeStep("analysis");
       goToStep("my_trip");
+      // Reaching the final state clears the Acte 2 flag so the creation
+      // progress bar / Acte 2 screen can't linger. trip_ready already resets
+      // it, but an interrupted analysis (e.g. a validation_error during Acte 2)
+      // leaves it true; my_trip is the authoritative "analysis is over" point.
+      useUiStore.getState().setAnalysisPhaseActive(false);
     } else if (trip && stages.length === 0) {
       // Trip identity loaded but no stages yet: preview state (loading).
       completeStep("preparation");

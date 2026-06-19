@@ -5,6 +5,7 @@ import {
   routeParsedEvent,
   stagesComputedEvent,
   tripReadyEvent,
+  validationErrorEvent,
 } from "../fixtures/mock-data";
 import type { MercureEvent } from "../../src/lib/mercure/types";
 
@@ -40,6 +41,32 @@ async function enterAnalysingState(
     timeout: 5000,
   });
 }
+
+test.describe("ProcessingProgress — interrupted analysis clears the Acte 2 flag", () => {
+  // Regression (#10): a validation_error during Acte 2 stops processing but used
+  // to leave `isAnalysisPhaseActive` true at the final state, keeping the
+  // creation progress bar / AI bubble in a confusing state. Reaching `my_trip`
+  // must reset the flag.
+  test("a validation_error during analysis returns to the loaded trip with the AI bubble restored", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await enterAnalysingState(submitUrl, injectEvent, mockedPage);
+
+    await injectEvent(validationErrorEvent());
+
+    // The Acte 2 progress screen is gone...
+    await expect(mockedPage.getByTestId("processing-progress")).toHaveCount(0, {
+      timeout: 5000,
+    });
+    // ...and the AI bubble (hidden while isAnalysisPhaseActive is true) is back,
+    // proving the final state reset the flag.
+    await expect(mockedPage.getByTestId("ai-bubble")).toBeVisible({
+      timeout: 5000,
+    });
+  });
+});
 
 test.describe("ProcessingProgress — display", () => {
   test("renders the six narrative categories during analysis", async ({
