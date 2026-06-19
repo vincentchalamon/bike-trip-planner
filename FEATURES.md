@@ -25,7 +25,7 @@ Inventaire complet des fonctionnalités de **Bike Trip Planner** — livrées et
 | ✅ | Import URL RideWithGPS | `ridewithgps.com/routes/{id}` |
 | ✅ | Création via query param `?link=...` | Démarrage direct depuis un lien partagé. Sprint 9 |
 | ✅ | Card Selection mutuellement exclusive | 3 cartes : Lien / GPX / Assistant IA (IA grisée « bientôt »). Sprint 22 |
-| 📅 | Génération d'itinéraire par IA | LLaMA 3B génère un tracé à partir d'une description texte. Sprint 28 / Hors sprint #67 |
+| 📅 | Génération d'itinéraire par IA | L'IA génère un tracé à partir d'une description texte (modèle du fournisseur). Sprint 28 / Hors sprint #67 |
 
 ### Wizard 4 étapes
 
@@ -54,7 +54,7 @@ Inventaire complet des fonctionnalités de **Bike Trip Planner** — livrées et
 | ✅ | Insertion jours de repos | Décale les dates des étapes suivantes. Sprint 4 |
 | ✅ | Dates de voyage | Picker start/end, influence météo et événements |
 | ✅ | Panneau de configuration latéral | Drawer accessible depuis le roadbook. Sprint 4 |
-| ✅ | Affinage par IA (prompt texte) | Text area pour demander ajustements (LLaMA). Sprint 27 |
+| ✅ | Affinage par IA (prompt texte) | Text area pour demander ajustements (modèle de chat du fournisseur). Sprint 27 |
 
 ---
 
@@ -169,7 +169,7 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Events panel | Fêtes, jours fériés, festivals datés |
 | ✅ | Téléchargements par étape | GPX, GeoJSON, texte |
 | ✅ | Export FIT par étape | Format Garmin natif (`FitEncoder`/`FitNormalizer`). Sprint 31 |
-| ✅ | Résumé IA par étape | Narratif + insights + suggestions, LLaMA 8B passe 1 (`StageAiSummary`). Sprint 27 #306 |
+| ✅ | Résumé IA par étape | Narratif + insights + suggestions, passe 1 d'analyse (`StageAiSummary`). Sprint 27 #306 |
 | 📅 | Shimmer/skeleton recalcul | État visuel pendant recomputation. Sprint 24 |
 | 📅 | Diff post-recalcul | Surbrillance des changements. Sprint 24 |
 
@@ -346,41 +346,43 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 
 ## 11. Intelligence artificielle
 
-> Pile IA auto-hébergée via Ollama (`symfony/ai`, ADR-028 / ADR-030). Dégradation gracieuse : sans Ollama, les résumés IA sont masqués et les alertes restent affichées.
+> IA **optionnelle, multi-fournisseur, à clé personnelle** (`symfony/ai-platform`, **ADR-042**). L'IA est activée par utilisateur en configurant un fournisseur (Anthropic/Claude, Google/Gemini, OpenAI) et son propre token dans les réglages du compte ; il n'y a pas de toggle d'environnement. Token chiffré au repos. Dégradation gracieuse : sans clé (ou clé invalide / quota / fournisseur indisponible), les résumés IA sont masqués et les alertes restent affichées. L'ancienne pile Ollama auto-hébergée (ADR-028 / ADR-030) est retirée.
 
 ### Fondations backend
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| ✅ | Service OllamaClient PHP | Client HTTP vers Ollama (`Llm/OllamaClient`). Sprint 25 #298 |
+| ✅ | IA optionnelle multi-fournisseur (BYO token) | `PlatformLlmClient` + `LlmClientFactory` par-utilisateur (Anthropic/Gemini/OpenAI). ADR-042 |
+| ✅ | Token IA chiffré + API compte | `AiTokenEncryptor` (libsodium) + `/users/me/ai-settings`. ADR-042 |
+| ✅ | Taxonomie d'erreurs + mode dégradé | `AiFailureReason` + `AiErrorClassifier` (token invalide / quota / rate-limit / indisponible). ADR-042 |
 | ✅ | Gate mechanism | Blocage/déblocage dans ComputationTracker (`LlmAnalysisTracker`). Sprint 25 #299 |
-| ✅ | System prompts cyclotourisme versionnés | Template FR/EN LLaMA 8B. Sprint 25 #300 |
-| ✅ | Docker Ollama | Container dédié. ADR-028 |
-| ✅ | Adoption `symfony/ai` | Platform Ollama (tool-calling désactivé sur le 3B). ADR-030 |
+| ✅ | System prompts cyclotourisme versionnés | Template FR/EN. Sprint 25 #300 |
+| ✅ | Adoption `symfony/ai` | `symfony/ai-platform` + bridges cloud (ADR-030, migré en ADR-042). |
+| 🗑️ | Service OllamaClient + Docker Ollama | Retiré (ADR-042) ; remplacé par les bridges cloud par-utilisateur. Anciennement Sprint 25 #298 / ADR-028 |
 
-### Analyse 2 passes (LLaMA 8B)
+### Analyse 2 passes (IA — modèle d'analyse du fournisseur)
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
 | ✅ | Passe 1 — analyse par étape | Message Messenger parallélisable (`AnalyzeStageWithLlmHandler`). Sprint 26 #301 |
 | ✅ | Passe 2 — vue d'ensemble du trip | Résumé global (`AnalyzeTripOverviewWithLlmHandler`). Sprint 26 #302 |
-| ✅ | Pipeline gate → LLaMA → TRIP_READY | Orchestration Mercure. Sprint 26 #303 |
-| ✅ | Fallback gracieux sans Ollama | Dégradation propre (`OllamaUnavailableException`). Sprint 26 #304 |
+| ✅ | Pipeline gate → IA → TRIP_READY | Orchestration Mercure. Sprint 26 #303 |
+| ✅ | Fallback gracieux sans IA | Dégradation propre (`AiUnavailableException` + raison). Sprint 26 #304 / ADR-042 |
 
 ### Frontend IA
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| ✅ | Résumé IA global dans Mon voyage | Passe 2 LLaMA 8B (`TripAiOverview`). Sprint 27 #305 |
+| ✅ | Résumé IA global dans Mon voyage | Passe 2 d'analyse (`TripAiOverview`). Sprint 27 #305 |
 | ✅ | Résumé IA par étape + layout hybride | Résumé + alertes repliables (`StageAiSummary`). Sprint 27 #306 |
 | ✅ | Bandeau « Actualiser l'analyse IA » | Si différé ou désactivé. Sprint 27 #307 |
-| ✅ | Fallback frontend sans LLaMA | Alertes dépliées, résumé masqué. Sprint 27 #308 |
+| ✅ | Fallback frontend sans IA | Alertes dépliées, résumé masqué. Sprint 27 #308 |
 
-### Bulle IA conversationnelle (LLaMA 3B)
+### Bulle IA conversationnelle (modèle de chat du fournisseur)
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| ✅ | Endpoint chat IA | LLaMA 3B context-aware. Sprint 28 #309 |
+| ✅ | Endpoint chat IA | Context-aware (modèle de chat du fournisseur). Sprint 28 #309 |
 | ✅ | Composant AiBubble | Bulle flottante + panneau chat. Sprint 28 #310 |
 | ✅ | Intégration ↔ recomputation inline | `skipAiAnalysis` flag. Sprint 28 #311 |
 | ✅ | Chat in-ride (POI à proximité) | Détection d'intention + calcul de détour avec géolocalisation (`InRide/*`), historique persisté (`TripChatMessage`). Sprint 32 |
