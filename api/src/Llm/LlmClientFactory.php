@@ -18,7 +18,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * since the token is per-user. Each provider's `symfony/ai-platform` bridge gets
  * the matching scoped HTTP client (timeout / User-Agent / SSRF scope).
  */
-final readonly class LlmClientFactory
+final readonly class LlmClientFactory implements UserLlmResolverInterface
 {
     public function __construct(
         private HttpClientInterface $anthropicClient,

@@ -20,7 +20,10 @@ use App\InRide\OpeningHoursParser;
 use App\InRide\PoiIntentDetector;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
+use App\Llm\AiProvider;
 use App\Llm\LlmClientInterface;
+use App\Llm\ResolvedLlmClient;
+use App\Llm\UserLlmResolverInterface;
 use App\Llm\SystemPromptLoader;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
@@ -103,7 +106,6 @@ final class TripChatPlanningRegressionTest extends TestCase
         ], \JSON_THROW_ON_ERROR);
 
         $llm = $this->createMock(LlmClientInterface::class);
-        $llm->method('isEnabled')->willReturn(true);
         $llm->method('chat')->willReturn([
             'message' => ['role' => 'assistant', 'content' => $envelope],
         ]);
@@ -168,19 +170,21 @@ final class TripChatPlanningRegressionTest extends TestCase
 
         $distance = new HaversineDistance();
         $inRideAssistant = new InRideAssistant(
-            intentDetector: new PoiIntentDetector($llm),
+            intentDetector: new PoiIntentDetector(),
             poiRepository: $poiRepository,
             openingHoursParser: new OpeningHoursParser(),
             detourCalculator: new DetourCalculator($distance),
             deeplinkBuilder: new DeeplinkBuilder(),
             distance: $distance,
-            llmClient: $llm,
             promptLoader: $promptLoader,
         );
 
+        $clientFactory = $this->createStub(UserLlmResolverInterface::class);
+        $clientFactory->method('forUser')->willReturn(new ResolvedLlmClient($llm, AiProvider::ANTHROPIC));
+
         return new TripChatProcessor(
             tripStateManager: $repository,
-            llmClient: $llm,
+            clientFactory: $clientFactory,
             promptLoader: $promptLoader,
             interpreter: new ChatActionInterpreter(new NullLogger()),
             historyStore: $historyStore,

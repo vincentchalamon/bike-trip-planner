@@ -13,8 +13,10 @@ use App\InRide\InRidePoiRepositoryInterface;
 use App\InRide\OpeningHoursParser;
 use App\InRide\PoiIntentDetector;
 use App\InRide\PoiSuggestion;
-use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\AiProvider;
+use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmClientInterface;
+use App\Llm\ResolvedLlmClient;
 use App\Llm\SystemPromptLoader;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\Test;
@@ -66,11 +68,12 @@ final class InRideAssistantTest extends TestCase
         $poiRepository = $this->createMock(InRidePoiRepositoryInterface::class);
         $poiRepository->expects($this->never())->method('findNearby');
 
-        $assistant = $this->buildAssistant($llm, $poiRepository);
+        $assistant = $this->buildAssistant($poiRepository);
 
         $response = $assistant->assist(
             message: 'Quel temps fait-il ?',
             position: new GeoPosition(50.8503, 4.3517),
+            resolved: $this->resolved($llm),
         );
 
         $this->assertSame(PoiSuggestion::CATEGORY_UNKNOWN, $response->category);
@@ -105,11 +108,12 @@ final class InRideAssistantTest extends TestCase
             ['lat' => 50.8509, 'lon' => 4.3527, 'tags' => ['name' => 'Fontaine Centrale']],
         ]);
 
-        $assistant = $this->buildAssistant($llm, $poiRepository);
+        $assistant = $this->buildAssistant($poiRepository);
 
         $response = $assistant->assist(
             message: "Je cherche un point d'eau",
             position: new GeoPosition(50.8503, 4.3517),
+            resolved: $this->resolved($llm),
         );
 
         $this->assertSame(PoiSuggestion::CATEGORY_WATER, $response->category);
@@ -141,12 +145,13 @@ final class InRideAssistantTest extends TestCase
             ['lat' => 50.8510, 'lon' => 4.3525, 'tags' => ['name' => 'Frites 24/7', 'opening_hours' => '24/7']],
         ]);
 
-        $assistant = $this->buildAssistant($llm, $poiRepository);
+        $assistant = $this->buildAssistant($poiRepository);
 
         // Sunday 14:00 UTC — outside the Mo-Fr 09:00-12:00 window of the first POI.
         $response = $assistant->assist(
             message: 'Je veux des frites',
             position: new GeoPosition(50.8503, 4.3517),
+            resolved: $this->resolved($llm),
             now: new \DateTimeImmutable('2024-06-09 14:00:00', new \DateTimeZone('UTC')),
         );
 
@@ -179,11 +184,12 @@ final class InRideAssistantTest extends TestCase
             ];
         }
 
-        $assistant = $this->buildAssistant($llm, $this->poiRepository($features));
+        $assistant = $this->buildAssistant($this->poiRepository($features));
 
         $response = $assistant->assist(
             message: 'Restaurant',
             position: new GeoPosition(50.8503, 4.3517),
+            resolved: $this->resolved($llm),
         );
 
         $this->assertCount(3, $response->pois);
@@ -202,11 +208,12 @@ final class InRideAssistantTest extends TestCase
             ],
         );
 
-        $assistant = $this->buildAssistant($llm, $this->poiRepository([]));
+        $assistant = $this->buildAssistant($this->poiRepository([]));
 
         $response = $assistant->assist(
             message: 'Un abri pour la pluie',
             position: new GeoPosition(50.8503, 4.3517),
+            resolved: $this->resolved($llm),
         );
 
         $this->assertSame(PoiSuggestion::CATEGORY_SHELTER, $response->category);
@@ -215,16 +222,16 @@ final class InRideAssistantTest extends TestCase
     }
 
     #[Test]
-    public function logsAtCriticalWhenOllamaUnreachableForNarrative(): void
+    public function logsAtCriticalWhenProviderUnreachableForNarrative(): void
     {
         // Intent classification succeeds (user message) but the narrative call
-        // (JSON payload) hits an unreachable tier — it must log `critical` and
+        // (JSON payload) hits an unreachable provider — it must log `critical` and
         // still serve the fallback narrative (#304).
         $llm = $this->createMock(LlmClientInterface::class);
         $llm->method('generate')->willReturnCallback(
             static function (string $model, string $prompt): array {
                 if (str_starts_with(trim($prompt), '{')) {
-                    throw new OllamaUnavailableException('boom');
+                    throw new AiUnavailableException('boom');
                 }
 
                 return ['response' => '{"category":"water","max_distance_m":3000}'];
@@ -233,17 +240,18 @@ final class InRideAssistantTest extends TestCase
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('critical')
-            ->with(self::stringContains('LLM unavailable for narrative'));
+            ->with(self::stringContains('AI provider unavailable for narrative'));
 
         $poiRepository = $this->poiRepository([
             ['lat' => 50.8504, 'lon' => 4.3520, 'tags' => ['name' => 'Fontaine']],
         ]);
 
-        $assistant = $this->buildAssistant($llm, $poiRepository, $logger);
+        $assistant = $this->buildAssistant($poiRepository, $logger);
 
         $response = $assistant->assist(
             message: "Je cherche un point d'eau",
             position: new GeoPosition(50.8503, 4.3517),
+            resolved: $this->resolved($llm),
         );
 
         // Graceful degradation: POIs are still returned with a fallback narrative.
@@ -263,22 +271,25 @@ final class InRideAssistantTest extends TestCase
     }
 
     private function buildAssistant(
-        LlmClientInterface $llm,
         InRidePoiRepositoryInterface $poiRepository,
         ?LoggerInterface $logger = null,
     ): InRideAssistant {
         $distance = new HaversineDistance();
 
         return new InRideAssistant(
-            intentDetector: new PoiIntentDetector($llm),
+            intentDetector: new PoiIntentDetector($logger ?? new NullLogger()),
             poiRepository: $poiRepository,
             openingHoursParser: new OpeningHoursParser(),
             detourCalculator: new DetourCalculator($distance),
             deeplinkBuilder: new DeeplinkBuilder(),
             distance: $distance,
-            llmClient: $llm,
             promptLoader: new SystemPromptLoader($this->promptDir),
             logger: $logger ?? new NullLogger(),
         );
+    }
+
+    private function resolved(LlmClientInterface $llm): ResolvedLlmClient
+    {
+        return new ResolvedLlmClient($llm, AiProvider::ANTHROPIC);
     }
 }

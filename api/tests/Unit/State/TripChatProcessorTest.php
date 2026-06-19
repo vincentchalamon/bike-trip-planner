@@ -21,11 +21,14 @@ use App\InRide\InRideAssistant;
 use App\InRide\InRidePoiRepositoryInterface;
 use App\InRide\OpeningHoursParser;
 use App\InRide\PoiIntentDetector;
+use App\Llm\AiProvider;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
-use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmClientInterface;
+use App\Llm\ResolvedLlmClient;
 use App\Llm\SystemPromptLoader;
+use App\Llm\UserLlmResolverInterface;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use App\State\TripChatProcessor;
@@ -641,19 +644,19 @@ final class TripChatProcessorTest extends TestCase
     }
 
     #[Test]
-    public function returnsServiceUnavailableAndLogsCriticalWhenOllamaUnreachable(): void
+    public function returnsServiceUnavailableAndLogsCriticalWhenProviderUnreachable(): void
     {
-        // AI enabled but the chat call hits an unreachable tier: 503 + `critical` log (#304).
+        // AI configured but the chat call hits an unreachable provider: 503 + `critical` log (#304).
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('critical')
-            ->with(self::stringContains('Ollama unreachable'));
+            ->with(self::stringContains('AI provider unreachable'));
 
         $processor = $this->newProcessor(
             llmContent: '',
             stagesCount: 1,
             messageBus: $this->newMessageBus(),
             logger: $logger,
-            chatException: new OllamaUnavailableException('boom'),
+            chatException: new AiUnavailableException('boom'),
         );
 
         $this->expectException(ServiceUnavailableHttpException::class);
@@ -697,7 +700,6 @@ final class TripChatProcessorTest extends TestCase
 
 
         $llmClient = $this->createStub(LlmClientInterface::class);
-        $llmClient->method('isEnabled')->willReturn(true);
         if ($chatException instanceof \Throwable) {
             $llmClient->method('chat')->willThrowException($chatException);
         } else {
@@ -729,19 +731,21 @@ final class TripChatProcessorTest extends TestCase
         $poiRepository = $this->createStub(InRidePoiRepositoryInterface::class);
         $poiRepository->method('findNearby')->willReturn($inRidePois ?? []);
         $inRideAssistant = new InRideAssistant(
-            intentDetector: new PoiIntentDetector($llmClient),
+            intentDetector: new PoiIntentDetector(),
             poiRepository: $poiRepository,
             openingHoursParser: new OpeningHoursParser(),
             detourCalculator: new DetourCalculator($distance),
             deeplinkBuilder: new DeeplinkBuilder(),
             distance: $distance,
-            llmClient: $llmClient,
             promptLoader: $promptLoader,
         );
 
+        $clientFactory = $this->createStub(UserLlmResolverInterface::class);
+        $clientFactory->method('forUser')->willReturn(new ResolvedLlmClient($llmClient, AiProvider::ANTHROPIC));
+
         return new TripChatProcessor(
             tripStateManager: $repository,
-            llmClient: $llmClient,
+            clientFactory: $clientFactory,
             promptLoader: $promptLoader,
             interpreter: new ChatActionInterpreter(new NullLogger()),
             historyStore: $historyStore,

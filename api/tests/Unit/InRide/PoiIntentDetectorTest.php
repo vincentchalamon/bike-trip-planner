@@ -6,8 +6,10 @@ namespace App\Tests\Unit\InRide;
 
 use App\InRide\PoiIntentDetector;
 use App\InRide\PoiSuggestion;
-use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\AiProvider;
+use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmClientInterface;
+use App\Llm\ResolvedLlmClient;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -32,24 +34,22 @@ final class PoiIntentDetectorTest extends TestCase
         $llm = $this->createMock(LlmClientInterface::class);
         $llm->expects(self::never())->method('generate');
 
-        $detector = new PoiIntentDetector($llm, new NullLogger());
-
-        $intent = $detector->detect('   ');
+        $intent = new PoiIntentDetector(new NullLogger())->detect('   ', $this->resolved($llm));
 
         self::assertTrue($intent->isUnknown());
     }
 
     #[Test]
-    public function logsAtCriticalWhenOllamaUnreachable(): void
+    public function logsAtCriticalWhenProviderUnreachable(): void
     {
         $llm = $this->createMock(LlmClientInterface::class);
-        $llm->method('generate')->willThrowException(new OllamaUnavailableException('boom'));
+        $llm->method('generate')->willThrowException(new AiUnavailableException('boom'));
 
-        // AI enabled but unreachable must be logged at `critical` for ops alerting (#304).
+        // AI configured but unreachable must be logged at `critical` for ops alerting (#304).
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('critical')->with(self::stringContains('LLM unavailable'));
+        $logger->expects(self::once())->method('critical')->with(self::stringContains('AI provider unavailable'));
 
-        $intent = new PoiIntentDetector($llm, $logger)->detect('Un café ?');
+        $intent = new PoiIntentDetector($logger)->detect('Un café ?', $this->resolved($llm));
 
         self::assertTrue($intent->isUnknown());
     }
@@ -58,9 +58,7 @@ final class PoiIntentDetectorTest extends TestCase
     #[DataProvider('payloadProvider')]
     public function parsesEnvelopeFromMockedLlm(string $llmResponse, string $expectedCategory, int $expectedRadius, ?int $expectedOpenForMinutes): void
     {
-        $detector = $this->detectorFor($llmResponse);
-
-        $intent = $detector->detect('Tu connais un endroit ?');
+        $intent = new PoiIntentDetector(new NullLogger())->detect('Tu connais un endroit ?', $this->resolvedFor($llmResponse));
 
         self::assertSame($expectedCategory, $intent->category);
         self::assertSame($expectedRadius, $intent->maxDistanceMeters);
@@ -172,17 +170,17 @@ final class PoiIntentDetectorTest extends TestCase
     #[Test]
     public function malformedJsonFallsBackToUnknown(): void
     {
-        $detector = $this->detectorFor('{this is not json');
+        $intent = new PoiIntentDetector(new NullLogger())->detect('Eau ?', $this->resolvedFor('{this is not json'));
 
-        self::assertTrue($detector->detect('Eau ?')->isUnknown());
+        self::assertTrue($intent->isUnknown());
     }
 
     #[Test]
     public function payloadWithoutBracesFallsBackToUnknown(): void
     {
-        $detector = $this->detectorFor('No JSON here at all, just words.');
+        $intent = new PoiIntentDetector(new NullLogger())->detect('Eau ?', $this->resolvedFor('No JSON here at all, just words.'));
 
-        self::assertTrue($detector->detect('Eau ?')->isUnknown());
+        self::assertTrue($intent->isUnknown());
     }
 
     #[Test]
@@ -191,16 +189,21 @@ final class PoiIntentDetectorTest extends TestCase
         // The parser extracts the substring between the outer braces, so an
         // array payload still goes through json_decode but yields a non-array
         // (well, an array but not an object map) and is rejected at the category check.
-        $detector = $this->detectorFor('["food", 3000]');
+        $intent = new PoiIntentDetector(new NullLogger())->detect('Eau ?', $this->resolvedFor('["food", 3000]'));
 
-        self::assertTrue($detector->detect('Eau ?')->isUnknown());
+        self::assertTrue($intent->isUnknown());
     }
 
-    private function detectorFor(string $llmResponse): PoiIntentDetector
+    private function resolved(LlmClientInterface $client): ResolvedLlmClient
     {
-        $llm = $this->createMock(LlmClientInterface::class);
+        return new ResolvedLlmClient($client, AiProvider::ANTHROPIC);
+    }
+
+    private function resolvedFor(string $llmResponse): ResolvedLlmClient
+    {
+        $llm = $this->createStub(LlmClientInterface::class);
         $llm->method('generate')->willReturn(['response' => $llmResponse]);
 
-        return new PoiIntentDetector($llm, new NullLogger());
+        return $this->resolved($llm);
     }
 }
