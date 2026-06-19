@@ -34,7 +34,7 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
 {
     private const string TRIP_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
-    private const string ANALYSIS_MODEL = 'claude-3-7-sonnet-latest';
+    private const string ANALYSIS_MODEL = 'claude-sonnet-4-6';
 
     private string $tmpPromptDir = '';
 
