@@ -99,7 +99,7 @@ export function AiBubble() {
           href="/account/settings#ai"
           aria-label={t("notConfiguredTitle")}
           data-testid="ai-bubble"
-          data-not-configured
+          data-not-configured=""
           title={title}
           className={bubbleClassName}
         >
