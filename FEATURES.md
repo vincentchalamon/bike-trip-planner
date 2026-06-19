@@ -346,17 +346,19 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 
 ## 11. Intelligence artificielle
 
-> Pile IA auto-hébergée via Ollama (`symfony/ai`, ADR-028 / ADR-030). Dégradation gracieuse : sans Ollama, les résumés IA sont masqués et les alertes restent affichées.
+> IA **optionnelle, multi-fournisseur, à clé personnelle** (`symfony/ai-platform`, **ADR-042**). L'IA est activée par utilisateur en configurant un fournisseur (Anthropic/Claude, Google/Gemini, OpenAI) et son propre token dans les réglages du compte ; il n'y a pas de toggle d'environnement. Token chiffré au repos. Dégradation gracieuse : sans clé (ou clé invalide / quota / fournisseur indisponible), les résumés IA sont masqués et les alertes restent affichées. L'ancienne pile Ollama auto-hébergée (ADR-028 / ADR-030) est retirée.
 
 ### Fondations backend
 
 | Statut | Fonctionnalité | Détail |
 |---|---|---|
-| ✅ | Service OllamaClient PHP | Client HTTP vers Ollama (`Llm/OllamaClient`). Sprint 25 #298 |
+| ✅ | IA optionnelle multi-fournisseur (BYO token) | `PlatformLlmClient` + `LlmClientFactory` par-utilisateur (Anthropic/Gemini/OpenAI). ADR-042 |
+| ✅ | Token IA chiffré + API compte | `AiTokenEncryptor` (libsodium) + `/users/me/ai-settings`. ADR-042 |
+| ✅ | Taxonomie d'erreurs + mode dégradé | `AiFailureReason` + `AiErrorClassifier` (token invalide / quota / rate-limit / indisponible). ADR-042 |
 | ✅ | Gate mechanism | Blocage/déblocage dans ComputationTracker (`LlmAnalysisTracker`). Sprint 25 #299 |
-| ✅ | System prompts cyclotourisme versionnés | Template FR/EN LLaMA 8B. Sprint 25 #300 |
-| ✅ | Docker Ollama | Container dédié. ADR-028 |
-| ✅ | Adoption `symfony/ai` | Platform Ollama (tool-calling désactivé sur le 3B). ADR-030 |
+| ✅ | System prompts cyclotourisme versionnés | Template FR/EN. Sprint 25 #300 |
+| ✅ | Adoption `symfony/ai` | `symfony/ai-platform` + bridges cloud (ADR-030, migré en ADR-042). |
+| 🗑️ | Service OllamaClient + Docker Ollama | Retiré (ADR-042) ; remplacé par les bridges cloud par-utilisateur. Anciennement Sprint 25 #298 / ADR-028 |
 
 ### Analyse 2 passes (LLaMA 8B)
 
@@ -365,7 +367,7 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | Passe 1 — analyse par étape | Message Messenger parallélisable (`AnalyzeStageWithLlmHandler`). Sprint 26 #301 |
 | ✅ | Passe 2 — vue d'ensemble du trip | Résumé global (`AnalyzeTripOverviewWithLlmHandler`). Sprint 26 #302 |
 | ✅ | Pipeline gate → LLaMA → TRIP_READY | Orchestration Mercure. Sprint 26 #303 |
-| ✅ | Fallback gracieux sans Ollama | Dégradation propre (`OllamaUnavailableException`). Sprint 26 #304 |
+| ✅ | Fallback gracieux sans IA | Dégradation propre (`AiUnavailableException` + raison). Sprint 26 #304 / ADR-042 |
 
 ### Frontend IA
 

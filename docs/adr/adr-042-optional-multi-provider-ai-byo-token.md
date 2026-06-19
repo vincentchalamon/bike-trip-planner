@@ -114,10 +114,12 @@ When AI is enabled, **trip data (route, towns, dates) is sent to the user-chosen
 
 ### 9. Ollama removal
 
+> **Implementation status (2026-06-19):** this section describes the target state. The code/config removal lands in PR #716 and this documentation in PR #717; until both are merged, `composer.json` may still carry `symfony/ai-ollama-platform` and the Compose files may still reference the `ollama` service.
+
 The self-hosted tier is removed entirely:
 
 - `App\Llm\OllamaClient` and the `OLLAMA_*` environment variables are deleted.
-- The bundled `ollama` Compose service (and its on-demand model-load wiring) is removed.
+- The bundled `ollama` Compose service is removed: `compose.ollama.yaml` is deleted, and the `OLLAMA_*` env, the shared `bike-trip-planner-llm` network and the `ollama` `depends_on` are dropped from `compose.yaml`/`compose.dev.yaml`/`compose.recette.yaml`.
 - The `/health` Ollama probes (`deps.ollama_chat` / `deps.ollama_analysis`) are removed; AI is no longer a server dependency or health signal — per-user token configuration alone decides availability.
 - The `symfony/ai-ollama-platform` package is dropped; the three cloud bridges replace it.
 
