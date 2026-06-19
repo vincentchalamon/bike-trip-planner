@@ -43,7 +43,7 @@ Cloud providers only. No self-hosted Ollama.
 
 | Provider | `symfony/ai` bridge | Default chat model | Default analysis model |
 |----------|---------------------|--------------------|------------------------|
-| **Anthropic (Claude)** | `symfony/ai-anthropic-platform` | `claude-3-5-haiku-latest` | `claude-3-7-sonnet-latest` |
+| **Anthropic (Claude)** | `symfony/ai-anthropic-platform` | `claude-haiku-4-5-20251001` | `claude-sonnet-4-6` |
 | **Google (Gemini)** | `symfony/ai-gemini-platform` | `gemini-2.5-flash` | `gemini-2.5-flash` |
 | **OpenAI** | `symfony/ai-open-ai-platform` | `gpt-4o-mini` | `gpt-4o-mini` |
 
@@ -70,7 +70,7 @@ Account API:
 
 The `LlmClientInterface` contract (`isEnabled`, `generate`, `chat`) is preserved so every caller — the analyze handlers, the in-ride assistant, the chat processor — is untouched. The implementation is a provider-neutral `PlatformLlmClient` built **per user at runtime** by a factory: given the user's decrypted token and provider, the factory wires the matching `symfony/ai-platform` bridge and returns a client. There is no process-global model: two concurrent requests from two users run against their own providers with their own keys.
 
-Each provider HTTP client is **SSRF-scoped to that provider's host** (per ADR-001 SSRF policy) with a **30 s timeout**.
+Each provider HTTP client is **SSRF-scoped to that provider's host** (per ADR-001 SSRF policy) with a **30 s timeout** — intentionally higher than the project's 10 s default for external clients (CLAUDE.md), because LLM inference (especially the async analysis pass) routinely takes 20-30 s on the provider backend; the lower default would abort legitimate calls.
 
 ### 5. Availability is decided per-user, never by an env flag
 
