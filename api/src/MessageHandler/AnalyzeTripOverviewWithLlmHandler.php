@@ -29,8 +29,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
  * cross-stage patterns and trip-level recommendations.
  *
  * Behaviour:
- * - When the trip owner has not configured an AI provider (or the AI_ENABLED
- *   kill-switch is off): the handler returns silently.
+ * - When the trip owner has not configured an AI provider: the handler returns
+ *   silently.
  * - When the LLM is unreachable: the {@see AiUnavailableException} is logged and
  *   swallowed. AI overview is best-effort enrichment, never blocking.
  * - When the response cannot be parsed: the handler logs and skips persistence.

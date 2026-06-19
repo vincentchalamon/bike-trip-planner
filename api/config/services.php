@@ -21,11 +21,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         // the dev/CI default below only keeps the container bootable (throwaway dev
         // tokens, never used to protect real credentials).
         ->set('app.ai_token_enc_key', '%env(default:default_ai_token_enc_key:AI_TOKEN_ENC_KEY)%')
-        ->set('default_ai_token_enc_key', 'dev-only-ai-token-encryption-key-change-in-prod')
-        // Instance-wide AI kill-switch (ADR-042): on by default; set AI_ENABLED=0 to
-        // hide every AI feature on a deployment regardless of per-user configuration.
-        ->set('app.ai_enabled', '%env(bool:default:default_ai_enabled:AI_ENABLED)%')
-        ->set('default_ai_enabled', true);
+        ->set('default_ai_token_enc_key', 'dev-only-ai-token-encryption-key-change-in-prod');
 
     $services = $containerConfigurator->services();
 
@@ -37,7 +33,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
 
     // Per-user multi-provider client factory (ADR-042): the 3 HttpClientInterface
     // args are ambiguous for autowiring, so bind each provider's scoped client.
-    // The AI_ENABLED kill-switch is autowired from the app.ai_enabled parameter.
     $services->set(LlmClientFactory::class)
         ->args([
             service('anthropic.client'),

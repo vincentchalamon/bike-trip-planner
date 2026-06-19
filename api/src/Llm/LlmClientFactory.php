@@ -9,7 +9,6 @@ use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Bridge\Anthropic\Factory as AnthropicFactory;
 use Symfony\AI\Platform\Bridge\Gemini\Factory as GeminiFactory;
 use Symfony\AI\Platform\Bridge\OpenAi\Factory as OpenAiFactory;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -26,23 +25,17 @@ final readonly class LlmClientFactory implements UserLlmResolverInterface
         private HttpClientInterface $geminiClient,
         private LoggerInterface $logger,
         private AiTokenEncryptor $tokenEncryptor,
-        #[Autowire(param: 'app.ai_enabled')]
-        private bool $aiEnabled = true,
     ) {
     }
 
     /**
-     * Returns the user's client paired with its provider, or null when AI is
-     * disabled instance-wide (AI_ENABLED kill-switch), not configured (no
-     * provider/token), the provider is unknown, or the stored token cannot be
-     * decrypted (e.g. key rotation) — so callers degrade cleanly.
+     * Returns the user's client paired with its provider, or null when AI is not
+     * configured (no provider/token), the provider is unknown, or the stored
+     * token cannot be decrypted (e.g. key rotation) — so callers degrade cleanly.
+     * Availability is decided here, per-user; there is no instance-wide env toggle.
      */
     public function forUser(User $user): ?ResolvedLlmClient
     {
-        if (!$this->aiEnabled) {
-            return null;
-        }
-
         $provider = AiProvider::tryFrom((string) $user->getAiProvider());
         $encrypted = $user->getAiToken();
         if (null === $provider || null === $encrypted) {

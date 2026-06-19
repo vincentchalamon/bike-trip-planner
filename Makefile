@@ -1,11 +1,10 @@
 .DEFAULT_GOAL := help
 .PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision provision-update coverage coverage-ci migration migrate db-create fixtures
 
-# Dev loads the iso-prod base + the shared Ollama service + dev overrides
-# automatically. Prod targets pass an explicit `-f compose.yaml`, which takes
-# precedence over COMPOSE_FILE, so the dev/ollama layers never leak into prod.
-# (The `ollama-init` model-pull job stays behind its profile, so dev never pulls.)
-export COMPOSE_FILE ?= compose.yaml:compose.ollama.yaml:compose.dev.yaml
+# Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
+# explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
+# layer never leaks into prod.
+export COMPOSE_FILE ?= compose.yaml:compose.dev.yaml
 
 # Forward extra CLI words after the goal (e.g. `make link-check -- --external`,
 # `make phpunit -- --filter=Foo`) into $(ARGS) and stub them as no-op goals so
@@ -41,10 +40,10 @@ start: start-prod ## Alias for start-prod
 start-prod: ensure-default-pbf ## Start the Docker environment (Detached) in production mode
 	@docker compose -f compose.yaml up --wait
 
-start-recette: ensure-default-pbf ## Boot iso-prod + Mailcatcher + Ollama (compose.ollama.yaml) for the recette. Re-routing needs `make provision` + `--profile routing`.
+start-recette: ensure-default-pbf ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make provision` + `--profile routing`.
 	@mkdir -p .docker/jwt-recette
 	@(test -f .docker/jwt-recette/private.pem && test -f .docker/jwt-recette/public.pem) || { openssl genpkey -algorithm RSA -out .docker/jwt-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/jwt-recette/private.pem -out .docker/jwt-recette/public.pem -passin pass:recette; }
-	@JWT_PRIVATE_KEY_PATH=$(CURDIR)/.docker/jwt-recette/private.pem JWT_PUBLIC_KEY_PATH=$(CURDIR)/.docker/jwt-recette/public.pem JWT_PASSPHRASE=recette OLLAMA_PULL_MODELS="$${OLLAMA_PULL_MODELS:-llama3.2:3b}" docker compose -f compose.yaml -f compose.recette.yaml -f compose.ollama.yaml --profile ollama-init up --wait
+	@JWT_PRIVATE_KEY_PATH=$(CURDIR)/.docker/jwt-recette/private.pem JWT_PUBLIC_KEY_PATH=$(CURDIR)/.docker/jwt-recette/public.pem JWT_PASSPHRASE=recette docker compose -f compose.yaml -f compose.recette.yaml up --wait
 
 stop: ## Stop the Docker environment
 	@docker compose stop

@@ -90,7 +90,7 @@ final readonly class AllEnrichmentsCompletedHandler
 
         // Short-circuit: when the rider opted out of re-analysis via the chat bubble,
         // when there is no stage to analyse (e.g. all rest days), or when the trip
-        // owner has no AI configured (kill-switch off / no token), publish TRIP_READY
+        // owner has no AI configured (no provider/token), publish TRIP_READY
         // directly — no AI overview to await. Owner resolution (Redis + DB + token
         // decryption) is evaluated last, only when the cheap guards pass.
         if ($skipAiAnalysis || 0 === $analysableStages || !($this->llmResolver->resolveForTrip($tripId) instanceof ResolvedLlmClient)) {

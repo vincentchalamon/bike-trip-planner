@@ -50,7 +50,7 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
  * 4. Parse the JSON envelope into a {@see ChatAction} via {@see ChatActionInterpreter}.
  * 5. Flag the response as `dispatched` for actions that require recomputation.
  *
- * Degradation: when AI is not configured (or the AI_ENABLED kill-switch is off)
+ * Degradation: when AI is not configured (no provider/token)
  * the endpoint returns 200 with an `info` action hinting the rider to configure
  * a provider; when the configured provider is unreachable it returns 503 with a
  * reason-aware message so the frontend can react precisely.
@@ -121,7 +121,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
 
         // Resolve the user's provider before consuming a rate-limit token, so a
         // user without AI configured doesn't burn their 20 req/min quota. When AI
-        // is not configured (or the kill-switch is off), degrade gracefully with an
+        // is not configured, degrade gracefully with an
         // in-chat hint rather than a hard error.
         $resolved = $this->clientFactory->forUser($user);
         if (!$resolved instanceof ResolvedLlmClient) {

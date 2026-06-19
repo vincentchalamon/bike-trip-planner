@@ -9,7 +9,7 @@ use App\Entity\User;
 /**
  * Default {@see TripLlmResolverInterface}: resolves the trip owner via
  * {@see TripOwnerResolver} then builds their provider client via
- * {@see LlmClientFactory} (which also enforces the AI_ENABLED kill-switch).
+ * {@see LlmClientFactory}.
  */
 final readonly class TripLlmResolver implements TripLlmResolverInterface
 {

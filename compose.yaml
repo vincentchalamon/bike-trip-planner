@@ -25,8 +25,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp
-    # Memory budget for the beta profile on a single 24 GB VM (#566). Ollama
-    # inference lives in a separate Coolify resource, so it is not counted here.
+    # Memory budget for the beta profile on a single 24 GB VM (#566). AI inference
+    # is an external per-user cloud provider (ADR-042), so it is not counted here.
     deploy:
       resources:
         limits:
@@ -38,7 +38,6 @@ services:
         condition: service_started
     networks:
       - default
-      - bike-trip-planner-llm
     environment:
       APP_ENV: prod
       CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
@@ -64,16 +63,6 @@ services:
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
       LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
-      # Ollama (LLM tier) runs as a SEPARATE resource (compose.ollama.yaml, ADR-028).
-      # These vars tell the app where to reach it. dev/recette load both files as one
-      # compose project, so `ollama` resolves directly. A separate-stack prod joins
-      # Ollama's `bike-trip-planner-llm` network (ADR-028 topology, via a deploy
-      # overlay) or sets OLLAMA_BASE_URL to a routable address; unreachable -> degraded
-      # mode (#304), not a 5xx. OLLAMA_ENABLED: dev forces 0, recette/prod 1.
-      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-1}"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
@@ -128,7 +117,6 @@ services:
     command: bin/console messenger:consume async --time-limit=3600 -vv
     networks:
       - default
-      - bike-trip-planner-llm
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -165,16 +153,6 @@ services:
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
       LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
-      # Ollama (LLM tier) runs as a SEPARATE resource (compose.ollama.yaml, ADR-028).
-      # These vars tell the app where to reach it. dev/recette load both files as one
-      # compose project, so `ollama` resolves directly. A separate-stack prod joins
-      # Ollama's `bike-trip-planner-llm` network (ADR-028 topology, via a deploy
-      # overlay) or sets OLLAMA_BASE_URL to a routable address; unreachable -> degraded
-      # mode (#304), not a 5xx. OLLAMA_ENABLED: dev forces 0, recette/prod 1.
-      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-1}"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
@@ -214,14 +192,13 @@ services:
     command: bin/console messenger:consume llm --time-limit=3600 -vv
     networks:
       - default
-      - bike-trip-planner-llm
     restart: unless-stopped
     read_only: true
     tmpfs:
       - /tmp
     # Highest worker limit (#566): the LLM worker buffers prompt/response
-    # payloads, but the heavy inference runs in the separate Ollama resource,
-    # so the worker itself stays modest.
+    # payloads, but inference runs in the user's external cloud provider
+    # (ADR-042), so the worker itself stays modest.
     deploy:
       replicas: ${WORKER_LLM_REPLICAS:-1}
       resources:
@@ -252,16 +229,6 @@ services:
       # 500s in prod (finding F1). Redis is the `redis` service. See ADR-022.
       LOCK_DSN: redis://redis:6379
       DATABASE_URL: "postgresql://${DATABASE_USERNAME:-app}:${DATABASE_PASSWORD:-!ChangeMe!}@database:5432/${DATABASE_NAME:-bike_trip_planner}?serverVersion=18&charset=utf8"
-      # Ollama (LLM tier) runs as a SEPARATE resource (compose.ollama.yaml, ADR-028).
-      # These vars tell the app where to reach it. dev/recette load both files as one
-      # compose project, so `ollama` resolves directly. A separate-stack prod joins
-      # Ollama's `bike-trip-planner-llm` network (ADR-028 topology, via a deploy
-      # overlay) or sets OLLAMA_BASE_URL to a routable address; unreachable -> degraded
-      # mode (#304), not a 5xx. OLLAMA_ENABLED: dev forces 0, recette/prod 1.
-      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-1}"
       JWT_SECRET_KEY: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY: /run/secrets/jwt_public_key
       JWT_PASSPHRASE: "${JWT_PASSPHRASE}"
@@ -308,11 +275,8 @@ services:
         # the self-hosted tracker script (e.g. https://analytics.example/js/script.js).
         NEXT_PUBLIC_PLAUSIBLE_DOMAIN: "${NEXT_PUBLIC_PLAUSIBLE_DOMAIN:-}"
         NEXT_PUBLIC_PLAUSIBLE_SRC: "${NEXT_PUBLIC_PLAUSIBLE_SRC:-}"
-        # AI feature gating (#304): inlined into the client bundle so AI features
-        # are hidden outright when off. Derived from OLLAMA_ENABLED so a single
-        # flag drives both tiers (front + API), with no divergence; changing it
-        # requires a front rebuild (NEXT_PUBLIC_* is build-time).
-        NEXT_PUBLIC_AI_ENABLED: "${OLLAMA_ENABLED:-1}"
+      # AI features are always present in the build (ADR-042); they activate per-user
+      # once a provider + token is configured in account settings — no build flag.
       # SENTRY_AUTH_TOKEN (source-map upload) is a real secret: passed as a
       # BuildKit secret so it never lands in an image layer or the build cache.
       secrets:
@@ -482,17 +446,3 @@ volumes:
   php_var: ~
   database_data: ~
   valhalla-tiles: ~
-
-networks:
-  # Shared with the separate Ollama stack (compose.ollama.yaml) so php/worker/
-  # worker-llm reach http://ollama:11434. Declared by a fixed `name` (non-external):
-  # in a single merged project (dev/recette/CI) it is created once; a standalone app
-  # project creates it too. The Ollama stack declares the same name and owns the
-  # `ollama` network alias. For fully separate Coolify projects the network is shared
-  # by name; see ADR-028 "Deployment topology".
-  bike-trip-planner-llm:
-    name: bike-trip-planner-llm
-    # Must match compose.ollama.yaml exactly: whichever stack comes up first
-    # creates the network, so identical attributes avoid a "network exists with
-    # different configuration" mismatch when the other stack joins it by name.
-    attachable: true

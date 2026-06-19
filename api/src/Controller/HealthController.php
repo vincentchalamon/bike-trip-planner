@@ -72,7 +72,7 @@ final readonly class HealthController
         // The AI tier is no longer a server dependency (ADR-042): it is an optional,
         // per-user cloud provider reached with the user's own token, so it is not
         // probed here. AI availability is surfaced to the PWA via the account
-        // AI-settings (provider configured?) and the NEXT_PUBLIC_AI_ENABLED kill-switch.
+        // AI-settings: AI is available once the user has configured a provider + token.
         $pending = [
             'mercure' => $this->startHttpCheck('HEAD', '?topic=health', $this->mercureClient),
             'valhalla' => $this->startHttpCheck('GET', '/status', $this->valhallaClient),
