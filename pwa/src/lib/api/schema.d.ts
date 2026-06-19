@@ -84,6 +84,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/me/ai-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Retrieves a AiSettings resource.
+         * @description Retrieves a AiSettings resource.
+         */
+        get: operations["api_usersmeai-settings_get"];
+        /**
+         * Replaces the AiSettings resource.
+         * @description Replaces the AiSettings resource.
+         */
+        put: operations["api_usersmeai-settings_put"];
+        post?: never;
+        /**
+         * Removes the AiSettings resource.
+         * @description Removes the AiSettings resource.
+         */
+        delete: operations["api_usersmeai-settings_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/logout": {
         parameters: {
             query?: never;
@@ -326,6 +354,26 @@ export interface paths {
          * @description Creates a Trip resource.
          */
         post: operations["api_trips_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/ai-generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate a trip from a natural-language brief using the user's configured AI provider.
+         * @description Generate a trip from a natural-language brief using the user's configured AI provider.
+         */
+        post: operations["api_tripsai-generate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -708,6 +756,60 @@ export interface components {
          *     URL identifier, so there is no IDOR surface.
          */
         "Account.jsonld": components["schemas"]["HydraItemBaseSchema"] & Record<string, never>;
+        /**
+         * @description Per-user AI configuration (ADR-042): the chosen cloud provider and its API
+         *     token (bring-your-own-token). AI is opt-in — without a configured token every
+         *     AI feature stays disabled.
+         *
+         *     - GET    /users/me/ai-settings  current provider + whether a token is stored
+         *     - PUT    /users/me/ai-settings  set provider + token (token format validated)
+         *     - DELETE /users/me/ai-settings  clear both
+         *
+         *     The token is write-only: it is encrypted at rest and the API never returns it,
+         *     only the boolean {@see $tokenConfigured}. The current user is resolved from the
+         *     security token, never from a URL identifier (no IDOR surface).
+         */
+        AiSettings: {
+            /**
+             * @description Chosen provider. Required on write; null only when AI is not configured.
+             * @enum {string|null}
+             */
+            provider: "anthropic" | "gemini" | "openai" | null;
+            /** @description Write-only: the stored token is never serialised back, only whether one is set. */
+            token: string | null;
+            /**
+             * @description Read-only signal that a (non-empty) token is stored.
+             * @default false
+             */
+            readonly tokenConfigured: boolean;
+        };
+        /**
+         * @description Per-user AI configuration (ADR-042): the chosen cloud provider and its API
+         *     token (bring-your-own-token). AI is opt-in — without a configured token every
+         *     AI feature stays disabled.
+         *
+         *     - GET    /users/me/ai-settings  current provider + whether a token is stored
+         *     - PUT    /users/me/ai-settings  set provider + token (token format validated)
+         *     - DELETE /users/me/ai-settings  clear both
+         *
+         *     The token is write-only: it is encrypted at rest and the API never returns it,
+         *     only the boolean {@see $tokenConfigured}. The current user is resolved from the
+         *     security token, never from a URL identifier (no IDOR surface).
+         */
+        "AiSettings.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            /**
+             * @description Chosen provider. Required on write; null only when AI is not configured.
+             * @enum {string|null}
+             */
+            provider: "anthropic" | "gemini" | "openai" | null;
+            /** @description Write-only: the stored token is never serialised back, only whether one is set. */
+            token: string | null;
+            /**
+             * @description Read-only signal that a (non-empty) token is stored.
+             * @default false
+             */
+            readonly tokenConfigured: boolean;
+        };
         "Alert.fit": {
             /** @enum {string} */
             type?: "critical" | "warning" | "nudge";
@@ -1194,6 +1296,10 @@ export interface components {
             promptVersion: number;
             /** @description RFC3339 timestamp when the analysis was generated */
             generatedAt: string;
+        };
+        "Trip.TripAiGenerateRequest": {
+            /** @description Free-form description of the desired trip (e.g. "boucle au départ de Lille, 2 jours, 80 km/jour, en tente"). */
+            brief: string;
         };
         "Trip.TripBatchRecomputeRequest": {
             modifications: components["schemas"]["TripModification"][];
@@ -1890,6 +1996,157 @@ export interface operations {
                 content: {
                     "application/ld+json": components["schemas"]["Account.jsonld"];
                 };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    "api_usersmeai-settings_get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description AiSettings resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["AiSettings.jsonld"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    "api_usersmeai-settings_put": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The updated AiSettings resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["AiSettings"];
+            };
+        };
+        responses: {
+            /** @description AiSettings resource updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["AiSettings.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    "api_usersmeai-settings_delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description AiSettings resource deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Forbidden */
             403: {
@@ -2692,6 +2949,71 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
                 };
+            };
+        };
+    };
+    "api_tripsai-generate_post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The new Trip resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["Trip.TripAiGenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description Trip resource created */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Trip.jsonld"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI provider not configured */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+            /** @description Rate limit reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

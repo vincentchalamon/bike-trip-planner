@@ -215,6 +215,55 @@ export function useTripPlanner() {
     }
   }
 
+  /**
+   * Create a trip from a free-form natural-language brief (B2, ADR-042). Mirrors
+   * {@link handleMagicLink} but POSTs to `/trips/ai-generate`: the LLM call,
+   * geocoding and Valhalla routing run on the worker, so the same async Mercure
+   * lifecycle (route_parsed → stages_computed → preview) drives the wizard.
+   * Generation-specific failures (out-of-zone, unparseable, unavailable, ...)
+   * surface as Mercure `validation_error` toasts via {@link useMercure}.
+   */
+  async function handleAiGeneration(brief: string) {
+    actions.clearTrip();
+    setMercureToken(null);
+    setProcessing(true);
+    setAccommodationScanning(true);
+
+    try {
+      const { data, error, response } = await apiClient.POST(
+        "/trips/ai-generate",
+        { body: { brief } },
+      );
+
+      if (error || !data) {
+        const apiError = parseApiError(response.status, error);
+        toast.error(apiError.message);
+        setProcessing(false);
+        setAccommodationScanning(false);
+        return;
+      }
+
+      actions.setIsLocked(data.isLocked === true);
+      const token = response.headers.get("X-Mercure-Token");
+      if (token) setMercureToken(token);
+      actions.setTrip({
+        id: data.id ?? "",
+        title: getRandomTripName(),
+        sourceUrl: "",
+      });
+      trackEvent("trip_created", { source: "ai" });
+      router.push(`/trips/${data.id ?? ""}`);
+    } catch (err) {
+      if (isNetworkError(err)) {
+        toast.error(t("errors.networkError"));
+      } else {
+        toast.error(t("errors.unexpectedError"));
+      }
+      setProcessing(false);
+      setAccommodationScanning(false);
+    }
+  }
+
   async function handleGpxUpload(file: File) {
     actions.clearTrip();
     setMercureToken(null);
@@ -1123,6 +1172,7 @@ export function useTripPlanner() {
     removeLocalAccommodation: actions.removeLocalAccommodation,
     handleMagicLink,
     handleGpxUpload,
+    handleAiGeneration,
     handleDatesChange,
     handleDeleteStage,
     handleAddStage,

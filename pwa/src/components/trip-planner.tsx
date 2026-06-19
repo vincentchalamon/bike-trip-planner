@@ -107,6 +107,7 @@ export function TripPlanner({
     removeLocalAccommodation,
     handleMagicLink,
     handleGpxUpload,
+    handleAiGeneration,
     handleDatesChange,
     handleDeleteStage,
     handleAddStage,
@@ -513,6 +514,16 @@ export function TripPlanner({
             <CardSelection
               onSubmitUrl={handleMagicLink}
               onUploadFile={handleGpxUpload}
+              onSubmitAiConversation={(messages) => {
+                // The assistant turns are local stubs; the brief is the rider's
+                // own words, so only user turns are forwarded to the backend.
+                const brief = messages
+                  .filter((m) => m.role === "user")
+                  .map((m) => m.content)
+                  .join("\n")
+                  .trim();
+                if (brief) void handleAiGeneration(brief);
+              }}
               disabled={!isOnline}
             />
             <RecentTrips />
