@@ -78,6 +78,24 @@ final class GeocoderTest extends TestCase
         self::assertNull($second);
     }
 
+    #[Test]
+    public function doesNotCacheTransientTransportErrors(): void
+    {
+        // First call: a 503 makes toArray() throw, so geocode() returns null
+        // WITHOUT caching. The second call must retry Nominatim and succeed,
+        // proving a transient error never pins a place as unresolvable.
+        $geocoder = new Geocoder(
+            new MockHttpClient([
+                new MockResponse('', ['http_code' => 503]),
+                new MockResponse('[{"lat":"50.6","lon":"3.0"}]'),
+            ]),
+            $this->cache(),
+        );
+
+        self::assertNull($geocoder->geocode('Lille'));
+        self::assertNotNull($geocoder->geocode('Lille'));
+    }
+
     private function cache(): CacheItemPoolInterface
     {
         return new ArrayAdapter();

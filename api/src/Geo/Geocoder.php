@@ -41,7 +41,11 @@ final readonly class Geocoder implements GeocoderInterface
             return null === $cached ? null : new Coordinate($cached['lat'], $cached['lon']);
         }
 
-        $coordinate = $this->query($place);
+        try {
+            $coordinate = $this->query($place);
+        } catch (\Throwable) {
+            return null; // transient network error - do not cache
+        }
 
         $item->set($coordinate instanceof Coordinate ? ['lat' => $coordinate->lat, 'lon' => $coordinate->lon] : null);
         $item->expiresAfter(self::CACHE_TTL);
@@ -53,21 +57,19 @@ final readonly class Geocoder implements GeocoderInterface
 
     private function query(string $place): ?Coordinate
     {
-        try {
-            /** @var list<array{lat?: string, lon?: string}> $data */
-            $data = $this->nominatimClient->request('GET', '/search', [
-                'query' => [
-                    'q' => $place,
-                    'format' => 'jsonv2',
-                    'limit' => 1,
-                    // Restrict to the supported coverage area so the model cannot
-                    // pull the route outside France + Benelux via a place name.
-                    'countrycodes' => 'fr,be,lu,nl',
-                ],
-            ])->toArray();
-        } catch (\Throwable) {
-            return null;
-        }
+        // Transport exceptions propagate so geocode() skips the cache write
+        // (a transient 429/503 must not pin a place as unresolvable for 24h).
+        /** @var list<array{lat?: string, lon?: string}> $data */
+        $data = $this->nominatimClient->request('GET', '/search', [
+            'query' => [
+                'q' => $place,
+                'format' => 'jsonv2',
+                'limit' => 1,
+                // Restrict to the supported coverage area so the model cannot
+                // pull the route outside France + Benelux via a place name.
+                'countrycodes' => 'fr,be,lu,nl',
+            ],
+        ])->toArray();
 
         $first = $data[0] ?? null;
         if (!isset($first['lat'], $first['lon'])) {

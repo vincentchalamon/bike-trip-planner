@@ -73,7 +73,7 @@ final readonly class AiTripGenerationService
                 'targetKm' => $this->targetKm($spec),
             ]);
 
-            $corrected = $this->extractSpec($resolved, $model, $systemPrompt, $this->correctionBrief($brief, $spec, $route->distanceKm));
+            $corrected = $this->extractSpec($resolved, $model, $systemPrompt, $this->correctionBrief($brief, $spec, $route->distanceKm, $locale));
             if (null !== $corrected && true !== ($corrected['out_of_zone'] ?? false)) {
                 $second = $this->route($corrected, $locale);
                 if ($second->isSuccess()) {
@@ -250,10 +250,14 @@ final readonly class AiTripGenerationService
     /**
      * @param array<string, mixed> $spec
      */
-    private function correctionBrief(string $brief, array $spec, float $routedKm): string
+    private function correctionBrief(string $brief, array $spec, float $routedKm, string $locale = 'fr'): string
     {
+        $template = 'fr' === $locale
+            ? "%s\n\n[correction] Ta proposition précédente faisait %.0f km au total, alors que la cible est ~%d km (%d jours x %d km/jour). Ajuste les waypoints (ajoute, retire ou déplace des étapes) pour t'approcher de la cible, en restant en France ou au Benelux. Réponds uniquement avec le JSON."
+            : "%s\n\n[correction] Your previous proposal was %.0f km total, but the target is ~%d km (%d days x %d km/day). Adjust the waypoints (add, remove or move stages) to get closer to the target, staying within France or the Benelux. Reply with ONLY the JSON.";
+
         return \sprintf(
-            "%s\n\n[correction] Ta proposition précédente faisait %.0f km au total, alors que la cible est ~%d km (%d jours x %d km/jour). Ajuste les waypoints (ajoute, retire ou déplace des étapes) pour t'approcher de la cible, en restant en France ou au Benelux. Réponds uniquement avec le JSON.",
+            $template,
             $brief,
             $routedKm,
             $this->targetKm($spec),
