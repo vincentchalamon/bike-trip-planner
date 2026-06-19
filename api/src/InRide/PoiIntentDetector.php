@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\InRide;
 
-use App\Llm\Exception\OllamaUnavailableException;
-use App\Llm\LlmClientInterface;
+use App\Llm\Exception\AiUnavailableException;
+use App\Llm\ResolvedLlmClient;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -29,8 +29,6 @@ use Psr\Log\NullLogger;
  */
 final readonly class PoiIntentDetector
 {
-    public const string MODEL = 'llama3.2:3b';
-
     public const int MIN_RADIUS_METERS = 2_000;
 
     public const int MAX_RADIUS_METERS = 5_000;
@@ -64,12 +62,11 @@ Rules:
 PROMPT;
 
     public function __construct(
-        private LlmClientInterface $llmClient,
         private LoggerInterface $logger = new NullLogger(),
     ) {
     }
 
-    public function detect(string $userMessage): PoiIntent
+    public function detect(string $userMessage, ResolvedLlmClient $resolved): PoiIntent
     {
         $message = trim($userMessage);
         if ('' === $message) {
@@ -77,19 +74,16 @@ PROMPT;
         }
 
         try {
-            $response = $this->llmClient->generate(
-                self::MODEL,
+            $response = $resolved->client->generate(
+                $resolved->provider->chatModel(),
                 $message,
                 self::SYSTEM_PROMPT,
-                [
-                    'temperature' => 0.0,
-                    'num_predict' => 50,
-                    'format' => 'json',
-                ],
+                ['temperature' => 0.0],
             );
-        } catch (OllamaUnavailableException $ollamaUnavailableException) {
-            $this->logger->critical('PoiIntentDetector: LLM unavailable, defaulting to unknown intent.', [
-                'error' => $ollamaUnavailableException->getMessage(),
+        } catch (AiUnavailableException $aiUnavailableException) {
+            $this->logger->critical('PoiIntentDetector: AI provider unavailable, defaulting to unknown intent.', [
+                'reason' => $aiUnavailableException->getReason()->value,
+                'error' => $aiUnavailableException->getMessage(),
             ]);
 
             return PoiIntent::unknown();

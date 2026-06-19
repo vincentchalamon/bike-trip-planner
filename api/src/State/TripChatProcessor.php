@@ -20,9 +20,11 @@ use App\InRide\PoiSuggestion;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
 use App\Llm\Dto\ChatAction;
-use App\Llm\Exception\OllamaUnavailableException;
-use App\Llm\LlmClientInterface;
+use App\Llm\Exception\AiFailureReason;
+use App\Llm\Exception\AiUnavailableException;
+use App\Llm\ResolvedLlmClient;
 use App\Llm\SystemPromptLoader;
+use App\Llm\UserLlmResolverInterface;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -37,29 +39,27 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 /**
- * Handles `POST /trips/{id}/chat`: orchestrates the LLaMA 3B dialogue assistant.
+ * Handles `POST /trips/{id}/chat`: orchestrates the AI dialogue assistant using
+ * the trip owner's configured provider (ADR-042).
  *
  * Pipeline:
- * 1. Enforce a per-user rate limit (20 req/min) to protect the local LLM.
+ * 1. Resolve the user's provider; enforce a per-user rate limit (20 req/min).
  * 2. Verify the trip exists; load minimal context for the dialogue prompt.
  * 3. Build the chat history (last {@see ChatHistoryStore::MAX_MESSAGES} turns)
- *    plus the new user message, and call {@see LlmClientInterface::chat()}.
+ *    plus the new user message, and call the resolved client's `chat()`.
  * 4. Parse the JSON envelope into a {@see ChatAction} via {@see ChatActionInterpreter}.
- * 5. Flag the response as `dispatched` for actions that require recomputation
- *    (the actual Messenger wiring is delivered by a follow-up issue).
+ * 5. Flag the response as `dispatched` for actions that require recomputation.
  *
- * When the LLM is disabled or unreachable, the endpoint returns 503 so the
- * frontend can show a clear error instead of a vague fallback message.
+ * Degradation: when AI is not configured (or the AI_ENABLED kill-switch is off)
+ * the endpoint returns 200 with an `info` action hinting the rider to configure
+ * a provider; when the configured provider is unreachable it returns 503 with a
+ * reason-aware message so the frontend can react precisely.
  *
  * @implements ProcessorInterface<TripChatRequest, TripChatResponse>
  */
 final readonly class TripChatProcessor implements ProcessorInterface
 {
     public const string PROMPT_NAME = 'dialogue';
-
-    public const string DEFAULT_MODEL = 'llama3.2:3b';
-
-    public const int MAX_RESPONSE_TOKENS = 600;
 
     /**
      * Actions that mutate the trip and therefore require backend recomputation.
@@ -77,11 +77,9 @@ final readonly class TripChatProcessor implements ProcessorInterface
         ChatAction::ACTION_ADJUST_DISTANCE,
     ];
 
-    private string $model;
-
     public function __construct(
         private TripRequestRepositoryInterface $tripStateManager,
-        private LlmClientInterface $llmClient,
+        private UserLlmResolverInterface $clientFactory,
         private SystemPromptLoader $promptLoader,
         private ChatActionInterpreter $interpreter,
         private ChatHistoryStore $historyStore,
@@ -93,10 +91,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
         #[Autowire(service: 'limiter.trip_chat')]
         private RateLimiterFactory $tripChatLimiter,
         private ?EntityManagerInterface $entityManager = null,
-        #[Autowire(env: 'default::OLLAMA_DIALOGUE_MODEL')]
-        ?string $model = null,
     ) {
-        $this->model = (null === $model || '' === $model) ? self::DEFAULT_MODEL : $model;
     }
 
     /**
@@ -124,10 +119,13 @@ final readonly class TripChatProcessor implements ProcessorInterface
         // operation's provider, it throws NotFoundHttpException before this
         // processor is entered. Don't re-read the cache here.
 
-        // Feature-flag guard before consuming a rate-limit token, so a user
-        // hitting a disabled endpoint doesn't burn their 20 req/min quota.
-        if (!$this->llmClient->isEnabled()) {
-            throw new ServiceUnavailableHttpException(retryAfter: null, message: 'AI assistant is currently disabled.');
+        // Resolve the user's provider before consuming a rate-limit token, so a
+        // user without AI configured doesn't burn their 20 req/min quota. When AI
+        // is not configured (or the kill-switch is off), degrade gracefully with an
+        // in-chat hint rather than a hard error.
+        $resolved = $this->clientFactory->forUser($user);
+        if (!$resolved instanceof ResolvedLlmClient) {
+            return $this->notConfiguredResponse($tripId);
         }
 
         $limiter = $this->tripChatLimiter->create($userId);
@@ -143,7 +141,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
         // POI search mode. The planning pipeline (dialogue prompt, action
         // interpreter, Messenger dispatch) is bypassed entirely.
         if ($data->position instanceof GeoPosition) {
-            return $this->processInRide($user, $tripId, $userId, $data);
+            return $this->processInRide($user, $tripId, $userId, $data, $resolved);
         }
 
         $systemPrompt = $this->promptLoader->load(self::PROMPT_NAME);
@@ -153,22 +151,21 @@ final readonly class TripChatProcessor implements ProcessorInterface
         $messages = [...$history, ['role' => 'user', 'content' => $userMessage]];
 
         try {
-            $response = $this->llmClient->chat(
-                model: $this->model,
+            // JSON is requested via the dialogue system prompt and parsed leniently
+            // by ChatActionInterpreter — no provider-specific format option.
+            $response = $resolved->client->chat(
+                model: $resolved->provider->chatModel(),
                 messages: $messages,
                 systemPrompt: $systemPrompt,
-                options: [
-                    'format' => 'json',
-                    'num_predict' => self::MAX_RESPONSE_TOKENS,
-                ],
             );
-        } catch (OllamaUnavailableException $ollamaUnavailableException) {
-            $this->logger->critical('Ollama unreachable — chat endpoint returning 503.', [
+        } catch (AiUnavailableException $aiUnavailableException) {
+            $this->logger->critical('AI provider unreachable — chat endpoint returning 503.', [
                 'tripId' => $tripId,
-                'error' => $ollamaUnavailableException->getMessage(),
+                'reason' => $aiUnavailableException->getReason()->value,
+                'error' => $aiUnavailableException->getMessage(),
             ]);
 
-            throw new ServiceUnavailableHttpException(retryAfter: null, message: 'AI assistant is temporarily unavailable. Please retry shortly.', previous: $ollamaUnavailableException);
+            throw new ServiceUnavailableHttpException(retryAfter: $aiUnavailableException->getRetryAfter(), message: $this->unavailableMessage($aiUnavailableException), previous: $aiUnavailableException);
         }
 
         if (null === $response) {
@@ -177,7 +174,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
 
         $rawContent = $this->extractText($response);
         if (null === $rawContent) {
-            $this->logger->warning('Ollama chat response missing message content.', ['tripId' => $tripId]);
+            $this->logger->warning('AI chat response missing message content.', ['tripId' => $tripId]);
 
             throw new ServiceUnavailableHttpException(retryAfter: null, message: 'AI assistant returned an invalid response. Please retry.');
         }
@@ -221,6 +218,32 @@ final readonly class TripChatProcessor implements ProcessorInterface
             impactedStageNumbers: $impactedStageNumbers,
             requiresFullAnalysis: $requiresFullAnalysis,
         );
+    }
+
+    /**
+     * Graceful in-chat reply when the user has not configured an AI provider:
+     * an `info` action carrying a hint that links the rider to the settings.
+     */
+    private function notConfiguredResponse(string $tripId): TripChatResponse
+    {
+        return new TripChatResponse(
+            tripId: $tripId,
+            action: ChatAction::ACTION_INFO,
+            params: [],
+            response: "Configurez une IA dans vos réglages pour discuter avec l'assistant et obtenir une analyse plus approfondie.",
+        );
+    }
+
+    /**
+     * Maps a provider failure to a rider-facing message keyed on its reason.
+     */
+    private function unavailableMessage(AiUnavailableException $exception): string
+    {
+        return match ($exception->getReason()) {
+            AiFailureReason::INVALID_TOKEN => 'Votre clé IA semble invalide. Vérifiez-la dans vos réglages.',
+            AiFailureReason::QUOTA_EXCEEDED => 'Le quota de votre offre IA est épuisé. Vérifiez votre compte chez le fournisseur.',
+            default => 'Assistant IA temporairement indisponible. Réessayez dans un instant.',
+        };
     }
 
     /**
@@ -356,16 +379,16 @@ final readonly class TripChatProcessor implements ProcessorInterface
      * a response carrying the `find_poi` action together with the structured
      * POI suggestions.
      */
-    private function processInRide(User $user, string $tripId, string $userId, TripChatRequest $data): TripChatResponse
+    private function processInRide(User $user, string $tripId, string $userId, TripChatRequest $data, ResolvedLlmClient $resolved): TripChatResponse
     {
         \assert($data->position instanceof GeoPosition);
 
-        // InRideAssistant::assist() already catches OllamaUnavailableException
-        // and produces a markdown fallback narrative, so we do not re-wrap it
-        // here.
+        // InRideAssistant::assist() already catches AiUnavailableException and
+        // produces a markdown fallback narrative, so we do not re-wrap it here.
         $response = $this->inRideAssistant->assist(
             message: $data->message,
             position: $data->position,
+            resolved: $resolved,
         );
 
         $this->historyStore->appendMany($tripId, $userId, [

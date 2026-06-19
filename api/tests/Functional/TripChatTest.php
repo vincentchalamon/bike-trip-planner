@@ -8,8 +8,12 @@ use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\TripRequest;
 use App\Entity\User;
-use App\Llm\Exception\OllamaUnavailableException;
+use App\Llm\AiProvider;
+use App\Llm\Exception\AiFailureReason;
+use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmClientInterface;
+use App\Llm\ResolvedLlmClient;
+use App\Llm\UserLlmResolverInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\Uid\Uuid;
@@ -50,9 +54,24 @@ final class TripChatTest extends ApiTestCase
         $this->associateTripWithUser($tripId, $this->testUser);
     }
 
-    private function installFakeLlmClient(LlmClientInterface $client): void
+    /**
+     * Overrides the per-user resolver: a non-null client is wrapped as the
+     * user's configured provider; null simulates "AI not configured".
+     */
+    private function installLlmClient(?LlmClientInterface $client): void
     {
-        self::getContainer()->set(LlmClientInterface::class, $client);
+        $resolver = new readonly class ($client) implements UserLlmResolverInterface {
+            public function __construct(private ?LlmClientInterface $client)
+            {
+            }
+
+            public function forUser(User $user): ?ResolvedLlmClient
+            {
+                return $this->client instanceof LlmClientInterface ? new ResolvedLlmClient($this->client, AiProvider::ANTHROPIC) : null;
+            }
+        };
+
+        self::getContainer()->set(UserLlmResolverInterface::class, $resolver);
     }
 
     #[Test]
@@ -60,7 +79,7 @@ final class TripChatTest extends ApiTestCase
     {
         $this->seedTrip(self::TRIP_ID);
 
-        $this->installFakeLlmClient(new FakeLlmClient([
+        $this->installLlmClient(new FakeLlmClient([
             'message' => [
                 'role' => 'assistant',
                 'content' => json_encode([
@@ -102,7 +121,7 @@ final class TripChatTest extends ApiTestCase
     {
         $this->seedTrip(self::TRIP_ID);
 
-        $this->installFakeLlmClient(new FakeLlmClient([
+        $this->installLlmClient(new FakeLlmClient([
             'message' => [
                 'role' => 'assistant',
                 'content' => json_encode([
@@ -136,7 +155,7 @@ final class TripChatTest extends ApiTestCase
     {
         $this->seedTrip(self::TRIP_ID);
 
-        $this->installFakeLlmClient(new FakeLlmClient([
+        $this->installLlmClient(new FakeLlmClient([
             'message' => [
                 'role' => 'assistant',
                 'content' => json_encode([
@@ -166,11 +185,37 @@ final class TripChatTest extends ApiTestCase
     }
 
     #[Test]
-    public function chatReturns503WhenLlmDisabled(): void
+    public function chatReturnsInfoHintWhenAiNotConfigured(): void
     {
         $this->seedTrip(self::TRIP_ID);
 
-        $this->installFakeLlmClient(new FakeLlmClient(response: null, enabled: false));
+        // No provider configured for the user → degrade gracefully with an
+        // in-chat `info` hint (200), not a hard error.
+        $this->installLlmClient(null);
+
+        $response = $this->client->request(
+            'POST',
+            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            [
+                'json' => ['message' => 'Bonjour'],
+                'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
+            ],
+        );
+
+        $this->assertResponseStatusCodeSame(200);
+        $data = $response->toArray(false);
+        $this->assertSame('info', $data['action']);
+        $this->assertStringContainsString('Configurez une IA', $data['response']);
+    }
+
+    #[Test]
+    public function chatReturns503WhenClientReturnsNull(): void
+    {
+        $this->seedTrip(self::TRIP_ID);
+
+        // Edge case: a configured client returns null. The dedicated 503 wording
+        // for this branch is otherwise untested.
+        $this->installLlmClient(new FakeLlmClient());
 
         $this->client->request(
             'POST',
@@ -185,13 +230,11 @@ final class TripChatTest extends ApiTestCase
     }
 
     #[Test]
-    public function chatReturns503WhenLlmEnabledButReturnsNull(): void
+    public function chatReturns503WhenProviderUnreachable(): void
     {
         $this->seedTrip(self::TRIP_ID);
 
-        // Edge case: client reports as enabled but chat() returns null. The
-        // dedicated 503 wording for this branch is otherwise untested.
-        $this->installFakeLlmClient(new FakeLlmClient(response: null, enabled: true));
+        $this->installLlmClient(new FakeLlmClient(throwUnavailable: true));
 
         $this->client->request(
             'POST',
@@ -206,11 +249,31 @@ final class TripChatTest extends ApiTestCase
     }
 
     #[Test]
-    public function chatReturns503WhenOllamaUnreachable(): void
+    public function chatReturns503WithInvalidTokenMessageWhenTokenRejected(): void
     {
         $this->seedTrip(self::TRIP_ID);
 
-        $this->installFakeLlmClient(new FakeLlmClient(throwUnavailable: true));
+        $this->installLlmClient(new FakeLlmClient(throwUnavailable: true, unavailableReason: AiFailureReason::INVALID_TOKEN));
+
+        $response = $this->client->request(
+            'POST',
+            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            [
+                'json' => ['message' => 'Bonjour'],
+                'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
+            ],
+        );
+
+        $this->assertResponseStatusCodeSame(503);
+        $this->assertStringContainsString('clé IA', $response->getContent(false));
+    }
+
+    #[Test]
+    public function chatPropagatesRetryAfterHeader(): void
+    {
+        $this->seedTrip(self::TRIP_ID);
+
+        $this->installLlmClient(new FakeLlmClient(throwUnavailable: true, unavailableReason: AiFailureReason::RATE_LIMITED, retryAfter: 60));
 
         $this->client->request(
             'POST',
@@ -222,6 +285,7 @@ final class TripChatTest extends ApiTestCase
         );
 
         $this->assertResponseStatusCodeSame(503);
+        $this->assertResponseHeaderSame('Retry-After', '60');
     }
 
     #[Test]
@@ -241,7 +305,7 @@ final class TripChatTest extends ApiTestCase
     #[Test]
     public function chatReturns404ForUnknownTrip(): void
     {
-        $this->installFakeLlmClient(new FakeLlmClient(enabled: false));
+        $this->installLlmClient(null);
 
         $this->client->request(
             'POST',
@@ -260,7 +324,7 @@ final class TripChatTest extends ApiTestCase
     {
         $this->seedTrip(self::TRIP_ID);
 
-        $this->installFakeLlmClient(new FakeLlmClient([
+        $this->installLlmClient(new FakeLlmClient([
             'message' => ['role' => 'assistant', 'content' => '{}'],
         ]));
 
@@ -287,14 +351,15 @@ final readonly class FakeLlmClient implements LlmClientInterface
      */
     public function __construct(
         private ?array $response = null,
-        private bool $enabled = true,
         private bool $throwUnavailable = false,
+        private AiFailureReason $unavailableReason = AiFailureReason::UNAVAILABLE,
+        private ?int $retryAfter = null,
     ) {
     }
 
     public function isEnabled(): bool
     {
-        return $this->enabled;
+        return true;
     }
 
     public function generate(string $model, string $prompt, ?string $systemPrompt = null, array $options = []): ?array
@@ -313,11 +378,7 @@ final readonly class FakeLlmClient implements LlmClientInterface
     private function respond(): ?array
     {
         if ($this->throwUnavailable) {
-            throw new OllamaUnavailableException('Simulated outage.');
-        }
-
-        if (!$this->enabled) {
-            return null;
+            throw new AiUnavailableException('Simulated outage.', $this->unavailableReason, $this->retryAfter);
         }
 
         return $this->response;

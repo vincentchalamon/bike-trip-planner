@@ -7,8 +7,8 @@ namespace App\InRide;
 use App\ApiResource\Model\GeoPosition;
 use App\Geo\GeoDistanceInterface;
 use App\Geo\GeoPoint;
-use App\Llm\Exception\OllamaUnavailableException;
-use App\Llm\LlmClientInterface;
+use App\Llm\Exception\AiUnavailableException;
+use App\Llm\ResolvedLlmClient;
 use App\Llm\SystemPromptLoader;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -43,8 +43,6 @@ use Psr\Log\NullLogger;
  */
 final readonly class InRideAssistant
 {
-    public const string NARRATIVE_MODEL = 'llama3.2:3b';
-
     private const int MAX_SUGGESTIONS = 3;
 
     /**
@@ -62,7 +60,6 @@ final readonly class InRideAssistant
         private DetourCalculator $detourCalculator,
         private DeeplinkBuilder $deeplinkBuilder,
         private GeoDistanceInterface $distance,
-        private LlmClientInterface $llmClient,
         private SystemPromptLoader $promptLoader,
         private LoggerInterface $logger = new NullLogger(),
     ) {
@@ -74,10 +71,11 @@ final readonly class InRideAssistant
     public function assist(
         string $message,
         GeoPosition $position,
+        ResolvedLlmClient $resolved,
         array $remainingRoute = [],
         ?\DateTimeImmutable $now = null,
     ): InRideResponse {
-        $intent = $this->intentDetector->detect($message);
+        $intent = $this->intentDetector->detect($message, $resolved);
 
         if ($intent->isUnknown()) {
             return new InRideResponse(
@@ -107,7 +105,7 @@ final readonly class InRideAssistant
 
         $top = \array_slice($suggestions, 0, self::MAX_SUGGESTIONS);
 
-        $narrative = $this->generateNarrative($message, $intent, $top);
+        $narrative = $this->generateNarrative($message, $intent, $top, $resolved);
 
         return new InRideResponse(
             category: $intent->category,
@@ -259,7 +257,7 @@ final readonly class InRideAssistant
     /**
      * @param list<PoiSuggestion> $pois
      */
-    private function generateNarrative(string $message, PoiIntent $intent, array $pois): string
+    private function generateNarrative(string $message, PoiIntent $intent, array $pois, ResolvedLlmClient $resolved): string
     {
         if ([] === $pois) {
             return \sprintf(
@@ -295,19 +293,16 @@ final readonly class InRideAssistant
         }
 
         try {
-            $response = $this->llmClient->generate(
-                self::NARRATIVE_MODEL,
+            $response = $resolved->client->generate(
+                $resolved->provider->chatModel(),
                 $jsonPayload,
                 $systemPrompt,
-                [
-                    'temperature' => 0.3,
-                    'num_predict' => 400,
-                    'num_ctx' => 8192,
-                ],
+                ['temperature' => 0.3],
             );
-        } catch (OllamaUnavailableException $ollamaUnavailableException) {
-            $this->logger->critical('InRideAssistant: LLM unavailable for narrative, using fallback.', [
-                'error' => $ollamaUnavailableException->getMessage(),
+        } catch (AiUnavailableException $aiUnavailableException) {
+            $this->logger->critical('InRideAssistant: AI provider unavailable for narrative, using fallback.', [
+                'reason' => $aiUnavailableException->getReason()->value,
+                'error' => $aiUnavailableException->getMessage(),
             ]);
 
             return $this->fallbackNarrative($pois);

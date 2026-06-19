@@ -24,7 +24,10 @@ use App\InRide\PoiSuggestion;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
 use App\Llm\Dto\ChatAction;
+use App\Llm\AiProvider;
 use App\Llm\LlmClientInterface;
+use App\Llm\ResolvedLlmClient;
+use App\Llm\UserLlmResolverInterface;
 use App\Llm\SystemPromptLoader;
 use App\Message\RecalculateStages;
 use App\Repository\TripRequestRepositoryInterface;
@@ -81,7 +84,6 @@ final class TripChatInRideTest extends TestCase
         ]);
 
         $llm = $this->createMock(LlmClientInterface::class);
-        $llm->method('isEnabled')->willReturn(true);
         $llm->method('generate')->willReturnCallback(
             static function (string $model, string $prompt, ?string $systemPrompt = null, array $options = []): array {
                 // The intent detector sends the raw user message; the narrative
@@ -130,7 +132,6 @@ final class TripChatInRideTest extends TestCase
         $poiRepository->expects($this->never())->method('findNearby');
 
         $llm = $this->createMock(LlmClientInterface::class);
-        $llm->method('isEnabled')->willReturn(true);
         $llm->method('generate')->willReturn([
             'response' => '{"category":"unknown","max_distance_m":3000}',
         ]);
@@ -181,7 +182,6 @@ final class TripChatInRideTest extends TestCase
         $poiRepository->method('findNearby')->willReturn([]);
 
         $llm = $this->createMock(LlmClientInterface::class);
-        $llm->method('isEnabled')->willReturn(true);
         $llm->method('generate')->willReturn([
             'response' => '{"category":"unknown","max_distance_m":3000}',
         ]);
@@ -236,19 +236,21 @@ final class TripChatInRideTest extends TestCase
 
         $distance = new HaversineDistance();
         $inRideAssistant = new InRideAssistant(
-            intentDetector: new PoiIntentDetector($llm),
+            intentDetector: new PoiIntentDetector(),
             poiRepository: $poiRepository,
             openingHoursParser: new OpeningHoursParser(),
             detourCalculator: new DetourCalculator($distance),
             deeplinkBuilder: new DeeplinkBuilder(),
             distance: $distance,
-            llmClient: $llm,
             promptLoader: $promptLoader,
         );
 
+        $clientFactory = $this->createStub(UserLlmResolverInterface::class);
+        $clientFactory->method('forUser')->willReturn(new ResolvedLlmClient($llm, AiProvider::ANTHROPIC));
+
         return new TripChatProcessor(
             tripStateManager: $repository,
-            llmClient: $llm,
+            clientFactory: $clientFactory,
             promptLoader: $promptLoader,
             interpreter: new ChatActionInterpreter(new NullLogger()),
             historyStore: $historyStore,
