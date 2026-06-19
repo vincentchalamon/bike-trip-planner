@@ -16,15 +16,11 @@ import { cn } from "@/lib/utils";
 /**
  * One turn of the AI assistant conversation.
  *
- * The shell stores both sides of the dialogue locally so the UI behaves
- * realistically (auto-scroll, alternating bubbles, keyboard navigation) before
- * the backend is wired in.
- *
- * @remarks
- * TODO(sprint 31, #309) — replace the local message list with the real chat
- * stream from the backend AI endpoint. The Ollama infrastructure ships in
- * sprint 28, after which this card will plug into the streaming chat API and
- * actually generate stages instead of dispatching a stub navigation event.
+ * The card stores both sides of the dialogue locally so the UI behaves
+ * realistically (auto-scroll, alternating bubbles, keyboard navigation). The
+ * rider's turns form the brief; the assistant turns are local stubs (there is
+ * no pre-trip streaming chat endpoint; the brief drives a single-shot
+ * generation via `POST /trips/ai-generate`, ADR-042).
  */
 export interface AiChatMessage {
   /** Stable id used as React key — generated from a monotonic counter. */
@@ -38,9 +34,9 @@ export interface AiChatMessage {
 interface AiChatCardProps {
   /**
    * Fired when the user clicks "Valider et continuer". Receives the current
-   * conversation transcript so the parent can hand it off to the wizard or
-   * forward it to the AI endpoint (sprint 31). The shell remains agnostic
-   * about how the conversation is consumed.
+   * conversation transcript; the wizard host forwards the rider's turns as the
+   * brief to AI route generation (`POST /trips/ai-generate`, ADR-042). The card
+   * stays agnostic about how the conversation is consumed.
    */
   onSubmitConversation?: (messages: ReadonlyArray<AiChatMessage>) => void;
   /** Disables every interactive element (offline, parent processing, ...). */
@@ -48,12 +44,10 @@ interface AiChatCardProps {
 }
 
 /**
- * Custom DOM event dispatched on the document when the user submits the chat.
- *
- * Sprint 31 / #309 will replace this with a proper navigation flow once the
- * backend chat endpoint exists; for now the wizard host listens to this event
- * to advance to the preview step (or simply ignores it during the shell-only
- * milestone).
+ * Custom DOM event dispatched on the document when the user submits the chat,
+ * in addition to the {@link AiChatCardProps.onSubmitConversation} callback.
+ * Kept for test/legacy consumers that observe the transcript without coupling
+ * to this component.
  */
 export const AI_CHAT_SUBMIT_EVENT = "ai-chat-submit";
 
@@ -76,10 +70,10 @@ const STUB_ASSISTANT_GREETING_KEY = "stubGreeting";
  *     ("Je veux faire le tour de Corse en 10 jours en septembre", ...).
  *  3. A submit row with the primary "Valider et continuer" button.
  *
- * Until sprint 31 wires the backend (#309), the assistant replies are stubbed
- * locally so the interaction can be exercised end-to-end in mocked tests. The
- * primary button dispatches {@link AI_CHAT_SUBMIT_EVENT} with the transcript
- * so the wizard host can react without coupling to this component.
+ * The assistant replies are local stubs (no pre-trip streaming chat endpoint);
+ * the rider's turns form the brief. On submit the card calls
+ * {@link AiChatCardProps.onSubmitConversation} (wired to AI route generation)
+ * and also dispatches {@link AI_CHAT_SUBMIT_EVENT} for test/legacy consumers.
  *
  * Accessibility:
  *
@@ -146,8 +140,8 @@ export function AiChatCard({
     setMessages((prev) => [
       ...prev,
       { id: nextId(), role: "user", content: trimmed },
-      // TODO(sprint 31, #309) — replace this stub assistant reply with the
-      // streamed response from the backend chat endpoint (Ollama, see #309).
+      // Local stub reply: there is no pre-trip streaming chat endpoint, so the
+      // brief drives a single-shot generation on submit (ADR-042).
       { id: nextId(), role: "assistant", content: stubReply },
     ]);
     setDraft("");
@@ -167,11 +161,9 @@ export function AiChatCard({
     if (disabled) return;
     if (messages.length === 0) return;
 
-    // TODO(sprint 31, #309) — once the backend chat endpoint is available,
-    // replace this stub navigation event with a proper API call that returns
-    // the generated stages and lets the wizard advance to step 2 with real
-    // data. Until then, we surface the transcript via a CustomEvent so the
-    // wizard host (or E2E tests) can observe it without coupling.
+    // Hand the transcript to the wizard host (which POSTs the brief to
+    // /trips/ai-generate) and also surface it via a CustomEvent so E2E tests
+    // and legacy consumers can observe the submit without coupling.
     onSubmitConversation?.(messages);
     if (typeof document !== "undefined") {
       const event = new CustomEvent<AiChatSubmitEventDetail>(

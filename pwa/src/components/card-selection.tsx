@@ -26,7 +26,7 @@ import { useUiStore } from "@/store/ui-store";
  * - `null`: no selection yet, all three cards displayed side-by-side
  * - `link`: Komoot/Strava/RideWithGPS URL input
  * - `gpx`: GPX file drag & drop + file picker
- * - `ai`: free-form chat with the AI assistant (UI shell only — see #392)
+ * - `ai`: free-form natural-language brief that drives AI route generation (ADR-042)
  */
 export type InputMode = "link" | "gpx" | "ai" | null;
 
@@ -34,10 +34,10 @@ interface CardSelectionProps {
   onSubmitUrl: (url: string) => Promise<void> | void;
   onUploadFile: (file: File) => Promise<void> | void;
   /**
-   * Optional callback fired when the AI chat conversation is submitted via the
-   * "Valider et continuer" button. Until the backend AI endpoint ships
-   * (sprint 31, #309) the parent typically leaves this `undefined` and lets
-   * the chat card dispatch its own `ai-chat-submit` DOM event.
+   * Fired when the user submits the AI chat conversation via the "Valider et
+   * continuer" button. The trip-planner host forwards the brief to
+   * `POST /trips/ai-generate` (ADR-042). The chat card also dispatches an
+   * `ai-chat-submit` DOM event for test/legacy consumers.
    */
   onSubmitAiConversation?: (messages: ReadonlyArray<AiChatMessage>) => void;
   disabled?: boolean;
@@ -51,8 +51,8 @@ const MAX_GPX_SIZE_BYTES = 30 * 1024 * 1024;
  *
  * Shows three active cards (Lien + GPX + Assistant IA). Selecting a card
  * expands it and collapses the others, revealing the appropriate input
- * (URL field, drop zone or chat composer). The AI assistant ships as a UI
- * shell only — its backend wiring lands in sprint 31 (see #309).
+ * (URL field, drop zone or chat composer). The AI assistant card forwards a
+ * natural-language brief to AI route generation (ADR-042).
  */
 export function CardSelection({
   onSubmitUrl,
@@ -115,10 +115,10 @@ export function CardSelection({
           />
         )}
 
-        {/* Card: AI Assistant — multi-turn chat shell (#392). Always visible:
-            disabled with an inline notice when the LLM tier is unreachable
-            (#304), or disabled-but-visible with a "Configurez une IA" CTA when
-            no provider is set on the account (ADR-042). */}
+        {/* Card: AI Assistant - natural-language brief to AI route generation
+            (ADR-042). Always visible: disabled with an inline notice when the
+            LLM tier is unreachable (#304), or disabled-but-visible with a
+            "Configurez une IA" CTA when no provider is set on the account. */}
         {(selected === null || selected === "ai") && (
           <AiCard
             expanded={selected === "ai"}

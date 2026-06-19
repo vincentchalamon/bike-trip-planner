@@ -321,6 +321,18 @@ export async function mockAllApis(
     });
   });
 
+  // POST /trips/ai-generate — AI route generation (B2, ADR-042). Returns the
+  // same 202 envelope as POST /trips so the async preview lifecycle kicks in.
+  // Registered after the generic /trips/* routes so it wins for this exact path.
+  await page.route("**/trips/ai-generate", (route, request) => {
+    if (request.method() !== "POST") return route.fallback();
+    return route.fulfill({
+      status: postTripStatus,
+      contentType: "application/ld+json",
+      body: JSON.stringify(postTripBody ?? defaultTripResponse),
+    });
+  });
+
   // GET /.well-known/mercure — abort real SSE (we use __test_mercure_event)
   await page.route("**/.well-known/mercure*", (route) => route.abort());
 
