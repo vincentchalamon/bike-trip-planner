@@ -15,7 +15,7 @@ use PHPUnit\Framework\Attributes\Test;
 /**
  * Guards the per-user analysis wiring (ADR-042): the async handlers resolve the
  * LLM client from the trip owner via {@see TripLlmResolverInterface}, not from a
- * global Ollama client. A silent fallback to a different collaborator would skip
+ * global LLM client. A silent fallback to a different collaborator would skip
  * AI analysis with no compile error and no other test failure.
  */
 final class LlmClientWiringTest extends ApiTestCase

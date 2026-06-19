@@ -1,9 +1,10 @@
 # Recette overlay on top of compose.yaml (iso-prod).
 #
-# Keeps the prod topology untouched (APP_ENV=prod, read_only, JWT secrets) and ONLY:
-#   - adds a Mailcatcher service (capture magic-link emails for the real auth flow),
-#   - sets OLLAMA_ENABLED=1 + OLLAMA_* URLs so the workers use the Ollama service from
-#     compose.ollama.yaml (load it too) to exercise the AI tier, absent from iso-prod.
+# Keeps the prod topology untouched (APP_ENV=prod, read_only, JWT secrets) and ONLY
+# adds a Mailcatcher service (capture magic-link emails for the real auth flow).
+# The AI tier is an optional, per-user cloud provider (ADR-042) — there is no local
+# AI service to wire here; AI is exercised in recette by configuring a provider +
+# token on a test account.
 #
 # Load EXPLICITLY (never auto-loaded): docker compose -f compose.yaml -f compose.recette.yaml ...
 # Named compose.recette.yaml (not compose.override.yaml) to avoid implicit auto-load.
@@ -15,42 +16,19 @@
 # duplicating the block across the three services (review #612).
 x-recette-env: &recette-env
   MAILER_DSN: smtp://mailcatcher:1025
-  OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-  # Flat defaults (no nested interpolation): robust across Compose versions and
-  # unambiguous. Recette never overrides OLLAMA_BASE_URL alone, so no fallback is lost.
-  OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-http://ollama:11434}"
-  OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-http://ollama:11434}"
-  OLLAMA_ENABLED: "1"
-  # Single small model for all LLM roles to keep the local recette light
-  # (chat default is 3b, analysis/overview default to 8b — overridden here).
-  OLLAMA_DIALOGUE_MODEL: "${OLLAMA_DIALOGUE_MODEL:-llama3.2:3b}"
-  OLLAMA_STAGE_MODEL: "${OLLAMA_STAGE_MODEL:-llama3.2:3b}"
-  OLLAMA_OVERVIEW_MODEL: "${OLLAMA_OVERVIEW_MODEL:-llama3.2:3b}"
 
 services:
   php:
     environment:
       <<: *recette-env
-    depends_on:
-      ollama:
-        condition: service_healthy
-        required: false
 
   worker:
     environment:
       <<: *recette-env
-    depends_on:
-      ollama:
-        condition: service_healthy
-        required: false
 
   worker-llm:
     environment:
       <<: *recette-env
-    depends_on:
-      ollama:
-        condition: service_healthy
-        required: false
 
   mailcatcher:
     # Pinned by digest: schickling/mailcatcher has no versioned tags, and the
@@ -67,7 +45,3 @@ services:
       timeout: 3s
       retries: 3
       start_period: 10s
-
-# The `ollama` service (+ ollama-data volume) lives in compose.ollama.yaml so the prod
-# LLM tier is versioned and validated by the recette. Load all three:
-#   docker compose -f compose.yaml -f compose.recette.yaml -f compose.ollama.yaml up --wait

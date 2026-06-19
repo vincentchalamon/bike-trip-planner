@@ -8,8 +8,8 @@
 # Dev keeps the prod topology (FrankenPHP edge: reverse proxy + embedded Mercure
 # + PHP app); it only swaps the build target to frankenphp_dev (Xdebug, file
 # watcher), bind-mounts the source, relaxes read_only/secrets, and adds the
-# dev-only mailcatcher service. The `ollama` service lives in compose.ollama.yaml
-# (single source of truth) and is layered in via COMPOSE_FILE for dev too.
+# dev-only mailcatcher service. The AI tier is an optional, per-user cloud
+# provider (ADR-042) — there is no local AI service in the dev stack.
 
 services:
   php:
@@ -24,11 +24,6 @@ services:
         cors_origins *
         demo
       MAILER_DSN: smtp://mailcatcher:1025
-      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-      # Split analysis vs chat endpoints (issue #564); both default to OLLAMA_BASE_URL.
-      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-0}"
       LOCK_DSN: redis://redis:6379
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
@@ -38,10 +33,6 @@ services:
       JWT_PASSPHRASE: ""
       FRONTEND_URL: "https://${SERVER_NAME:-localhost}"
     secrets: !reset null
-    depends_on:
-      ollama:
-        condition: service_healthy
-        required: false
     extra_hosts:
       # Ensure that host.docker.internal is correctly defined on Linux
       - host.docker.internal:host-gateway
@@ -66,11 +57,6 @@ services:
     environment:
       APP_ENV: dev
       MAILER_DSN: smtp://mailcatcher:1025
-      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-      # Split analysis vs chat endpoints (issue #564); both default to OLLAMA_BASE_URL.
-      OLLAMA_ANALYSIS_URL: "${OLLAMA_ANALYSIS_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_CHAT_URL: "${OLLAMA_CHAT_URL:-${OLLAMA_BASE_URL:-http://ollama:11434}}"
-      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-0}"
       LOCK_DSN: redis://redis:6379
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
       JWT_SECRET_KEY: /app/config/jwt/private.pem
@@ -78,10 +64,6 @@ services:
       JWT_PASSPHRASE: ""
       FRONTEND_URL: "https://${SERVER_NAME:-localhost}"
     secrets: !reset null
-    depends_on:
-      ollama:
-        condition: service_healthy
-        required: false
     extra_hosts:
       - host.docker.internal:host-gateway
     volumes: !override
@@ -96,8 +78,6 @@ services:
     environment:
       APP_ENV: dev
       MAILER_DSN: smtp://mailcatcher:1025
-      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-      OLLAMA_ENABLED: "${OLLAMA_ENABLED:-0}"
       LOCK_DSN: redis://redis:6379
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
       JWT_SECRET_KEY: /app/config/jwt/private.pem
@@ -105,10 +85,6 @@ services:
       JWT_PASSPHRASE: ""
       FRONTEND_URL: "https://${SERVER_NAME:-localhost}"
     secrets: !reset null
-    depends_on:
-      ollama:
-        condition: service_healthy
-        required: false
     extra_hosts:
       - host.docker.internal:host-gateway
     volumes: !override
@@ -123,12 +99,6 @@ services:
       NODE_ENV: development
       # Development usage only
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
-      # Derived from OLLAMA_ENABLED (single flag for both tiers), defaulting to
-      # enabled so the assistant UI is exercised (and E2E specs see it). Ollama
-      # itself is off in dev, so /api/health omits the tier and the PWA shows the
-      # explicit degraded-mode gating (#304). `next dev` reads NEXT_PUBLIC_* at
-      # runtime — no rebuild needed.
-      NEXT_PUBLIC_AI_ENABLED: "${OLLAMA_ENABLED:-1}"
     volumes: !override
       - ./pwa:/srv/app
       - pwa_node_modules:/srv/app/node_modules

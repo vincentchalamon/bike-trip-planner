@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  *
  * Only the last {@see self::MAX_MESSAGES} turns are kept so the prompt window
  * stays bounded for LLaMA 3B inference. Entries are stored as plain `{role,
- * content}` arrays compatible with the Ollama chat API.
+ * content}` arrays compatible with the provider chat API.
  */
 final readonly class ChatHistoryStore
 {

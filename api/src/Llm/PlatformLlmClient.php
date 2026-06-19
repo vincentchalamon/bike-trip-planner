@@ -16,10 +16,9 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpExceptionIn
 /**
  * Provider-agnostic LLM client over a `symfony/ai-platform` Platform (ADR-042),
  * built per-user by {@see LlmClientFactory} for the user's chosen provider/token.
- * Generalises the former OllamaClient: uses `->asText()` (neutral across
- * providers) and does NOT force Ollama-only options (`format`, `num_ctx`) — JSON
- * output is requested via the prompt and parsed leniently downstream, since the
- * JSON mode differs per provider.
+ * Uses `->asText()` (neutral across providers) and does NOT force provider-specific
+ * options (`format`, `num_ctx`) — JSON output is requested via the prompt and
+ * parsed leniently downstream, since the JSON mode differs per provider.
  *
  * Returns the same lightweight shapes the existing consumers expect
  * (`['response' => ...]` / `['message' => ['content' => ...]]`). Transport or

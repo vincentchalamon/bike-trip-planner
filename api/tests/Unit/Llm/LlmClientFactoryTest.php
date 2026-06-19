@@ -24,10 +24,10 @@ final class LlmClientFactoryTest extends TestCase
         $this->encryptor = new AiTokenEncryptor('test-key');
     }
 
-    private function factory(bool $aiEnabled = true): LlmClientFactory
+    private function factory(): LlmClientFactory
     {
         // MockHttpClient with no queued responses: construction must not hit the wire.
-        return new LlmClientFactory(new MockHttpClient(), new MockHttpClient(), new MockHttpClient(), new NullLogger(), $this->encryptor, $aiEnabled);
+        return new LlmClientFactory(new MockHttpClient(), new MockHttpClient(), new MockHttpClient(), new NullLogger(), $this->encryptor);
     }
 
     /**
@@ -60,15 +60,6 @@ final class LlmClientFactoryTest extends TestCase
         self::assertNotNull($resolved);
         self::assertInstanceOf(PlatformLlmClient::class, $resolved->client);
         self::assertSame(AiProvider::ANTHROPIC, $resolved->provider);
-    }
-
-    #[Test]
-    public function forUserReturnsNullWhenTheKillSwitchIsOff(): void
-    {
-        $user = new User('rider@example.test');
-        $user->setAiProvider('anthropic')->setAiToken($this->encryptor->encrypt('sk-ant-secret'));
-
-        self::assertNull($this->factory(aiEnabled: false)->forUser($user));
     }
 
     #[Test]

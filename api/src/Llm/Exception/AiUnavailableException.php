@@ -6,8 +6,7 @@ namespace App\Llm\Exception;
 
 /**
  * Thrown when a user's configured AI provider cannot be reached or returns an
- * unrecoverable error. Provider-neutral successor to OllamaUnavailableException
- * (ADR-042). Carries a typed {@see AiFailureReason} (and an optional Retry-After
+ * unrecoverable error (ADR-042). Carries a typed {@see AiFailureReason} (and an optional Retry-After
  * hint) so callers can degrade precisely and only retry transient failures.
  */
 class AiUnavailableException extends \RuntimeException

@@ -31,12 +31,6 @@ final readonly class HealthController
         private Connection $connection,
         #[Autowire(service: 'routing.client')]
         private HttpClientInterface $valhallaClient,
-        #[Autowire(service: 'ollama_chat.client')]
-        private HttpClientInterface $ollamaChatClient,
-        #[Autowire(service: 'ollama_analysis.client')]
-        private HttpClientInterface $ollamaAnalysisClient,
-        #[Autowire(env: 'bool:default::OLLAMA_ENABLED')]
-        private bool $aiEnabled,
         #[Autowire(service: 'mercure.health.client')]
         private HttpClientInterface $mercureClient,
         #[Autowire(service: 'limiter.health_liveness')]
@@ -75,19 +69,14 @@ final readonly class HealthController
         $deps['redis'] = $this->checkRedis();
 
         // Launch HTTP-based checks in parallel by issuing their requests up front.
+        // The AI tier is no longer a server dependency (ADR-042): it is an optional,
+        // per-user cloud provider reached with the user's own token, so it is not
+        // probed here. AI availability is surfaced to the PWA via the account
+        // AI-settings: AI is available once the user has configured a provider + token.
         $pending = [
             'mercure' => $this->startHttpCheck('HEAD', '?topic=health', $this->mercureClient),
             'valhalla' => $this->startHttpCheck('GET', '/status', $this->valhallaClient),
         ];
-
-        // The LLM tier is probed/surfaced only when enabled (OLLAMA_ENABLED=1). When off,
-        // the absence of `deps.ollama_*` is itself the "AI disabled" signal, and we skip
-        // two pointless probes against an unwired tier. The PWA gates AI features on
-        // NEXT_PUBLIC_AI_ENABLED + deps.ollama_chat (ADR-028 "Degraded Mode").
-        if ($this->aiEnabled) {
-            $pending['ollama_chat'] = $this->startHttpCheck('GET', '/api/tags', $this->ollamaChatClient);
-            $pending['ollama_analysis'] = $this->startHttpCheck('GET', '/api/tags', $this->ollamaAnalysisClient);
-        }
 
         // The two metadata DB round-trips run while the HTTP probes are in flight.
         $deps['reference_data'] = $this->checkReferenceData();
@@ -96,12 +85,8 @@ final readonly class HealthController
             $deps[$name] = $this->finishHttpCheck($pair);
         }
 
-        // Ollama is intentionally NOT required: the app runs in a degraded mode when the
-        // LLM tier is down (AI features disabled, not a 5xx) — see ADR-028 "Degraded Mode"
-        // update. When enabled, ollama_chat/ollama_analysis are surfaced in `deps` (and
-        // logged `critical`) so operators can see/alert on the outage.
-        // reference_data is likewise non-required: a stale or unprovisioned PostGIS
-        // index degrades features (fewer/no POI), it never takes readiness down (ADR-040).
+        // reference_data is non-required: a stale or unprovisioned PostGIS index
+        // degrades features (fewer/no POI), it never takes readiness down (ADR-040).
         $required = ['postgres', 'redis', 'mercure', 'valhalla'];
         $status = 'ok';
         foreach ($required as $dep) {

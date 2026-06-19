@@ -27,10 +27,10 @@ use Symfony\Component\Messenger\MessageBusInterface;
  *
  * From this point, two strategies coexist (issue #303 wires them):
  *
- *  - **Ollama disabled** (or no non-rest stage to analyse) — the handler is
+ *  - **AI not configured** (or no non-rest stage to analyse) — the handler is
  *    self-terminating: it publishes the `TRIP_READY` Mercure event directly
  *    so the frontend swaps state atomically with the enriched payload.
- *  - **Ollama enabled** — the handler initialises the dedicated LLM tracker
+ *  - **AI configured** — the handler initialises the dedicated LLM tracker
  *    ({@see LlmAnalysisTrackerInterface}) with the number of expected pass-1
  *    analyses, then dispatches one {@see AnalyzeStageWithLlmMessage} per
  *    non-rest stage. TRIP_READY is published later, by
@@ -90,7 +90,7 @@ final readonly class AllEnrichmentsCompletedHandler
 
         // Short-circuit: when the rider opted out of re-analysis via the chat bubble,
         // when there is no stage to analyse (e.g. all rest days), or when the trip
-        // owner has no AI configured (kill-switch off / no token), publish TRIP_READY
+        // owner has no AI configured (no provider/token), publish TRIP_READY
         // directly — no AI overview to await. Owner resolution (Redis + DB + token
         // decryption) is evaluated last, only when the cheap guards pass.
         if ($skipAiAnalysis || 0 === $analysableStages || !($this->llmResolver->resolveForTrip($tripId) instanceof ResolvedLlmClient)) {

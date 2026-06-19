@@ -97,29 +97,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'max_redirects' => 2,
                     'timeout' => 60,
                 ],
-                // Analysis and chat are split at the client level (issue #564) so the
-                // async per-stage/overview analysis can later point to a dedicated 8B
-                // service (or a managed endpoint) without touching the chat path —
-                // config-only. Both default to OLLAMA_BASE_URL, so in beta they target
-                // the same Ollama instance and behaviour is unchanged.
-                'ollama_analysis.client' => [
-                    'base_uri' => '%env(OLLAMA_ANALYSIS_URL)%',
-                    'max_redirects' => 0,
-                    'timeout' => 30,
-                    'headers' => [
-                        'Accept' => 'application/json',
-                        'Content-Type' => 'application/json',
-                    ],
-                ],
-                'ollama_chat.client' => [
-                    'base_uri' => '%env(OLLAMA_CHAT_URL)%',
-                    'max_redirects' => 0,
-                    'timeout' => 30,
-                    'headers' => [
-                        'Accept' => 'application/json',
-                        'Content-Type' => 'application/json',
-                    ],
-                ],
                 'mercure.health.client' => [
                     'base_uri' => '%env(MERCURE_URL)%',
                     'max_redirects' => 0,

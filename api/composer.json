@@ -26,7 +26,6 @@
         "symfony/ai-anthropic-platform": "^0.9",
         "symfony/ai-bundle": "^0.9",
         "symfony/ai-gemini-platform": "^0.9",
-        "symfony/ai-ollama-platform": "^0.9.0",
         "symfony/ai-open-ai-platform": "^0.9",
         "symfony/ai-platform": "^0.9.0",
         "symfony/asset": "8.0.*",

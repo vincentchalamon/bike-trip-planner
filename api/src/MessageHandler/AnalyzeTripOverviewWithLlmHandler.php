@@ -29,8 +29,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
  * cross-stage patterns and trip-level recommendations.
  *
  * Behaviour:
- * - When the trip owner has not configured an AI provider (or the AI_ENABLED
- *   kill-switch is off): the handler returns silently.
+ * - When the trip owner has not configured an AI provider: the handler returns
+ *   silently.
  * - When the LLM is unreachable: the {@see AiUnavailableException} is logged and
  *   swallowed. AI overview is best-effort enrichment, never blocking.
  * - When the response cannot be parsed: the handler logs and skips persistence.
@@ -122,7 +122,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
         $model = $resolved->provider->analysisModel();
 
         try {
-            // Options are intentionally left to provider defaults: Ollama-only knobs
+            // Options are intentionally left to provider defaults: provider-specific knobs
             // (format, num_ctx, num_predict) are not portable across cloud providers.
             $response = $resolved->client->generate(
                 model: $model,
@@ -349,7 +349,7 @@ final readonly class AnalyzeTripOverviewWithLlmHandler
     }
 
     /**
-     * @param array<string, mixed> $response Ollama API response (either /api/generate or /api/chat)
+     * @param array<string, mixed> $response provider response envelope (generate- or chat-shaped)
      */
     private function extractText(array $response): ?string
     {
