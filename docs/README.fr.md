@@ -19,7 +19,7 @@ Vous cherchez la présentation produit ? Voir le README ([Français](../README.f
 |---|---|
 | [Contribuer](contributing.fr.md) | Workflow de dev, QA, tests, et régénération des captures d'écran |
 | [Déploiement](deployment.md) | Pipeline de production, Coolify, monitoring, rollback (EN) |
-| [Runbooks](runbooks/) | Procédures d'astreinte : workers, BDD, Redis, Mercure, Ollama, releases (EN) |
+| [Runbooks](runbooks/) | Procédures d'astreinte : workers, BDD, Redis, Mercure, releases (EN) |
 | [Outillage Claude Code](claude-code-tooling.fr.md) | Serveurs MCP, hooks et skills pour le développement assisté par IA |
 
 ## Consulter — référence
@@ -37,7 +37,8 @@ Vous cherchez la présentation produit ? Voir le README ([Français](../README.f
 |---|---|
 | [Architecture](architecture.md) | Vue d'ensemble du système : comment les briques s'assemblent, et pourquoi (EN) |
 | [Décisions d'architecture (ADR)](adr/) | Chaque choix technique majeur, avec contexte et alternatives (EN) |
-| [Pipeline IA / LLaMA](LLaMA.md) | Structure du pipeline IA auto-hébergé |
+| [IA optionnelle (multi-fournisseur, clé personnelle)](adr/adr-042-optional-multi-provider-ai-byo-token.md) | Le modèle d'IA opt-in, par utilisateur — choisir un fournisseur (Anthropic, Gemini, OpenAI) et apporter sa propre clé (EN) |
+| [Pipeline IA / LLaMA](LLaMA.md) | Structure historique du pipeline IA auto-hébergé (obsolète — remplacé par l'ADR-042) |
 
 ---
 

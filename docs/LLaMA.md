@@ -1,6 +1,8 @@
 # Architecture Project: Bike Trip Planner AI (2026)
 
-**Stack :** Next.js, Symfony/API Platform, Ollama (LLaMA 3.2 3B & 3.1 8B), Valhalla, Photon.
+> **⚠️ Obsolète (2026-06-19) — voir [ADR-042](adr/adr-042-optional-multi-provider-ai-byo-token.md).** L'IA auto-hébergée (Ollama/LLaMA) décrite ici a été remplacée par un modèle **optionnel, multi-fournisseur, à clé personnelle (BYO token)** : Anthropic (Claude), Google (Gemini), OpenAI. Ce document est conservé pour son raisonnement d'architecture historique ; le pipeline (analyse 2 passes, chat, in-ride) reste valable mais le transport est désormais le fournisseur cloud choisi par l'utilisateur avec sa propre clé.
+
+**Stack :** Next.js, Symfony/API Platform, `symfony/ai-platform` (Anthropic/Claude, Google/Gemini, OpenAI — BYO token), Valhalla, Photon.
 **Infra :** Oracle Cloud Free Tier (4 OCPUs ARM, 24GB RAM).
 
 > **Statut :** l'analyse IA (par étape + vue d'ensemble, LLaMA 8B) et l'assistant conversationnel (LLaMA 3B, dont le mode in-ride POI) sont livrés — voir [ADR-028](adr/adr-028-ollama-llama-integration.md) et [ADR-030](adr/adr-030-symfony-ai-adoption.md). La génération d'itinéraire à partir d'un prompt texte (le flux « Brief de Mission » ci-dessous) est une cible non encore implémentée (#67). Ce document décrit l'architecture visée et son raisonnement.

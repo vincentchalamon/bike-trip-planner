@@ -1,5 +1,7 @@
 # Ollama Down
 
+> **⚠️ Obsolete (2026-06-19) — superseded by [ADR-042](../adr/adr-042-optional-multi-provider-ai-byo-token.md).** The self-hosted Ollama/LLaMA tier this runbook covers has been removed: there is no `ollama` Compose service, no `OLLAMA_*` env, and no `/api/health` Ollama probe. AI is now an optional, per-user, multi-provider bring-your-own-token model (Anthropic, Gemini, OpenAI) — there is no operator-side inference service to restart. AI availability is decided per-user (is a token configured?) — there is no env-var toggle; provider failures degrade gracefully (reason-aware 503 on chat, skipped async analysis). This file is kept for historical reference only.
+
 Ollama is an **optional LLM tier** running in **explicit degraded mode** (ADR-028, "Decision Update — Degraded Mode Re-instated"). When it is unreachable the app **stays up**: AI passes are skipped (not retried to failure), the events are logged `critical` for alerting, `/api/health` stays HTTP **200** (Ollama is excluded from the readiness `$required` set), and the PWA **disables the AI features with an explicit "unavailable" notice** rather than silently dropping them. Trip computation, rule-based alerts, and `TRIP_READY` are unaffected.
 
 ## Symptômes

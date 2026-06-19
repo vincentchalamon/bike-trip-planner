@@ -5,6 +5,8 @@
 - **Depends on:** ADR-019 (Deployment Infrastructure), ADR-028 (Ollama/LLaMA integration), ADR-031 (Error tracking), ADR-034 (Usage analytics), ADR-037 (Dev/Prod Docker convergence)
 - **Amends:** ADR-019 (RAM budget correction)
 
+> **Superseded by [ADR-042](adr-042-optional-multi-provider-ai-byo-token.md) (2026-06-19):** the self-hosted Ollama/LLaMA tier was replaced by an optional, per-user, multi-provider bring-your-own-token model. The Ollama service, OLLAMA_* env and the bundled LLM resource have been removed, which **frees the LLM RAM/CPU budget on the beta VM** (no resident model, no serialised `llm` worker, no CPU-only inference bottleneck — the constraint this ADR right-sized around). The pipeline shape (2-pass analysis, gate, graceful degradation) still holds, but inference now runs on the user's chosen cloud provider with their own key.
+
 > **Note on numbering.** The source GitHub issue (#570) titled this ADR "ADR-035". ADR-035 was already allocated to RGPD account erasure (sprint 34), and 036 (manual OSM refresh) / 037 (dev/prod convergence) were taken on disk. The next free number, 038, is already claimed by an open PR (#578, backup/DR for #527). To avoid a collision the number slid to **ADR-039**. The technical scope is unchanged.
 
 ## Context and Problem Statement

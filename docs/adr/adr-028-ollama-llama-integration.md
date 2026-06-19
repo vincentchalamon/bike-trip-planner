@@ -5,6 +5,8 @@
 - **Depends on:** ADR-001 (Global Architecture), ADR-012 (Rule-based alert engine), ADR-014 (Alert extensibility), ADR-027 (Gate mechanism and two-phase pipeline)
 - **Extends:** ADR-012 (adds an LLM-driven narrative layer on top of the rule-based alert engine)
 
+> **Superseded by [ADR-042](adr-042-optional-multi-provider-ai-byo-token.md) (2026-06-19):** the self-hosted Ollama/LLaMA tier was replaced by an optional, per-user, multi-provider bring-your-own-token model. The Ollama service, OLLAMA_* env and the bundled LLM resource have been removed. The pipeline shape (2-pass analysis, gate, graceful degradation) described below still holds, but the transport is now the user's chosen cloud provider.
+
 > **Note on numbering.** This ADR was originally tracked as "ADR-027" in the GitHub issue. ADR-027 was concurrently allocated to the gate mechanism and two-phase pipeline. To preserve numbering uniqueness, the Ollama/LLaMA integration was renumbered to ADR-028. The technical scope is unchanged.
 
 ## Context and Problem Statement

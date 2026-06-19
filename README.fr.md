@@ -54,7 +54,7 @@
 
 **Traitement temps réel** — Des workers asynchrones calculent votre voyage en parallèle ; les mises à jour de statut sont poussées vers le navigateur via Mercure SSE. Aucun rechargement de page.
 
-**Analyse IA (optionnelle)** — Un modèle LLaMA auto-hébergé (via Ollama) rédige un résumé par étape et pour l'ensemble du voyage, et alimente un assistant conversationnel context-aware — y compris un mode « in-ride » qui repère les points d'intérêt à proximité. Dégradation gracieuse : sans le modèle, les alertes restent affichées.
+**Analyse IA (optionnelle, à clé personnelle)** — Désactivée par défaut, entièrement opt-in. Activez-la dans les réglages de votre compte en choisissant un fournisseur — Anthropic (Claude), Google (Gemini) ou OpenAI — et en collant votre propre clé API. Votre clé alimente un résumé par étape et pour l'ensemble du voyage, ainsi qu'un assistant conversationnel context-aware — y compris un mode « in-ride » qui repère les points d'intérêt à proximité. La clé est chiffrée au repos et n'est jamais renvoyée par l'API. Quand l'IA est active, les données du voyage (tracé, villes, dates) sont envoyées au fournisseur que vous avez choisi avec votre propre clé et facturées sur votre compte ; rien n'est transmis à un tiers sans votre opt-in. Dégradation gracieuse : sans clé, avec une clé invalide, un quota atteint ou un fournisseur indisponible, les alertes basées sur les règles restent affichées.
 
 **Export multi-format** — Exportez des fichiers GPX enrichis de waypoints (hébergements, points d'eau, POI), prêts pour votre GPS. Téléchargez les fichiers FIT par étape pour Garmin, ou générez un résumé texte du roadbook.
 
@@ -181,11 +181,11 @@ La sécurité des types est appliquée de bout en bout : les DTO PHP définissen
 | Carte | MapLibre GL |
 | Style | Tailwind CSS, shadcn/ui |
 | Persistance | PostgreSQL 18 (Doctrine ORM), Redis (transitoire + caches) |
-| IA | Ollama (LLaMA), `symfony/ai` |
+| IA | `symfony/ai-platform` (Anthropic, Gemini, OpenAI — BYO token) |
 | Tests | PHPUnit 13 (backend), Playwright 1.60 (E2E) |
 | Qualité | PHPStan niveau 9, PHP-CS-Fixer, Rector, ESLint, Prettier |
 | Asynchrone | Symfony Messenger, transport Redis, 5 workers |
-| Runtime | Docker (Caddy, Mercure, Redis, PostgreSQL, Node, Ollama) |
+| Runtime | Docker (Caddy, Mercure, Redis, PostgreSQL, Node) |
 
 ---
 
