@@ -60,6 +60,21 @@ final class AiTripGenerationServiceTest extends TestCase
     }
 
     #[Test]
+    public function generatesAPointToPointRoute(): void
+    {
+        // Exercises the loop:false branch: $to = last coordinate, $via excludes both endpoints.
+        $client = $this->llm('{"start":"Lille","loop":false,"end":"Paris","days":2,"km_per_day":100,"accommodation":"hotel","waypoints":["Cambrai"]}');
+
+        $result = $this->service(
+            geocoder: $this->geocoderReturning(new Coordinate(50.6, 3.0)),
+            routing: $this->routingReturning(200_000.0), // 200 km, within [120, 280] of the 200 km target
+        )->generate('Lille vers Paris', $this->resolved($client));
+
+        self::assertSame(AiGenerationOutcome::SUCCESS, $result->outcome);
+        self::assertEqualsWithDelta(200.0, $result->distanceKm, 0.01);
+    }
+
+    #[Test]
     public function returnsUnparseableWhenTheModelDoesNotEmitJson(): void
     {
         $client = $this->llm('Sorry, I cannot help with that.');

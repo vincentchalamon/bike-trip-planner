@@ -64,6 +64,20 @@ final class GeocoderTest extends TestCase
         self::assertSame($first->lat, $second->lat);
     }
 
+    #[Test]
+    public function cachesNullForAnUnresolvablePlace(): void
+    {
+        // Only one response queued: a second HTTP call would throw, so a cached
+        // null miss is what lets the second call succeed.
+        $geocoder = new Geocoder(new MockHttpClient(new MockResponse('[]')), $this->cache());
+
+        $first = $geocoder->geocode('Atlantis-sur-Mer');
+        $second = $geocoder->geocode('Atlantis-sur-Mer');
+
+        self::assertNull($first);
+        self::assertNull($second);
+    }
+
     private function cache(): CacheItemPoolInterface
     {
         return new ArrayAdapter();

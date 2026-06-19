@@ -57,14 +57,14 @@ final readonly class AiTripGenerationService
 
         $spec = $this->extractSpec($resolved, $model, $systemPrompt, $brief);
         if (null === $spec) {
-            return AiGeneratedRoute::unparseable();
+            return AiGeneratedRoute::unparseable($locale);
         }
 
         if (true === ($spec['out_of_zone'] ?? false)) {
-            return AiGeneratedRoute::outOfZone($this->specString($spec, 'out_of_zone_reason'));
+            return AiGeneratedRoute::outOfZone($this->specString($spec, 'out_of_zone_reason'), $locale);
         }
 
-        $route = $this->route($spec);
+        $route = $this->route($spec, $locale);
 
         // One corrective re-prompt when the routed distance is far off the target.
         if ($route->isSuccess() && $this->isOffTarget($spec, $route->distanceKm)) {
@@ -75,7 +75,7 @@ final readonly class AiTripGenerationService
 
             $corrected = $this->extractSpec($resolved, $model, $systemPrompt, $this->correctionBrief($brief, $spec, $route->distanceKm));
             if (null !== $corrected && true !== ($corrected['out_of_zone'] ?? false)) {
-                $second = $this->route($corrected);
+                $second = $this->route($corrected, $locale);
                 if ($second->isSuccess()) {
                     return $second;
                 }
@@ -88,7 +88,7 @@ final readonly class AiTripGenerationService
     /**
      * @param array<string, mixed> $spec
      */
-    private function route(array $spec): AiGeneratedRoute
+    private function route(array $spec, string $locale): AiGeneratedRoute
     {
         $loop = (bool) ($spec['loop'] ?? false);
 
@@ -120,11 +120,17 @@ final readonly class AiTripGenerationService
         }
 
         if ([] !== $missing) {
-            return AiGeneratedRoute::ungeocodable($spec, \sprintf('Impossible de localiser : %s. Reformulez avec des lieux plus précis.', implode(', ', $missing)));
+            $places = implode(', ', $missing);
+
+            return AiGeneratedRoute::ungeocodable($spec, 'fr' === $locale
+                ? \sprintf('Impossible de localiser : %s. Reformulez avec des lieux plus précis.', $places)
+                : \sprintf('Could not locate: %s. Try more specific place names.', $places));
         }
 
         if (\count($coordinates) < 2) {
-            return AiGeneratedRoute::ungeocodable($spec, 'Pas assez de lieux exploitables pour tracer un itinéraire.');
+            return AiGeneratedRoute::ungeocodable($spec, 'fr' === $locale
+                ? 'Pas assez de lieux exploitables pour tracer un itinéraire.'
+                : 'Not enough usable places to draw an itinerary.');
         }
 
         // Coverage backstop: even an in-zone start can route through an uncovered
@@ -133,7 +139,9 @@ final readonly class AiTripGenerationService
             static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
             $coordinates,
         ))) {
-            return AiGeneratedRoute::outOfZone('L\'itinéraire proposé sort de la zone couverte (France et Benelux).');
+            return AiGeneratedRoute::outOfZone('fr' === $locale
+                ? "L'itinéraire proposé sort de la zone couverte (France et Benelux)."
+                : 'The proposed route leaves the covered area (France and the Benelux).', $locale);
         }
 
         $from = $coordinates[0];
@@ -145,7 +153,7 @@ final readonly class AiTripGenerationService
         } catch (\Throwable $throwable) {
             $this->logger->warning('AI generation routing failed.', ['error' => $throwable->getMessage()]);
 
-            return AiGeneratedRoute::routingFailed($spec);
+            return AiGeneratedRoute::routingFailed($spec, $locale);
         }
 
         return AiGeneratedRoute::success($spec, $result->coordinates, $result->distance / 1000);
