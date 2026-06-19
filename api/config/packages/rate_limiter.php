@@ -43,6 +43,15 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '60 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
+            // AI route generation is heavier than chat (LLM + geocoding + Valhalla,
+            // possibly a corrective re-prompt) and runs on the user's own quota,
+            // so it is throttled more tightly.
+            'ai_generate' => [
+                'policy' => 'sliding_window',
+                'limit' => 5,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
             'health_liveness' => [
                 'policy' => 'sliding_window',
                 'limit' => 60,
