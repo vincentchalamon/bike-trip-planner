@@ -16,6 +16,7 @@ use ApiPlatform\OpenApi\Model\Operation;
 use App\State\AnalyzeTripProcessor;
 use App\State\TripBatchRecomputeProcessor;
 use App\State\TripChatProcessor;
+use App\State\TripAiGenerateProcessor;
 use App\State\TripCollectionProvider;
 use App\State\TripCreateProcessor;
 use App\State\TripDeleteProcessor;
@@ -71,6 +72,21 @@ use App\State\TripUpdateProcessor;
             input: TripRequest::class,
             mercure: true,
             processor: TripCreateProcessor::class,
+        ),
+        new Post(
+            uriTemplate: '/trips/ai-generate{._format}',
+            status: 202,
+            openapi: new Operation(
+                responses: [
+                    422 => new Response(description: 'AI provider not configured'),
+                    429 => new Response(description: 'Rate limit reached'),
+                ],
+                summary: "Generate a trip from a natural-language brief using the user's configured AI provider.",
+            ),
+            security: "is_granted('ROLE_USER')",
+            input: TripAiGenerateRequest::class,
+            mercure: true,
+            processor: TripAiGenerateProcessor::class,
         ),
         new Post(
             uriTemplate: '/trips/{id}/duplicate{._format}',

@@ -28,7 +28,7 @@ use Psr\Log\LoggerInterface;
  * Stateless: returns an {@see AiGeneratedRoute}; persistence + the async pipeline
  * dispatch live in the caller.
  */
-final readonly class AiTripGenerationService
+final readonly class AiTripGenerationService implements AiTripGenerationServiceInterface
 {
     public const string PROMPT_NAME = 'itinerary-generation';
 
