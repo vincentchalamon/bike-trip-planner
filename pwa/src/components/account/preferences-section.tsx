@@ -21,7 +21,7 @@ const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: "English",
 };
 
-const THEME_OPTIONS = ["light", "dark", "system"] as const;
+const THEME_OPTIONS = ["light", "dark"] as const;
 type ThemeOption = (typeof THEME_OPTIONS)[number];
 
 const emptySubscribe = () => () => {};
@@ -30,15 +30,16 @@ const getFalse = () => false;
 
 /**
  * "Préférences" section: language (synced with the top-bar locale switcher via
- * the `locale` cookie + next-intl) and theme (Light/Dark/Auto synced with
- * next-themes).
+ * the `locale` cookie + next-intl) and theme (Light/Dark synced with
+ * next-themes). No "auto/system" option (#649) — the provider defaults to
+ * `system`, so the OS preference is the default until the user picks one.
  */
 export function PreferencesSection() {
   const t = useTranslations("accountSettings.preferences");
   const currentLocale = useLocale();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(emptySubscribe, getTrue, getFalse);
 
   function handleLocaleChange(locale: SupportedLocale) {
@@ -52,7 +53,6 @@ export function PreferencesSection() {
   const themeLabels: Record<ThemeOption, string> = {
     light: t("themeLight"),
     dark: t("themeDark"),
-    system: t("themeSystem"),
   };
 
   return (
@@ -102,7 +102,10 @@ export function PreferencesSection() {
           <span className="text-sm font-medium">{t("themeLabel")}</span>
           <div className="flex gap-2">
             {THEME_OPTIONS.map((option) => {
-              const isActive = mounted && theme === option;
+              // Reflect the resolved theme so a persisted "system" value still
+              // highlights its effective light/dark choice (UI never shows an
+              // empty selection).
+              const isActive = mounted && resolvedTheme === option;
               return (
                 <Button
                   key={option}

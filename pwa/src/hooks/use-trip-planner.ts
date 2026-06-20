@@ -15,6 +15,7 @@ import { useMercure } from "@/hooks/use-mercure";
 import {
   apiClient,
   parseApiError,
+  localizedApiErrorMessage,
   isNetworkError,
   uploadGpxFile,
   scanAccommodations,
@@ -186,7 +187,7 @@ export function useTripPlanner() {
 
       if (error || !data) {
         const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
+        toast.error(localizedApiErrorMessage(apiError, t));
         setProcessing(false);
         setAccommodationScanning(false);
         return;
@@ -237,7 +238,7 @@ export function useTripPlanner() {
 
       if (error || !data) {
         const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
+        toast.error(localizedApiErrorMessage(apiError, t));
         setProcessing(false);
         setAccommodationScanning(false);
         return;
@@ -333,7 +334,7 @@ export function useTripPlanner() {
 
       if (error) {
         const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
+        toast.error(localizedApiErrorMessage(apiError, t));
       } else {
         if (data) actions.setIsLocked(data.isLocked === true);
         setProcessing(true);
@@ -380,7 +381,7 @@ export function useTripPlanner() {
       );
       if (error) {
         const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
+        toast.error(localizedApiErrorMessage(apiError, t));
         useTripTemporalStore.getState()._pop();
         useTripStore.getState().setStages(snapshot);
       } else {
@@ -479,7 +480,7 @@ export function useTripPlanner() {
       );
       if (error) {
         const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
+        toast.error(localizedApiErrorMessage(apiError, t));
         useTripTemporalStore.getState()._pop();
         useTripStore.getState().setStages(currentStages);
       } else {
@@ -510,7 +511,7 @@ export function useTripPlanner() {
       );
       if (error) {
         const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
+        toast.error(localizedApiErrorMessage(apiError, t));
       } else {
         // Push snapshot only after a successful PATCH to avoid phantom undo entries
         useTripTemporalStore.getState()._push(snapshot);
@@ -553,7 +554,7 @@ export function useTripPlanner() {
 
       if (error) {
         const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
+        toast.error(localizedApiErrorMessage(apiError, t));
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
@@ -632,7 +633,7 @@ export function useTripPlanner() {
 
       if (error) {
         const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
+        toast.error(localizedApiErrorMessage(apiError, t));
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
@@ -680,7 +681,7 @@ export function useTripPlanner() {
       if (error) {
         actions.setEnabledAccommodationTypes(previous);
         const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
+        toast.error(localizedApiErrorMessage(apiError, t));
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
@@ -1070,7 +1071,7 @@ export function useTripPlanner() {
       );
       if (error) {
         const apiError = parseApiError(response.status, error);
-        toast.error(apiError.message);
+        toast.error(localizedApiErrorMessage(apiError, t));
         useTripStore.getState().setStages([...currentStages]);
       } else {
         setProcessing(true);

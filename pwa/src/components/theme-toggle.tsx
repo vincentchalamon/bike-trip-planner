@@ -28,8 +28,8 @@ const NEXT_THEME: Record<ThemeState, ThemeState> = {
  *
  * The provider defaults to `system`, so on first load the theme matches the
  * OS preference. A single click then flips to the opposite *resolved* theme
- * and pins it explicitly (no "auto/system" state in the top bar — #649). The
- * dedicated Account → Préférences picker still exposes the three options.
+ * and pins it explicitly (no "auto/system" state — #649). The dedicated
+ * Account → Préférences picker exposes the same two options.
  */
 export function ThemeToggle() {
   const t = useTranslations("theme");

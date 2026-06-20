@@ -18,6 +18,7 @@ import {
   AI_PROVIDERS,
   clearAiSettings,
   fetchAiSettings,
+  localizedApiErrorMessage,
   saveAiSettings,
   type AiProvider,
 } from "@/lib/api/client";
@@ -39,6 +40,7 @@ import { useUiStore } from "@/store/ui-store";
  */
 export function AiProviderSection() {
   const t = useTranslations("accountSettings.ai");
+  const tErrors = useTranslations();
   const setAiConfigured = useUiStore((s) => s.setAiConfigured);
   const providerId = useId();
   const tokenId = useId();
@@ -70,7 +72,7 @@ export function AiProviderSection() {
     try {
       const { data, error: apiError } = await saveAiSettings(provider, token);
       if (apiError) {
-        setError(apiError.message);
+        setError(localizedApiErrorMessage(apiError, tErrors));
         return;
       }
       setProvider(data.provider ?? provider);
