@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback, useMemo, useState, memo } from "react";
 import { createPortal } from "react-dom";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import type { FeatureCollection, LineString } from "geojson";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
@@ -77,9 +78,7 @@ const emptySubscribe = () => () => {};
 const getTrue = () => true;
 const getFalse = () => false;
 
-function buildRouteGeoJSON(
-  stages: StageData[],
-): GeoJSON.FeatureCollection<GeoJSON.LineString> {
+function buildRouteGeoJSON(stages: StageData[]): FeatureCollection<LineString> {
   return {
     type: "FeatureCollection",
     features: stages
@@ -264,7 +263,7 @@ export const MapView = memo(function MapView({
   });
 
   const addSourceAndLayers = useCallback(
-    (map: maplibregl.Map, data: GeoJSON.FeatureCollection) => {
+    (map: maplibregl.Map, data: FeatureCollection) => {
       if (!map.getSource("route")) {
         map.addSource("route", { type: "geojson", data });
       } else {

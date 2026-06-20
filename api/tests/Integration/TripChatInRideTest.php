@@ -101,7 +101,6 @@ final class TripChatInRideTest extends TestCase
         $response = $processor->process(
             new TripChatRequest(
                 message: "Je cherche un point d'eau",
-                context: null,
                 position: new GeoPosition(50.8503, 4.3517),
             ),
             new Post(),
@@ -141,7 +140,6 @@ final class TripChatInRideTest extends TestCase
         $response = $processor->process(
             new TripChatRequest(
                 message: 'Quelle est la météo ?',
-                context: null,
                 position: new GeoPosition(50.8503, 4.3517),
             ),
             new Post(),
@@ -191,7 +189,6 @@ final class TripChatInRideTest extends TestCase
         $processor->process(
             new TripChatRequest(
                 message: 'Point eau ?',
-                context: null,
                 position: new GeoPosition(50.8503, 4.3517),
             ),
             new Post(),

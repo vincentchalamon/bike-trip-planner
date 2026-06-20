@@ -111,7 +111,7 @@ final class ComputationDependencyResolverTest extends TestCase
     #[Test]
     public function datesModificationTriggersWeatherCalendarAndEvents(): void
     {
-        $modification = new TripModification(stageIndex: null, type: 'dates', label: 'Dates');
+        $modification = new TripModification(type: 'dates', label: 'Dates');
         $messages = $this->resolver->resolve('trip-1', [$modification], [0, 1, 2], true, [], generation: null);
 
         $classes = $this->classesOf($messages);
@@ -127,7 +127,7 @@ final class ComputationDependencyResolverTest extends TestCase
     #[Test]
     public function pacingModificationTriggersRecalculateForAllStages(): void
     {
-        $modification = new TripModification(stageIndex: null, type: 'pacing', label: 'Pacing');
+        $modification = new TripModification(type: 'pacing', label: 'Pacing');
         $messages = $this->resolver->resolve('trip-1', [$modification], [0, 1, 2], false, [], generation: null);
 
         $recalc = $this->firstOf($messages, RecalculateStages::class);
@@ -138,7 +138,7 @@ final class ComputationDependencyResolverTest extends TestCase
     #[Test]
     public function pacingModificationWithDatesTriggersWeatherAndCalendar(): void
     {
-        $modification = new TripModification(stageIndex: null, type: 'pacing', label: 'Pacing');
+        $modification = new TripModification(type: 'pacing', label: 'Pacing');
         $messages = $this->resolver->resolve('trip-1', [$modification], [0, 1, 2], true, [], generation: null);
 
         $classes = $this->classesOf($messages);
@@ -153,7 +153,7 @@ final class ComputationDependencyResolverTest extends TestCase
         $modifications = [
             new TripModification(stageIndex: 0, type: 'accommodation', label: 'acc 0'),
             new TripModification(stageIndex: 2, type: 'distance', label: 'dist 2'),
-            new TripModification(stageIndex: null, type: 'dates', label: 'dates'),
+            new TripModification(type: 'dates', label: 'dates'),
         ];
 
         $messages = $this->resolver->resolve('trip-1', $modifications, [0, 1, 2], true, ['hotel'], generation: 1);

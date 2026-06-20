@@ -71,7 +71,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
         );
 
         $request = new TripBatchRecomputeRequest([
-            new TripModification(stageIndex: null, type: 'pacing'),
+            new TripModification(type: 'pacing'),
         ]);
 
         $processor->process($request, new Post(), ['id' => 't']);

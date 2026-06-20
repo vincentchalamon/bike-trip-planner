@@ -107,7 +107,6 @@ final readonly class CheckCulturalPoisHandler extends AbstractTripMessageHandler
             $allCulturalPois = $this->registry->fetchAllForStages($stageGeometries, self::CULTURAL_POI_RADIUS_METERS);
 
             // Distribute POIs to the nearest active stage via geometry
-            /** @var array<int, list<array>> $poisByActiveStage */
             $poisByActiveStage = $this->distributor->distributeByGeometry($allCulturalPois, $activeStages);
 
             $alerts = [];
