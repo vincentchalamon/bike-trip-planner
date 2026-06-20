@@ -690,6 +690,9 @@
   "errors": {
     "networkError": "Network error. Please check your connection.",
     "unexpectedError": "An unexpected error occurred.",
+    "validationError": "Invalid data.",
+    "badRequest": "Bad request.",
+    "notFound": "Resource not found.",
     "failedUpdateDates": "Failed to update dates.",
     "failedDeleteStage": "Failed to delete stage.",
     "failedMoveStage": "Failed to move stage.",
@@ -934,8 +937,7 @@
       "languageLabel": "Language",
       "themeLabel": "Theme",
       "themeLight": "Light",
-      "themeDark": "Dark",
-      "themeSystem": "Auto"
+      "themeDark": "Dark"
     },
     "data": {
       "title": "My data",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseApiError } from "./client";
+import { localizedApiErrorMessage, parseApiError } from "./client";
 
 describe("parseApiError", () => {
   it("returns validation error with joined messages for 422", () => {
@@ -16,11 +16,11 @@ describe("parseApiError", () => {
     });
   });
 
-  it("returns fallback message for 422 with empty violations", () => {
+  it("returns an empty message for 422 with empty violations", () => {
     const result = parseApiError(422, { violations: [] });
     expect(result).toEqual({
       type: "validation",
-      message: "Validation error",
+      message: "",
       violations: [],
     });
   });
@@ -32,24 +32,24 @@ describe("parseApiError", () => {
     });
   });
 
-  it("returns bad_request with fallback when body has no detail", () => {
+  it("returns bad_request with an empty message when body has no detail", () => {
     expect(parseApiError(400, {})).toEqual({
       type: "bad_request",
-      message: "Bad request",
+      message: "",
     });
   });
 
   it("returns not_found for 404", () => {
     expect(parseApiError(404, null)).toEqual({
       type: "not_found",
-      message: "Resource not found",
+      message: "",
     });
   });
 
   it("returns network error for unknown status codes", () => {
     expect(parseApiError(500, null)).toEqual({
       type: "network",
-      message: "An unexpected error occurred",
+      message: "",
     });
   });
 
@@ -57,7 +57,29 @@ describe("parseApiError", () => {
     // 422 but body doesn't match ViolationBody shape → falls through
     expect(parseApiError(422, { detail: "something" })).toEqual({
       type: "network",
-      message: "An unexpected error occurred",
+      message: "",
     });
+  });
+});
+
+describe("localizedApiErrorMessage", () => {
+  const t = (key: string) => `t:${key}`;
+
+  it("returns the API-provided message when present", () => {
+    expect(
+      localizedApiErrorMessage({ type: "bad_request", message: "Bad URL" }, t),
+    ).toBe("Bad URL");
+  });
+
+  it("falls back to the localized key when the message is empty", () => {
+    expect(
+      localizedApiErrorMessage({ type: "not_found", message: "" }, t),
+    ).toBe("t:errors.notFound");
+    expect(localizedApiErrorMessage({ type: "network", message: "" }, t)).toBe(
+      "t:errors.unexpectedError",
+    );
+    expect(
+      localizedApiErrorMessage({ type: "validation", message: "" }, t),
+    ).toBe("t:errors.validationError");
   });
 });

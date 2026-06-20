@@ -240,13 +240,26 @@ function hasDetail(body: unknown): body is DetailBody {
   return body !== null && typeof body === "object" && "detail" in body;
 }
 
+/**
+ * Localized fallback message key (under the `errors` namespace) for each error
+ * `type`. Used by {@link localizedApiErrorMessage} when the API did not provide
+ * a human-readable message of its own (e.g. a 404, or a 422 with empty
+ * violations). API-provided messages (400 `detail`, 422 `violations`) — which
+ * may already be localized server-side — are preserved as-is.
+ */
+const API_ERROR_FALLBACK_KEY: Record<ApiError["type"], string> = {
+  validation: "errors.validationError",
+  bad_request: "errors.badRequest",
+  not_found: "errors.notFound",
+  network: "errors.unexpectedError",
+};
+
 export function parseApiError(status: number, body: unknown): ApiError {
   if (status === 422 && hasViolations(body)) {
     const violations = body.violations ?? [];
     return {
       type: "validation",
-      message:
-        violations.map((v) => v.message).join(", ") || "Validation error",
+      message: violations.map((v) => v.message).join(", "),
       violations,
     };
   }
@@ -255,21 +268,36 @@ export function parseApiError(status: number, body: unknown): ApiError {
     const detail = hasDetail(body) ? body.detail : undefined;
     return {
       type: "bad_request",
-      message: detail ?? "Bad request",
+      message: detail ?? "",
     };
   }
 
   if (status === 404) {
     return {
       type: "not_found",
-      message: "Resource not found",
+      message: "",
     };
   }
 
   return {
     type: "network",
-    message: "An unexpected error occurred",
+    message: "",
   };
+}
+
+/**
+ * Resolve the message to display for an {@link ApiError}: the API-provided
+ * message when present (e.g. a 422 violation or a 400 `detail`, possibly
+ * already translated server-side), otherwise the localized generic fallback
+ * for the error `type`.
+ *
+ * @param t a next-intl translator scoped to the root namespace.
+ */
+export function localizedApiErrorMessage(
+  error: ApiError,
+  t: (key: string) => string,
+): string {
+  return error.message || t(API_ERROR_FALLBACK_KEY[error.type]);
 }
 
 export function isNetworkError(error: unknown): error is TypeError {

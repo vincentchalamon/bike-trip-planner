@@ -690,6 +690,9 @@
   "errors": {
     "networkError": "Erreur réseau. Vérifiez votre connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",
+    "validationError": "Données invalides.",
+    "badRequest": "Requête invalide.",
+    "notFound": "Ressource introuvable.",
     "failedUpdateDates": "Impossible de mettre à jour les dates.",
     "failedDeleteStage": "Impossible de supprimer l'étape.",
     "failedMoveStage": "Impossible de déplacer l'étape.",
@@ -934,8 +937,7 @@
       "languageLabel": "Langue",
       "themeLabel": "Thème",
       "themeLight": "Clair",
-      "themeDark": "Sombre",
-      "themeSystem": "Auto"
+      "themeDark": "Sombre"
     },
     "data": {
       "title": "Mes données",
