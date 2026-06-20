@@ -93,7 +93,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'adapter' => 'cache.app',
                     ],
                     'doctrine.system_cache_pool' => [
-                        'adapter' => 'cache.system',
+                        // Redis, not cache.system (PhpFiles): the DQL query cache is
+                        // written at runtime on parse miss, which would fail under
+                        // read_only (no var volume, see ADR-037 / #728).
+                        'adapter' => 'cache.adapter.redis',
                     ],
                 ],
             ],

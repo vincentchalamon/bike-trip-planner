@@ -8,6 +8,11 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $containerConfigurator->extension('framework', [
         'cache' => [
             'default_redis_provider' => '%env(REDIS_URL)%',
+            // Pin the framework default pool to Redis: doctrine.result_cache_pool
+            // is backed by cache.app, whose default adapter is the filesystem one.
+            // Under read_only (no var volume, see ADR-037 / #728) a filesystem write
+            // would fail, so every cache write must go to Redis.
+            'app' => 'cache.adapter.redis',
             'pools' => [
                 'cache.trip_state' => [
                     'adapter' => 'cache.adapter.redis',
