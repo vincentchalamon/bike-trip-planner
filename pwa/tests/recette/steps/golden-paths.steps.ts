@@ -77,7 +77,7 @@ async function importGpxFile(page: Page): Promise<void> {
   });
   // A successful upload navigates to /trips/{id}; wait for the URL change then
   // the trip title rendered after the detail load.
-  await page.waitForURL(/\/trips\//, { timeout: 10000 });
+  await page.waitForURL(/\/trips\/(?!new\b)/, { timeout: 10000 });
   await expect(
     page.getByTestId("trip-title-skeleton").or(page.getByTestId("trip-title")),
   ).toBeVisible({ timeout: 10000 });
