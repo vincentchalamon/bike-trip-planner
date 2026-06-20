@@ -64,10 +64,19 @@ const MapPanel = dynamic(
 export function TripPlanner({
   onClose,
   hideStepper = false,
+  stepperSlot,
   previewSlot,
 }: {
   onClose?: () => void;
   hideStepper?: boolean;
+  /**
+   * Optional step indicator rendered in place of the internal {@link Stepper},
+   * i.e. under the {@link TopBar} header and at the top of the creation flow.
+   * Used by the `/trips/new` wizard to mount its URL-synced {@link WizardStepper}
+   * below the header instead of above it (issue #729). Only honoured while the
+   * trip is not fully loaded — same visibility window as the internal stepper.
+   */
+  stepperSlot?: ReactNode;
   /**
    * Optional content rendered inside the Acte 1.5 preview screen, between
    * the per-stage breakdown and the action bar. Used by the `/trips/new`
@@ -504,14 +513,17 @@ export function TripPlanner({
             the creation progress bar no longer serves a purpose there and was
             confused with the horizontal day timeline on scroll (recette #649).
             Hidden on landing page, FAQ and trips list since those pages don't
-            render TripPlanner at all. The wizard at `/trips/new` renders its
-            own {@link WizardStepper} synced with the URL and passes
-            `hideStepper` to suppress this internal one. */}
-        {!hideStepper && !isTripLoaded && (
-          <div className="mb-8 pb-6" data-testid="stepper-wrapper">
-            <Stepper />
-          </div>
-        )}
+            render TripPlanner at all. The wizard at `/trips/new` injects its
+            own URL-synced {@link WizardStepper} via `stepperSlot`, which takes
+            precedence over this internal one and renders here — below the
+            header — instead of above it (issue #729). */}
+        {!isTripLoaded &&
+          (stepperSlot ??
+            (!hideStepper && (
+              <div className="mb-8 pb-6" data-testid="stepper-wrapper">
+                <Stepper />
+              </div>
+            )))}
 
         {/* === State 1: Welcome (no trip, not processing) === */}
         {isWelcome && (
