@@ -1010,6 +1010,32 @@ Sprint dédié à la résilience de la donnée en production. ADR-032 (Migration
 
 ---
 
+## Sprint 40 — Recette #649 (round 2) : boot iso-prod + correctifs UI
+
+Findings de la 2ᵉ passe de recette manuelle ([#649 commentaire bloquant du 20/06](https://github.com/vincentchalamon/bike-trip-planner/issues/649#issuecomment-4758501208)). Diagnostic runtime (recette iso-prod, authentifié) : les symptômes "données" remontés — Komoot **"Voyage introuvable"** et config IA **"Resource not found"** — ne sont **pas** des bugs métier mais **une cause infra unique** côté boot iso-prod (cache DI prod figé par le volume `php_var`, antérieur à #689/#695 et à la feature IA ; + workers restés `Created`). Modèle worktree-parallèle (`/sprint`).
+
+| Ordre | ID                                                                      | Titre                                                                        | Effort | PRs | Dépend de |
+|-------|-------------------------------------------------------------------------|------------------------------------------------------------------------------|--------|-----|-----------|
+| 1     | [#728](https://github.com/vincentchalamon/bike-trip-planner/issues/728) | fix(docker): intégrité du boot iso-prod (cache DI prod figé + workers)       | M      | —   | —         |
+| 2     | [#729](https://github.com/vincentchalamon/bike-trip-planner/issues/729) | fix(wizard): parcours GPX + breadcrumb sous le header + largeur bloc "Dates" | M      | —   | —         |
+| 3     | [#730](https://github.com/vincentchalamon/bike-trip-planner/issues/730) | fix(pwa): thème "système" hors Préférences + erreurs API en français         | S      | —   | —         |
+
+**Reste manuel** (hors `/sprint` — nécessite la stack up) :
+
+- [#731](https://github.com/vincentchalamon/bike-trip-planner/issues/731) `chore(landing)` — régénérer les screenshots "Aperçu" (`make screenshots`).
+- Re-vérifier l'**upload GPX neuf** end-to-end après #728 : en recette le GPX restait à 0 stage, mais confondu par le flush d'un backlog de 30 min (erreurs `Could not acknowledge redis message`) — à reproduire proprement workers OK + cache frais.
+
+### Recette Sprint 40
+
+- **Checklist manuelle :**
+  - [ ] Voyage Komoot (lien) : création → page voyage avec stages, plus de "Voyage introuvable".
+  - [ ] Upload GPX : création → stages calculés, parcours sans blocage à l'étape 2.
+  - [ ] Config IA : enregistrement clé Gemini → 200 ; messages d'erreur affichés en français.
+  - [ ] Préférences : thème Clair/Sombre uniquement, défaut suivant l'OS.
+  - [ ] Screenshots landing à jour.
+
+---
+
 ## Hors Sprints
 
 | ID  | Titre                            | Note                     |
@@ -1071,4 +1097,5 @@ Sprint dédié à la résilience de la donnée en production. ADR-032 (Migration
 | 37        | Déploiement (incl. Ollama prod)          | 8       | ~8           |
 | 38        | Performance & Resilience Deep Dive       | 18      | ~12          |
 | 39        | Backup & Disaster Recovery               | 9       | ~9           |
-| **Total** |                                          | **231** | **~235**     |
+| 40        | Recette #649 round 2 (boot iso-prod + UI) | 4       | ~4           |
+| **Total** |                                          | **235** | **~239**     |
