@@ -40,7 +40,7 @@ test.describe("GPX upload flow", () => {
     // Like the magic-link flow (#729), a successful upload navigates to
     // /trips/{id}; the planner then re-hydrates and the async Mercure
     // lifecycle drives the rest.
-    await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
+    await mockedPage.waitForURL(/\/trips\/(?!new\b)/, { timeout: 5000 });
 
     // Trip title should appear (from the detail endpoint after navigation)
     await expect(
@@ -91,7 +91,7 @@ test.describe("GPX upload flow", () => {
     const fileInput = mockedPage.getByTestId("gpx-file-input");
     await fileInput.setInputFiles(GPX_FIXTURE);
 
-    await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
+    await mockedPage.waitForURL(/\/trips\/(?!new\b)/, { timeout: 5000 });
 
     // A title (skeleton or editable) is shown after the detail load.
     await expect(
@@ -169,7 +169,7 @@ test.describe("GPX upload flow", () => {
     });
 
     // A successful drop uploads then navigates to /trips/{id} (#729).
-    await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
+    await mockedPage.waitForURL(/\/trips\/(?!new\b)/, { timeout: 5000 });
 
     // Trip title should appear after the detail load
     await expect(
