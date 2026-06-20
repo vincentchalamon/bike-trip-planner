@@ -513,18 +513,17 @@ export function TripPlanner({
             the creation progress bar no longer serves a purpose there and was
             confused with the horizontal day timeline on scroll (recette #649).
             Hidden on landing page, FAQ and trips list since those pages don't
-            render TripPlanner at all. The wizard at `/trips/new` passes
-            `hideStepper` to suppress this internal one and injects its own
-            URL-synced {@link WizardStepper} via `stepperSlot` so it renders
-            here — below the header — instead of above it (issue #729). */}
+            render TripPlanner at all. The wizard at `/trips/new` injects its
+            own URL-synced {@link WizardStepper} via `stepperSlot`, which takes
+            precedence over this internal one and renders here — below the
+            header — instead of above it (issue #729). */}
         {!isTripLoaded &&
-          (hideStepper ? (
-            stepperSlot
-          ) : (
-            <div className="mb-8 pb-6" data-testid="stepper-wrapper">
-              <Stepper />
-            </div>
-          ))}
+          (stepperSlot ??
+            (!hideStepper && (
+              <div className="mb-8 pb-6" data-testid="stepper-wrapper">
+                <Stepper />
+              </div>
+            )))}
 
         {/* === State 1: Welcome (no trip, not processing) === */}
         {isWelcome && (
