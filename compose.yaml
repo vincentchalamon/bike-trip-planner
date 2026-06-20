@@ -96,7 +96,6 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
-      - php_var:/app/var
       # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
       # and our date.timezone=UTC override takes effect.
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
@@ -167,7 +166,6 @@ services:
       - jwt_private_key
       - jwt_public_key
     volumes:
-      - php_var:/app/var
       # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
       # and our date.timezone=UTC override takes effect.
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
@@ -243,7 +241,6 @@ services:
       - jwt_private_key
       - jwt_public_key
     volumes:
-      - php_var:/app/var
       # Mounted as zz-app.ini so it loads after docker.ini (which sets Europe/Brussels)
       # and our date.timezone=UTC override takes effect.
       - .docker/php/conf.d/10-app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
@@ -443,6 +440,5 @@ services:
 volumes:
   caddy_data: ~
   caddy_config: ~
-  php_var: ~
   database_data: ~
   valhalla-tiles: ~
