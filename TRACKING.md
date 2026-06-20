@@ -1016,9 +1016,11 @@ Findings de la 2ᵉ passe de recette manuelle ([#649 commentaire bloquant du 20/
 
 | Ordre | ID                                                                      | Titre                                                                        | Effort | PRs | Dépend de |
 |-------|-------------------------------------------------------------------------|------------------------------------------------------------------------------|--------|-----|-----------|
-| 1     | [#728](https://github.com/vincentchalamon/bike-trip-planner/issues/728) | fix(docker): intégrité du boot iso-prod (cache DI prod figé + workers)       | M      | —   | —         |
-| 2     | [#729](https://github.com/vincentchalamon/bike-trip-planner/issues/729) | fix(wizard): parcours GPX + breadcrumb sous le header + largeur bloc "Dates" | M      | —   | —         |
-| 3     | [#730](https://github.com/vincentchalamon/bike-trip-planner/issues/730) | fix(pwa): thème "système" hors Préférences + erreurs API en français         | S      | —   | —         |
+| 1     | [#728](https://github.com/vincentchalamon/bike-trip-planner/issues/728) | fix(docker): intégrité du boot iso-prod (cache DI prod figé + workers)       | M      | [#733](https://github.com/vincentchalamon/bike-trip-planner/pull/733) | —         |
+| 2     | [#729](https://github.com/vincentchalamon/bike-trip-planner/issues/729) | fix(wizard): parcours GPX + breadcrumb sous le header + largeur bloc "Dates" | M      | [#734](https://github.com/vincentchalamon/bike-trip-planner/pull/734) | —         |
+| 3     | [#730](https://github.com/vincentchalamon/bike-trip-planner/issues/730) | fix(pwa): thème "système" hors Préférences + erreurs API en français         | S      | [#735](https://github.com/vincentchalamon/bike-trip-planner/pull/735) | —         |
+
+> **Statut `/sprint 40`** : 3 PRs portées à READY au cycle 1 (CI verte, `claude-review` APPROVED, `mergeable`, 0 finding bloquant). ⚠️ #734 et #735 modifient tous deux `pwa/src/hooks/use-trip-planner.ts` → "Update branch" / rebase requis avant le 2ᵉ merge.
 
 **Reste manuel** (hors `/sprint` — nécessite la stack up) :
 
