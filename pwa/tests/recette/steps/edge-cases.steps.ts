@@ -496,16 +496,19 @@ Then("je vois une page 404 ou un message d'erreur", async ({ mockedPage }) => {
 
 Then(
   "l'onglet {int} reflète le changement ou affiche un avertissement",
-  async ({ $test }) => {
+  async ({ $test }, _tab: number) => {
     // Multi-tab scenarios are not supported in Playwright BDD single-page fixtures
     $test.fixme();
   },
 );
 
-Then("l'import est traité en moins de {int} secondes", async ({ $test }) => {
-  // Performance benchmarking requires a large test fixture not available in unit tests
-  $test.fixme();
-});
+Then(
+  "l'import est traité en moins de {int} secondes",
+  async ({ $test }, _seconds: number) => {
+    // Performance benchmarking requires a large test fixture not available in unit tests
+    $test.fixme();
+  },
+);
 
 Then("aucune erreur de mémoire ne se produit", async ({ $test }) => {
   // Memory error detection requires large file fixtures and browser memory monitoring
@@ -602,15 +605,21 @@ Then("I see a 404 page or error message", async ({ mockedPage }) => {
   ).toBeVisible({ timeout: 5000 });
 });
 
-Then("tab {int} reflects the change or shows a warning", async ({ $test }) => {
-  // Multi-tab scenarios are not supported in Playwright BDD single-page fixtures
-  $test.fixme();
-});
+Then(
+  "tab {int} reflects the change or shows a warning",
+  async ({ $test }, _tab: number) => {
+    // Multi-tab scenarios are not supported in Playwright BDD single-page fixtures
+    $test.fixme();
+  },
+);
 
-Then("the import is processed in under {int} seconds", async ({ $test }) => {
-  // Performance benchmarking requires a large test fixture not available in unit tests
-  $test.fixme();
-});
+Then(
+  "the import is processed in under {int} seconds",
+  async ({ $test }, _seconds: number) => {
+    // Performance benchmarking requires a large test fixture not available in unit tests
+    $test.fixme();
+  },
+);
 
 Then("no memory error occurs", async ({ $test }) => {
   // Memory error detection requires large file fixtures and browser memory monitoring

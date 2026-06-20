@@ -12,20 +12,24 @@ interface GeometryDistributorInterface
      * Assigns each item to the stage whose endPoint is closest.
      * Output keys match the input $stages keys.
      *
-     * @param list<array{lat: float, lon: float}> $items
-     * @param array<int, Stage>                   $stages
+     * @template T of array{lat: float, lon: float, ...}
      *
-     * @return array<int, list<array{lat: float, lon: float}>>
+     * @param list<T>           $items
+     * @param array<int, Stage> $stages
+     *
+     * @return array<int, list<T>>
      */
     public function distributeByEndpoint(array $items, array $stages): array;
 
     /**
      * Assigns each item to the stage whose geometry (all points) is closest.
      *
-     * @param list<array{lat: float, lon: float}> $items
-     * @param list<Stage>                         $stages
+     * @template T of array{lat: float, lon: float, ...}
      *
-     * @return array<int, list<array{lat: float, lon: float}>>
+     * @param list<T>     $items
+     * @param list<Stage> $stages
+     *
+     * @return array<int, list<T>>
      */
     public function distributeByGeometry(array $items, array $stages): array;
 }

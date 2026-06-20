@@ -47,7 +47,7 @@ abstract readonly class AbstractStageNormalizer implements NormalizerInterface
     abstract protected function nameKey(): string;
 
     /**
-     * @return array{lat: float, lon: float, name: string, type: string}
+     * @return array{lat: float, lon: float, name: string, type: string, ...}
      */
     protected function buildWaypointEntry(string $name, string $category, float $lat, float $lon): array
     {

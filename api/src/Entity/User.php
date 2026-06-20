@@ -174,9 +174,4 @@ class User implements UserInterface
     {
         return $this->trips;
     }
-
-    public function eraseCredentials(): void
-    {
-        // No credentials to erase (passwordless auth)
-    }
 }

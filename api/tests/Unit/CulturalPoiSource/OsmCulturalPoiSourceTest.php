@@ -130,7 +130,7 @@ final class OsmCulturalPoiSourceTest extends TestCase
     }
 
     /**
-     * @param list<array{name: ?string, category: string, lat: float, lon: float, wikidata: ?string}> $rows
+     * @param list<array{name: ?string, category: string, lat: float, lon: float, wikidata: ?string, ...}> $rows
      */
     private function repository(array $rows): CulturalPoiRepositoryInterface
     {

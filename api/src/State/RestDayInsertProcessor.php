@@ -71,7 +71,6 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
             startPoint: $afterStage->endPoint,
             endPoint: $afterStage->endPoint,
             geometry: [$afterStage->endPoint],
-            label: null,
             elevationLoss: 0.0,
             isRestDay: true,
         );

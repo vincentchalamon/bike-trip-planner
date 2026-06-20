@@ -379,16 +379,22 @@ When("I navigate to the next month", async ({ mockedPage }) => {
 
 // --- Then steps FR ---
 
-Then("la date de départ affichée est {string}", async ({ $test }) => {
-  $test.fixme();
-});
+Then(
+  "la date de départ affichée est {string}",
+  async ({ $test }, _date: string) => {
+    $test.fixme();
+  },
+);
 
-Then(/^l'étape (\d+) est prévue le \d+ \w+ \d+$/, async ({ mockedPage }) => {
-  // Stage cards show sunrise/sunset times when a start date is set,
-  // which confirms dates are computed per stage
-  const stageCards = mockedPage.locator('[data-testid^="stage-card-"]');
-  await expect(stageCards.first()).toBeVisible({ timeout: 5000 });
-});
+Then(
+  /^l'étape (\d+) est prévue le \d+ \w+ \d+$/,
+  async ({ mockedPage }, _stage: string) => {
+    // Stage cards show sunrise/sunset times when a start date is set,
+    // which confirms dates are computed per stage
+    const stageCards = mockedPage.locator('[data-testid^="stage-card-"]');
+    await expect(stageCards.first()).toBeVisible({ timeout: 5000 });
+  },
+);
 
 Then(
   "le calendrier affiche toutes les étapes avec leurs dates",
@@ -428,14 +434,20 @@ Then("le mois suivant est affiché", async ({ mockedPage }) => {
 
 // --- Then steps EN ---
 
-Then("the displayed departure date is {string}", async ({ $test }) => {
-  $test.fixme();
-});
+Then(
+  "the displayed departure date is {string}",
+  async ({ $test }, _date: string) => {
+    $test.fixme();
+  },
+);
 
-Then(/^stage (\d+) is scheduled for \w+ \d+, \d+$/, async ({ mockedPage }) => {
-  const stageCards = mockedPage.locator('[data-testid^="stage-card-"]');
-  await expect(stageCards.first()).toBeVisible({ timeout: 5000 });
-});
+Then(
+  /^stage (\d+) is scheduled for \w+ \d+, \d+$/,
+  async ({ mockedPage }, _stage: string) => {
+    const stageCards = mockedPage.locator('[data-testid^="stage-card-"]');
+    await expect(stageCards.first()).toBeVisible({ timeout: 5000 });
+  },
+);
 
 Then(
   "the calendar shows all stages with their dates",

@@ -83,7 +83,7 @@ markdownlint: ## Run Markdownlint
 	@docker run --rm -v $$(pwd):/app -w /app davidanson/markdownlint-cli2 "**/*.md" "!.claude/**" "!api/vendor/**" "!api/vendor-bin/**" "!provisioner/vendor/**" "!provisioner/vendor-bin/**" "!pwa/node_modules/**"
 
 link-check: ## Check Markdown links & anchors (internal fatal; use `make link-check -- --external` to gate on external URLs)
-	@docker run --rm -v $(CURDIR):/app -w /app node:22-slim node scripts/check-md-links.mjs $(ARGS)
+	@docker run --rm -v $(CURDIR):/app -w /app node:25-slim node scripts/check-md-links.mjs $(ARGS)
 
 tsc: typescript-check ## Alias for "typescript-check"
 
@@ -121,7 +121,7 @@ test-e2e: ## Run Playwright End-to-End tests
 		-w /app -v $(CURDIR)/pwa:/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
-		mcr.microsoft.com/playwright:v1.60.0-noble \
+		mcr.microsoft.com/playwright:v1.61.0-noble \
 		/bin/sh -c 'npm install; npx playwright test $(ARGS)'
 
 playwright: test-e2e ## Alias for "test-e2e"
@@ -131,7 +131,7 @@ screenshots: ## Regenerate README + landing screenshots (run after UI changes; r
 		-w /repo/pwa -v $(CURDIR):/repo \
 		--mount type=volume,src=playwright_node_modules,dst=/repo/pwa/node_modules \
 		--rm --ipc=host \
-		mcr.microsoft.com/playwright:v1.60.0-noble \
+		mcr.microsoft.com/playwright:v1.61.0-noble \
 		/bin/sh -c 'npm install; npx playwright test --config playwright.screenshots.config.ts'
 
 test-recette: ## Run Playwright BDD recette scenarios (Gherkin)
@@ -139,7 +139,7 @@ test-recette: ## Run Playwright BDD recette scenarios (Gherkin)
 		-w /app -v $(CURDIR)/pwa:/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
-		mcr.microsoft.com/playwright:v1.60.0-noble \
+		mcr.microsoft.com/playwright:v1.61.0-noble \
 		/bin/sh -c 'npm ci; npx bddgen --config playwright.bdd.config.ts; npx playwright test --config playwright.bdd.config.ts $(ARGS)'
 
 lighthouse: ## Run Lighthouse CI on public pages (requires the prod stack up: make start)
@@ -147,7 +147,7 @@ lighthouse: ## Run Lighthouse CI on public pages (requires the prod stack up: ma
 		-w /app -v $(CURDIR)/pwa:/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
-		mcr.microsoft.com/playwright:v1.60.0-noble \
+		mcr.microsoft.com/playwright:v1.61.0-noble \
 		/bin/sh -c 'npm ci; CHROME_PATH=$$(node -e "process.stdout.write(require(\"playwright\").chromium.executablePath())") npx lhci autorun --config=lighthouserc.json'
 
 lighthouse-authed: ## Run Lighthouse on authenticated pages (requires recette stack + RECETTE_COOKIE=refresh_token=...). Collect-only (warnings, no gate).
@@ -157,7 +157,7 @@ lighthouse-authed: ## Run Lighthouse on authenticated pages (requires recette st
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
 		-e RECETTE_COOKIE="$(RECETTE_COOKIE)" \
-		mcr.microsoft.com/playwright:v1.60.0-noble \
+		mcr.microsoft.com/playwright:v1.61.0-noble \
 		/bin/sh -c 'npm ci; sed "s|__RECETTE_COOKIE__|$$RECETTE_COOKIE|" lighthouserc.authed.json > /tmp/lhci-authed.json; CHROME_PATH=$$(node -e "process.stdout.write(require(\"playwright\").chromium.executablePath())") npx lhci autorun --config=/tmp/lhci-authed.json'
 
 visual-test: ## Run visual-regression assertions (requires prod stack + committed baselines)
@@ -165,7 +165,7 @@ visual-test: ## Run visual-regression assertions (requires prod stack + committe
 		-w /app -v $(CURDIR)/pwa:/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
-		mcr.microsoft.com/playwright:v1.60.0-noble \
+		mcr.microsoft.com/playwright:v1.61.0-noble \
 		/bin/sh -c 'npm ci; npx playwright test --config playwright.visual.config.ts $(ARGS)'
 
 visual-update: ## (Re)generate visual-regression baselines in the container (requires prod stack: make start)
@@ -173,7 +173,7 @@ visual-update: ## (Re)generate visual-regression baselines in the container (req
 		-w /app -v $(CURDIR)/pwa:/app \
 		--mount type=volume,src=playwright_node_modules,dst=/app/node_modules \
 		--rm --ipc=host \
-		mcr.microsoft.com/playwright:v1.60.0-noble \
+		mcr.microsoft.com/playwright:v1.61.0-noble \
 		/bin/sh -c 'npm ci; npx playwright test --config playwright.visual.config.ts --update-snapshots'
 
 jwt-keypair-test: ## (Re)generate JWT keys matching the test passphrase (run before coverage/test-php locally)

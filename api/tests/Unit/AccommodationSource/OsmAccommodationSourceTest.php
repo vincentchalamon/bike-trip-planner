@@ -64,7 +64,7 @@ final class OsmAccommodationSourceTest extends TestCase
     #[Test]
     public function fetchSetsNullWikidataIdWhenAbsent(): void
     {
-        $source = $this->createSource($this->repository([$this->row(wikidata: null)]));
+        $source = $this->createSource($this->repository([$this->row()]));
 
         $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
 
@@ -111,7 +111,7 @@ final class OsmAccommodationSourceTest extends TestCase
     #[Test]
     public function fetchFallsBackToContactWebsiteTagForUrl(): void
     {
-        $source = $this->createSource($this->repository([$this->row(website: null, tags: ['contact:website' => 'https://contact.example'])]));
+        $source = $this->createSource($this->repository([$this->row(tags: ['contact:website' => 'https://contact.example'])]));
 
         $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
 
@@ -122,7 +122,7 @@ final class OsmAccommodationSourceTest extends TestCase
     #[Test]
     public function fetchSetsNoUrlWhenNeitherWebsiteNorContactPresent(): void
     {
-        $source = $this->createSource($this->repository([$this->row(website: null)]));
+        $source = $this->createSource($this->repository([$this->row()]));
 
         $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['hotel']);
 

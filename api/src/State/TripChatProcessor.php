@@ -169,14 +169,14 @@ final readonly class TripChatProcessor implements ProcessorInterface
         }
 
         if (null === $response) {
-            throw new ServiceUnavailableHttpException(retryAfter: null, message: 'AI assistant returned an empty response. Please retry.');
+            throw new ServiceUnavailableHttpException(message: 'AI assistant returned an empty response. Please retry.');
         }
 
         $rawContent = $this->extractText($response);
         if (null === $rawContent) {
             $this->logger->warning('AI chat response missing message content.', ['tripId' => $tripId]);
 
-            throw new ServiceUnavailableHttpException(retryAfter: null, message: 'AI assistant returned an invalid response. Please retry.');
+            throw new ServiceUnavailableHttpException(message: 'AI assistant returned an invalid response. Please retry.');
         }
 
         $action = $this->interpreter->interpret($rawContent);
