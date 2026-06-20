@@ -44,6 +44,7 @@ Docker auto-loads `compose.override.yaml` next to `compose.yaml`. Coolify's exac
 
 - Dev installs Composer deps and runs migrations at first boot (vendor is not baked into `frankenphp_dev`), so the first `make start-dev` is slower; the dev `php` healthcheck uses a longer `start_period` to absorb it.
 - A few keys need the Compose `!override` / `!reset` tags so the dev layer replaces (rather than merges into) the prod volume and secret lists.
+- Prod bakes a warmed `var/cache/prod` into the image at build (Composer `post-install-cmd` → `cache:clear`, no external deps). Prod therefore mounts **no** writable volume on `/app/var`: `php`/`worker`/`worker-llm` run `read_only` on the baked cache. This is safe because nothing writes under `var` at runtime (Monolog → `stderr`, all cache pools + Symfony lock → Redis). A prior `php_var` named volume on `/app/var` masked and froze that cache across deploys, causing stale-container 500s (`/trips/{id}/detail`) and 404s (`/users/me/ai-settings`) — issue #728; it has been removed.
 
 ### Neutral
 
