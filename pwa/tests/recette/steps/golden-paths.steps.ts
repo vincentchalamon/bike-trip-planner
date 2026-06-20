@@ -39,11 +39,10 @@ async function selectAccommodation(
 
 /**
  * Upload a valid GPX file through the welcome-screen GPX card. The upload POSTs
- * to `/trips/gpx-upload` (mocked, 202 + trip body) which seeds the store via
- * `setTrip` and mounts the Mercure subscriber so injected SSE events are
- * processed. Unlike the magic-link flow, a GPX upload does not navigate to
- * /trips/{id} — the planner renders in place. Mirrors `tests/mocked/
- * gpx-upload.spec.ts`.
+ * to `/trips/gpx-upload` (mocked, 202 + trip body), then — like the magic-link
+ * flow (#729) — navigates to /trips/{id}, where the planner re-hydrates from the
+ * detail endpoint and mounts the Mercure subscriber so injected SSE events are
+ * processed. Mirrors `tests/mocked/gpx-upload.spec.ts`.
  */
 async function importGpxFile(page: Page): Promise<void> {
   await page.route("**/trips/gpx-upload", (route, request) => {
@@ -76,7 +75,9 @@ async function importGpxFile(page: Page): Promise<void> {
         "</trkseg></trk></gpx>",
     ),
   });
-  // The 202 response carries the title, so the planner renders in place.
+  // A successful upload navigates to /trips/{id}; wait for the URL change then
+  // the trip title rendered after the detail load.
+  await page.waitForURL(/\/trips\//, { timeout: 10000 });
   await expect(
     page.getByTestId("trip-title-skeleton").or(page.getByTestId("trip-title")),
   ).toBeVisible({ timeout: 10000 });

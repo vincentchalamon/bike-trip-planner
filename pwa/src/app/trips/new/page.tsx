@@ -142,9 +142,21 @@ function WizardContent() {
     [navigateToStep],
   );
 
-  // Render the WizardStepper outside TripPlanner's main layout because
-  // TripPlanner manages its own padded section. We mount everything inside
-  // a single page wrapper so `/trips/new` looks coherent.
+  // The WizardStepper is injected into TripPlanner via `stepperSlot` so it
+  // renders under the <TopBar> header (where the internal stepper sits),
+  // instead of above it (issue #729).
+  // {@link WizardStepId} and {@link StepId} share the same string union, so the
+  // cast is structurally safe — it only narrows the nominal type.
+  const stepper = (
+    <div className="mb-8 pb-6" data-testid="wizard-stepper-wrapper">
+      <WizardStepper
+        currentStep={currentStep as WizardStepId}
+        completedSteps={completedSteps as Set<WizardStepId>}
+        onNavigate={handleStepperNavigate}
+      />
+    </div>
+  );
+
   return (
     <div data-testid="wizard-trip-new" data-current-step={currentStep}>
       <a
@@ -153,17 +165,6 @@ function WizardContent() {
       >
         {t("ariaLabel")}
       </a>
-
-      {/* Step indicator — desktop horizontal stepper, mobile compact label.
-          {@link WizardStepId} and {@link StepId} share the same string union,
-          so the cast is structurally safe — it only narrows the nominal type. */}
-      <div className="max-w-[1200px] mx-auto px-4 md:px-6 pt-6 pb-2">
-        <WizardStepper
-          currentStep={currentStep as WizardStepId}
-          completedSteps={completedSteps as Set<WizardStepId>}
-          onNavigate={handleStepperNavigate}
-        />
-      </div>
 
       <div id="wizard-content">
         {/* Step 2 ("Aperçu") embeds the single-shot AI refinement card
@@ -175,6 +176,7 @@ function WizardContent() {
             (sprint 31) once it ships. */}
         <TripPlanner
           hideStepper
+          stepperSlot={stepper}
           previewSlot={
             <AiRefinementCard
               unavailable={!aiCapability.available}

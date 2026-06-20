@@ -1,9 +1,5 @@
 import { test, expect, expandGpxCard } from "../fixtures/base.fixture";
-import {
-  routeParsedEvent,
-  stagesComputedEvent,
-  fullTripEventSequence,
-} from "../fixtures/mock-data";
+import { routeParsedEvent, stagesComputedEvent } from "../fixtures/mock-data";
 import path from "node:path";
 
 const GPX_FIXTURE = path.resolve(__dirname, "../fixtures/test-route.gpx");
@@ -31,7 +27,7 @@ test.describe("GPX upload flow", () => {
     });
   });
 
-  test("happy path: upload GPX file, metrics from response, stages from SSE", async ({
+  test("happy path: upload GPX file navigates to /trips/{id}, metrics + stages from SSE", async ({
     mockedPage,
     injectSequence,
   }) => {
@@ -41,20 +37,23 @@ test.describe("GPX upload flow", () => {
     const fileInput = mockedPage.getByTestId("gpx-file-input");
     await fileInput.setInputFiles(GPX_FIXTURE);
 
-    // Trip title should appear (from backend response title)
+    // Like the magic-link flow (#729), a successful upload navigates to
+    // /trips/{id}; the planner then re-hydrates and the async Mercure
+    // lifecycle drives the rest.
+    await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
+
+    // Trip title should appear (from the detail endpoint after navigation)
     await expect(
       mockedPage
         .getByTestId("trip-title-skeleton")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
 
-    // Metrics available immediately from HTTP response — no SSE needed
+    // Metrics arrive via SSE (route_parsed), mirroring the magic-link flow.
+    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
     await expect(mockedPage.getByTestId("total-distance")).toContainText(
       "187km",
     );
-
-    // Inject stages computed (still via SSE)
-    await injectSequence([stagesComputedEvent()]);
 
     // Stage cards should appear
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
@@ -64,10 +63,12 @@ test.describe("GPX upload flow", () => {
     await expect(mockedPage.getByTestId("stage-card-3")).toBeVisible();
   });
 
-  test("uses filename as fallback title when backend returns no title", async ({
+  test("upload with no title in response still navigates and loads the trip", async ({
     mockedPage,
   }) => {
-    // Override mock to return no title
+    // Override mock to return no title — the local filename fallback is only
+    // transient now (the detail endpoint owns the title post-navigation, #729),
+    // so we just assert the upload succeeds and lands on the trip.
     await mockedPage.route("**/trips/gpx-upload", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       return route.fulfill({
@@ -90,7 +91,9 @@ test.describe("GPX upload flow", () => {
     const fileInput = mockedPage.getByTestId("gpx-file-input");
     await fileInput.setInputFiles(GPX_FIXTURE);
 
-    // Trip title should appear (fallback to filename without .gpx)
+    await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
+
+    // A title (skeleton or editable) is shown after the detail load.
     await expect(
       mockedPage
         .getByTestId("trip-title-skeleton")
@@ -149,8 +152,9 @@ test.describe("GPX upload flow", () => {
     expect(uploadCalled).toBe(false);
   });
 
-  test("drag & drop: GPX file drop triggers upload and displays metrics from response", async ({
+  test("drag & drop: GPX file drop triggers upload and navigates to the trip", async ({
     mockedPage,
+    injectSequence,
   }) => {
     await mockedPage.evaluate(() => {
       const dt = new DataTransfer();
@@ -164,14 +168,18 @@ test.describe("GPX upload flow", () => {
       );
     });
 
-    // Trip title should appear from the HTTP response
+    // A successful drop uploads then navigates to /trips/{id} (#729).
+    await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
+
+    // Trip title should appear after the detail load
     await expect(
       mockedPage
         .getByTestId("trip-title-skeleton")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
 
-    // Metrics available immediately from HTTP response — no SSE injection needed
+    // Metrics arrive via SSE, mirroring the magic-link flow.
+    await injectSequence([routeParsedEvent()]);
     await expect(mockedPage.getByTestId("total-distance")).toContainText(
       "187km",
     );

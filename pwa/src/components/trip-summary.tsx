@@ -198,9 +198,11 @@ export function TripSummary({
 
       {/* No-dates alert — moved here (recette #649) so it sits directly under
           the trip info and above the disclaimer, keeping its amber alert style.
-          Only shown in the editable trip view when no start date is set. */}
+          Only shown in the editable trip view when no start date is set.
+          Centered so the banner shrinks to its content and lines up with the
+          centered info block above instead of stretching full-width (#729). */}
       {showNoDatesBanner && !startDate && (
-        <div className="pt-1">
+        <div className="flex justify-center pt-1">
           <NoDatesBanner onOpenConfig={() => openConfigPanelAt("dates")} />
         </div>
       )}

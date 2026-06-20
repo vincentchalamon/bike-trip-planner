@@ -291,16 +291,14 @@ export function useTripPlanner() {
         title: data.title ?? file.name.replace(/\.gpx$/i, ""),
         sourceUrl: "",
       });
-
-      actions.updateRouteData({
-        totalDistance: data.totalDistance,
-        totalElevation: data.totalElevation,
-        totalElevationLoss: data.totalElevationLoss,
-        sourceType: "gpx_upload",
-        title: data.title ?? null,
-      });
       trackEvent("import_gpx");
       trackEvent("trip_created", { source: "gpx" });
+      // Navigate to /trips/{id} like the magic-link flow (#729): the planner
+      // re-hydrates from the detail endpoint and the async Mercure lifecycle
+      // (route_parsed → stages_computed → preview) drives the wizard. Without
+      // this the GPX flow stayed on /trips/new and the preview gate ("Lancer
+      // l'analyse") was unreachable.
+      router.push(`/trips/${data.id}`);
     } catch (err) {
       if (isNetworkError(err)) {
         toast.error(t("errors.networkError"));
