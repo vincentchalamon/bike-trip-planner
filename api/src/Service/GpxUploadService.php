@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\ApiResource\Stage;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -12,19 +13,23 @@ use App\Engine\ElevationCalculatorInterface;
 use App\Engine\RouteSimplifierInterface;
 use App\Enum\ComputationName;
 use App\Enum\SourceType;
+use App\Enum\TripStatus;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
-use App\Message\GenerateStages;
-use App\Repository\TripRequestRepositoryInterface;
 use App\RouteParser\GpxRouteParserInterface;
-use Symfony\Component\Messenger\MessageBusInterface;
+use App\Repository\TripRequestRepositoryInterface;
 use Symfony\Component\Uid\Uuid;
 
 /**
  * Encapsulates GPX upload business logic: trip initialization, route storage,
- * computation tracking, Mercure publishing, and downstream message dispatching.
+ * synchronous structural computation (pacing), computation tracking, Mercure
+ * publishing, and the asynchronous enrichment fan-out.
  *
  * Extracted from GpxUploadController to satisfy SRP and reduce coupling.
+ *
+ * ADR-043: the pacing is pure local CPU, so it runs synchronously here — the HTTP
+ * response already carries the computed stages and the persisted `ready` status.
+ * Only the network/LLM enrichments stay asynchronous (dispatched at the end).
  */
 final readonly class GpxUploadService
 {
@@ -32,11 +37,12 @@ final readonly class GpxUploadService
         private GpxRouteParserInterface $gpxParser,
         private TripRequestRepositoryInterface $tripStateManager,
         private ComputationTrackerInterface $computationTracker,
-        private MessageBusInterface $messageBus,
         private DistanceCalculatorInterface $distanceCalculator,
         private ElevationCalculatorInterface $elevationCalculator,
         private RouteSimplifierInterface $routeSimplifier,
         private TripUpdatePublisherInterface $publisher,
+        private StructuralComputationService $structuralComputation,
+        private TripAnalysisDispatcher $analysisDispatcher,
     ) {
     }
 
@@ -61,11 +67,12 @@ final readonly class GpxUploadService
     }
 
     /**
-     * Creates a trip from parsed GPX data and dispatches downstream computations.
+     * Creates a trip from parsed GPX data, computes its stages synchronously, then
+     * dispatches the asynchronous enrichments.
      *
      * @param list<Coordinate> $points
      *
-     * @return array{tripId: string, computationStatus: array<string, string>, totalDistance: float, totalElevation: int, totalElevationLoss: int}
+     * @return array{tripId: string, computationStatus: array<string, string>, totalDistance: float, totalElevation: int, totalElevationLoss: int, status: string, stages: list<array<string, mixed>>}
      */
     public function createTrip(
         array $points,
@@ -88,7 +95,15 @@ final readonly class GpxUploadService
         $totalElevationLoss = (int) $this->elevationCalculator->calculateTotalDescent($points);
 
         $this->publishRouteEvent($tripId, $totalDistance, $totalElevation, $totalElevationLoss, $title);
-        $this->dispatchDownstreamMessages($tripId);
+
+        // ADR-043: pacing is pure local CPU — compute the stages synchronously so the
+        // structural trip is already available in the HTTP response.
+        $request = $this->tripStateManager->getRequest($tripId) ?? $tripRequest;
+        $stages = $this->structuralComputation->generateStages($tripId, $request);
+        $status = $this->storeStructuralStages($tripId, $stages);
+
+        // Hand off the network/LLM enrichments to the workers (unchanged async fan-out).
+        $this->analysisDispatcher->dispatch($tripId, $request);
 
         return [
             'tripId' => $tripId,
@@ -96,6 +111,8 @@ final readonly class GpxUploadService
             'totalDistance' => $totalDistance,
             'totalElevation' => $totalElevation,
             'totalElevationLoss' => $totalElevationLoss,
+            'status' => $status->value,
+            'stages' => $this->structuralComputation->serializeStagesForEvent($stages),
         ];
     }
 
@@ -133,9 +150,52 @@ final readonly class GpxUploadService
         ]);
     }
 
-    private function dispatchDownstreamMessages(string $tripId): void
+    /**
+     * Persists the synchronously computed stages, marks the STAGES computation done,
+     * publishes the `stages_computed` event and the progress step, and posts the
+     * structural `ready` status (ADR-043) once at least {@see TripStatus::MIN_STAGES}
+     * stages exist.
+     *
+     * The terminal enrichment gate is intentionally NOT evaluated here — readiness is
+     * structural and must not depend on the asynchronous enrichments settling.
+     *
+     * @param list<Stage> $stages
+     */
+    private function storeStructuralStages(string $tripId, array $stages): TripStatus
     {
-        $this->messageBus->dispatch(new GenerateStages($tripId));
+        $this->computationTracker->markRunning($tripId, ComputationName::STAGES);
+
+        if (\count($stages) < TripStatus::MIN_STAGES) {
+            $this->publisher->publishValidationError($tripId, 'MIN_STAGES', 'A minimum of 2 stages is required.');
+        }
+
+        $this->tripStateManager->storeStages($tripId, $stages);
+        $this->computationTracker->markDone($tripId, ComputationName::STAGES);
+
+        $status = TripStatus::DRAFT;
+        if (\count($stages) >= TripStatus::MIN_STAGES) {
+            $status = TripStatus::READY;
+            $this->tripStateManager->storeStatus($tripId, $status->value);
+        }
+
+        $this->publisher->publish(
+            $tripId,
+            MercureEventType::STAGES_COMPUTED,
+            ['stages' => $this->structuralComputation->serializeStagesForEvent($stages)],
+        );
+
+        $progress = $this->computationTracker->getProgress($tripId);
+        if (0 !== $progress['total']) {
+            $this->publisher->publishComputationStepCompleted(
+                $tripId,
+                ComputationName::STAGES,
+                $progress['completed'],
+                $progress['total'],
+                $progress['failed'],
+            );
+        }
+
+        return $status;
     }
 
     /**
@@ -145,11 +205,12 @@ final readonly class GpxUploadService
      */
     private function buildComputationStatus(array $computations): array
     {
-        $status = [];
+        $structural = ComputationName::structuralPipeline();
+        $result = [];
         foreach ($computations as $computation) {
-            $status[$computation->value] = ComputationName::ROUTE === $computation ? 'done' : 'pending';
+            $result[$computation->value] = \in_array($computation, $structural, true) ? 'done' : 'pending';
         }
 
-        return $status;
+        return $result;
     }
 }

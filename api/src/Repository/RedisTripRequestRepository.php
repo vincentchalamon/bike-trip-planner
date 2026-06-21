@@ -181,6 +181,17 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         return $value;
     }
 
+    public function storeStatus(string $tripId, string $status): void
+    {
+        $request = $this->getRequest($tripId);
+        if (!$request instanceof TripRequest) {
+            return;
+        }
+
+        $request->status = $status;
+        $this->set($this->requestKey($tripId), $request);
+    }
+
     private function set(string $key, mixed $value): void
     {
         $item = $this->tripStateCache->getItem($key);

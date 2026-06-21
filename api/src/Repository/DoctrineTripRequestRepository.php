@@ -146,6 +146,17 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         return $this->findTripRequest($tripId)?->sourceType;
     }
 
+    public function storeStatus(string $tripId, string $status): void
+    {
+        $trip = $this->findTripRequest($tripId);
+        if (!$trip instanceof TripRequest) {
+            return;
+        }
+
+        $trip->status = $status;
+        $this->getEntityManager()->flush();
+    }
+
     public function storeLocale(string $tripId, string $locale): void
     {
         $trip = $this->findTripRequest($tripId);

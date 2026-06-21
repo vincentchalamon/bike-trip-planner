@@ -533,6 +533,36 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
     }
 
     #[Test]
+    public function storeStatus(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+
+        self::assertSame('draft', $trip->status);
+
+        $this->entityManager->method('find')
+            ->willReturn($trip);
+        $this->entityManager->expects(self::once())
+            ->method('flush');
+
+        $this->repository->storeStatus($tripId, 'ready');
+        self::assertSame('ready', $trip->status);
+    }
+
+    #[Test]
+    public function storeStatusIgnoresNonExistentTrip(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+
+        $this->entityManager->method('find')
+            ->willReturn(null);
+        $this->entityManager->expects(self::never())
+            ->method('flush');
+
+        $this->repository->storeStatus($tripId, 'ready');
+    }
+
+    #[Test]
     public function storeStagesIgnoresNonExistentTrip(): void
     {
         $tripId = Uuid::v7()->toRfc4122();

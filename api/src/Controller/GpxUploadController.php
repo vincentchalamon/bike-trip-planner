@@ -111,6 +111,10 @@ final readonly class GpxUploadController
             'totalDistance' => $result['totalDistance'],
             'totalElevation' => $result['totalElevation'],
             'totalElevationLoss' => $result['totalElevationLoss'],
+            // ADR-043: structural data is computed synchronously, so the response
+            // already carries the persisted status and the computed stages.
+            'status' => $result['status'],
+            'stages' => $result['stages'],
         ];
 
         if (null !== $title) {

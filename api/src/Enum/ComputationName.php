@@ -59,6 +59,21 @@ enum ComputationName: string
     }
 
     /**
+     * The structural computations that make a trip renderable (ADR-043).
+     *
+     * Pure local CPU work (route parsing + pacing). Used to express the intent
+     * behind posting the persisted `ready` status — it does NOT fragment the
+     * {@see self::pipeline()} tracker, whose completion still gates the terminal
+     * `AllEnrichmentsCompleted` / TripCompletionGate event.
+     *
+     * @return list<self>
+     */
+    public static function structuralPipeline(): array
+    {
+        return [self::ROUTE, self::STAGES];
+    }
+
+    /**
      * Returns the user-facing progress category this computation belongs to.
      *
      * The category groups several individual computations under the same progress

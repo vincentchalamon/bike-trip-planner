@@ -83,6 +83,13 @@ interface TripRequestRepositoryInterface
 
     public function getSourceType(string $tripId): ?string;
 
+    /**
+     * Persists the structural-readiness status of a trip (ADR-043), e.g. `draft` → `ready`.
+     *
+     * Returns silently if the trip does not exist anymore.
+     */
+    public function storeStatus(string $tripId, string $status): void;
+
     public function storeLocale(string $tripId, string $locale): void;
 
     public function getLocale(string $tripId): ?string;

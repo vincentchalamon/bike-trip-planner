@@ -8,10 +8,14 @@ use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\Controller\GpxUploadController;
 use App\Enum\ComputationName;
+use App\Message\AnalyzeTerrain;
+use App\Message\FetchWeather;
 use App\Message\GenerateStages;
+use App\Message\ScanPois;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 
 final class GpxUploadTest extends ApiTestCase
@@ -79,9 +83,18 @@ final class GpxUploadTest extends ApiTestCase
         $this->assertArrayHasKey('totalElevationLoss', $data);
         $this->assertIsInt($data['totalElevationLoss']);
 
-        // Other computations should be pending
+        // ADR-043: stages are computed synchronously, so the structural pipeline
+        // (route + stages) is already done and the response carries status + stages.
+        $this->assertSame('done', $data['computationStatus']['stages']);
+        $this->assertArrayHasKey('status', $data);
+        $this->assertContains($data['status'], ['draft', 'ready']);
+        $this->assertArrayHasKey('stages', $data);
+        $this->assertIsArray($data['stages']);
+
+        // Enrichment computations (everything but the structural pipeline) stay pending.
+        $structural = ComputationName::structuralPipeline();
         foreach (ComputationName::pipeline() as $computation) {
-            if (ComputationName::ROUTE === $computation) {
+            if (\in_array($computation, $structural, true)) {
                 continue;
             }
 
@@ -91,7 +104,40 @@ final class GpxUploadTest extends ApiTestCase
     }
 
     #[Test]
-    public function uploadDispatchesDownstreamMessages(): void
+    public function uploadLongRouteIsReadyWithStages(): void
+    {
+        // A ~100km route splits into >= 2 stages (30km minimum per stage), so the
+        // synchronously computed trip reaches the structural `ready` status.
+        $file = new UploadedFile(
+            self::FIXTURES_DIR.'/multi-stage-route.gpx',
+            'multi-stage-route.gpx',
+            'application/gpx+xml',
+            null,
+            true,
+        );
+
+        $response = $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
+            'extra' => [
+                'files' => ['gpxFile' => $file],
+            ],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+
+        $data = $response->toArray(false);
+        $this->assertSame('ready', $data['status']);
+        $this->assertGreaterThanOrEqual(2, \count($data['stages']));
+        $this->assertSame('done', $data['computationStatus']['stages']);
+
+        $firstStage = $data['stages'][0];
+        $this->assertArrayHasKey('dayNumber', $firstStage);
+        $this->assertArrayHasKey('distance', $firstStage);
+        $this->assertArrayHasKey('geometry', $firstStage);
+    }
+
+    #[Test]
+    public function uploadDispatchesEnrichmentMessagesNotStageGeneration(): void
     {
         $file = new UploadedFile(
             self::FIXTURES_DIR.'/valid-route.gpx',
@@ -112,10 +158,17 @@ final class GpxUploadTest extends ApiTestCase
 
         /** @var InMemoryTransport $transport */
         $transport = self::getContainer()->get('messenger.transport.async');
-        $sentMessages = $transport->getSent();
+        $dispatched = array_map(
+            static fn (Envelope $envelope): string => $envelope->getMessage()::class,
+            $transport->getSent(),
+        );
 
-        $this->assertCount(1, $sentMessages);
-        $this->assertInstanceOf(GenerateStages::class, $sentMessages[0]->getMessage());
+        // ADR-043: stage generation now runs synchronously, so GenerateStages is no
+        // longer dispatched; instead the async enrichment fan-out is dispatched directly.
+        $this->assertNotContains(GenerateStages::class, $dispatched);
+        $this->assertContains(ScanPois::class, $dispatched);
+        $this->assertContains(FetchWeather::class, $dispatched);
+        $this->assertContains(AnalyzeTerrain::class, $dispatched);
     }
 
     #[Test]
