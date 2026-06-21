@@ -66,8 +66,8 @@ final readonly class ComputationFailureSubscriber
 
         $message = $event->getEnvelope()->getMessage();
 
-        $computation = self::resolveComputation($message);
-        if (null === $computation) {
+        $computation = $this->resolveComputation($message);
+        if (!$computation instanceof ComputationName) {
             return;
         }
 
@@ -101,7 +101,7 @@ final readonly class ComputationFailureSubscriber
      * on-demand recalculations or LLM analyses tracked separately), so their
      * failure does not disturb the gate.
      */
-    private static function resolveComputation(object $message): ?ComputationName
+    private function resolveComputation(object $message): ?ComputationName
     {
         return match ($message::class) {
             FetchAndParseRoute::class => ComputationName::ROUTE,
