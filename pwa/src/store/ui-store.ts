@@ -175,11 +175,10 @@ interface UiState {
   hasSeenBubble: boolean;
   /**
    * AI tier availability driving the explicit gating (#304, ADR-042).
-   * - `available`: runtime reachability of the LLM tier, read from `/api/health`
-   *   (`deps.ollama_chat`). Starts optimistic (`true`) to avoid a disabled→enabled
-   *   flash; flipped to `false` only once an outage is confirmed. For the
+   * - `available`: runtime reachability of the LLM tier. For the
    *   bring-your-own-token cloud providers (ADR-042) there is no self-hosted tier
-   *   to probe, so this stays `true`.
+   *   to probe, so this stays `true` (see `fetchAiAvailability`); a provider
+   *   outage surfaces reactively via the 503 the chat endpoint returns.
    * - `configured`: whether the account has an AI provider + token set
    *   (`GET /users/me/ai-settings`). When false, AI surfaces are shown
    *   disabled-but-visible with a "Configurez une IA" CTA. Starts `false`

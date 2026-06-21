@@ -5,11 +5,13 @@ import { mockAllApis } from "../fixtures/api-mocks";
  * Issue #304 / ADR-042 — explicit gating of the AI features.
  *
  * AI is per-user (no build-time env gate): the controls are always present and
- * driven solely by runtime signals. Availability comes from `/api/health`, and
- * `configured` from the account `GET /users/me/ai-settings`. To pin the states
- * deterministically — and prod-safely, since the E2E build hides
- * `window.__zustand_ui_store` — the tests drive the capability via the
- * `__test_set_ai_capability` CustomEvent:
+ * driven solely by runtime signals. Since ADR-042 the AI is a bring-your-own-
+ * token cloud provider, so there is no self-hosted tier to probe: `available`
+ * stays `true` and the real gate is `configured`, read from the account
+ * `GET /users/me/ai-settings`. A provider outage surfaces reactively via the
+ * 503 the chat endpoint returns. To pin the states deterministically - and
+ * prod-safely, since the E2E build hides `window.__zustand_ui_store` - the tests
+ * drive the capability via the `__test_set_ai_capability` CustomEvent:
  *  - reachable + configured   → AI features active
  *  - unreachable              → features disabled with an explicit notice
  *  - not configured           → disabled-but-visible with a configure CTA
@@ -106,12 +108,17 @@ test.describe("AI generation card gating (#304)", () => {
   test("tier unreachable: the generation card is disabled with a notice", async ({
     page,
   }) => {
-    await mockAllApis(page, { aiAvailable: false });
+    await mockAllApis(page);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
     const card = page.getByTestId("card-ai");
     await expect(card).toBeVisible();
+    // No self-hosted tier to probe post-ADR-042: a provider outage is driven via
+    // the test hook (mirrors the reactive 503-classified state), not the health
+    // mock.
+    await setAiCapability(page, { available: false });
+
     await expect(card).toHaveAttribute("data-disabled", "true");
     await expect(page.getByTestId("ai-unavailable-notice")).toBeVisible();
 
