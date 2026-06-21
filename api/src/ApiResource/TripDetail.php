@@ -52,6 +52,11 @@ final readonly class TripDetail
         public bool $isLocked,
         /** True when the route falls outside the provisioned coverage area: the trip is display-only (no Valhalla rerouting). */
         public bool $outOfZone,
+        #[ApiProperty(
+            description: 'Structural-readiness status (ADR-043): "draft" until pacing stages are persisted, then "ready".',
+            openapiContext: ['type' => 'string', 'enum' => ['draft', 'ready']],
+        )]
+        public string $status,
         #[ApiProperty(openapiContext: [
             'type' => 'array',
             'items' => [

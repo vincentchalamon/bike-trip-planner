@@ -86,6 +86,9 @@ final readonly class TripDetailProvider implements ProviderInterface
             enabledAccommodationTypes: $request->enabledAccommodationTypes,
             isLocked: $this->tripLocker->isLocked($request),
             outOfZone: $this->coverageRepository->isRouteOutOfZone($this->routePoints($stages)),
+            // Fallback for trips persisted before the status column existed: infer
+            // readiness from whether stages are present.
+            status: '' !== $request->status ? $request->status : ([] !== $stages ? 'ready' : 'draft'),
             stages: array_map($this->serializeStage(...), $stages, $cycleNetwork),
         );
     }
