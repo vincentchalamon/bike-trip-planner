@@ -59,6 +59,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
             $this->createStage(1, false),
             $this->createStage(2, false),
             $this->createStage(3, false),
+            $this->createStage(4, false),
         ];
 
         $alerts = $analyzer->analyze($stages[2], ['allStages' => $stages]);
@@ -68,6 +69,22 @@ final class RestDayNudgeAnalyzerTest extends TestCase
         $this->assertNotNull($alerts[0]->action);
         $this->assertSame(AlertActionKind::AUTO_FIX, $alerts[0]->action->kind);
         $this->assertSame(3, $alerts[0]->action->payload['afterStage']);
+    }
+
+    #[Test]
+    public function noNudgeOnLastStage(): void
+    {
+        $analyzer = new RestDayNudgeAnalyzer($this->translator, 3);
+        $stages = [
+            $this->createStage(1, false),
+            $this->createStage(2, false),
+            $this->createStage(3, false),
+        ];
+
+        // Day 3 reaches the threshold but is the last stage of the trip
+        $alerts = $analyzer->analyze($stages[2], ['allStages' => $stages]);
+
+        $this->assertSame([], $alerts);
     }
 
     #[Test]
@@ -96,6 +113,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
             $this->createStage(4, false),
             $this->createStage(5, false),
             $this->createStage(6, false),
+            $this->createStage(7, false),
         ];
 
         // Day 4, 5, 6 are the first 3 consecutive after the rest: nudge on 6
@@ -132,7 +150,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
         $analyzer = new RestDayNudgeAnalyzer($this->translator, 3);
         $stages = array_map(
             fn (int $n): Stage => $this->createStage($n, false),
-            range(1, 6),
+            range(1, 7),
         );
 
         $alertsDay3 = $analyzer->analyze($stages[2], ['allStages' => $stages]);
@@ -164,6 +182,7 @@ final class RestDayNudgeAnalyzerTest extends TestCase
             $this->createStage(1, false),
             $this->createStage(2, false),
             $this->createStage(3, false),
+            $this->createStage(4, false),
         ];
 
         $alerts = $analyzer->analyze($stages[2], ['allStages' => $stages, 'locale' => 'fr']);
