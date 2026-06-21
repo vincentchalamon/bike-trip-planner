@@ -7,7 +7,6 @@ import { TripAiOverviewSchema } from "@/lib/validation/schemas";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { reverseGeocode } from "@/lib/geocode/client";
-import { fetchAiAvailability } from "@/lib/ai-availability";
 import { toast } from "@/components/ui/sonner";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 import type { StageData } from "@/lib/validation/schemas";
@@ -517,15 +516,6 @@ function dispatchEvent(event: MercureEvent): void {
         event.data.aiOverview,
       );
       store.setAiOverview(parsedOverview.success ? parsedOverview.data : null);
-      // If AI looked reachable at mount but no overview arrived, the tier may
-      // have gone down mid-Phase 2. Re-probe so the UI can explicitly flag the
-      // outage instead of silently showing no analysis (#304).
-      const ui = useUiStore.getState();
-      if (ui.aiCapability.available && !parsedOverview.success) {
-        void fetchAiAvailability().then((available) =>
-          ui.setAiAvailable(available),
-        );
-      }
       useUiStore.getState().setAnalysisProgress(null);
       useUiStore.getState().setAnalysisStarted(true);
       useUiStore.getState().setAnalysisPhaseActive(false);

@@ -161,8 +161,10 @@ export function TripPlanner({
   const aiConfigured = useUiStore((s) => s.aiCapability.configured);
   const setAiAvailable = useUiStore((s) => s.setAiAvailable);
 
-  // Probe the LLM tier once on mount so AI features can be gated explicitly when
-  // the tier is unreachable (#304).
+  // Initialise the AI availability signal on mount. Since ADR-042 there is no
+  // self-hosted tier to probe: with the BYO-token cloud model availability
+  // resolves to `true` here. A genuine provider outage surfaces reactively via
+  // the 503 the chat endpoint returns, not from this mount-time call.
   useEffect(() => {
     let cancelled = false;
     void fetchAiAvailability().then((available) => {
