@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Loader2, Sparkles, Trash2 } from "lucide-react";
+import { BadgeCheck, Loader2, Sparkles, Trash2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/sonner";
@@ -110,6 +111,7 @@ export function AiProviderSection() {
 
   const busy = isSaving || isClearing;
   const canSave = provider !== "" && token.trim().length > 0 && !busy;
+  const providerName = provider ? t(`providers.${provider}`) : "";
 
   return (
     <Card data-testid="ai-provider-section" id="ai">
@@ -147,8 +149,22 @@ export function AiProviderSection() {
         </div>
 
         <div className="flex flex-col gap-2">
+          {tokenConfigured && (
+            <Badge
+              variant="secondary"
+              className="self-start gap-1.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+              data-testid="ai-token-configured-badge"
+            >
+              <BadgeCheck className="h-3 w-3" aria-hidden="true" />
+              {providerName
+                ? t("tokenConfiguredBadgeWithProvider", {
+                    provider: providerName,
+                  })
+                : t("tokenConfiguredBadge")}
+            </Badge>
+          )}
           <label htmlFor={tokenId} className="text-sm font-medium">
-            {t("tokenLabel")}
+            {tokenConfigured ? t("tokenReplaceLabel") : t("tokenLabel")}
           </label>
           <Input
             id={tokenId}
@@ -159,7 +175,11 @@ export function AiProviderSection() {
               setToken(e.target.value);
               setError(null);
             }}
-            placeholder={t("tokenPlaceholder")}
+            placeholder={
+              tokenConfigured
+                ? t("tokenReplacePlaceholder")
+                : t("tokenPlaceholder")
+            }
             disabled={busy}
             data-testid="ai-token-input"
             aria-invalid={!!error}
@@ -204,7 +224,11 @@ export function AiProviderSection() {
             ) : (
               <Sparkles className="h-4 w-4" aria-hidden="true" />
             )}
-            {isSaving ? t("saving") : t("save")}
+            {isSaving
+              ? t("saving")
+              : tokenConfigured
+                ? t("replace")
+                : t("save")}
           </Button>
           <Button
             type="button"
