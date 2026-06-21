@@ -14,6 +14,7 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripDetail;
 use App\ApiResource\TripRequest;
+use App\Enum\TripStatus;
 use App\Osm\CoverageRepositoryInterface;
 use App\Osm\CycleRouteRepositoryInterface;
 use App\Repository\DoctrineTripRequestRepository;
@@ -86,6 +87,9 @@ final readonly class TripDetailProvider implements ProviderInterface
             enabledAccommodationTypes: $request->enabledAccommodationTypes,
             isLocked: $this->tripLocker->isLocked($request),
             outOfZone: $this->coverageRepository->isRouteOutOfZone($this->routePoints($stages)),
+            // Fallback for trips persisted before the status column existed: infer
+            // readiness from whether stages are present.
+            status: '' !== $request->status ? $request->status : ([] !== $stages ? TripStatus::READY->value : TripStatus::DRAFT->value),
             stages: array_map($this->serializeStage(...), $stages, $cycleNetwork),
         );
     }

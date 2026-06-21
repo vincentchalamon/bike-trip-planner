@@ -14,11 +14,13 @@ use App\Engine\ElevationCalculatorInterface;
 use App\Engine\PacingEngineInterface;
 use App\Engine\RouteSimplifierInterface;
 use App\Enum\SourceType;
+use App\Enum\TripStatus;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\GenerateStages;
 use App\MessageHandler\GenerateStagesHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\StructuralComputationService;
 use App\Service\TripAnalysisDispatcher;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -28,10 +30,24 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 final class GenerateStagesHandlerTest extends TestCase
 {
+    private function structuralComputation(
+        TripRequestRepositoryInterface $tripStateManager,
+        PacingEngineInterface $pacingEngine,
+        ?DistanceCalculatorInterface $distanceCalculator = null,
+    ): StructuralComputationService {
+        return new StructuralComputationService(
+            $tripStateManager,
+            $distanceCalculator ?? $this->createStub(DistanceCalculatorInterface::class),
+            $this->createStub(ElevationCalculatorInterface::class),
+            $this->createStub(RouteSimplifierInterface::class),
+            $pacingEngine,
+        );
+    }
+
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
-        PacingEngineInterface $pacingEngine,
+        StructuralComputationService $structuralComputation,
         MessageBusInterface $messageBus,
     ): GenerateStagesHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
@@ -45,10 +61,7 @@ final class GenerateStagesHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
-            $this->createStub(DistanceCalculatorInterface::class),
-            $this->createStub(ElevationCalculatorInterface::class),
-            $this->createStub(RouteSimplifierInterface::class),
-            $pacingEngine,
+            $structuralComputation,
             new TripAnalysisDispatcher($messageBus),
             $messageBus,
         );
@@ -107,22 +120,10 @@ final class GenerateStagesHandlerTest extends TestCase
                 }),
             );
 
-        $computationTracker = $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
-
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-
-        $handler = new GenerateStagesHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
+        $handler = $this->createHandler(
             $tripStateManager,
-            $distanceCalculator,
-            $this->createStub(ElevationCalculatorInterface::class),
-            $this->createStub(RouteSimplifierInterface::class),
-            $pacingEngine,
-            new TripAnalysisDispatcher($messageBus),
+            $publisher,
+            $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator),
             $messageBus,
         );
 
@@ -175,22 +176,113 @@ final class GenerateStagesHandlerTest extends TestCase
 
         $publisher = $this->createStub(TripUpdatePublisherInterface::class);
 
-        $computationTracker = $this->createStub(ComputationTrackerInterface::class);
-        $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
-
-        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-
-        $handler = new GenerateStagesHandler(
-            $computationTracker,
-            $publisher,
-            $generationTracker,
-            new NullLogger(),
+        $handler = $this->createHandler(
             $tripStateManager,
-            $distanceCalculator,
-            $this->createStub(ElevationCalculatorInterface::class),
-            $this->createStub(RouteSimplifierInterface::class),
-            $pacingEngine,
-            new TripAnalysisDispatcher($messageBus),
+            $publisher,
+            $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator),
+            $messageBus,
+        );
+
+        $handler(new GenerateStages('trip-1'));
+    }
+
+    #[Test]
+    public function postsReadyStatusAfterStoringStages(): void
+    {
+        $coordinate = new Coordinate(48.8566, 2.3522, 35.0);
+
+        $stage = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 1,
+            distance: 80.0,
+            elevation: 500.0,
+            startPoint: $coordinate,
+            endPoint: $coordinate,
+            geometry: [$coordinate],
+        );
+
+        $tripRequest = new TripRequest();
+
+        $tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getRequest')->willReturn($tripRequest);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
+        $tripStateManager->method('getDecimatedPoints')->willReturn([
+            ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
+            ['lat' => 49.0, 'lon' => 2.5, 'ele' => 50.0],
+        ]);
+        $tripStateManager->method('getRawPoints')->willReturn(null);
+
+        // Status must be posted to `ready` once at least MIN_STAGES stages are stored.
+        $tripStateManager->expects($this->once())
+            ->method('storeStatus')
+            ->with('trip-1', TripStatus::READY->value);
+
+        $pacingEngine = $this->createStub(PacingEngineInterface::class);
+        $pacingEngine->method('generateStages')->willReturn([$stage, $stage]);
+
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('calculateTotalDistance')->willReturn(80.0);
+
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $publisher,
+            $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator),
+            $messageBus,
+        );
+
+        $handler(new GenerateStages('trip-1'));
+    }
+
+    #[Test]
+    public function doesNotPostReadyStatusWhenBelowMinStages(): void
+    {
+        $coordinate = new Coordinate(48.8566, 2.3522, 35.0);
+
+        $stage = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 1,
+            distance: 80.0,
+            elevation: 500.0,
+            startPoint: $coordinate,
+            endPoint: $coordinate,
+            geometry: [$coordinate],
+        );
+
+        $tripRequest = new TripRequest();
+
+        $tripStateManager = $this->createMock(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getRequest')->willReturn($tripRequest);
+        $tripStateManager->method('getSourceType')->willReturn(SourceType::KOMOOT_TOUR->value);
+        $tripStateManager->method('getDecimatedPoints')->willReturn([
+            ['lat' => 48.8566, 'lon' => 2.3522, 'ele' => 35.0],
+        ]);
+        $tripStateManager->method('getRawPoints')->willReturn(null);
+
+        $tripStateManager->expects($this->never())->method('storeStatus');
+
+        $pacingEngine = $this->createStub(PacingEngineInterface::class);
+        $pacingEngine->method('generateStages')->willReturn([$stage]); // single stage → below MIN_STAGES
+
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('calculateTotalDistance')->willReturn(20.0);
+
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publishValidationError')
+            ->with('trip-1', 'MIN_STAGES', $this->anything());
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $publisher,
+            $this->structuralComputation($tripStateManager, $pacingEngine, $distanceCalculator),
             $messageBus,
         );
 
@@ -211,7 +303,7 @@ final class GenerateStagesHandlerTest extends TestCase
         $handler = $this->createHandler(
             $tripStateManager,
             $publisher,
-            $this->createStub(PacingEngineInterface::class),
+            $this->structuralComputation($tripStateManager, $this->createStub(PacingEngineInterface::class)),
             $messageBus,
         );
 

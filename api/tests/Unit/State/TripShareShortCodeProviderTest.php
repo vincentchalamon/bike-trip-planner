@@ -61,6 +61,7 @@ final class TripShareShortCodeProviderTest extends TestCase
             enabledAccommodationTypes: [],
             isLocked: false,
             outOfZone: false,
+            status: 'ready',
             stages: [],
         );
         $this->tripDetailProvider->expects($this->once())->method('provide')->willReturn($detail);

@@ -117,6 +117,14 @@ final class TripRequest
     #[ApiProperty(readable: false, writable: false)]
     public ?string $sourceType = null;
 
+    /**
+     * Structural-readiness status (ADR-043): `draft` until the pacing stages are persisted,
+     * then `ready`. Independent of the asynchronous enrichment completion gate.
+     */
+    #[ORM\Column(length: 20, options: ['default' => 'draft'])]
+    #[ApiProperty(readable: false, writable: false)]
+    public string $status = 'draft';
+
     #[ORM\Column(length: 5)]
     #[ApiProperty(readable: false, writable: false)]
     public string $locale = 'en';

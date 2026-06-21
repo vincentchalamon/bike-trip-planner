@@ -472,6 +472,10 @@ final class InMemoryTripRequestRepository implements TripRequestRepositoryInterf
         return null;
     }
 
+    public function storeStatus(string $tripId, string $status): void
+    {
+    }
+
     public function storeLocale(string $tripId, string $locale): void
     {
     }

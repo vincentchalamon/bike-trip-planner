@@ -12,6 +12,7 @@ use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\DBAL\Connection;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 use Zenstruck\Foundry\Test\Factories;
@@ -29,6 +30,12 @@ final class TripDetailTest extends ApiTestCase
     private User $testUser;
 
     private string $jwtToken;
+
+    #[\Override]
+    public static function setUpBeforeClass(): void
+    {
+        self::$alwaysBootKernel = false;
+    }
 
     #[\Override]
     protected function setUp(): void
@@ -66,6 +73,7 @@ final class TripDetailTest extends ApiTestCase
             geometry: [new Coordinate(45.0, 6.0, 1000.0)],
         );
         $repo->storeStages(self::TRIP_ID, [$stage]);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
 
         $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
@@ -76,6 +84,8 @@ final class TripDetailTest extends ApiTestCase
         $data = $response->toArray(false);
         $this->assertSame(self::TRIP_ID, $data['id']);
         $this->assertArrayHasKey('stages', $data);
+        $this->assertArrayHasKey('status', $data);
+        $this->assertSame('ready', $data['status']);
         $this->assertArrayHasKey('fatigueFactor', $data);
         $this->assertArrayHasKey('enabledAccommodationTypes', $data);
         // Coverage polygon is unprovisioned in the test DB, so a valid trip is in zone.
@@ -91,6 +101,55 @@ final class TripDetailTest extends ApiTestCase
         // No cycle routes provisioned in the test DB → stage is not on a network.
         $this->assertArrayHasKey('onCycleNetwork', $stage);
         $this->assertEqualsWithDelta(0.0, $stage['onCycleNetwork'], 0.0001);
+    }
+
+    #[Test]
+    public function detailExposesDraftStatusForTripWithoutStages(): void
+    {
+        // A freshly initialized trip with no stages keeps the default `draft` status.
+        $this->seedTrip(self::TRIP_ID);
+
+        $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $this->assertSame('draft', $response->toArray(false)['status']);
+    }
+
+    #[Test]
+    public function detailFallsBackToReadyForLegacyTripWithStagesAndEmptyStatus(): void
+    {
+        // Simulates a trip persisted before the status column existed: status is blank
+        // in DB, so the provider infers readiness from the presence of stages.
+        $repo = $this->seedTrip(self::TRIP_ID);
+
+        $stage = new StageDto(
+            tripId: self::TRIP_ID,
+            dayNumber: 1,
+            distance: 40.0,
+            elevation: 300.0,
+            startPoint: new Coordinate(48.5, 3.0, 0.0),
+            endPoint: new Coordinate(48.6, 3.1, 0.0),
+        );
+        $repo->storeStages(self::TRIP_ID, [$stage]);
+
+        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        \assert($connection instanceof Connection);
+        $connection->executeStatement("UPDATE trip SET status = '' WHERE id = :id", ['id' => self::TRIP_ID]);
+
+        // Drop the Doctrine identity map so the provider re-reads the blanked status
+        // from the DB instead of returning the still-managed entity (status='draft').
+        $em = self::getContainer()->get('doctrine')->getManager();
+        \assert($em instanceof EntityManagerInterface);
+        $em->clear();
+
+        $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $this->assertSame('ready', $response->toArray(false)['status']);
     }
 
     #[Test]

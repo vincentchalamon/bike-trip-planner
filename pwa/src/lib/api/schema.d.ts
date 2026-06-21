@@ -1538,6 +1538,11 @@ export interface components {
             isLocked?: boolean;
             /** @description True when the route falls outside the provisioned coverage area: the trip is display-only (no Valhalla rerouting). */
             outOfZone?: boolean;
+            /**
+             * @description Structural-readiness status (ADR-043): "draft" until pacing stages are persisted, then "ready".
+             * @enum {string}
+             */
+            status?: "draft" | "ready";
             /** @description Serialized stage DTOs */
             stages?: {
                 dayNumber?: number;
@@ -1710,6 +1715,11 @@ export interface components {
             isLocked?: boolean;
             /** @description True when the route falls outside the provisioned coverage area: the trip is display-only (no Valhalla rerouting). */
             outOfZone?: boolean;
+            /**
+             * @description Structural-readiness status (ADR-043): "draft" until pacing stages are persisted, then "ready".
+             * @enum {string}
+             */
+            status?: "draft" | "ready";
             /** @description Serialized stage DTOs */
             stages?: {
                 dayNumber?: number;
