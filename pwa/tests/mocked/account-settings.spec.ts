@@ -285,10 +285,36 @@ test.describe("AI provider settings (ADR-042)", () => {
     await expect(page.getByTestId("ai-token-status")).toHaveText(
       "Une clé API est enregistrée.",
     );
-    // The token itself is never returned, so the input stays empty.
-    await expect(page.getByTestId("ai-token-input")).toHaveValue("");
+    // A clear "key configured" badge surfaces the current provider without
+    // ever exposing the key value.
+    await expect(page.getByTestId("ai-token-configured-badge")).toHaveText(
+      "Clé configurée · Anthropic (Claude)",
+    );
+    // The token itself is never returned, so the input stays empty and the
+    // field switches to "replace the key" mode.
+    const tokenInput = page.getByTestId("ai-token-input");
+    await expect(tokenInput).toHaveValue("");
+    await expect(tokenInput).toHaveAttribute("placeholder", /remplacer/i);
+    // The save button reflects the replace action.
+    await expect(page.getByTestId("ai-settings-save")).toHaveText(
+      "Remplacer la clé",
+    );
     // RGPD disclosure is always shown.
     await expect(page.getByTestId("ai-settings-rgpd")).toBeVisible();
+  });
+
+  test("hides the configured badge when no key is set", async ({ page }) => {
+    await mockAuthenticated(page);
+    await mockAiSettingsGet(page, null);
+
+    await page.goto("/account/settings");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByTestId("ai-token-configured-badge")).toHaveCount(0);
+    await expect(page.getByTestId("ai-token-status")).toHaveText(
+      "Aucune clé API enregistrée.",
+    );
+    await expect(page.getByTestId("ai-settings-save")).toHaveText("Enregistrer");
   });
 
   test("saving sends PUT and confirms the configured state", async ({
@@ -324,6 +350,11 @@ test.describe("AI provider settings (ADR-042)", () => {
     });
     await expect(page.getByTestId("ai-token-status")).toHaveText(
       "Une clé API est enregistrée.",
+    );
+    // The configured badge appears right after a successful save, scoped to the
+    // returned provider.
+    await expect(page.getByTestId("ai-token-configured-badge")).toHaveText(
+      "Clé configurée · OpenAI",
     );
     // Token is cleared from the input after a successful save.
     await expect(page.getByTestId("ai-token-input")).toHaveValue("");
@@ -380,5 +411,7 @@ test.describe("AI provider settings (ADR-042)", () => {
     await expect(page.getByTestId("ai-token-status")).toHaveText(
       "Aucune clé API enregistrée.",
     );
+    // The configured badge is gone once the key is cleared.
+    await expect(page.getByTestId("ai-token-configured-badge")).toHaveCount(0);
   });
 });
