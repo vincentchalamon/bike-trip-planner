@@ -32,6 +32,12 @@ final class TripDetailTest extends ApiTestCase
     private string $jwtToken;
 
     #[\Override]
+    public static function setUpBeforeClass(): void
+    {
+        self::$alwaysBootKernel = false;
+    }
+
+    #[\Override]
     protected function setUp(): void
     {
         $this->client = self::createClient();
