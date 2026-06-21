@@ -58,6 +58,11 @@ final readonly class RestDayNudgeAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
+        // No point suggesting a rest day on the very last stage of the trip
+        if ($stageIndex === \count($allStages) - 1) {
+            return [];
+        }
+
         // Count consecutive non-rest-day stages ending at this stage
         $consecutiveCount = 0;
         for ($i = $stageIndex; $i >= 0; --$i) {
