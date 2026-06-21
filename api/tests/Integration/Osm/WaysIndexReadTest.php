@@ -15,6 +15,8 @@ use Zenstruck\Foundry\Test\ResetDatabase;
  * Integration coverage for the local-first ways read layer (ADR-040): seeds real
  * PostGIS LineStrings in osm.ways and asserts the ST_DWithin corridor filtering
  * plus the centroid / geography-length / tag projection the terrain analyzers consume.
+ *
+ * @phpstan-import-type WayRow from WaysRepository
  */
 final class WaysIndexReadTest extends KernelTestCase
 {
@@ -128,7 +130,7 @@ final class WaysIndexReadTest extends KernelTestCase
      *
      * @param list<array{lat: float, lon: float}> $route
      *
-     * @return list<array{lat: float, lon: float, surface: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float}>
+     * @return list<WayRow>
      */
     private function naiveCorridorScan(array $route, int $radiusMeters): array
     {
@@ -181,8 +183,8 @@ final class WaysIndexReadTest extends KernelTestCase
     }
 
     /**
-     * @param array{lat: float, lon: float} $a
-     * @param array{lat: float, lon: float} $b
+     * @param WayRow $a
+     * @param WayRow $b
      */
     private function byCentroid(array $a, array $b): int
     {

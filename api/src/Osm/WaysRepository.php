@@ -21,6 +21,8 @@ use Doctrine\DBAL\Connection;
  * the bounding box strictly contains the 100 m corridor, so the candidate set
  * is a superset and the returned ways are byte-for-byte identical to the
  * unoptimised scan. See WaysIndexReadTest for the behaviour guard.
+ *
+ * @phpstan-type WayRow = array{lat: float, lon: float, surface: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float}
  */
 final readonly class WaysRepository implements WaysRepositoryInterface
 {
@@ -31,7 +33,7 @@ final readonly class WaysRepository implements WaysRepositoryInterface
     /**
      * @param list<array{lat: float, lon: float}> $route
      *
-     * @return list<array{lat: float, lon: float, surface: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float}>
+     * @return list<WayRow>
      */
     public function findInCorridor(array $route, int $radiusMeters): array
     {
