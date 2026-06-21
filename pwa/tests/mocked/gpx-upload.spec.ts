@@ -117,7 +117,7 @@ test.describe("GPX upload flow", () => {
     });
 
     await expect(
-      mockedPage.getByText("Déposez votre fichier GPX ici"),
+      mockedPage.getByText("Dépose ton fichier GPX ici"),
     ).toBeVisible();
 
     // Drag leave hides overlay
@@ -126,7 +126,7 @@ test.describe("GPX upload flow", () => {
     });
 
     await expect(
-      mockedPage.getByText("Déposez votre fichier GPX ici"),
+      mockedPage.getByText("Dépose ton fichier GPX ici"),
     ).not.toBeVisible();
   });
 
@@ -205,7 +205,7 @@ test.describe("GPX upload flow", () => {
     // Error toast should appear (French translation)
     await expect(
       mockedPage.getByText(
-        "Impossible d'importer le fichier GPX. Vérifiez le fichier et réessayez.",
+        "Impossible d'importer le fichier GPX. Vérifie le fichier et réessaie.",
       ),
     ).toBeVisible({ timeout: 5000 });
   });
@@ -230,7 +230,7 @@ test.describe("GPX upload flow", () => {
     // Error toast should appear (French translation)
     await expect(
       mockedPage.getByText(
-        "Impossible d'importer le fichier GPX. Vérifiez le fichier et réessayez.",
+        "Impossible d'importer le fichier GPX. Vérifie le fichier et réessaie.",
       ),
     ).toBeVisible({ timeout: 5000 });
   });

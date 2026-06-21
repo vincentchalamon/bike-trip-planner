@@ -60,7 +60,7 @@ test.describe("Error handling", () => {
     await input.fill("not-a-valid-url");
     await input.press("Enter");
     await expect(
-      mockedPage.getByText("Veuillez entrer une URL valide."),
+      mockedPage.getByText("Entre une URL valide."),
     ).toBeVisible();
   });
 
