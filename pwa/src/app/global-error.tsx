@@ -26,7 +26,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
   // lang hardcoded: GlobalError replaces the root layout so next-intl context is unavailable
   const title = "Un caillou dans le dérailleur";
   const subtitle =
-    "Une erreur critique est survenue. Vous pouvez recharger la page.";
+    "Une erreur critique est survenue. Tu peux recharger la page.";
   const requestIdLabel = "Identifiant pour le support :";
   const reloadLabel = "Recharger la page";
 

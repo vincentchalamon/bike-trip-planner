@@ -1,18 +1,18 @@
 {
   "layout": {
     "title": "Planificateur de voyage vélo",
-    "description": "Planifiez vos voyages bikepacking facilement",
+    "description": "Planifie tes voyages bikepacking facilement",
     "skipToTimeline": "Aller à la timeline"
   },
   "gpxUpload": {
     "ariaLabel": "Importer un fichier GPX",
-    "dropZone": "Déposez votre fichier GPX ici"
+    "dropZone": "Dépose ton fichier GPX ici"
   },
   "gpxDropZone": {
     "ariaLabel": "Zone de dépôt GPX",
     "ariaProgress": "Progression de l'import",
-    "idle": "Glissez-déposez votre fichier GPX ici",
-    "release": "Relâchez pour importer",
+    "idle": "Glisse-dépose ton fichier GPX ici",
+    "release": "Relâche pour importer",
     "uploading": "Import en cours…",
     "browse": "Parcourir",
     "retry": "Réessayer",
@@ -27,7 +27,7 @@
   "destructiveDialog": {
     "cancel": "Annuler",
     "confirm": "Supprimer",
-    "typeKeyword": "Tapez « {keyword} » pour confirmer"
+    "typeKeyword": "Tape « {keyword} » pour confirmer"
   },
   "tripNotFound": {
     "title": "Voyage introuvable",
@@ -43,7 +43,7 @@
   },
   "roadbookEmpty": {
     "title": "Carnet de route vierge",
-    "subtitle": "Aucune étape pour ce voyage. Importez un itinéraire ou ajoutez votre première étape pour commencer."
+    "subtitle": "Aucune étape pour ce voyage. Importe un itinéraire ou ajoute ta première étape pour commencer."
   },
   "tripSummary": {
     "totalDistance": "Distance totale :",
@@ -52,7 +52,7 @@
     "disclaimer": "Les données détectées automatiquement peuvent contenir des erreurs.",
     "downloadGpx": "Télécharger le GPX complet",
     "downloadFit": "Télécharger le FIT complet",
-    "downloadFailed": "Le téléchargement a échoué. Veuillez réessayer.",
+    "downloadFailed": "Le téléchargement a échoué. Réessaie.",
     "datesLabel": "Dates du voyage",
     "editDatesHint": "Modifier les dates",
     "noDates": "Dates non définies",
@@ -81,7 +81,7 @@
     "minStagesReached": "Minimum 2 étapes requises",
     "downloadGpx": "Télécharger le GPX étape {dayNumber}",
     "downloadFit": "Télécharger le FIT étape {dayNumber}",
-    "downloadFailed": "Le téléchargement a échoué. Veuillez réessayer.",
+    "downloadFailed": "Le téléchargement a échoué. Réessaie.",
     "loadingAlerts": "Analyse de l'étape...",
     "recomputing": "Mise à jour en cours...",
     "editDistance": "Modifier la distance",
@@ -109,7 +109,7 @@
     "tripStages": "Étapes du voyage",
     "cumulativeDistance": "{km} km cumulés",
     "sidebarLabel": "Sommaire des étapes",
-    "noStageSelected": "Sélectionnez une étape"
+    "noStageSelected": "Sélectionne une étape"
   },
   "calendar": {
     "previousMonth": "Mois précédent",
@@ -149,14 +149,14 @@
     "remove": "Supprimer l'hébergement",
     "add": "Ajouter un hébergement",
     "new": "Nouvel hébergement",
-    "urlPlaceholder": "Collez l'URL de l'hébergement...",
+    "urlPlaceholder": "Colle l'URL de l'hébergement...",
     "urlLabel": "URL de l'hébergement",
     "scraping": "Chargement...",
     "scrapeFailed": "Impossible d'extraire les données de l'URL",
     "loading": "Recherche d'hébergements...",
     "noAccommodation": "Aucun hébergement détecté à proximité dans un rayon de {radius} km.",
     "expandRadius": "Élargir le rayon à {radius} km",
-    "suggestExpandTypes": "Essayez d'activer d'autres types d'hébergements.",
+    "suggestExpandTypes": "Essaie d'activer d'autres types d'hébergements.",
     "select": "Sélectionner cet hébergement",
     "deselect": "Désélectionner l'hébergement",
     "selected": "Sélectionné",
@@ -177,7 +177,7 @@
     "preset_intermediate": "Intermédiaire",
     "preset_expert": "Expert",
     "presetLabel": "Appliquer le profil {preset}",
-    "coherenceWarning": "Attention : votre vitesse moyenne est très faible pour la distance journalière maximale définie.",
+    "coherenceWarning": "Attention : ta vitesse moyenne est très faible pour la distance journalière maximale définie.",
     "maxDistance": "Distance max/jour",
     "maxDistanceTooltip": "Plafond de distance journalière (km), appliqué après la formule de pacing.",
     "maxDistanceLabel": "Distance maximale par jour (km)",
@@ -255,7 +255,7 @@
     "deleteConfirm": "Supprimer",
     "deleteCancel": "Annuler",
     "deleteSuccess": "Voyage supprimé.",
-    "deleteFailed": "Impossible de supprimer le voyage. Veuillez réessayer."
+    "deleteFailed": "Impossible de supprimer le voyage. Réessaie."
   },
   "weather": {
     "humidity": "Humidité",
@@ -388,14 +388,14 @@
     "nextBtn": "Suivant",
     "prevBtn": "Précédent",
     "doneBtn": "Commencer",
-    "step1Title": "Collez votre lien d'itinéraire",
-    "step1Description": "Copiez un lien depuis <strong>Komoot</strong> (tour ou collection) et collez-le ici. Votre voyage sera calculé automatiquement.",
-    "step2Title": "Ou importez un fichier GPX",
-    "step2Description": "Vous avez déjà un fichier GPX ? Cliquez sur ce bouton pour l'importer directement et planifier votre voyage depuis vos données d'itinéraire existantes.",
-    "step3Title": "Configurez votre profil cyclo",
-    "step3Description": "Ouvrez les Paramètres pour ajuster le <strong>pacing</strong>, le facteur de fatigue, l'indice de dénivelé et vos préférences d'hébergements avant de calculer vos étapes.",
-    "step4Title": "Explorez vos étapes",
-    "step4Description": "Une fois votre voyage chargé, les étapes apparaissent dans la <strong>timeline</strong>. Chaque étape affiche distance, dénivelé, temps de trajet, alertes et suggestions d'hébergements. Vous pouvez réordonner, fractionner ou insérer des jours de repos."
+    "step1Title": "Colle ton lien d'itinéraire",
+    "step1Description": "Copie un lien depuis <strong>Komoot</strong> (tour ou collection) et colle-le ici. Ton voyage sera calculé automatiquement.",
+    "step2Title": "Ou importe un fichier GPX",
+    "step2Description": "Tu as déjà un fichier GPX ? Clique sur ce bouton pour l'importer directement et planifier ton voyage depuis tes données d'itinéraire existantes.",
+    "step3Title": "Configure ton profil cyclo",
+    "step3Description": "Ouvre les Paramètres pour ajuster le <strong>pacing</strong>, le facteur de fatigue, l'indice de dénivelé et tes préférences d'hébergements avant de calculer tes étapes.",
+    "step4Title": "Explore tes étapes",
+    "step4Description": "Une fois ton voyage chargé, les étapes apparaissent dans la <strong>timeline</strong>. Chaque étape affiche distance, dénivelé, temps de trajet, alertes et suggestions d'hébergements. Tu peux réordonner, fractionner ou insérer des jours de repos."
   },
   "undoRedo": {
     "undoTitle": "Annuler (Ctrl+Z)",
@@ -406,7 +406,7 @@
   "keyboardHelp": {
     "openButton": "Raccourcis clavier",
     "title": "Raccourcis clavier",
-    "description": "Utilisez ces raccourcis pour naviguer plus rapidement.",
+    "description": "Utilise ces raccourcis pour naviguer plus rapidement.",
     "sectionNavigation": "Navigation",
     "sectionHistory": "Historique",
     "sectionInterface": "Interface",
@@ -420,7 +420,7 @@
     "toggleMap": "Afficher / masquer la carte"
   },
   "tripLocked": {
-    "banner": "Ce trip est en cours ou passé — consultation uniquement. Utilisez « Dupliquer » pour planifier une nouvelle variante."
+    "banner": "Ce trip est en cours ou passé — consultation uniquement. Utilise « Dupliquer » pour planifier une nouvelle variante."
   },
   "outOfZone": {
     "banner": "Cet itinéraire sort de notre zone couverte (France, Belgique, Pays-Bas, Luxembourg). Les distances et points d'intérêt restent affichés, mais tu ne peux pas modifier ni recalculer ce voyage.",
@@ -449,7 +449,7 @@
     "deleteTripConfirm": "Supprimer",
     "deleteTripCancel": "Annuler",
     "deleteSuccess": "Voyage supprimé.",
-    "deleteError": "Impossible de supprimer le voyage. Veuillez réessayer.",
+    "deleteError": "Impossible de supprimer le voyage. Réessaie.",
     "previousPage": "Page précédente",
     "nextPage": "Page suivante",
     "page": "Page {current} sur {total}",
@@ -556,35 +556,35 @@
     }
   },
   "cardSelection": {
-    "heading": "Comment souhaitez-vous commencer ?",
+    "heading": "Comment veux-tu commencer ?",
     "linkTitle": "Lien",
     "linkDescription": "Komoot, Strava, RideWithGPS",
     "linkInputLabel": "URL de l'itinéraire",
-    "linkInputPlaceholder": "Collez votre lien Komoot, Strava ou RideWithGPS ici...",
-    "linkInvalidUrl": "Veuillez entrer une URL valide.",
-    "linkUnsupportedSource": "Source non supportée. Utilisez Komoot, Strava ou RideWithGPS.",
+    "linkInputPlaceholder": "Colle ton lien Komoot, Strava ou RideWithGPS ici...",
+    "linkInvalidUrl": "Entre une URL valide.",
+    "linkUnsupportedSource": "Source non supportée. Utilise Komoot, Strava ou RideWithGPS.",
     "linkSubmit": "Importer",
     "gpxTitle": "Fichier GPX",
-    "gpxDescription": "Glissez-déposez votre fichier",
+    "gpxDescription": "Glisse-dépose ton fichier",
     "gpxBrowse": "Parcourir",
     "gpxFileSize": "{size} Mo",
     "gpxSizeLimit": "Maximum 30 Mo",
     "gpxFileTooLarge": "Fichier trop volumineux (max 30 Mo).",
     "gpxInvalidType": "Seuls les fichiers .gpx sont acceptés.",
-    "gpxUploadGenericError": "L'import a échoué. Veuillez réessayer.",
+    "gpxUploadGenericError": "L'import a échoué. Réessaie.",
     "aiTitle": "Assistant IA",
-    "aiDescription": "Créez un itinéraire sur mesure",
+    "aiDescription": "Crée un itinéraire sur mesure",
     "back": "Changer de méthode",
     "ariaSelectLink": "Choisir l'entrée par lien",
     "ariaSelectGpx": "Choisir l'entrée par fichier GPX",
     "ariaSelectAi": "Discuter avec l'assistant IA"
   },
   "aiChat": {
-    "subtitle": "Décrivez votre projet, l'assistant proposera un itinéraire.",
+    "subtitle": "Décris ton projet, l'assistant proposera un itinéraire.",
     "historyAriaLabel": "Conversation avec l'assistant IA",
-    "stubGreeting": "Bonjour ! Décrivez l'aventure que vous imaginez (région, durée, période, niveau...) et je vous proposerai un itinéraire sur mesure.",
-    "stubReply": "C'est noté ! Une fois la connexion à l'assistant activée, je vous proposerai un itinéraire détaillé avec des étapes adaptées.",
-    "inputLabel": "Votre demande",
+    "stubGreeting": "Bonjour ! Décris l'aventure que tu imagines (région, durée, période, niveau...) et je te proposerai un itinéraire sur mesure.",
+    "stubReply": "C'est noté ! Une fois la connexion à l'assistant activée, je te proposerai un itinéraire détaillé avec des étapes adaptées.",
+    "inputLabel": "Ta demande",
     "inputPlaceholder": "Ex : « Je veux faire le tour de Corse en 10 jours en septembre »",
     "inputHint": "Entrée pour envoyer · Maj + Entrée pour un retour à la ligne",
     "sendAriaLabel": "Envoyer le message",
@@ -594,8 +594,8 @@
     "closeTrip": "Fermer ce trip"
   },
   "tripPreview": {
-    "title": "Aperçu de votre itinéraire",
-    "subtitle": "Vérifiez le tracé, les étapes et les paramètres avant de lancer l'analyse complète.",
+    "title": "Aperçu de ton itinéraire",
+    "subtitle": "Vérifie le tracé, les étapes et les paramètres avant de lancer l'analyse complète.",
     "stagesHeading": "Découpage en étapes",
     "stagesCount": "{count, plural, =0 {# étape} one {# étape} other {# étapes}}",
     "stageDay": "Jour {day}",
@@ -610,7 +610,7 @@
     "changeRoute": "Changer d'itinéraire",
     "changeRouteAria": "Retourner à l'écran de préparation pour changer d'itinéraire",
     "analysisLaunched": "Analyse lancée",
-    "analysisLaunchFailed": "Impossible de lancer l'analyse. Réessayez."
+    "analysisLaunchFailed": "Impossible de lancer l'analyse. Réessaie."
   },
   "aiBubble": {
     "label": "Assistant IA",
@@ -618,35 +618,35 @@
     "closeAria": "Fermer l'assistant IA",
     "newBadge": "Nouveau",
     "title": "Assistant IA",
-    "subtitle": "Posez une question ou demandez une modification.",
-    "greeting": "Bonjour ! Je suis votre assistant IA. Que puis-je faire pour vous ?",
-    "stageHint": "Vous consultez l'étape {stage}. Posez-moi une question !",
-    "inputPlaceholder": "Demandez une modification, par exemple « divise l'étape 3 »",
+    "subtitle": "Pose une question ou demande une modification.",
+    "greeting": "Bonjour ! Je suis ton assistant IA. Que puis-je faire pour toi ?",
+    "stageHint": "Tu consultes l'étape {stage}. Pose-moi une question !",
+    "inputPlaceholder": "Demande une modification, par exemple « divise l'étape 3 »",
     "inputAriaLabel": "Message pour l'assistant IA",
     "send": "Envoyer",
     "sendAria": "Envoyer le message",
     "typing": "L'assistant rédige une réponse…",
     "historyAriaLabel": "Conversation avec l'assistant IA",
-    "errorNetwork": "Erreur réseau. Vérifiez votre connexion puis réessayez.",
-    "errorRateLimit": "Vous avez atteint la limite de messages. Réessayez dans un instant.",
-    "errorUnavailable": "L'assistant IA est temporairement indisponible. Réessayez plus tard.",
-    "errorGeneric": "Une erreur est survenue. Réessayez plus tard.",
+    "errorNetwork": "Erreur réseau. Vérifie ta connexion puis réessaie.",
+    "errorRateLimit": "Tu as atteint la limite de messages. Réessaie dans un instant.",
+    "errorUnavailable": "L'assistant IA est temporairement indisponible. Réessaie plus tard.",
+    "errorGeneric": "Une erreur est survenue. Réessaie plus tard.",
     "fullAnalysisHint": "Cette modification nécessite une nouvelle analyse complète.",
     "relaunchAnalysis": "Relancer l'analyse",
     "unavailableTitle": "Assistant IA indisponible",
-    "notConfiguredTitle": "Configurez une IA pour activer l'assistant"
+    "notConfiguredTitle": "Configure une IA pour activer l'assistant"
   },
   "chat": {
     "offline": {
-      "label": "Vous êtes hors ligne. L'assistant est indisponible."
+      "label": "Tu es hors ligne. L'assistant est indisponible."
     },
     "inRide": {
       "openInMaps": "Ouvrir dans Google Maps",
       "detourBadge": "+{km} km",
       "opensAt": "Ouvre à {time}",
       "closesAt": "Ferme à {time}",
-      "noOpeningHours": "Horaires non vérifiés — confirmez sur place.",
-      "routeNotModified": "Votre itinéraire de base n'est pas modifié.",
+      "noOpeningHours": "Horaires non vérifiés — confirme sur place.",
+      "routeNotModified": "Ton itinéraire de base n'est pas modifié.",
       "osmDisclaimer": "Données OpenStreetMap — vérifier sur place en cas de doute.",
       "geolocPrompt": "Partager ma position pour des suggestions à proximité"
     },
@@ -668,7 +668,7 @@
   },
   "aiRefinement": {
     "title": "Affiner avec l'assistant IA",
-    "helper": "Décrivez en une phrase la modification souhaitée — par exemple « Ajoute une étape à Ajaccio » ou « Évite les routes principales le jour 3 ».",
+    "helper": "Décris en une phrase la modification souhaitée — par exemple « Ajoute une étape à Ajaccio » ou « Évite les routes principales le jour 3 ».",
     "textareaLabel": "Suggestion de modification du tracé ou des étapes",
     "placeholder": "Ex : Ajoute une étape à Ajaccio puis remonte vers Calvi par la côte ouest…",
     "charactersRemaining": "{remaining, plural, =0 {0 caractère restant} one {# caractère restant} other {# caractères restants}}",
@@ -678,17 +678,17 @@
     "applyAria": "Appliquer la suggestion et régénérer les étapes",
     "applying": "Application…",
     "unavailable": "Assistant IA bientôt disponible.",
-    "applyFailed": "Impossible d'appliquer la suggestion. Réessayez."
+    "applyFailed": "Impossible d'appliquer la suggestion. Réessaie."
   },
   "aiUnavailable": {
     "analysis": "Analyse IA indisponible : le service IA est actuellement hors ligne.",
-    "refinement": "Assistant IA indisponible, réessayez plus tard.",
+    "refinement": "Assistant IA indisponible, réessaie plus tard.",
     "chat": "Assistant IA indisponible.",
-    "notConfigured": "Configurez une IA pour profiter d'une analyse plus approfondie.",
+    "notConfigured": "Configure une IA pour profiter d'une analyse plus approfondie.",
     "configureCta": "Configurer une IA"
   },
   "errors": {
-    "networkError": "Erreur réseau. Vérifiez votre connexion.",
+    "networkError": "Erreur réseau. Vérifie ta connexion.",
     "unexpectedError": "Une erreur inattendue s'est produite.",
     "validationError": "Données invalides.",
     "badRequest": "Requête invalide.",
@@ -699,11 +699,11 @@
     "failedAddStage": "Impossible d'ajouter l'étape.",
     "failedUpdateLocation": "Impossible de mettre à jour la localisation.",
     "failedUpdatePacing": "Impossible de mettre à jour les réglages.",
-    "gpxUploadFailed": "Impossible d'importer le fichier GPX. Vérifiez le fichier et réessayez.",
+    "gpxUploadFailed": "Impossible d'importer le fichier GPX. Vérifie le fichier et réessaie.",
     "retry": "Réessayer",
     "tripPlannerError": "Une erreur est survenue lors du chargement du planificateur.",
     "failedSelectAccommodation": "Impossible de sélectionner l'hébergement.",
-    "accommodationStale": "La liste des hébergements a été mise à jour. Veuillez réessayer.",
+    "accommodationStale": "La liste des hébergements a été mise à jour. Réessaie.",
     "failedDeselectAccommodation": "Impossible de désélectionner l'hébergement.",
     "failedUpdateAccommodationTypes": "Impossible de mettre à jour les filtres de types d'hébergements.",
     "failedInsertRestDay": "Impossible d'insérer le jour de repos."
@@ -711,14 +711,14 @@
   "auth": {
     "loginTitle": "Connexion",
     "backToHome": "Retour à l'accueil",
-    "loginDescription": "Entrez votre adresse email pour recevoir un lien de connexion.",
+    "loginDescription": "Entre ton adresse email pour recevoir un lien de connexion.",
     "emailLabel": "Adresse email",
-    "emailPlaceholder": "vous@exemple.com",
-    "emailRequired": "Veuillez entrer votre adresse email.",
-    "emailInvalid": "Veuillez entrer une adresse email valide.",
+    "emailPlaceholder": "toi@exemple.com",
+    "emailRequired": "Entre ton adresse email.",
+    "emailInvalid": "Entre une adresse email valide.",
     "sendLink": "Recevoir un lien de connexion",
     "sending": "Envoi en cours...",
-    "linkSent": "Si votre adresse est enregistrée, vous allez recevoir un email avec un lien de connexion.",
+    "linkSent": "Si ton adresse est enregistrée, tu vas recevoir un email avec un lien de connexion.",
     "checkYourInbox": "Vérifie ta boîte mail",
     "linkSentTo": "Si <strong>{email}</strong> est enregistrée, tu recevras un lien de connexion sous peu.",
     "checkSpamHint": "Pense à vérifier tes courriers indésirables.",
@@ -729,13 +729,13 @@
     "linkExpiredDescription": "Ce lien de connexion n'est plus valide. Demande un nouveau lien pour te connecter.",
     "requestNewLink": "Redemander un lien",
     "verifying": "Vérification en cours...",
-    "verifyFailed": "Lien invalide ou expiré. Veuillez demander un nouveau lien de connexion.",
+    "verifyFailed": "Lien invalide ou expiré. Demande un nouveau lien de connexion.",
     "backToLogin": "Retour à la connexion",
     "logout": "Déconnexion"
   },
   "share": {
     "title": "Partager le voyage",
-    "description": "Partagez votre voyage via un lien, une infographie ou un texte formaté.",
+    "description": "Partage ton voyage via un lien, une infographie ou un texte formaté.",
     "linkTitle": "Lien partageable",
     "linkCreating": "Création du lien...",
     "linkCopied": "Lien copié dans le presse-papier",
@@ -777,7 +777,7 @@
   "landing": {
     "hero": {
       "badge": "Beta privée · accès sur demande",
-      "title": "Votre prochain voyage à vélo, planifié dans les moindres détails",
+      "title": "Ton prochain voyage à vélo, planifié dans les moindres détails",
       "subtitle": "Komoot, RideWithGPS, Strava, GPX. Dénivelé, météo, hébergements, alertes. Consultable hors-ligne, partageable en un lien.",
       "ctaPrimary": "Créer un itinéraire",
       "ctaDemo": "Voir comment ça marche"
@@ -785,21 +785,21 @@
     "howItWorks": {
       "title": "Comment ça marche",
       "subtitle": "Quatre étapes pour transformer un tracé en aventure prête à partir.",
-      "step1Title": "Importez",
-      "step1Description": "Collez un lien Komoot, Strava, RideWithGPS, importez un GPX ou laissez l'IA générer un itinéraire.",
-      "step2Title": "Analysez",
-      "step2Description": "Notre moteur découpe votre parcours en étapes journalières et détecte alertes, météo et points-clés.",
-      "step3Title": "Planifiez",
-      "step3Description": "Affinez vos étapes, ajoutez des hébergements, ajustez le pacing — tout est éditable.",
-      "step4Title": "Partez",
-      "step4Description": "Téléchargez votre GPX/FIT optimisé et roulez l'esprit tranquille, même hors ligne."
+      "step1Title": "Importe",
+      "step1Description": "Colle un lien Komoot, Strava, RideWithGPS, importe un GPX ou laisse l'IA générer un itinéraire.",
+      "step2Title": "Analyse",
+      "step2Description": "Notre moteur découpe ton parcours en étapes journalières et détecte alertes, météo et points-clés.",
+      "step3Title": "Planifie",
+      "step3Description": "Affine tes étapes, ajoute des hébergements, ajuste le pacing — tout est éditable.",
+      "step4Title": "Pars",
+      "step4Description": "Télécharge ton GPX/FIT optimisé et roule l'esprit tranquille, même hors ligne."
     },
     "features": {
-      "title": "Tout ce qu'il vous faut, dans une seule appli",
-      "subtitle": "Neuf modules conçus pour les cyclistes longue distance — et vous décidez lesquels activer.",
+      "title": "Tout ce qu'il te faut, dans une seule appli",
+      "subtitle": "Neuf modules conçus pour les cyclistes longue distance — et tu décides lesquels activer.",
       "terrain": {
         "title": "Terrain & dénivelé",
-        "description": "Profil altimétrique précis, détection des cols, surfaces et zones difficiles sur votre tracé."
+        "description": "Profil altimétrique précis, détection des cols, surfaces et zones difficiles sur ton tracé."
       },
       "weather": {
         "title": "Météo",
@@ -807,11 +807,11 @@
       },
       "supply": {
         "title": "Ravitaillement",
-        "description": "Points d'eau, épiceries, restaurants détectés à proximité de votre route."
+        "description": "Points d'eau, épiceries, restaurants détectés à proximité de ta route."
       },
       "ai": {
         "title": "Assistant IA",
-        "description": "Générez ou optimisez votre itinéraire en décrivant vos contraintes, affinez en dialogue multi-tours, et obtenez une analyse contextuelle de chaque étape."
+        "description": "Génère ou optimise ton itinéraire en décrivant tes contraintes, affine en dialogue multi-tours, et obtiens une analyse contextuelle de chaque étape."
       },
       "accommodation": {
         "title": "Hébergements",
@@ -819,7 +819,7 @@
       },
       "services": {
         "title": "Services & santé",
-        "description": "Pharmacies, médecins et réparateurs vélo signalés sur votre parcours."
+        "description": "Pharmacies, médecins et réparateurs vélo signalés sur ton parcours."
       },
       "safety": {
         "title": "Sécurité",
@@ -827,16 +827,16 @@
       },
       "poi": {
         "title": "Points d'intérêt",
-        "description": "Patrimoine, festivals, sites naturels remarquables le long de votre route."
+        "description": "Patrimoine, festivals, sites naturels remarquables le long de ta route."
       },
       "export": {
         "title": "Export GPX / FIT",
-        "description": "Téléchargez chaque étape au format GPX ou FIT pour Garmin, Wahoo et tous vos compteurs."
+        "description": "Télécharge chaque étape au format GPX ou FIT pour Garmin, Wahoo et tous tes compteurs."
       }
     },
     "sources": {
       "title": "Sources supportées",
-      "subtitle": "Importez votre itinéraire depuis votre plateforme préférée — ou laissez l'IA en générer un.",
+      "subtitle": "Importe ton itinéraire depuis ta plateforme préférée — ou laisse l'IA en générer un.",
       "komootType": "Tour ou collection",
       "stravaType": "Route publique",
       "rwgpsType": "Route publique",
@@ -845,15 +845,15 @@
     },
     "availability": {
       "title": "Disponible partout",
-      "subtitle": "Sur le web, dans votre poche et même sans réseau.",
+      "subtitle": "Sur le web, dans ta poche et même sans réseau.",
       "webTitle": "Web",
       "webDescription": "Optimisé pour tous les écrans, du smartphone au desktop.",
       "pwaTitle": "PWA",
-      "pwaDescription": "Installez l'application sur votre appareil comme une app native.",
+      "pwaDescription": "Installe l'application sur ton appareil comme une app native.",
       "androidTitle": "Android",
       "androidDescription": "Version Android native pour une expérience mobile optimale.",
       "offlineTitle": "Hors ligne",
-      "offlineDescription": "Consultez vos voyages sans connexion pendant le trajet."
+      "offlineDescription": "Consulte tes voyages sans connexion pendant le trajet."
     },
     "screenshots": {
       "title": "Aperçu de l'application",
@@ -864,14 +864,14 @@
       "next": "Suivant"
     },
     "earlyAccess": {
-      "title": "Rejoignez l'accès anticipé",
-      "description": "Places limitées. Soyez parmi les premiers à planifier vos aventures avec Bike Trip Planner.",
+      "title": "Rejoins l'accès anticipé",
+      "description": "Places limitées. Sois parmi les premiers à planifier tes aventures avec Bike Trip Planner.",
       "ctaPrimary": "Créer un itinéraire",
       "waitingListTitle": "Rejoindre la liste d'attente",
-      "waitingListComingSoon": "Inscriptions bientôt disponibles. Revenez très vite !"
+      "waitingListComingSoon": "Inscriptions bientôt disponibles. Reviens très vite !"
     },
     "footer": {
-      "tagline": "Le copilote open-source pour vos aventures à vélo.",
+      "tagline": "Le copilote open-source pour tes aventures à vélo.",
       "links": "Liens",
       "login": "Connexion",
       "faq": "FAQ",
@@ -887,19 +887,19 @@
   },
   "earlyAccess": {
     "sectionTitle": "Demander un accès anticipé",
-    "sectionDescription": "Bike Trip Planner est actuellement en bêta privée. Laissez votre adresse email pour être notifié lorsque votre accès est accordé.",
-    "earlyAccessDescription": "Laissez votre email, nous vous préviendrons dès que votre place sera disponible.",
+    "sectionDescription": "Bike Trip Planner est actuellement en bêta privée. Laisse ton adresse email pour être notifié lorsque ton accès est accordé.",
+    "earlyAccessDescription": "Laisse ton email, nous te préviendrons dès que ta place sera disponible.",
     "emailLabel": "Adresse email",
-    "emailPlaceholder": "vous@exemple.com",
-    "invalidEmail": "Veuillez entrer une adresse email valide.",
+    "emailPlaceholder": "toi@exemple.com",
+    "invalidEmail": "Entre une adresse email valide.",
     "submitButton": "Demander l'accès",
     "sending": "Envoi en cours...",
-    "successMessage": "Merci ! Vous allez recevoir un email de confirmation.",
-    "throttledMessage": "Trop de requêtes. Veuillez patienter quelques minutes avant de réessayer.",
-    "verifying": "Vérification de votre adresse email...",
-    "accessConfirmed": "Votre adresse email a été confirmée ! Vous serez notifié lorsque votre accès sera accordé.",
+    "successMessage": "Merci ! Tu vas recevoir un email de confirmation.",
+    "throttledMessage": "Trop de requêtes. Patiente quelques minutes avant de réessayer.",
+    "verifying": "Vérification de ton adresse email...",
+    "accessConfirmed": "Ton adresse email a été confirmée ! Tu seras notifié lorsque ton accès sera accordé.",
     "loginBoxTitle": "Pas encore de compte ?",
-    "loginBoxDescription": "Bike Trip Planner est actuellement en bêta privée. Inscrivez-vous pour recevoir une invitation.",
+    "loginBoxDescription": "Bike Trip Planner est actuellement en bêta privée. Inscris-toi pour recevoir une invitation.",
     "loginBoxCta": "Demander un accès anticipé",
     "ctaCreateTrip": "Créer un itinéraire"
   },
@@ -922,18 +922,18 @@
   },
   "accountSettings": {
     "title": "Mon compte",
-    "subtitle": "Gérez votre compte, vos préférences et vos données.",
+    "subtitle": "Gère ton compte, tes préférences et tes données.",
     "account": {
       "title": "Mon compte",
-      "description": "Adresse e-mail associée à votre compte.",
+      "description": "Adresse e-mail associée à ton compte.",
       "emailLabel": "Adresse e-mail",
       "changeEmail": "Modifier via magic link",
-      "changeEmailSent": "Un lien de modification vous a été envoyé par e-mail.",
+      "changeEmailSent": "Un lien de modification t'a été envoyé par e-mail.",
       "changeEmailFailed": "Impossible d'envoyer le lien de modification."
     },
     "preferences": {
       "title": "Préférences",
-      "description": "Personnalisez la langue et l'apparence de l'application.",
+      "description": "Personnalise la langue et l'apparence de l'application.",
       "languageLabel": "Langue",
       "themeLabel": "Thème",
       "themeLight": "Clair",
@@ -941,45 +941,45 @@
     },
     "data": {
       "title": "Mes données",
-      "description": "Téléchargez une archive de vos données personnelles (RGPD).",
+      "description": "Télécharge une archive de tes données personnelles (RGPD).",
       "download": "Télécharger mes données (JSON)",
       "downloading": "Téléchargement...",
-      "downloadFailed": "Impossible de télécharger vos données."
+      "downloadFailed": "Impossible de télécharger tes données."
     },
     "danger": {
       "title": "Zone de danger",
-      "description": "La suppression de votre compte est définitive et irréversible.",
+      "description": "La suppression de ton compte est définitive et irréversible.",
       "deleteAccount": "Supprimer mon compte",
-      "dialogTitle": "Supprimer votre compte ?",
-      "dialogDescription": "Cette action est définitive. Tous vos voyages et préférences seront supprimés et ne pourront pas être récupérés.",
-      "confirmLabel": "Tapez « SUPPRIMER » pour confirmer",
+      "dialogTitle": "Supprimer ton compte ?",
+      "dialogDescription": "Cette action est définitive. Tous tes voyages et préférences seront supprimés et ne pourront pas être récupérés.",
+      "confirmLabel": "Tape « SUPPRIMER » pour confirmer",
       "keyword": "SUPPRIMER",
-      "deleteFailed": "Impossible de supprimer votre compte."
+      "deleteFailed": "Impossible de supprimer ton compte."
     },
     "logout": {
       "title": "Déconnexion",
-      "description": "Vous serez déconnecté de cet appareil.",
+      "description": "Tu seras déconnecté de cet appareil.",
       "button": "Se déconnecter",
-      "logoutFailed": "Échec de la déconnexion. Veuillez réessayer."
+      "logoutFailed": "Échec de la déconnexion. Réessaie."
     },
     "ai": {
       "title": "Assistant IA",
-      "description": "Activez les fonctionnalités d'IA en renseignant un fournisseur et votre propre clé API.",
+      "description": "Active les fonctionnalités d'IA en renseignant un fournisseur et ta propre clé API.",
       "providerLabel": "Fournisseur",
-      "providerPlaceholder": "Choisissez un fournisseur",
+      "providerPlaceholder": "Choisis un fournisseur",
       "providers": {
         "anthropic": "Anthropic (Claude)",
         "gemini": "Google (Gemini)",
         "openai": "OpenAI"
       },
       "tokenLabel": "Clé API",
-      "tokenPlaceholder": "Collez votre clé API",
+      "tokenPlaceholder": "Colle ta clé API",
       "tokenConfigured": "Une clé API est enregistrée.",
       "tokenNotConfigured": "Aucune clé API enregistrée.",
       "tokenConfiguredBadge": "Clé configurée",
       "tokenConfiguredBadgeWithProvider": "Clé configurée · {provider}",
       "tokenReplaceLabel": "Remplacer la clé API",
-      "tokenReplacePlaceholder": "•••••••••••• — collez une nouvelle clé pour la remplacer",
+      "tokenReplacePlaceholder": "•••••••••••• — colle une nouvelle clé pour la remplacer",
       "save": "Enregistrer",
       "replace": "Remplacer la clé",
       "saving": "Enregistrement…",
@@ -989,7 +989,7 @@
       "saveFailed": "Impossible d'enregistrer la configuration IA.",
       "cleared": "Configuration IA supprimée.",
       "clearFailed": "Impossible de supprimer la configuration IA.",
-      "rgpd": "Vos données de voyage (itinéraire, villes, dates) sont transmises au fournisseur choisi avec votre clé API. Consultez sa politique de confidentialité avant d'activer l'IA."
+      "rgpd": "Tes données de voyage (itinéraire, villes, dates) sont transmises au fournisseur choisi avec ta clé API. Consulte sa politique de confidentialité avant d'activer l'IA."
     }
   },
   "errorPages": {
@@ -1002,21 +1002,21 @@
     },
     "error": {
       "title": "Un caillou dans le dérailleur",
-      "subtitle": "Une erreur inattendue est survenue. Vous pouvez réessayer ou revenir à l'accueil.",
+      "subtitle": "Une erreur inattendue est survenue. Tu peux réessayer ou revenir à l'accueil.",
       "badge": "Erreur serveur · 500",
       "retry": "Réessayer",
       "backHome": "Retour à l'accueil"
     },
     "globalError": {
       "title": "Un caillou dans le dérailleur",
-      "subtitle": "Une erreur critique est survenue. Vous pouvez recharger la page.",
+      "subtitle": "Une erreur critique est survenue. Tu peux recharger la page.",
       "requestIdLabel": "Identifiant pour le support :",
       "reload": "Recharger la page"
     }
   },
   "faq": {
     "title": "Foire aux questions",
-    "description": "Tout ce que vous devez savoir sur Bike Trip Planner.",
+    "description": "Tout ce que tu dois savoir sur Bike Trip Planner.",
     "backToHome": "Retour à l'accueil",
     "sectionsLabel": "Sections",
     "categoryProject": "Le projet",
@@ -1024,27 +1024,27 @@
     "categoryAccess": "Accès",
     "categoryAi": "Assistant IA",
     "q1": "Qu'est-ce qui différencie Bike Trip Planner de Komoot ou RideWithGPS ?",
-    "a1": "Komoot et RideWithGPS sont des plateformes de navigation GPS. Bike Trip Planner est un outil de planification d'itinéraire multi-étapes : il découpe automatiquement votre parcours en étapes journalières en tenant compte de votre profil cycliste (vitesse, fatigue accumulée, dénivelé), suggère des hébergements au point d'arrivée de chaque étape, et génère des alertes contextuelles (météo, ravitaillement, services de santé, etc.). Il complète vos outils de navigation plutôt qu'il ne les remplace.",
+    "a1": "Komoot et RideWithGPS sont des plateformes de navigation GPS. Bike Trip Planner est un outil de planification d'itinéraire multi-étapes : il découpe automatiquement ton parcours en étapes journalières en tenant compte de ton profil cycliste (vitesse, fatigue accumulée, dénivelé), suggère des hébergements au point d'arrivée de chaque étape, et génère des alertes contextuelles (météo, ravitaillement, services de santé, etc.). Il complète tes outils de navigation plutôt qu'il ne les remplace.",
     "q2": "Pourquoi utiliser cet outil plutôt que de planifier manuellement sur une carte ?",
     "a2": "La planification manuelle prend du temps et sous-estime souvent la fatigue accumulée sur plusieurs jours. Bike Trip Planner applique une formule de pacing automatique qui réduit progressivement la distance journalière pour tenir compte de la fatigue, intègre le dénivelé dans le calcul, et propose des hébergements directement au point d'arrivée de chaque étape — le tout en quelques secondes.",
     "q3": "Le projet est-il indépendant des plateformes comme Komoot ou Strava ?",
     "a3": "Oui. Bike Trip Planner est un projet indépendant. Il utilise les exports GPX ou les liens partagés de Komoot, Strava et RideWithGPS uniquement pour récupérer les données de tracé, mais ne dépend d'aucun partenariat commercial avec ces plateformes.",
     "q4": "Quelles données sont stockées sur le serveur ?",
-    "a4": "Votre configuration de voyage (dates, profil, étapes) est stockée en base de données pour vous permettre d'y accéder depuis n'importe quel appareil. Les données de tracé brutes (points GPS) sont conservées temporairement en cache Redis et supprimées automatiquement. Aucune donnée personnelle autre que votre adresse email n'est collectée.",
+    "a4": "Ta configuration de voyage (dates, profil, étapes) est stockée en base de données pour te permettre d'y accéder depuis n'importe quel appareil. Les données de tracé brutes (points GPS) sont conservées temporairement en cache Redis et supprimées automatiquement. Aucune donnée personnelle autre que ton adresse email n'est collectée.",
     "q5": "Quelles sources d'itinéraires sont supportées ?",
-    "a5": "Bike Trip Planner accepte les liens de tours et collections Komoot, les routes Strava et les routes RideWithGPS. Vous pouvez également importer directement un fichier GPX depuis votre ordinateur.",
+    "a5": "Bike Trip Planner accepte les liens de tours et collections Komoot, les routes Strava et les routes RideWithGPS. Tu peux également importer directement un fichier GPX depuis ton ordinateur.",
     "q6": "L'application fonctionne-t-elle hors ligne ?",
-    "a6": "Partiellement. En mode hors ligne, vous pouvez consulter vos voyages déjà chargés en lecture seule. La création ou modification d'un voyage nécessite une connexion internet, car les calculs (pacing, alertes, suggestions d'hébergements) sont effectués côté serveur.",
+    "a6": "Partiellement. En mode hors ligne, tu peux consulter tes voyages déjà chargés en lecture seule. La création ou modification d'un voyage nécessite une connexion internet, car les calculs (pacing, alertes, suggestions d'hébergements) sont effectués côté serveur.",
     "q7": "L'application est-elle utilisable sur mobile ?",
-    "a7": "Oui. L'application est une PWA (Progressive Web App) responsive, optimisée pour mobile et tablette. Vous pouvez l'installer sur votre écran d'accueil depuis votre navigateur mobile pour un accès rapide, même sans passer par un store d'applications.",
+    "a7": "Oui. L'application est une PWA (Progressive Web App) responsive, optimisée pour mobile et tablette. Tu peux l'installer sur ton écran d'accueil depuis ton navigateur mobile pour un accès rapide, même sans passer par un store d'applications.",
     "q8": "Comment obtenir un accès à l'application ?",
-    "a8": "L'application utilise un système de connexion par lien magique : entrez votre adresse email sur la page de connexion et vous recevrez un lien de connexion sécurisé. Aucun mot de passe n'est requis.",
+    "a8": "L'application utilise un système de connexion par lien magique : entre ton adresse email sur la page de connexion et tu recevras un lien de connexion sécurisé. Aucun mot de passe n'est requis.",
     "q9": "L'application est-elle gratuite et open source ?",
     "a9": "Le code source est open source et disponible sur GitHub. L'application hébergée est accessible gratuitement. Des coûts d'infrastructure peuvent à terme justifier une offre freemium, mais aucun accès payant n'est prévu à ce stade.",
     "q10": "Comment activer l'assistant IA ?",
-    "a10": "L'assistant IA s'active depuis les réglages de votre compte : choisissez un fournisseur (Anthropic/Claude, Google/Gemini ou OpenAI) et renseignez votre propre clé API. Tant qu'aucune clé n'est fournie, l'IA reste désactivée et les fonctionnalités correspondantes s'affichent en mode désactivé.",
+    "a10": "L'assistant IA s'active depuis les réglages de ton compte : choisis un fournisseur (Anthropic/Claude, Google/Gemini ou OpenAI) et renseigne ta propre clé API. Tant qu'aucune clé n'est fournie, l'IA reste désactivée et les fonctionnalités correspondantes s'affichent en mode désactivé.",
     "q11": "Mes données sont-elles partagées avec l'IA ?",
-    "a11": "Uniquement si vous activez l'IA. Dans ce cas, vos données de voyage sont envoyées au fournisseur que vous avez choisi, avec votre propre clé API (facturée sur votre compte). Votre clé est chiffrée et n'est jamais partagée d'aucune autre manière. Vous pouvez la retirer à tout moment depuis les réglages du compte."
+    "a11": "Uniquement si tu actives l'IA. Dans ce cas, tes données de voyage sont envoyées au fournisseur que tu as choisi, avec ta propre clé API (facturée sur ton compte). Ta clé est chiffrée et n'est jamais partagée d'aucune autre manière. Tu peux la retirer à tout moment depuis les réglages du compte."
   },
   "events": {
     "type_festival": "Festival",
@@ -1066,7 +1066,7 @@
     "applyAll": "Appliquer tout",
     "cancel": "Annuler",
     "applying": "Application…",
-    "failedApply": "Impossible d'appliquer les modifications. Veuillez réessayer."
+    "failedApply": "Impossible d'appliquer les modifications. Réessaie."
   },
   "footer": {
     "faq": "FAQ"
@@ -1106,8 +1106,8 @@
       "contact": {
         "title": "Contact",
         "paragraphs": [
-          "Pour toute question relative au site ou pour exercer vos droits, vous pouvez nous contacter à l'adresse : __CONTACT_EMAIL__.",
-          "Vous pouvez également ouvrir une issue sur le dépôt GitHub du projet."
+          "Pour toute question relative au site ou pour exercer tes droits, tu peux nous contacter à l'adresse : __CONTACT_EMAIL__.",
+          "Tu peux également ouvrir une issue sur le dépôt GitHub du projet."
         ]
       },
       "intellectualProperty": {
@@ -1122,7 +1122,7 @@
   },
   "privacy": {
     "title": "Politique de confidentialité",
-    "intro": "Comment Bike Trip Planner collecte, utilise et protège vos données personnelles, conformément au RGPD.",
+    "intro": "Comment Bike Trip Planner collecte, utilise et protège tes données personnelles, conformément au RGPD.",
     "lastUpdated": "Dernière mise à jour : 29 mai 2026",
     "tocLabel": "Sommaire",
     "backToHome": "Retour à l'accueil",
@@ -1131,28 +1131,28 @@
         "title": "Responsable du traitement",
         "paragraphs": [
           "Le responsable du traitement des données est l'éditeur de Bike Trip Planner (voir les mentions légales).",
-          "Pour toute question relative à vos données personnelles, contactez-nous à : __CONTACT_EMAIL__."
+          "Pour toute question relative à tes données personnelles, contacte-nous à : __CONTACT_EMAIL__."
         ]
       },
       "basis": {
         "title": "Base légale",
         "paragraphs": [
-          "Le traitement de votre adresse email repose sur l'exécution du service que vous demandez (connexion par lien magique et gestion de votre compte), au sens de l'article 6.1.b du RGPD.",
-          "La mesure d'audience anonyme repose sur notre intérêt légitime à améliorer le service, sans préjudice pour vos droits et libertés (article 6.1.f du RGPD)."
+          "Le traitement de ton adresse email repose sur l'exécution du service que tu demandes (connexion par lien magique et gestion de ton compte), au sens de l'article 6.1.b du RGPD.",
+          "La mesure d'audience anonyme repose sur notre intérêt légitime à améliorer le service, sans préjudice pour tes droits et libertés (article 6.1.f du RGPD)."
         ]
       },
       "purposes": {
         "title": "Finalités",
         "paragraphs": [
-          "Vos données sont utilisées pour vous authentifier, sauvegarder et restituer vos voyages, et calculer les analyses d'itinéraire (pacing, alertes, hébergements, météo).",
+          "Tes données sont utilisées pour t'authentifier, sauvegarder et restituer tes voyages, et calculer les analyses d'itinéraire (pacing, alertes, hébergements, météo).",
           "La mesure d'audience anonyme sert uniquement à comprendre l'usage global du service et à en améliorer l'ergonomie."
         ]
       },
       "data": {
         "title": "Données collectées",
         "paragraphs": [
-          "Compte : votre adresse email, nécessaire à la connexion par lien magique.",
-          "Voyages : la configuration de vos voyages (titre, dates, profil cycliste, étapes, hébergements sélectionnés) est conservée pour vous permettre d'y accéder depuis n'importe quel appareil.",
+          "Compte : ton adresse email, nécessaire à la connexion par lien magique.",
+          "Voyages : la configuration de tes voyages (titre, dates, profil cycliste, étapes, hébergements sélectionnés) est conservée pour te permettre d'y accéder depuis n'importe quel appareil.",
           "Données de tracé : les points GPS bruts importés sont conservés temporairement en cache (Redis) puis supprimés automatiquement.",
           "Aucune donnée sensible n'est collectée, et aucune donnée n'est revendue à des tiers."
         ]
@@ -1160,17 +1160,17 @@
       "retention": {
         "title": "Durée de conservation",
         "paragraphs": [
-          "Votre compte et vos voyages sont conservés tant que votre compte est actif. Vous pouvez demander leur suppression à tout moment ; la suppression entraîne une anonymisation immédiate et irréversible de votre compte.",
+          "Ton compte et tes voyages sont conservés tant que ton compte est actif. Tu peux demander leur suppression à tout moment ; la suppression entraîne une anonymisation immédiate et irréversible de ton compte.",
           "Les données de tracé brutes en cache sont conservées au maximum 24 heures.",
-          "Les données de mesure d'audience anonyme sont agrégées et ne permettent pas de vous réidentifier."
+          "Les données de mesure d'audience anonyme sont agrégées et ne permettent pas de te réidentifier."
         ]
       },
       "rights": {
-        "title": "Vos droits",
+        "title": "Tes droits",
         "paragraphs": [
-          "Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de vos données.",
-          "Pour exercer ces droits, contactez-nous à : __CONTACT_EMAIL__. Nous répondons dans un délai d'un mois.",
-          "Vous avez également le droit d'introduire une réclamation auprès de la CNIL (www.cnil.fr)."
+          "Conformément au RGPD, tu disposes d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de tes données.",
+          "Pour exercer ces droits, contacte-nous à : __CONTACT_EMAIL__. Nous répondons dans un délai d'un mois.",
+          "Tu as également le droit d'introduire une réclamation auprès de la CNIL (www.cnil.fr)."
         ]
       },
       "processors": {
@@ -1186,15 +1186,15 @@
         "paragraphs": [
           "Nous utilisons Plausible Analytics, une solution de mesure d'audience respectueuse de la vie privée, auto-hébergée sur la même infrastructure que l'application.",
           "Plausible ne dépose aucun cookie et n'utilise aucune technique d'empreinte numérique (fingerprinting). Aucune donnée n'est partagée avec des tiers à des fins publicitaires.",
-          "Les adresses IP et les agents utilisateur (navigateur) sont anonymisés et ne sont jamais stockés ; aucune donnée ne permet de vous identifier ou de vous suivre entre les sites.",
+          "Les adresses IP et les agents utilisateur (navigateur) sont anonymisés et ne sont jamais stockés ; aucune donnée ne permet de t'identifier ou de te suivre entre les sites.",
           "Finalité : comprendre de façon agrégée les pages consultées et l'usage global afin d'améliorer le service. Rétention : statistiques agrégées uniquement, aucune donnée individuelle.",
-          "Aucune bannière de consentement n'est requise car aucune donnée personnelle n'est collectée ; vous conservez néanmoins vos droits d'opposition décrits ci-dessus."
+          "Aucune bannière de consentement n'est requise car aucune donnée personnelle n'est collectée ; tu conserves néanmoins tes droits d'opposition décrits ci-dessus."
         ]
       },
       "contact": {
         "title": "Contact",
         "paragraphs": [
-          "Pour toute question relative à cette politique de confidentialité, écrivez-nous à : __CONTACT_EMAIL__.",
+          "Pour toute question relative à cette politique de confidentialité, écris-nous à : __CONTACT_EMAIL__.",
           "Cette politique peut être mise à jour ; la date de dernière mise à jour figure en haut de cette page."
         ]
       }
