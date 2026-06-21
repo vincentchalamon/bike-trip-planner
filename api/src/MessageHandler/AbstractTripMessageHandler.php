@@ -49,7 +49,13 @@ abstract readonly class AbstractTripMessageHandler
     /**
      * Executes the handler body with computation tracking.
      * Marks computation as running, executes callback, then marks done.
-     * On exception: marks failed, publishes error event, re-throws for retry.
+     *
+     * On exception: publishes the error event and re-throws so Messenger can
+     * retry. The computation is intentionally NOT marked `failed` here — that
+     * would happen on every failed attempt, including ones a retry could still
+     * recover, and would let the terminal gate fire prematurely. The terminal
+     * `failed` status (and the gate re-evaluation) is set only once the retries
+     * are exhausted, by {@see \App\EventListener\ComputationFailureSubscriber}.
      *
      * @throws \Throwable
      */
@@ -85,7 +91,6 @@ abstract readonly class AbstractTripMessageHandler
             ]);
         } catch (\Throwable $throwable) {
             $duration = (int) ((hrtime(true) - $startTime) / 1_000_000);
-            $this->computationTracker->markFailed($tripId, $computation);
             $this->publisher->publishComputationError($tripId, $computation->value, $throwable->getMessage());
             $this->logger->warning('Handler {name} failed after {duration}ms.', [
                 'name' => $computation->value,
