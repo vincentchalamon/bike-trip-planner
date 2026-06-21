@@ -12,12 +12,6 @@ export interface MockApiOptions {
    */
   assertNoRuntimeErrors?: boolean;
   /**
-   * Runtime AI-tier availability surfaced by the mocked `/api/health`
-   * (`deps.ollama_chat.status`). Defaults to reachable so existing AI specs
-   * (bubble, chat) keep passing; set `false` to exercise the degraded mode (#304).
-   */
-  aiAvailable?: boolean;
-  /**
    * Whether the account has a configured AI provider, surfaced by the mocked
    * `GET /users/me/ai-settings` (ADR-042). Defaults to `true` so existing AI
    * specs (bubble, chat, generation card) keep exercising the active path; set
@@ -58,7 +52,6 @@ export async function mockAllApis(
     postTripBody,
     deleteStageFail = false,
     addStageFail = false,
-    aiAvailable = true,
     aiConfigured = true,
   } = options;
 
@@ -72,12 +65,13 @@ export async function mockAllApis(
     });
   });
 
-  // GET /api/health — readiness probe the PWA reads to gate AI features (#304).
-  // `aiAvailable` toggles deps.ollama_chat between "ok"/"down"; the aggregate
-  // status stays "ok" either way (Ollama is excluded from the required set).
+  // GET /api/health - readiness probe (postgres/redis/mercure/valhalla +
+  // non-required reference_data). The AI tier is no longer a server dependency
+  // (ADR-042): it is a per-user cloud provider reached with the user's own
+  // token, so it is absent from this payload. AI availability is now driven by
+  // the account AI-settings, not by this probe.
   await page.route("**/api/health", (route, request) => {
     if (request.method() !== "GET") return route.fallback();
-    const ollamaStatus = aiAvailable ? "ok" : "down";
     return route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -88,8 +82,7 @@ export async function mockAllApis(
           redis: { status: "ok" },
           mercure: { status: "ok" },
           valhalla: { status: "ok" },
-          ollama_chat: { status: ollamaStatus },
-          ollama_analysis: { status: ollamaStatus },
+          reference_data: { status: "ok" },
         },
       }),
     });
