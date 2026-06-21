@@ -1036,6 +1036,43 @@ Findings de la 2ᵉ passe de recette manuelle ([#649 commentaire bloquant du 20/
 
 ---
 
+## Sprint 41 — Recette #649 (round 3) : correctifs + refonte du flux en modèle synchrone (ADR-043)
+
+Findings de la 3ᵉ passe de recette manuelle ([#649 commentaire du 21/06](https://github.com/vincentchalamon/bike-trip-planner/issues/649#issuecomment-4762100806)). Deux volets : (a) correctifs ciblés livrés en PRs directes ; (b) **refonte du flux de création** — la migration PostGIS (ADR-040) rend le calcul structurel quasi-instantané, donc on supprime les étapes Aperçu/Analyse et le gate two-phase (ADR-027) au profit d'un **calcul structurel synchrone + enrichissements réseau/IA asynchrones par bloc** ([ADR-043](docs/adr/adr-043-synchronous-structural-computation-async-enrichments.md)).
+
+### Correctifs livrés (PRs directes)
+
+| PR | Titre | Statut |
+|----|-------|--------|
+| [#737](https://github.com/vincentchalamon/bike-trip-planner/pull/737) | fix(alerts): pas de nudge jour de repos sur la dernière étape | mergé |
+| [#736](https://github.com/vincentchalamon/bike-trip-planner/pull/736) | fix(ai): IA disponible avec un token cloud BYO (ADR-042) | mergé |
+| [#738](https://github.com/vincentchalamon/bike-trip-planner/pull/738) | feat(ai): état « clé configurée » sans révéler la clé | mergé |
+| [#739](https://github.com/vincentchalamon/bike-trip-planner/pull/739) | chore(i18n): tutoiement dans toute l'UI française | en cours |
+| [#740](https://github.com/vincentchalamon/bike-trip-planner/pull/740) | fix(trip): publier l'event terminal même si une computation échoue | en cours |
+| [#741](https://github.com/vincentchalamon/bike-trip-planner/pull/741) | build(provisioner): cible `make provision-recette` (iso-prod) | en cours |
+
+### Refonte flux synchrone — ADR-043 (5 PRs, ordre imposé)
+
+| Ordre | Titre | Effort | Dépend de |
+|-------|-------|--------|-----------|
+| PR1 | perf(osm): borner `WaysRepository::findInCorridor` (LIMIT + filtre `highway`, éviter le cast `::geography`) | S | — |
+| PR2 | refactor(trip): calcul structurel synchrone (pacing + scans PostGIS + alertes), suppression du gate two-phase + de `POST /trips/{id}/analyze`, statut trip `draft`→`ready` + états par bloc dans `/detail` | L | PR1, #740 |
+| PR3 | feat(trip): enrichissements météo + IA asynchrones par bloc (spinner par bloc ; IA auto si token + régénérer, chat à la demande ; édition `skipAiAnalysis` par défaut) | M | PR2 |
+| PR4 | feat(pwa): effondrer le wizard (Saisie → loader → Voyage), spinners par bloc, édition recalculée en place | L | PR2, PR3 |
+| PR5 | test: aligner specs mockées + BDD recette + baselines visuelles (VR) sur le flux synchrone | M | PR4 |
+
+> **Dépendance dure :** PR1 (`WaysRepository` borné) doit land **avant** PR2, sinon le calcul structurel synchrone peut dépasser le budget (~1s) sur un long itinéraire dense. PR2/PR3 supposent [#740](https://github.com/vincentchalamon/bike-trip-planner/pull/740) mergé (le `TripCompletionGate` coordonne les blocs météo/IA asynchrones restants).
+
+### Recette Sprint 41
+
+- **Checklist manuelle :**
+  - [ ] Provisioning PostGIS (Nord-Pas-de-Calais) : hébergements/POI détectés sur le tour de test, plus de faux positif « lunch ».
+  - [ ] Création (GPX & lien) : un seul loader → page voyage complète (étapes, distances, hébergements, alertes), sans étapes Aperçu/Analyse.
+  - [ ] Météo + rapport IA : se remplissent en place avec spinner par bloc ; chat à la demande.
+  - [ ] Édition distance/profil : recalcul en place quasi-instantané, sans re-analyse bloquante.
+
+---
+
 ## Hors Sprints
 
 | ID  | Titre                            | Note                     |
@@ -1098,4 +1135,5 @@ Findings de la 2ᵉ passe de recette manuelle ([#649 commentaire bloquant du 20/
 | 38        | Performance & Resilience Deep Dive       | 18      | ~12          |
 | 39        | Backup & Disaster Recovery               | 9       | ~9           |
 | 40        | Recette #649 round 2 (boot iso-prod + UI) | 4       | ~4           |
-| **Total** |                                          | **235** | **~239**     |
+| 41        | Recette #649 round 3 (correctifs + flux synchrone ADR-043) | —       | ~12          |
+| **Total** |                                          | **235** | **~251**     |

@@ -1,6 +1,6 @@
 # ADR-027: Gate Mechanism and Two-Phase Pipeline (Preview → Analysis)
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-043](adr-043-synchronous-structural-computation-async-enrichments.md) (the Preview→Analysis user gate and the wizard's Aperçu/Analyse steps are removed now that PostGIS makes structural computation near-instant; the ComputationTracker completion-gate machinery is retained for the async enrichments)
 - **Date:** 2026-04-19
 - **Depends on:** ADR-001 (Global Architecture), ADR-005 (External API caching), ADR-022 (Persistent Storage)
 - **Supersedes:** ADR-001 (single-phase synchronous computation model described in the Backend Implementation section)
