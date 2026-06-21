@@ -1,6 +1,6 @@
 # ADR-043: Synchronous Structural Computation with Per-Block Asynchronous Enrichments
 
-- **Status:** Proposed — flips to Accepted once the implementing PRs land.
+- **Status:** Accepted — the decision is taken; implementation is tracked as the 5-PR plan in TRACKING.md (Sprint 41), with PR1 (the `WaysRepository` bound) landing before PR2.
 - **Date:** 2026-06-21
 - **Depends on:** ADR-006 (Pacing Engine), ADR-040 (Local-First Reference Data in PostGIS), ADR-042 (Optional Per-User AI, BYO token)
 - **Supersedes:** ADR-027 (Gate Mechanism and Two-Phase Pipeline) — specifically the user-facing Preview→Analysis gate and the wizard's *Aperçu*/*Analyse* steps. The `ComputationTracker` completion-gate machinery introduced by ADR-027 is **retained** for the asynchronous enrichments.
@@ -82,7 +82,7 @@ The `ComputationTracker` completion gate and `TripCompletionGate` (ADR-027, hard
 ### Negative
 
 - Backend refactor: move structural computation out of the async fan-out; collapse the wizard; introduce per-block statuses.
-- The `WaysRepository` bound must land first (PR1).
+- The `WaysRepository` bound must land first (PR1); the PR1→PR5 sequencing is tracked in TRACKING.md (Sprint 41).
 - Visual baselines (VR) and recette/mocked specs that assume the wizard must be updated.
 - `POST /trips/{id}/analyze` is removed/repurposed (OpenAPI + TypeScript client regenerated via `make typegen`).
 
