@@ -49,6 +49,38 @@ use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 #[AsEventListener(event: WorkerMessageFailedEvent::class)]
 final readonly class ComputationFailureSubscriber
 {
+    /**
+     * Maps each gated-pipeline message class to the computation it tracks.
+     *
+     * Single source of truth for {@see resolveComputation()}: a message absent
+     * from this table is not part of the gated pipeline (on-demand recalculations,
+     * LLM analyses tracked separately) and its failure must not disturb the gate.
+     * {@see \App\Tests\Unit\EventListener\ComputationFailureSubscriberTest::resolveComputationCoversAllPipelineEntries()}
+     * asserts every {@see ComputationName::pipeline()} entry is reachable through
+     * this table, so adding a computation to the pipeline without a mapping fails CI.
+     *
+     * @var array<class-string, ComputationName>
+     */
+    public const array MESSAGE_TO_COMPUTATION = [
+        FetchAndParseRoute::class => ComputationName::ROUTE,
+        GenerateStages::class => ComputationName::STAGES,
+        ScanPois::class => ComputationName::POIS,
+        ScanAccommodations::class => ComputationName::ACCOMMODATIONS,
+        AnalyzeTerrain::class => ComputationName::TERRAIN,
+        FetchWeather::class => ComputationName::WEATHER,
+        CheckCalendar::class => ComputationName::CALENDAR,
+        AnalyzeWind::class => ComputationName::WIND,
+        CheckBikeShops::class => ComputationName::BIKE_SHOPS,
+        CheckWaterPoints::class => ComputationName::WATER_POINTS,
+        CheckCulturalPois::class => ComputationName::CULTURAL_POIS,
+        CheckRailwayStations::class => ComputationName::RAILWAY_STATIONS,
+        CheckHealthServices::class => ComputationName::HEALTH_SERVICES,
+        CheckBorderCrossing::class => ComputationName::BORDER_CROSSING,
+        CheckFerries::class => ComputationName::FERRIES,
+        CheckFords::class => ComputationName::FORDS,
+        ScanEvents::class => ComputationName::EVENTS,
+    ];
+
     public function __construct(
         private ComputationTrackerInterface $computationTracker,
         private TripCompletionGate $completionGate,
@@ -99,29 +131,12 @@ final readonly class ComputationFailureSubscriber
      *
      * Returns null for messages that are not part of the gated pipeline (e.g.
      * on-demand recalculations or LLM analyses tracked separately), so their
-     * failure does not disturb the gate.
+     * failure does not disturb the gate. The mapping lives in
+     * {@see self::MESSAGE_TO_COMPUTATION}, the single source of truth checked for
+     * pipeline parity by the unit test.
      */
     private function resolveComputation(object $message): ?ComputationName
     {
-        return match ($message::class) {
-            FetchAndParseRoute::class => ComputationName::ROUTE,
-            GenerateStages::class => ComputationName::STAGES,
-            ScanPois::class => ComputationName::POIS,
-            ScanAccommodations::class => ComputationName::ACCOMMODATIONS,
-            AnalyzeTerrain::class => ComputationName::TERRAIN,
-            FetchWeather::class => ComputationName::WEATHER,
-            CheckCalendar::class => ComputationName::CALENDAR,
-            AnalyzeWind::class => ComputationName::WIND,
-            CheckBikeShops::class => ComputationName::BIKE_SHOPS,
-            CheckWaterPoints::class => ComputationName::WATER_POINTS,
-            CheckCulturalPois::class => ComputationName::CULTURAL_POIS,
-            CheckRailwayStations::class => ComputationName::RAILWAY_STATIONS,
-            CheckHealthServices::class => ComputationName::HEALTH_SERVICES,
-            CheckBorderCrossing::class => ComputationName::BORDER_CROSSING,
-            CheckFerries::class => ComputationName::FERRIES,
-            CheckFords::class => ComputationName::FORDS,
-            ScanEvents::class => ComputationName::EVENTS,
-            default => null,
-        };
+        return self::MESSAGE_TO_COMPUTATION[$message::class] ?? null;
     }
 }

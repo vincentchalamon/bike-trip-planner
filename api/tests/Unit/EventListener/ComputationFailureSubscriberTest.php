@@ -127,6 +127,37 @@ final class ComputationFailureSubscriberTest extends TestCase
         );
     }
 
+    /**
+     * Parity guard: resolveComputation() is driven by the explicit
+     * {@see ComputationFailureSubscriber::MESSAGE_TO_COMPUTATION} table. If a new
+     * computation is added to {@see ComputationName::pipeline()} without a matching
+     * entry here, its failure would stay `pending` forever and the gate could never
+     * settle. This test fails the moment the table drifts from the pipeline.
+     */
+    #[Test]
+    public function resolveComputationCoversAllPipelineEntries(): void
+    {
+        $mapped = array_values(ComputationFailureSubscriber::MESSAGE_TO_COMPUTATION);
+
+        $missing = array_filter(
+            ComputationName::pipeline(),
+            static fn (ComputationName $c): bool => !\in_array($c, $mapped, true),
+        );
+        self::assertSame([], array_values($missing), sprintf(
+            'These ComputationName::pipeline() entries have no MESSAGE_TO_COMPUTATION mapping: %s',
+            implode(', ', array_map(static fn (ComputationName $c): string => $c->value, $missing)),
+        ));
+
+        $extraneous = array_filter(
+            $mapped,
+            static fn (ComputationName $c): bool => !\in_array($c, ComputationName::pipeline(), true),
+        );
+        self::assertSame([], array_values($extraneous), sprintf(
+            'These MESSAGE_TO_COMPUTATION entries are not part of ComputationName::pipeline(): %s',
+            implode(', ', array_map(static fn (ComputationName $c): string => $c->value, $extraneous)),
+        ));
+    }
+
     #[Test]
     public function ignoresMessagesThatAreNotPartOfTheGatedPipeline(): void
     {
