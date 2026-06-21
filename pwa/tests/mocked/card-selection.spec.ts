@@ -142,7 +142,7 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     await input.fill("not-a-url");
     await input.press("Enter");
     await expect(page.getByTestId("card-link-error")).toContainText(
-      "Veuillez entrer une URL valide.",
+      "Entre une URL valide.",
     );
   });
 

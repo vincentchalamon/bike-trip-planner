@@ -42,7 +42,7 @@ test.describe("Mobile build config", () => {
     const input = mockedPage.getByTestId("magic-link-input");
     await expect(input).toHaveAttribute(
       "placeholder",
-      "Collez votre lien Komoot, Strava ou RideWithGPS ici...",
+      "Colle ton lien Komoot, Strava ou RideWithGPS ici...",
     );
   });
 

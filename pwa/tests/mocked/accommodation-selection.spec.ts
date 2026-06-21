@@ -212,7 +212,7 @@ test.describe("Accommodation selection", () => {
     // Info toast should appear (French locale)
     await expect(
       mockedPage.getByText(
-        "La liste des hébergements a été mise à jour. Veuillez réessayer.",
+        "La liste des hébergements a été mise à jour. Réessaie.",
       ),
     ).toBeVisible();
 

@@ -463,14 +463,14 @@ Then(
 
 Then("je ne vois plus le message d'erreur", async ({ mockedPage }) => {
   await expect(
-    mockedPage.getByText("Veuillez entrer une URL valide."),
+    mockedPage.getByText("Entre une URL valide."),
   ).toBeHidden();
 });
 
 Then("I no longer see the error message", async ({ mockedPage }) => {
   await expect(
     mockedPage.getByText(
-      /Veuillez entrer une URL valide\.|Please enter a valid URL\./,
+      /Entre une URL valide\.|Please enter a valid URL\./,
     ),
   ).toBeHidden();
 });

@@ -9,13 +9,13 @@ Fonctionnalité: Création de voyage
 
   @desktop @critique
   Scénario: Affichage du champ de saisie du lien magique
-    Alors je vois un champ de saisie avec le placeholder "Collez votre lien Komoot, Strava ou RideWithGPS ici..."
+    Alors je vois un champ de saisie avec le placeholder "Colle ton lien Komoot, Strava ou RideWithGPS ici..."
 
   @desktop @critique
   Scénario: Erreur de validation pour une URL invalide
     Quand je saisis "pas-une-url" dans le champ de lien magique
     Et que j'appuie sur Entrée
-    Alors je vois le message d'erreur "Veuillez entrer une URL valide."
+    Alors je vois le message d'erreur "Entre une URL valide."
 
   @desktop
   Scénario: L'erreur disparaît quand je recommence à taper
