@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision provision-update coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision provision-update provision-recette coverage coverage-ci migration migrate db-create fixtures
 
 # Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
 # explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
@@ -195,6 +195,13 @@ provision: ensure-default-pbf ## Provision OSM regions + import the Tier-1 PostG
 
 provision-update: ## Trigger a non-interactive provisioner update (re-download OSM + re-import PostGIS)
 	@docker compose --profile provisioning run --rm provisioner --no-interaction --with-postgis
+
+# `--build` is required: it builds the `prod` provisioner stage (which COPYs the code) instead
+# of reusing a `dev`-tagged image whose /app is empty (code is bind-mounted in dev), which would
+# fail with "Could not open input file: bin/provision". `-f compose.yaml -f compose.recette.yaml`
+# is passed explicitly so the dev COMPOSE_FILE layer never leaks in.
+provision-recette: ensure-default-pbf ## Provision the iso-prod recette PostGIS index (non-interactive; first run needs a seeded .docker/osm/data/regions.json, e.g. {"slugs":["nord-pas-de-calais"]}, or a prior `make provision`)
+	@JWT_PRIVATE_KEY_PATH=$(CURDIR)/.docker/jwt-recette/private.pem JWT_PUBLIC_KEY_PATH=$(CURDIR)/.docker/jwt-recette/public.pem JWT_PASSPHRASE=recette docker compose -f compose.yaml -f compose.recette.yaml --profile provisioning run --build --rm -T provisioner --no-interaction --with-postgis
 
 ## --- 🗄️ Database ---
 migration: ## Generate a Doctrine migration
