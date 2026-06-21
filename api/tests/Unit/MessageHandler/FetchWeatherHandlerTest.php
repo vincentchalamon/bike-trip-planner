@@ -14,7 +14,6 @@ use App\Message\FetchWeather;
 use App\MessageHandler\FetchWeatherHandler;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Service\TripCompletionGate;
 use App\Weather\WeatherProviderInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -76,11 +75,9 @@ final class FetchWeatherHandlerTest extends TestCase
         // dispatch() returns the final Envelope class, which cannot be doubled.
         $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
 
-        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-
-        $handler = new FetchWeatherHandler(
+        return new FetchWeatherHandler(
             $computationTracker,
-            $publisher,
+            $this->createStub(TripUpdatePublisherInterface::class),
             $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
@@ -88,9 +85,6 @@ final class FetchWeatherHandlerTest extends TestCase
             $cache,
             $messageBus,
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
-
-        return $handler;
     }
 
     #[Test]

@@ -14,7 +14,6 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
 use App\MessageHandler\AnalyzeWindHandler;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -74,20 +73,15 @@ final class AnalyzeWindHandlerTest extends TestCase
             },
         );
 
-        $messageBus = $this->createStub(MessageBusInterface::class);
-
-        $handler = new AnalyzeWindHandler(
+        return new AnalyzeWindHandler(
             $computationTracker,
             $publisher,
             $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
             $translator,
-            $messageBus,
+            $this->createStub(MessageBusInterface::class),
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
-
-        return $handler;
     }
 
     #[Test]

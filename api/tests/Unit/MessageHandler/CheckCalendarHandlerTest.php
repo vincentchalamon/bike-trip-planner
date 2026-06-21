@@ -14,7 +14,6 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCalendar;
 use App\MessageHandler\CheckCalendarHandler;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -53,20 +52,16 @@ final class CheckCalendarHandlerTest extends TestCase
         );
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $messageBus = $this->createStub(MessageBusInterface::class);
 
-        $handler = new CheckCalendarHandler(
+        return new CheckCalendarHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
             $translator,
-            $messageBus,
+            $this->createStub(MessageBusInterface::class),
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
-
-        return $handler;
     }
 
     #[Test]

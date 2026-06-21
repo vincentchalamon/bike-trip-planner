@@ -18,7 +18,6 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanAccommodations;
 use App\MessageHandler\ScanAccommodationsHandler;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -59,9 +58,7 @@ final class ScanAccommodationsHandlerTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
-        $messageBus = $this->createStub(MessageBusInterface::class);
-
-        $handler = new ScanAccommodationsHandler(
+        return new ScanAccommodationsHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
@@ -72,11 +69,8 @@ final class ScanAccommodationsHandlerTest extends TestCase
             $distributor,
             $seasonalityChecker,
             $translator,
-            $messageBus,
+            $this->createStub(MessageBusInterface::class),
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
-
-        return $handler;
     }
 
     #[Test]

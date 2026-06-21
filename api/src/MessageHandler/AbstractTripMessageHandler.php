@@ -12,11 +12,10 @@ use App\Repository\TripRequestRepositoryInterface;
 use App\Service\TripCompletionGate;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Service\Attribute\Required;
 
 abstract readonly class AbstractTripMessageHandler
 {
-    protected TripCompletionGate $completionGate;
+    private TripCompletionGate $completionGate;
 
     public function __construct(
         protected ComputationTrackerInterface $computationTracker,
@@ -26,18 +25,13 @@ abstract readonly class AbstractTripMessageHandler
         protected TripRequestRepositoryInterface $tripRequestRepository,
         protected MessageBusInterface $messageBus,
     ) {
-    }
-
-    /**
-     * Injected via a setter rather than the constructor so the ~20 concrete
-     * handlers extending this class do not have to thread the dependency through
-     * their own constructors. The container calls this exactly once after
-     * construction, which is a valid single write of the readonly property.
-     */
-    #[Required]
-    public function setCompletionGate(TripCompletionGate $completionGate): void
-    {
-        $this->completionGate = $completionGate;
+        // The gate is a stateless collaborator built from dependencies the handler
+        // already receives, so we construct it here rather than threading the
+        // service through the ~20 child constructors or relying on a #[Required]
+        // setter (which manual instantiations — e.g. integration tests — skip,
+        // leaving the readonly property uninitialized). The terminal-gate logic
+        // stays single-sourced in TripCompletionGate.
+        $this->completionGate = new TripCompletionGate($this->computationTracker, $this->publisher, $this->messageBus);
     }
 
     /**

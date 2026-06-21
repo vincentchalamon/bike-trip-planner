@@ -15,7 +15,6 @@ use App\MessageHandler\RecalculateRouteSegmentHandler;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Routing\RoutingProviderInterface;
 use App\Routing\RoutingResult;
-use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -69,8 +68,6 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
-        $messageBus = $this->createStub(MessageBusInterface::class);
-
         $handler = new RecalculateRouteSegmentHandler(
             $computationTracker,
             $publisher,
@@ -78,9 +75,8 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $routingProvider,
-            $messageBus,
+            $this->createStub(MessageBusInterface::class),
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
 
         $handler(new RecalculateRouteSegment(
             tripId: 'trip-1',
@@ -105,8 +101,6 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
-        $messageBus = $this->createStub(MessageBusInterface::class);
-
         $handler = new RecalculateRouteSegmentHandler(
             $computationTracker,
             $publisher,
@@ -114,9 +108,8 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $routingProvider,
-            $messageBus,
+            $this->createStub(MessageBusInterface::class),
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
 
         $handler(new RecalculateRouteSegment(
             tripId: 'trip-1',
@@ -150,8 +143,6 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
-        $messageBus = $this->createStub(MessageBusInterface::class);
-
         $handler = new RecalculateRouteSegmentHandler(
             $computationTracker,
             $publisher,
@@ -159,9 +150,8 @@ final class RecalculateRouteSegmentHandlerTest extends TestCase
             new NullLogger(),
             $tripStateManager,
             $routingProvider,
-            $messageBus,
+            $this->createStub(MessageBusInterface::class),
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
 
         $handler(new RecalculateRouteSegment(
             tripId: 'trip-1',

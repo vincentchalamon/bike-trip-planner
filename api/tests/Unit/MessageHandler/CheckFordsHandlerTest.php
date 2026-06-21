@@ -15,7 +15,6 @@ use App\Message\CheckFords;
 use App\MessageHandler\CheckFordsHandler;
 use App\Osm\FordRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -37,9 +36,7 @@ final class CheckFordsHandlerTest extends TestCase
             static fn (string $id): string => $id,
         );
 
-        $messageBus = $this->createStub(MessageBusInterface::class);
-
-        $handler = new CheckFordsHandler(
+        return new CheckFordsHandler(
             $computationTracker,
             $publisher,
             $this->createStub(TripGenerationTrackerInterface::class),
@@ -47,11 +44,8 @@ final class CheckFordsHandlerTest extends TestCase
             $tripStateManager,
             $fordRepository,
             $translator,
-            $messageBus,
+            $this->createStub(MessageBusInterface::class),
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
-
-        return $handler;
     }
 
     /** @param list<Stage>|null $stages */

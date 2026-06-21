@@ -16,7 +16,6 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\RouteFetcher\RouteFetcherInterface;
 use App\RouteFetcher\RouteFetcherRegistryInterface;
-use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -65,7 +64,6 @@ final class FetchAndParseRouteHandlerTest extends TestCase
             $this->createStub(RouteSimplifierInterface::class),
             $messageBus,
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
 
         // The handler must return normally (computation marked done), not re-throw.
         $handler(new FetchAndParseRoute('trip-1'));

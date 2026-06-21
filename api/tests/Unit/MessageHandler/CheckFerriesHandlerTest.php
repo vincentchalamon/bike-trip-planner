@@ -14,7 +14,6 @@ use App\Message\CheckFerries;
 use App\MessageHandler\CheckFerriesHandler;
 use App\Osm\FerryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -39,9 +38,7 @@ final class CheckFerriesHandlerTest extends TestCase
             },
         );
 
-        $messageBus = $this->createStub(MessageBusInterface::class);
-
-        $handler = new CheckFerriesHandler(
+        return new CheckFerriesHandler(
             $computationTracker,
             $publisher,
             $this->createStub(TripGenerationTrackerInterface::class),
@@ -49,11 +46,8 @@ final class CheckFerriesHandlerTest extends TestCase
             $tripStateManager,
             $ferryRepository,
             $translator,
-            $messageBus,
+            $this->createStub(MessageBusInterface::class),
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
-
-        return $handler;
     }
 
     /** @param list<Stage>|null $stages */

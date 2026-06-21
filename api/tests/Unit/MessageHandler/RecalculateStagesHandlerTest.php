@@ -16,7 +16,6 @@ use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
 use App\MessageHandler\RecalculateStagesHandler;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -35,7 +34,7 @@ final class RecalculateStagesHandlerTest extends TestCase
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
-        $handler = new RecalculateStagesHandler(
+        return new RecalculateStagesHandler(
             $computationTracker,
             $publisher,
             $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class),
@@ -44,9 +43,6 @@ final class RecalculateStagesHandlerTest extends TestCase
             $messageBus,
             $llmTracker ?? $this->createStub(LlmAnalysisTrackerInterface::class),
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
-
-        return $handler;
     }
 
     #[Test]

@@ -19,7 +19,6 @@ use App\Message\AnalyzeTerrain;
 use App\MessageHandler\AnalyzeTerrainHandler;
 use App\Osm\WaysRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -72,9 +71,8 @@ final class AnalyzeTerrainHandlerTest extends TestCase
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $messageBus = $this->createStub(MessageBusInterface::class);
 
-        $handler = new AnalyzeTerrainHandler(
+        return new AnalyzeTerrainHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
@@ -83,11 +81,8 @@ final class AnalyzeTerrainHandlerTest extends TestCase
             $analyzerRegistry,
             $waysRepository,
             $distributor,
-            $messageBus,
+            $this->createStub(MessageBusInterface::class),
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
-
-        return $handler;
     }
 
     #[Test]

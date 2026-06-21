@@ -16,7 +16,6 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
 use App\MessageHandler\CheckCulturalPoisHandler;
 use App\Repository\TripRequestRepositoryInterface;
-use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -62,9 +61,8 @@ final class CheckCulturalPoisHandlerTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
         $distributor ??= $this->createStub(GeometryDistributorInterface::class);
-        $messageBus = $this->createStub(MessageBusInterface::class);
 
-        $handler = new CheckCulturalPoisHandler(
+        return new CheckCulturalPoisHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
@@ -74,11 +72,8 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             $distributor,
             $haversine,
             $translator,
-            $messageBus,
+            $this->createStub(MessageBusInterface::class),
         );
-        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
-
-        return $handler;
     }
 
     /**
