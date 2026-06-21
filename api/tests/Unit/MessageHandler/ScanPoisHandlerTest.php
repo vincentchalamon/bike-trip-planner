@@ -23,6 +23,7 @@ use App\Poi\PoiSourceInterface;
 use App\Poi\PoiSourceRegistry;
 use App\Poi\SupplyTimelineBuilder;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
@@ -70,8 +71,9 @@ final class ScanPoisHandlerTest extends TestCase
         );
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $messageBus = $this->createStub(MessageBusInterface::class);
 
-        return new ScanPoisHandler(
+        $handler = new ScanPoisHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
@@ -83,8 +85,11 @@ final class ScanPoisHandlerTest extends TestCase
             new SupplyTimelineBuilder($haversine),
             $riderTimeEstimator,
             $translator,
-            $this->createStub(MessageBusInterface::class),
+            $messageBus,
         );
+        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
+
+        return $handler;
     }
 
     /**

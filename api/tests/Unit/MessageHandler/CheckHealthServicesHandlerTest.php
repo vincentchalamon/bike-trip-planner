@@ -15,6 +15,7 @@ use App\Message\CheckHealthServices;
 use App\MessageHandler\CheckHealthServicesHandler;
 use App\Osm\HealthServiceRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -92,7 +93,9 @@ final class CheckHealthServicesHandlerTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
-        return new CheckHealthServicesHandler(
+        $messageBus = $this->createStub(MessageBusInterface::class);
+
+        $handler = new CheckHealthServicesHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
@@ -101,8 +104,11 @@ final class CheckHealthServicesHandlerTest extends TestCase
             $healthServiceRepository,
             $haversine,
             $translator,
-            $this->createStub(MessageBusInterface::class),
+            $messageBus,
         );
+        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
+
+        return $handler;
     }
 
     #[Test]

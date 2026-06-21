@@ -17,6 +17,7 @@ use App\Message\CheckWaterPoints;
 use App\MessageHandler\CheckWaterPointsHandler;
 use App\Osm\WaterPointRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -62,7 +63,9 @@ final class CheckWaterPointsHandlerTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
-        return new CheckWaterPointsHandler(
+        $messageBus = $this->createStub(MessageBusInterface::class);
+
+        $handler = new CheckWaterPointsHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
@@ -72,8 +75,11 @@ final class CheckWaterPointsHandlerTest extends TestCase
             $distributor,
             $haversine,
             $translator,
-            $this->createStub(MessageBusInterface::class),
+            $messageBus,
         );
+        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
+
+        return $handler;
     }
 
     /**

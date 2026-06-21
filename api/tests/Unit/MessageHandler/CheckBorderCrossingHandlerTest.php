@@ -14,6 +14,7 @@ use App\Message\CheckBorderCrossing;
 use App\MessageHandler\CheckBorderCrossingHandler;
 use App\Osm\AdminBoundaryRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -39,8 +40,9 @@ final class CheckBorderCrossingHandlerTest extends TestCase
         );
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $messageBus = $this->createStub(MessageBusInterface::class);
 
-        return new CheckBorderCrossingHandler(
+        $handler = new CheckBorderCrossingHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
@@ -48,8 +50,11 @@ final class CheckBorderCrossingHandlerTest extends TestCase
             $tripStateManager,
             $adminBoundaryRepository,
             $translator,
-            $this->createStub(MessageBusInterface::class),
+            $messageBus,
         );
+        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
+
+        return $handler;
     }
 
     /**

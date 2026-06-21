@@ -8,13 +8,16 @@ use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Mercure\TripUpdatePublisherInterface;
-use App\Message\AllEnrichmentsCompleted;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripCompletionGate;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Contracts\Service\Attribute\Required;
 
 abstract readonly class AbstractTripMessageHandler
 {
+    protected TripCompletionGate $completionGate;
+
     public function __construct(
         protected ComputationTrackerInterface $computationTracker,
         protected TripUpdatePublisherInterface $publisher,
@@ -23,6 +26,18 @@ abstract readonly class AbstractTripMessageHandler
         protected TripRequestRepositoryInterface $tripRequestRepository,
         protected MessageBusInterface $messageBus,
     ) {
+    }
+
+    /**
+     * Injected via a setter rather than the constructor so the ~20 concrete
+     * handlers extending this class do not have to thread the dependency through
+     * their own constructors. The container calls this exactly once after
+     * construction, which is a valid single write of the readonly property.
+     */
+    #[Required]
+    public function setCompletionGate(TripCompletionGate $completionGate): void
+    {
+        $this->completionGate = $completionGate;
     }
 
     /**
@@ -103,24 +118,13 @@ abstract readonly class AbstractTripMessageHandler
 
         // Mode 1 — progress bar: publish a business-data-free progress event
         // after every handler completes, so the frontend can drive its narrative stepper.
-        $progress = $this->publishProgress($tripId, $computation);
+        $this->publishProgress($tripId, $computation);
 
         // Issue #299 — gate: when every initialized enrichment has settled
-        // (done OR failed), dispatch the terminal AllEnrichmentsCompleted message.
-        // The dedicated handler decides whether to chain into LLaMA 8B (issues
-        // #301-#303) or short-circuit by publishing TRIP_READY directly.
-        // Note: with 5 concurrent workers the check-and-dispatch is not atomic; two
-        // workers can both observe the settled condition and both dispatch the message.
-        // AllEnrichmentsCompletedHandler guards against duplicate processing via
-        // claimReadyPublication (PSR-6 best-effort NX; true atomicity tracked in #303).
-        $allSettled = $progress['total'] > 0
-            && $progress['completed'] + $progress['failed'] === $progress['total'];
-
-        if ($allSettled) {
-            $statuses = $this->computationTracker->getStatuses($tripId) ?? [];
-            $this->publisher->publishTripComplete($tripId, $statuses);
-            $this->messageBus->dispatch(new AllEnrichmentsCompleted($tripId));
-        }
+        // (done OR failed), publish the terminal TRIP_COMPLETE event and dispatch
+        // AllEnrichmentsCompleted. Shared with ComputationFailureSubscriber so the
+        // happy path and the retries-exhausted path evaluate the same condition.
+        $this->completionGate->evaluate($tripId);
     }
 
     /**

@@ -17,6 +17,7 @@ use App\Message\ScanEvents;
 use App\MessageHandler\ScanEventsHandler;
 use App\Repository\MarketRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripCompletionGate;
 use App\Tourism\EventRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -54,7 +55,9 @@ final class ScanEventsHandlerTest extends TestCase
         $marketRepository ??= $this->createStub(MarketRepositoryInterface::class);
         $translator ??= $this->createStub(TranslatorInterface::class);
 
-        return new ScanEventsHandler(
+        $messageBus = $this->createStub(MessageBusInterface::class);
+
+        $handler = new ScanEventsHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
@@ -64,8 +67,11 @@ final class ScanEventsHandlerTest extends TestCase
             $haversine,
             $marketRepository,
             $translator,
-            $this->createStub(MessageBusInterface::class),
+            $messageBus,
         );
+        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
+
+        return $handler;
     }
 
     private function createTripRequest(\DateTimeImmutable $startDate): TripRequest

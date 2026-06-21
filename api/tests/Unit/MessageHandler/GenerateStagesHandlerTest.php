@@ -20,6 +20,7 @@ use App\Message\GenerateStages;
 use App\MessageHandler\GenerateStagesHandler;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Service\TripAnalysisDispatcher;
+use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -39,7 +40,7 @@ final class GenerateStagesHandlerTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
-        return new GenerateStagesHandler(
+        $handler = new GenerateStagesHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
@@ -52,6 +53,9 @@ final class GenerateStagesHandlerTest extends TestCase
             new TripAnalysisDispatcher($messageBus),
             $messageBus,
         );
+        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
+
+        return $handler;
     }
 
     #[Test]
@@ -125,6 +129,7 @@ final class GenerateStagesHandlerTest extends TestCase
             new TripAnalysisDispatcher($messageBus),
             $messageBus,
         );
+        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
 
         $handler(new GenerateStages('trip-1'));
     }
@@ -193,6 +198,7 @@ final class GenerateStagesHandlerTest extends TestCase
             new TripAnalysisDispatcher($messageBus),
             $messageBus,
         );
+        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
 
         $handler(new GenerateStages('trip-1'));
     }

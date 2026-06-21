@@ -24,6 +24,7 @@ use App\Message\GenerateAiRoute;
 use App\Message\GenerateStages;
 use App\MessageHandler\GenerateAiRouteHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -198,7 +199,7 @@ final class GenerateAiRouteHandlerTest extends TestCase
         $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
         $routeSimplifier->method('simplify')->willReturnArgument(0);
 
-        return new GenerateAiRouteHandler(
+        $handler = new GenerateAiRouteHandler(
             $computationTracker,
             $publisher,
             $this->createStub(TripGenerationTrackerInterface::class),
@@ -209,6 +210,9 @@ final class GenerateAiRouteHandlerTest extends TestCase
             $routeSimplifier,
             $messageBus,
         );
+        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
+
+        return $handler;
     }
 
     private function resolved(): ResolvedLlmClient

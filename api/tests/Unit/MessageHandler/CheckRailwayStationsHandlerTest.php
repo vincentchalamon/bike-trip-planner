@@ -15,6 +15,7 @@ use App\Message\CheckRailwayStations;
 use App\MessageHandler\CheckRailwayStationsHandler;
 use App\Osm\RailwayStationRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -91,7 +92,9 @@ final class CheckRailwayStationsHandlerTest extends TestCase
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
-        return new CheckRailwayStationsHandler(
+        $messageBus = $this->createStub(MessageBusInterface::class);
+
+        $handler = new CheckRailwayStationsHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
@@ -100,8 +103,11 @@ final class CheckRailwayStationsHandlerTest extends TestCase
             $railwayStationRepository,
             $haversine,
             $translator,
-            $this->createStub(MessageBusInterface::class),
+            $messageBus,
         );
+        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
+
+        return $handler;
     }
 
     #[Test]

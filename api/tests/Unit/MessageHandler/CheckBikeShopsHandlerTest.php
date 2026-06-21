@@ -16,6 +16,7 @@ use App\Message\CheckBikeShops;
 use App\MessageHandler\CheckBikeShopsHandler;
 use App\Osm\BikeShopRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Service\TripCompletionGate;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -84,8 +85,9 @@ final class CheckBikeShopsHandlerTest extends TestCase
         );
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $messageBus = $this->createStub(MessageBusInterface::class);
 
-        return new CheckBikeShopsHandler(
+        $handler = new CheckBikeShopsHandler(
             $computationTracker,
             $publisher,
             $generationTracker,
@@ -94,8 +96,11 @@ final class CheckBikeShopsHandlerTest extends TestCase
             $bikeShopRepository,
             $haversine,
             $translator,
-            $this->createStub(MessageBusInterface::class),
+            $messageBus,
         );
+        $handler->setCompletionGate(new TripCompletionGate($computationTracker, $publisher, $messageBus));
+
+        return $handler;
     }
 
     private function tripStateManager(string $tripId, int $stageCount = 6): TripRequestRepositoryInterface
