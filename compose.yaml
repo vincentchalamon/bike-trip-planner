@@ -407,6 +407,11 @@ services:
       retries: 5
 
   provisioner:
+    # Explicit prod tag, distinct from the dev override (compose.dev.yaml), so the
+    # `prod` and `dev` build targets never reuse each other's image. Without it
+    # both targets resolved to the same default tag, which is why recette needed a
+    # forced `--build` to avoid running a `dev` image with an empty bind-mounted /app.
+    image: bike-trip-planner-provisioner:prod
     build:
       context: ./
       dockerfile: .docker/provisioner/Dockerfile
@@ -420,14 +425,15 @@ services:
         condition: service_healthy
     environment:
       # Tier-1 PostGIS import target (ADR-040). Standard libpq env, consumed by
-      # osm2pgsql and psql when the provisioner runs with --with-postgis.
+      # osm2pgsql and psql during the PostGIS import (always run).
       PGHOST: "${DATABASE_HOST:-database}"
       PGPORT: "5432"
       PGUSER: "${DATABASE_USERNAME:-app}"
       PGPASSWORD: "${DATABASE_PASSWORD:-!ChangeMe!}"
       PGDATABASE: "${DATABASE_NAME:-bike_trip_planner}"
-      # DataTourisme flux credentials, consumed when the provisioner runs with
-      # --with-datatourisme to download the flux ZIP into the tourism schema.
+      # DataTourisme flux credentials. When set, the provisioner downloads the
+      # flux ZIP into the tourism schema; when absent the DataTourisme step is
+      # skipped gracefully (OSM still provisions).
       DATATOURISME_FLUX_ID: "${DATATOURISME_FLUX_ID:-}"
       DATATOURISME_APP_KEY: "${DATATOURISME_APP_KEY:-}"
     # One-shot OSM extract + PostGIS import; osm2pgsql needs more headroom than
