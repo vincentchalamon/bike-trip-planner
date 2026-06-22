@@ -529,7 +529,12 @@ export function useTripPlanner() {
     newMaxDistance: number,
     newAverageSpeed: number,
     newEbikeMode: boolean,
-    clearStages: boolean,
+    // When true, skip the recomputing skeleton: the change has already been
+    // reflected locally (e.g. the e-bike toggle clears terrain alerts and the
+    // stat row re-derives durations from `averageSpeed`), so the cards must
+    // stay mounted with their content instead of waiting for a `stages_computed`
+    // SSE that may never come for a purely local optimistic update.
+    optimistic = false,
   ) {
     if (!tripId) return;
 
@@ -556,8 +561,17 @@ export function useTripPlanner() {
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
-        if (clearStages) {
-          useTripStore.getState().setStages([]);
+        if (optimistic) return;
+        // Mark every stage as recomputing so the timeline shows the shimmer
+        // skeleton until the `stages_computed` Mercure event lands. The stages
+        // are NOT wiped: clearing them flips `isTripLoaded` to false, unmounts
+        // the whole trip view (toolbar, config, undo/redo) and defeats the
+        // in-place merge that preserves accommodations/labels (use-mercure).
+        const stageCount = useTripStore.getState().stages.length;
+        if (stageCount > 0) {
+          actions.startStageRecomputation(
+            Array.from({ length: stageCount }, (_, i) => i),
+          );
         }
       }
     } catch {
@@ -610,7 +624,6 @@ export function useTripPlanner() {
       newMaxDistance,
       newAverageSpeed,
       getPacingState().ebikeMode,
-      true,
     );
   }
 
@@ -650,13 +663,16 @@ export function useTripPlanner() {
       );
     }
     const pacing = getPacingState();
+    // The toggle is applied optimistically in-place (alerts cleared above,
+    // durations re-derived from the stat row): keep the cards mounted rather
+    // than swapping them for the recomputing skeleton.
     await patchPacingSettings(
       pacing.fatigueFactor,
       pacing.elevationPenalty,
       pacing.maxDistancePerDay,
       pacing.averageSpeed,
       newEbikeMode,
-      false,
+      true,
     );
   }
 
@@ -748,10 +764,13 @@ export function useTripPlanner() {
   }
 
   /**
-   * Fire the Phase 2 analysis pipeline for the currently-loaded trip and
-   * flip the UI store flag so the preview screen makes way for the full
-   * trip view. Errors surface as toasts but the user stays on the preview
-   * screen so they can retry.
+   * Re-run the full enrichment pipeline for the currently-loaded trip. Only
+   * reached from the chat `change_route` action (see {@link relaunchFullAnalysis}):
+   * the rider asked for a tracé-wide modification, so weather + AI are recomputed
+   * on top of the already-displayed trip view (ADR-043 — no wizard gate). The
+   * per-block spinners are flipped to `running` so the affected cards show their
+   * loading state until the matching Mercure events land. Errors surface as
+   * toasts and the trip view stays put so the user can retry.
    */
   async function handleLaunchAnalysis(): Promise<boolean> {
     if (!tripId) return false;
@@ -767,8 +786,8 @@ export function useTripPlanner() {
       // while the new analysis is in flight.
       useTripStore.getState().setAiOverview(null);
       setAccommodationScanning(true);
-      useUiStore.getState().setAnalysisStarted(true);
-      useUiStore.getState().setAnalysisPhaseActive(true);
+      useUiStore.getState().setBlockStatus("weather", "running");
+      useUiStore.getState().setBlockStatus("ai", "running");
       return true;
     } catch (err) {
       if (isNetworkError(err)) {

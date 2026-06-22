@@ -17,8 +17,9 @@ import { cn } from "@/lib/utils";
  * Floating AI assistant bubble + chat panel.
  *
  * - Bubble: bottom-right floating action button with a "Nouveau" badge on the
- *   first visit (persisted via `localStorage`). Hidden during Acte 2 (the
- *   narrative analysis screen) so it does not compete with the progress UI.
+ *   first visit (persisted via `localStorage`). Visible as soon as a trip is
+ *   loaded (ADR-043 — no analysis-phase gate); hidden only on the welcome /
+ *   loader screens.
  * - Panel: anchored 400 × 500 chat on desktop, full-screen sheet on mobile.
  *
  * The bubble also keeps {@link useUiStore.currentContext} in sync with the
@@ -39,7 +40,6 @@ export function AiBubble() {
     })),
   );
 
-  const isAnalysisPhaseActive = useUiStore((s) => s.isAnalysisPhaseActive);
   const activeDayNumber = useUiStore((s) => s.activeDayNumber);
   const setCurrentContext = useUiStore((s) => s.setCurrentContext);
 
@@ -56,7 +56,9 @@ export function AiBubble() {
     toggleBubble();
   };
 
-  if (!trip || isAnalysisPhaseActive) return null;
+  // Hidden until a trip is loaded (welcome / loader screens). Once the trip
+  // view renders it is always available (ADR-043 — no analysis-phase gate).
+  if (!trip) return null;
 
   // Disabled-but-visible affordance when the network is down, the AI
   // tier is unreachable (#304), or no provider is configured on the account

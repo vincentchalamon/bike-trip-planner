@@ -591,7 +591,7 @@
     "submitLabel": "Validate and continue"
   },
   "planner": {
-    "closeTrip": "Close this trip"
+    "computing": "Computing your route…"
   },
   "tripPreview": {
     "title": "Your route preview",
@@ -664,7 +664,10 @@
     "expand": "Show more",
     "expandAria": "Expand the AI summary",
     "collapse": "Show less",
-    "collapseAria": "Collapse the AI summary"
+    "collapseAria": "Collapse the AI summary",
+    "loading": "The assistant is analysing your trip…",
+    "failed": "The AI analysis could not complete.",
+    "regenerate": "Regenerate"
   },
   "aiRefinement": {
     "title": "Refine with the AI assistant",

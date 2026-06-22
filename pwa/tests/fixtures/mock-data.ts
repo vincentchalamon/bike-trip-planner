@@ -502,11 +502,14 @@ export function validationErrorEvent(): MercureEvent {
   };
 }
 
-export function computationErrorEvent(retryable = false): MercureEvent {
+export function computationErrorEvent(
+  retryable = false,
+  computation = "weather",
+): MercureEvent {
   return {
     type: "computation_error",
     data: {
-      computation: "weather",
+      computation,
       message: "Service meteo temporairement indisponible.",
       retryable,
     },

@@ -107,10 +107,17 @@ test.describe("/trips/[id] detail page", () => {
     await page.route(`**/trips/${TRIP_ID}/detail`, (route, request) => {
       const accept = request.headers()["accept"] ?? "";
       if (!accept.includes("application/ld+json")) return route.fallback();
+      // A loaded trip (status ready + structural stages) mounts the trip view
+      // directly under the synchronous flow (ADR-043); a draft + empty payload
+      // would stay on the single loader and never render the actions toolbar.
       return route.fulfill({
         status: 200,
         headers: { "Content-Type": "application/ld+json; charset=utf-8" },
-        body: JSON.stringify(MOCK_DETAIL),
+        body: JSON.stringify({
+          ...MOCK_DETAIL,
+          status: "ready",
+          stages: MOCK_STAGES,
+        }),
       });
     });
 

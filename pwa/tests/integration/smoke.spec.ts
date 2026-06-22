@@ -40,11 +40,10 @@ test.describe("Integration smoke test", () => {
     await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
     await input.press("Enter");
 
-    // Trip title skeleton should appear (trip created successfully)
+    // The synchronous-flow loader should appear (trip created successfully);
+    // with Mercure aborted no structural stages arrive, so we stay on it.
     await expect(
-      page
-        .getByTestId("trip-title-skeleton")
-        .or(page.getByTestId("trip-title")),
+      page.getByTestId("trip-loader").or(page.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 30000 });
 
     // Verify backend accepted the trip (202 Accepted with a valid UUID)

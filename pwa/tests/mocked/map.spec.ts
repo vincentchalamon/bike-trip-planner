@@ -255,12 +255,10 @@ test.describe("Tile layer control", () => {
     await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
     await input.press("Enter");
     await page.waitForURL(/\/trips\//, { timeout: 5000 });
-    // Wait for the trip detail page to be loaded (matches submitUrl fixture)
-    // before injecting SSE so the listener is attached on the new page.
+    // Wait for the loader to mount (matches submitUrl fixture) before injecting
+    // SSE so the listener is attached on the new page.
     await expect(
-      page
-        .getByTestId("trip-title-skeleton")
-        .or(page.getByTestId("trip-title")),
+      page.getByTestId("trip-loader").or(page.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
     await injectSseEvent(page, stagesWithGeometryEvent());
 

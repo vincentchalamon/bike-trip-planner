@@ -81,9 +81,12 @@ export const test = base.extend<
       await input.fill(url ?? "https://www.komoot.com/fr-fr/tour/2795080048");
       await input.press("Enter");
       await mockedPage.waitForURL(/\/trips\//, { timeout: 10000 });
+      // Synchronous flow (ADR-043): the detail endpoint returns empty stages, so
+      // we land on the single `trip-loader`. The full trip view (and
+      // `trip-title`) only mounts once structural stages arrive via SSE.
       await expect(
         mockedPage
-          .getByTestId("trip-title-skeleton")
+          .getByTestId("trip-loader")
           .or(mockedPage.getByTestId("trip-title")),
       ).toBeVisible({ timeout: 5000 });
     });

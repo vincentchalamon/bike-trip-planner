@@ -2,36 +2,44 @@
 
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Bot, ChevronDown, ChevronUp } from "lucide-react";
+import { Bot, ChevronDown, ChevronUp, Loader2, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useTripAiOverview } from "@/store/trip-store";
+import { useUiStore } from "@/store/ui-store";
 
 /**
- * Acte 3 — Trip-level AI overview card (issue #305).
+ * Trip-level AI overview card (issue #305, ADR-043 per-block async).
  *
  * Renders the narrative + patterns + recommendations + cross-stage alerts
  * produced by the LLaMA pass 2 (`AnalyzeTripOverviewWithLlmHandler` →
  * `aiOverview` field on the `trip_ready` Mercure event).
  *
- * Placement — top of the "Mon voyage" view (Acte 3), before the stage cards.
+ * Placement — top of the "Mon voyage" view, above the stage cards.
  *
- * Behavior:
- * - Renders nothing when the store has no overview (LLM disabled / failed /
- *   pending) — silent fallback as required by the issue spec.
- * - On desktop (≥ md) the card is always fully expanded.
- * - On mobile (< md) only the title + first narrative line are visible until
- *   the user taps the disclosure button.
+ * Per-block behaviour (`useUiStore.blockStatus.ai`):
+ * - `pending` / `running` → skeleton spinner (the LLM pass is still in flight,
+ *   over the already-displayed trip view).
+ * - `failed` → error notice + "Régénérer" button (re-runs the analysis).
+ * - `done` (or any state) with an overview present → the full card.
+ * - otherwise (no overview, idle / TTL-expired) → silent fallback (renders
+ *   nothing), preserving the original #305 contract.
  *
- * The narrative is plain text (no full markdown parser is needed for the
- * current backend output); paragraph breaks (`\n\n`) and line breaks (`\n`)
- * are preserved by splitting on whitespace boundaries and emitting individual
- * `<p>` elements. Bullet lists for patterns, recommendations and alerts are
- * rendered explicitly so screen readers announce them as such.
+ * On desktop (≥ md) the card is always fully expanded; on mobile (< md) only
+ * the title + first narrative line show until the user taps the disclosure.
  */
-export function TripAiOverview() {
+export function TripAiOverview({
+  onRegenerate,
+}: {
+  /** Re-run the full enrichment (used by the `failed` retry button). */
+  onRegenerate?: () => void;
+} = {}) {
   const t = useTranslations("aiOverview");
   const overview = useTripAiOverview();
+  const aiBlockStatus = useUiStore((s) => s.blockStatus.ai);
+  const aiConfigured = useUiStore((s) => s.aiCapability.configured);
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const detailsId = useId();
 
@@ -42,8 +50,72 @@ export function TripAiOverview() {
         .filter((p) => p.length > 0)
     : [];
 
-  // Silent fallback when no overview is available — the issue spec requires
-  // that the component does not render anything at all in that case.
+  // AI surfaces are gated by configuration upstream (the `AiUnavailableNotice`
+  // in TripPlanner); when no provider is configured this card stays silent.
+  if (aiConfigured && paragraphs.length === 0) {
+    // Pending / running — show a skeleton over the trip view (ADR-043).
+    if (aiBlockStatus === "pending" || aiBlockStatus === "running") {
+      return (
+        <Card
+          data-testid="trip-ai-overview-loading"
+          className="border-brand/30 bg-brand/5"
+          aria-busy="true"
+        >
+          <CardContent className="flex items-start gap-3">
+            <span
+              aria-hidden="true"
+              className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand"
+            >
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </span>
+            <div className="flex-1 space-y-2">
+              <p className="text-sm text-muted-foreground">{t("loading")}</p>
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-4/5" />
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Failed — surface the error + a retry affordance (ADR-043).
+    if (aiBlockStatus === "failed") {
+      return (
+        <Card
+          data-testid="trip-ai-overview-failed"
+          className="border-destructive/40 bg-destructive/5"
+        >
+          <CardContent className="flex items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span
+                aria-hidden="true"
+                className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-destructive/15 text-destructive"
+              >
+                <Bot className="h-4 w-4" />
+              </span>
+              <p className="text-sm text-muted-foreground">{t("failed")}</p>
+            </div>
+            {onRegenerate && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onRegenerate}
+                className="inline-flex items-center gap-2"
+                data-testid="trip-ai-overview-regenerate"
+              >
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                {t("regenerate")}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      );
+    }
+  }
+
+  // Silent fallback when no overview is available (idle / TTL-expired / not
+  // configured) — the original #305 contract: render nothing at all.
   if (!overview || paragraphs.length === 0) {
     return null;
   }

@@ -32,8 +32,10 @@ async function submitDefaultTripUrl(): Promise<void> {
   await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
   await input.press("Enter");
   await page.waitForURL(/\/trips\//, { timeout: 5000 });
+  // Synchronous flow: land on the loader; the trip view follows once stages
+  // arrive via SSE (callers inject them next).
   await expect(
-    page.getByTestId("trip-title-skeleton").or(page.getByTestId("trip-title")),
+    page.getByTestId("trip-loader").or(page.getByTestId("trip-title")),
   ).toBeVisible({ timeout: 5000 });
 }
 

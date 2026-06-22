@@ -45,20 +45,24 @@ test.describe("Trip creation flow", () => {
     mockedPage,
   }) => {
     await submitUrl();
+    // No stages injected: the synchronous flow stays on the single loader
+    // until structural stages arrive.
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible();
   });
 
   test("shows total distance after route_parsed", async ({
     submitUrl,
-    injectEvent,
+    injectSequence,
     mockedPage,
   }) => {
     await submitUrl();
-    await injectEvent(routeParsedEvent());
+    // The summary lives inside the trip view, which mounts only once structural
+    // stages exist; route metadata alone no longer renders it (ADR-043).
+    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
     await expect(mockedPage.getByTestId("total-distance")).toContainText(
       "187km",
     );
@@ -66,11 +70,11 @@ test.describe("Trip creation flow", () => {
 
   test("shows total elevation after route_parsed", async ({
     submitUrl,
-    injectEvent,
+    injectSequence,
     mockedPage,
   }) => {
     await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
     await expect(mockedPage.getByTestId("total-elevation")).toContainText(
       "2850m",
     );
@@ -154,7 +158,7 @@ test.describe("Trip creation flow", () => {
     await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
   });
@@ -167,10 +171,10 @@ test.describe("Trip creation flow", () => {
       "/?link=" +
         encodeURIComponent("https://www.komoot.com/fr-fr/tour/2795080048"),
     );
-    // Trip creation should start automatically
+    // Trip creation should start automatically and land on the loader
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
     // After creation the app navigates to the trip detail page
@@ -187,7 +191,7 @@ test.describe("Trip creation flow", () => {
     await expect(mockedPage.getByTestId("magic-link-input")).toBeVisible();
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).not.toBeVisible();
   });

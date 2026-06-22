@@ -46,12 +46,12 @@ test.describe("Keyboard shortcuts", () => {
   });
 
   test("Escape closes the config panel when open and help modal is not open", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    // The config gear lives in the trip view, which only mounts once structural
+    // stages exist under the synchronous flow (ADR-043).
+    await createFullTrip();
     await mockedPage.getByTestId("config-open-button").click();
     // The config panel is a dialog with aria-modal
     const configPanel = mockedPage.locator(

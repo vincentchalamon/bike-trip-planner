@@ -101,6 +101,84 @@ test.describe("TripAiOverview — re-analysis", () => {
   });
 });
 
+test.describe("TripAiOverview — per-block async states (ADR-043)", () => {
+  test("shows a skeleton while the AI block is running, then the card when trip_ready lands", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectEvent(routeParsedEvent());
+    await injectEvent(stagesComputedEvent());
+
+    // Structural stages already render the trip view.
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Configure AI + mark the AI block running → loading skeleton appears.
+    await mockedPage.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("__test_set_ai_capability", {
+          detail: { available: true, configured: true },
+        }),
+      );
+      window.dispatchEvent(
+        new CustomEvent("__test_set_block_status", {
+          detail: { ai: "running" },
+        }),
+      );
+    });
+
+    await expect(
+      mockedPage.getByTestId("trip-ai-overview-loading"),
+    ).toBeVisible();
+
+    // trip_ready brings the overview and flips the block to done.
+    await injectEvent(tripReadyEventWithAiOverview());
+
+    await expect(mockedPage.getByTestId("trip-ai-overview")).toBeVisible();
+    await expect(
+      mockedPage.getByTestId("trip-ai-overview-loading"),
+    ).toHaveCount(0);
+  });
+
+  test("shows an error + regenerate button when the AI block fails", async ({
+    submitUrl,
+    injectEvent,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectEvent(routeParsedEvent());
+    await injectEvent(stagesComputedEvent());
+    await injectEvent(tripReadyEvent());
+
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
+      timeout: 10000,
+    });
+
+    await mockedPage.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent("__test_set_ai_capability", {
+          detail: { available: true, configured: true },
+        }),
+      );
+      window.dispatchEvent(
+        new CustomEvent("__test_set_block_status", {
+          detail: { ai: "failed" },
+        }),
+      );
+    });
+
+    await expect(
+      mockedPage.getByTestId("trip-ai-overview-failed"),
+    ).toBeVisible();
+    await expect(
+      mockedPage.getByTestId("trip-ai-overview-regenerate"),
+    ).toBeVisible();
+  });
+});
+
 test.describe("TripAiOverview — responsive", () => {
   test("collapses detailed sections behind a disclosure toggle on mobile", async ({
     submitUrl,

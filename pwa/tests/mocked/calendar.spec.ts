@@ -1,14 +1,11 @@
 import { test, expect } from "../fixtures/base.fixture";
-import { routeParsedEvent } from "../fixtures/mock-data";
 
 test.describe("Date range picker in ConfigPanel", () => {
   test("shows date range picker when config panel opens", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     // Open config panel
     await mockedPage.getByTestId("config-open-button").click();
     // Date range trigger should be visible inside the panel
@@ -16,12 +13,10 @@ test.describe("Date range picker in ConfigPanel", () => {
   });
 
   test("opens calendar popover on date trigger click", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     // Open config panel
     await mockedPage.getByTestId("config-open-button").click();
     // Click date range trigger
@@ -31,12 +26,10 @@ test.describe("Date range picker in ConfigPanel", () => {
   });
 
   test("clicking dates chip in summary opens config panel at dates section", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     // Click dates chip in summary
     await mockedPage.getByTestId("summary-dates").click();
     // Config panel should open
@@ -49,12 +42,10 @@ test.describe("Date range picker in ConfigPanel", () => {
   });
 
   test("clicking profile chip in summary opens config panel at pacing section", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     // Click profile chip in summary
     await mockedPage.getByTestId("summary-profile").click();
     // Config panel should open

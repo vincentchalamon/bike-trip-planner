@@ -97,36 +97,9 @@ visualTest.describe("visual baselines (authenticated pages)", () => {
     },
   );
 
-  // `/trips/new` step 3 — narrative analysis/processing screen.
-  visualTest(
-    "trip-new-processing",
-    async ({ visualPage, gotoProcessing }, testInfo) => {
-      visualTest.skip(shouldSkipMapScreen(testInfo), MAP_SCREEN_SKIP_REASON);
-      await gotoProcessing();
-      await visualExpect(visualPage).toHaveScreenshot(
-        "trip-new-processing.png",
-        {
-          fullPage: true,
-          mask: maskRegions(visualPage),
-        },
-      );
-    },
-  );
-
-  // `/trips/new` step 2 — preview (map + stats + stages + launch CTA). Reached
-  // by the same submit flow as the planner preview (`stage-card-N`).
-  visualTest(
-    "trip-new-preview",
-    async ({ visualPage, gotoPreview }, testInfo) => {
-      visualTest.skip(shouldSkipMapScreen(testInfo), MAP_SCREEN_SKIP_REASON);
-      await gotoPreview();
-      await visualPage.waitForTimeout(500);
-      await visualExpect(visualPage).toHaveScreenshot("trip-new-preview.png", {
-        fullPage: true,
-        mask: maskRegions(visualPage),
-      });
-    },
-  );
+  // ADR-043: the wizard "Aperçu" (preview) and "Analyse" (processing) screens
+  // are gone — the flow collapsed to Saisie → loader → trip view. Their VR
+  // baselines (`trip-new-preview`, `trip-new-processing`) were removed.
 
   // `/trips` — populated list (override the default empty collection).
   visualTest("trips-populated", async ({ visualPage }) => {

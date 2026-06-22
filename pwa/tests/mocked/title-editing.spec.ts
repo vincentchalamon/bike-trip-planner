@@ -2,29 +2,30 @@ import { test, expect } from "../fixtures/base.fixture";
 import { routeParsedEvent, stagesComputedEvent } from "../fixtures/mock-data";
 
 test.describe("Title editing", () => {
-  test("shows skeleton while loading", async ({ submitUrl, mockedPage }) => {
+  test("shows loader while computing", async ({ submitUrl, mockedPage }) => {
     await submitUrl();
-    // Before route_parsed, title should be a skeleton
-    await expect(mockedPage.getByTestId("trip-title-skeleton")).toBeVisible();
+    // Before structural stages exist, the synchronous flow shows the single
+    // loader; the editable title only appears once the trip view mounts.
+    await expect(mockedPage.getByTestId("trip-loader")).toBeVisible();
   });
 
-  test("shows editable title after route_parsed", async ({
+  test("shows editable title once stages exist", async ({
     submitUrl,
-    injectEvent,
+    injectSequence,
     mockedPage,
   }) => {
     await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
     await expect(mockedPage.getByTestId("trip-title")).toBeVisible();
   });
 
   test("edits title via click and type", async ({
     submitUrl,
-    injectEvent,
+    injectSequence,
     mockedPage,
   }) => {
     await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
     const title = mockedPage.getByTestId("trip-title");
     await expect(title).toBeVisible();
     // Click to enter edit mode

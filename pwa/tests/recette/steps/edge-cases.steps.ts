@@ -201,9 +201,11 @@ When("je consulte ce voyage", async ({ mockedPage }) => {
 
 When(
   "je saisis un titre de voyage de {int} caractères",
-  async ({ submitUrl, injectEvent, mockedPage }, chars: number) => {
+  async ({ submitUrl, injectSequence, mockedPage }, chars: number) => {
     await submitUrl();
-    await injectEvent(routeParsedEvent());
+    // Structural stages must land for the trip view (and its editable title) to
+    // mount under the synchronous flow (ADR-043).
+    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
     const title = mockedPage.getByTestId("trip-title");
     await expect(title).toBeVisible({ timeout: 5000 });
     await title.click();
@@ -354,9 +356,11 @@ When("I view that trip", async ({ mockedPage }) => {
 
 When(
   "I enter a trip title of {int} characters",
-  async ({ submitUrl, injectEvent, mockedPage }, chars: number) => {
+  async ({ submitUrl, injectSequence, mockedPage }, chars: number) => {
     await submitUrl();
-    await injectEvent(routeParsedEvent());
+    // Structural stages must land for the trip view (and its editable title) to
+    // mount under the synchronous flow (ADR-043).
+    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
     const title = mockedPage.getByTestId("trip-title");
     await expect(title).toBeVisible({ timeout: 5000 });
     await title.click();
@@ -476,11 +480,12 @@ Then(
 );
 
 Then("l'état du calcul est correctement récupéré", async ({ mockedPage }) => {
-  // After reload, the trip detail endpoint serves the trip data,
-  // so the title or stage cards should re-appear
+  // After reload, the trip detail endpoint serves the trip data. With empty
+  // stages the synchronous flow shows the single loader; the trip view (and
+  // title) mounts once structural stages exist.
   await expect(
     mockedPage
-      .getByTestId("trip-title-skeleton")
+      .getByTestId("trip-loader")
       .or(mockedPage.getByTestId("trip-title")),
   ).toBeVisible({ timeout: 5000 });
 });
@@ -591,7 +596,7 @@ Then(
 Then("the computation state is correctly recovered", async ({ mockedPage }) => {
   await expect(
     mockedPage
-      .getByTestId("trip-title-skeleton")
+      .getByTestId("trip-loader")
       .or(mockedPage.getByTestId("trip-title")),
   ).toBeVisible({ timeout: 5000 });
 });

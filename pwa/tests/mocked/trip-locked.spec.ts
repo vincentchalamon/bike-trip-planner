@@ -67,11 +67,12 @@ test.describe("Trip locking", () => {
     const input = mockedPage.getByTestId("magic-link-input");
     await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
     await input.press("Enter");
-    // Wait for navigation to /trips/[id] and for TripPlanner to mount
+    // Wait for navigation to /trips/[id] and for the loader to mount (the trip
+    // view follows once structural stages arrive via the injected sequence).
     await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
 
@@ -118,11 +119,12 @@ test.describe("Trip locking", () => {
     const input = mockedPage.getByTestId("magic-link-input");
     await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
     await input.press("Enter");
-    // Wait for navigation to /trips/[id] and for TripPlanner to mount
+    // Wait for navigation to /trips/[id] and for the loader to mount (the trip
+    // view follows once structural stages arrive via the injected sequence).
     await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
 

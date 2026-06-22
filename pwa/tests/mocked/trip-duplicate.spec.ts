@@ -14,10 +14,12 @@ test.describe("Trip duplication", () => {
   });
 
   test("duplicate button navigates to new trip on success", async ({
-    submitUrl,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
+    // The config gear hosting the duplicate action lives in the trip view,
+    // which mounts once structural stages exist (synchronous flow, ADR-043).
+    await createFullTrip();
 
     await mockedPage.route(
       `**/trips/${getTripId()}/duplicate`,
@@ -43,10 +45,10 @@ test.describe("Trip duplication", () => {
   });
 
   test("duplicate button shows error toast on API failure", async ({
-    submitUrl,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
+    await createFullTrip();
 
     await mockedPage.route(
       `**/trips/${getTripId()}/duplicate`,

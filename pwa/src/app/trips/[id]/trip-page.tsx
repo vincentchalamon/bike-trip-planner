@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
-import { useRouter } from "next/navigation";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { TripPlanner } from "@/components/trip-planner";
@@ -25,7 +24,6 @@ type TripDetailResponse = components["schemas"]["TripDetail.jsonld"];
 
 function TripLoader({ tripId }: { tripId: string }) {
   const t = useTranslations("tripList");
-  const router = useRouter();
   const [loadError, setLoadError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -147,10 +145,22 @@ function TripLoader({ tripId }: { tripId: string }) {
             sourceType: "persisted",
             title: data.title ?? null,
           });
-          // A persisted trip with stages has already gone through Phase 2,
-          // so bypass the Acte 1.5 preview gate and render the full view.
-          useUiStore.getState().setAnalysisStarted(true);
         }
+
+        // Drive the synchronous-flow loader vs. trip view from `status`
+        // (ADR-043, PR4-front). A `draft` trip has no structural stages yet:
+        // keep the global processing flag on so the planner shows the single
+        // loader until Mercure (`stages_computed` / route lifecycle) resolves.
+        // A `ready` trip renders the full view immediately.
+        const ui = useUiStore.getState();
+        ui.setProcessing(data.status !== "ready");
+
+        // Hydrate the per-block async enrichment status from the detail
+        // payload so the weather / AI spinners reflect server-side progress on
+        // reload (a running block keeps spinning; a done/failed block renders
+        // its terminal state). Mercure events keep these live afterwards.
+        ui.setBlockStatus("weather", data.weatherStatus ?? null);
+        ui.setBlockStatus("ai", data.aiStatus ?? null);
 
         setIsLoaded(true);
       } catch {
@@ -209,14 +219,7 @@ function TripLoader({ tripId }: { tripId: string }) {
   return (
     <TripPlannerErrorBoundary>
       <Suspense fallback={null}>
-        <TripPlanner
-          onClose={() => {
-            clearTrip();
-            useUiStore.getState().setProcessing(false);
-            useUiStore.getState().setAccommodationScanning(false);
-            router.push("/");
-          }}
-        />
+        <TripPlanner />
       </Suspense>
     </TripPlannerErrorBoundary>
   );

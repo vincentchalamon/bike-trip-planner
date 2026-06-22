@@ -100,47 +100,9 @@ Fonctionnalité: Fonctionnalités IA
     Et que j'envoie le message "Un point d'eau ?" dans le chat IA
     Alors l'avertissement de sécurité en route est affiché
 
-  @desktop @critique
-  Scénario: Carte de raffinement IA visible à l'étape Aperçu
-    Étant donné que je suis sur l'aperçu de voyage avec la carte de raffinement IA
-    Alors la carte de raffinement IA est visible
-    Et le compteur de caractères de la carte de raffinement IA est affiché
-
-  @desktop
-  Scénario: Bouton "Appliquer" désactivé quand la suggestion est vide
-    Étant donné que je suis sur l'aperçu de voyage avec la carte de raffinement IA
-    Alors le bouton "Appliquer" du raffinement IA est désactivé
-
-  @desktop
-  Scénario: Bouton "Appliquer" activé quand une suggestion est saisie
-    Étant donné que je suis sur l'aperçu de voyage avec la carte de raffinement IA
-    Quand je saisis "Ajoute une étape à Aubenas" dans le raffinement IA
-    Alors le bouton "Appliquer" du raffinement IA est activé
-
-  @desktop
-  Scénario: Limite de 500 caractères respectée dans le raffinement IA
-    Étant donné que je suis sur l'aperçu de voyage avec la carte de raffinement IA
-    Quand je saisis 600 caractères dans le raffinement IA
-    Alors la suggestion de raffinement IA est limitée à 500 caractères
-
-  @desktop
-  Scénario: Le compteur de caractères décrémente à la saisie
-    Étant donné que je suis sur l'aperçu de voyage avec la carte de raffinement IA
-    Quand je saisis "Passe par la côte" dans le raffinement IA
-    Alors le compteur de raffinement IA indique le nombre de caractères restants
-
-  @desktop
-  Scénario: Effacer vide la suggestion de raffinement IA
-    Étant donné que je suis sur l'aperçu de voyage avec la carte de raffinement IA
-    Quand je saisis "Une suggestion à effacer" dans le raffinement IA
-    Et que je clique sur le bouton "Effacer" du raffinement IA
-    Alors la zone de saisie du raffinement IA est vide
-
-  @desktop
-  Scénario: Carte de raffinement IA désactivée quand le LLM est injoignable
-    Étant donné que je suis sur l'aperçu de voyage avec le raffinement IA indisponible
-    Alors la zone de saisie du raffinement IA est désactivée
-    Et un avis d'indisponibilité de l'IA est affiché
+  # ADR-043 : l'ecran "Apercu" et la carte de raffinement IA mono-coup ont ete
+  # retires (flux Saisie -> chargement -> voyage). Les scenarios de la carte de
+  # raffinement IA ont ete supprimes en consequence.
 
   @desktop @critique
   Scénario: Distance modifiée surlignée après recalcul

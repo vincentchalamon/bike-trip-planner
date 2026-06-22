@@ -162,6 +162,8 @@ function dispatchEvent(event: MercureEvent): void {
           store.updateStageWeather(s.dayNumber, s.weather);
         }
       }
+      // Weather enrichment landed — resolve its per-block spinner (ADR-043).
+      useUiStore.getState().setBlockStatus("weather", "done");
       break;
 
     case "pois_scanned":
@@ -472,32 +474,21 @@ function dispatchEvent(event: MercureEvent): void {
 
     case "trip_complete":
       store.setComputationStatus(event.data.computationStatus);
-      // Phase 2 completion implies the analysis was running; mark it
-      // explicitly BEFORE flipping isProcessing/accommodationScanning so
-      // any intermediate render observes { hasAnalysisStarted: true } and
-      // skips the "park on preview" branch of the stepper. Also covers
-      // legacy flows (tests, one-shot backends) where `trip_complete`
-      // fires before #322's split lands and `POST /trips/{id}/analyze`
-      // ever gets called.
-      useUiStore.getState().setAnalysisStarted(true);
-      useUiStore.getState().setAnalysisPhaseActive(false);
+      // Terminal completion — settle the global processing/scanning overlays
+      // and the per-block enrichment spinners (ADR-043). Weather/AI are marked
+      // done here as a safety net in case their dedicated events (or the
+      // detail-status hydration) did not flip them.
+      useUiStore.getState().setBlockStatus("weather", "done");
+      useUiStore.getState().setBlockStatus("ai", "done");
       store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
       break;
 
     case "computation_step_completed":
-      // Mode 1 — progress tick only. Drive the progress bar and do not
-      // mutate stage data (the final payload lands via `trip_ready`).
-      useUiStore.getState().setAnalysisProgress({
-        step: event.data.step,
-        category: event.data.category,
-        completed: event.data.completed,
-        total: event.data.total,
-      });
-      // Record the step as completed so the Acte 2 narrative screen can
-      // aggregate per-category status (see ProcessingProgress).
-      useUiStore.getState().recordAnalysisStep(event.data.step);
+      // Mode 1 — progress tick only. With the synchronous structural flow
+      // there is no narrative progress screen to drive (ADR-043); the tick is
+      // a no-op kept for wire-compatibility with the existing backend events.
       break;
 
     case "trip_ready": {
@@ -516,9 +507,11 @@ function dispatchEvent(event: MercureEvent): void {
         event.data.aiOverview,
       );
       store.setAiOverview(parsedOverview.success ? parsedOverview.data : null);
-      useUiStore.getState().setAnalysisProgress(null);
-      useUiStore.getState().setAnalysisStarted(true);
-      useUiStore.getState().setAnalysisPhaseActive(false);
+      // The terminal enrichment payload landed — resolve both async block
+      // spinners (ADR-043). Weather rides along in the atomic swap, so mark it
+      // done too in case `weather_fetched` never fired separately.
+      useUiStore.getState().setBlockStatus("ai", "done");
+      useUiStore.getState().setBlockStatus("weather", "done");
       store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
@@ -596,20 +589,28 @@ function dispatchEvent(event: MercureEvent): void {
       useUiStore.getState().setAccommodationScanning(false);
       break;
 
-    case "computation_error":
+    case "computation_error": {
       toast.error(`Computation failed: ${event.data.message}`);
-      // Surface the failure on the Acte 2 narrative screen so the user
-      // sees which step went wrong.
-      useUiStore
-        .getState()
-        .failAnalysisStep(event.data.computation, event.data.message);
+      // Map the failed computation onto its per-block spinner so the matching
+      // block surfaces an error + retry affordance (ADR-043). Weather/wind →
+      // weather; the LLM passes → ai. Other computations have no dedicated
+      // block and only settle the global processing flag below.
+      const computation = event.data.computation;
+      if (computation === "weather" || computation === "wind") {
+        useUiStore.getState().setBlockStatus("weather", "failed");
+      } else if (
+        computation === "stage_ai_analysis" ||
+        computation === "trip_ai_overview"
+      ) {
+        useUiStore.getState().setBlockStatus("ai", "failed");
+      }
       if (!event.data.retryable) {
         store.clearRecomputingStages();
         useUiStore.getState().setProcessing(false);
         useUiStore.getState().setAccommodationScanning(false);
-        useUiStore.getState().setAnalysisPhaseActive(false);
       }
       break;
+    }
   }
 }
 

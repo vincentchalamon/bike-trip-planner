@@ -218,12 +218,17 @@ When("I submit the link {string}", async ({ submitUrl }, link: string) => {
   await submitUrl(link);
 });
 
-When("l'événement route_parsed est reçu", async ({ injectEvent }) => {
-  await injectEvent(routeParsedEvent());
+// Under the synchronous flow (ADR-043) the route totals (distance / elevation)
+// live in the trip-view summary, which mounts only once structural stages
+// exist. So emit `stages_computed` alongside `route_parsed`: the stage
+// distances sum to the same 187.3 km / 2850 m the route metadata carries, so
+// the displayed totals are unchanged while the view is now rendered.
+When("l'événement route_parsed est reçu", async ({ injectSequence }) => {
+  await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
 });
 
-When("the route_parsed event is received", async ({ injectEvent }) => {
-  await injectEvent(routeParsedEvent());
+When("the route_parsed event is received", async ({ injectSequence }) => {
+  await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
 });
 
 When(
@@ -293,9 +298,11 @@ Then("I stay on the home page", async ({ mockedPage }) => {
 Then(
   "je vois le titre du voyage ou son squelette de chargement",
   async ({ mockedPage }) => {
+    // Synchronous flow (ADR-043): right after submission the app shows the
+    // single loader; the trip title only mounts once structural stages arrive.
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
   },
@@ -304,7 +311,7 @@ Then(
 Then("I see the trip title or its loading skeleton", async ({ mockedPage }) => {
   await expect(
     mockedPage
-      .getByTestId("trip-title-skeleton")
+      .getByTestId("trip-loader")
       .or(mockedPage.getByTestId("trip-title")),
   ).toBeVisible({ timeout: 5000 });
 });

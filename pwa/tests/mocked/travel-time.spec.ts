@@ -63,6 +63,9 @@ test.describe("Travel time estimation", () => {
   }) => {
     await submitUrl();
     await injectEvent(routeParsedEvent());
+    // Structural stages must land for the trip view (and its config gear) to
+    // mount under the synchronous flow (ADR-043).
+    await injectEvent(stagesComputedEvent());
     await openConfigPanel(mockedPage);
 
     const departureHourSlider = mockedPage.getByRole("slider", {

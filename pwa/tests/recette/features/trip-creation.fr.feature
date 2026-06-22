@@ -33,13 +33,13 @@ Fonctionnalité: Création de voyage
   @desktop @critique
   Scénario: Affichage de la distance totale après le calcul des étapes
     Quand je soumets un lien Komoot valide
-    Et que l'événement route_parsed est reçu
+    Et que les événements route_parsed et stages_computed sont reçus
     Alors la distance totale affiche "187km"
 
   @desktop @critique
   Scénario: Affichage du dénivelé total après le calcul des étapes
     Quand je soumets un lien Komoot valide
-    Et que l'événement route_parsed est reçu
+    Et que les événements route_parsed et stages_computed sont reçus
     Alors le dénivelé total affiche "2850m"
 
   @desktop @critique

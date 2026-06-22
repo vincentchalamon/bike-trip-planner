@@ -30,15 +30,15 @@ Feature: Trip creation
     And I see the trip title or its loading skeleton
 
   @desktop @critical
-  Scenario: Total distance displayed after route parsed
+  Scenario: Total distance displayed after stages computed
     When I submit a valid Komoot link
-    And the route_parsed event is received
+    And the route_parsed and stages_computed events are received
     Then the total distance shows "187km"
 
   @desktop @critical
-  Scenario: Total elevation displayed after route parsed
+  Scenario: Total elevation displayed after stages computed
     When I submit a valid Komoot link
-    And the route_parsed event is received
+    And the route_parsed and stages_computed events are received
     Then the total elevation shows "2850m"
 
   @desktop @critical
