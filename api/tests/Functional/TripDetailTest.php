@@ -179,6 +179,26 @@ final class TripDetailTest extends ApiTestCase
         $this->assertNull($data['aiStatus'] ?? null);
     }
 
+    #[Test]
+    public function detailExposesDoneBlockStatusOnPartialSuccess(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
+        \assert($tracker instanceof ComputationTrackerInterface);
+        $tracker->initializeComputations(self::TRIP_ID, [
+            ComputationName::WEATHER,
+            ComputationName::WIND,
+        ]);
+        // Mixed terminal state: one done, one failed → done (partial success).
+        $tracker->markDone(self::TRIP_ID, ComputationName::WEATHER);
+        $tracker->markFailed(self::TRIP_ID, ComputationName::WIND);
+
+        $data = $this->fetchDetail();
+        $this->assertSame('done', $data['weatherStatus']);
+    }
+
     /**
      * @return array<string, mixed>
      */
