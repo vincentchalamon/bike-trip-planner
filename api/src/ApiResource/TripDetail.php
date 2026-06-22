@@ -59,12 +59,12 @@ final readonly class TripDetail
         public string $status,
         #[ApiProperty(
             description: 'Per-block weather computation status derived from the ComputationTracker (WEATHER/WIND). Null when no computations are tracked (e.g. expired Redis TTL).',
-            openapiContext: ['type' => 'string', 'enum' => ['pending', 'running', 'done', 'failed'], 'nullable' => true],
+            openapiContext: ['type' => ['string', 'null'], 'enum' => ['pending', 'running', 'done', 'failed', null]],
         )]
         public ?string $weatherStatus,
         #[ApiProperty(
             description: 'Per-block AI computation status derived from the ComputationTracker (STAGE_AI_ANALYSIS/TRIP_AI_OVERVIEW). Null when no computations are tracked (e.g. expired Redis TTL).',
-            openapiContext: ['type' => 'string', 'enum' => ['pending', 'running', 'done', 'failed'], 'nullable' => true],
+            openapiContext: ['type' => ['string', 'null'], 'enum' => ['pending', 'running', 'done', 'failed', null]],
         )]
         public ?string $aiStatus,
         #[ApiProperty(openapiContext: [
