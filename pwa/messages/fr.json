@@ -583,7 +583,7 @@
     "subtitle": "Décris ton projet, l'assistant proposera un itinéraire.",
     "historyAriaLabel": "Conversation avec l'assistant IA",
     "stubGreeting": "Bonjour ! Décris l'aventure que tu imagines (région, durée, période, niveau...) et je te proposerai un itinéraire sur mesure.",
-    "stubReply": "C'est noté ! Une fois la connexion à l'assistant activée, je te proposerai un itinéraire détaillé avec des étapes adaptées.",
+    "stubReply": "C'est noté ! Ajoute des précisions si tu veux (durée, dénivelé, type de route…), puis clique sur « Valider et continuer » pour que je génère ton itinéraire.",
     "inputLabel": "Ta demande",
     "inputPlaceholder": "Ex : « Je veux faire le tour de Corse en 10 jours en septembre »",
     "inputHint": "Entrée pour envoyer · Maj + Entrée pour un retour à la ligne",
