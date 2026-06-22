@@ -478,6 +478,8 @@ function dispatchEvent(event: MercureEvent): void {
       // and the per-block enrichment spinners (ADR-043). Weather/AI are marked
       // done here as a safety net in case their dedicated events (or the
       // detail-status hydration) did not flip them.
+      useUiStore.getState().setBlockStatus("weather", "done");
+      useUiStore.getState().setBlockStatus("ai", "done");
       store.clearRecomputingStages();
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);

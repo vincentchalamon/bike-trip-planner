@@ -220,8 +220,9 @@ export function TripPlanner() {
       ).detail;
       if (!detail) return;
       const ui = useUiStore.getState();
-      if ("weather" in detail) ui.setBlockStatus("weather", detail.weather!);
-      if ("ai" in detail) ui.setBlockStatus("ai", detail.ai!);
+      if (detail.weather !== undefined)
+        ui.setBlockStatus("weather", detail.weather);
+      if (detail.ai !== undefined) ui.setBlockStatus("ai", detail.ai);
     };
     const onClearAiOverview = () => {
       useTripStore.getState().setAiOverview(null);
