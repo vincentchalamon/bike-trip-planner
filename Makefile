@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-default-pbf provision provision-update provision-recette coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-default-pbf ensure-jwt-recette provision provision-update provision-recette coverage coverage-ci migration migrate db-create fixtures
 
 # Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
 # explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
@@ -27,6 +27,10 @@ install: ## Install dependencies
 ensure-default-pbf:
 	@test -f .docker/osm/data/default.osm.pbf || cp .docker/osm/lille-stub.osm.pbf .docker/osm/data/default.osm.pbf
 
+ensure-jwt-recette:
+	@mkdir -p .docker/jwt-recette
+	@(test -f .docker/jwt-recette/private.pem && test -f .docker/jwt-recette/public.pem) || { openssl genpkey -algorithm RSA -out .docker/jwt-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/jwt-recette/private.pem -out .docker/jwt-recette/public.pem -passin pass:recette; }
+
 start-dev: ensure-default-pbf ## Start the Docker environment (Detached) in development mode
 	@COMPOSE_PROFILES=routing docker compose up --wait
 
@@ -36,9 +40,7 @@ build: ## Build the Docker environment in production mode
 start: ensure-default-pbf ## Start the Docker environment (Detached) in production mode
 	@docker compose -f compose.yaml up --wait
 
-start-recette: ensure-default-pbf ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make provision` + `--profile routing`.
-	@mkdir -p .docker/jwt-recette
-	@(test -f .docker/jwt-recette/private.pem && test -f .docker/jwt-recette/public.pem) || { openssl genpkey -algorithm RSA -out .docker/jwt-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/jwt-recette/private.pem -out .docker/jwt-recette/public.pem -passin pass:recette; }
+start-recette: ensure-default-pbf ensure-jwt-recette ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make provision` + `--profile routing`.
 	@docker compose -f compose.yaml -f compose.recette.yaml up --wait
 
 stop: ## Stop the Docker environment
@@ -192,7 +194,7 @@ provision-update: ## Trigger a non-interactive provisioner update (re-download O
 	@docker compose --profile provisioning run --rm provisioner --no-interaction
 	@docker compose run --rm php bin/console app:markets:import
 
-provision-recette: ensure-default-pbf ## Provision the iso-prod recette reference sources (non-interactive; first run needs a seeded .docker/osm/data/regions.json, e.g. {"slugs":["nord-pas-de-calais"]}, or a prior `make provision`)
+provision-recette: ensure-default-pbf ensure-jwt-recette ## Provision the iso-prod recette reference sources (non-interactive; first run needs a seeded .docker/osm/data/regions.json, e.g. {"slugs":["nord-pas-de-calais"]}, or a prior `make provision`)
 	@docker compose -f compose.yaml -f compose.recette.yaml --profile provisioning run --rm -T provisioner --no-interaction
 	@docker compose -f compose.yaml -f compose.recette.yaml run --rm php bin/console app:markets:import
 
