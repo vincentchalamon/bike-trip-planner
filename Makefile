@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help start stop install qa test php-shell pwa-shell ensure-default-pbf provision provision-update provision-recette coverage coverage-ci migration migrate db-create fixtures
+.PHONY: help start build start-dev stop install qa test test-pwa php-shell pwa-shell ensure-default-pbf ensure-jwt-recette provision provision-update provision-recette coverage coverage-ci migration migrate db-create fixtures
 
 # Dev loads the iso-prod base + dev overrides automatically. Prod targets pass an
 # explicit `-f compose.yaml`, which takes precedence over COMPOSE_FILE, so the dev
@@ -24,26 +24,24 @@ install: ## Install dependencies
 	@docker compose run --rm --no-deps pwa npm install
 
 ## --- 🐳 Docker Infrastructure ---
-ensure-default-pbf: ## Ensure default.osm.pbf exists (copies Lille stub if missing)
+ensure-default-pbf:
 	@test -f .docker/osm/data/default.osm.pbf || cp .docker/osm/lille-stub.osm.pbf .docker/osm/data/default.osm.pbf
+
+ensure-jwt-recette:
+	@mkdir -p .docker/jwt-recette
+	@(test -f .docker/jwt-recette/private.pem && test -f .docker/jwt-recette/public.pem) || { openssl genpkey -algorithm RSA -out .docker/jwt-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/jwt-recette/private.pem -out .docker/jwt-recette/public.pem -passin pass:recette; }
 
 start-dev: ensure-default-pbf ## Start the Docker environment (Detached) in development mode
 	@COMPOSE_PROFILES=routing docker compose up --wait
 
-build: build-prod ## Alias for build-prod
-
-build-prod: ## Build the Docker environment in production mode
+build: ## Build the Docker environment in production mode
 	@docker compose -f compose.yaml build
 
-start: start-prod ## Alias for start-prod
-
-start-prod: ensure-default-pbf ## Start the Docker environment (Detached) in production mode
+start: ensure-default-pbf ## Start the Docker environment (Detached) in production mode
 	@docker compose -f compose.yaml up --wait
 
-start-recette: ensure-default-pbf ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make provision` + `--profile routing`.
-	@mkdir -p .docker/jwt-recette
-	@(test -f .docker/jwt-recette/private.pem && test -f .docker/jwt-recette/public.pem) || { openssl genpkey -algorithm RSA -out .docker/jwt-recette/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:recette && openssl rsa -pubout -in .docker/jwt-recette/private.pem -out .docker/jwt-recette/public.pem -passin pass:recette; }
-	@JWT_PRIVATE_KEY_PATH=$(CURDIR)/.docker/jwt-recette/private.pem JWT_PUBLIC_KEY_PATH=$(CURDIR)/.docker/jwt-recette/public.pem JWT_PASSPHRASE=recette docker compose -f compose.yaml -f compose.recette.yaml up --wait
+start-recette: ensure-default-pbf ensure-jwt-recette ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make provision` + `--profile routing`.
+	@docker compose -f compose.yaml -f compose.recette.yaml up --wait
 
 stop: ## Stop the Docker environment
 	@docker compose stop
@@ -89,8 +87,6 @@ tsc: typescript-check ## Alias for "typescript-check"
 
 qa-php: php-cs-fixer rector phpstan ## Run PHP-CS-Fixer, Rector, and PHPStan
 
-lint: qa-php ## Alias for qa-php
-
 qa-pwa: eslint i18n-check prettier typescript-check ## Run ESLint, i18n check, Prettier, and TypeScript Check
 
 qa-doc: markdownlint ## Run Markdownlint
@@ -113,7 +109,7 @@ security-check: ## Run Security Check
 	@docker compose run --rm --no-deps php symfony check:security
 	@docker compose --profile provisioning run --rm --entrypoint "" provisioner symfony check:security
 
-test-unit: ## Run Vitest unit tests (frontend)
+test-pwa: ## Run Vitest unit tests (frontend)
 	@docker compose exec pwa npm run test:unit
 
 test-e2e: ## Run Playwright End-to-End tests
@@ -190,18 +186,17 @@ coverage-ci: ## Run PHPUnit with coverage (Clover XML for CI)
 test: qa test-php test-e2e openapi-lint security-check ## Run full test suite (Requires QA to pass first)
 
 ## --- 🗺️ OSM Provisioning ---
-provision: ensure-default-pbf ## Provision OSM regions + import the Tier-1 PostGIS index
-	@docker compose --profile provisioning run --rm provisioner --with-postgis
+provision: ensure-default-pbf ## Provision all reference sources (OSM/PostGIS + DataTourisme + markets)
+	@docker compose --profile provisioning run --rm provisioner
+	@docker compose run --rm php bin/console app:markets:import
 
-provision-update: ## Trigger a non-interactive provisioner update (re-download OSM + re-import PostGIS)
-	@docker compose --profile provisioning run --rm provisioner --no-interaction --with-postgis
+provision-update: ## Trigger a non-interactive provisioner update (re-download OSM + re-import PostGIS + DataTourisme + markets)
+	@docker compose --profile provisioning run --rm provisioner --no-interaction
+	@docker compose run --rm php bin/console app:markets:import
 
-# `--build` is required: it builds the `prod` provisioner stage (which COPYs the code) instead
-# of reusing a `dev`-tagged image whose /app is empty (code is bind-mounted in dev), which would
-# fail with "Could not open input file: bin/provision". `-f compose.yaml -f compose.recette.yaml`
-# is passed explicitly so the dev COMPOSE_FILE layer never leaks in.
-provision-recette: ensure-default-pbf ## Provision the iso-prod recette PostGIS index (non-interactive; first run needs a seeded .docker/osm/data/regions.json, e.g. {"slugs":["nord-pas-de-calais"]}, or a prior `make provision`)
-	@JWT_PRIVATE_KEY_PATH=$(CURDIR)/.docker/jwt-recette/private.pem JWT_PUBLIC_KEY_PATH=$(CURDIR)/.docker/jwt-recette/public.pem JWT_PASSPHRASE=recette docker compose -f compose.yaml -f compose.recette.yaml --profile provisioning run --build --rm -T provisioner --no-interaction --with-postgis
+provision-recette: ensure-default-pbf ensure-jwt-recette ## Provision the iso-prod recette reference sources (non-interactive; first run needs a seeded .docker/osm/data/regions.json, e.g. {"slugs":["nord-pas-de-calais"]}, or a prior `make provision`)
+	@docker compose -f compose.yaml -f compose.recette.yaml --profile provisioning run --rm -T provisioner --no-interaction
+	@docker compose -f compose.yaml -f compose.recette.yaml run --rm php bin/console app:markets:import
 
 ## --- 🗄️ Database ---
 migration: ## Generate a Doctrine migration

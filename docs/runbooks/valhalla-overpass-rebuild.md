@@ -33,21 +33,15 @@ ls -lh .docker/default.osm.pbf
 
 ## Procédure
 
-1. **Ensure a default PBF exists** (Makefile bootstrap, Lille stub by default):
-
-   ```bash
-   make ensure-default-pbf
-   ```
-
-2. **Re-run the provisioner** to download / build the requested regions:
+1. **Re-run the provisioner** to download / build the requested regions:
 
    ```bash
    make provision
    ```
 
-   The provisioner runs interactively under the `provisioning` profile (`docker compose --profile provisioning run --rm provisioner`). Follow the prompts to select Geofabrik regions; tiles are written to the `valhalla-tiles` volume.
+   `make provision` first ensures a default PBF exists (Lille stub by default), then runs the provisioner interactively under the `provisioning` profile (`docker compose --profile provisioning run --rm provisioner`). Follow the prompts to select Geofabrik regions; tiles are written to the `valhalla-tiles` volume.
 
-3. **Force a full Valhalla rebuild** when tiles are corrupted (destructive — clears the volume):
+2. **Force a full Valhalla rebuild** when tiles are corrupted (destructive — clears the volume):
 
    ```bash
    docker compose down valhalla
@@ -56,7 +50,7 @@ ls -lh .docker/default.osm.pbf
    docker compose up -d valhalla
    ```
 
-4. **Re-warm caches** by issuing a known-good routing request:
+3. **Re-warm caches** by issuing a known-good routing request:
 
    ```bash
    docker compose exec php curl -sS -X POST http://valhalla:8002/route \
@@ -64,7 +58,7 @@ ls -lh .docker/default.osm.pbf
      -d '{"locations":[{"lat":50.63,"lon":3.06},{"lat":50.64,"lon":3.07}],"costing":"bicycle"}'
    ```
 
-5. **Reference data** — POI / accommodation / event data is no longer fetched from Overpass at runtime; it is served from the local `osm` / `tourism` PostGIS schemas populated by the `provisioner` (ADR-040). If those queries return nothing, it is a provisioning gap, not a routing one: re-run the provisioner (`make provision` with `--with-postgis` / `--with-datatourisme`) rather than rebuilding tiles here.
+4. **Reference data** — POI / accommodation / event data is no longer fetched from Overpass at runtime; it is served from the local `osm` / `tourism` PostGIS schemas populated by the `provisioner` (ADR-040). If those queries return nothing, it is a provisioning gap, not a routing one: re-run the provisioner (`make provision`, which loads OSM + DataTourisme + markets) rather than rebuilding tiles here.
 
 ## Post-action
 
@@ -78,4 +72,4 @@ ls -lh .docker/default.osm.pbf
 - ADR-017 — Valhalla routing engine and (former) Overpass integration
 - ADR-020 — Dynamic Overpass region provisioning
 - ADR-025 — Removal of self-hosted Overpass
-- `Makefile` targets `ensure-default-pbf`, `provision`
+- `Makefile` target `provision` (ensures the default PBF, then provisions all reference sources)

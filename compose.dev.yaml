@@ -124,8 +124,11 @@ services:
 
   # Dev provisioner: build the `dev` target with the working tree mounted, so
   # `make provision` and the provisioner QA targets run against live code
-  # (the prod base bakes the sources into the image instead).
+  # (the prod base bakes the sources into the image instead). The explicit `:dev`
+  # tag keeps it distinct from the `:prod` image (compose.yaml) so the two targets
+  # never collide — that collision is what forced recette's `--build`.
   provisioner:
+    image: bike-trip-planner-provisioner:dev
     build:
       target: dev
     volumes: !override
