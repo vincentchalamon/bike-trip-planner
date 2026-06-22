@@ -242,10 +242,12 @@ docker compose restart valhalla  # rebuild routing tiles from the new PBF
 `make provision` / `make provision-update` inherit the dev `COMPOSE_FILE` and target the dev provisioner overlay. To provision against the iso-prod recette stack started with `make start-recette`, use the dedicated target instead:
 
 ```bash
-make provision-recette           # provision the recette PostGIS index (non-interactive)
+make provision-recette           # provision the recette sources (OSM PostGIS, plus DataTourisme when configured; non-interactive)
 ```
 
 It targets `-f compose.yaml -f compose.recette.yaml` with the recette JWT vars and forces `--build` so the `prod` provisioner stage (which COPYs the code) is rebuilt rather than reusing a `dev`-tagged image whose `/app` is empty. The first run needs a seeded region selection in `.docker/osm/data/regions.json` (e.g. `{"slugs":["nord-pas-de-calais"]}`) or a prior interactive `make provision`.
+
+It always imports the OSM PostGIS index (`--with-postgis`). It additionally imports DataTourisme (`--with-datatourisme`) when `DATATOURISME_FLUX_ID` is set in the environment (exported shell var or `.env`); the compose `provisioner` service resolves `DATATOURISME_FLUX_ID` / `DATATOURISME_APP_KEY` from the environment. Without `DATATOURISME_FLUX_ID`, only OSM is provisioned.
 
 See [ADR-036](docs/adr/adr-036-manual-osm-data-refresh.md) for why the automated nightly job (`osm-cron`) was dropped.
 
