@@ -14,6 +14,8 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripDetail;
 use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationTrackerInterface;
+use App\Enum\ComputationName;
 use App\Enum\TripStatus;
 use App\Osm\CoverageRepositoryInterface;
 use App\Osm\CycleRouteRepositoryInterface;
@@ -39,6 +41,7 @@ final readonly class TripDetailProvider implements ProviderInterface
         private TripLocker $tripLocker,
         private CoverageRepositoryInterface $coverageRepository,
         private CycleRouteRepositoryInterface $cycleRouteRepository,
+        private ComputationTrackerInterface $computationTracker,
     ) {
     }
 
@@ -59,6 +62,8 @@ final readonly class TripDetailProvider implements ProviderInterface
         \assert($request->id instanceof Uuid);
 
         $stages = $this->tripStateManager->getStages($id) ?? [];
+
+        $statuses = $this->computationTracker->getStatuses($id);
 
         // One batched query for the on-cycle-network fraction of every stage.
         $cycleNetwork = $this->cycleRouteRepository->onNetworkFractions(
@@ -90,8 +95,80 @@ final readonly class TripDetailProvider implements ProviderInterface
             // Fallback for trips persisted before the status column existed: infer
             // readiness from whether stages are present.
             status: '' !== $request->status ? $request->status : ([] !== $stages ? TripStatus::READY->value : TripStatus::DRAFT->value),
+            weatherStatus: $this->deriveBlockStatus($this->computationsInCategory('weather'), $statuses),
+            aiStatus: $this->deriveBlockStatus($this->computationsInCategory('ai_analysis'), $statuses),
             stages: array_map($this->serializeStage(...), $stages, $cycleNetwork),
         );
+    }
+
+    /**
+     * Lists the {@see ComputationName} cases belonging to a progress category,
+     * so the block-status derivation stays aligned with {@see ComputationName::category()}
+     * instead of hardcoding the WEATHER/WIND or STAGE_AI_ANALYSIS/TRIP_AI_OVERVIEW pairs.
+     *
+     * @return list<ComputationName>
+     */
+    private function computationsInCategory(string $category): array
+    {
+        return array_values(array_filter(
+            ComputationName::cases(),
+            static fn (ComputationName $c): bool => $c->category() === $category,
+        ));
+    }
+
+    /**
+     * Aggregates the tracked statuses of a block's computations into a single label.
+     *
+     * Mirrors {@see TripCollectionProvider::computeStatus()} (30-min TTL cache that
+     * can return null). Deterministic rule, evaluated against the block's
+     * computations actually present in `$statuses`:
+     *   - `$statuses === null`                  → null (nothing tracked, e.g. expired TTL)
+     *   - no block computation present at all    → null (front falls back to data presence)
+     *   - at least one `pending` or `running`    → 'running'
+     *   - all present are `done`                 → 'done'
+     *   - all present are terminal, ≥1 `failed`,
+     *     0 `done`                               → 'failed'
+     *
+     * @param list<ComputationName>      $computationNames
+     * @param array<string, string>|null $statuses
+     */
+    private function deriveBlockStatus(array $computationNames, ?array $statuses): ?string
+    {
+        if (null === $statuses) {
+            return null;
+        }
+
+        $present = [];
+        foreach ($computationNames as $name) {
+            if (isset($statuses[$name->value])) {
+                $present[] = $statuses[$name->value];
+            }
+        }
+
+        if ([] === $present) {
+            return null;
+        }
+
+        $hasDone = false;
+        $hasFailed = false;
+        foreach ($present as $status) {
+            if ('pending' === $status || 'running' === $status) {
+                return 'running';
+            }
+
+            if ('done' === $status) {
+                $hasDone = true;
+            } elseif ('failed' === $status) {
+                $hasFailed = true;
+            }
+        }
+
+        // All present statuses are terminal here (no pending/running returned above).
+        if ($hasFailed && !$hasDone) {
+            return 'failed';
+        }
+
+        return 'done';
     }
 
     /**

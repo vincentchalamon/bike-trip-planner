@@ -1543,6 +1543,16 @@ export interface components {
              * @enum {string}
              */
             status?: "draft" | "ready";
+            /**
+             * @description Per-block weather computation status derived from the ComputationTracker (WEATHER/WIND). Null when no computations are tracked (e.g. expired Redis TTL).
+             * @enum {string|null}
+             */
+            weatherStatus?: "pending" | "running" | "done" | "failed" | null;
+            /**
+             * @description Per-block AI computation status derived from the ComputationTracker (STAGE_AI_ANALYSIS/TRIP_AI_OVERVIEW). Null when no computations are tracked (e.g. expired Redis TTL).
+             * @enum {string|null}
+             */
+            aiStatus?: "pending" | "running" | "done" | "failed" | null;
             /** @description Serialized stage DTOs */
             stages?: {
                 dayNumber?: number;
@@ -1720,6 +1730,16 @@ export interface components {
              * @enum {string}
              */
             status?: "draft" | "ready";
+            /**
+             * @description Per-block weather computation status derived from the ComputationTracker (WEATHER/WIND). Null when no computations are tracked (e.g. expired Redis TTL).
+             * @enum {string|null}
+             */
+            weatherStatus?: "pending" | "running" | "done" | "failed" | null;
+            /**
+             * @description Per-block AI computation status derived from the ComputationTracker (STAGE_AI_ANALYSIS/TRIP_AI_OVERVIEW). Null when no computations are tracked (e.g. expired Redis TTL).
+             * @enum {string|null}
+             */
+            aiStatus?: "pending" | "running" | "done" | "failed" | null;
             /** @description Serialized stage DTOs */
             stages?: {
                 dayNumber?: number;
