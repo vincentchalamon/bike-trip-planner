@@ -529,7 +529,6 @@ export function useTripPlanner() {
     newMaxDistance: number,
     newAverageSpeed: number,
     newEbikeMode: boolean,
-    clearStages: boolean,
   ) {
     if (!tripId) return;
 
@@ -556,8 +555,16 @@ export function useTripPlanner() {
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
-        if (clearStages) {
-          useTripStore.getState().setStages([]);
+        // Mark every stage as recomputing so the timeline shows the shimmer
+        // skeleton until the `stages_computed` Mercure event lands. The stages
+        // are NOT wiped: clearing them flips `isTripLoaded` to false, unmounts
+        // the whole trip view (toolbar, config, undo/redo) and defeats the
+        // in-place merge that preserves accommodations/labels (use-mercure).
+        const stageCount = useTripStore.getState().stages.length;
+        if (stageCount > 0) {
+          actions.startStageRecomputation(
+            Array.from({ length: stageCount }, (_, i) => i),
+          );
         }
       }
     } catch {
@@ -610,7 +617,6 @@ export function useTripPlanner() {
       newMaxDistance,
       newAverageSpeed,
       getPacingState().ebikeMode,
-      true,
     );
   }
 
@@ -656,7 +662,6 @@ export function useTripPlanner() {
       pacing.maxDistancePerDay,
       pacing.averageSpeed,
       newEbikeMode,
-      false,
     );
   }
 
