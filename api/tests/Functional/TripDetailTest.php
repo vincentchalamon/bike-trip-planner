@@ -9,7 +9,9 @@ use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
+use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
+use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -101,6 +103,114 @@ final class TripDetailTest extends ApiTestCase
         // No cycle routes provisioned in the test DB → stage is not on a network.
         $this->assertArrayHasKey('onCycleNetwork', $stage);
         $this->assertEqualsWithDelta(0.0, $stage['onCycleNetwork'], 0.0001);
+        // No computations tracked for this trip → block statuses are null. JSON-LD
+        // strips null properties, so they are absent here (the front reads them as
+        // undefined and falls back to the presence of the underlying data).
+        $this->assertNull($data['weatherStatus'] ?? null);
+        $this->assertNull($data['aiStatus'] ?? null);
+    }
+
+    #[Test]
+    public function detailExposesRunningBlockStatusWhileComputing(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
+        \assert($tracker instanceof ComputationTrackerInterface);
+        $tracker->initializeComputations(self::TRIP_ID, [
+            ComputationName::WEATHER,
+            ComputationName::WIND,
+            ComputationName::STAGE_AI_ANALYSIS,
+            ComputationName::TRIP_AI_OVERVIEW,
+        ]);
+        // Weather: one done, one still running → running. AI: both pending → running.
+        $tracker->markDone(self::TRIP_ID, ComputationName::WEATHER);
+        $tracker->markRunning(self::TRIP_ID, ComputationName::WIND);
+
+        $data = $this->fetchDetail();
+        $this->assertSame('running', $data['weatherStatus']);
+        $this->assertSame('running', $data['aiStatus']);
+    }
+
+    #[Test]
+    public function detailExposesDoneBlockStatusWhenAllComputationsSucceed(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
+        \assert($tracker instanceof ComputationTrackerInterface);
+        $tracker->initializeComputations(self::TRIP_ID, [
+            ComputationName::WEATHER,
+            ComputationName::WIND,
+            ComputationName::STAGE_AI_ANALYSIS,
+            ComputationName::TRIP_AI_OVERVIEW,
+        ]);
+        $tracker->markDone(self::TRIP_ID, ComputationName::WEATHER);
+        $tracker->markDone(self::TRIP_ID, ComputationName::WIND);
+        $tracker->markDone(self::TRIP_ID, ComputationName::STAGE_AI_ANALYSIS);
+        $tracker->markDone(self::TRIP_ID, ComputationName::TRIP_AI_OVERVIEW);
+
+        $data = $this->fetchDetail();
+        $this->assertSame('done', $data['weatherStatus']);
+        $this->assertSame('done', $data['aiStatus']);
+    }
+
+    #[Test]
+    public function detailExposesFailedBlockStatusWhenAllTerminalAndNoneSucceeded(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
+        \assert($tracker instanceof ComputationTrackerInterface);
+        $tracker->initializeComputations(self::TRIP_ID, [
+            ComputationName::WEATHER,
+            ComputationName::WIND,
+        ]);
+        // All weather computations terminal with at least one failed and zero done → failed.
+        $tracker->markFailed(self::TRIP_ID, ComputationName::WEATHER);
+        $tracker->markFailed(self::TRIP_ID, ComputationName::WIND);
+
+        $data = $this->fetchDetail();
+        $this->assertSame('failed', $data['weatherStatus']);
+        // AI computations were never tracked → null, stripped from the JSON-LD payload.
+        $this->assertNull($data['aiStatus'] ?? null);
+    }
+
+    #[Test]
+    public function detailExposesDoneBlockStatusOnPartialSuccess(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $tracker = self::getContainer()->get(ComputationTrackerInterface::class);
+        \assert($tracker instanceof ComputationTrackerInterface);
+        $tracker->initializeComputations(self::TRIP_ID, [
+            ComputationName::WEATHER,
+            ComputationName::WIND,
+        ]);
+        // Mixed terminal state: one done, one failed → done (partial success).
+        $tracker->markDone(self::TRIP_ID, ComputationName::WEATHER);
+        $tracker->markFailed(self::TRIP_ID, ComputationName::WIND);
+
+        $data = $this->fetchDetail();
+        $this->assertSame('done', $data['weatherStatus']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function fetchDetail(): array
+    {
+        $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+
+        return $response->toArray(false);
     }
 
     #[Test]
