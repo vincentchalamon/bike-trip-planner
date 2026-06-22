@@ -29,7 +29,7 @@ test.describe("Mobile build config", () => {
     await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
   });

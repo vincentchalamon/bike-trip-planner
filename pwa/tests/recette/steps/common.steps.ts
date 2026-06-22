@@ -293,9 +293,11 @@ Then("I stay on the home page", async ({ mockedPage }) => {
 Then(
   "je vois le titre du voyage ou son squelette de chargement",
   async ({ mockedPage }) => {
+    // Synchronous flow (ADR-043): right after submission the app shows the
+    // single loader; the trip title only mounts once structural stages arrive.
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
   },
@@ -304,7 +306,7 @@ Then(
 Then("I see the trip title or its loading skeleton", async ({ mockedPage }) => {
   await expect(
     mockedPage
-      .getByTestId("trip-title-skeleton")
+      .getByTestId("trip-loader")
       .or(mockedPage.getByTestId("trip-title")),
   ).toBeVisible({ timeout: 5000 });
 });

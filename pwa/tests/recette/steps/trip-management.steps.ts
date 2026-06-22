@@ -384,7 +384,7 @@ Then(
 Then("je vois un indicateur de chargement", async ({ mockedPage }) => {
   await expect(
     mockedPage
-      .getByTestId("trip-title-skeleton")
+      .getByTestId("trip-loader")
       .or(mockedPage.getByTestId("trip-title")),
   ).toBeVisible({ timeout: 5000 });
 });
@@ -458,7 +458,7 @@ Then("stages are displayed correctly without dates", async ({ mockedPage }) => {
 Then("I see a loading indicator", async ({ mockedPage }) => {
   await expect(
     mockedPage
-      .getByTestId("trip-title-skeleton")
+      .getByTestId("trip-loader")
       .or(mockedPage.getByTestId("trip-title")),
   ).toBeVisible({ timeout: 5000 });
 });

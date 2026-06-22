@@ -68,9 +68,11 @@ test.describe("Out-of-zone trips", () => {
     await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
     await input.press("Enter");
     await mockedPage.waitForURL(/\/trips\//, { timeout: 5000 });
+    // The synchronous flow lands on the loader; the trip view follows once
+    // structural stages arrive via the injected sequence.
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
 

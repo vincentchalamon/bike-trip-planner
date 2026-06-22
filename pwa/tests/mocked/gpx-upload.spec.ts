@@ -42,10 +42,12 @@ test.describe("GPX upload flow", () => {
     // lifecycle drives the rest.
     await mockedPage.waitForURL(/\/trips\/(?!new\b)/, { timeout: 5000 });
 
-    // Trip title should appear (from the detail endpoint after navigation)
+    // The synchronous flow lands on the single loader after navigation; the
+    // full trip view (and trip title) only mounts once structural stages
+    // arrive via SSE.
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
 
@@ -93,10 +95,11 @@ test.describe("GPX upload flow", () => {
 
     await mockedPage.waitForURL(/\/trips\/(?!new\b)/, { timeout: 5000 });
 
-    // A title (skeleton or editable) is shown after the detail load.
+    // No stages are injected here, so the app stays on the single loader; the
+    // detail load alone does not mount the trip view in the synchronous flow.
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
   });
@@ -171,15 +174,18 @@ test.describe("GPX upload flow", () => {
     // A successful drop uploads then navigates to /trips/{id} (#729).
     await mockedPage.waitForURL(/\/trips\/(?!new\b)/, { timeout: 5000 });
 
-    // Trip title should appear after the detail load
+    // The synchronous flow lands on the single loader after navigation; the
+    // trip view mounts only once structural stages arrive.
     await expect(
       mockedPage
-        .getByTestId("trip-title-skeleton")
+        .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).toBeVisible({ timeout: 5000 });
 
-    // Metrics arrive via SSE, mirroring the magic-link flow.
-    await injectSequence([routeParsedEvent()]);
+    // Metrics arrive via SSE, mirroring the magic-link flow. Structural stages
+    // are required to mount the trip view (and thus the summary) in the
+    // synchronous flow.
+    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
     await expect(mockedPage.getByTestId("total-distance")).toContainText(
       "187km",
     );
