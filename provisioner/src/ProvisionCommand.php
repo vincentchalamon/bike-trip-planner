@@ -74,8 +74,6 @@ final class ProvisionCommand extends Command
     protected function configure(): void
     {
         $this->addOption('dry-run', null, InputOption::VALUE_NONE, 'Show what would be downloaded without executing');
-        $this->addOption('with-postgis', null, InputOption::VALUE_NONE, 'After merging, import the Tier-1 features into PostGIS (requires PG* env)');
-        $this->addOption('with-datatourisme', null, InputOption::VALUE_NONE, 'Download the DataTourisme flux and import it into the tourism schema (requires DATATOURISME_FLUX_ID + DATATOURISME_APP_KEY + PG* env)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -84,8 +82,6 @@ final class ProvisionCommand extends Command
         $io->title('OSM Region Provisioner');
 
         $dryRun = (bool) $input->getOption('dry-run');
-        $importPostgis = (bool) $input->getOption('with-postgis');
-        $importDataTourisme = (bool) $input->getOption('with-datatourisme');
         $interactive = $input->isInteractive();
         $hasSelection = $this->selectionStore->exists();
 
@@ -109,10 +105,10 @@ final class ProvisionCommand extends Command
             $outcomes = [];
 
             $outcomes['osm'] = $hasSelection
-                ? $this->runUpdateFlow($io, $dryRun, $interactive, $importPostgis)
-                : $this->runInstallFlow($io, $dryRun, $importPostgis);
+                ? $this->runUpdateFlow($io, $dryRun, $interactive)
+                : $this->runInstallFlow($io, $dryRun);
 
-            if ($importDataTourisme && !$dryRun) {
+            if (!$dryRun) {
                 $outcomes['datatourisme'] = $this->runDataTourisme($io);
             }
 
@@ -201,9 +197,11 @@ final class ProvisionCommand extends Command
             $fluxId = getenv('DATATOURISME_FLUX_ID') ?: '';
             $appKey = getenv('DATATOURISME_APP_KEY') ?: '';
             if ('' === $fluxId || '' === $appKey) {
-                $io->error('DataTourisme import requires DATATOURISME_FLUX_ID and DATATOURISME_APP_KEY.');
+                // Skip gracefully when DataTourisme is not configured: OSM is the
+                // primary source and must still provision (ADR-041 continue-on-error).
+                $io->warning('DataTourisme import skipped: DATATOURISME_FLUX_ID and DATATOURISME_APP_KEY are not set.');
 
-                return Command::FAILURE;
+                return Command::SUCCESS;
             }
 
             $importer = new DataTourismeImporter(
@@ -232,7 +230,7 @@ final class ProvisionCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function runInstallFlow(SymfonyStyle $io, bool $dryRun, bool $importPostgis): int
+    private function runInstallFlow(SymfonyStyle $io, bool $dryRun): int
     {
         $allRegions = GeofabrikRegionRegistry::all();
         $regionNames = array_keys($allRegions);
@@ -315,7 +313,7 @@ final class ProvisionCommand extends Command
 
         $slugs = array_map(static fn (string $name): string => $allRegions[$name]['slug'], $selected);
 
-        $result = $this->downloadAndMerge($io, $slugs, force: false, importPostgis: $importPostgis);
+        $result = $this->downloadAndMerge($io, $slugs, force: false);
         if (Command::SUCCESS !== $result) {
             return $result;
         }
@@ -326,7 +324,7 @@ final class ProvisionCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function runUpdateFlow(SymfonyStyle $io, bool $dryRun, bool $interactive, bool $importPostgis): int
+    private function runUpdateFlow(SymfonyStyle $io, bool $dryRun, bool $interactive): int
     {
         $slugs = $this->selectionStore->load();
         $knownSlugs = array_column(GeofabrikRegionRegistry::all(), 'slug');
@@ -350,11 +348,11 @@ final class ProvisionCommand extends Command
 
             $io->warning('Selection file exists but is empty or invalid. Falling back to install flow.');
 
-            return $this->runInstallFlow($io, $dryRun, $importPostgis);
+            return $this->runInstallFlow($io, $dryRun);
         }
 
         if (!$interactive) {
-            return $this->runSilentUpdate($io, $slugs, $dryRun, $importPostgis);
+            return $this->runSilentUpdate($io, $slugs, $dryRun);
         }
 
         $choice = $io->choice(
@@ -364,8 +362,8 @@ final class ProvisionCommand extends Command
         );
 
         return match ($choice) {
-            'update' => $this->runSilentUpdate($io, $slugs, $dryRun, $importPostgis),
-            'reconfigure' => $this->runInstallFlow($io, $dryRun, $importPostgis),
+            'update' => $this->runSilentUpdate($io, $slugs, $dryRun),
+            'reconfigure' => $this->runInstallFlow($io, $dryRun),
             default => Command::SUCCESS,
         };
     }
@@ -373,7 +371,7 @@ final class ProvisionCommand extends Command
     /**
      * @param list<string> $slugs
      */
-    private function runSilentUpdate(SymfonyStyle $io, array $slugs, bool $dryRun, bool $importPostgis): int
+    private function runSilentUpdate(SymfonyStyle $io, array $slugs, bool $dryRun): int
     {
         $io->section('Updating persisted regions');
         foreach ($slugs as $slug) {
@@ -386,7 +384,7 @@ final class ProvisionCommand extends Command
             return Command::SUCCESS;
         }
 
-        $result = $this->downloadAndMerge($io, $slugs, force: true, importPostgis: $importPostgis);
+        $result = $this->downloadAndMerge($io, $slugs, force: true);
         if (Command::SUCCESS !== $result) {
             return $result;
         }
@@ -399,7 +397,7 @@ final class ProvisionCommand extends Command
     /**
      * @param list<string> $slugs
      */
-    private function downloadAndMerge(SymfonyStyle $io, array $slugs, bool $force, bool $importPostgis): int
+    private function downloadAndMerge(SymfonyStyle $io, array $slugs, bool $force): int
     {
         $toDownload = [];
         foreach ($slugs as $slug) {
@@ -449,20 +447,18 @@ final class ProvisionCommand extends Command
             $io->writeln("\u{2713}");
         }
 
-        if ($importPostgis) {
-            $io->write('  Importing Tier-1 features into PostGIS... ');
+        $io->write('  Importing Tier-1 features into PostGIS... ');
 
-            try {
-                $this->postgisImporter->run($this->mergedPbf, $this->filteredPbf);
-            } catch (ImportFailedException $e) {
-                $io->newLine();
-                $this->fail($io, $e->getMessage());
+        try {
+            $this->postgisImporter->run($this->mergedPbf, $this->filteredPbf);
+        } catch (ImportFailedException $importFailedException) {
+            $io->newLine();
+            $this->fail($io, $importFailedException->getMessage());
 
-                return Command::FAILURE;
-            }
-
-            $io->writeln("\u{2713}");
+            return Command::FAILURE;
         }
+
+        $io->writeln("\u{2713}");
 
         return Command::SUCCESS;
     }

@@ -239,7 +239,7 @@ final class ProvisionCommandTest extends TestCase
     }
 
     #[Test]
-    public function withPostgisFlagRunsTheImport(): void
+    public function postgisImportAlwaysRuns(): void
     {
         new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
 
@@ -259,7 +259,7 @@ final class ProvisionCommandTest extends TestCase
             postgisImporter: $importer,
         );
 
-        $exitCode = $tester->execute(['--with-postgis' => true], ['interactive' => false]);
+        $exitCode = $tester->execute([], ['interactive' => false]);
 
         self::assertSame(0, $exitCode, $tester->getDisplay());
         self::assertStringContainsString('Importing Tier-1 features into PostGIS', $tester->getDisplay());
@@ -282,7 +282,7 @@ final class ProvisionCommandTest extends TestCase
             postgisImporter: $importer,
         );
 
-        $exitCode = $tester->execute(['--with-postgis' => true], ['interactive' => false]);
+        $exitCode = $tester->execute([], ['interactive' => false]);
 
         self::assertSame(1, $exitCode);
         self::assertStringContainsString('tags-filter failed', $tester->getDisplay());
@@ -304,7 +304,7 @@ final class ProvisionCommandTest extends TestCase
 
         $tester = $this->buildTester(dataTourismeImporter: $failingDataTourisme);
 
-        $exitCode = $tester->execute(['--with-datatourisme' => true], ['interactive' => false]);
+        $exitCode = $tester->execute([], ['interactive' => false]);
 
         self::assertSame(1, $exitCode, $tester->getDisplay());
         $output = $tester->getDisplay();
@@ -352,29 +352,33 @@ final class ProvisionCommandTest extends TestCase
     }
 
     #[Test]
-    public function withoutPostgisFlagSkipsImport(): void
+    public function missingDataTourismeCredentialsSkipsGracefullyWithoutFailingOsm(): void
     {
+        // No DataTourisme importer injected and no DATATOURISME_* env: the step is
+        // skipped with a warning and reported as a success, so a deployment without
+        // DataTourisme credentials still provisions OSM (ADR-041 continue-on-error).
         new RegionSelectionStore($this->selectionFile)->save(['bretagne']);
 
-        $ran = false;
-        $importer = new PostgisImporter(
-            flexStylePath: '/app/osm2pgsql/tier1.lua',
-            processFactory: function (array $command) use (&$ran): Process {
-                $ran = true;
+        $previousFluxId = getenv('DATATOURISME_FLUX_ID');
+        $previousAppKey = getenv('DATATOURISME_APP_KEY');
+        putenv('DATATOURISME_FLUX_ID');
+        putenv('DATATOURISME_APP_KEY');
 
-                return new Process(['true']);
-            },
-        );
+        try {
+            $tester = $this->buildTester(
+                downloaderProcessFactory: static fn (array $command): Process => new Process(['true']),
+            );
 
-        $tester = $this->buildTester(
-            runMerge: true,
-            downloaderProcessFactory: static fn (array $command): Process => new Process(['true']),
-            postgisImporter: $importer,
-        );
-
-        $exitCode = $tester->execute([], ['interactive' => false]);
+            $exitCode = $tester->execute([], ['interactive' => false]);
+        } finally {
+            false === $previousFluxId ? putenv('DATATOURISME_FLUX_ID') : putenv('DATATOURISME_FLUX_ID='.$previousFluxId);
+            false === $previousAppKey ? putenv('DATATOURISME_APP_KEY') : putenv('DATATOURISME_APP_KEY='.$previousAppKey);
+        }
 
         self::assertSame(0, $exitCode, $tester->getDisplay());
-        self::assertFalse($ran, 'import must not run without --with-postgis');
+        $output = $tester->getDisplay();
+        self::assertStringContainsString('DataTourisme import skipped', $output);
+        self::assertMatchesRegularExpression('/\x{2713}\s*osm/u', $output, 'osm reported as succeeded');
+        self::assertMatchesRegularExpression('/\x{2713}\s*datatourisme/u', $output, 'datatourisme reported as skipped-success');
     }
 }
