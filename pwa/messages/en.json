@@ -591,7 +591,6 @@
     "submitLabel": "Validate and continue"
   },
   "planner": {
-    "closeTrip": "Close this trip",
     "computing": "Computing your route…"
   },
   "tripPreview": {
