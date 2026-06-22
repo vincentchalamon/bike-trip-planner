@@ -529,6 +529,12 @@ export function useTripPlanner() {
     newMaxDistance: number,
     newAverageSpeed: number,
     newEbikeMode: boolean,
+    // When true, skip the recomputing skeleton: the change has already been
+    // reflected locally (e.g. the e-bike toggle clears terrain alerts and the
+    // stat row re-derives durations from `averageSpeed`), so the cards must
+    // stay mounted with their content instead of waiting for a `stages_computed`
+    // SSE that may never come for a purely local optimistic update.
+    optimistic = false,
   ) {
     if (!tripId) return;
 
@@ -555,6 +561,7 @@ export function useTripPlanner() {
       } else {
         setProcessing(true);
         setAccommodationScanning(true);
+        if (optimistic) return;
         // Mark every stage as recomputing so the timeline shows the shimmer
         // skeleton until the `stages_computed` Mercure event lands. The stages
         // are NOT wiped: clearing them flips `isTripLoaded` to false, unmounts
@@ -656,12 +663,16 @@ export function useTripPlanner() {
       );
     }
     const pacing = getPacingState();
+    // The toggle is applied optimistically in-place (alerts cleared above,
+    // durations re-derived from the stat row): keep the cards mounted rather
+    // than swapping them for the recomputing skeleton.
     await patchPacingSettings(
       pacing.fatigueFactor,
       pacing.elevationPenalty,
       pacing.maxDistancePerDay,
       pacing.averageSpeed,
       newEbikeMode,
+      true,
     );
   }
 
