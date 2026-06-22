@@ -208,6 +208,10 @@ When(
 // --- When steps EN ---
 
 When("I click on that trip in the list", async ({ mockedPage }) => {
+  // The detail route must return a loaded trip so the trip view mounts on
+  // navigation (synchronous flow, ADR-043) — otherwise it stays on the loader
+  // and `config-open-button` never appears.
+  await mockLoadedTripDetail(mockedPage);
   const firstTrip = mockedPage
     .locator('[data-testid^="recent-trip-"]')
     .first();
@@ -216,6 +220,7 @@ When("I click on that trip in the list", async ({ mockedPage }) => {
 });
 
 When("I duplicate that trip", async ({ mockedPage }) => {
+  await mockLoadedTripDetail(mockedPage);
   const firstTrip = mockedPage
     .locator('[data-testid^="recent-trip-"]')
     .first();
