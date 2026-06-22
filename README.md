@@ -224,9 +224,13 @@ The Valhalla routing engine consumes Geofabrik PBF extracts mounted at `/data` i
 make provision
 ```
 
-This runs the unified `provision` command inside the `provisioner` container (Compose profile `provisioning`). It downloads the configured Geofabrik regions, writes them atomically to the shared `/data` volume, and updates `/data/regions.json`. Re-running the same command later updates existing regions instead of re-installing them — the install vs update mode is detected from the presence of `/data/regions.json` and the `--no-interaction` flag.
+This runs the unified `provision` command inside the `provisioner` container (Compose profile `provisioning`), then imports the weekly markets. It loads **all reference sources** in one shot:
 
-The Makefile targets also pass `--with-postgis`, which imports the bikepacking-relevant OSM features (POI, accommodations, water points) into the PostGIS `osm` schema via `osm2pgsql` (flex style `provisioner/osm2pgsql/tier1.lua`). The import builds a staging schema and swaps it onto the live `osm` schema in one transaction, so the previous dataset keeps serving until the new one is complete. This local-first reference index is what the API reads via `ST_DWithin` corridor queries — see [ADR-040](docs/adr/adr-040-local-first-reference-data-postgis.md).
+- **OSM + PostGIS** — downloads the configured Geofabrik regions, writes them atomically to the shared `/data` volume, updates `/data/regions.json`, then imports the bikepacking-relevant OSM features (POI, accommodations, water points) into the PostGIS `osm` schema via `osm2pgsql` (flex style `provisioner/osm2pgsql/tier1.lua`). The import builds a staging schema and swaps it onto the live `osm` schema in one transaction, so the previous dataset keeps serving until the new one is complete. This local-first reference index is what the API reads via `ST_DWithin` corridor queries — see [ADR-040](docs/adr/adr-040-local-first-reference-data-postgis.md).
+- **DataTourisme** — downloads the configured flux and imports it into the `tourism` schema. Skipped gracefully (with a warning) when `DATATOURISME_FLUX_ID` / `DATATOURISME_APP_KEY` are absent, so OSM still provisions.
+- **Markets** — runs `app:markets:import` (data.gouv.fr) into the `market` table.
+
+Re-running the same command later updates existing regions instead of re-installing them — the install vs update mode is detected from the presence of `/data/regions.json` and the `--no-interaction` flag.
 
 **Refresh (manual):**
 
@@ -245,7 +249,7 @@ docker compose restart valhalla  # rebuild routing tiles from the new PBF
 make provision-recette           # provision the recette PostGIS index (non-interactive)
 ```
 
-It targets `-f compose.yaml -f compose.recette.yaml` with the recette JWT vars and forces `--build` so the `prod` provisioner stage (which COPYs the code) is rebuilt rather than reusing a `dev`-tagged image whose `/app` is empty. The first run needs a seeded region selection in `.docker/osm/data/regions.json` (e.g. `{"slugs":["nord-pas-de-calais"]}`) or a prior interactive `make provision`.
+It targets `-f compose.yaml -f compose.recette.yaml`. The recette JWT keys and passphrase are wired in `compose.recette.yaml` (no `JWT_*` passed on the command line), and the `prod` / `dev` provisioner images now carry distinct tags (`bike-trip-planner-provisioner:prod` vs `:dev`), so the previous forced `--build` is no longer needed. Like `make provision`, it loads OSM + DataTourisme + markets. The first run needs a seeded region selection in `.docker/osm/data/regions.json` (e.g. `{"slugs":["nord-pas-de-calais"]}`) or a prior interactive `make provision`.
 
 See [ADR-036](docs/adr/adr-036-manual-osm-data-refresh.md) for why the automated nightly job (`osm-cron`) was dropped.
 
@@ -278,7 +282,7 @@ Enrichment runs **at provision time**, not at request time (ADR-040/041): the pr
 
 ### data.gouv.fr — Weekly markets
 
-The weekly market dataset from [data.gouv.fr](https://www.data.gouv.fr/) is imported into the PostgreSQL `market` table via a one-time (or periodic) CLI command. Markets are included automatically in the event scan for each stage.
+The weekly market dataset from [data.gouv.fr](https://www.data.gouv.fr/) is imported into the PostgreSQL `market` table via a one-time (or periodic) CLI command. Markets are included automatically in the event scan for each stage. `make provision` runs this import as its last step, so the standalone target below is only needed to refresh markets on their own:
 
 ```bash
 make markets-import

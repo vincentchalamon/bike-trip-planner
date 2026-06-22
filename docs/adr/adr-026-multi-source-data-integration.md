@@ -109,7 +109,7 @@ AccommodationSourceInterface          CulturalPoiSourceInterface
 #### Negative
 
 - **New Redis pools** — `cache.datatourisme` and `cache.wikidata` add two named pools to the Redis configuration. Memory quota monitoring is required.
-- **New PostgreSQL table** — The `market` table must be provisioned and kept fresh via periodic `make markets-import` runs.
+- **New PostgreSQL table** — The `market` table must be provisioned and kept fresh; `make provision` runs the import as its last step (or `make markets-import` to refresh markets alone).
 - **DataTourisme quota** — 1 000 req/h requires monitoring. A single trip computation may consume up to ~20 requests (one per stage × two queries: events + POIs).
 - **Multi-source attribution required in the UI** — ODbL (OSM), Licence Ouverte 2.0 (DataTourisme, data.gouv.fr), and CC0 (Wikidata) must all be credited in the application footer (see F.4 implementation).
 

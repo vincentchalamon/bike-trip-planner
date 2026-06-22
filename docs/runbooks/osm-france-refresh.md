@@ -173,5 +173,5 @@ docker compose exec php curl -sS http://localhost/api/health | jq '.valhalla'
 - ADR-017 — Valhalla routing engine
 - ADR-020 — Dynamic region provisioning (`provision` command)
 - [valhalla-overpass-rebuild.md](valhalla-overpass-rebuild.md) — corrupted-tile / hot rebuild
-- `Makefile` targets `provision`, `provision-update`, `ensure-default-pbf`
+- `Makefile` targets `provision`, `provision-update` (both ensure the default PBF first)
 - `compose.yaml` — `valhalla` service, `valhalla-tiles` volume, healthcheck `start_period`
