@@ -308,6 +308,14 @@ export async function mockAllApis(
           "alpine_hut",
         ],
         isLocked: false,
+        // Synchronous-flow status fields (ADR-043). `draft` + empty stages
+        // keeps the planner on the single loader until the SSE sequence
+        // (injected by `createFullTrip`) delivers the structural stages, after
+        // which the full trip view renders. Per-block enrichment statuses
+        // start null (no spinner) — specs override them as needed.
+        status: "draft",
+        weatherStatus: null,
+        aiStatus: null,
         stages: [],
         computationStatus: {},
       }),

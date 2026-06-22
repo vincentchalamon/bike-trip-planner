@@ -1,23 +1,13 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { CardSelection } from "@/components/card-selection";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
 import { TripLockedBanner } from "@/components/trip-locked-banner";
 import { OutOfZoneBanner } from "@/components/out-of-zone-banner";
-import { TripPreview } from "@/components/trip-preview";
-import { ProcessingProgress } from "@/components/processing-progress";
 import { TripSummary } from "@/components/trip-summary";
 import { TripAiOverview } from "@/components/trip-ai-overview";
 import { AiUnavailableNotice } from "@/components/ai-unavailable-notice";
@@ -32,8 +22,6 @@ import { TripActions } from "@/components/trip-actions";
 import { ShareModal } from "@/components/share-modal";
 import dynamic from "next/dynamic";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
-import { Button } from "@/components/ui/button";
-import { Stepper } from "@/components/stepper";
 import { InlineRecomputationBar } from "@/components/inline-recomputation-bar";
 import { ModificationQueue } from "@/components/modification-queue";
 import { RecentTrips } from "@/components/recent-trips";
@@ -61,32 +49,23 @@ const MapPanel = dynamic(
   { ssr: false, loading: () => null },
 );
 
-export function TripPlanner({
-  onClose,
-  hideStepper = false,
-  stepperSlot,
-  previewSlot,
-}: {
-  onClose?: () => void;
-  hideStepper?: boolean;
-  /**
-   * Optional step indicator rendered in place of the internal {@link Stepper},
-   * i.e. under the {@link TopBar} header and at the top of the creation flow.
-   * Used by the `/trips/new` wizard to mount its URL-synced {@link WizardStepper}
-   * below the header instead of above it (issue #729). Only honoured while the
-   * trip is not fully loaded — same visibility window as the internal stepper.
-   */
-  stepperSlot?: ReactNode;
-  /**
-   * Optional content rendered inside the Acte 1.5 preview screen, between
-   * the per-stage breakdown and the action bar. Used by the `/trips/new`
-   * wizard (issue #393) to inject the single-shot AI refinement card.
-   */
-  previewSlot?: ReactNode;
-} = {}) {
+/**
+ * Trip planner — synchronous flow (ADR-043, PR4-front).
+ *
+ * The 4-step wizard (Saisie → Aperçu → Analyse → Voyage) collapsed into a
+ * binary model:
+ *   - **loader** while the route is being fetched / the GPX uploaded / the
+ *     structural computation runs (no stages yet);
+ *   - **trip view** as soon as the structural stages exist.
+ *
+ * Weather and AI are the only remaining asynchronous enrichments. They render
+ * their own spinners on top of the already-displayed trip view, driven by
+ * `useUiStore.blockStatus` (hydrated from `/detail`, kept live by Mercure).
+ * There is no longer a user gate between structural computation and
+ * enrichment.
+ */
+export function TripPlanner() {
   const t = useTranslations();
-  const router = useRouter();
-  const clearTrip = useTripStore((s) => s.clearTrip);
   const isOnline = useOfflineStore((s) => s.isOnline);
 
   const {
@@ -133,8 +112,8 @@ export function TripPlanner({
     handleAddPoiWaypoint,
     handleDuplicateTrip,
     handleDeleteTrip,
-    handleLaunchAnalysis,
     handleShareTrip,
+    relaunchFullAnalysis,
     isShareModalOpen,
     setShareModalOpen,
     clearNewAccKey,
@@ -152,11 +131,6 @@ export function TripPlanner({
   const setFocusedMapStageIndex = useUiStore((s) => s.setFocusedMapStageIndex);
   const viewMode = useUiStore((s) => s.viewMode);
   const setViewMode = useUiStore((s) => s.setViewMode);
-  const goToStep = useUiStore((s) => s.goToStep);
-  const completeStep = useUiStore((s) => s.completeStep);
-  const resetStepper = useUiStore((s) => s.resetStepper);
-  const hasAnalysisStarted = useUiStore((s) => s.hasAnalysisStarted);
-  const isAnalysisPhaseActive = useUiStore((s) => s.isAnalysisPhaseActive);
   const aiAvailable = useUiStore((s) => s.aiCapability.available);
   const aiConfigured = useUiStore((s) => s.aiCapability.configured);
   const setAiAvailable = useUiStore((s) => s.setAiAvailable);
@@ -230,17 +204,24 @@ export function TripPlanner({
       window.removeEventListener("__test_set_focused_map_stage", handler);
   }, [setFocusedMapStageIndex]);
 
-  // E2E test hook: let Playwright simulate the Phase 1 → Phase 2 gate by
-  // forcing processing/analysisStarted flags. Needed because the prod build
-  // does not expose `window.__zustand_ui_store` (guarded by NODE_ENV).
+  // E2E test hooks. The prod build does not expose `window.__zustand_ui_store`
+  // (guarded by NODE_ENV), so the few flags tests need to drive are exposed via
+  // CustomEvents instead.
   useEffect(() => {
     const onProcessing = (e: Event) => {
       useUiStore.getState().setProcessing(!!(e as CustomEvent<boolean>).detail);
     };
-    const onAnalysisStarted = (e: Event) => {
-      const value = !!(e as CustomEvent<boolean>).detail;
-      useUiStore.getState().setAnalysisStarted(value);
-      useUiStore.getState().setAnalysisPhaseActive(value);
+    const onBlockStatus = (e: Event) => {
+      const detail = (
+        e as CustomEvent<{
+          weather?: import("@/store/ui-store").BlockStatus;
+          ai?: import("@/store/ui-store").BlockStatus;
+        }>
+      ).detail;
+      if (!detail) return;
+      const ui = useUiStore.getState();
+      if ("weather" in detail) ui.setBlockStatus("weather", detail.weather!);
+      if ("ai" in detail) ui.setBlockStatus("ai", detail.ai!);
     };
     const onClearAiOverview = () => {
       useTripStore.getState().setAiOverview(null);
@@ -277,7 +258,7 @@ export function TripPlanner({
     };
     window.addEventListener("__test_set_ai_capability", onSetAiCapability);
     window.addEventListener("__test_set_processing", onProcessing);
-    window.addEventListener("__test_set_analysis_started", onAnalysisStarted);
+    window.addEventListener("__test_set_block_status", onBlockStatus);
     window.addEventListener("__test_clear_ai_overview", onClearAiOverview);
     window.addEventListener(
       "__test_set_active_day_number",
@@ -286,10 +267,7 @@ export function TripPlanner({
     window.addEventListener("__test_set_trip_id", onSetTripId);
     return () => {
       window.removeEventListener("__test_set_processing", onProcessing);
-      window.removeEventListener(
-        "__test_set_analysis_started",
-        onAnalysisStarted,
-      );
+      window.removeEventListener("__test_set_block_status", onBlockStatus);
       window.removeEventListener("__test_clear_ai_overview", onClearAiOverview);
       window.removeEventListener(
         "__test_set_active_day_number",
@@ -318,57 +296,6 @@ export function TripPlanner({
     return () =>
       window.removeEventListener("__test_queue_modification", handler);
   }, []);
-
-  // Drive stepper state transitions based on trip lifecycle:
-  // - Processing (URL submit / GPX upload) → "analysis"
-  // - Stages computed, processing settled, analysis not launched → "preview"
-  // - Stages computed, analysis complete → "my_trip"
-  useEffect(() => {
-    if (isProcessing && hasAnalysisStarted) {
-      // Acte 2 analysis in flight: advance past preparation/preview into analysis.
-      completeStep("preparation");
-      completeStep("preview");
-      goToStep("analysis");
-    } else if (isProcessing) {
-      // Initial route computation (URL submit / GPX upload) in flight: park on
-      // "preview" (loading) instead of jumping to analysis, so the wizard passes
-      // through the preview step before the user launches the analysis (#649).
-      completeStep("preparation");
-      goToStep("preview");
-    } else if (trip && stages.length > 0 && !hasAnalysisStarted) {
-      // Phase 1 complete: pacing engine produced stages. Park on "preview"
-      // and wait for the user to explicitly click "Lancer l'analyse".
-      completeStep("preparation");
-      goToStep("preview");
-    } else if (trip && stages.length > 0 && hasAnalysisStarted) {
-      // Phase 2 complete: every prior step done, advance to my_trip.
-      completeStep("preparation");
-      completeStep("preview");
-      completeStep("analysis");
-      goToStep("my_trip");
-      // Reaching the final state clears the Acte 2 flag so the creation
-      // progress bar / Acte 2 screen can't linger. trip_ready already resets
-      // it, but an interrupted analysis (e.g. a validation_error during Acte 2)
-      // leaves it true; my_trip is the authoritative "analysis is over" point.
-      useUiStore.getState().setAnalysisPhaseActive(false);
-    } else if (trip && stages.length === 0) {
-      // Trip identity loaded but no stages yet: preview state (loading).
-      completeStep("preparation");
-      goToStep("preview");
-    } else {
-      // No trip, not processing: trip was cleared (or initial mount) — rewind
-      // past the "my_trip" lock and back to "preparation".
-      resetStepper();
-    }
-  }, [
-    isProcessing,
-    trip,
-    stages.length,
-    hasAnalysisStarted,
-    completeStep,
-    goToStep,
-    resetStepper,
-  ]);
 
   // Mobile swipe: left → map, right → timeline (cycle: timeline ↔ map on mobile)
   const swipeHandlers = useSwipe({
@@ -457,36 +384,19 @@ export function TripPlanner({
     return () => observer.disconnect();
   }, [hasMap, viewMode]);
 
-  // Derive the UI states (welcome / loading / preview / full trip view).
-  // The preview screen (Acte 1.5) sits between Phase 1 (pacing engine) and
-  // Phase 2 (enrichment) — it is active once the backend has produced
-  // stages AND the initial processing has settled AND the user has not yet
-  // clicked "Lancer l'analyse". The `trip_complete` event flips
-  // `hasAnalysisStarted` to `true`, which keeps the legacy single-phase
-  // flow (used in most mocked tests) rendering the full trip view.
+  // Binary UI model (ADR-043, PR4-front):
+  //   - `isWelcome`  — no trip and nothing in flight: show the card selection.
+  //   - `isLoading`  — the single loader: a trip is being created (route fetch /
+  //     GPX upload / structural computation) but no structural stages exist yet.
+  //   - trip view    — as soon as structural stages exist, render the full view.
+  //     Weather and AI enrichments arrive on top via their own per-block
+  //     spinners (no preview / analysis gate).
   const isWelcome = !trip && !isProcessing;
-  const isLoading = !trip && isProcessing;
-  const isPreview =
-    !!trip && !isProcessing && activeStages.length > 0 && !hasAnalysisStarted;
-  // Acte 2 — narrative progress screen. Active only while the Acte 2 pipeline
-  // is in flight (`isAnalysisPhaseActive`). Uses a dedicated flag rather than
-  // `hasAnalysisStarted` so that Acte 3 inline-edit backend calls (PATCH
-  // distance, pacing, etc.) don't re-trigger the progress screen.
-  const isAnalysing =
-    !!trip && isProcessing && isAnalysisPhaseActive && activeStages.length > 0;
-  // Acte 3 — the trip is fully loaded (stages computed and the analysis pass
-  // has run). Used to hide the creation stepper there (recette #649). Excludes
-  // the loading / preview / analysis sub-states so the stepper stays visible
-  // throughout the creation flow.
-  const isTripLoaded =
-    !!trip && hasAnalysisStarted && activeStages.length > 0 && !isAnalysing;
-  const clearTripAndReset = useCallback(() => {
-    clearTrip();
-    useUiStore.getState().setProcessing(false);
-    useUiStore.getState().setAccommodationScanning(false);
-    useUiStore.getState().setAnalysisStarted(false);
-    useUiStore.getState().setAnalysisPhaseActive(false);
-  }, [clearTrip]);
+  const isTripLoaded = !!trip && activeStages.length > 0;
+  // Single loader: a creation is in flight (route fetch / GPX upload /
+  // structural computation) or a trip identity exists but no structural stage
+  // has landed yet.
+  const isLoading = !isWelcome && !isTripLoaded;
 
   return (
     <GpxDropZone
@@ -509,23 +419,6 @@ export function TripPlanner({
 
         {/* Offline status banner */}
         <OfflineBanner />
-
-        {/* Stepper — visible during the creation flow (welcome, loading,
-            preview, analysis). Hidden once the trip is fully loaded (Acte 3):
-            the creation progress bar no longer serves a purpose there and was
-            confused with the horizontal day timeline on scroll (recette #649).
-            Hidden on landing page, FAQ and trips list since those pages don't
-            render TripPlanner at all. The wizard at `/trips/new` injects its
-            own URL-synced {@link WizardStepper} via `stepperSlot`, which takes
-            precedence over this internal one and renders here — below the
-            header — instead of above it (issue #729). */}
-        {!isTripLoaded &&
-          (stepperSlot ??
-            (!hideStepper && (
-              <div className="mb-8 pb-6" data-testid="stepper-wrapper">
-                <Stepper />
-              </div>
-            )))}
 
         {/* === State 1: Welcome (no trip, not processing) === */}
         {isWelcome && (
@@ -563,96 +456,25 @@ export function TripPlanner({
           </div>
         )}
 
-        {/* === State 2: Loading (URL submitted or GPX uploading) === */}
+        {/* === State 2: Loader (single loader — route fetch / GPX upload /
+             synchronous structural computation, before any stage exists). === */}
         {isLoading && (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+          <div
+            className="flex flex-col items-center justify-center min-h-[60vh] gap-4"
+            data-testid="trip-loader"
+            aria-busy="true"
+          >
             <Loader2 className="h-10 w-10 text-brand animate-spin" />
+            <p className="text-sm text-muted-foreground">
+              {t("planner.computing")}
+            </p>
           </div>
         )}
 
-        {/* === State 3a: Preview (Acte 1.5 — stages computed, analysis
-             not yet launched). Inserts a user-controlled gate between
-             Phase 1 (pacing engine) and Phase 2 (enrichment pipeline). */}
-        {isPreview && (
-          <>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-4 md:right-6 h-8 w-8 z-10 text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                if (onClose) {
-                  onClose();
-                } else {
-                  clearTripAndReset();
-                  router.push("/");
-                }
-              }}
-              title={t("planner.closeTrip")}
-              aria-label={t("planner.closeTrip")}
-              data-testid="close-trip-button-preview"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-
-            <TripPreview
-              title={trip?.title ?? ""}
-              totalDistance={totalDistance}
-              totalElevation={totalElevation}
-              totalElevationLoss={totalElevationLoss}
-              stages={stages}
-              startDate={startDate}
-              endDate={endDate}
-              weather={firstWeather}
-              isWeatherLoading={isWeatherLoading}
-              fatigueFactor={fatigueFactor}
-              elevationPenalty={elevationPenalty}
-              maxDistancePerDay={maxDistancePerDay}
-              averageSpeed={averageSpeed}
-              onLaunchAnalysis={handleLaunchAnalysis}
-              onChangeRoute={() => {
-                clearTripAndReset();
-                router.push("/");
-              }}
-              onTitleChange={handleTitleChange}
-              showTitleSuggestion={totalDistance !== null}
-              aiRefinementSlot={previewSlot}
-            />
-          </>
-        )}
-
-        {/* === State 3a-bis: Acte 2 — narrative progress screen
-             (processing + analysis launched, before trip_ready). === */}
-        {isAnalysing && (
-          <>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-4 md:right-6 h-8 w-8 z-10 text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                if (onClose) {
-                  onClose();
-                } else {
-                  clearTripAndReset();
-                  router.push("/");
-                }
-              }}
-              title={t("planner.closeTrip")}
-              aria-label={t("planner.closeTrip")}
-              data-testid="close-trip-button-analysing"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-
-            <ProcessingProgress
-              title={trip?.title ?? ""}
-              onTitleChange={handleTitleChange}
-            />
-          </>
-        )}
-
-        {/* === State 3b: Trip loaded — full view (shown once the user
-             has launched the Phase 2 analysis via the preview CTA). === */}
-        {trip && !isPreview && !isAnalysing && (
+        {/* === State 3: Trip loaded — full view. Rendered as soon as structural
+             stages exist; weather / AI enrichments arrive on top via their own
+             per-block spinners (ADR-043). === */}
+        {isTripLoaded && (
           <>
             {/* Inline recomputation progress bar — thin bar at top of page */}
             <InlineRecomputationBar />
@@ -737,7 +559,9 @@ export function TripPlanner({
               ) : (
                 !aiAvailable && <AiUnavailableNotice context="analysis" />
               )}
-              <TripAiOverview />
+              <TripAiOverview
+                onRegenerate={() => void relaunchFullAnalysis()}
+              />
 
               {/* Sentinel — marks the natural position of the progress bar in the
                 flow. The sticky bar becomes visible once this exits the viewport. */}
@@ -903,9 +727,9 @@ export function TripPlanner({
         {/* Unified help modal (shortcuts + FAQ) */}
         <HelpModal />
 
-        {/* Floating AI assistant — visible on Acte 1.5 (Aperçu) and Acte 3
-            (Mon voyage), hidden during Acte 2 thanks to the internal
-            `isAnalysisPhaseActive` guard. */}
+        {/* Floating AI assistant — visible as soon as the trip view is rendered
+            (no longer gated by an analysis phase). Hidden on the welcome /
+            loader screens via its own `trip` guard. */}
         <AiBubble />
       </main>
     </GpxDropZone>

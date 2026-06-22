@@ -17,7 +17,8 @@ import { getTripId } from "../fixtures/api-mocks";
  *  - Actionable replies (action != "info") trigger an
  *    `ai-chat-action` CustomEvent so the recomputation wiring (#311) can
  *    plug in without coupling to the panel.
- *  - The bubble is hidden during Acte 2 (`isAnalysisPhaseActive=true`).
+ *  - The bubble is visible as soon as a trip is loaded (ADR-043 — there is no
+ *    longer an analysis-phase gate that hides it).
  *  - On mobile viewports the panel covers the full screen.
  */
 
@@ -189,22 +190,28 @@ test.describe("AiBubble — chat round-trip", () => {
   });
 });
 
-test.describe("AiBubble — visibility gating", () => {
-  test("is hidden while Acte 2 (analysis phase) is active", async ({
+test.describe("AiBubble — visibility (synchronous flow, ADR-043)", () => {
+  test("stays visible once the trip view is rendered", async ({
     createFullTrip,
     mockedPage,
   }) => {
     await createFullTrip();
 
+    // No analysis-phase gate anymore: the bubble is available as soon as the
+    // trip is loaded and remains so (per-block enrichments stream in on top).
     await expect(mockedPage.getByTestId("ai-bubble")).toBeVisible();
 
+    // Mark the AI block as running (an enrichment in flight): the bubble must
+    // not be hidden by it.
     await mockedPage.evaluate(() => {
       window.dispatchEvent(
-        new CustomEvent("__test_set_analysis_started", { detail: true }),
+        new CustomEvent("__test_set_block_status", {
+          detail: { ai: "running" },
+        }),
       );
     });
 
-    await expect(mockedPage.getByTestId("ai-bubble")).toHaveCount(0);
+    await expect(mockedPage.getByTestId("ai-bubble")).toBeVisible();
   });
 });
 

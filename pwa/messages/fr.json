@@ -591,7 +591,8 @@
     "submitLabel": "Valider et continuer"
   },
   "planner": {
-    "closeTrip": "Fermer ce trip"
+    "closeTrip": "Fermer ce trip",
+    "computing": "Calcul de ton itinéraire en cours…"
   },
   "tripPreview": {
     "title": "Aperçu de ton itinéraire",
@@ -664,7 +665,10 @@
     "expand": "Voir plus",
     "expandAria": "Déplier la synthèse IA",
     "collapse": "Réduire",
-    "collapseAria": "Réduire la synthèse IA"
+    "collapseAria": "Réduire la synthèse IA",
+    "loading": "L'assistant analyse ton voyage…",
+    "failed": "L'analyse IA n'a pas pu aboutir.",
+    "regenerate": "Régénérer"
   },
   "aiRefinement": {
     "title": "Affiner avec l'assistant IA",

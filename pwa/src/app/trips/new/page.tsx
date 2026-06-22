@@ -1,205 +1,50 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { AiRefinementCard } from "@/components/ai-refinement-card";
+import { Suspense, useEffect } from "react";
 import { HydrationBoundary } from "@/components/hydration-boundary";
 import { TripPlanner } from "@/components/trip-planner";
 import { TripPlannerErrorBoundary } from "@/components/trip-planner-error-boundary";
-import {
-  WizardStepper,
-  WIZARD_STEPS,
-  wizardStepFromNumber,
-  wizardStepToNumber,
-  type WizardStepId,
-} from "@/components/wizard-stepper";
-import { useUiStore } from "@/store/ui-store";
-import type { StepId } from "@/store/ui-store";
 import { useTripStore } from "@/store/trip-store";
+import { useUiStore } from "@/store/ui-store";
 
 /**
- * `/trips/new` — 4-step wizard for trip creation (issue #391).
+ * `/trips/new` — Saisie screen (ADR-043, PR4-front).
  *
- * Each act of the planner now sits behind an explicit URL-addressable step:
+ * The 4-step creation wizard (Saisie → Aperçu → Analyse → Voyage) is gone.
+ * This route now only hosts the data-entry step: {@link TripPlanner} renders
+ * its welcome state (the {@link CardSelection} card — Lien / GPX / Assistant
+ * IA). Submitting a source POSTs the trip and `router.push('/trips/{id}')`
+ * (handled inside `useTripPlanner`), where the structural computation result
+ * arrives synchronously and the per-block weather / AI enrichments stream in.
  *
- *   ?step=1 → preparation (Card Selection: Lien / GPX / Assistant IA)
- *   ?step=2 → preview     (Map + stats + stages + sliders + "Lancer l'analyse")
- *   ?step=3 → analysis    (Narrative SSE display)
- *   ?step=4 → my_trip     (Redirect to `/trips/[id]`)
- *
- * The {@link WizardStepper} mirrors the URL: clicking a completed step rewrites
- * `?step=` and rewinds the wizard. The query param is the source of truth so
- * the workflow is shareable, refresh-safe, and bookmarkable.
- *
- * Implementation note: we reuse the battle-tested {@link TripPlanner} for the
- * underlying state machine (URL submit, GPX upload, preview, analysis,
- * my_trip), but suppress its internal `<Stepper />` — the new
- * `<WizardStepper />` rendered at the top of this page replaces it for the
- * `/trips/new` route only.
+ * A bare `/trips/new` visit (e.g. the header "Nouveau voyage" link) clears any
+ * stale trip so the Saisie screen always starts fresh and never bounces to a
+ * leftover trip (recette #649).
  */
-function WizardContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const t = useTranslations("stepper");
-  const currentStep = useUiStore((s) => s.currentStep);
-  const completedSteps = useUiStore((s) => s.completedSteps);
-  const goToStep = useUiStore((s) => s.goToStep);
-  const aiCapability = useUiStore((s) => s.aiCapability);
-  const tripId = useTripStore((s) => s.trip?.id ?? null);
-
-  const requestedStep = useMemo<WizardStepId | null>(() => {
-    const raw = searchParams.get("step");
-    if (raw === null) return null;
-    const parsed = Number.parseInt(raw, 10);
-    return Number.isFinite(parsed) ? wizardStepFromNumber(parsed) : null;
-  }, [searchParams]);
-
+function NewTripContent() {
   const clearTrip = useTripStore((s) => s.clearTrip);
 
-  // Mirror `currentStep` into a ref so the URL→store effect can read the
-  // latest value without re-running every time the store advances. This
-  // prevents a race where `setProcessing(true)` synchronously moves the
-  // store to "analysis" while the URL is still `?step=1` (router.replace is
-  // async): the effect would otherwise observe the stale URL and call
-  // `navigateToStep("preparation")`, wiping the trip and looping.
-  const currentStepRef = useRef<WizardStepId>(currentStep as WizardStepId);
-  currentStepRef.current = currentStep as WizardStepId;
-
-  // Resolve a backwards navigation request (from the stepper or the URL):
-  // when going back to "preparation" we must also clear the trip data, or
-  // the lifecycle effect in {@link TripPlanner} would immediately re-advance
-  // the stepper to "preview". Other backwards transitions are pure store
-  // mutations.
-  const navigateToStep = useCallback(
-    (step: WizardStepId) => {
-      if (step === "preparation") {
-        clearTrip();
-        const ui = useUiStore.getState();
-        ui.setProcessing(false);
-        ui.setAccommodationScanning(false);
-        ui.resetStepper();
-        return;
-      }
-      goToStep(step as StepId);
-    },
-    [clearTrip, goToStep],
-  );
-
-  // URL → store: when the URL contains a `?step=` value, drive the store. Only
-  // apply it for backwards navigation (forward navigation is dictated by the
-  // app logic — e.g. analysis is reached only after the user clicks
-  // "Lancer l'analyse"). We rely on the store's own guards (see `goToStep`).
   useEffect(() => {
-    if (requestedStep === null) {
-      // Bare `/trips/new` (e.g. the header "Nouveau voyage" link) is an explicit
-      // fresh-start intent: reset a stale wizard instead of letting the
-      // store→URL effect re-pin a leftover `?step` and trap the user on the
-      // analysis/loading screen (recette #649).
-      if (currentStepRef.current !== "preparation") {
-        navigateToStep("preparation");
-      }
-      return;
-    }
-    // Read the latest store step from a ref so this effect only re-runs when
-    // the URL changes — not when the store advances asynchronously.
-    const current = currentStepRef.current;
-    if (requestedStep === current) return;
-    // The "analysis" step is system-driven and never reachable via URL.
-    if (requestedStep === "analysis") return;
-    // Forward navigation via URL is also blocked: the user must reach forward
-    // steps via in-app actions (submitting a URL, clicking "Lancer l'analyse").
-    const requestedIdx = WIZARD_STEPS.indexOf(requestedStep);
-    const currentIdx = WIZARD_STEPS.indexOf(current);
-    if (requestedIdx > currentIdx) return;
-    navigateToStep(requestedStep);
-  }, [requestedStep, navigateToStep]);
+    clearTrip();
+    const ui = useUiStore.getState();
+    ui.setProcessing(false);
+    ui.setAccommodationScanning(false);
+    ui.setBlockStatus("weather", null);
+    ui.setBlockStatus("ai", null);
+    // Run once on mount: arriving on `/trips/new` is an explicit fresh-start
+    // intent. Subsequent in-page state changes must not re-clear the trip.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Store → URL: keep `?step=` in sync whenever the store advances. Use
-  // `replace` so the back button doesn't pile up history entries for each
-  // intermediate state.
-  useEffect(() => {
-    const current = searchParams.get("step");
-    const desired = String(wizardStepToNumber(currentStep));
-    if (current === desired) return;
-    const next = new URLSearchParams(searchParams.toString());
-    next.set("step", desired);
-    router.replace(`/trips/new?${next.toString()}`, { scroll: false });
-  }, [currentStep, router, searchParams]);
-
-  // Step 4 "Mon voyage" → redirect to /trips/[id] once the trip identity is
-  // known. We intentionally wait for `tripId` to be set; in the unlikely
-  // event the wizard reaches `my_trip` without an identity (defensive), we
-  // simply stay on the wizard and let the user manage from there.
-  useEffect(() => {
-    if (currentStep !== "my_trip") return;
-    if (!tripId) return;
-    router.replace(`/trips/${encodeURIComponent(tripId)}`);
-  }, [currentStep, tripId, router]);
-
-  const handleStepperNavigate = useCallback(
-    (step: WizardStepId) => navigateToStep(step),
-    [navigateToStep],
-  );
-
-  // The WizardStepper is injected into TripPlanner via `stepperSlot` so it
-  // renders under the <TopBar> header (where the internal stepper sits),
-  // instead of above it (issue #729).
-  // {@link WizardStepId} and {@link StepId} share the same string union, so the
-  // cast is structurally safe — it only narrows the nominal type.
-  const stepper = (
-    <div className="mb-8 pb-6" data-testid="wizard-stepper-wrapper">
-      <WizardStepper
-        currentStep={currentStep as WizardStepId}
-        completedSteps={completedSteps as Set<WizardStepId>}
-        onNavigate={handleStepperNavigate}
-      />
-    </div>
-  );
-
-  return (
-    <div data-testid="wizard-trip-new" data-current-step={currentStep}>
-      <a
-        href="#wizard-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-background focus:p-2 focus:rounded"
-      >
-        {t("ariaLabel")}
-      </a>
-
-      <div id="wizard-content">
-        {/* Step 2 ("Aperçu") embeds the single-shot AI refinement card
-            (issue #393). The slot is forwarded to {@link TripPreview} so the
-            card sits between the stages list and the launch CTA. Gated on AI
-            availability (#304): hidden when AI is off by config, disabled with
-            an explicit notice when the tier is enabled but unreachable.
-            TODO(#309): wire the `onApply` handler to the chat-IA endpoint
-            (sprint 31) once it ships. */}
-        <TripPlanner
-          hideStepper
-          stepperSlot={stepper}
-          previewSlot={
-            <AiRefinementCard
-              unavailable={!aiCapability.available}
-              notConfigured={!aiCapability.configured}
-            />
-          }
-        />
-      </div>
-    </div>
-  );
+  return <TripPlanner />;
 }
 
-/**
- * `/trips/new` page — wraps the wizard in the standard error/hydration
- * boundaries used elsewhere in the app. The {@link Suspense} is required by
- * `useSearchParams` for static export compatibility (see Next.js docs).
- */
 export default function NewTripPage() {
   return (
     <HydrationBoundary>
       <TripPlannerErrorBoundary>
         <Suspense fallback={null}>
-          <WizardContent />
+          <NewTripContent />
         </Suspense>
       </TripPlannerErrorBoundary>
     </HydrationBoundary>

@@ -2,29 +2,24 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { enableMapSet } from "immer";
-
-// Required for Immer to allow mutating Set/Map drafts (used by completedSteps).
-enableMapSet();
 
 export type ViewMode = "timeline" | "map" | "split";
 
 /**
- * The 4 sequential steps of the trip planning workflow.
+ * Per-block async enrichment status (ADR-043, PR4-front).
  *
- * - `preparation` — user inputs a route URL or uploads a GPX file
- * - `preview`     — the route has been parsed and stages are displayed
- * - `analysis`    — backend async computation is running (system step, never clickable)
- * - `my_trip`     — computation complete; the user explores their trip
+ * Mirrors the backend `weatherStatus` / `aiStatus` fields exposed on
+ * `GET /trips/{id}/detail`. Structural computation now runs synchronously
+ * (status `draft` → `ready`); weather and AI are the only remaining
+ * asynchronous blocks, each rendered with its own spinner on top of the
+ * already-displayed trip view.
+ *
+ * - `null`              — block not applicable (TTL expired, never started)
+ * - `pending`/`running` — enrichment in flight → spinner / skeleton
+ * - `done`              — enrichment landed → final render
+ * - `failed`            — enrichment failed → error + retry affordance
  */
-export type StepId = "preparation" | "preview" | "analysis" | "my_trip";
-
-export const STEPS: StepId[] = [
-  "preparation",
-  "preview",
-  "analysis",
-  "my_trip",
-];
+export type BlockStatus = "pending" | "running" | "done" | "failed" | null;
 
 import type { PoiSuggestionDto } from "@/lib/api/client";
 
@@ -88,64 +83,16 @@ interface UiState {
   /** Section to scroll to when ConfigPanel opens (e.g. from TripSummary chips). */
   configPanelFocusSection: "dates" | "pacing" | null;
   /**
-   * Current step in the 4-step trip planning workflow.
-   * Guards prevent navigating to "analysis" or backwards from "my_trip".
-   */
-  currentStep: StepId;
-  /** Set of steps the user has already completed (enables backwards navigation). */
-  completedSteps: Set<StepId>;
-  /**
-   * Whether the user has explicitly launched the Phase 2 analysis via
-   * `POST /trips/{id}/analyze` (Acte 2). Until this is `true`, the UI stays
-   * on the "preview" screen (Acte 1.5) where the user can inspect the raw
-   * route and tweak parameters before committing to the full enrichment.
-   * Stays `true` for the lifetime of the trip so Acte 3 inline edits don't
-   * revert to the preview screen.
-   */
-  hasAnalysisStarted: boolean;
-  /**
-   * Whether the Acte 2 enrichment pipeline is currently running. `true` from
-   * the moment the user clicks "Lancer l'analyse" until `trip_ready` (or
-   * `trip_complete`) arrives. Distinct from {@link hasAnalysisStarted} which
-   * stays `true` permanently — this flag gates the `ProcessingProgress` screen
-   * so that Acte 3 inline-edit backend calls don't re-trigger it.
-   */
-  isAnalysisPhaseActive: boolean;
-  /**
-   * Latest snapshot from the `computation_step_completed` Mercure event.
-   * Drives the progress bar during Phase 2. `null` when no analysis is in
-   * flight (initial state, or after `trip_ready` lands).
-   */
-  analysisProgress: {
-    step: string;
-    category: string;
-    completed: number;
-    total: number;
-  } | null;
-  /**
-   * Per-step progress state for Acte 2 (narrative progress screen).
+   * Per-block async enrichment status (ADR-043, PR4-front).
    *
-   * Keyed by the backend `ComputationName::value` emitted in
-   * `computation_step_completed` events (e.g. "terrain", "water_points",
-   * "bike_shops", "accommodations", …). Statuses:
-   *   pending → in_progress → done | failed
-   *
-   * The narrative screen groups these steps into user-facing categories
-   * (Terrain, Ravitaillement, Hébergements, Météo, Services, AI). See
-   * `components/processing-progress.tsx` for the mapping.
-   *
-   * `in_progress` is a transient state: the backend only emits a single
-   * event *when a step completes*, so we track "seen" steps as done and
-   * use the latest `analysisProgress.step` to highlight the currently
-   * running step.
+   * `weather` and `ai` are the only remaining asynchronous blocks once
+   * structural computation runs synchronously. Each drives its own spinner /
+   * skeleton on top of the already-displayed trip view, hydrated from
+   * `GET /trips/{id}/detail` (`weatherStatus` / `aiStatus`) and kept live by
+   * the Mercure dispatcher (`weather_fetched`, `trip_ready`,
+   * `computation_error`).
    */
-  analysisStepStates: Record<
-    string,
-    {
-      status: "done" | "failed";
-      error: string | null;
-    }
-  >;
+  blockStatus: { weather: BlockStatus; ai: BlockStatus };
   /**
    * Whether the floating AI assistant chat panel is currently open.
    * Toggled by {@link toggleBubble} / {@link closeBubble}.
@@ -202,38 +149,8 @@ interface UiState {
   setViewMode: (mode: ViewMode) => void;
   setConfigPanelFocusSection: (section: "dates" | "pacing" | null) => void;
   openConfigPanelAt: (section: "dates" | "pacing") => void;
-  /**
-   * Navigate to a specific step.
-   * Guards:
-   * - Forward navigation (including programmatic advance to "analysis") is always allowed.
-   * - "analysis" cannot be navigated back to (system-only, forward-only).
-   * - Backwards navigation from "my_trip" is blocked (Act 3 lock).
-   * - Backwards navigation to other steps requires the step to be completed.
-   */
-  goToStep: (step: StepId) => void;
-  /** Mark a step as completed (enabling backwards navigation to it). */
-  completeStep: (step: StepId) => void;
-  /** Reset the stepper to "preparation" and clear completed steps (called on `clearTrip`). */
-  resetStepper: () => void;
-  /** Flip {@link hasAnalysisStarted}. Called by the preview screen when the user
-   * confirms they want to launch the full enrichment pipeline. */
-  setAnalysisStarted: (value: boolean) => void;
-  /** Flip {@link isAnalysisPhaseActive}. Set `true` when Acte 2 starts, `false`
-   * when `trip_ready` / `trip_complete` lands. */
-  setAnalysisPhaseActive: (value: boolean) => void;
-  /** Store a `computation_step_completed` snapshot (Mode 1 progress tick). */
-  setAnalysisProgress: (
-    progress: {
-      step: string;
-      category: string;
-      completed: number;
-      total: number;
-    } | null,
-  ) => void;
-  /** Mark a step as completed (from a `computation_step_completed` event). */
-  recordAnalysisStep: (step: string) => void;
-  /** Mark a step as failed with a human-readable error message. */
-  failAnalysisStep: (step: string, message: string) => void;
+  /** Set the async status of a single enrichment block (weather / ai). */
+  setBlockStatus: (block: "weather" | "ai", status: BlockStatus) => void;
   /** Flip {@link isBubbleOpen}. Also marks the bubble as seen on first open. */
   toggleBubble: () => void;
   /** Force the chat panel closed. */
@@ -292,8 +209,7 @@ function writeBubbleSeenToStorage(): void {
  * - `focusedMapStageIndex` — which active-stage index is currently zoomed on
  *   the map; `null` means global view (all stages visible)
  * - `viewMode` — current layout mode: "timeline", "map", or "split"
- * - `currentStep` — active step in the 4-step workflow (preparation → preview → analysis → my_trip)
- * - `completedSteps` — set of already-visited steps (enables backwards navigation)
+ * - `blockStatus` — per-block async enrichment status (weather / ai)
  *
  * This store is intentionally separate from {@link useTripStore} to avoid
  * unnecessary re-renders of trip-dependent components when only UI flags change.
@@ -318,12 +234,7 @@ export const useUiStore = create<UiState>()(
     // on first render via a useEffect that detects the viewport width.
     viewMode: "split",
     configPanelFocusSection: null,
-    currentStep: "preparation",
-    completedSteps: new Set<StepId>(),
-    hasAnalysisStarted: false,
-    isAnalysisPhaseActive: false,
-    analysisProgress: null,
-    analysisStepStates: {},
+    blockStatus: { weather: null, ai: null },
     isBubbleOpen: false,
     chatHistory: [],
     currentContext: { currentStage: null },
@@ -397,65 +308,9 @@ export const useUiStore = create<UiState>()(
         state.isConfigPanelOpen = true;
       }),
 
-    goToStep: (step) =>
+    setBlockStatus: (block, status) =>
       set((state) => {
-        // Once at "my_trip", no navigation is possible (Act 3 lock)
-        if (state.currentStep === "my_trip") return;
-        const currentIdx = STEPS.indexOf(state.currentStep);
-        const targetIdx = STEPS.indexOf(step);
-        // Forward navigation: always allowed (system can advance to "analysis")
-        if (targetIdx > currentIdx) {
-          state.currentStep = step;
-          return;
-        }
-        // Backwards navigation: "analysis" is a system step and can never be
-        // navigated back to; other completed steps allow backwards navigation.
-        if (step !== "analysis" && state.completedSteps.has(step)) {
-          state.currentStep = step;
-        }
-      }),
-
-    completeStep: (step) =>
-      set((state) => {
-        state.completedSteps.add(step);
-      }),
-
-    resetStepper: () =>
-      set((state) => {
-        state.currentStep = "preparation";
-        state.completedSteps = new Set<StepId>();
-        state.hasAnalysisStarted = false;
-        state.isAnalysisPhaseActive = false;
-        state.analysisProgress = null;
-        state.analysisStepStates = {};
-      }),
-
-    setAnalysisStarted: (value) =>
-      set((state) => {
-        state.hasAnalysisStarted = value;
-      }),
-
-    setAnalysisPhaseActive: (value) =>
-      set((state) => {
-        state.isAnalysisPhaseActive = value;
-      }),
-
-    setAnalysisProgress: (progress) =>
-      set((state) => {
-        state.analysisProgress = progress;
-      }),
-
-    recordAnalysisStep: (step) =>
-      set((state) => {
-        state.analysisStepStates[step] = { status: "done", error: null };
-      }),
-
-    failAnalysisStep: (step, message) =>
-      set((state) => {
-        state.analysisStepStates[step] = {
-          status: "failed",
-          error: message,
-        };
+        state.blockStatus[block] = status;
       }),
 
     toggleBubble: () =>

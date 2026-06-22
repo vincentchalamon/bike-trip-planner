@@ -570,11 +570,12 @@ test.describe("StageAlerts — alert actions", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Transition from Acte 2 → Acte 3
+// Synchronous flow — structural stages render immediately, enrichment lands
+// on top via trip_ready (ADR-043: no Acte 2 narrative progress screen).
 // ---------------------------------------------------------------------------
 
-test.describe("StageAlerts — transition from Acte 2", () => {
-  test("stage alerts are visible after transitioning from ProcessingProgress via trip_ready", async ({
+test.describe("StageAlerts — enrichment via trip_ready", () => {
+  test("stage alerts appear once trip_ready lands on the already-displayed trip view", async ({
     submitUrl,
     injectEvent,
     mockedPage,
@@ -583,35 +584,21 @@ test.describe("StageAlerts — transition from Acte 2", () => {
     await injectEvent(routeParsedEvent());
     await injectEvent(stagesComputedEvent());
 
-    // Trigger Acte 2 (analysis started + processing)
-    await mockedPage.evaluate(() => {
-      window.dispatchEvent(
-        new CustomEvent("__test_set_processing", { detail: true }),
-      );
-      window.dispatchEvent(
-        new CustomEvent("__test_set_analysis_started", { detail: true }),
-      );
-    });
-
-    await expect(mockedPage.getByTestId("processing-progress")).toBeVisible({
-      timeout: 5000,
-    });
-
-    // Send trip_ready — transitions to Acte 3
-    await injectEvent(tripReadyWithThreeAlertsEvent());
-
-    await expect(mockedPage.getByTestId("processing-progress")).toBeHidden({
-      timeout: 5000,
-    });
+    // Structural stages already render the trip view — no gate, no progress
+    // screen (ADR-043).
     await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
       timeout: 5000,
     });
+
+    // Enrichment payload arrives on top.
+    await injectEvent(tripReadyWithThreeAlertsEvent());
+
     await expect(
       mockedPage.getByTestId("stage-card-1").getByTestId("stage-alerts"),
     ).toBeVisible();
   });
 
-  test("original trip_ready transition still works when stages have no alerts", async ({
+  test("trip_ready with no alerts leaves the trip view without an alert section", async ({
     submitUrl,
     injectEvent,
     mockedPage,
@@ -620,28 +607,13 @@ test.describe("StageAlerts — transition from Acte 2", () => {
     await injectEvent(routeParsedEvent());
     await injectEvent(stagesComputedEvent());
 
-    await mockedPage.evaluate(() => {
-      window.dispatchEvent(
-        new CustomEvent("__test_set_processing", { detail: true }),
-      );
-      window.dispatchEvent(
-        new CustomEvent("__test_set_analysis_started", { detail: true }),
-      );
-    });
-
-    await expect(mockedPage.getByTestId("processing-progress")).toBeVisible({
+    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
       timeout: 5000,
     });
 
     // trip_ready with empty alerts
     await injectEvent(tripReadyEvent());
 
-    await expect(mockedPage.getByTestId("processing-progress")).toBeHidden({
-      timeout: 5000,
-    });
-    await expect(mockedPage.getByTestId("stage-card-1")).toBeVisible({
-      timeout: 5000,
-    });
     // No alert section when there are no alerts
     await expect(
       mockedPage.getByTestId("stage-card-1").getByTestId("stage-alerts"),

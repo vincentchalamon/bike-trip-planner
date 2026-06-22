@@ -748,10 +748,13 @@ export function useTripPlanner() {
   }
 
   /**
-   * Fire the Phase 2 analysis pipeline for the currently-loaded trip and
-   * flip the UI store flag so the preview screen makes way for the full
-   * trip view. Errors surface as toasts but the user stays on the preview
-   * screen so they can retry.
+   * Re-run the full enrichment pipeline for the currently-loaded trip. Only
+   * reached from the chat `change_route` action (see {@link relaunchFullAnalysis}):
+   * the rider asked for a tracé-wide modification, so weather + AI are recomputed
+   * on top of the already-displayed trip view (ADR-043 — no wizard gate). The
+   * per-block spinners are flipped to `running` so the affected cards show their
+   * loading state until the matching Mercure events land. Errors surface as
+   * toasts and the trip view stays put so the user can retry.
    */
   async function handleLaunchAnalysis(): Promise<boolean> {
     if (!tripId) return false;
@@ -767,8 +770,8 @@ export function useTripPlanner() {
       // while the new analysis is in flight.
       useTripStore.getState().setAiOverview(null);
       setAccommodationScanning(true);
-      useUiStore.getState().setAnalysisStarted(true);
-      useUiStore.getState().setAnalysisPhaseActive(true);
+      useUiStore.getState().setBlockStatus("weather", "running");
+      useUiStore.getState().setBlockStatus("ai", "running");
       return true;
     } catch (err) {
       if (isNetworkError(err)) {

@@ -9,10 +9,6 @@ import {
   getTripId,
   type MockApiOptions,
 } from "../../fixtures/api-mocks";
-import { injectSseSequence } from "../../fixtures/sse-helpers";
-import { fullTripEventSequence } from "../../fixtures/mock-data";
-import { expandLinkCard } from "../../fixtures/base.fixture";
-
 export { expect };
 
 /**
@@ -48,7 +44,6 @@ export const MASK_SELECTORS = [
   "[data-testid='map']",
   "[data-testid='map-container']",
   "[data-testid='map-panel']",
-  "[data-testid='trip-preview-map']",
   "canvas",
   "[data-testid='summary-dates']",
   "[data-testid='stage-weather-card']",
@@ -93,10 +88,6 @@ interface VisualFixtures {
    * test so it can target any route.
    */
   visualPage: Page;
-  /** Drive the planner to the wizard step-2 "preview" view (stage cards). */
-  gotoPreview: () => Promise<void>;
-  /** Drive the planner to the wizard step-3 "processing/analysis" view. */
-  gotoProcessing: () => Promise<void>;
   /**
    * Navigate to `/trips/[id]` with a stages-bearing detail response and wait
    * for the roadbook master-detail view. The most deterministic loaded-trip
@@ -125,36 +116,6 @@ export const test = base.extend<
     }, theme);
     await mockAllApis(page, mockOptions);
     await use(page);
-  },
-
-  gotoPreview: async ({ visualPage }, use) => {
-    await use(async () => {
-      await submitUrlAndAwaitTrip(visualPage);
-      await injectSseSequence(visualPage, fullTripEventSequence());
-      await expect(visualPage.getByTestId("stage-card-3")).toBeVisible({
-        timeout: 10000,
-      });
-    });
-  },
-
-  gotoProcessing: async ({ visualPage }, use) => {
-    await use(async () => {
-      await submitUrlAndAwaitTrip(visualPage);
-      // Compute stages, then simulate the "user clicked Launch analysis" gate so
-      // the narrative progress screen stays mounted (see processing-progress.spec).
-      await injectSseSequence(visualPage, fullTripEventSequence().slice(0, 2));
-      await visualPage.evaluate(() => {
-        window.dispatchEvent(
-          new CustomEvent("__test_set_processing", { detail: true }),
-        );
-        window.dispatchEvent(
-          new CustomEvent("__test_set_analysis_started", { detail: true }),
-        );
-      });
-      await expect(visualPage.getByTestId("processing-progress")).toBeVisible({
-        timeout: 10000,
-      });
-    });
   },
 
   gotoRoadbook: async ({ visualPage }, use) => {
@@ -257,22 +218,4 @@ export function roadbookDetail() {
       },
     ],
   };
-}
-
-/**
- * Open the planner welcome screen, submit a valid Komoot URL and wait until the
- * planner has navigated to `/trips/[id]` with the title visible. Mirrors the
- * `submitUrl` fixtures used by the mocked/recette suites.
- */
-async function submitUrlAndAwaitTrip(page: Page): Promise<void> {
-  await page.goto("/");
-  await page.waitForLoadState("networkidle");
-  await expandLinkCard(page);
-  const input = page.getByTestId("magic-link-input");
-  await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
-  await input.press("Enter");
-  await page.waitForURL(/\/trips\//, { timeout: 10000 });
-  await expect(
-    page.getByTestId("trip-title-skeleton").or(page.getByTestId("trip-title")),
-  ).toBeVisible({ timeout: 5000 });
 }

@@ -64,8 +64,19 @@ export function TripSummary({
   const tPacing = useTranslations("pacing");
   const locale = useLocale();
   const openConfigPanelAt = useUiStore((s) => s.openConfigPanelAt);
+  const weatherBlockStatus = useUiStore((s) => s.blockStatus.weather);
   const showSkeleton =
     isProcessing && totalDistance === null && totalElevation === null;
+
+  // Per-block weather spinner (ADR-043). Spin while the block is pending /
+  // running. Anti-infinite-spinner guard: a `null` block (TTL expired
+  // server-side) never spins — weather is rendered when present, otherwise the
+  // row stays silent. `isWeatherLoading` (derived from the global processing
+  // flag) is kept as a fallback for legacy / mocked flows that don't drive
+  // `blockStatus`.
+  const isWeatherPending =
+    weatherBlockStatus === "pending" || weatherBlockStatus === "running";
+  const showWeatherSkeleton = !weather && (isWeatherPending || isWeatherLoading);
 
   if (!showSkeleton && totalDistance === null && totalElevation === null)
     return null;
@@ -143,8 +154,8 @@ export function TripSummary({
                 {Math.round(weather.tempMax)}°C
               </span>
             </>
-          ) : isWeatherLoading ? (
-            <Skeleton className="w-32 h-4" />
+          ) : showWeatherSkeleton ? (
+            <Skeleton className="w-32 h-4" data-testid="weather-skeleton" />
           ) : null}
         </div>
         {estimatedBudgetMin !== undefined &&

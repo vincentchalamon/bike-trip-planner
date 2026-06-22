@@ -43,8 +43,9 @@ test.describe("Mercure dual mode — Mode 1 (initial analysis)", () => {
       timeout: 10000,
     });
 
-    // analysisProgress is cleared on trip_ready — progress screen must be gone.
-    await expect(mockedPage.getByTestId("processing-progress")).toBeHidden();
+    // ADR-043: there is no narrative progress screen — `computation_step_completed`
+    // is a no-op tick. The trip view renders straight from the structural stages.
+    await expect(mockedPage.getByTestId("processing-progress")).toHaveCount(0);
   });
 
   test("trip_ready performs an atomic swap of trip state", async ({

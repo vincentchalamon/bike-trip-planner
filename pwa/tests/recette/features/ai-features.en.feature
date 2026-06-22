@@ -99,47 +99,8 @@ Feature: AI features
     And I send the message "A water point?" in the AI chat
     Then the in-ride safety disclaimer is shown
 
-  @desktop @critical
-  Scenario: AI refinement card visible on the preview step
-    Given I am on the trip preview with the AI refinement card
-    Then the AI refinement card is visible
-    And the AI refinement character counter is displayed
-
-  @desktop
-  Scenario: "Apply" button disabled when the suggestion is empty
-    Given I am on the trip preview with the AI refinement card
-    Then the AI refinement "Apply" button is disabled
-
-  @desktop
-  Scenario: "Apply" button enabled when a suggestion is entered
-    Given I am on the trip preview with the AI refinement card
-    When I type "Add a stage in Aubenas" in the AI refinement
-    Then the AI refinement "Apply" button is enabled
-
-  @desktop
-  Scenario: 500-character limit enforced in the AI refinement
-    Given I am on the trip preview with the AI refinement card
-    When I type 600 characters in the AI refinement
-    Then the AI refinement suggestion is limited to 500 characters
-
-  @desktop
-  Scenario: Character counter decrements as I type
-    Given I am on the trip preview with the AI refinement card
-    When I type "Go along the coast" in the AI refinement
-    Then the AI refinement counter shows the number of remaining characters
-
-  @desktop
-  Scenario: Clear empties the AI refinement suggestion
-    Given I am on the trip preview with the AI refinement card
-    When I type "A suggestion to clear" in the AI refinement
-    And I click the AI refinement "Clear" button
-    Then the AI refinement textarea is empty
-
-  @desktop
-  Scenario: AI refinement card disabled when the LLM is unreachable
-    Given I am on the trip preview with the AI refinement unavailable
-    Then the AI refinement textarea is disabled
-    And an AI unavailable notice is displayed
+  # ADR-043: the "Preview" screen and the single-shot AI refinement card were
+  # removed (Saisie -> loader -> trip view flow). Its scenarios were dropped.
 
   @desktop @critical
   Scenario: Changed distance highlighted after recomputation

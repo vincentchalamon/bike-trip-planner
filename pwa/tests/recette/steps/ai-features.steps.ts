@@ -152,46 +152,6 @@ const NEARBY_POIS = [
   },
 ];
 
-/**
- * Reach the Acte 1.5 preview on `/trips/new` where the Ai refinement card is
- * mounted via the wizard's `previewSlot`. A real magic-link submit redirects
- * to `/trips/{id}`, so we synthesize the preview state directly: set a trip id,
- * feed stages, and settle the processing/analysis flags (mirrors trip-preview
- * spec's `enterPreviewState`, but on the wizard route so the slot renders).
- */
-async function enterRefinementPreview(
-  page: Page,
-  injectEvent: (event: MercureEvent) => Promise<void>,
-  options: { available?: boolean } = {},
-): Promise<void> {
-  const available = options.available ?? true;
-  await page.goto("/trips/new");
-  await page.waitForLoadState("networkidle");
-  await page.evaluate((avail) => {
-    window.dispatchEvent(
-      new CustomEvent("__test_set_ai_capability", {
-        detail: { available: avail },
-      }),
-    );
-    window.dispatchEvent(
-      new CustomEvent("__test_set_trip_id", { detail: "test-trip-abc-123" }),
-    );
-  }, available);
-  await injectEvent(routeParsedEvent());
-  await injectEvent(stagesComputedEvent());
-  await page.evaluate(() => {
-    window.dispatchEvent(
-      new CustomEvent("__test_set_processing", { detail: false }),
-    );
-    window.dispatchEvent(
-      new CustomEvent("__test_set_analysis_started", { detail: false }),
-    );
-  });
-  await expect(page.getByTestId("ai-refinement-card")).toBeVisible({
-    timeout: 10000,
-  });
-}
-
 // ===========================================================================
 // Given — trip AI overview (FR + EN)
 // ===========================================================================
@@ -340,37 +300,9 @@ Given("the AI assistant replies with nearby POIs", async ({ mockedPage }) => {
   });
 });
 
-// ===========================================================================
-// Given — AI refinement card (preview step on /trips/new)
-// ===========================================================================
-
-Given(
-  "je suis sur l'aperçu de voyage avec la carte de raffinement IA",
-  async ({ mockedPage, injectEvent }) => {
-    await enterRefinementPreview(mockedPage, injectEvent);
-  },
-);
-
-Given(
-  "I am on the trip preview with the AI refinement card",
-  async ({ mockedPage, injectEvent }) => {
-    await enterRefinementPreview(mockedPage, injectEvent);
-  },
-);
-
-Given(
-  "je suis sur l'aperçu de voyage avec le raffinement IA indisponible",
-  async ({ mockedPage, injectEvent }) => {
-    await enterRefinementPreview(mockedPage, injectEvent, { available: false });
-  },
-);
-
-Given(
-  "I am on the trip preview with the AI refinement unavailable",
-  async ({ mockedPage, injectEvent }) => {
-    await enterRefinementPreview(mockedPage, injectEvent, { available: false });
-  },
-);
+// ADR-043: the single-shot AI refinement card and the "Aperçu" wizard step it
+// lived on were removed (Saisie -> loader -> trip view). Its Given/When/Then
+// step definitions were deleted along with the scenarios.
 
 // ===========================================================================
 // When — chat interactions (FR + EN)
@@ -469,53 +401,6 @@ When(
       .click();
   },
 );
-
-// ===========================================================================
-// When — AI refinement interactions (FR + EN)
-// ===========================================================================
-
-When(
-  "je saisis {string} dans le raffinement IA",
-  async ({ mockedPage }, value: string) => {
-    await mockedPage.getByTestId("ai-refinement-textarea").fill(value);
-  },
-);
-
-When(
-  "I type {string} in the AI refinement",
-  async ({ mockedPage }, value: string) => {
-    await mockedPage.getByTestId("ai-refinement-textarea").fill(value);
-  },
-);
-
-When(
-  "je saisis {int} caractères dans le raffinement IA",
-  async ({ mockedPage }, count: number) => {
-    await mockedPage
-      .getByTestId("ai-refinement-textarea")
-      .fill("a".repeat(count));
-  },
-);
-
-When(
-  "I type {int} characters in the AI refinement",
-  async ({ mockedPage }, count: number) => {
-    await mockedPage
-      .getByTestId("ai-refinement-textarea")
-      .fill("a".repeat(count));
-  },
-);
-
-When(
-  'je clique sur le bouton "Effacer" du raffinement IA',
-  async ({ mockedPage }) => {
-    await mockedPage.getByTestId("ai-refinement-clear").click();
-  },
-);
-
-When('I click the AI refinement "Clear" button', async ({ mockedPage }) => {
-  await mockedPage.getByTestId("ai-refinement-clear").click();
-});
 
 // ===========================================================================
 // When — diff highlight (FR + EN)
@@ -935,128 +820,6 @@ Then("the in-ride safety disclaimer is shown", async ({ mockedPage }) => {
   await expect(mockedPage.getByTestId("in-ride-disclaimer")).toBeVisible({
     timeout: 5000,
   });
-});
-
-// ===========================================================================
-// Then — AI refinement card (FR + EN)
-// ===========================================================================
-
-Then("la carte de raffinement IA est visible", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("ai-refinement-card")).toBeVisible();
-});
-
-Then("the AI refinement card is visible", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("ai-refinement-card")).toBeVisible();
-});
-
-Then(
-  "le compteur de caractères de la carte de raffinement IA est affiché",
-  async ({ mockedPage }) => {
-    await expect(mockedPage.getByTestId("ai-refinement-counter")).toBeVisible();
-  },
-);
-
-Then(
-  "the AI refinement character counter is displayed",
-  async ({ mockedPage }) => {
-    await expect(mockedPage.getByTestId("ai-refinement-counter")).toBeVisible();
-  },
-);
-
-Then(
-  'le bouton "Appliquer" du raffinement IA est désactivé',
-  async ({ mockedPage }) => {
-    await expect(mockedPage.getByTestId("ai-refinement-apply")).toBeDisabled();
-  },
-);
-
-Then('the AI refinement "Apply" button is disabled', async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("ai-refinement-apply")).toBeDisabled();
-});
-
-Then(
-  'le bouton "Appliquer" du raffinement IA est activé',
-  async ({ mockedPage }) => {
-    await expect(mockedPage.getByTestId("ai-refinement-apply")).toBeEnabled();
-  },
-);
-
-Then('the AI refinement "Apply" button is enabled', async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("ai-refinement-apply")).toBeEnabled();
-});
-
-Then(
-  "la suggestion de raffinement IA est limitée à {int} caractères",
-  async ({ mockedPage }, max: number) => {
-    const value = await mockedPage
-      .getByTestId("ai-refinement-textarea")
-      .inputValue();
-    expect(value.length).toBe(max);
-  },
-);
-
-Then(
-  "the AI refinement suggestion is limited to {int} characters",
-  async ({ mockedPage }, max: number) => {
-    const value = await mockedPage
-      .getByTestId("ai-refinement-textarea")
-      .inputValue();
-    expect(value.length).toBe(max);
-  },
-);
-
-Then(
-  "le compteur de raffinement IA indique le nombre de caractères restants",
-  async ({ mockedPage }) => {
-    await expect(mockedPage.getByTestId("ai-refinement-counter")).toContainText(
-      "483",
-    );
-  },
-);
-
-Then(
-  "the AI refinement counter shows the number of remaining characters",
-  async ({ mockedPage }) => {
-    await expect(mockedPage.getByTestId("ai-refinement-counter")).toContainText(
-      "482",
-    );
-  },
-);
-
-Then("la zone de saisie du raffinement IA est vide", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("ai-refinement-textarea")).toHaveValue(
-    "",
-  );
-});
-
-Then("the AI refinement textarea is empty", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("ai-refinement-textarea")).toHaveValue(
-    "",
-  );
-});
-
-Then(
-  "la zone de saisie du raffinement IA est désactivée",
-  async ({ mockedPage }) => {
-    await expect(
-      mockedPage.getByTestId("ai-refinement-textarea"),
-    ).toBeDisabled();
-  },
-);
-
-Then("the AI refinement textarea is disabled", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("ai-refinement-textarea")).toBeDisabled();
-});
-
-Then(
-  "un avis d'indisponibilité de l'IA est affiché",
-  async ({ mockedPage }) => {
-    await expect(mockedPage.getByTestId("ai-unavailable-notice")).toBeVisible();
-  },
-);
-
-Then("an AI unavailable notice is displayed", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("ai-unavailable-notice")).toBeVisible();
 });
 
 // ===========================================================================
