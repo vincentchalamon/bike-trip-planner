@@ -201,9 +201,11 @@ When("je consulte ce voyage", async ({ mockedPage }) => {
 
 When(
   "je saisis un titre de voyage de {int} caractères",
-  async ({ submitUrl, injectEvent, mockedPage }, chars: number) => {
+  async ({ submitUrl, injectSequence, mockedPage }, chars: number) => {
     await submitUrl();
-    await injectEvent(routeParsedEvent());
+    // Structural stages must land for the trip view (and its editable title) to
+    // mount under the synchronous flow (ADR-043).
+    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
     const title = mockedPage.getByTestId("trip-title");
     await expect(title).toBeVisible({ timeout: 5000 });
     await title.click();
@@ -354,9 +356,11 @@ When("I view that trip", async ({ mockedPage }) => {
 
 When(
   "I enter a trip title of {int} characters",
-  async ({ submitUrl, injectEvent, mockedPage }, chars: number) => {
+  async ({ submitUrl, injectSequence, mockedPage }, chars: number) => {
     await submitUrl();
-    await injectEvent(routeParsedEvent());
+    // Structural stages must land for the trip view (and its editable title) to
+    // mount under the synchronous flow (ADR-043).
+    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
     const title = mockedPage.getByTestId("trip-title");
     await expect(title).toBeVisible({ timeout: 5000 });
     await title.click();

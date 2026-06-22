@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base.fixture";
-import { routeParsedEvent } from "../fixtures/mock-data";
 
 /**
  * E2E coverage for the desktop top bar (#384).
@@ -44,13 +43,12 @@ test.describe("Desktop top bar", () => {
   });
 
   test("undo/redo and share are visible on a trip detail route", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
-    // submitUrl navigates to /trips/{id}
+    // The per-trip actions toolbar (undo/redo/share) sits in the trip view,
+    // which mounts once structural stages exist (synchronous flow, ADR-043).
+    await createFullTrip();
     await expect(mockedPage).toHaveURL(/\/trips\//);
 
     await expect(mockedPage.getByTestId("undo-button")).toBeVisible();
@@ -59,12 +57,10 @@ test.describe("Desktop top bar", () => {
   });
 
   test("share button opens the share modal on a trip", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
 
     await mockedPage.getByTestId("share-button").click();
     // The share API GET is unmocked here, so the modal settles on the

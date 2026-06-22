@@ -1,6 +1,6 @@
 import { expect } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
-import { getTripId } from "../../fixtures/api-mocks";
+import { getTripId, mockLoadedTripDetail } from "../../fixtures/api-mocks";
 
 const SETTINGS_DIALOG_NAME = /Paramètres|Settings/i;
 
@@ -85,36 +85,9 @@ Given("j'ai récemment consulté un voyage", async ({ mockedPage }) => {
 Given(
   "un voyage a été verrouillé par un autre utilisateur",
   async ({ mockedPage }) => {
-    // The detail mock reports the trip as locked; opening it shows the banner.
-    await mockedPage.route("**/trips/*/detail", (route, request) => {
-      if (request.method() !== "GET") return route.fallback();
-      const tripId =
-        request.url().match(/\/trips\/([^/]+)\/detail/)?.[1] ?? getTripId();
-      return route.fulfill({
-        status: 200,
-        contentType: "application/ld+json",
-        body: JSON.stringify({
-          "@context": "/contexts/TripDetail",
-          "@id": `/trips/${tripId}/detail`,
-          "@type": "TripDetail",
-          id: tripId,
-          title: "Test Trip",
-          sourceUrl: "https://www.komoot.com/fr-fr/tour/2795080048",
-          startDate: null,
-          endDate: null,
-          fatigueFactor: 0.8,
-          elevationPenalty: 100,
-          maxDistancePerDay: 80,
-          averageSpeed: 15,
-          ebikeMode: false,
-          departureHour: 8,
-          enabledAccommodationTypes: ["hotel", "camp_site"],
-          isLocked: true,
-          stages: [],
-          computationStatus: {},
-        }),
-      });
-    });
+    // A loaded + locked detail payload: the trip view mounts (synchronous flow,
+    // ADR-043) so the locked banner is visible once the trip is opened.
+    await mockLoadedTripDetail(mockedPage, { isLocked: true });
   },
 );
 
@@ -124,9 +97,13 @@ Given("je suis connecté sans voyage", async () => {
 
 Given(
   "j'ai un voyage sans dates de départ ni d'arrivée",
-  async ({ createFullTrip }) => {
-    // createFullTrip creates a trip; the default mock already returns null startDate/endDate
-    await createFullTrip();
+  async ({ mockedPage }) => {
+    // A loaded detail payload with null dates: opening it mounts the trip view
+    // (synchronous flow, ADR-043) so the stages render despite the absent dates.
+    await mockLoadedTripDetail(mockedPage, {
+      startDate: null,
+      endDate: null,
+    });
   },
 );
 
@@ -148,51 +125,30 @@ Given("I have recently viewed a trip", async ({ mockedPage }) => {
 });
 
 Given("a trip has been locked by another user", async ({ mockedPage }) => {
-  await mockedPage.route("**/trips/*/detail", (route, request) => {
-    if (request.method() !== "GET") return route.fallback();
-    const tripId =
-      request.url().match(/\/trips\/([^/]+)\/detail/)?.[1] ?? getTripId();
-    return route.fulfill({
-      status: 200,
-      contentType: "application/ld+json",
-      body: JSON.stringify({
-        "@context": "/contexts/TripDetail",
-        "@id": `/trips/${tripId}/detail`,
-        "@type": "TripDetail",
-        id: tripId,
-        title: "Test Trip",
-        sourceUrl: "https://www.komoot.com/fr-fr/tour/2795080048",
-        startDate: null,
-        endDate: null,
-        fatigueFactor: 0.8,
-        elevationPenalty: 100,
-        maxDistancePerDay: 80,
-        averageSpeed: 15,
-        ebikeMode: false,
-        departureHour: 8,
-        enabledAccommodationTypes: ["hotel", "camp_site"],
-        isLocked: true,
-        stages: [],
-        computationStatus: {},
-      }),
-    });
-  });
+  // A loaded + locked detail payload: the trip view mounts (synchronous flow,
+  // ADR-043) so the locked banner is visible once the trip is opened.
+  await mockLoadedTripDetail(mockedPage, { isLocked: true });
 });
 
 Given("I am logged in with no trips", async () => {
   // The default mock already returns an empty trip list — nothing to do.
 });
 
-Given(
-  "I have a trip with no start or end dates",
-  async ({ createFullTrip }) => {
-    await createFullTrip();
-  },
-);
+Given("I have a trip with no start or end dates", async ({ mockedPage }) => {
+  // A loaded detail payload with null dates: opening it mounts the trip view
+  // (synchronous flow, ADR-043) so the stages render despite the absent dates.
+  await mockLoadedTripDetail(mockedPage, {
+    startDate: null,
+    endDate: null,
+  });
+});
 
 // --- When steps FR ---
 
 When("je clique sur ce voyage dans la liste", async ({ mockedPage }) => {
+  // The detail route must return a loaded trip so the trip view mounts on
+  // navigation (synchronous flow, ADR-043) — otherwise it stays on the loader.
+  await mockLoadedTripDetail(mockedPage);
   const firstTrip = mockedPage
     .locator('[data-testid^="recent-trip-"]')
     .first();
@@ -201,6 +157,7 @@ When("je clique sur ce voyage dans la liste", async ({ mockedPage }) => {
 });
 
 When("je duplique ce voyage", async ({ mockedPage }) => {
+  await mockLoadedTripDetail(mockedPage);
   const firstTrip = mockedPage
     .locator('[data-testid^="recent-trip-"]')
     .first();

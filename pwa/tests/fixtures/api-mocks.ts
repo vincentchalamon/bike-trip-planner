@@ -43,6 +43,137 @@ export function getTripId(): string {
   return TRIP_ID;
 }
 
+/**
+ * Three structural stages shaped like the `TripDetail.stages` payload. Used by
+ * {@link mockLoadedTripDetail} so a `GET /trips/{id}/detail` can hydrate a fully
+ * loaded trip view without an SSE round-trip.
+ */
+export const LOADED_TRIP_DETAIL_STAGES = [
+  {
+    dayNumber: 1,
+    distance: 72.5,
+    elevation: 1180,
+    elevationLoss: 920,
+    startPoint: { lat: 44.735, lon: 4.598, ele: 280 },
+    endPoint: { lat: 44.532, lon: 4.392, ele: 540 },
+    geometry: [
+      { lat: 44.735, lon: 4.598, ele: 280 },
+      { lat: 44.532, lon: 4.392, ele: 540 },
+    ],
+    label: null,
+    isRestDay: false,
+    weather: null,
+    alerts: [],
+    pois: [],
+    accommodations: [],
+    selectedAccommodation: null,
+  },
+  {
+    dayNumber: 2,
+    distance: 63.2,
+    elevation: 870,
+    elevationLoss: 1050,
+    startPoint: { lat: 44.532, lon: 4.392, ele: 540 },
+    endPoint: { lat: 44.295, lon: 4.087, ele: 360 },
+    geometry: [
+      { lat: 44.532, lon: 4.392, ele: 540 },
+      { lat: 44.295, lon: 4.087, ele: 360 },
+    ],
+    label: null,
+    isRestDay: false,
+    weather: null,
+    alerts: [],
+    pois: [],
+    accommodations: [],
+    selectedAccommodation: null,
+  },
+  {
+    dayNumber: 3,
+    distance: 51.6,
+    elevation: 800,
+    elevationLoss: 750,
+    startPoint: { lat: 44.295, lon: 4.087, ele: 360 },
+    endPoint: { lat: 44.112, lon: 3.876, ele: 410 },
+    geometry: [
+      { lat: 44.295, lon: 4.087, ele: 360 },
+      { lat: 44.112, lon: 3.876, ele: 410 },
+    ],
+    label: null,
+    isRestDay: false,
+    weather: null,
+    alerts: [],
+    pois: [],
+    accommodations: [],
+    selectedAccommodation: null,
+  },
+];
+
+/**
+ * Override `GET /trips/{id}/detail` so it returns a *loaded* trip: `status:
+ * "ready"` plus structural stages. Under the synchronous flow (ADR-043) this
+ * mounts the full trip view immediately on a `goto /trips/{id}`, instead of the
+ * single loader the default (draft + empty) detail mock keeps the planner on.
+ *
+ * The default `mockAllApis` detail mock is intentionally left as draft+empty so
+ * `submitUrl`-then-inject-SSE specs still exercise the loader→stages path; call
+ * this helper only in specs that navigate straight to a persisted trip.
+ *
+ * `overrides` is shallow-merged into the body (e.g. `{ isLocked: true }`,
+ * `{ startDate: "2025-07-01T00:00:00+00:00" }`).
+ */
+export async function mockLoadedTripDetail(
+  page: Page,
+  overrides: Record<string, unknown> = {},
+): Promise<void> {
+  await page.route("**/trips/*/detail", (route, request) => {
+    if (request.method() !== "GET") return route.fallback();
+    const tripId =
+      request.url().match(/\/trips\/([^/]+)\/detail/)?.[1] ?? TRIP_ID;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/ld+json",
+      body: JSON.stringify({
+        "@context": "/contexts/TripDetail",
+        "@id": `/trips/${tripId}/detail`,
+        "@type": "TripDetail",
+        id: tripId,
+        title: "Test Trip",
+        sourceUrl: "https://www.komoot.com/fr-fr/tour/2795080048",
+        startDate: null,
+        endDate: null,
+        fatigueFactor: 0.8,
+        elevationPenalty: 100,
+        maxDistancePerDay: 80,
+        averageSpeed: 15,
+        ebikeMode: false,
+        departureHour: 8,
+        enabledAccommodationTypes: [
+          "camp_site",
+          "hotel",
+          "hostel",
+          "chalet",
+          "guest_house",
+          "motel",
+          "alpine_hut",
+        ],
+        isLocked: false,
+        status: "ready",
+        weatherStatus: "done",
+        aiStatus: null,
+        stages: LOADED_TRIP_DETAIL_STAGES,
+        computationStatus: {
+          route: "done",
+          stages: "done",
+          weather: "done",
+          terrain: "done",
+          accommodations: "done",
+        },
+        ...overrides,
+      }),
+    });
+  });
+}
+
 export async function mockAllApis(
   page: Page,
   options: MockApiOptions = {},

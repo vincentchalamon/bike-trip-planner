@@ -1,5 +1,4 @@
 import { test, expect } from "../fixtures/base.fixture";
-import { routeParsedEvent } from "../fixtures/mock-data";
 
 async function openConfigPanel(
   mockedPage: import("@playwright/test").Page,
@@ -14,12 +13,10 @@ async function openConfigPanel(
 
 test.describe("Pacing settings", () => {
   test("shows fatigue and elevation sliders", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     await openConfigPanel(mockedPage);
     const fatigueSlider = mockedPage.getByRole("slider", {
       name: "Indice de fatigue accumulée",
@@ -32,12 +29,10 @@ test.describe("Pacing settings", () => {
   });
 
   test("fatigue slider defaults to 20% (Intermediate preset)", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     await openConfigPanel(mockedPage);
     const fatigueSlider = mockedPage.getByRole("slider", {
       name: "Indice de fatigue accumulée",
@@ -47,12 +42,10 @@ test.describe("Pacing settings", () => {
   });
 
   test("shows max distance and average speed sliders", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     await openConfigPanel(mockedPage);
     const maxDistanceSlider = mockedPage.getByRole("slider", {
       name: "Distance maximale par jour (km)",
@@ -65,12 +58,10 @@ test.describe("Pacing settings", () => {
   });
 
   test("max distance slider defaults to 80 km", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     await openConfigPanel(mockedPage);
     const maxDistanceSlider = mockedPage.getByRole("slider", {
       name: "Distance maximale par jour (km)",
@@ -79,12 +70,10 @@ test.describe("Pacing settings", () => {
   });
 
   test("average speed slider defaults to 15 km/h", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     await openConfigPanel(mockedPage);
     const averageSpeedSlider = mockedPage.getByRole("slider", {
       name: "Vitesse moyenne (km/h)",
@@ -92,13 +81,8 @@ test.describe("Pacing settings", () => {
     await expect(averageSpeedSlider).toHaveValue("15");
   });
 
-  test("shows preset buttons", async ({
-    submitUrl,
-    injectEvent,
-    mockedPage,
-  }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+  test("shows preset buttons", async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
     await openConfigPanel(mockedPage);
     const beginnerButton = mockedPage.getByRole("button", {
       name: "Appliquer le profil Débutant",
@@ -115,12 +99,10 @@ test.describe("Pacing settings", () => {
   });
 
   test("clicking Débutant preset sets distance=50 and speed=10", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     await openConfigPanel(mockedPage);
     const beginnerButton = mockedPage.getByRole("button", {
       name: "Appliquer le profil Débutant",
@@ -137,12 +119,10 @@ test.describe("Pacing settings", () => {
   });
 
   test("shows coherence warning when speed < 8 and distance > 100", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     await openConfigPanel(mockedPage);
     const expertButton = mockedPage.getByRole("button", {
       name: "Appliquer le profil Expert",
@@ -160,14 +140,12 @@ test.describe("Pacing settings", () => {
   });
 
   test("pacing settings persist in the store across config open/close", async ({
+    createFullTrip,
     mockedPage,
-    submitUrl,
-    injectEvent,
   }) => {
     // The config gear only renders once a trip is loaded, so load a trip first,
     // then open the panel and select the Débutant preset.
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     await openConfigPanel(mockedPage);
     await mockedPage
       .getByRole("button", { name: "Appliquer le profil Débutant" })

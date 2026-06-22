@@ -1,14 +1,8 @@
 import { test, expect } from "../fixtures/base.fixture";
-import { routeParsedEvent } from "../fixtures/mock-data";
 
 test.describe("ConfigPanel", () => {
-  test("opens via gear button", async ({
-    submitUrl,
-    injectEvent,
-    mockedPage,
-  }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+  test("opens via gear button", async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
     await mockedPage
       .getByRole("button", { name: "Ouvrir les paramètres" })
       .click();
@@ -17,13 +11,8 @@ test.describe("ConfigPanel", () => {
     ).toBeInViewport();
   });
 
-  test("closes via ✕ button", async ({
-    submitUrl,
-    injectEvent,
-    mockedPage,
-  }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+  test("closes via ✕ button", async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
     await mockedPage
       .getByRole("button", { name: "Ouvrir les paramètres" })
       .click();
@@ -35,13 +24,8 @@ test.describe("ConfigPanel", () => {
     await expect(dialog).not.toBeInViewport();
   });
 
-  test("closes via backdrop click", async ({
-    submitUrl,
-    injectEvent,
-    mockedPage,
-  }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+  test("closes via backdrop click", async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
     await mockedPage
       .getByRole("button", { name: "Ouvrir les paramètres" })
       .click();
@@ -52,13 +36,8 @@ test.describe("ConfigPanel", () => {
     await expect(dialog).not.toBeInViewport();
   });
 
-  test("closes via Escape key", async ({
-    submitUrl,
-    injectEvent,
-    mockedPage,
-  }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+  test("closes via Escape key", async ({ createFullTrip, mockedPage }) => {
+    await createFullTrip();
     await mockedPage
       .getByRole("button", { name: "Ouvrir les paramètres" })
       .click();
@@ -69,12 +48,10 @@ test.describe("ConfigPanel", () => {
   });
 
   test("toggling the last enabled accommodation type is a no-op", async ({
-    submitUrl,
-    injectEvent,
+    createFullTrip,
     mockedPage,
   }) => {
-    await submitUrl();
-    await injectEvent(routeParsedEvent());
+    await createFullTrip();
     await mockedPage
       .getByRole("button", { name: "Ouvrir les paramètres" })
       .click();
