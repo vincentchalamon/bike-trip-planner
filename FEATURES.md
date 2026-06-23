@@ -133,7 +133,6 @@ Pipeline d'analyseurs (auto-découverts via `#[AutoconfigureTag('app.stage_analy
 | ✅ | **OpenStreetMap** (Overpass) | Routes, infra cyclable, eau, ateliers, ravitaillement, POI, hébergements de base | ODbL |
 | ✅ | **DataTourisme** | Enrichissement hébergements + POI culturels + événements datés (France) | Licence Ouverte 2.0 |
 | ✅ | **Wikidata** (SPARQL) | Descriptions multilingues, images, liens Wikipedia (Q-IDs) | CC0 |
-| ✅ | **data.gouv.fr** | Marchés forains hebdomadaires (import manuel) | Licence Ouverte 2.0 |
 | ✅ | **Open-Meteo** | Prévisions météo | CC-BY |
 
 Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
@@ -224,7 +223,6 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 |---|---|---|
 | ✅ | Jours fériés français | Détection auto |
 | ✅ | Dimanches | Alerte commerces fermés |
-| ✅ | Marchés forains hebdomadaires | Import data.gouv.fr via `make markets-import`. Sprint 20 #351 |
 | ✅ | Festivals datés | DataTourisme. Sprint 20 #349 |
 | ✅ | POI culturels basiques | OSM (château, musée, belvédère). Sprint 7 #35 |
 | ✅ | POI culturels enrichis | Description + horaires + prix + Wikipedia. Sprint 20 #348 |
@@ -414,7 +412,6 @@ Caches : OSM 24h, Wikidata 7j, DataTourisme (par ressource), Open-Meteo 3h.
 | ✅ | DataTourisme API | Rate limiter fixed_window, cache par ressource. Sprint 20 #346 |
 | ✅ | Wikidata SPARQL batch | Cache 7 jours. Sprint 20 #350 |
 | ✅ | Open-Meteo | Pas de clé API. Sprint 5 |
-| ✅ | data.gouv.fr | Import ponctuel manuel. Sprint 20 #351 |
 | 📅 | Garmin Developer Program | Inscription préalable ~2j approbation |
 | 📅 | Garmin Connect OAuth 2.0 PKCE | Flux authentification + callback. Sprint 31 |
 | 📅 | Push course vers Garmin Connect | Envoi GPX/FIT comme activité. Sprint 31 #65 |

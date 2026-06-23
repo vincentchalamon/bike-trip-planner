@@ -44,7 +44,7 @@ Pour la rotation : voir [secrets-rotation.md](secrets-rotation.md).
 | `SENTRY_URL` / `SENTRY_ORG` / `SENTRY_PROJECT` | Métadonnées (non sensibles) | GitHub repo secret | `deploy.yml` | Statiques | ADR-031 |
 | `NEXT_PUBLIC_SENTRY_DSN` | DSN client | GitHub repo secret | `deploy.yml` (build arg) | Idem runtime | ADR-031 |
 | `INCIDENT_DISPATCH_TOKEN` | Fine-grained PAT (issues:write) | GitHub repo secret | `incident-create.yml`, alertes externes | **90 jours** (déjà documenté) | PR #502 |
-| `DATABASE_URL` | DSN Postgres (dev/import) | GitHub repo secret | `import-markets.yml` | Statique (DSN dev) | — |
+| `DATABASE_URL` | DSN Postgres (dev/CI) | GitHub repo secret | `ci.yml` | Statique (DSN dev) | — |
 | `CLAUDE_CODE_OAUTH_TOKEN` | OAuth token Anthropic | GitHub repo secret | `claude.yml`, `claude-code-review.yml` | Géré par Anthropic | CLAUDE.md |
 | `GITHUB_TOKEN` | Token natif GHA | Auto-injecté | Tous workflows | Géré par GitHub (par run) | — |
 

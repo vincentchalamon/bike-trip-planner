@@ -77,21 +77,6 @@ export function AttributionFooter() {
                 </a>
               </p>
             </li>
-            <li>
-              <p className="font-medium">data.gouv.fr</p>
-              <p className="text-muted-foreground">
-                {t("datagouvCredit")}{" "}
-                <a
-                  href="https://www.etalab.gouv.fr/licence-ouverte-open-licence"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline hover:text-foreground"
-                  data-testid="attribution-datagouv-link"
-                >
-                  {t("licenceOuverte")}
-                </a>
-              </p>
-            </li>
           </ul>
         </DialogContent>
       </Dialog>

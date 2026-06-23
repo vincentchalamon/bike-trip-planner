@@ -362,7 +362,6 @@ export function resolveCategory(
       return "cultural-poi";
     case "event":
     case "festival":
-    case "market":
     case "public_holiday":
       return "event";
     case "waypoint":

@@ -676,7 +676,7 @@ export function tripReadyEventWithStageAiAnalysis(): MercureEvent {
             },
             {
               type: "nudge",
-              message: "Marché local le matin à Cassel",
+              message: "Boulangerie ouverte tôt à Cassel",
               lat: null,
               lon: null,
             },

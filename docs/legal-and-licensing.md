@@ -26,7 +26,6 @@ The app combines several open datasets; each keeps its own licence and attributi
 | OpenStreetMap (Overpass, Valhalla tiles) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) | Display "© OpenStreetMap contributors" (rendered on the map) |
 | DataTourisme | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | Credit the source; commercial use and modification allowed |
 | Wikidata | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Public domain — no attribution required |
-| data.gouv.fr (weekly markets) | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | Credit the source |
 | Open-Meteo | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Credit Open-Meteo |
 
 How each source is used and cached: [External data sources](../README.md#external-data-sources).

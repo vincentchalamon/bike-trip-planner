@@ -40,7 +40,7 @@ test.describe("attribution footer", () => {
     await expect(modal).toBeVisible();
   });
 
-  test("modal contains all four data sources", async ({ page }) => {
+  test("modal contains all three data sources", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
@@ -54,7 +54,6 @@ test.describe("attribution footer", () => {
       page.getByTestId("attribution-datatourisme-link"),
     ).toBeVisible();
     await expect(page.getByTestId("attribution-wikidata-link")).toBeVisible();
-    await expect(page.getByTestId("attribution-datagouv-link")).toBeVisible();
   });
 
   test("ODbL link points to the correct URL", async ({ page }) => {

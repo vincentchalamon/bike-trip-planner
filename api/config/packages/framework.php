@@ -83,11 +83,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                         'User-Agent' => 'BikeTripPlanner/1.0',
                     ],
                 ],
-                'markets.client' => [
-                    'scope' => '^https://www\\.data\\.gouv\\.fr',
-                    'max_redirects' => 2,
-                    'timeout' => 60,
-                ],
                 'mercure.health.client' => [
                     'base_uri' => '%env(MERCURE_URL)%',
                     'max_redirects' => 0,

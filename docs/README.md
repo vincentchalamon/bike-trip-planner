@@ -28,7 +28,7 @@ Looking for the product overview instead? See the README ([English](../README.md
 |---|---|
 | [Features](../FEATURES.md) | Complete feature inventory with delivery status |
 | [Alert engine](../README.md#alert-engine) | Canonical alert-rule table (severity, priority, trigger) |
-| [External data sources](../README.md#external-data-sources) | OSM, DataTourisme, Wikidata, data.gouv.fr, Open-Meteo |
+| [External data sources](../README.md#external-data-sources) | OSM, DataTourisme, Wikidata, Open-Meteo |
 | [Legal & Licensing](legal-and-licensing.md) | Project licence, data attribution, GDPR posture |
 
 ## Explanation — understanding the design

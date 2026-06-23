@@ -186,17 +186,14 @@ coverage-ci: ## Run PHPUnit with coverage (Clover XML for CI)
 test: qa test-php test-e2e openapi-lint security-check ## Run full test suite (Requires QA to pass first)
 
 ## --- 🗺️ OSM Provisioning ---
-provision: ensure-default-pbf ## Provision all reference sources (OSM/PostGIS + DataTourisme + markets)
+provision: ensure-default-pbf ## Provision all reference sources (OSM/PostGIS + DataTourisme)
 	@docker compose --profile provisioning run --rm provisioner
-	@docker compose run --rm php bin/console app:markets:import
 
-provision-update: ## Trigger a non-interactive provisioner update (re-download OSM + re-import PostGIS + DataTourisme + markets)
+provision-update: ## Trigger a non-interactive provisioner update (re-download OSM + re-import PostGIS + DataTourisme)
 	@docker compose --profile provisioning run --rm provisioner --no-interaction
-	@docker compose run --rm php bin/console app:markets:import
 
 provision-recette: ensure-default-pbf ensure-jwt-recette ## Provision the iso-prod recette reference sources (non-interactive; first run needs a seeded .docker/osm/data/regions.json, e.g. {"slugs":["nord-pas-de-calais"]}, or a prior `make provision`)
 	@docker compose -f compose.yaml -f compose.recette.yaml --profile provisioning run --rm -T provisioner --no-interaction
-	@docker compose -f compose.yaml -f compose.recette.yaml run --rm php bin/console app:markets:import
 
 ## --- 🗄️ Database ---
 migration: ## Generate a Doctrine migration
@@ -237,6 +234,3 @@ flush-queue: ## Stop workers, clear all Messenger queues, and purge trip state c
 	@# Redis visibility timeouts prevent double-processing of in-flight messages.
 	@docker compose exec php bin/console app:messenger:clear --all
 	@docker compose exec php bin/console cache:pool:clear cache.trip_state
-
-markets-import: ## Import weekly markets from data.gouv.fr into the database
-	@docker compose exec php bin/console app:markets:import

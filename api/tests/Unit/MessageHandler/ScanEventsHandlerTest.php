@@ -9,20 +9,17 @@ use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
-use App\Entity\Market;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanEvents;
 use App\MessageHandler\ScanEventsHandler;
-use App\Repository\MarketRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Tourism\EventRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ScanEventsHandlerTest extends TestCase
 {
@@ -44,15 +41,11 @@ final class ScanEventsHandlerTest extends TestCase
         TripUpdatePublisherInterface $publisher,
         EventRepositoryInterface $eventRepository,
         GeoDistanceInterface $haversine,
-        ?MarketRepositoryInterface $marketRepository = null,
-        ?TranslatorInterface $translator = null,
     ): ScanEventsHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
-        $marketRepository ??= $this->createStub(MarketRepositoryInterface::class);
-        $translator ??= $this->createStub(TranslatorInterface::class);
 
         return new ScanEventsHandler(
             $computationTracker,
@@ -62,8 +55,6 @@ final class ScanEventsHandlerTest extends TestCase
             $tripStateManager,
             $eventRepository,
             $haversine,
-            $marketRepository,
-            $translator,
             $this->createStub(MessageBusInterface::class),
         );
     }
@@ -183,63 +174,5 @@ final class ScanEventsHandlerTest extends TestCase
         self::assertSame('datatourisme', $events[0]['payload']['events'][0]['source']);
         self::assertSame(1, $events[1]['payload']['stageIndex']);
         self::assertSame('Expo Renoir', $events[1]['payload']['events'][0]['name']);
-    }
-
-    #[Test]
-    public function mergesDataTourismeAndMarketEventsForSameStage(): void
-    {
-        // 2026-07-13 is a Monday (ISO day 1).
-        $startDate = new \DateTimeImmutable('2026-07-13');
-
-        $eventRepository = $this->createStub(EventRepositoryInterface::class);
-        $eventRepository->method('findActiveNear')->willReturn([
-            $this->eventRow('Festival Jazz', 'festival', '2026-07-13', '2026-07-18'),
-            $this->eventRow('Expo Impressionnisme', 'exhibition', '2026-07-12', '2026-07-20'),
-        ]);
-
-        $market = new Market('MKT-MON-001', 'Marché du Lundi');
-        $market->setLat(48.49);
-        $market->setLon(2.49);
-        $market->setDayOfWeek(1);
-        $market->setStartTime('07:00');
-        $market->setEndTime('13:00');
-        $market->setCommune('Paris');
-        $market->setDepartment('75');
-
-        $marketRepository = $this->createStub(MarketRepositoryInterface::class);
-        $marketRepository->method('findNearEndpoint')->willReturn([$market]);
-
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturn('Weekly market');
-
-        $published = [];
-        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
-        $publisher->method('publish')->willReturnCallback(
-            static function (string $tripId, MercureEventType $type, array $payload) use (&$published): void {
-                $published[] = ['type' => $type, 'payload' => $payload];
-            },
-        );
-
-        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
-        $tripStateManager->method('getStages')->willReturn([$this->createStage(1)]);
-        $tripStateManager->method('getRequest')->willReturn($this->createTripRequest($startDate));
-
-        $haversine = $this->createStub(GeoDistanceInterface::class);
-        $haversine->method('inMeters')->willReturn(400.0);
-
-        $handler = $this->createHandler($tripStateManager, $publisher, $eventRepository, $haversine, $marketRepository, $translator);
-        $handler(new ScanEvents('trip-1'));
-
-        $events = array_values(array_filter($published, static fn (array $e): bool => MercureEventType::EVENTS_FOUND === $e['type']));
-        self::assertCount(1, $events);
-        self::assertCount(3, $events[0]['payload']['events']);
-
-        $sources = array_column($events[0]['payload']['events'], 'source');
-        self::assertContains('datatourisme', $sources);
-        self::assertContains('data_gouv_markets', $sources);
-
-        $marketEvents = array_values(array_filter($events[0]['payload']['events'], static fn (array $e): bool => 'data_gouv_markets' === $e['source']));
-        self::assertSame('Marché du Lundi', $marketEvents[0]['name']);
-        self::assertSame('market', $marketEvents[0]['type']);
     }
 }
