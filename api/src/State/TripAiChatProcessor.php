@@ -114,7 +114,7 @@ final readonly class TripAiChatProcessor implements ProcessorInterface
                 'error' => $aiUnavailableException->getMessage(),
             ]);
 
-            throw new ServiceUnavailableHttpException(retryAfter: $aiUnavailableException->getRetryAfter(), message: $this->unavailableMessage($aiUnavailableException), previous: $aiUnavailableException);
+            throw new ServiceUnavailableHttpException(retryAfter: $aiUnavailableException->getRetryAfter(), message: $this->unavailableMessage($aiUnavailableException->getReason(), $locale), previous: $aiUnavailableException);
         }
 
         $rawContent = null === $response ? '' : ($this->extractText($response) ?? '');
@@ -164,12 +164,20 @@ final readonly class TripAiChatProcessor implements ProcessorInterface
         return $built;
     }
 
-    private function unavailableMessage(AiUnavailableException $exception): string
+    private function unavailableMessage(AiFailureReason $reason, string $locale): string
     {
-        return match ($exception->getReason()) {
-            AiFailureReason::INVALID_TOKEN => 'Votre clé IA semble invalide. Vérifiez-la dans vos réglages.',
-            AiFailureReason::QUOTA_EXCEEDED => 'Le quota de votre offre IA est épuisé. Vérifiez votre compte chez le fournisseur.',
-            default => 'Assistant IA temporairement indisponible. Réessayez dans un instant.',
+        if ('fr' === $locale) {
+            return match ($reason) {
+                AiFailureReason::INVALID_TOKEN => 'Votre clé IA semble invalide. Vérifiez-la dans vos réglages.',
+                AiFailureReason::QUOTA_EXCEEDED => 'Le quota de votre offre IA est épuisé. Vérifiez votre compte chez le fournisseur.',
+                default => 'Assistant IA temporairement indisponible. Réessayez dans un instant.',
+            };
+        }
+
+        return match ($reason) {
+            AiFailureReason::INVALID_TOKEN => 'Your AI key looks invalid. Check it in your settings.',
+            AiFailureReason::QUOTA_EXCEEDED => 'Your AI plan quota is exhausted. Check your provider account.',
+            default => 'AI assistant temporarily unavailable. Please try again shortly.',
         };
     }
 
