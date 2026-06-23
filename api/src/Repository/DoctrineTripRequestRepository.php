@@ -231,7 +231,9 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
             ->setParameter('dayNumber', $dayNumber)
-            ->setParameter('aiAnalysis', $aiAnalysis)
+            // Bind as a single JSONB value; without the explicit type Doctrine infers
+            // ArrayParameterType::STRING and expands the array into an IN list ($1, $2, ...).
+            ->setParameter('aiAnalysis', $aiAnalysis, 'jsonb')
             ->execute();
     }
 
@@ -250,7 +252,9 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             'UPDATE App\ApiResource\TripRequest t SET t.aiOverviewData = :aiOverview WHERE t.id = :tripId',
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
-            ->setParameter('aiOverview', $aiOverview)
+            // Bind as a single JSONB value (see updateStageAiAnalysis): the explicit type
+            // prevents Doctrine from expanding the array into an IN list.
+            ->setParameter('aiOverview', $aiOverview, 'jsonb')
             ->execute();
     }
 
