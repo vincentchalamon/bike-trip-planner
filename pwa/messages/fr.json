@@ -580,15 +580,36 @@
     "ariaSelectAi": "Discuter avec l'assistant IA"
   },
   "aiChat": {
-    "subtitle": "Décris ton projet, l'assistant proposera un itinéraire.",
+    "subtitle": "Décris ton projet, l'assistant affine l'itinéraire avec toi.",
     "historyAriaLabel": "Conversation avec l'assistant IA",
-    "stubGreeting": "Bonjour ! Décris l'aventure que tu imagines (région, durée, période, niveau...) et je te proposerai un itinéraire sur mesure.",
-    "stubReply": "C'est noté ! Ajoute des précisions si tu veux (durée, dénivelé, type de route…), puis clique sur « Valider et continuer » pour que je génère ton itinéraire.",
+    "greeting": "Bonjour ! Décris l'aventure que tu imagines (région, durée, période, niveau...) et je t'aiderai à préciser ton itinéraire.",
+    "thinking": "L'assistant réfléchit…",
     "inputLabel": "Ta demande",
     "inputPlaceholder": "Ex : « Je veux faire le tour de Corse en 10 jours en septembre »",
     "inputHint": "Entrée pour envoyer · Maj + Entrée pour un retour à la ligne",
     "sendAriaLabel": "Envoyer le message",
-    "submitLabel": "Valider et continuer"
+    "capReached": "Tu as donné beaucoup de détails. Lance le calcul de l'itinéraire pour continuer.",
+    "recapAriaLabel": "Paramètres compris par l'assistant",
+    "recapTitle": "Ce que j'ai compris",
+    "recapEmpty": "Décris ton projet, je résumerai ici les paramètres compris.",
+    "recap": {
+      "start": "Départ",
+      "end": "Destination",
+      "loop": "Boucle",
+      "durationDays": "Durée",
+      "profile": "Profil",
+      "elevation": "Dénivelé",
+      "startDate": "Dates",
+      "supply": "Ravitaillement"
+    },
+    "launchLabel": "Lancer le calcul d'itinéraire",
+    "launchRecommended": "Ton projet semble complet : tu peux lancer le calcul.",
+    "launchNeedsStart": "Indique au moins un point de départ pour lancer le calcul.",
+    "errorNotConfigured": "Configure un fournisseur IA pour discuter de ton itinéraire.",
+    "configureCta": "Configurer une IA",
+    "errorRateLimit": "Trop de messages d'affilée. Patiente un instant avant de réessayer.",
+    "errorUnavailable": "Assistant IA temporairement indisponible. Réessaie dans un instant.",
+    "errorGeneric": "Une erreur est survenue. Réessaie."
   },
   "planner": {
     "computing": "Calcul de ton itinéraire en cours…"

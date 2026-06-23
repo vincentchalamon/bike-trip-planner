@@ -685,6 +685,107 @@ const tripChatResponseSchema = z.object({
 });
 
 /**
+ * One turn of the pre-trip brief chat (`POST /trips/ai-chat`, ADR-045).
+ * Sourced from the generated OpenAPI schema (`AiChatMessage`) so role/content
+ * stay in lockstep with `App\ApiResource\Model\AiChatMessage`.
+ */
+export type AiChatTurn = components["schemas"]["AiChatMessage"];
+
+/**
+ * Response of `POST /trips/ai-chat` (`App\ApiResource\AiChatResponse`): the
+ * assistant reply, the model's readiness verdict and the running structured
+ * summary of the brief understood so far.
+ */
+export interface AiChatResponseBody {
+  reply: string;
+  readyToGenerate: boolean;
+  collected: Record<string, string | number | boolean | null>;
+}
+
+/**
+ * Outcome of {@link sendAiChat}. A discriminated union so the caller maps the
+ * backend's discrete failure modes (ADR-045) to localized messages without
+ * re-deriving them from a raw status code:
+ *
+ * - `ok`              — the assistant turn (reply + readiness + collected).
+ * - `not_configured`  — 422 `{error:"ai_not_configured"}`: no provider set;
+ *   surface the "configure une IA" CTA (mirrors `aiCapability.configured`).
+ * - `rate_limited`    — 429: per-user chat rate limit reached.
+ * - `unavailable`     — 503: provider unreachable / invalid token / quota.
+ * - `error`           — any other failure (network, 4xx, bad shape).
+ */
+export type AiChatResult =
+  | { status: "ok"; data: AiChatResponseBody }
+  | { status: "not_configured" }
+  | { status: "rate_limited" }
+  | { status: "unavailable" }
+  | { status: "error" };
+
+const aiChatResponseSchema = z.object({
+  reply: z.string(),
+  readyToGenerate: z.boolean(),
+  collected: z
+    .record(
+      z.string(),
+      z.union([z.string(), z.number(), z.boolean(), z.null()]),
+    )
+    .catch({})
+    .default({}),
+});
+
+function hasAiNotConfigured(body: unknown): boolean {
+  return (
+    body !== null &&
+    typeof body === "object" &&
+    "error" in body &&
+    (body as { error?: unknown }).error === "ai_not_configured"
+  );
+}
+
+/**
+ * Send the whole brief-chat transcript to `POST /trips/ai-chat` (ADR-045).
+ *
+ * The endpoint is stateless — the client carries the full conversation on every
+ * turn. Uses the typed {@link apiClient} (the route is fully described by the
+ * generated schema, unlike `sendTripChat` which keeps a hand-written mirror for
+ * legacy reasons), then classifies the discrete failure modes by HTTP status so
+ * the caller can localize them.
+ */
+export async function sendAiChat(
+  messages: ReadonlyArray<AiChatTurn>,
+  signal?: AbortSignal,
+): Promise<AiChatResult> {
+  let response: Response;
+  let error: unknown;
+  let data: unknown;
+  try {
+    const result = await apiClient.POST("/trips/ai-chat", {
+      body: { messages: [...messages] },
+      ...(signal ? { signal } : {}),
+    });
+    response = result.response;
+    error = result.error;
+    data = result.data;
+  } catch {
+    // Network failure / aborted request — the openapi-fetch promise rejects.
+    return { status: "error" };
+  }
+
+  if (response.ok && data) {
+    const parsed = aiChatResponseSchema.safeParse(data);
+    if (!parsed.success) return { status: "error" };
+    return { status: "ok", data: parsed.data };
+  }
+
+  if (response.status === 422 && hasAiNotConfigured(error)) {
+    return { status: "not_configured" };
+  }
+  if (response.status === 429) return { status: "rate_limited" };
+  if (response.status === 503) return { status: "unavailable" };
+  return { status: "error" };
+}
+
+/**
  * Duplicate an existing trip (deep-clone with all stages and settings).
  * Returns the new trip id on success, null on failure.
  */

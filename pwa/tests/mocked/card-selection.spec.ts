@@ -41,23 +41,23 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     await expect(page.getByTestId("card-gpx")).toBeHidden();
   });
 
-  test("AI chat appends user / assistant turns and submits the conversation", async ({
+  test("AI chat appends user / assistant turns and launches on a collected start", async ({
     page,
   }) => {
     await page.getByTestId("card-ai").click();
 
-    // The "Valider et continuer" button is disabled while the conversation is empty
-    const submit = page.getByTestId("ai-chat-submit");
-    await expect(submit).toBeDisabled();
+    // The launch button is hard-gated off until a geocodable start is collected.
+    const launch = page.getByTestId("ai-chat-launch");
+    await expect(launch).toBeDisabled();
 
-    // Capture the submit event so we can assert on the dispatched transcript
+    // Capture the launch event so we can assert on the consolidated brief.
     await page.evaluate(() => {
-      (window as unknown as { __aiChatSubmits: unknown[] }).__aiChatSubmits =
+      (window as unknown as { __aiChatLaunches: unknown[] }).__aiChatLaunches =
         [];
-      document.addEventListener("ai-chat-submit", (event) => {
+      document.addEventListener("ai-chat-launch", (event) => {
         (
-          window as unknown as { __aiChatSubmits: unknown[] }
-        ).__aiChatSubmits.push((event as CustomEvent).detail);
+          window as unknown as { __aiChatLaunches: unknown[] }
+        ).__aiChatLaunches.push((event as CustomEvent).detail);
       });
     });
 
@@ -65,7 +65,6 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     await textarea.fill("Tour de Corse en 10 jours en septembre");
     await textarea.press("Enter");
 
-    // Two new bubbles appended (user + assistant stub)
     const userMessages = page.locator(
       '[data-testid="ai-chat-message"][data-role="user"]',
     );
@@ -73,20 +72,12 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
       '[data-testid="ai-chat-message"][data-role="assistant"]',
     );
     await expect(userMessages).toHaveCount(1);
-    // The greeting + the stub reply
+    // The greeting + the real assistant reply from the mocked /trips/ai-chat.
     await expect(assistantMessages).toHaveCount(2);
     await expect(userMessages.first()).toContainText("Tour de Corse");
 
-    await expect(submit).toBeEnabled();
-    await submit.click();
-
-    const submits = await page.evaluate(
-      () =>
-        (window as unknown as { __aiChatSubmits: { messages: unknown[] }[] })
-          .__aiChatSubmits,
-    );
-    expect(submits.length).toBe(1);
-    expect(submits[0]?.messages.length).toBe(2);
+    // The default mock collects no start, so launch stays disabled.
+    await expect(launch).toBeDisabled();
   });
 
   test("selecting Link card reveals URL input and hides GPX card", async ({

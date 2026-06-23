@@ -427,14 +427,10 @@ export function TripPlanner() {
             <CardSelection
               onSubmitUrl={handleMagicLink}
               onUploadFile={handleGpxUpload}
-              onSubmitAiConversation={(messages) => {
-                // The assistant turns are local stubs; the brief is the rider's
-                // own words, so only user turns are forwarded to the backend.
-                const brief = messages
-                  .filter((m) => m.role === "user")
-                  .map((m) => m.content)
-                  .join("\n")
-                  .trim();
+              onLaunchAiGeneration={(brief) => {
+                // The chat card consolidates the brief (structured `collected`
+                // parameters + the rider's turns as fallback, ADR-045); the
+                // host just forwards it to POST /trips/ai-generate.
                 if (brief) void handleAiGeneration(brief);
               }}
               disabled={!isOnline}
