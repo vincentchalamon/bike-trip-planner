@@ -583,7 +583,7 @@
     "subtitle": "Describe your project — the assistant will draft an itinerary.",
     "historyAriaLabel": "Conversation with the AI assistant",
     "stubGreeting": "Hi! Tell me about the adventure you have in mind (region, duration, dates, fitness level...) and I'll draft a custom itinerary for you.",
-    "stubReply": "Got it! Once the assistant is connected, I'll suggest a detailed itinerary with stages tailored to your request.",
+    "stubReply": "Got it! Add any details you like (duration, elevation, road type…), then click \"Validate and continue\" so I can generate your itinerary.",
     "inputLabel": "Your request",
     "inputPlaceholder": "E.g. \"I want to ride around Corsica for 10 days in September\"",
     "inputHint": "Enter to send · Shift + Enter for a new line",
