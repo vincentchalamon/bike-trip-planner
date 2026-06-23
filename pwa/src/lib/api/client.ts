@@ -696,11 +696,14 @@ export type AiChatTurn = components["schemas"]["AiChatMessage"];
  * assistant reply, the model's readiness verdict and the running structured
  * summary of the brief understood so far.
  */
-export interface AiChatResponseBody {
-  reply: string;
-  readyToGenerate: boolean;
+export type AiChatResponseBody = Pick<
+  components["schemas"]["Trip.AiChatResponse.jsonld"],
+  "reply" | "readyToGenerate"
+> & {
+  // Intentionally narrower than the generated `{ [key: string]: unknown }`:
+  // the recap/brief only consume flat scalar values.
   collected: Record<string, string | number | boolean | null>;
-}
+};
 
 /**
  * Outcome of {@link sendAiChat}. A discriminated union so the caller maps the
