@@ -73,7 +73,7 @@ Estimation ~53 scénarios : 2 nouveaux fichiers + extensions de 2 fichiers exist
 **Chat IA (`ai-chat-panel`)** — 6 scénarios :
 
 - Panneau chat visible après calcul.
-- Message envoyé au backend (`POST /trips/*/chat`).
+- Message envoyé au backend (`POST /trips/*/ai-chat`).
 - Réponse affichée dans l'historique.
 - Indicateur de chargement pendant la réponse.
 - Mode "En route" + géolocalisation -> POIs proches.

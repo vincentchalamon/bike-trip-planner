@@ -462,7 +462,7 @@ export async function launchTripAnalysis(tripId: string): Promise<boolean> {
 }
 
 /**
- * Body of `POST /trips/{id}/chat`. Mirrors `App\ApiResource\TripChatRequest`
+ * Body of `POST /trips/{id}/ai-chat`. Mirrors `App\ApiResource\TripChatRequest`
  * on the backend; declared locally until `make typegen` ingests the schema
  * change introduced by issue #309.
  */
@@ -494,7 +494,7 @@ export type PoiSuggestionDto = NonNullable<
 >;
 
 /**
- * Response of `POST /trips/{id}/chat`. Mirrors `App\ApiResource\TripChatResponse`
+ * Response of `POST /trips/{id}/ai-chat`. Mirrors `App\ApiResource\TripChatResponse`
  * on the backend (`tripId`, `action`, `params`, `response`, `dispatched`,
  * `impactedStageNumbers`, `requiresFullAnalysis`).
  */
@@ -526,7 +526,7 @@ export interface TripChatResponseBody {
  * Send a natural-language instruction to the LLaMA 3B dialogue assistant.
  *
  * Until the OpenAPI schema is regenerated (after #309 lands on main), the
- * `/trips/{id}/chat` route is not yet exposed via `apiClient.POST`, so this
+ * `/trips/{id}/ai-chat` route is not yet exposed via `apiClient.POST`, so this
  * function talks to the server through {@link apiFetch}. Once the typegen
  * catches up, this can be swapped for a typed call.
  */
@@ -539,7 +539,7 @@ export async function sendTripChat(
   error: string | null;
   status: number;
 }> {
-  const res = await apiFetch(`${API_URL}/trips/${tripId}/chat`, {
+  const res = await apiFetch(`${API_URL}/trips/${tripId}/ai-chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/ld+json",
@@ -567,7 +567,7 @@ export async function sendTripChat(
 }
 
 /**
- * One persisted chat turn returned by `GET /trips/{id}/chat-history`.
+ * One persisted chat turn returned by `GET /trips/{id}/ai-chat-history`.
  *
  * Mirrors `App\ApiResource\TripChatMessageResource`. Messages are returned
  * most-recent first; consumers reverse the array for chronological rendering.
@@ -650,7 +650,7 @@ export async function fetchTripChatHistory(
   const params = new URLSearchParams();
   if (options.limit !== undefined) params.set("limit", String(options.limit));
   const query = params.toString();
-  const url = `${API_URL}/trips/${tripId}/chat-history${query ? `?${query}` : ""}`;
+  const url = `${API_URL}/trips/${tripId}/ai-chat-history${query ? `?${query}` : ""}`;
 
   const res = await apiFetch(url, {
     method: "GET",

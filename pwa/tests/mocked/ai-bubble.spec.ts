@@ -10,7 +10,7 @@ import { getTripId } from "../fixtures/api-mocks";
  *
  * Coverage:
  *  - The bubble opens/closes a 400×500 chat panel from the bottom right.
- *  - Submitting a message round-trips through `POST /trips/{id}/chat` and
+ *  - Submitting a message round-trips through `POST /trips/{id}/ai-chat` and
  *    appends the assistant reply to the conversation.
  *  - Context-aware: the body sent to the backend carries
  *    `context.currentStage` matching the active day number.
@@ -24,7 +24,7 @@ import { getTripId } from "../fixtures/api-mocks";
 
 function chatUrlPattern(): RegExp {
   return new RegExp(
-    `/trips/${getTripId().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/chat$`,
+    `/trips/${getTripId().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/ai-chat$`,
   );
 }
 

@@ -9,7 +9,7 @@ Ollama is an **optional LLM tier** running in **explicit degraded mode** (ADR-02
 - PHP/worker logs at **`critical`**: `Ollama unreachable — skipping stage analysis.` / `… skipping trip overview synthesis.` / `Ollama unreachable — chat endpoint returning 503.` (plus the in-ride detector/assistant). One per affected message — Sentry groups them by the fixed template.
 - `GET /api/health` returns HTTP **200** with `deps.ollama_chat.status: "down"` (and `deps.ollama_analysis.status`) — surfaced **only when `OLLAMA_ENABLED=1`**; the keys are absent entirely when AI is off by config. Ollama is probed but excluded from `$required`, so it does **not** flip the aggregate HTTP status to 503.
 - PWA: the floating AI bubble is disabled (title "Assistant IA indisponible"), the Acte 3 "AI unavailable" notice shows, and the refinement card on `/trips/new` is disabled.
-- The in-editor chat endpoint (`POST /trips/{id}/chat`) returns **503** while the tier is down.
+- The in-editor chat endpoint (`POST /trips/{id}/ai-chat`) returns **503** while the tier is down.
 - Trips still complete: stages, weather, and rule-based alerts render; only the AI narrative is absent.
 
 ## Diagnostic

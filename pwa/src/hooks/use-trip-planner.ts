@@ -854,7 +854,7 @@ export function useTripPlanner() {
   }
 
   /**
-   * Dispatch a chat turn to `POST /trips/{id}/chat`, append both the user
+   * Dispatch a chat turn to `POST /trips/{id}/ai-chat`, append both the user
    * message and the assistant reply to {@link useUiStore.chatHistory}, and
    * — when the backend dispatched an inline recomputation — flag the impacted
    * stages as `recomputing` so the timeline shows the shimmer skeleton until

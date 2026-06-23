@@ -16,7 +16,7 @@ use App\State\TripChatHistoryProvider;
 /**
  * Read-only DTO exposing a single persisted chat turn over the API.
  *
- * Backs the `GET /trips/{id}/chat-history` endpoint introduced in #459 so the
+ * Backs the `GET /trips/{id}/ai-chat-history` endpoint introduced in #459 so the
  * PWA can rehydrate the chat drawer after a refresh or a return visit. The
  * underlying Doctrine entity ({@see \App\Entity\TripChatMessage}) is kept
  * private to the backend; only the publicly safe fields are exposed here.
@@ -29,7 +29,7 @@ use App\State\TripChatHistoryProvider;
     shortName: 'TripChatMessage',
     operations: [
         new GetCollection(
-            uriTemplate: '/trips/{id}/chat-history{._format}',
+            uriTemplate: '/trips/{id}/ai-chat-history{._format}',
             openapi: new Operation(
                 responses: [
                     404 => new Response(description: 'Trip not found'),

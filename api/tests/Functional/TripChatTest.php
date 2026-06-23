@@ -92,7 +92,7 @@ final class TripChatTest extends ApiTestCase
 
         $response = $this->client->request(
             'POST',
-            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat', self::TRIP_ID),
             [
                 'json' => [
                     'message' => "Coupe l'étape 3 en deux",
@@ -134,7 +134,7 @@ final class TripChatTest extends ApiTestCase
 
         $response = $this->client->request(
             'POST',
-            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat', self::TRIP_ID),
             [
                 'json' => ['message' => "C'est quoi le gravel ?"],
                 'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
@@ -168,7 +168,7 @@ final class TripChatTest extends ApiTestCase
 
         $response = $this->client->request(
             'POST',
-            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat', self::TRIP_ID),
             [
                 'json' => ['message' => "Change l'itinéraire pour passer par la côte"],
                 'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
@@ -195,7 +195,7 @@ final class TripChatTest extends ApiTestCase
 
         $response = $this->client->request(
             'POST',
-            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat', self::TRIP_ID),
             [
                 'json' => ['message' => 'Bonjour'],
                 'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
@@ -219,7 +219,7 @@ final class TripChatTest extends ApiTestCase
 
         $this->client->request(
             'POST',
-            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat', self::TRIP_ID),
             [
                 'json' => ['message' => 'Bonjour'],
                 'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
@@ -238,7 +238,7 @@ final class TripChatTest extends ApiTestCase
 
         $this->client->request(
             'POST',
-            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat', self::TRIP_ID),
             [
                 'json' => ['message' => 'Bonjour'],
                 'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
@@ -257,7 +257,7 @@ final class TripChatTest extends ApiTestCase
 
         $response = $this->client->request(
             'POST',
-            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat', self::TRIP_ID),
             [
                 'json' => ['message' => 'Bonjour'],
                 'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
@@ -277,7 +277,7 @@ final class TripChatTest extends ApiTestCase
 
         $this->client->request(
             'POST',
-            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat', self::TRIP_ID),
             [
                 'json' => ['message' => 'Bonjour'],
                 'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
@@ -295,7 +295,7 @@ final class TripChatTest extends ApiTestCase
 
         $this->client->request(
             'POST',
-            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat', self::TRIP_ID),
             ['json' => ['message' => 'Bonjour']],
         );
 
@@ -309,7 +309,7 @@ final class TripChatTest extends ApiTestCase
 
         $this->client->request(
             'POST',
-            '/trips/00000000-0000-0000-0000-000000000000/chat',
+            '/trips/00000000-0000-0000-0000-000000000000/ai-chat',
             [
                 'json' => ['message' => 'Bonjour'],
                 'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
@@ -330,7 +330,7 @@ final class TripChatTest extends ApiTestCase
 
         $this->client->request(
             'POST',
-            \sprintf('/trips/%s/chat', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat', self::TRIP_ID),
             [
                 'json' => ['message' => ''],
                 'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],

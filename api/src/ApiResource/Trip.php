@@ -137,7 +137,7 @@ use App\State\TripUpdateProcessor;
             processor: AnalyzeTripProcessor::class,
         ),
         new Post(
-            uriTemplate: '/trips/{id}/chat{._format}',
+            uriTemplate: '/trips/{id}/ai-chat{._format}',
             status: 200,
             openapi: new Operation(
                 responses: [

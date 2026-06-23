@@ -21,7 +21,7 @@ use Symfony\Component\Uid\Uuid;
  * Loads the persisted chat history for a trip with cursor-based pagination.
  *
  * Companion provider for {@see TripChatMessageResource} backing
- * `GET /trips/{id}/chat-history`. The Redis-backed Mercure history is volatile
+ * `GET /trips/{id}/ai-chat-history`. The Redis-backed Mercure history is volatile
  * and capped to the most recent N turns; this endpoint reads the durable
  * PostgreSQL store so the PWA can rehydrate the chat drawer days later.
  *

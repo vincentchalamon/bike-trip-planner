@@ -69,7 +69,7 @@ Fonctionnalité: Fonctionnalités IA
     Et que l'assistant IA répond "Voici mon analyse de votre étape."
     Quand j'ouvre la bulle d'assistance IA
     Et que j'envoie le message "Que penses-tu de cette étape ?" dans le chat IA
-    Alors une requête POST vers /trips/*/chat est envoyée
+    Alors une requête POST vers /trips/*/ai-chat est envoyée
     Et la réponse "Voici mon analyse de votre étape." apparaît dans l'historique du chat
 
   @desktop

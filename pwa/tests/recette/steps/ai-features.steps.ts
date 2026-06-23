@@ -19,7 +19,7 @@ import type { MercureEvent } from "../../../src/lib/mercure/types";
 
 function chatUrlPattern(): RegExp {
   return new RegExp(
-    `/trips/${getTripId().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/chat$`,
+    `/trips/${getTripId().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/ai-chat$`,
   );
 }
 
@@ -743,13 +743,13 @@ Then("the AI chat panel is visible", async ({ mockedPage }) => {
   });
 });
 
-Then(/^une requête POST vers \/trips\/\*\/chat est envoyée$/, async () => {
+Then(/^une requête POST vers \/trips\/\*\/ai-chat est envoyée$/, async () => {
   await expect
     .poll(() => capturedChatRequests.length, { timeout: 5000 })
     .toBeGreaterThan(0);
 });
 
-Then(/^a POST request to \/trips\/\*\/chat is sent$/, async () => {
+Then(/^a POST request to \/trips\/\*\/ai-chat is sent$/, async () => {
   await expect
     .poll(() => capturedChatRequests.length, { timeout: 5000 })
     .toBeGreaterThan(0);
