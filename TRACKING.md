@@ -552,12 +552,12 @@ Assistant conversationnel via bulle flottante, LLaMA 3B pour interpréter les in
 
 ## Sprint 32 — Chat in-ride : assistant POI à proximité avec détour
 
-Extension du chat LLaMA 3B (sprint 31) au cas d'usage **in-ride** : pendant un voyage, l'utilisateur consulte son trip et demande à l'assistant de trouver un POI proche (friterie, abri, eau, mécano…) pour gérer un imprévu (faim, pluie, panne). Le chat existant (`POST /trips/{id}/chat`) détecte la présence d'une **position GPS** dans le payload pour basculer en mode in-ride : recherche Overpass + filtrage `opening_hours` + calcul approximatif du détour (Haversine + projection orthogonale) + deeplink Google Maps. Pas de recalcul GPX (V2 future) — l'itinéraire de base reste inchangé.
+Extension du chat LLaMA 3B (sprint 31) au cas d'usage **in-ride** : pendant un voyage, l'utilisateur consulte son trip et demande à l'assistant de trouver un POI proche (friterie, abri, eau, mécano…) pour gérer un imprévu (faim, pluie, panne). Le chat existant (`POST /trips/{id}/ai-chat`) détecte la présence d'une **position GPS** dans le payload pour basculer en mode in-ride : recherche Overpass + filtrage `opening_hours` + calcul approximatif du détour (Haversine + projection orthogonale) + deeplink Google Maps. Pas de recalcul GPX (V2 future) — l'itinéraire de base reste inchangé.
 
 | Ordre | ID  | Titre                                                                                                                | Effort | PRs | Dépend de |
 |-------|-----|----------------------------------------------------------------------------------------------------------------------|--------|-----|-----------|
 | 1     | [#458](https://github.com/vincentchalamon/bike-trip-planner/issues/458) | Entité `TripChatMessage` + repository + migration Doctrine (persistance long-terme par trip)                         | M      | [#467](https://github.com/vincentchalamon/bike-trip-planner/pull/467) `feature/458` | sprint 31    |
-| 2     | [#459](https://github.com/vincentchalamon/bike-trip-planner/issues/459) | Endpoint `GET /trips/{id}/chat-history` : pagination de l'historique persisté                                        | S      | [#471](https://github.com/vincentchalamon/bike-trip-planner/pull/471) `feature/459` | #458         |
+| 2     | [#459](https://github.com/vincentchalamon/bike-trip-planner/issues/459) | Endpoint `GET /trips/{id}/ai-chat-history` : pagination de l'historique persisté                                        | S      | [#471](https://github.com/vincentchalamon/bike-trip-planner/pull/471) `feature/459` | #458         |
 | 3     | [#460](https://github.com/vincentchalamon/bike-trip-planner/issues/460) | `OpeningHoursParser` PHP + benchmark lib tierce + tests cas OSM courants                                             | M      | [#468](https://github.com/vincentchalamon/bike-trip-planner/pull/468) `feature/460` | —            |
 | 4     | [#461](https://github.com/vincentchalamon/bike-trip-planner/issues/461) | `DetourCalculator` : projection orthogonale POI → polyline restante + distance détour (Haversine)                    | M      | [#469](https://github.com/vincentchalamon/bike-trip-planner/pull/469) `feature/461` | —            |
 | 5     | [#462](https://github.com/vincentchalamon/bike-trip-planner/issues/462) | `InRideAssistant` + `PoiIntentDetector` + `DeeplinkBuilder` + extensions `OsmOverpassQueryBuilder` (eau, abri)        | L      | [#472](https://github.com/vincentchalamon/bike-trip-planner/pull/472) `feature/462` | #460, #461   |
@@ -574,7 +574,7 @@ Extension du chat LLaMA 3B (sprint 31) au cas d'usage **in-ride** : pendant un v
   - [ ] Bouton « Ouvrir dans Google Maps » → deeplink `?api=1&travelmode=bicycling` avec coords correctes
   - [ ] Disclaimer « votre itinéraire de base n'est pas modifié » visible sous les cards
   - [ ] Filtre horaires : POI fermé ou fermeture < 1h est exclu ; POI sans `opening_hours` affiché avec avertissement
-  - [ ] Persistance : refresh page → historique rechargé depuis `/chat-history`
+  - [ ] Persistance : refresh page → historique rechargé depuis `/ai-chat-history`
   - [ ] Refus géoloc → message clair, le chat planning continue de fonctionner
   - [ ] DevTools Offline → badge offline + bouton désactivé
   - [ ] Non-régression : les 7 actions planning existantes (split, merge, add waypoint, change accommodation, adjust distance, change route, info) marchent sans géoloc

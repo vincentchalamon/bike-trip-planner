@@ -93,7 +93,7 @@ final class TripChatHistoryTest extends ApiTestCase
 
         $response = $this->client->request(
             'GET',
-            \sprintf('/trips/%s/chat-history', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat-history', self::TRIP_ID),
             ['headers' => ['Accept' => 'application/ld+json', ...$this->authHeader($this->jwtToken)]],
         );
 
@@ -120,7 +120,7 @@ final class TripChatHistoryTest extends ApiTestCase
 
         $response = $this->client->request(
             'GET',
-            \sprintf('/trips/%s/chat-history?limit=2', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat-history?limit=2', self::TRIP_ID),
             ['headers' => ['Accept' => 'application/ld+json', ...$this->authHeader($this->jwtToken)]],
         );
 
@@ -138,7 +138,7 @@ final class TripChatHistoryTest extends ApiTestCase
 
         $this->client->request(
             'GET',
-            \sprintf('/trips/%s/chat-history?limit=0', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat-history?limit=0', self::TRIP_ID),
             ['headers' => ['Accept' => 'application/ld+json', ...$this->authHeader($this->jwtToken)]],
         );
 
@@ -157,7 +157,7 @@ final class TripChatHistoryTest extends ApiTestCase
 
         $response = $this->client->request(
             'GET',
-            \sprintf('/trips/%s/chat-history?before=%s', self::TRIP_ID, urlencode('2026-05-01T11:30:00+02:00')),
+            \sprintf('/trips/%s/ai-chat-history?before=%s', self::TRIP_ID, urlencode('2026-05-01T11:30:00+02:00')),
             ['headers' => ['Accept' => 'application/ld+json', ...$this->authHeader($this->jwtToken)]],
         );
 
@@ -179,7 +179,7 @@ final class TripChatHistoryTest extends ApiTestCase
 
         $response = $this->client->request(
             'GET',
-            \sprintf('/trips/%s/chat-history?before=%s', self::TRIP_ID, urlencode('2026-05-01T09:30:00+00:00')),
+            \sprintf('/trips/%s/ai-chat-history?before=%s', self::TRIP_ID, urlencode('2026-05-01T09:30:00+00:00')),
             ['headers' => ['Accept' => 'application/ld+json', ...$this->authHeader($this->jwtToken)]],
         );
 
@@ -197,7 +197,7 @@ final class TripChatHistoryTest extends ApiTestCase
 
         $this->client->request(
             'GET',
-            \sprintf('/trips/%s/chat-history?before=not-a-date', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat-history?before=not-a-date', self::TRIP_ID),
             ['headers' => ['Accept' => 'application/ld+json', ...$this->authHeader($this->jwtToken)]],
         );
 
@@ -211,7 +211,7 @@ final class TripChatHistoryTest extends ApiTestCase
 
         $this->client->request(
             'GET',
-            \sprintf('/trips/%s/chat-history', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat-history', self::TRIP_ID),
             ['headers' => ['Accept' => 'application/ld+json']],
         );
 
@@ -231,7 +231,7 @@ final class TripChatHistoryTest extends ApiTestCase
 
         $this->client->request(
             'GET',
-            \sprintf('/trips/%s/chat-history', self::OTHER_TRIP_ID),
+            \sprintf('/trips/%s/ai-chat-history', self::OTHER_TRIP_ID),
             ['headers' => ['Accept' => 'application/ld+json', ...$this->authHeader($this->jwtToken)]],
         );
 
@@ -247,7 +247,7 @@ final class TripChatHistoryTest extends ApiTestCase
 
         $response = $this->client->request(
             'GET',
-            \sprintf('/trips/%s/chat-history', self::TRIP_ID),
+            \sprintf('/trips/%s/ai-chat-history', self::TRIP_ID),
             ['headers' => ['Accept' => 'application/ld+json', ...$this->authHeader($this->jwtToken)]],
         );
 

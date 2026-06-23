@@ -462,9 +462,10 @@ export async function launchTripAnalysis(tripId: string): Promise<boolean> {
 }
 
 /**
- * Body of `POST /trips/{id}/chat`. Mirrors `App\ApiResource\TripChatRequest`
- * on the backend; declared locally until `make typegen` ingests the schema
- * change introduced by issue #309.
+ * Body of `POST /trips/{id}/ai-chat`. Hand-written mirror of
+ * `App\ApiResource\TripChatRequest`: this route is called through
+ * {@link apiFetch} rather than the generated typed client, so the shape is
+ * maintained here instead of being sourced from the OpenAPI types.
  */
 export interface TripChatRequestBody {
   message: string;
@@ -494,7 +495,7 @@ export type PoiSuggestionDto = NonNullable<
 >;
 
 /**
- * Response of `POST /trips/{id}/chat`. Mirrors `App\ApiResource\TripChatResponse`
+ * Response of `POST /trips/{id}/ai-chat`. Mirrors `App\ApiResource\TripChatResponse`
  * on the backend (`tripId`, `action`, `params`, `response`, `dispatched`,
  * `impactedStageNumbers`, `requiresFullAnalysis`).
  */
@@ -525,10 +526,10 @@ export interface TripChatResponseBody {
 /**
  * Send a natural-language instruction to the LLaMA 3B dialogue assistant.
  *
- * Until the OpenAPI schema is regenerated (after #309 lands on main), the
- * `/trips/{id}/chat` route is not yet exposed via `apiClient.POST`, so this
- * function talks to the server through {@link apiFetch}. Once the typegen
- * catches up, this can be swapped for a typed call.
+ * Calls the server through {@link apiFetch} rather than the generated
+ * `apiClient.POST`, using the hand-written {@link TripChatRequestBody} /
+ * {@link TripChatResponseBody} shapes above. The OpenAPI schema does expose
+ * this route, so this is a deliberate choice, not a typegen limitation.
  */
 export async function sendTripChat(
   tripId: string,
@@ -539,7 +540,7 @@ export async function sendTripChat(
   error: string | null;
   status: number;
 }> {
-  const res = await apiFetch(`${API_URL}/trips/${tripId}/chat`, {
+  const res = await apiFetch(`${API_URL}/trips/${tripId}/ai-chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/ld+json",
@@ -567,7 +568,7 @@ export async function sendTripChat(
 }
 
 /**
- * One persisted chat turn returned by `GET /trips/{id}/chat-history`.
+ * One persisted chat turn returned by `GET /trips/{id}/ai-chat-history`.
  *
  * Mirrors `App\ApiResource\TripChatMessageResource`. Messages are returned
  * most-recent first; consumers reverse the array for chronological rendering.
@@ -650,7 +651,7 @@ export async function fetchTripChatHistory(
   const params = new URLSearchParams();
   if (options.limit !== undefined) params.set("limit", String(options.limit));
   const query = params.toString();
-  const url = `${API_URL}/trips/${tripId}/chat-history${query ? `?${query}` : ""}`;
+  const url = `${API_URL}/trips/${tripId}/ai-chat-history${query ? `?${query}` : ""}`;
 
   const res = await apiFetch(url, {
     method: "GET",

@@ -40,7 +40,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 /**
- * Handles `POST /trips/{id}/chat`: orchestrates the AI dialogue assistant using
+ * Handles `POST /trips/{id}/ai-chat`: orchestrates the AI dialogue assistant using
  * the trip owner's configured provider (ADR-042).
  *
  * Pipeline:

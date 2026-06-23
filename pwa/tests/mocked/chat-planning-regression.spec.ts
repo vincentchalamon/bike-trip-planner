@@ -12,13 +12,13 @@ import { getTripId } from "../fixtures/api-mocks";
 
 function chatUrlPattern(): RegExp {
   return new RegExp(
-    `/trips/${getTripId().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/chat$`,
+    `/trips/${getTripId().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/ai-chat$`,
   );
 }
 
 function chatHistoryUrlPattern(): RegExp {
   return new RegExp(
-    `/trips/${getTripId().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/chat-history`,
+    `/trips/${getTripId().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}/ai-chat-history`,
   );
 }
 

@@ -70,7 +70,7 @@ const hydratedTrips = new Set<string>();
  * Rehydrates the floating chat panel with the persisted history for a given
  * trip.
  *
- * On mount the loader calls `GET /trips/{id}/chat-history`, maps each entry
+ * On mount the loader calls `GET /trips/{id}/ai-chat-history`, maps each entry
  * to the in-memory store shape, and pushes them via `appendMessage` so the
  * panel reflects the conversation across refreshes. A lightweight skeleton
  * appears while the request is in flight; failures are logged silently — the

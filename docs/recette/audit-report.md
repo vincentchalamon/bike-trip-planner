@@ -257,13 +257,13 @@ voyage, étapes calculées : géométrie, météo, POI, hébergements). Preuve e
 # A crée le trip 019e8dca-... ; B = autre compte
 GET /trips/019e8dca-.../detail        (B, non-proprio) -> HTTP 200 + {"title":"Entre Sensée et Escaut",...}
 GET /trips/019e8dca-.../detail        (anonyme)        -> HTTP 401
-GET /trips/019e8dca-.../chat-history  (B, non-proprio) -> HTTP 403   <- correctement protégé
+GET /trips/019e8dca-.../ai-chat-history  (B, non-proprio) -> HTTP 403   <- correctement protégé
 PATCH/DELETE /trips/019e8dca-...      (B)              -> HTTP 403   (TRIP_EDIT appliqué)
 GET /trips (collection, B)                             -> 0 item     (collection owner-scopée)
 ```
 
 L'écriture, la collection **et le chat** sont bien protégés ; **seule la lecture `/detail` fuit**. Ce n'est donc
-**pas systémique** : le pattern correct existe déjà dans le code — `GET /trips/{id}/chat-history` (#459,
+**pas systémique** : le pattern correct existe déjà dans le code — `GET /trips/{id}/ai-chat-history` (#459,
 `TripChatMessageResource:56`) déclare `security: "is_granted('TRIP_VIEW', request.attributes.get('id'))"` (B -> 403
 vérifié). `/detail` est le **seul** endpoint de lecture trip à l'omettre. Cela **réfute** la conformité v1 « IDOR
 couvert par TripVoter » uniquement pour `/detail`.
@@ -297,7 +297,7 @@ analyze). L'anonyme garde son `401` (entry point) ; un voyage verrouillé qu'on 
   **rempli par un portail React** -> noms échappés (pas de `setHTML`). Chat IA / texte = enfants React (échappés).
   React échappe donc l'intégralité des surfaces user/externe.
 + **Auth 401 + autorisation objet** : endpoints protégés -> `401` non authentifié ; la **collection `/trips` est
-  owner-scopée** (un autre user voit 0 trip). Au moment de l'audit, `PATCH`/`DELETE`/chat-history d'un trip
+  owner-scopée** (un autre user voit 0 trip). Au moment de l'audit, `PATCH`/`DELETE`/ai-chat-history d'un trip
   d'autrui renvoyaient `403` et `/detail` fuyait en `200` (IDOR-DETAIL). **Post-#616/#618 : `/detail` est protégé
   par `TRIP_VIEW` et tous les refus d'autorisation objet renvoient `404`** (ENUM-404, ADR-038) — lecture comme
   écriture d'un trip d'autrui indistinguables d'un trip inexistant.

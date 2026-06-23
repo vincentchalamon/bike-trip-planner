@@ -68,7 +68,7 @@ Feature: AI features
     And the AI assistant replies "Here is my analysis of your stage."
     When I open the AI assistant bubble
     And I send the message "What do you think of this stage?" in the AI chat
-    Then a POST request to /trips/*/chat is sent
+    Then a POST request to /trips/*/ai-chat is sent
     And the reply "Here is my analysis of your stage." appears in the chat history
 
   @desktop
