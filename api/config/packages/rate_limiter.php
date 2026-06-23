@@ -46,6 +46,14 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '60 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
+            // Stateless trip-brief chat (ADR-045): one LLM call per user turn on
+            // the rider's own quota, like the loaded-trip chat.
+            'ai_chat' => [
+                'policy' => 'sliding_window',
+                'limit' => 20,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
             'health_liveness' => [
                 'policy' => 'sliding_window',
                 'limit' => 60,
