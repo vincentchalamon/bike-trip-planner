@@ -371,7 +371,7 @@
     "riverCrossing": "Traversée d'un cours d'eau sans pont",
     "earlyDeparture": "Départ avant l'aube",
     "culturalPoi": "POI culturels (musée, monument)",
-    "event": "Événements datés (festival, marché)",
+    "event": "Événements datés (festival, exposition, foire)",
     "userWaypoint": "Waypoints utilisateur"
   },
   "stageAlerts": {
@@ -1054,7 +1054,6 @@
     "type_exhibition": "Exposition",
     "type_music_event": "Concert",
     "type_fair_or_show": "Foire / Salon",
-    "type_market": "Marché",
     "from_price": "À partir de {price} €",
     "see_on_wikipedia": "Voir sur Wikipedia",
     "see_on_wikipedia_label": "Voir {name} sur Wikipedia",
@@ -1081,7 +1080,6 @@
     "osmCredit": "© les contributeurs OpenStreetMap —",
     "datatourismeCredit": "© DataTourisme —",
     "wikidataCredit": "Données sous",
-    "datagouvCredit": "Marchés hebdomadaires (data.gouv.fr) —",
     "licenceOuverte": "Licence Ouverte 2.0"
   },
   "legal": {
@@ -1117,7 +1115,7 @@
         "title": "Propriété intellectuelle",
         "paragraphs": [
           "Le code source de Bike Trip Planner est distribué sous licence open-source ; les conditions d'utilisation et de redistribution figurent dans le dépôt GitHub.",
-          "Les données d'itinéraire et cartographiques proviennent de sources tierces (OpenStreetMap, DataTourisme, Wikidata, data.gouv.fr) et restent soumises à leurs licences respectives, créditées sur l'application.",
+          "Les données d'itinéraire et cartographiques proviennent de sources tierces (OpenStreetMap, DataTourisme, Wikidata) et restent soumises à leurs licences respectives, créditées sur l'application.",
           "Les marques, logos et contenus appartenant à des tiers (Komoot, Strava, RideWithGPS, Garmin, Wahoo) demeurent la propriété de leurs détenteurs respectifs."
         ]
       }

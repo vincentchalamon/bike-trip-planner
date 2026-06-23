@@ -19,8 +19,8 @@ The business requirements include dozens of conditional rules:
 
 * **Surface Alert:** *If* bike type is "Road" *and* OSM surface is `unpaved`, *then* generate a Warning.
 * **Physical Alert:** *If* stage , *then* generate an "Effort Intense" Warning.
-* **The "Lunch Nudge":** *If* no lunch POI exists in the stage *and* OSM detects a market on that specific weekday,
-  *then* push a Market Suggestion.
+* **The "Lunch Nudge":** *If* no lunch POI exists in the stage, *then* push a nudge suggesting a resupply
+  stop near the midway point.
 * **Maintenance Alert:** *If* trip duration days *and* distance to next bike shop , *then* generate a Tooling Alert.
 
 **The Architectural Problem:** If we implement these checks procedurally inside the API Platform
@@ -184,11 +184,10 @@ final class LunchNudgeAnalyzer implements StageAnalyzerInterface
 
         // 2. If no lunch is planned, inject the nudge
         if (!$hasLunchPoi) {
-            // Logic to check local markets based on $stage->date goes here.
-            // For example, if a market is detected at the midway point:
+            // Logic to locate a resupply stop near the midway point goes here.
             $alerts[] = new Alert(
                 type: Alert::TYPE_NUDGE,
-                message: 'Pas de déjeuner prévu ? Un marché local se tient ce matin à mi-parcours.',
+                message: 'Pas de déjeuner prévu ? Pense à un ravitaillement à mi-parcours.',
             );
         }
 

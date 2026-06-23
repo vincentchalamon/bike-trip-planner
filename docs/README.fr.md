@@ -28,7 +28,7 @@ Vous cherchez la présentation produit ? Voir le README ([Français](../README.f
 |---|---|
 | [Fonctionnalités](../FEATURES.md) | Inventaire complet des fonctionnalités avec leur statut |
 | [Moteur d'alertes](../README.md#alert-engine) | Table de référence canonique des règles (sévérité, priorité, déclencheur) |
-| [Sources de données externes](../README.fr.md#sources-de-donn%C3%A9es-externes) | OSM, DataTourisme, Wikidata, data.gouv.fr, Open-Meteo |
+| [Sources de données externes](../README.fr.md#sources-de-donn%C3%A9es-externes) | OSM, DataTourisme, Wikidata, Open-Meteo |
 | [Légal & licences](legal-and-licensing.fr.md) | Licence, attribution des données, posture RGPD |
 
 ## Comprendre — la conception

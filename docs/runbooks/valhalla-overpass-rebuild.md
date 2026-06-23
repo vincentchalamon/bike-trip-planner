@@ -58,7 +58,7 @@ ls -lh .docker/default.osm.pbf
      -d '{"locations":[{"lat":50.63,"lon":3.06},{"lat":50.64,"lon":3.07}],"costing":"bicycle"}'
    ```
 
-4. **Reference data** — POI / accommodation / event data is no longer fetched from Overpass at runtime; it is served from the local `osm` / `tourism` PostGIS schemas populated by the `provisioner` (ADR-040). If those queries return nothing, it is a provisioning gap, not a routing one: re-run the provisioner (`make provision`, which loads OSM + DataTourisme + markets) rather than rebuilding tiles here.
+4. **Reference data** — POI / accommodation / event data is no longer fetched from Overpass at runtime; it is served from the local `osm` / `tourism` PostGIS schemas populated by the `provisioner` (ADR-040). If those queries return nothing, it is a provisioning gap, not a routing one: re-run the provisioner (`make provision`, which loads OSM + DataTourisme) rather than rebuilding tiles here.
 
 ## Post-action
 

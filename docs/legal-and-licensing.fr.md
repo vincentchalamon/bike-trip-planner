@@ -28,7 +28,6 @@ obligation d'attribution.
 | OpenStreetMap (Overpass, tuiles Valhalla) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) | Afficher « © les contributeurs OpenStreetMap » (rendu sur la carte) |
 | DataTourisme | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | Créditer la source ; usage commercial et modification autorisés |
 | Wikidata | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Domaine public — aucune attribution requise |
-| data.gouv.fr (marchés hebdomadaires) | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | Créditer la source |
 | Open-Meteo | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Créditer Open-Meteo |
 
 Usage et cache de chaque source : [Sources de données externes](../README.fr.md#sources-de-donn%C3%A9es-externes).

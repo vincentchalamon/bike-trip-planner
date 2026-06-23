@@ -77,7 +77,6 @@ describe("resolveCategory — full identifier mapping", () => {
     // Event
     ["event", "event"],
     ["festival", "event"],
-    ["market", "event"],
     ["public_holiday", "event"],
     // User waypoint
     ["waypoint", "user-waypoint"],

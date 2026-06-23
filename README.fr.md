@@ -211,7 +211,6 @@ La sécurité des types est appliquée de bout en bout : les DTO PHP définissen
 | **OpenStreetMap** | Principale : routes, infra cyclable, eau, ateliers, ravitaillement, POI et hébergements de base | [ODbL](https://opendatacommons.org/licenses/odbl/) | Mondiale | Aucun |
 | **DataTourisme** | Complémentaire : hébergements et POI culturels enrichis ; exclusif : événements datés | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | France | `DATATOURISME_API_KEY` |
 | **Wikidata** | Enrichissement transverse : descriptions multilingues, images, liens Wikipedia via Q-IDs | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) | Europe | Aucun |
-| **data.gouv.fr** | Marchés forains hebdomadaires (import hors ligne) | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | France | `make markets-import` |
 | **Open-Meteo** | Prévisions météo | [CC-BY](https://creativecommons.org/licenses/by/4.0/) | Mondiale | Aucun |
 
 Détails de configuration (clés API, provisioning OSM via Valhalla, refresh manuel) : voir [README.md](README.md#external-data-sources) (EN) et [docs/deployment.md](docs/deployment.md). Attribution OSM obligatoire : « © les contributeurs OpenStreetMap ».

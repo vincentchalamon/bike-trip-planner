@@ -13,19 +13,16 @@ use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\ScanEvents;
-use App\Repository\MarketRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Tourism\EventRepositoryInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Attaches dated events to each stage: DataTourisme events read from the
- * local-first `tourism` schema (ADR-040, no longer the runtime REST API) plus
- * weekly markets from the local data.gouv index. Both are filtered to the
- * stage's own date and a radius around its end point.
+ * local-first `tourism` schema (ADR-040, no longer the runtime REST API),
+ * filtered to the stage's own date and a radius around its end point.
  */
 #[AsMessageHandler]
 final readonly class ScanEventsHandler extends AbstractTripMessageHandler
@@ -40,8 +37,6 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
         private TripRequestRepositoryInterface $tripStateManager,
         private EventRepositoryInterface $eventRepository,
         private GeoDistanceInterface $haversine,
-        private MarketRepositoryInterface $marketRepository,
-        private TranslatorInterface $translator,
         MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
@@ -69,19 +64,14 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
             return;
         }
 
-        $locale = $this->tripStateManager->getLocale($tripId) ?? 'en';
-
-        $this->executeWithTracking($tripId, ComputationName::EVENTS, function () use ($tripId, $stages, $startDate, $locale): void {
+        $this->executeWithTracking($tripId, ComputationName::EVENTS, function () use ($tripId, $stages, $startDate): void {
             foreach ($stages as $i => $stage) {
                 if ($stage->isRestDay) {
                     continue;
                 }
 
                 $stageDate = $startDate->modify(\sprintf('+%d days', $i));
-                $events = array_merge(
-                    $this->fetchEventsForStage($stage, $stageDate),
-                    $this->fetchMarketsForStage($stage, $stageDate, $locale),
-                );
+                $events = $this->fetchEventsForStage($stage, $stageDate);
 
                 if ([] === $events) {
                     continue;
@@ -141,59 +131,6 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                 priceMin: $row['priceMin'],
                 distanceToEndPoint: $this->haversine->inMeters($row['lat'], $row['lon'], $stage->endPoint->lat, $stage->endPoint->lon),
                 source: 'datatourisme',
-            );
-        }
-
-        return $events;
-    }
-
-    /**
-     * @return list<Event>
-     */
-    private function fetchMarketsForStage(Stage $stage, \DateTimeImmutable $stageDate, string $locale): array
-    {
-        $dayOfWeek = (int) $stageDate->format('N');
-
-        $markets = $this->marketRepository->findNearEndpoint(
-            $stage->endPoint->lat,
-            $stage->endPoint->lon,
-            self::EVENT_RADIUS_METERS,
-            $dayOfWeek,
-        );
-
-        $events = [];
-
-        foreach ($markets as $market) {
-            $startTime = $market->getStartTime() ?? '00:00';
-            $endTime = $market->getEndTime() ?? '23:59';
-            $datePrefix = $stageDate->format('Y-m-d');
-
-            $startDate = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $datePrefix.' '.$startTime);
-            $endDate = \DateTimeImmutable::createFromFormat('Y-m-d H:i', $datePrefix.' '.$endTime);
-
-            if (!$startDate instanceof \DateTimeImmutable || !$endDate instanceof \DateTimeImmutable) {
-                continue;
-            }
-
-            $distanceToEndPoint = $this->haversine->inMeters(
-                $market->getLat(),
-                $market->getLon(),
-                $stage->endPoint->lat,
-                $stage->endPoint->lon,
-            );
-
-            $description = $this->translator->trans('market.weekly_description', [], 'messages', $locale);
-
-            $events[] = new Event(
-                name: $market->getName(),
-                type: 'market',
-                lat: $market->getLat(),
-                lon: $market->getLon(),
-                startDate: $startDate,
-                endDate: $endDate,
-                description: $description,
-                distanceToEndPoint: $distanceToEndPoint,
-                source: 'data_gouv_markets',
             );
         }
 

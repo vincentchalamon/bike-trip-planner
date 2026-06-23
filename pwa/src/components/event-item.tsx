@@ -9,7 +9,6 @@ const EVENT_TYPE_KEYS: Record<string, string> = {
   "schema:Exhibition": "type_exhibition",
   "schema:MusicEvent": "type_music_event",
   "urn:resource:FairOrShow": "type_fair_or_show",
-  market: "type_market",
 };
 
 function formatDateRange(

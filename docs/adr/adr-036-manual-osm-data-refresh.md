@@ -20,7 +20,7 @@ make provision-update            # re-download configured regions (non-interacti
 docker compose restart valhalla  # rebuild routing tiles from the new PBF
 ```
 
-The `provisioner` service (Compose profile `provisioning`) remains the single mechanism for both first install (`make provision`) and update (`make provision-update`). Both targets load all reference sources in one shot (OSM/PostGIS + DataTourisme + markets); there are no per-source flags.
+The `provisioner` service (Compose profile `provisioning`) remains the single mechanism for both first install (`make provision`) and update (`make provision-update`). Both targets load all reference sources in one shot (OSM/PostGIS + DataTourisme); there are no per-source flags.
 
 ## Rationale
 

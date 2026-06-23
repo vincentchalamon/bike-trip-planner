@@ -1,9 +1,10 @@
 # ADR-026: Multi-Source Data Integration
 
-- **Status:** Accepted
+- **Status:** Accepted — **partially superseded by [ADR-044](adr-044-removal-of-data-gouv-markets-source.md)**
 - **Date:** 2026-04-18
 - **Depends on:** ADR-005 (External API caching), ADR-012 (Alert engine), ADR-013 (Accommodation discovery), ADR-022 (Persistent storage)
 - **Extends:** ADR-013 (adds DataTourisme and Wikidata as complementary sources)
+- **Superseded (in part) by:** ADR-044 — the **data.gouv.fr weekly-markets** source (the `market` table, the `app:markets:import` command, the `'market'` event type, and the data.gouv.fr attribution) has been **removed**. The data.gouv.fr resource went dead with no reliable national equivalent, and a market is not actionable without its trading day. The remaining sources (OpenStreetMap, DataTourisme, Wikidata) are unaffected; the passages below describing markets are retained for historical context only.
 
 ## Context and Problem Statement
 
@@ -14,17 +15,15 @@ OpenStreetMap provides a reliable baseline for geographic data (roads, bike infr
 | **Bikepacker-friendly accommodation** | Gîtes d'étape and auberges routières rarely carry `backpack=yes` or structured bike tags in OSM |
 | **Cultural POIs without opening hours** | Many châteaux, abbeys, and museums are mapped but lack `opening_hours`, `fee`, or multilingual descriptions |
 | **Dated events** | OSM does not model time-bound events (festivals, exhibitions, fairs) |
-| **Weekly markets** | Market data exists on `data.gouv.fr` but is rarely reflected in OSM |
 
-Three open data sources are available to address these gaps without proprietary API dependencies:
+Two open data sources are available to address these gaps without proprietary API dependencies:
 
 - **DataTourisme** — the French national tourism data aggregator (Ministry of Tourism), covering accommodations, cultural POIs, and dated events with structured JSON-LD. Published under Licence Ouverte 2.0 (Etalab). Available via a free-registration REST API.
 - **Wikidata** — the structured knowledge base of the Wikimedia Foundation. Q-ID references appear on OSM objects (`wikidata=Q12345`) and in DataTourisme payloads (`owl:sameAs`). Published under CC0. No registration required.
-- **data.gouv.fr** — the French open data portal. The "Marchés forains et brocantes" dataset provides geocoded weekly market data with day-of-week and time slots. Published under Licence Ouverte 2.0.
 
 ## Decision Drivers
 
-- **Coverage** — Dated events and weekly markets cannot be sourced from OSM alone.
+- **Coverage** — Dated events cannot be sourced from OSM alone.
 - **Legal compliance** — All sources must be open-licensed and permit attribution-free or low-burden attribution.
 - **Operational cost** — Sources must be either free or offer sufficient quota for the application's usage pattern.
 - **Architecture consistency** — New sources must plug into the existing alert and enrichment pipelines without requiring a global refactor.
@@ -69,7 +68,6 @@ Introduce `AccommodationSourceInterface` and `CulturalPoiSourceInterface` to abs
 | **OpenStreetMap** | Primary source for all geographic data, bike infrastructure, water points, bike shops, resupply POIs | Global | ODbL | None |
 | **DataTourisme** | Complementary source for accommodations and cultural POIs; exclusive source for dated events (festivals, exhibitions, fairs) | France | Licence Ouverte 2.0 | `DATATOURISME_API_KEY` |
 | **Wikidata** | Cross-cutting enricher: adds multilingual descriptions, images, Wikipedia links, and structured opening hours to any object carrying a Q-ID | Europe | CC0 | None (optional `WIKIDATA_USER_AGENT`) |
-| **data.gouv.fr** | Source for recurring weekly markets (import only — not a live API) | France | Licence Ouverte 2.0 | `make markets-import` |
 
 ### Architecture
 
@@ -84,8 +82,6 @@ AccommodationSourceInterface          CulturalPoiSourceInterface
                (single instance, rate-limited, Redis-cached)
                         │
                WikidataEnricher  ← batch Q-ID resolution after primary collection
-                        │
-               MarketRepository  ← PostgreSQL table populated by CLI import
 ```
 
 **Registry pattern:** each interface is consumed via `#[AutowireIterator]` — new sources implement the interface and are discovered automatically without modifying existing consumers.
@@ -94,8 +90,6 @@ AccommodationSourceInterface          CulturalPoiSourceInterface
 
 **Wikidata enricher** (`WikidataEnricherInterface`): batch SPARQL queries via the public Wikidata endpoint. Results cached in `cache.wikidata` Redis pool (TTL 7 days). Errors (timeout, 5xx) are silently swallowed — the application continues without enrichment.
 
-**Market import** (`app:markets:import` CLI command): downloads the `data.gouv.fr` market CSV, geocodes entries, and inserts them into the `market` PostgreSQL table. Not a live API — no rate limiting or auth required.
-
 ### Consequences
 
 #### Positive
@@ -103,21 +97,18 @@ AccommodationSourceInterface          CulturalPoiSourceInterface
 - **Dated events now supported** — The first alert rule covering cultural/social events around stage endpoints is enabled by DataTourisme.
 - **Richer accommodation data** — Gîtes d'étape and accommodation types absent from OSM are now discoverable.
 - **Multilingual enrichment** — Wikidata Q-IDs unlock descriptions, images, and Wikipedia links in FR/EN/DE/ES/IT without per-source effort.
-- **Weekly markets** — A recurring event type (day-of-week, time slot) is covered without requiring a live API call per trip computation.
 - **Interface abstraction** — Adding a new source (e.g., regional tourism APIs) requires only a new class implementing the relevant interface.
 
 #### Negative
 
 - **New Redis pools** — `cache.datatourisme` and `cache.wikidata` add two named pools to the Redis configuration. Memory quota monitoring is required.
-- **New PostgreSQL table** — The `market` table must be provisioned and kept fresh; `make provision` runs the import as its last step (or `make markets-import` to refresh markets alone).
 - **DataTourisme quota** — 1 000 req/h requires monitoring. A single trip computation may consume up to ~20 requests (one per stage × two queries: events + POIs).
-- **Multi-source attribution required in the UI** — ODbL (OSM), Licence Ouverte 2.0 (DataTourisme, data.gouv.fr), and CC0 (Wikidata) must all be credited in the application footer (see F.4 implementation).
+- **Multi-source attribution required in the UI** — ODbL (OSM), Licence Ouverte 2.0 (DataTourisme), and CC0 (Wikidata) must all be credited in the application footer (see F.4 implementation).
 
 #### Neutral
 
 - DataTourisme is opt-in: `DATATOURISME_ENABLED=false` (the default) skips all DataTourisme queries and falls back to OSM only. The application is fully functional without a DataTourisme API key.
 - Wikidata is always enabled but degrades silently on errors — it is never a blocking dependency.
-- The `market` table is populated independently of trip computation — a missing or empty table results in no market events, not an error.
 
 ---
 
@@ -125,7 +116,6 @@ AccommodationSourceInterface          CulturalPoiSourceInterface
 
 - [DataTourisme — Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence)
 - [Wikidata — CC0](https://creativecommons.org/publicdomain/zero/1.0/)
-- [data.gouv.fr — Marchés forains dataset](https://www.data.gouv.fr/)
 - [ADR-005: Orchestration, Optimization, and Caching of External APIs](adr-005-orchestration-optimization-and-caching-of-external-apis.md)
 - [ADR-013: Accommodation Discovery and Heuristic Pricing Strategy](adr-013-accomodation-discovery-and-heuristic-pricing-strategy.md)
 - [ADR-022: Persistent Storage Strategy](adr-022-persistent-storage-strategy.md)
