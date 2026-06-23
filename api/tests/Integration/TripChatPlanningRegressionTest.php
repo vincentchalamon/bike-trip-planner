@@ -22,6 +22,7 @@ use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
 use App\Llm\AiProvider;
 use App\Llm\LlmClientInterface;
+use App\Llm\LlmResponseParser;
 use App\Llm\ResolvedLlmClient;
 use App\Llm\UserLlmResolverInterface;
 use App\Llm\SystemPromptLoader;
@@ -188,6 +189,7 @@ final class TripChatPlanningRegressionTest extends TestCase
             promptLoader: $promptLoader,
             interpreter: new ChatActionInterpreter(new NullLogger()),
             historyStore: $historyStore,
+            responseParser: new LlmResponseParser(),
             security: $security,
             logger: new NullLogger(),
             messageBus: $messageBus,

@@ -26,6 +26,7 @@ use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
 use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmClientInterface;
+use App\Llm\LlmResponseParser;
 use App\Llm\ResolvedLlmClient;
 use App\Llm\SystemPromptLoader;
 use App\Llm\UserLlmResolverInterface;
@@ -749,6 +750,7 @@ final class TripChatProcessorTest extends TestCase
             promptLoader: $promptLoader,
             interpreter: new ChatActionInterpreter(new NullLogger()),
             historyStore: $historyStore,
+            responseParser: new LlmResponseParser(),
             security: $security,
             logger: $logger ?? new NullLogger(),
             messageBus: $messageBus,

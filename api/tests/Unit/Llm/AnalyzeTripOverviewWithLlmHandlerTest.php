@@ -13,6 +13,7 @@ use App\Llm\Dto\StageAiAnalysis;
 use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
+use App\Llm\LlmResponseParser;
 use App\Llm\ResolvedLlmClient;
 use App\Llm\SystemPromptLoader;
 use App\Llm\TripLlmResolverInterface;
@@ -513,6 +514,7 @@ final class AnalyzeTripOverviewWithLlmHandlerTest extends TestCase
             tripStateManager: $repo,
             llmResolver: $resolver,
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
+            responseParser: new LlmResponseParser(),
             logger: $logger ?? new NullLogger(),
             llmTracker: $llmTracker,
             computationTracker: $computationTracker,

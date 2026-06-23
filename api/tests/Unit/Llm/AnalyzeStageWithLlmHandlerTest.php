@@ -11,6 +11,7 @@ use App\Llm\AiProvider;
 use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
+use App\Llm\LlmResponseParser;
 use App\Llm\ResolvedLlmClient;
 use App\Llm\StageAnalysisSummaryBuilder;
 use App\Llm\SystemPromptLoader;
@@ -400,6 +401,7 @@ final class AnalyzeStageWithLlmHandlerTest extends TestCase
             llmResolver: $resolver,
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
             summaryBuilder: new StageAnalysisSummaryBuilder(),
+            responseParser: new LlmResponseParser(),
             logger: $logger ?? new NullLogger(),
             llmTracker: $tracker,
             messageBus: $messageBus ?? $this->createStub(MessageBusInterface::class),

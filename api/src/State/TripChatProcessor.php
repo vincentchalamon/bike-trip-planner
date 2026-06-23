@@ -22,6 +22,7 @@ use App\Llm\ChatHistoryStore;
 use App\Llm\Dto\ChatAction;
 use App\Llm\Exception\AiFailureReason;
 use App\Llm\Exception\AiUnavailableException;
+use App\Llm\LlmResponseParser;
 use App\Llm\ResolvedLlmClient;
 use App\Llm\SystemPromptLoader;
 use App\Llm\UserLlmResolverInterface;
@@ -83,6 +84,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
         private SystemPromptLoader $promptLoader,
         private ChatActionInterpreter $interpreter,
         private ChatHistoryStore $historyStore,
+        private LlmResponseParser $responseParser,
         private Security $security,
         private LoggerInterface $logger,
         private MessageBusInterface $messageBus,
@@ -172,7 +174,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
             throw new ServiceUnavailableHttpException(message: 'AI assistant returned an empty response. Please retry.');
         }
 
-        $rawContent = $this->extractText($response);
+        $rawContent = $this->responseParser->extractText($response);
         if (null === $rawContent) {
             $this->logger->warning('AI chat response missing message content.', ['tripId' => $tripId]);
 
@@ -523,24 +525,5 @@ final readonly class TripChatProcessor implements ProcessorInterface
         );
 
         return $contextLine.$request->message;
-    }
-
-    /**
-     * @param array<string, mixed> $response
-     */
-    private function extractText(array $response): ?string
-    {
-        if (isset($response['message']) && \is_array($response['message'])) {
-            $content = $response['message']['content'] ?? null;
-            if (\is_string($content)) {
-                return $content;
-            }
-        }
-
-        if (isset($response['response']) && \is_string($response['response'])) {
-            return $response['response'];
-        }
-
-        return null;
     }
 }
