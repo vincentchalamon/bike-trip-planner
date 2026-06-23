@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { FAKE_JWT_TOKEN } from "../fixtures/api-mocks";
+import { FAKE_JWT_TOKEN, mockAllApis } from "../fixtures/api-mocks";
+import { expandLinkCard } from "../fixtures/base.fixture";
 
 const TRIP_ID = "01936f6e-0000-7000-8000-000000000101";
 
@@ -145,6 +146,105 @@ test.describe("/trips/[id] detail page", () => {
       timeout: 5000,
     });
     await expect(page.getByTestId("trip-not-found-back")).toBeVisible();
+  });
+
+  test("shows not found immediately on a 404 from a direct visit (recette #649)", async ({
+    page,
+  }) => {
+    // A 404 on a trip we did NOT just create (empty store — a foreign or missing
+    // trip, object-level authz hidden as 404 per ADR-038) must surface the error
+    // immediately, without retrying (a direct visit / reload never owns a fresh
+    // trip in the store).
+    await page.route(`**/trips/${TRIP_ID}/detail`, (route, request) => {
+      const accept = request.headers()["accept"] ?? "";
+      if (!accept.includes("application/ld+json")) return route.fallback();
+      return route.fulfill({ status: 404, body: "" });
+    });
+
+    await page.goto(`/trips/${TRIP_ID}`);
+
+    await expect(page.getByTestId("trip-not-found-page")).toBeVisible({
+      timeout: 5000,
+    });
+  });
+
+  test("shows not found when the detail payload is not valid JSON (recette #649)", async ({
+    page,
+  }) => {
+    // A 200 with a non-JSON body (proxy / CDN HTML error page) must surface the
+    // error instead of hanging the loader — res.json() would otherwise reject.
+    await page.route(`**/trips/${TRIP_ID}/detail`, (route, request) => {
+      const accept = request.headers()["accept"] ?? "";
+      if (!accept.includes("application/ld+json")) return route.fallback();
+      return route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+        body: "<html><body>Bad gateway</body></html>",
+      });
+    });
+
+    await page.goto(`/trips/${TRIP_ID}`);
+
+    await expect(page.getByTestId("trip-not-found-page")).toBeVisible({
+      timeout: 5000,
+    });
+  });
+
+  test("re-syncs a draft trip via /detail when the stages event is missed (recette #649)", async ({
+    page,
+  }) => {
+    // First load is a draft with no stages (single loader). No Mercure event is
+    // injected, so only the /detail re-sync can surface the computed trip —
+    // this is the "had to reload the page" symptom.
+    let calls = 0;
+    await page.route(`**/trips/${TRIP_ID}/detail`, (route, request) => {
+      const accept = request.headers()["accept"] ?? "";
+      if (!accept.includes("application/ld+json")) return route.fallback();
+      calls += 1;
+      const ready = calls > 1;
+      return route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "application/ld+json; charset=utf-8" },
+        body: JSON.stringify({
+          ...MOCK_DETAIL,
+          status: ready ? "ready" : "draft",
+          stages: ready ? MOCK_STAGES : [],
+        }),
+      });
+    });
+
+    await page.goto(`/trips/${TRIP_ID}`);
+
+    await expect(page.getByTestId("trip-actions")).toBeVisible({
+      timeout: 10000,
+    });
+  });
+
+  test("retries 404s on our freshly-created trip then shows not found (recette #649)", async ({
+    page,
+  }) => {
+    // Full creation flow → ownsFreshTrip === true (the trip is in the store via
+    // setTrip before the router.push). The detail endpoint always 404s, so the
+    // loader must exhaust its retries and surface "Voyage introuvable" rather
+    // than spin forever.
+    await mockAllApis(page, { postTripBody: { id: TRIP_ID, isLocked: false } });
+    await page.route(`**/trips/${TRIP_ID}/detail`, (route, request) => {
+      const accept = request.headers()["accept"] ?? "";
+      if (!accept.includes("application/ld+json")) return route.fallback();
+      return route.fulfill({ status: 404, body: "" });
+    });
+
+    await page.goto("/");
+    await expandLinkCard(page);
+    const input = page.getByTestId("magic-link-input");
+    await input.fill("https://www.komoot.com/fr-fr/tour/2795080048");
+    await input.press("Enter");
+
+    await page.waitForURL(new RegExp(`/trips/${TRIP_ID}`), { timeout: 5000 });
+    // 5 retries × 1200 ms + navigation overhead.
+    await expect(page.getByTestId("trip-not-found-page")).toBeVisible({
+      timeout: 12000,
+    });
   });
 });
 
