@@ -23,7 +23,8 @@ The gap is purely the **multi-turn conversation that builds the brief** before g
 - **Reuse the generation pipeline** — no second LLM→geocode→Valhalla path; the chat only produces the brief.
 - **Stateless backend** — the app keeps computation stateless (ADR-043); avoid a new server-side conversation session if the client can carry it.
 - **User stays in control** — the rider can launch at any time; the AI recommends, it does not gate.
-- **Bounded LLM cost** — one call per user turn (BYO-token), capped by a turn limit and per-user rate limiting.
+- **Bounded LLM cost** — one call per user turn (BYO-token), capped by a turn limit, per-user rate limiting, and a server-side payload ceiling (max message count + per-message length).
+- **Untrusted client input** — the conversation is supplied by the browser each turn; message roles and payload size are validated server-side so a malicious client cannot inject a `system` turn or inflate token cost.
 
 ## Considered Options
 
@@ -45,9 +46,9 @@ A new **stateless** endpoint takes the conversation from the client on every tur
 
 ### New endpoint — `POST /trips/ai-chat` (stateless)
 
-- **Input:** `{ messages: [{ role: "user" | "assistant", content: string }] }` — the full conversation so far, sent by the client each turn.
+- **Input:** `{ messages: [{ role: "user" | "assistant", content: string }] }` — the full conversation so far, sent by the client each turn. The processor enforces a hard ceiling of **N messages** (e.g. 2x the client-side turn cap) and a per-message character limit (e.g. 4,000 characters), returning a **422** if either bound is exceeded.
 - **Output (structured per turn):** `{ reply: string, readyToGenerate: boolean, collected: { start?, end?, durationDays?, profile?, ... } }`.
-- **Processor (stateless State Processor):** resolves the per-user provider (`forUser()`, graceful 422 if unconfigured, ADR-042), applies a dedicated per-user rate limit, builds a system prompt that instructs the model to (a) ask focused clarifying questions, (b) keep a running structured summary of what it has understood, and (c) signal `readyToGenerate` once it has the essentials. It calls `LlmClientInterface::chat(...)` and parses the reply **leniently** into the structured shape, reusing the `ChatActionInterpreter` approach (Markdown-fence tolerant, prose-wrapper tolerant, fallback to a plain reply with `readyToGenerate: false` on parse failure). **No server-side conversation state** is stored.
+- **Processor (stateless State Processor):** resolves the per-user provider (`forUser()`; returns a **422 with `{ error: "ai_not_configured" }`** if no provider is configured — diverging from the in-chat `info` hint used by the loaded-trip chat `POST /trips/{id}/chat` (ADR-042 error taxonomy) because the caller here needs a discrete signal to surface the provider-setup CTA before any chat UI is mounted), applies a dedicated per-user rate limit, **validates that every message role is strictly `user` or `assistant`** (any other value, including `system`, is rejected with a 422 before reaching the LLM), builds a system prompt that instructs the model to (a) ask focused clarifying questions, (b) keep a running structured summary of what it has understood, and (c) signal `readyToGenerate` once it has the essentials. It calls `LlmClientInterface::chat(...)` and parses the reply **leniently** into the structured shape, reusing the `ChatActionInterpreter` approach (Markdown-fence tolerant, prose-wrapper tolerant, fallback to a plain reply with `readyToGenerate: false` on parse failure). **No server-side conversation state** is stored.
 
 ### Launching the computation — reuse `POST /trips/ai-generate`
 
