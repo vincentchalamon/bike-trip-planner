@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { Link2, FileUp, Sparkles, ArrowLeft } from "lucide-react";
-import { AiChatCard, type AiChatMessage } from "@/components/ai-chat-card";
+import { AiChatCard } from "@/components/ai-chat-card";
 import { AiUnavailableNotice } from "@/components/ai-unavailable-notice";
 import { GpxDropZoneCard } from "@/components/gpx-drop-zone-card";
 import { SourceUrlChip } from "@/components/source-url-chip";
@@ -34,12 +34,14 @@ interface CardSelectionProps {
   onSubmitUrl: (url: string) => Promise<void> | void;
   onUploadFile: (file: File) => Promise<void> | void;
   /**
-   * Fired when the user submits the AI chat conversation via the "Valider et
-   * continuer" button. The trip-planner host forwards the brief to
-   * `POST /trips/ai-generate` (ADR-042). The chat card also dispatches an
-   * `ai-chat-submit` DOM event for test/legacy consumers.
+   * Fired when the rider launches AI route generation from the chat card's
+   * "Lancer le calcul d'itinéraire" button. Receives the consolidated brief
+   * (structured `collected` parameters + the rider's turns as fallback). The
+   * trip-planner host forwards it to `POST /trips/ai-generate` (ADR-045). The
+   * chat card also dispatches an `ai-chat-launch` DOM event for test/legacy
+   * consumers.
    */
-  onSubmitAiConversation?: (messages: ReadonlyArray<AiChatMessage>) => void;
+  onLaunchAiGeneration?: (brief: string) => void;
   disabled?: boolean;
 }
 
@@ -57,7 +59,7 @@ const MAX_GPX_SIZE_BYTES = 30 * 1024 * 1024;
 export function CardSelection({
   onSubmitUrl,
   onUploadFile,
-  onSubmitAiConversation,
+  onLaunchAiGeneration,
   disabled = false,
 }: CardSelectionProps) {
   const t = useTranslations("cardSelection");
@@ -126,7 +128,7 @@ export function CardSelection({
             unavailable={!aiCapability.available}
             notConfigured={!aiCapability.configured}
             onSelect={() => handleSelect("ai")}
-            onSubmitConversation={onSubmitAiConversation}
+            onLaunchGeneration={onLaunchAiGeneration}
           />
         )}
       </div>
@@ -401,7 +403,7 @@ interface AiCardProps {
   unavailable?: boolean;
   notConfigured?: boolean;
   onSelect: () => void;
-  onSubmitConversation?: (messages: ReadonlyArray<AiChatMessage>) => void;
+  onLaunchGeneration?: (brief: string) => void;
 }
 
 function AiCard({
@@ -410,7 +412,7 @@ function AiCard({
   unavailable = false,
   notConfigured = false,
   onSelect,
-  onSubmitConversation,
+  onLaunchGeneration,
 }: AiCardProps) {
   const t = useTranslations("cardSelection");
 
@@ -432,7 +434,7 @@ function AiCard({
       ) : (
         expanded && (
           <AiChatCard
-            onSubmitConversation={onSubmitConversation}
+            onLaunchGeneration={onLaunchGeneration}
             disabled={disabled}
           />
         )

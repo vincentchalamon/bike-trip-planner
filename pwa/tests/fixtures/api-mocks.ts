@@ -18,6 +18,18 @@ export interface MockApiOptions {
    * `false` to exercise the disabled-but-visible "not configured" affordances.
    */
   aiConfigured?: boolean;
+  /**
+   * Scripted replies for the brief chat (`POST /trips/ai-chat`, ADR-045). Each
+   * POST consumes the next entry (the last one repeats once exhausted). Set
+   * `status` to exercise the discrete failure modes (422 `ai_not_configured`,
+   * 429, 503). When omitted, the route serves a single generic reply.
+   */
+  aiChatTurns?: Array<{
+    reply?: string;
+    readyToGenerate?: boolean;
+    collected?: Record<string, string | number | boolean | null>;
+    status?: number;
+  }>;
 }
 
 const TRIP_ID = "test-trip-abc-123";
@@ -184,6 +196,7 @@ export async function mockAllApis(
     deleteStageFail = false,
     addStageFail = false,
     aiConfigured = true,
+    aiChatTurns,
   } = options;
 
   // POST /auth/refresh — return fake JWT so AuthGuard's silentRefresh succeeds
@@ -462,6 +475,38 @@ export async function mockAllApis(
       status: postTripStatus,
       contentType: "application/ld+json",
       body: JSON.stringify(postTripBody ?? defaultTripResponse),
+    });
+  });
+
+  // POST /trips/ai-chat — stateless brief chat (ADR-045). Serves the scripted
+  // `aiChatTurns` in order (last entry repeats); a turn carrying `status`
+  // exercises the discrete failure modes. Registered after the generic
+  // /trips/* routes so this exact path wins.
+  let aiChatCallIndex = 0;
+  await page.route("**/trips/ai-chat", (route, request) => {
+    if (request.method() !== "POST") return route.fallback();
+    const turns = aiChatTurns ?? [
+      { reply: "Got it! Tell me more about your trip." },
+    ];
+    const turn = turns[Math.min(aiChatCallIndex, turns.length - 1)];
+    aiChatCallIndex += 1;
+    if (turn?.status && turn.status >= 400) {
+      return route.fulfill({
+        status: turn.status,
+        contentType: "application/ld+json",
+        body: JSON.stringify(
+          turn.status === 422 ? { error: "ai_not_configured" } : {},
+        ),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/ld+json",
+      body: JSON.stringify({
+        reply: turn?.reply ?? "Got it!",
+        readyToGenerate: turn?.readyToGenerate ?? false,
+        collected: turn?.collected ?? {},
+      }),
     });
   });
 

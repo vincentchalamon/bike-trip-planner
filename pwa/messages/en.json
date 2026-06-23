@@ -580,15 +580,36 @@
     "ariaSelectAi": "Chat with the AI assistant"
   },
   "aiChat": {
-    "subtitle": "Describe your project — the assistant will draft an itinerary.",
+    "subtitle": "Describe your project — the assistant refines the itinerary with you.",
     "historyAriaLabel": "Conversation with the AI assistant",
-    "stubGreeting": "Hi! Tell me about the adventure you have in mind (region, duration, dates, fitness level...) and I'll draft a custom itinerary for you.",
-    "stubReply": "Got it! Add any details you like (duration, elevation, road type…), then click \"Validate and continue\" so I can generate your itinerary.",
+    "greeting": "Hi! Tell me about the adventure you have in mind (region, duration, dates, fitness level...) and I'll help you refine your itinerary.",
+    "thinking": "The assistant is thinking…",
     "inputLabel": "Your request",
     "inputPlaceholder": "E.g. \"I want to ride around Corsica for 10 days in September\"",
     "inputHint": "Enter to send · Shift + Enter for a new line",
     "sendAriaLabel": "Send message",
-    "submitLabel": "Validate and continue"
+    "capReached": "You've shared plenty of detail. Launch the route computation to continue.",
+    "recapAriaLabel": "Parameters understood by the assistant",
+    "recapTitle": "What I understood",
+    "recapEmpty": "Describe your project and I'll summarise the understood parameters here.",
+    "recap": {
+      "start": "Start",
+      "end": "Destination",
+      "loop": "Loop",
+      "durationDays": "Duration",
+      "profile": "Profile",
+      "elevation": "Elevation",
+      "startDate": "Dates",
+      "supply": "Resupply"
+    },
+    "launchLabel": "Launch route computation",
+    "launchRecommended": "Your project looks complete — you can launch the computation.",
+    "launchNeedsStart": "Provide at least a starting point to launch the computation.",
+    "errorNotConfigured": "Configure an AI provider to chat about your itinerary.",
+    "configureCta": "Configure an AI provider",
+    "errorRateLimit": "Too many messages in a row. Please wait a moment before retrying.",
+    "errorUnavailable": "AI assistant temporarily unavailable. Please try again shortly.",
+    "errorGeneric": "Something went wrong. Please try again."
   },
   "planner": {
     "computing": "Computing your route…"
