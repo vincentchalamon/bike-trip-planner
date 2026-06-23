@@ -13,6 +13,7 @@ use App\Llm\AiProvider;
 use App\Llm\BriefChatInterpreter;
 use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmClientInterface;
+use App\Llm\LlmResponseParser;
 use App\Llm\ResolvedLlmClient;
 use App\Llm\SystemPromptLoader;
 use App\Llm\UserLlmResolverInterface;
@@ -224,6 +225,7 @@ final class TripAiChatProcessorTest extends TestCase
             clientFactory: $clientFactory,
             promptLoader: new SystemPromptLoader($this->createPromptFixtureDir()),
             interpreter: new BriefChatInterpreter(),
+            responseParser: new LlmResponseParser(),
             requestStack: $requestStack,
             security: $security,
             logger: new NullLogger(),

@@ -11,6 +11,7 @@ use App\Enum\ComputationName;
 use App\Llm\Dto\StageAiAnalysis;
 use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmAnalysisTrackerInterface;
+use App\Llm\LlmResponseParser;
 use App\Llm\StageAnalysisSummaryBuilder;
 use App\Llm\SystemPromptLoader;
 use App\Llm\TripLlmResolverInterface;
@@ -48,6 +49,7 @@ final readonly class AnalyzeStageWithLlmHandler
         private TripLlmResolverInterface $llmResolver,
         private SystemPromptLoader $promptLoader,
         private StageAnalysisSummaryBuilder $summaryBuilder,
+        private LlmResponseParser $responseParser,
         private LoggerInterface $logger,
         private LlmAnalysisTrackerInterface $llmTracker,
         private MessageBusInterface $messageBus,
@@ -147,7 +149,7 @@ final readonly class AnalyzeStageWithLlmHandler
             return;
         }
 
-        $rawText = $this->extractText($response);
+        $rawText = $this->responseParser->extractText($response);
         if (null === $rawText || '' === trim($rawText)) {
             $this->logger->warning('LLM returned an empty response for stage analysis.', [
                 'tripId' => $message->tripId,
@@ -269,27 +271,6 @@ final readonly class AnalyzeStageWithLlmHandler
             'language' => $request->locale,
             'date' => $date,
         ];
-    }
-
-    /**
-     * @param array<string, mixed> $response provider response envelope (generate- or chat-shaped)
-     */
-    private function extractText(array $response): ?string
-    {
-        // /api/generate returns {"response": "...", "done": true, ...}
-        if (isset($response['response']) && \is_string($response['response'])) {
-            return $response['response'];
-        }
-
-        // /api/chat returns {"message": {"role": "assistant", "content": "..."}, ...}
-        if (isset($response['message']) && \is_array($response['message'])) {
-            $content = $response['message']['content'] ?? null;
-            if (\is_string($content)) {
-                return $content;
-            }
-        }
-
-        return null;
     }
 
     /**

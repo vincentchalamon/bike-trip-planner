@@ -14,6 +14,7 @@ use App\Entity\User;
 use App\Llm\BriefChatInterpreter;
 use App\Llm\Exception\AiFailureReason;
 use App\Llm\Exception\AiUnavailableException;
+use App\Llm\LlmResponseParser;
 use App\Llm\ResolvedLlmClient;
 use App\Llm\SystemPromptLoader;
 use App\Llm\UserLlmResolverInterface;
@@ -59,6 +60,7 @@ final readonly class TripAiChatProcessor implements ProcessorInterface
         private UserLlmResolverInterface $clientFactory,
         private SystemPromptLoader $promptLoader,
         private BriefChatInterpreter $interpreter,
+        private LlmResponseParser $responseParser,
         private RequestStack $requestStack,
         private Security $security,
         private LoggerInterface $logger,
@@ -117,7 +119,7 @@ final readonly class TripAiChatProcessor implements ProcessorInterface
             throw new ServiceUnavailableHttpException(retryAfter: $aiUnavailableException->getRetryAfter(), message: $this->unavailableMessage($aiUnavailableException->getReason(), $locale), previous: $aiUnavailableException);
         }
 
-        $rawContent = null === $response ? '' : ($this->extractText($response) ?? '');
+        $rawContent = null === $response ? '' : ($this->responseParser->extractText($response) ?? '');
         $reply = $this->interpreter->interpret($rawContent);
 
         return new AiChatResponse(
@@ -179,24 +181,5 @@ final readonly class TripAiChatProcessor implements ProcessorInterface
             AiFailureReason::QUOTA_EXCEEDED => 'Your AI plan quota is exhausted. Check your provider account.',
             default => 'AI assistant temporarily unavailable. Please try again shortly.',
         };
-    }
-
-    /**
-     * @param array<string, mixed> $response
-     */
-    private function extractText(array $response): ?string
-    {
-        if (isset($response['message']) && \is_array($response['message'])) {
-            $content = $response['message']['content'] ?? null;
-            if (\is_string($content)) {
-                return $content;
-            }
-        }
-
-        if (isset($response['response']) && \is_string($response['response'])) {
-            return $response['response'];
-        }
-
-        return null;
     }
 }
