@@ -462,9 +462,10 @@ export async function launchTripAnalysis(tripId: string): Promise<boolean> {
 }
 
 /**
- * Body of `POST /trips/{id}/ai-chat`. Mirrors `App\ApiResource\TripChatRequest`
- * on the backend; declared locally until `make typegen` ingests the schema
- * change introduced by issue #309.
+ * Body of `POST /trips/{id}/ai-chat`. Hand-written mirror of
+ * `App\ApiResource\TripChatRequest`: this route is called through
+ * {@link apiFetch} rather than the generated typed client, so the shape is
+ * maintained here instead of being sourced from the OpenAPI types.
  */
 export interface TripChatRequestBody {
   message: string;
@@ -525,10 +526,10 @@ export interface TripChatResponseBody {
 /**
  * Send a natural-language instruction to the LLaMA 3B dialogue assistant.
  *
- * Until the OpenAPI schema is regenerated (after #309 lands on main), the
- * `/trips/{id}/ai-chat` route is not yet exposed via `apiClient.POST`, so this
- * function talks to the server through {@link apiFetch}. Once the typegen
- * catches up, this can be swapped for a typed call.
+ * Calls the server through {@link apiFetch} rather than the generated
+ * `apiClient.POST`, using the hand-written {@link TripChatRequestBody} /
+ * {@link TripChatResponseBody} shapes above. The OpenAPI schema does expose
+ * this route, so this is a deliberate choice, not a typegen limitation.
  */
 export async function sendTripChat(
   tripId: string,
