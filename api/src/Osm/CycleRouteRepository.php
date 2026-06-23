@@ -49,7 +49,29 @@ final readonly class CycleRouteRepository implements CycleRouteRepositoryInterfa
                 LEFT JOIN LATERAL (
                     SELECT ST_Buffer(ST_Collect(c.geom)::geography, :tol)::geometry AS g
                     FROM osm.cycle_routes c
-                    WHERE ST_DWithin(c.geom::geography, stage.g::geography, :tol)
+                    -- Index-usable bbox pre-filter (ADR-043 PR1, same shape as
+                    -- WaysRepository): the per-row c.geom::geography cast in
+                    -- ST_DWithin defeats the GiST index, so gate it behind
+                    -- `c.geom && <expanded bbox>`. The box pads the stage envelope
+                    -- by the tolerance (lat: ~111 320 m/deg; lon: divided by cos at
+                    -- the envelope's highest |lat|, clamped), strictly containing
+                    -- the metric corridor — so the candidate set is a superset and
+                    -- the measured fraction is identical to the unfiltered scan.
+                    WHERE c.geom && ST_Expand(
+                            ST_Envelope(stage.g),
+                            :tol / (111320.0 * GREATEST(
+                                cos(radians(LEAST(
+                                    GREATEST(
+                                        abs(ST_YMin(ST_Envelope(stage.g))),
+                                        abs(ST_YMax(ST_Envelope(stage.g)))
+                                    ) + :tol / 111320.0,
+                                    89.9
+                                ))),
+                                0.01
+                            )),
+                            :tol / 111320.0
+                        )
+                      AND ST_DWithin(c.geom::geography, stage.g::geography, :tol)
                 ) AS buffer ON TRUE
                 ORDER BY t.idx
                 SQL,
