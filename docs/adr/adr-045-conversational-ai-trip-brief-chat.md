@@ -17,6 +17,12 @@ The building blocks already exist (do **not** rebuild them):
 
 The gap is purely the **multi-turn conversation that builds the brief** before generation. The loaded-trip chat (`POST /trips/{id}/chat`, `TripChatProcessor`, `ChatHistoryStore`) cannot be reused as-is: it is keyed by an existing `tripId`, its actions mutate an existing trip, and its history store assumes a trip exists.
 
+## Scope and Non-Goals
+
+This ADR covers **only the pre-trip generation chat** — the conversational refinement of a brief *before any trip exists*, ending in a call to the existing generation pipeline.
+
+**Out of scope: the in-ride / loaded-trip chat.** The assistant on an existing trip is already implemented and is covered by **ADR-042**: `POST /trips/{id}/chat` (`TripChatProcessor`), front panel `ai-chat-panel.tsx`, the `split_stage` / `merge_stages` / `add_waypoint` / `change_accommodation` / `adjust_distance` / `change_route` / `find_poi` / `info` actions, in-ride POI search (`InRideAssistant`, ADR-040 PostGIS), and persisted history (`TripChatMessage`, `GET /trips/{id}/chat-history`). This ADR reuses its `ChatActionInterpreter` lenient-parsing approach but does **not** modify it. The two chats are distinct endpoints with distinct purposes — *build a brief* vs. *mutate an existing trip* — and share no state. Any recette feedback that the in-ride assistant "does not work" is tracked separately (it is most likely a side effect of the now-fixed AI-analysis persistence bug, to be reconfirmed once the recette stack is rebuilt with a configured provider), not a gap this ADR addresses.
+
 ## Decision Drivers
 
 - **Real refinement loop** — the AI must ask questions and converge, not echo canned text (recette #649).
