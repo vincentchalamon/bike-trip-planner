@@ -13,6 +13,7 @@ use App\Llm\AiProvider;
 use App\Llm\Dto\StageAiAnalysis;
 use App\Llm\LlmAnalysisTrackerInterface;
 use App\Llm\LlmClientInterface;
+use App\Llm\LlmResponseParser;
 use App\Llm\ResolvedLlmClient;
 use App\Llm\StageAnalysisSummaryBuilder;
 use App\Llm\SystemPromptLoader;
@@ -114,6 +115,7 @@ final class LlmPipelineTest extends TestCase
             llmResolver: $this->resolver($this->stageLlmClient()),
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
             summaryBuilder: new StageAnalysisSummaryBuilder(),
+            responseParser: new LlmResponseParser(),
             logger: new NullLogger(),
             llmTracker: $llmTracker,
             messageBus: $bus,
@@ -124,6 +126,7 @@ final class LlmPipelineTest extends TestCase
             tripStateManager: $repository,
             llmResolver: $this->resolver($this->overviewLlmClient()),
             promptLoader: new SystemPromptLoader($this->tmpPromptDir),
+            responseParser: new LlmResponseParser(),
             logger: new NullLogger(),
             llmTracker: $llmTracker,
             computationTracker: $this->stubComputationTracker(['route' => 'done', 'weather' => 'failed']),

@@ -26,6 +26,7 @@ use App\Llm\ChatHistoryStore;
 use App\Llm\Dto\ChatAction;
 use App\Llm\AiProvider;
 use App\Llm\LlmClientInterface;
+use App\Llm\LlmResponseParser;
 use App\Llm\ResolvedLlmClient;
 use App\Llm\UserLlmResolverInterface;
 use App\Llm\SystemPromptLoader;
@@ -251,6 +252,7 @@ final class TripChatInRideTest extends TestCase
             promptLoader: $promptLoader,
             interpreter: new ChatActionInterpreter(new NullLogger()),
             historyStore: $historyStore,
+            responseParser: new LlmResponseParser(),
             security: $security,
             logger: new NullLogger(),
             messageBus: $messageBus,
