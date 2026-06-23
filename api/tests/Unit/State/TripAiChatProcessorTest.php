@@ -174,7 +174,7 @@ final class TripAiChatProcessorTest extends TestCase
     }
 
     #[Test]
-    public function returns503WhenProviderUnreachable(): void
+    public function returns503WithEnglishMessageWhenProviderUnreachable(): void
     {
         $processor = $this->newProcessor(
             configured: true,
@@ -182,12 +182,36 @@ final class TripAiChatProcessorTest extends TestCase
             chatException: new AiUnavailableException('boom'),
         );
 
-        $this->expectException(ServiceUnavailableHttpException::class);
+        try {
+            $processor->process(
+                new AiChatRequest([new AiChatMessage('user', 'Bonjour')]),
+                new Post(),
+            );
+            self::fail('Expected ServiceUnavailableHttpException.');
+        } catch (ServiceUnavailableHttpException $serviceUnavailableHttpException) {
+            self::assertStringContainsString('unavailable', $serviceUnavailableHttpException->getMessage());
+        }
+    }
 
-        $processor->process(
-            new AiChatRequest([new AiChatMessage('user', 'Bonjour')]),
-            new Post(),
+    #[Test]
+    public function returns503WithFrenchMessageWhenLocaleIsFrench(): void
+    {
+        $processor = $this->newProcessor(
+            configured: true,
+            llmContent: '',
+            chatException: new AiUnavailableException('boom'),
+            acceptLanguage: 'fr',
         );
+
+        try {
+            $processor->process(
+                new AiChatRequest([new AiChatMessage('user', 'Bonjour')]),
+                new Post(),
+            );
+            self::fail('Expected ServiceUnavailableHttpException.');
+        } catch (ServiceUnavailableHttpException $serviceUnavailableHttpException) {
+            self::assertStringContainsString('indisponible', $serviceUnavailableHttpException->getMessage());
+        }
     }
 
     private function newProcessor(
@@ -196,6 +220,7 @@ final class TripAiChatProcessorTest extends TestCase
         ?RateLimiterFactory $limiterFactory = null,
         ?\Throwable $chatException = null,
         ?LlmClientInterface $llmClient = null,
+        ?string $acceptLanguage = null,
     ): TripAiChatProcessor {
         $user = new User('chat@example.com', Uuid::v7());
 
@@ -219,7 +244,10 @@ final class TripAiChatProcessorTest extends TestCase
         );
 
         $requestStack = new RequestStack();
-        $requestStack->push(Request::create('/trips/ai-chat'));
+        $requestStack->push(Request::create(
+            '/trips/ai-chat',
+            server: null === $acceptLanguage ? [] : ['HTTP_ACCEPT_LANGUAGE' => $acceptLanguage],
+        ));
 
         return new TripAiChatProcessor(
             clientFactory: $clientFactory,
