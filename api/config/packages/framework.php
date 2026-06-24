@@ -91,10 +91,12 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 // Per-user BYO-token AI providers (ADR-042). The symfony/ai-platform
                 // bridge sends the user's key per request; these scoped clients add a
                 // descriptive User-Agent + timeout and lock each one to its provider
-                // host (SSRF). retry_failed retries transient provider failures
-                // (429 and 503 "overloaded"/"high demand", POST included, with
-                // exponential back-off); permanent 401/403 token errors are not
-                // retried and degrade gracefully via the error taxonomy (ADR-042).
+                // host (SSRF). retry_failed retries only transient server-side
+                // failures (5xx: 502/503/504..., "overloaded"/"high demand", POST
+                // included, with exponential back-off). 429 is NOT retried; the error
+                // taxonomy distinguishes a transient rate-limit (Retry-After) from an
+                // exhausted quota ("fail fast"), and 401/403 token errors degrade
+                // gracefully (ADR-042).
                 // timeout (20s) stays under PHP's 30s max_execution_time so a slow
                 // provider yields a handled TransportException (-> 503 "retry") rather
                 // than a fatal 500; capped at 2 retries to keep the worst case (a few
@@ -105,6 +107,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'timeout' => 20,
                     'retry_failed' => [
                         'max_retries' => 2,
+                        'http_codes' => [500, 502, 503, 504, 507, 510],
                     ],
                     'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
                 ],
@@ -114,6 +117,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'timeout' => 20,
                     'retry_failed' => [
                         'max_retries' => 2,
+                        'http_codes' => [500, 502, 503, 504, 507, 510],
                     ],
                     'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
                 ],
@@ -123,6 +127,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                     'timeout' => 20,
                     'retry_failed' => [
                         'max_retries' => 2,
+                        'http_codes' => [500, 502, 503, 504, 507, 510],
                     ],
                     'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
                 ],
