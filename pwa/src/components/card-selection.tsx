@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { isAiFeatureEnabled } from "@/lib/constants";
 import { isSupportedSourceUrl, isValidUrl } from "@/lib/validation/url";
 import { useUiStore } from "@/store/ui-store";
 
@@ -64,6 +65,7 @@ export function CardSelection({
 }: CardSelectionProps) {
   const t = useTranslations("cardSelection");
   const aiCapability = useUiStore((s) => s.aiCapability);
+  const aiEnabled = isAiFeatureEnabled();
   const [selected, setSelected] = useState<InputMode>(null);
 
   const handleSelect = useCallback(
@@ -93,7 +95,9 @@ export function CardSelection({
           "grid w-full gap-4 transition-all",
           // When one card is selected it takes the full width; otherwise 3-up grid
           selected === null
-            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            ? aiEnabled
+              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+              : "grid-cols-1 sm:grid-cols-2"
             : "grid-cols-1",
         )}
       >
@@ -118,10 +122,12 @@ export function CardSelection({
         )}
 
         {/* Card: AI Assistant - natural-language brief to AI route generation
-            (ADR-042). Always visible: disabled with an inline notice when the
-            LLM tier is unreachable (#304), or disabled-but-visible with a
-            "Configurez une IA" CTA when no provider is set on the account. */}
-        {(selected === null || selected === "ai") && (
+            (ADR-042). Hidden entirely while the AI feature is on hold behind
+            `NEXT_PUBLIC_ENABLE_AI` (recette #649). When enabled it is always
+            visible: disabled with an inline notice when the LLM tier is
+            unreachable (#304), or disabled-but-visible with a "Configurez une
+            IA" CTA when no provider is set on the account. */}
+        {aiEnabled && (selected === null || selected === "ai") && (
           <AiCard
             expanded={selected === "ai"}
             disabled={disabled}

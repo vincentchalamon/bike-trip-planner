@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { fetchAiSettings } from "@/lib/api/client";
+import { isAiFeatureEnabled } from "@/lib/constants";
 import { useUiStore } from "@/store/ui-store";
 
 /**
@@ -16,6 +17,7 @@ export function useAiSettings(): void {
   const setAiConfigured = useUiStore((s) => s.setAiConfigured);
 
   useEffect(() => {
+    if (!isAiFeatureEnabled()) return;
     let cancelled = false;
     void fetchAiSettings().then((settings) => {
       if (!cancelled) setAiConfigured(Boolean(settings?.provider));

@@ -25,6 +25,7 @@ import type { StageData, AccommodationData } from "@/lib/validation/schemas";
 import { useTripStore, useStageAiAnalysis } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
+import { isAiFeatureEnabled } from "@/lib/constants";
 
 function formatCoords(point: { lat: number; lon: number }): string {
   const latDir = point.lat >= 0 ? "N" : "S";
@@ -107,9 +108,10 @@ export function StageCard({
   const startDate = useTripStore((s) => s.startDate);
   const viewMode = useUiStore((s) => s.viewMode);
 
+  const aiEnabled = isAiFeatureEnabled();
   const aiSummary = stage.aiSummary?.trim();
   const aiAnalysis = useStageAiAnalysis(stageIndex);
-  const hasAiAnalysis = Boolean(aiAnalysis?.narrative.trim());
+  const hasAiAnalysis = aiEnabled && Boolean(aiAnalysis?.narrative.trim());
   const hasAlerts = stage.alerts.length > 0;
 
   // In the split (map + list) layout the card is narrow, so keep the legacy
@@ -172,7 +174,7 @@ export function StageCard({
         {/* 2. AI summary — legacy short string (sprint 26, forward-compat).
             Suppressed when the richer pass-1 `aiAnalysis` is available so
             the rider sees a single coach voice per stage. */}
-        {!hasAiAnalysis && aiSummary && aiSummary.length > 0 && (
+        {aiEnabled && !hasAiAnalysis && aiSummary && aiSummary.length > 0 && (
           <StageAiSummaryLegacy summary={aiSummary} />
         )}
 

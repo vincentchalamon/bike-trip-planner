@@ -4,6 +4,7 @@
 - **Date:** 2026-06-19
 - **Depends on:** ADR-001 (Global Architecture), ADR-012 (Rule-based alert engine), ADR-027 (Gate mechanism and two-phase pipeline), ADR-030 (symfony/ai adoption), ADR-035 (GDPR account erasure)
 - **Supersedes / refines:** ADR-028 (Ollama/LLaMA integration), ADR-030 (symfony/ai transport layer), ADR-039 (beta right-sizing — the LLM RAM/CPU budget freed)
+- **Superseded (in part) by:** ADR-046 (temporary AI feature flag): only the "always present in the build / no env flag" stance below; the per-user BYO-token model stands.
 
 ## Context and Problem Statement
 
@@ -75,6 +76,8 @@ Each provider HTTP client is **SSRF-scoped to that provider's host** (per ADR-00
 ### 5. Availability is decided per-user, never by an env flag
 
 The AI features are **always present in the build** — they are part of the product, not a deployment option. What is optional is **per-user activation**: a feature is usable only once *that user* has chosen a provider and saved their token. The application therefore does **not** enable or disable AI through an environment variable. Two env-var flags are removed and **not replaced**: the Ollama-specific `OLLAMA_ENABLED` (which answered "is the self-hosted tier reachable?") and the instance-wide `AI_ENABLED` kill-switch on `LlmClientFactory`/`services.php` (which answered "is AI enabled for all users on this server?").
+
+> **Superseded in part (recette #649, [ADR-046](adr-046-temporary-ai-feature-flag.md)):** a single front-end build flag `NEXT_PUBLIC_ENABLE_AI` (default-off) now hides the whole AI surface to put the feature on hold for a release. It does not revive a backend kill-switch (the backend stays per-user gated) and does not change the per-user activation model described here.
 
 Two states, generalising the ADR-028 degraded-mode contract:
 

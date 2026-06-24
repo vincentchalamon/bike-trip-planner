@@ -41,6 +41,12 @@ FROM deps AS builder
 ARG NEXT_PUBLIC_APP_RELEASE
 ARG NEXT_PUBLIC_APP_ENV=production
 ARG NEXT_PUBLIC_SENTRY_DSN
+# AI feature flag (recette #649): default-off so prod and the iso-prod recette
+# build mask the whole AI surface (generation assistant, in-ride chat, stage
+# briefings + trip overview, account provider config). Set to "true" only where
+# AI must stay visible (CI E2E in ci.yml, dev in compose.dev.yaml). The code and
+# endpoints are kept for a later re-enable; this is a single reversible switch.
+ARG NEXT_PUBLIC_ENABLE_AI=false
 
 COPY --link pwa/. .
 
@@ -52,6 +58,7 @@ RUN --mount=type=secret,id=sentry_auth_token \
     NEXT_PUBLIC_APP_RELEASE="${NEXT_PUBLIC_APP_RELEASE}" \
     NEXT_PUBLIC_APP_ENV="${NEXT_PUBLIC_APP_ENV}" \
     NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
+    NEXT_PUBLIC_ENABLE_AI="${NEXT_PUBLIC_ENABLE_AI}" \
     npm run build
 
 
