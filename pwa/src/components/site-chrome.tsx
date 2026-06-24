@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { TopBar } from "@/components/top-bar";
 import { PublicTopBar } from "@/components/public-top-bar";
@@ -20,9 +22,11 @@ import { LandingFooter } from "@/components/landing/footer";
  * button (and the `?` shortcut on the roadbook) works on every authenticated
  * page, not only the trip view.
  *
- * Server component: it only composes client islands (`TopBar` / `PublicTopBar`,
- * `HelpModal`, `LandingFooter`), so it needs no `"use client"` boundary and can
- * be rendered directly from a layout.
+ * Marked `"use client"`: it composes only client islands (`TopBar` /
+ * `PublicTopBar`, `HelpModal`, `LandingFooter`) and is itself imported by client
+ * components (`error.tsx`, `home-content.tsx`), so the explicit boundary keeps
+ * the contract honest and guards against a server-only import slipping in later.
+ * The server route-group layouts that render it treat it as a client island.
  */
 export function SiteChrome({
   children,

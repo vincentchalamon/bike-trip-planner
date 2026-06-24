@@ -106,12 +106,12 @@ export default function TripsPage() {
   }, [fetchTrips]);
 
   async function handleDelete() {
-    if (!deleteTarget) return;
+    if (!deleteTarget?.id) return;
 
     setIsDeleting(true);
     try {
       const res = await apiFetch(
-        `${API_URL}/trips/${encodeURIComponent(deleteTarget.id ?? "")}`,
+        `${API_URL}/trips/${encodeURIComponent(deleteTarget.id)}`,
         { method: "DELETE" },
       );
 
