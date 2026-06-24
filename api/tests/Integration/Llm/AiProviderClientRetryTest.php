@@ -39,7 +39,7 @@ final class AiProviderClientRetryTest extends KernelTestCase
         self::assertContains(
             RetryableHttpClient::class,
             $this->decoratorChain($client),
-            \sprintf('AI scoped client "%s" must enable retry_failed so transient 429/503 provider failures are retried (ADR-042).', $serviceId),
+            \sprintf('AI scoped client "%s" must enable retry_failed so transient 5xx provider failures are retried (ADR-042).', $serviceId),
         );
     }
 
