@@ -272,8 +272,12 @@ services:
         # the self-hosted tracker script (e.g. https://analytics.example/js/script.js).
         NEXT_PUBLIC_PLAUSIBLE_DOMAIN: "${NEXT_PUBLIC_PLAUSIBLE_DOMAIN:-}"
         NEXT_PUBLIC_PLAUSIBLE_SRC: "${NEXT_PUBLIC_PLAUSIBLE_SRC:-}"
-      # AI features are always present in the build (ADR-042); they activate per-user
-      # once a provider + token is configured in account settings — no build flag.
+        # AI feature flag (recette #649): default-off so prod and the iso-prod
+        # recette build hide the whole AI surface (generation assistant, in-ride
+        # chat, stage briefings + trip overview, account provider config).
+        # Override to "true" only where AI must show (CI E2E bake args, dev). The
+        # code and endpoints are kept for a later re-enable (ADR-042).
+        NEXT_PUBLIC_ENABLE_AI: "${NEXT_PUBLIC_ENABLE_AI:-false}"
       # SENTRY_AUTH_TOKEN (source-map upload) is a real secret: passed as a
       # BuildKit secret so it never lands in an image layer or the build cache.
       secrets:

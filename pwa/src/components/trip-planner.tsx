@@ -35,6 +35,7 @@ import { useUiStore } from "@/store/ui-store";
 import { useOfflineStore } from "@/store/offline-store";
 import { useSwipe } from "@/hooks/use-swipe";
 import { fetchAiAvailability } from "@/lib/ai-availability";
+import { isAiFeatureEnabled } from "@/lib/constants";
 import {
   MEAL_COST_MIN,
   MEAL_COST_MAX,
@@ -140,6 +141,7 @@ export function TripPlanner() {
   // resolves to `true` here. A genuine provider outage surfaces reactively via
   // the 503 the chat endpoint returns, not from this mount-time call.
   useEffect(() => {
+    if (!isAiFeatureEnabled()) return;
     let cancelled = false;
     void fetchAiAvailability().then((available) => {
       if (!cancelled) setAiAvailable(available);
@@ -548,17 +550,21 @@ export function TripPlanner() {
                   silently when the LLM pipeline is disabled or did not produce
                   an overview. Placed above the stage timeline so it gives the
                   user a high-level view before they dive into per-stage data. */}
-              {!aiConfigured ? (
-                <AiUnavailableNotice
-                  variant="notConfigured"
-                  context="analysis"
-                />
-              ) : (
-                !aiAvailable && <AiUnavailableNotice context="analysis" />
+              {isAiFeatureEnabled() && (
+                <>
+                  {!aiConfigured ? (
+                    <AiUnavailableNotice
+                      variant="notConfigured"
+                      context="analysis"
+                    />
+                  ) : (
+                    !aiAvailable && <AiUnavailableNotice context="analysis" />
+                  )}
+                  <TripAiOverview
+                    onRegenerate={() => void relaunchFullAnalysis()}
+                  />
+                </>
               )}
-              <TripAiOverview
-                onRegenerate={() => void relaunchFullAnalysis()}
-              />
 
               {/* Sentinel — marks the natural position of the progress bar in the
                 flow. The sticky bar becomes visible once this exits the viewport. */}
@@ -727,7 +733,7 @@ export function TripPlanner() {
         {/* Floating AI assistant — visible as soon as the trip view is rendered
             (no longer gated by an analysis phase). Hidden on the welcome /
             loader screens via its own `trip` guard. */}
-        <AiBubble />
+        {isAiFeatureEnabled() && <AiBubble />}
       </main>
     </GpxDropZone>
   );

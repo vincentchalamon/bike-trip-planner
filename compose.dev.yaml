@@ -99,6 +99,10 @@ services:
       NODE_ENV: development
       # Development usage only
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      # AI feature flag (recette #649): on in dev so the AI surface stays visible
+      # and its code keeps being exercised while it is masked in prod/recette.
+      # `next dev` reads NEXT_PUBLIC_* from the runtime env (no rebuild needed).
+      NEXT_PUBLIC_ENABLE_AI: "true"
     volumes: !override
       - ./pwa:/srv/app
       - pwa_node_modules:/srv/app/node_modules

@@ -53,3 +53,20 @@ export const SITE_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost";
  */
 export const CONTACT_EMAIL =
   process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contact@example.org";
+
+/**
+ * AI feature flag (recette #649). The whole AI surface — generation assistant
+ * card, in-ride chat bubble, per-stage briefings + trip overview, and the
+ * account provider/token config — is hidden unless `NEXT_PUBLIC_ENABLE_AI` is
+ * explicitly `"true"`. The feature is on hold (provider quota/availability
+ * issues); the code and endpoints are kept for a later re-enable, so this is a
+ * single reversible switch rather than a removal.
+ *
+ * Default-off (fail-safe masking): prod and the iso-prod recette build mask AI
+ * with no env set. It is turned on only in dev (`compose.dev.yaml`), in the CI
+ * E2E build (`ci.yml` bake args) and in Vitest (`vitest.config.ts`) so the AI
+ * code stays exercised. Build-time inlined like the other NEXT_PUBLIC_* reads.
+ */
+export function isAiFeatureEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ENABLE_AI === "true";
+}
