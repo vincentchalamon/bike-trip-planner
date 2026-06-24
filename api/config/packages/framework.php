@@ -95,30 +95,34 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 // (429 and 503 "overloaded"/"high demand", POST included, with
                 // exponential back-off); permanent 401/403 token errors are not
                 // retried and degrade gracefully via the error taxonomy (ADR-042).
+                // timeout (20s) stays under PHP's 30s max_execution_time so a slow
+                // provider yields a handled TransportException (-> 503 "retry") rather
+                // than a fatal 500; capped at 2 retries to keep the worst case (a few
+                // 503s then a timeout) below that ceiling.
                 'anthropic.client' => [
                     'scope' => '^https://api\\.anthropic\\.com',
                     'max_redirects' => 2,
-                    'timeout' => 30,
+                    'timeout' => 20,
                     'retry_failed' => [
-                        'max_retries' => 3,
+                        'max_retries' => 2,
                     ],
                     'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
                 ],
                 'openai.client' => [
                     'scope' => '^https://api\\.openai\\.com',
                     'max_redirects' => 2,
-                    'timeout' => 30,
+                    'timeout' => 20,
                     'retry_failed' => [
-                        'max_retries' => 3,
+                        'max_retries' => 2,
                     ],
                     'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
                 ],
                 'gemini.client' => [
                     'scope' => '^https://generativelanguage\\.googleapis\\.com',
                     'max_redirects' => 2,
-                    'timeout' => 30,
+                    'timeout' => 20,
                     'retry_failed' => [
-                        'max_retries' => 3,
+                        'max_retries' => 2,
                     ],
                     'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
                 ],
