@@ -24,6 +24,7 @@ use App\InRide\PoiIntentDetector;
 use App\Llm\AiProvider;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
+use App\Llm\Exception\AiFailureReason;
 use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\LlmResponseParser;
