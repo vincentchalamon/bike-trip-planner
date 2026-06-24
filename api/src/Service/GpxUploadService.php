@@ -16,8 +16,12 @@ use App\Enum\SourceType;
 use App\Enum\TripStatus;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
+use App\Entity\User;
 use App\RouteParser\GpxRouteParserInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Security\Voter\TripVoter;
+use Psr\Cache\CacheItemPoolInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -43,6 +47,8 @@ final readonly class GpxUploadService
         private TripUpdatePublisherInterface $publisher,
         private StructuralComputationService $structuralComputation,
         private TripAnalysisDispatcher $analysisDispatcher,
+        #[Autowire(service: 'cache.trip_state')]
+        private CacheItemPoolInterface $tripStateCache,
     ) {
     }
 
@@ -79,11 +85,27 @@ final readonly class GpxUploadService
         ?string $title,
         TripRequest $tripRequest,
         string $locale,
+        User $user,
     ): array {
         $tripId = Uuid::v7()->toRfc4122();
 
+        // Associate the trip with its uploader so TripVoter grants TRIP_VIEW
+        // (Postgres column + Redis fallback), mirroring TripCreateProcessor.
+        // Without this the GPX trip is ownerless: GET /trips/{id}/detail is
+        // denied and hidden as 404 (ADR-038), surfacing as "Voyage introuvable"
+        // right after a successful upload (recette #649).
+        $tripRequest->user = $user;
+
         $this->tripStateManager->initializeTrip($tripId, $tripRequest);
         $this->tripStateManager->storeLocale($tripId, $locale);
+
+        // Fast ownership check for the async enrichment fan-out before the row
+        // is queryable everywhere (same key/TTL as TripCreateProcessor).
+        $ownershipItem = $this->tripStateCache->getItem(\sprintf('trip.%s.user_id', $tripId));
+        $ownershipItem->set($user->getId()->toRfc4122());
+        $ownershipItem->expiresAfter(TripVoter::CACHE_TTL);
+
+        $this->tripStateCache->save($ownershipItem);
 
         $computations = ComputationName::pipeline();
         $this->computationTracker->initializeComputations($tripId, $computations);

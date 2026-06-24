@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\ApiResource\TripRequest;
+use App\Entity\User;
 use App\Service\GpxUploadService;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,6 +26,7 @@ final readonly class GpxUploadController
 
     public function __construct(
         private GpxUploadService $gpxUploadService,
+        private Security $security,
     ) {
     }
 
@@ -100,7 +103,10 @@ final readonly class GpxUploadController
 
         $locale = $request->getPreferredLanguage(['en', 'fr']) ?? 'en';
 
-        $result = $this->gpxUploadService->createTrip($points, $title, $tripRequest, $locale);
+        /** @var User $user */
+        $user = $this->security->getUser();
+
+        $result = $this->gpxUploadService->createTrip($points, $title, $tripRequest, $locale, $user);
 
         $response = [
             '@context' => '/contexts/Trip',
