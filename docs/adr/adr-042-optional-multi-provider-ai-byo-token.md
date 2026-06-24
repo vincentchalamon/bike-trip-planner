@@ -44,7 +44,7 @@ Cloud providers only. No self-hosted Ollama.
 | Provider | `symfony/ai` bridge | Default chat model | Default analysis model |
 |----------|---------------------|--------------------|------------------------|
 | **Anthropic (Claude)** | `symfony/ai-anthropic-platform` | `claude-haiku-4-5-20251001` | `claude-sonnet-4-6` |
-| **Google (Gemini)** | `symfony/ai-gemini-platform` | `gemini-2.5-flash` | `gemini-2.5-flash` |
+| **Google (Gemini)** | `symfony/ai-gemini-platform` | `gemini-2.0-flash` | `gemini-2.0-flash` |
 | **OpenAI** | `symfony/ai-open-ai-platform` | `gpt-4o-mini` | `gpt-4o-mini` |
 
 Models are chosen cheap-but-capable per provider. They are **not user-selectable in v1** — the user picks a provider, not a model.

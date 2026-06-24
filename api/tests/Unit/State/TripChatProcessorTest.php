@@ -669,6 +669,32 @@ final class TripChatProcessorTest extends TestCase
         );
     }
 
+    #[Test]
+    public function logsWarningNotCriticalForUserConfigErrors(): void
+    {
+        // A bad key / exhausted quota is a user-config error: warning, not critical
+        // (no on-call page). Still returns 503 on the in-ride path for now.
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('log')
+            ->with('warning', self::stringContains('AI provider unreachable'), self::anything());
+
+        $processor = $this->newProcessor(
+            llmContent: '',
+            stagesCount: 1,
+            messageBus: $this->newMessageBus(),
+            logger: $logger,
+            chatException: new AiUnavailableException('bad key', AiFailureReason::INVALID_TOKEN),
+        );
+
+        $this->expectException(ServiceUnavailableHttpException::class);
+
+        $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+    }
+
     /**
      * @param list<array{lat: float, lon: float, tags: array<string, string>}>|null $inRidePois optional features returned by the in-ride index mock
      */
