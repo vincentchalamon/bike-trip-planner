@@ -649,8 +649,8 @@ final class TripChatProcessorTest extends TestCase
     {
         // AI configured but the chat call hits an unreachable provider: 503 + `critical` log (#304).
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('critical')
-            ->with(self::stringContains('AI provider unreachable'));
+        $logger->expects(self::once())->method('log')
+            ->with('critical', self::stringContains('AI provider unreachable'), self::anything());
 
         $processor = $this->newProcessor(
             llmContent: '',

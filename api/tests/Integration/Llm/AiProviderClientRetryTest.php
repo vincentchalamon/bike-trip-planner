@@ -13,11 +13,13 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 /**
  * Guards that every per-user AI provider scoped client (ADR-042) enables
  * `retry_failed`. Gemini (and occasionally the others) returns transient
- * `503 "high demand"` / `429` under load on the default model; without retry
- * these surface as a one-shot 503 to the rider. Symfony's default retry status
- * codes retry 429 and 503 on every method (POST included) with exponential
- * back-off, so having a {@see RetryableHttpClient} in the stack is what makes
- * the AI endpoints resilient.
+ * `503 "high demand"` under load on the default model; without retry these
+ * surface as a one-shot 503 to the rider. The clients retry 5xx codes only
+ * (POST included) with exponential back-off; 429 is explicitly excluded so an
+ * exhausted-quota 429 fails fast (ADR-042). Having a {@see RetryableHttpClient}
+ * in the stack is what makes the AI endpoints resilient; this asserts the
+ * wrapper is present, not the `http_codes` value (that lives in framework.php,
+ * validated by Symfony's config parser on kernel boot).
  *
  * A scoped client is a stack of decorators (UriTemplate -> Retryable -> Scoping
  * -> transport), so the assertion walks the chain rather than checking the
