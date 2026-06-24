@@ -112,10 +112,14 @@ final readonly class TripAiChatProcessor implements ProcessorInterface
         } catch (AiUnavailableException $aiUnavailableException) {
             $reason = $aiUnavailableException->getReason();
 
-            $this->logger->critical('AI provider call failed — ai-chat endpoint degrading.', [
-                'reason' => $reason->value,
-                'error' => $aiUnavailableException->getMessage(),
-            ]);
+            // Only a genuine provider outage (UNAVAILABLE) is worth paging on; a bad
+            // key or an exhausted quota is a user-config error, logged as a warning
+            // to avoid false on-call alerts.
+            $this->logger->log(
+                AiFailureReason::UNAVAILABLE === $reason ? 'critical' : 'warning',
+                'AI provider call failed — ai-chat endpoint degrading.',
+                ['reason' => $reason->value, 'error' => $aiUnavailableException->getMessage()],
+            );
 
             // Propagate the classified reason (ADR-042/045) so the UI can show an
             // actionable message instead of a generic "retry": an exhausted quota
