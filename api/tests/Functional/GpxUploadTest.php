@@ -358,4 +358,39 @@ final class GpxUploadTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(401);
     }
+
+    #[Test]
+    public function uploadedTripIsViewableByItsUploader(): void
+    {
+        // Regression (recette #649): a GPX upload used to create an *ownerless*
+        // trip, so the uploader's own GET /detail was denied and hidden as a 404
+        // ("Voyage introuvable" right after a successful upload). createTrip now
+        // assigns the owner (TripRequest.user + Redis ownership key) like the URL
+        // flow, so the uploader can load their trip immediately.
+        $file = new UploadedFile(
+            self::FIXTURES_DIR.'/multi-stage-route.gpx',
+            'multi-stage-route.gpx',
+            'application/gpx+xml',
+            null,
+            true,
+        );
+
+        $upload = $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
+            'extra' => [
+                'files' => ['gpxFile' => $file],
+            ],
+        ]);
+        $this->assertResponseStatusCodeSame(202);
+
+        $tripId = $upload->toArray(false)['id'];
+        self::assertIsString($tripId);
+        self::assertNotEmpty($tripId);
+
+        // Same kernel + same JWT: the owner must load their own trip (200, not 404).
+        $this->client->request('GET', \sprintf('/trips/%s/detail', $tripId), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+        $this->assertResponseStatusCodeSame(200);
+    }
 }
