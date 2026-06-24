@@ -18,8 +18,8 @@ final class AiProviderTest extends TestCase
         self::assertSame('claude-sonnet-4-6', AiProvider::ANTHROPIC->analysisModel());
         self::assertSame('gpt-4o-mini', AiProvider::OPENAI->chatModel());
         self::assertSame('gpt-4o-mini', AiProvider::OPENAI->analysisModel());
-        self::assertSame('gemini-2.5-flash', AiProvider::GEMINI->chatModel());
-        self::assertSame('gemini-2.5-flash', AiProvider::GEMINI->analysisModel());
+        self::assertSame('gemini-2.0-flash', AiProvider::GEMINI->chatModel());
+        self::assertSame('gemini-2.0-flash', AiProvider::GEMINI->analysisModel());
     }
 
     #[Test]
