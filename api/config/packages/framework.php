@@ -91,23 +91,35 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 // Per-user BYO-token AI providers (ADR-042). The symfony/ai-platform
                 // bridge sends the user's key per request; these scoped clients add a
                 // descriptive User-Agent + timeout and lock each one to its provider
-                // host (SSRF). Selective retry is layered on with the error taxonomy.
+                // host (SSRF). retry_failed retries transient provider failures
+                // (429 and 503 "overloaded"/"high demand", POST included, with
+                // exponential back-off); permanent 401/403 token errors are not
+                // retried and degrade gracefully via the error taxonomy (ADR-042).
                 'anthropic.client' => [
                     'scope' => '^https://api\\.anthropic\\.com',
                     'max_redirects' => 2,
                     'timeout' => 30,
+                    'retry_failed' => [
+                        'max_retries' => 3,
+                    ],
                     'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
                 ],
                 'openai.client' => [
                     'scope' => '^https://api\\.openai\\.com',
                     'max_redirects' => 2,
                     'timeout' => 30,
+                    'retry_failed' => [
+                        'max_retries' => 3,
+                    ],
                     'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
                 ],
                 'gemini.client' => [
                     'scope' => '^https://generativelanguage\\.googleapis\\.com',
                     'max_redirects' => 2,
                     'timeout' => 30,
+                    'retry_failed' => [
+                        'max_retries' => 3,
+                    ],
                     'headers' => ['User-Agent' => 'BikeTripPlanner/1.0 (https://github.com/vincentchalamon/bike-trip-planner)'],
                 ],
             ],
