@@ -161,7 +161,11 @@ export function AiChatCard({
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [capReached, setCapReached] = useState(false);
-  const [notConfigured, setNotConfigured] = useState(false);
+  // i18n key of the message rendered in the settings-CTA banner, or null when
+  // hidden. Shared by the non-actionable-by-retry failures (no provider set,
+  // invalid token, exhausted quota): each shows the same "go to settings" CTA
+  // with its own message instead of a misleading "retry" error bubble.
+  const [configErrorKey, setConfigErrorKey] = useState<string | null>(null);
   const counterRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const historyRef = useRef<HTMLDivElement>(null);
@@ -268,10 +272,16 @@ export function AiChatCard({
         ]);
         setCollected(result.data.collected);
         setReadyToGenerate(result.data.readyToGenerate);
-        setNotConfigured(false);
+        setConfigErrorKey(null);
         break;
       case "not_configured":
-        setNotConfigured(true);
+        setConfigErrorKey("errorNotConfigured");
+        break;
+      case "invalid_token":
+        setConfigErrorKey("errorInvalidToken");
+        break;
+      case "quota_exceeded":
+        setConfigErrorKey("errorQuotaExceeded");
         break;
       case "rate_limited":
         appendAssistantError(t("errorRateLimit"));
@@ -363,7 +373,7 @@ export function AiChatCard({
           {isSending && <TypingBubble label={t("thinking")} />}
         </div>
 
-        {notConfigured && (
+        {configErrorKey && (
           <div
             data-testid="ai-chat-not-configured"
             role="alert"
@@ -374,7 +384,7 @@ export function AiChatCard({
                 className="h-4 w-4 shrink-0 text-brand"
                 aria-hidden="true"
               />
-              <span>{t("errorNotConfigured")}</span>
+              <span>{t(configErrorKey)}</span>
             </span>
             <Link
               href="/account/settings#ai"

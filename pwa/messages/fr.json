@@ -606,6 +606,8 @@
     "launchRecommended": "Ton projet semble complet : tu peux lancer le calcul.",
     "launchNeedsStart": "Indique au moins un point de départ pour lancer le calcul.",
     "errorNotConfigured": "Configure un fournisseur IA pour discuter de ton itinéraire.",
+    "errorInvalidToken": "Ta clé IA semble invalide. Vérifie-la dans tes réglages.",
+    "errorQuotaExceeded": "Le quota de ton offre IA est épuisé. Vérifie ton compte chez le fournisseur.",
     "configureCta": "Configurer une IA",
     "errorRateLimit": "Trop de messages d'affilée. Patiente un instant avant de réessayer.",
     "errorUnavailable": "Assistant IA temporairement indisponible. Réessaie dans un instant.",
