@@ -36,7 +36,7 @@ final class AiProviderClientRetryTest extends KernelTestCase
 
         self::assertContains(
             RetryableHttpClient::class,
-            self::decoratorChain($client),
+            $this->decoratorChain($client),
             \sprintf('AI scoped client "%s" must enable retry_failed so transient 429/503 provider failures are retried (ADR-042).', $serviceId),
         );
     }
@@ -57,7 +57,7 @@ final class AiProviderClientRetryTest extends KernelTestCase
      *
      * @return list<class-string>
      */
-    private static function decoratorChain(HttpClientInterface $client): array
+    private function decoratorChain(HttpClientInterface $client): array
     {
         $chain = [];
         $current = $client;
