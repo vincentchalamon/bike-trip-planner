@@ -24,6 +24,7 @@ use App\InRide\PoiIntentDetector;
 use App\Llm\AiProvider;
 use App\Llm\ChatActionInterpreter;
 use App\Llm\ChatHistoryStore;
+use App\Llm\Exception\AiFailureReason;
 use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\LlmResponseParser;
@@ -649,8 +650,8 @@ final class TripChatProcessorTest extends TestCase
     {
         // AI configured but the chat call hits an unreachable provider: 503 + `critical` log (#304).
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('critical')
-            ->with(self::stringContains('AI provider unreachable'));
+        $logger->expects(self::once())->method('log')
+            ->with('critical', self::stringContains('AI provider unreachable'), self::anything());
 
         $processor = $this->newProcessor(
             llmContent: '',
@@ -658,6 +659,32 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $this->newMessageBus(),
             logger: $logger,
             chatException: new AiUnavailableException('boom'),
+        );
+
+        $this->expectException(ServiceUnavailableHttpException::class);
+
+        $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+    }
+
+    #[Test]
+    public function logsWarningNotCriticalForUserConfigErrors(): void
+    {
+        // A bad key / exhausted quota is a user-config error: warning, not critical
+        // (no on-call page). Still returns 503 on the in-ride path for now.
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('log')
+            ->with('warning', self::stringContains('AI provider unreachable'), self::anything());
+
+        $processor = $this->newProcessor(
+            llmContent: '',
+            stagesCount: 1,
+            messageBus: $this->newMessageBus(),
+            logger: $logger,
+            chatException: new AiUnavailableException('bad key', AiFailureReason::INVALID_TOKEN),
         );
 
         $this->expectException(ServiceUnavailableHttpException::class);

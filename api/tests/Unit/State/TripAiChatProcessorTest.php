@@ -11,6 +11,7 @@ use App\ApiResource\Model\AiChatMessage;
 use App\Entity\User;
 use App\Llm\AiProvider;
 use App\Llm\BriefChatInterpreter;
+use App\Llm\Exception\AiFailureReason;
 use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\LlmResponseParser;
@@ -26,7 +27,6 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
@@ -174,7 +174,7 @@ final class TripAiChatProcessorTest extends TestCase
     }
 
     #[Test]
-    public function returns503WithEnglishMessageWhenProviderUnreachable(): void
+    public function returns503WhenProviderUnreachable(): void
     {
         $processor = $this->newProcessor(
             configured: true,
@@ -182,36 +182,72 @@ final class TripAiChatProcessorTest extends TestCase
             chatException: new AiUnavailableException('boom'),
         );
 
-        try {
-            $processor->process(
-                new AiChatRequest([new AiChatMessage('user', 'Bonjour')]),
-                new Post(),
-            );
-            self::fail('Expected ServiceUnavailableHttpException.');
-        } catch (ServiceUnavailableHttpException $serviceUnavailableHttpException) {
-            self::assertStringContainsString('unavailable', $serviceUnavailableHttpException->getMessage());
-        }
+        $result = $processor->process(
+            new AiChatRequest([new AiChatMessage('user', 'Bonjour')]),
+            new Post(),
+        );
+
+        self::assertInstanceOf(JsonResponse::class, $result);
+        self::assertSame(503, $result->getStatusCode());
+        self::assertSame('{"error":"ai_unavailable"}', $result->getContent());
     }
 
     #[Test]
-    public function returns503WithFrenchMessageWhenLocaleIsFrench(): void
+    public function returns422WithInvalidTokenError(): void
     {
         $processor = $this->newProcessor(
             configured: true,
             llmContent: '',
-            chatException: new AiUnavailableException('boom'),
-            acceptLanguage: 'fr',
+            chatException: new AiUnavailableException('bad key', AiFailureReason::INVALID_TOKEN),
         );
 
-        try {
-            $processor->process(
-                new AiChatRequest([new AiChatMessage('user', 'Bonjour')]),
-                new Post(),
-            );
-            self::fail('Expected ServiceUnavailableHttpException.');
-        } catch (ServiceUnavailableHttpException $serviceUnavailableHttpException) {
-            self::assertStringContainsString('indisponible', $serviceUnavailableHttpException->getMessage());
-        }
+        $result = $processor->process(
+            new AiChatRequest([new AiChatMessage('user', 'Bonjour')]),
+            new Post(),
+        );
+
+        self::assertInstanceOf(JsonResponse::class, $result);
+        self::assertSame(422, $result->getStatusCode());
+        self::assertSame('{"error":"ai_invalid_token"}', $result->getContent());
+    }
+
+    #[Test]
+    public function returns422WithQuotaExceededError(): void
+    {
+        $processor = $this->newProcessor(
+            configured: true,
+            llmContent: '',
+            chatException: new AiUnavailableException('no credit', AiFailureReason::QUOTA_EXCEEDED),
+        );
+
+        $result = $processor->process(
+            new AiChatRequest([new AiChatMessage('user', 'Bonjour')]),
+            new Post(),
+        );
+
+        self::assertInstanceOf(JsonResponse::class, $result);
+        self::assertSame(422, $result->getStatusCode());
+        self::assertSame('{"error":"ai_quota_exceeded"}', $result->getContent());
+    }
+
+    #[Test]
+    public function returns429WithRateLimitedErrorAndRetryAfterHeader(): void
+    {
+        $processor = $this->newProcessor(
+            configured: true,
+            llmContent: '',
+            chatException: new AiUnavailableException('slow down', AiFailureReason::RATE_LIMITED, retryAfter: 12),
+        );
+
+        $result = $processor->process(
+            new AiChatRequest([new AiChatMessage('user', 'Bonjour')]),
+            new Post(),
+        );
+
+        self::assertInstanceOf(JsonResponse::class, $result);
+        self::assertSame(429, $result->getStatusCode());
+        self::assertSame('{"error":"ai_rate_limited"}', $result->getContent());
+        self::assertSame('12', $result->headers->get('Retry-After'));
     }
 
     private function newProcessor(

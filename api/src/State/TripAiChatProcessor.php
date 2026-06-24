@@ -25,7 +25,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
-use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
@@ -111,12 +110,33 @@ final readonly class TripAiChatProcessor implements ProcessorInterface
                 systemPrompt: $systemPrompt,
             );
         } catch (AiUnavailableException $aiUnavailableException) {
-            $this->logger->critical('AI provider unreachable — ai-chat endpoint returning 503.', [
-                'reason' => $aiUnavailableException->getReason()->value,
-                'error' => $aiUnavailableException->getMessage(),
-            ]);
+            $reason = $aiUnavailableException->getReason();
 
-            throw new ServiceUnavailableHttpException(retryAfter: $aiUnavailableException->getRetryAfter(), message: $this->unavailableMessage($aiUnavailableException->getReason(), $locale), previous: $aiUnavailableException);
+            // Only a genuine provider outage (UNAVAILABLE) is worth paging on; a bad
+            // key or an exhausted quota is a user-config error, logged as a warning
+            // to avoid false on-call alerts.
+            $this->logger->log(
+                AiFailureReason::UNAVAILABLE === $reason ? 'critical' : 'warning',
+                'AI provider call failed — ai-chat endpoint degrading.',
+                ['reason' => $reason->value, 'error' => $aiUnavailableException->getMessage()],
+            );
+
+            // Propagate the classified reason (ADR-042/045) so the UI can show an
+            // actionable message instead of a generic "retry": an exhausted quota
+            // or a revoked token are not transient, so retrying is misleading.
+            [$status, $error] = match ($reason) {
+                AiFailureReason::INVALID_TOKEN => [Response::HTTP_UNPROCESSABLE_ENTITY, 'ai_invalid_token'],
+                AiFailureReason::QUOTA_EXCEEDED => [Response::HTTP_UNPROCESSABLE_ENTITY, 'ai_quota_exceeded'],
+                AiFailureReason::RATE_LIMITED => [Response::HTTP_TOO_MANY_REQUESTS, 'ai_rate_limited'],
+                AiFailureReason::UNAVAILABLE => [Response::HTTP_SERVICE_UNAVAILABLE, 'ai_unavailable'],
+            };
+
+            $headers = [];
+            if (AiFailureReason::RATE_LIMITED === $reason && null !== $aiUnavailableException->getRetryAfter()) {
+                $headers['Retry-After'] = (string) $aiUnavailableException->getRetryAfter();
+            }
+
+            return new JsonResponse(['error' => $error], $status, $headers);
         }
 
         $rawContent = null === $response ? '' : ($this->responseParser->extractText($response) ?? '');
@@ -164,22 +184,5 @@ final readonly class TripAiChatProcessor implements ProcessorInterface
         }
 
         return $built;
-    }
-
-    private function unavailableMessage(AiFailureReason $reason, string $locale): string
-    {
-        if ('fr' === $locale) {
-            return match ($reason) {
-                AiFailureReason::INVALID_TOKEN => 'Votre clé IA semble invalide. Vérifiez-la dans vos réglages.',
-                AiFailureReason::QUOTA_EXCEEDED => 'Le quota de votre offre IA est épuisé. Vérifiez votre compte chez le fournisseur.',
-                default => 'Assistant IA temporairement indisponible. Réessayez dans un instant.',
-            };
-        }
-
-        return match ($reason) {
-            AiFailureReason::INVALID_TOKEN => 'Your AI key looks invalid. Check it in your settings.',
-            AiFailureReason::QUOTA_EXCEEDED => 'Your AI plan quota is exhausted. Check your provider account.',
-            default => 'AI assistant temporarily unavailable. Please try again shortly.',
-        };
     }
 }

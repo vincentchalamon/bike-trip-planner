@@ -161,11 +161,16 @@ final readonly class TripChatProcessor implements ProcessorInterface
                 systemPrompt: $systemPrompt,
             );
         } catch (AiUnavailableException $aiUnavailableException) {
-            $this->logger->critical('AI provider unreachable — chat endpoint returning 503.', [
-                'tripId' => $tripId,
-                'reason' => $aiUnavailableException->getReason()->value,
-                'error' => $aiUnavailableException->getMessage(),
-            ]);
+            $reason = $aiUnavailableException->getReason();
+
+            // Page only on a genuine provider outage (UNAVAILABLE); a bad key or an
+            // exhausted quota is a user-config error, logged as a warning to avoid
+            // false on-call alerts.
+            $this->logger->log(
+                AiFailureReason::UNAVAILABLE === $reason ? 'critical' : 'warning',
+                'AI provider unreachable — chat endpoint returning 503.',
+                ['tripId' => $tripId, 'reason' => $reason->value, 'error' => $aiUnavailableException->getMessage()],
+            );
 
             throw new ServiceUnavailableHttpException(retryAfter: $aiUnavailableException->getRetryAfter(), message: $this->unavailableMessage($aiUnavailableException), previous: $aiUnavailableException);
         }

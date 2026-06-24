@@ -713,13 +713,19 @@ export type AiChatResponseBody = Pick<
  * - `ok`              — the assistant turn (reply + readiness + collected).
  * - `not_configured`  — 422 `{error:"ai_not_configured"}`: no provider set;
  *   surface the "configure une IA" CTA (mirrors `aiCapability.configured`).
- * - `rate_limited`    — 429: per-user chat rate limit reached.
- * - `unavailable`     — 503: provider unreachable / invalid token / quota.
+ * - `invalid_token`   — 422 `{error:"ai_invalid_token"}`: the stored key is
+ *   wrong/revoked; surface the settings CTA (retrying is pointless).
+ * - `quota_exceeded`  — 422 `{error:"ai_quota_exceeded"}`: the provider plan is
+ *   exhausted; surface the settings CTA to switch provider.
+ * - `rate_limited`    — 429: per-user chat rate limit reached (transient).
+ * - `unavailable`     — 503: provider unreachable / transient outage.
  * - `error`           — any other failure (network, 4xx, bad shape).
  */
 export type AiChatResult =
   | { status: "ok"; data: AiChatResponseBody }
   | { status: "not_configured" }
+  | { status: "invalid_token" }
+  | { status: "quota_exceeded" }
   | { status: "rate_limited" }
   | { status: "unavailable" }
   | { status: "error" };
@@ -736,13 +742,13 @@ const aiChatResponseSchema = z.object({
     .default({}),
 });
 
-function hasAiNotConfigured(body: unknown): boolean {
-  return (
-    body !== null &&
-    typeof body === "object" &&
-    "error" in body &&
-    (body as { error?: unknown }).error === "ai_not_configured"
-  );
+/** Read the discrete `{error}` code carried by an ai-chat failure body. */
+function aiChatErrorCode(body: unknown): string | null {
+  if (body !== null && typeof body === "object" && "error" in body) {
+    const value = (body as { error?: unknown }).error;
+    return typeof value === "string" ? value : null;
+  }
+  return null;
 }
 
 /**
@@ -780,8 +786,17 @@ export async function sendAiChat(
     return { status: "ok", data: parsed.data };
   }
 
-  if (response.status === 422 && hasAiNotConfigured(error)) {
-    return { status: "not_configured" };
+  if (response.status === 422) {
+    switch (aiChatErrorCode(error)) {
+      case "ai_not_configured":
+        return { status: "not_configured" };
+      case "ai_invalid_token":
+        return { status: "invalid_token" };
+      case "ai_quota_exceeded":
+        return { status: "quota_exceeded" };
+      default:
+        return { status: "error" };
+    }
   }
   if (response.status === 429) return { status: "rate_limited" };
   if (response.status === 503) return { status: "unavailable" };

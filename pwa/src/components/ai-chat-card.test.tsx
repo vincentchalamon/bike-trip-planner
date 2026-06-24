@@ -202,6 +202,40 @@ describe("AiChatCard (ADR-045)", () => {
     );
   });
 
+  it("surfaces the invalid-token message + settings CTA on a 422 ai_invalid_token", async () => {
+    sendAiChat.mockResolvedValueOnce({
+      status: "invalid_token",
+    } as AiChatResult);
+    render(<AiChatCard />);
+
+    await sendUserTurn("Boucle Lille");
+    await waitFor(() =>
+      expect(screen.getByTestId("ai-chat-not-configured")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("errorInvalidToken")).toBeInTheDocument();
+    expect(screen.getByTestId("ai-chat-configure-cta")).toHaveAttribute(
+      "href",
+      "/account/settings#ai",
+    );
+  });
+
+  it("surfaces the quota-exceeded message + settings CTA on a 422 ai_quota_exceeded", async () => {
+    sendAiChat.mockResolvedValueOnce({
+      status: "quota_exceeded",
+    } as AiChatResult);
+    render(<AiChatCard />);
+
+    await sendUserTurn("Boucle Lille");
+    await waitFor(() =>
+      expect(screen.getByTestId("ai-chat-not-configured")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("errorQuotaExceeded")).toBeInTheDocument();
+    expect(screen.getByTestId("ai-chat-configure-cta")).toHaveAttribute(
+      "href",
+      "/account/settings#ai",
+    );
+  });
+
   it("maps 429 / 503 / generic failures to localized error bubbles", async () => {
     sendAiChat.mockResolvedValueOnce({ status: "rate_limited" });
     sendAiChat.mockResolvedValueOnce({ status: "unavailable" });

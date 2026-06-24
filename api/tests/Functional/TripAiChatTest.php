@@ -8,6 +8,8 @@ use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\Entity\User;
 use App\Llm\AiProvider;
+use App\Llm\Exception\AiFailureReason;
+use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\ResolvedLlmClient;
 use App\Llm\UserLlmResolverInterface;
@@ -134,6 +136,48 @@ final class TripAiChatTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(422);
         $this->assertSame(['error' => 'ai_not_configured'], $response->toArray(false));
+    }
+
+    #[Test]
+    public function returns422WithInvalidTokenErrorWhenProviderRejectsKey(): void
+    {
+        $client = new readonly class () implements LlmClientInterface {
+            public function isEnabled(): bool
+            {
+                return true;
+            }
+
+            public function generate(string $model, string $prompt, ?string $systemPrompt = null, array $options = []): array
+            {
+                throw new AiUnavailableException('bad key', AiFailureReason::INVALID_TOKEN);
+            }
+
+            public function chat(string $model, array $messages, ?string $systemPrompt = null, array $options = []): array
+            {
+                throw new AiUnavailableException('bad key', AiFailureReason::INVALID_TOKEN);
+            }
+        };
+
+        $resolver = new readonly class ($client) implements UserLlmResolverInterface {
+            public function __construct(private LlmClientInterface $client)
+            {
+            }
+
+            public function forUser(User $user): ResolvedLlmClient
+            {
+                return new ResolvedLlmClient($this->client, AiProvider::ANTHROPIC);
+            }
+        };
+
+        self::getContainer()->set(UserLlmResolverInterface::class, $resolver);
+
+        $response = $this->client->request('POST', '/trips/ai-chat', [
+            'json' => ['messages' => [['role' => 'user', 'content' => 'Bonjour']]],
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertSame(['error' => 'ai_invalid_token'], $response->toArray(false));
     }
 
     #[Test]
