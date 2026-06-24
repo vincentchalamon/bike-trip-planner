@@ -8,6 +8,8 @@ use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use ApiPlatform\Symfony\Bundle\Test\Client;
 use App\Entity\User;
 use App\Llm\AiProvider;
+use App\Llm\Exception\AiFailureReason;
+use App\Llm\Exception\AiUnavailableException;
 use App\Llm\LlmClientInterface;
 use App\Llm\ResolvedLlmClient;
 use App\Llm\UserLlmResolverInterface;
