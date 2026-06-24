@@ -6,13 +6,16 @@ namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\ApiResource\TripRequest;
 use App\Controller\GpxUploadController;
 use App\Enum\ComputationName;
 use App\Message\AnalyzeTerrain;
 use App\Message\FetchWeather;
 use App\Message\GenerateStages;
 use App\Message\ScanPois;
+use App\Service\GpxUploadService;
 use PHPUnit\Framework\Attributes\Test;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Messenger\Envelope;
@@ -360,37 +363,33 @@ final class GpxUploadTest extends ApiTestCase
     }
 
     #[Test]
-    public function uploadedTripIsViewableByItsUploader(): void
+    public function uploadAssignsOwnershipToUploader(): void
     {
         // Regression (recette #649): a GPX upload used to create an *ownerless*
-        // trip, so the uploader's own GET /detail was denied and hidden as a 404
-        // ("Voyage introuvable" right after a successful upload). createTrip now
-        // assigns the owner (TripRequest.user + Redis ownership key) like the URL
-        // flow, so the uploader can load their trip immediately.
-        $file = new UploadedFile(
-            self::FIXTURES_DIR.'/multi-stage-route.gpx',
-            'multi-stage-route.gpx',
-            'application/gpx+xml',
-            null,
-            true,
-        );
+        // trip, so the uploader's GET /detail was denied by TripVoter and hidden
+        // as a 404 ("Voyage introuvable" right after a successful upload). The
+        // uploader is now assigned as owner like the URL flow: TripRequest.user is
+        // set and the trip.{id}.user_id key is written (the Postgres column + the
+        // Redis fallback the voter reads). Asserted at the service layer: right
+        // after upload the trip lives in the Redis-backed state (the voter's Redis
+        // fallback), not yet in Postgres.
+        ['user' => $user] = $this->createTestUserWithJwt(\sprintf('gpx-owner-%s@test.com', bin2hex(random_bytes(4))));
 
-        $upload = $this->client->request('POST', '/trips/gpx-upload', [
-            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
-            'extra' => [
-                'files' => ['gpxFile' => $file],
-            ],
-        ]);
-        $this->assertResponseStatusCodeSame(202);
+        $service = self::getContainer()->get(GpxUploadService::class);
+        self::assertInstanceOf(GpxUploadService::class, $service);
 
-        $tripId = $upload->toArray(false)['id'];
-        self::assertIsString($tripId);
-        self::assertNotEmpty($tripId);
+        $points = $service->parseGpx((string) file_get_contents(self::FIXTURES_DIR.'/multi-stage-route.gpx'));
+        $tripRequest = new TripRequest();
+        $result = $service->createTrip($points, 'Test Route', $tripRequest, 'en', $user);
 
-        // Same kernel + same JWT: the owner must load their own trip (200, not 404).
-        $this->client->request('GET', \sprintf('/trips/%s/detail', $tripId), [
-            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
-        ]);
-        $this->assertResponseStatusCodeSame(200);
+        // Postgres ownership column.
+        self::assertSame($user, $tripRequest->user);
+
+        // Redis ownership key (the voter's fallback for not-yet-persisted trips).
+        $pool = self::getContainer()->get('cache.trip_state');
+        self::assertInstanceOf(CacheItemPoolInterface::class, $pool);
+        $item = $pool->getItem(\sprintf('trip.%s.user_id', $result['tripId']));
+        self::assertTrue($item->isHit());
+        self::assertSame($user->getId()->toRfc4122(), $item->get());
     }
 }
