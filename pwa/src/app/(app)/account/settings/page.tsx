@@ -1,14 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { TopBar } from "@/components/top-bar";
 import { AccountRail } from "@/components/account/account-rail";
 import { AccountSection } from "@/components/account/account-section";
 import { PreferencesSection } from "@/components/account/preferences-section";
 import { AiProviderSection } from "@/components/account/ai-provider-section";
 import { DataSection } from "@/components/account/data-section";
 import { DangerZoneSection } from "@/components/account/danger-zone-section";
-import { LandingFooter } from "@/components/landing/footer";
 import { isAiFeatureEnabled } from "@/lib/constants";
 
 /**
@@ -31,33 +29,27 @@ export default function AccountSettingsPage() {
   const t = useTranslations("accountSettings");
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <TopBar showHelp={false} />
+    <main
+      className="flex-1 w-full max-w-[1100px] mx-auto px-4 md:px-6 py-8 md:py-12"
+      data-testid="account-settings-page"
+    >
+      <div className="mb-8">
+        <h1 className="font-serif text-2xl font-semibold tracking-tight">
+          {t("title")}
+        </h1>
+        <p className="text-muted-foreground text-sm mt-1">{t("subtitle")}</p>
+      </div>
 
-      <main
-        className="flex-1 w-full max-w-[1100px] mx-auto px-4 md:px-6 py-8 md:py-12"
-        data-testid="account-settings-page"
-      >
-        <div className="mb-8">
-          <h1 className="font-serif text-2xl font-semibold tracking-tight">
-            {t("title")}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">{t("subtitle")}</p>
+      <div className="grid gap-8 md:grid-cols-[240px_1fr]">
+        <AccountRail />
+        <div className="flex flex-col gap-6 min-w-0">
+          <AccountSection />
+          <PreferencesSection />
+          {isAiFeatureEnabled() && <AiProviderSection />}
+          <DataSection />
+          <DangerZoneSection />
         </div>
-
-        <div className="grid gap-8 md:grid-cols-[240px_1fr]">
-          <AccountRail />
-          <div className="flex flex-col gap-6 min-w-0">
-            <AccountSection />
-            <PreferencesSection />
-            {isAiFeatureEnabled() && <AiProviderSection />}
-            <DataSection />
-            <DangerZoneSection />
-          </div>
-        </div>
-      </main>
-
-      <LandingFooter />
-    </div>
+      </div>
+    </main>
   );
 }

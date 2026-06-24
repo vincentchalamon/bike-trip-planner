@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { CardSelection } from "@/components/card-selection";
 import { GpxDropZone } from "@/components/gpx-drop-zone";
@@ -16,8 +15,6 @@ import { AiBubble } from "@/components/ai-bubble";
 import { useAiSettings } from "@/hooks/use-ai-settings";
 import { RoadbookMasterDetail } from "@/components/Timeline";
 import { ConfigPanel } from "@/components/config-panel";
-import { HelpModal } from "@/components/help-modal";
-import { TopBar } from "@/components/top-bar";
 import { TripActions } from "@/components/trip-actions";
 import { ShareModal } from "@/components/share-modal";
 import dynamic from "next/dynamic";
@@ -26,7 +23,6 @@ import { InlineRecomputationBar } from "@/components/inline-recomputation-bar";
 import { ModificationQueue } from "@/components/modification-queue";
 import { RecentTrips } from "@/components/recent-trips";
 import { OfflineBanner } from "@/components/offline-banner";
-import { AttributionFooter } from "@/components/attribution-footer";
 import { useTripPlanner } from "@/hooks/use-trip-planner";
 import { useLinkParam } from "@/hooks/use-link-param";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
@@ -409,8 +405,6 @@ export function TripPlanner() {
       {/* Desktop top bar (#384) — brand, nav tabs, help, language, theme,
           profile. Trip-specific actions now sit next to the trip title
           (recette #649). */}
-      <TopBar />
-
       <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12 relative overflow-x-clip">
         {/* Skip link */}
         <a
@@ -438,20 +432,6 @@ export function TripPlanner() {
               disabled={!isOnline}
             />
             <RecentTrips />
-            <footer className="mt-4 text-center space-y-2">
-              <div>
-                <Link
-                  href="/faq"
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  data-testid="footer-faq-link"
-                >
-                  {t("footer.faq")}
-                </Link>
-              </div>
-              <div>
-                <AttributionFooter />
-              </div>
-            </footer>
           </div>
         )}
 
@@ -726,9 +706,6 @@ export function TripPlanner() {
           onShare={handleShareTrip}
           onDelete={handleDeleteTrip}
         />
-
-        {/* Unified help modal (shortcuts + FAQ) */}
-        <HelpModal />
 
         {/* Floating AI assistant — visible as soon as the trip view is rendered
             (no longer gated by an analysis phase). Hidden on the welcome /

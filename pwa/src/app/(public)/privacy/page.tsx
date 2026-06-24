@@ -5,8 +5,6 @@ import {
   asParagraphs,
   withContactEmail,
 } from "@/components/legal-page";
-import { PublicTopBar } from "@/components/public-top-bar";
-import { LandingFooter } from "@/components/landing/footer";
 
 const SECTION_IDS = [
   "controller",
@@ -33,18 +31,14 @@ export default async function PrivacyPage() {
   });
 
   return (
-    <>
-      <PublicTopBar />
-      <LegalPageLayout
-        title={t("title")}
-        intro={t("intro")}
-        lastUpdated={t("lastUpdated")}
-        tocLabel={t("tocLabel")}
-        backToHome={t("backToHome")}
-        sections={sections}
-        testIdPrefix="privacy"
-      />
-      <LandingFooter />
-    </>
+    <LegalPageLayout
+      title={t("title")}
+      intro={t("intro")}
+      lastUpdated={t("lastUpdated")}
+      tocLabel={t("tocLabel")}
+      backToHome={t("backToHome")}
+      sections={sections}
+      testIdPrefix="privacy"
+    />
   );
 }
