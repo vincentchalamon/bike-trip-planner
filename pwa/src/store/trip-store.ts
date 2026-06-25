@@ -717,8 +717,8 @@ export const useTripStore = create<TripState>()(
           // handler delivers fresh data via a supply_timeline event.
           supplyTimeline: prev.supplyTimeline,
           // A stage_updated event (e.g. after selecting an accommodation)
-          // re-routes the stage but does not re-scan accommodations: the
-          // payload may carry an empty list, so preserve the current ones
+          // re-routes the stage but does not re-scan accommodations/alerts:
+          // the payload may carry an empty list, so preserve the current ones
           // (and the selection) when the endpoint is stable (recette #649).
           accommodations:
             endMatch && prev.accommodations.length > 0
@@ -727,6 +727,8 @@ export const useTripStore = create<TripState>()(
           selectedAccommodation: endMatch
             ? (prev.selectedAccommodation ?? stage.selectedAccommodation)
             : stage.selectedAccommodation,
+          alerts:
+            endMatch && prev.alerts.length > 0 ? prev.alerts : stage.alerts,
         };
       }),
 

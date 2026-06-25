@@ -265,4 +265,33 @@ describe("applyStageUpdate preservation (recette #649)", () => {
     const result = useTripStore.getState().stages[0]!;
     expect(result.accommodations[0]?.name).toBe("New");
   });
+
+  it("keeps alerts when the endpoint is stable", () => {
+    const store = useTripStore.getState();
+    const current = makeStage(1);
+    current.alerts = [makeAlert("Stock up before the climb")];
+    store.setStages([current]);
+
+    const incoming = makeStage(1);
+    store.applyStageUpdate(0, incoming);
+
+    const result = useTripStore.getState().stages[0]!;
+    expect(result.alerts).toHaveLength(1);
+    expect(result.alerts[0]?.message).toBe("Stock up before the climb");
+  });
+
+  it("takes incoming alerts when the endpoint moved", () => {
+    const store = useTripStore.getState();
+    const current = makeStage(1);
+    current.alerts = [makeAlert("old")];
+    store.setStages([current]);
+
+    const incoming = makeStage(1);
+    incoming.endPoint = { lat: 9, lon: 9, ele: 0 };
+    incoming.alerts = [makeAlert("new")];
+    store.applyStageUpdate(0, incoming);
+
+    const result = useTripStore.getState().stages[0]!;
+    expect(result.alerts[0]?.message).toBe("new");
+  });
 });
