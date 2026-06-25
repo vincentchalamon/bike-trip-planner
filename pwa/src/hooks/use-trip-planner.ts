@@ -173,7 +173,6 @@ export function useTripPlanner() {
     actions.clearTrip();
     setMercureToken(null);
     setProcessing(true);
-    setAccommodationScanning(true);
 
     try {
       const pacing = getPacingState();
@@ -228,7 +227,6 @@ export function useTripPlanner() {
     actions.clearTrip();
     setMercureToken(null);
     setProcessing(true);
-    setAccommodationScanning(true);
 
     try {
       const { data, error, response } = await apiClient.POST(
@@ -269,7 +267,6 @@ export function useTripPlanner() {
     actions.clearTrip();
     setMercureToken(null);
     setProcessing(true);
-    setAccommodationScanning(true);
 
     try {
       const pacing = getPacingState();
@@ -1069,7 +1066,6 @@ export function useTripPlanner() {
         }
       } else {
         setProcessing(true);
-        setAccommodationScanning(true);
         // Mark affected stages as recomputing: the selected stage and the
         // next one (its startPoint may have shifted to the accommodation).
         const affectedIndices = [stageIndex];

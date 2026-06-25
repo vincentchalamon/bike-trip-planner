@@ -662,6 +662,24 @@ export const useTripStore = create<TripState>()(
             // event), so the timeline already set in the store is current
             // — preserve it rather than blanking it.
             supplyTimeline: prev?.supplyTimeline ?? [],
+            // Accommodations + alerts arrive via their own SSE events
+            // (accommodations_found) that may land before trip_ready. The
+            // terminal payload can carry an empty list, so preserve the
+            // current ones when the stage endpoint is stable to avoid
+            // blanking already-displayed data (recette #649).
+            accommodations: endMatch
+              ? prev.accommodations.length > 0
+                ? prev.accommodations
+                : incoming.accommodations
+              : incoming.accommodations,
+            selectedAccommodation: endMatch
+              ? (prev.selectedAccommodation ?? incoming.selectedAccommodation)
+              : incoming.selectedAccommodation,
+            alerts: endMatch
+              ? prev.alerts.length > 0
+                ? prev.alerts
+                : incoming.alerts
+              : incoming.alerts,
           };
         });
       }),
@@ -698,6 +716,19 @@ export const useTripStore = create<TripState>()(
           // Keep current supply timeline until the re-dispatched ScanPois
           // handler delivers fresh data via a supply_timeline event.
           supplyTimeline: prev.supplyTimeline,
+          // A stage_updated event (e.g. after selecting an accommodation)
+          // re-routes the stage but does not re-scan accommodations/alerts:
+          // the payload may carry an empty list, so preserve the current ones
+          // (and the selection) when the endpoint is stable (recette #649).
+          accommodations:
+            endMatch && prev.accommodations.length > 0
+              ? prev.accommodations
+              : stage.accommodations,
+          selectedAccommodation: endMatch
+            ? (prev.selectedAccommodation ?? stage.selectedAccommodation)
+            : stage.selectedAccommodation,
+          alerts:
+            endMatch && prev.alerts.length > 0 ? prev.alerts : stage.alerts,
         };
       }),
 
