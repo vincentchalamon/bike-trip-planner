@@ -160,6 +160,17 @@ final class Stage
 
     public ?Accommodation $selectedAccommodation = null;
 
+    /**
+     * Fraction (0..1) of the stage line that follows a signed cycle route,
+     * persisted at stage-store time and read back here (issue #775).
+     *
+     * Server-computed from PostGIS: readable (the frontend consumes it) but never
+     * writable, so a client PATCH/PUT on a Stage cannot overwrite the computed
+     * value (review on #787).
+     */
+    #[ApiProperty(writable: false)]
+    public float $onCycleNetwork = 0.0;
+
     /** @var Event[] */
     public array $events = [];
 

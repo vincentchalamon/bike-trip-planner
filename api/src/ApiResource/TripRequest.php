@@ -129,6 +129,19 @@ final class TripRequest
     #[ApiProperty(readable: false, writable: false)]
     public string $locale = 'en';
 
+    /**
+     * True when the route falls (even partly) outside the provisioned coverage
+     * area: the trip is display-only (no Valhalla rerouting).
+     *
+     * Persisted at stage-store time (issue #775) from the expensive PostGIS
+     * {@see \App\Osm\CoverageRepositoryInterface::isRouteOutOfZone()} query so
+     * {@see \App\State\TripDetailProvider} reads it in O(1) instead of recomputing
+     * it on every trip reload.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    #[ApiProperty(readable: false, writable: false)]
+    public bool $outOfZone = false;
+
     #[ORM\Column]
     #[ApiProperty(readable: false, writable: false)]
     public \DateTimeImmutable $createdAt;

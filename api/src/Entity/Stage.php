@@ -60,6 +60,17 @@ class Stage
     #[ORM\Column]
     private bool $isRestDay = false;
 
+    /**
+     * Fraction (0..1) of the stage line that follows a signed cycle route.
+     *
+     * Persisted at stage-store time (issue #775) from the expensive PostGIS
+     * {@see \App\Osm\CycleRouteRepositoryInterface::onNetworkFractions()} query so
+     * {@see \App\State\TripDetailProvider} reads it in O(1) instead of recomputing
+     * it on every trip reload.
+     */
+    #[ORM\Column(options: ['default' => 0])]
+    private float $onCycleNetwork = 0.0;
+
     /** @var array<string, mixed>|null */
     #[ORM\Column(type: 'jsonb', nullable: true)]
     private ?array $weather = null;
@@ -275,6 +286,18 @@ class Stage
     public function setIsRestDay(bool $isRestDay): self
     {
         $this->isRestDay = $isRestDay;
+
+        return $this;
+    }
+
+    public function getOnCycleNetwork(): float
+    {
+        return $this->onCycleNetwork;
+    }
+
+    public function setOnCycleNetwork(float $onCycleNetwork): self
+    {
+        $this->onCycleNetwork = $onCycleNetwork;
 
         return $this;
     }
