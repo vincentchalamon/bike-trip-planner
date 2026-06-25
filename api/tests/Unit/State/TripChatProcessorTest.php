@@ -42,7 +42,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
-use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -646,12 +646,12 @@ final class TripChatProcessorTest extends TestCase
     }
 
     #[Test]
-    public function returnsServiceUnavailableAndLogsCriticalWhenProviderUnreachable(): void
+    public function returns503AndLogsCriticalWhenProviderUnreachable(): void
     {
         // AI configured but the chat call hits an unreachable provider: 503 + `critical` log (#304).
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('log')
-            ->with('critical', self::stringContains('AI provider unreachable'), self::anything());
+            ->with('critical', self::stringContains('AI provider call failed'), self::anything());
 
         $processor = $this->newProcessor(
             llmContent: '',
@@ -661,23 +661,26 @@ final class TripChatProcessorTest extends TestCase
             chatException: new AiUnavailableException('boom'),
         );
 
-        $this->expectException(ServiceUnavailableHttpException::class);
-
-        $processor->process(
+        $result = $processor->process(
             new TripChatRequest('Bonjour'),
             new Post(),
             ['id' => self::TRIP_ID],
         );
+
+        self::assertInstanceOf(JsonResponse::class, $result);
+        self::assertSame(503, $result->getStatusCode());
+        self::assertSame('{"error":"ai_unavailable"}', $result->getContent());
     }
 
     #[Test]
-    public function logsWarningNotCriticalForUserConfigErrors(): void
+    public function returns422AndLogsWarningForInvalidToken(): void
     {
-        // A bad key / exhausted quota is a user-config error: warning, not critical
-        // (no on-call page). Still returns 503 on the in-ride path for now.
+        // A bad key is a user-config error: warning, not critical (no on-call page),
+        // and an actionable 422 the UI surfaces with a settings CTA (#761) rather
+        // than a misleading "retry" 503.
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('log')
-            ->with('warning', self::stringContains('AI provider unreachable'), self::anything());
+            ->with('warning', self::stringContains('AI provider call failed'), self::anything());
 
         $processor = $this->newProcessor(
             llmContent: '',
@@ -687,13 +690,58 @@ final class TripChatProcessorTest extends TestCase
             chatException: new AiUnavailableException('bad key', AiFailureReason::INVALID_TOKEN),
         );
 
-        $this->expectException(ServiceUnavailableHttpException::class);
-
-        $processor->process(
+        $result = $processor->process(
             new TripChatRequest('Bonjour'),
             new Post(),
             ['id' => self::TRIP_ID],
         );
+
+        self::assertInstanceOf(JsonResponse::class, $result);
+        self::assertSame(422, $result->getStatusCode());
+        self::assertSame('{"error":"ai_invalid_token"}', $result->getContent());
+    }
+
+    #[Test]
+    public function returns422ForExhaustedQuota(): void
+    {
+        $processor = $this->newProcessor(
+            llmContent: '',
+            stagesCount: 1,
+            messageBus: $this->newMessageBus(),
+            chatException: new AiUnavailableException('no credit', AiFailureReason::QUOTA_EXCEEDED),
+        );
+
+        $result = $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertInstanceOf(JsonResponse::class, $result);
+        self::assertSame(422, $result->getStatusCode());
+        self::assertSame('{"error":"ai_quota_exceeded"}', $result->getContent());
+    }
+
+    #[Test]
+    public function returns429WithRetryAfterWhenRateLimitedByProvider(): void
+    {
+        $processor = $this->newProcessor(
+            llmContent: '',
+            stagesCount: 1,
+            messageBus: $this->newMessageBus(),
+            chatException: new AiUnavailableException('slow down', AiFailureReason::RATE_LIMITED, retryAfter: 12),
+        );
+
+        $result = $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertInstanceOf(JsonResponse::class, $result);
+        self::assertSame(429, $result->getStatusCode());
+        self::assertSame('{"error":"ai_rate_limited"}', $result->getContent());
+        self::assertSame('12', $result->headers->get('Retry-After'));
     }
 
     /**

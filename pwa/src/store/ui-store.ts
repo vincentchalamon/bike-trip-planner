@@ -115,6 +115,13 @@ interface UiState {
    */
   isChatSending: boolean;
   /**
+   * i18n key (under `aiBubble`) of the actionable provider-config error to show
+   * as a settings-CTA banner in the chat panel, or `null` when hidden. Set on a
+   * 422 from the chat endpoint (invalid token / exhausted quota, #761); cleared
+   * on the next successful turn.
+   */
+  chatConfigErrorKey: string | null;
+  /**
    * Whether the user has ever opened the AI bubble. Stored in
    * `localStorage` so the "Nouveau" badge only shows on the first visit.
    * Persisted by {@link toggleBubble} the first time the panel opens.
@@ -163,6 +170,8 @@ interface UiState {
   clearHistory: () => void;
   /** Flip the in-flight indicator that drives the typing dots. */
   setChatSending: (value: boolean) => void;
+  /** Show / hide the actionable provider-config error banner (#761). */
+  setChatConfigError: (key: string | null) => void;
   /** Update the runtime AI availability (from the `/api/health` probe, #304). */
   setAiAvailable: (value: boolean) => void;
   /** Update whether the account has a configured AI provider (ADR-042). */
@@ -239,6 +248,7 @@ export const useUiStore = create<UiState>()(
     chatHistory: [],
     currentContext: { currentStage: null },
     isChatSending: false,
+    chatConfigErrorKey: null,
     hasSeenBubble: readBubbleSeenFromStorage(),
     aiCapability: { available: true, configured: false },
 
@@ -342,11 +352,17 @@ export const useUiStore = create<UiState>()(
       set((state) => {
         state.chatHistory = [];
         state.isChatSending = false;
+        state.chatConfigErrorKey = null;
       }),
 
     setChatSending: (value) =>
       set((state) => {
         state.isChatSending = value;
+      }),
+
+    setChatConfigError: (key) =>
+      set((state) => {
+        state.chatConfigErrorKey = key;
       }),
 
     setAiAvailable: (value) =>
