@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { getUndoableSlice, useTripStore } from "./trip-store";
-import type { StageData } from "@/lib/validation/schemas";
+import type {
+  AccommodationData,
+  AlertData,
+  StageData,
+} from "@/lib/validation/schemas";
 
 function makeStage(dayNumber: number, distance = 50): StageData {
   return {
@@ -23,6 +27,25 @@ function makeStage(dayNumber: number, distance = 50): StageData {
     supplyTimeline: [],
     events: [],
   };
+}
+
+function makeAccommodation(name: string): AccommodationData {
+  return {
+    name,
+    type: "hotel",
+    lat: 1,
+    lon: 1,
+    estimatedPriceMin: 50,
+    estimatedPriceMax: 80,
+    isExactPrice: false,
+    possibleClosed: false,
+    distanceToEndPoint: 0,
+    source: "osm",
+  };
+}
+
+function makeAlert(message: string): AlertData {
+  return { type: "warning", message, source: "accommodations" };
 }
 
 describe("getUndoableSlice", () => {
@@ -167,5 +190,79 @@ describe("selectedStageIndex (master/detail)", () => {
     store.setSelectedStageIndex(3);
     store.setStages([makeStage(1)]);
     expect(useTripStore.getState().selectedStageIndex).toBe(0);
+  });
+});
+
+describe("applyTripReady preservation (recette #649)", () => {
+  it("keeps accommodations/selection/alerts when the endpoint is stable", () => {
+    const store = useTripStore.getState();
+    const acc = makeAccommodation("Gîte du Tour");
+    const current = makeStage(1);
+    current.accommodations = [acc];
+    current.selectedAccommodation = acc;
+    current.alerts = [makeAlert("Stock up before the climb")];
+    store.setStages([current]);
+
+    // trip_ready payload arrives with empty accommodations/alerts.
+    const incoming = makeStage(1);
+    store.applyTripReady([incoming]);
+
+    const result = useTripStore.getState().stages[0]!;
+    expect(result.accommodations).toEqual([acc]);
+    expect(result.selectedAccommodation).toEqual(acc);
+    expect(result.alerts).toHaveLength(1);
+  });
+
+  it("takes incoming accommodations/alerts when the endpoint moved", () => {
+    const store = useTripStore.getState();
+    const old = makeAccommodation("Old");
+    const current = makeStage(1);
+    current.accommodations = [old];
+    current.alerts = [makeAlert("old")];
+    store.setStages([current]);
+
+    const incoming = makeStage(1);
+    incoming.endPoint = { lat: 9, lon: 9, ele: 0 };
+    incoming.accommodations = [makeAccommodation("New")];
+    incoming.alerts = [makeAlert("new")];
+    store.applyTripReady([incoming]);
+
+    const result = useTripStore.getState().stages[0]!;
+    expect(result.accommodations[0]?.name).toBe("New");
+    expect(result.alerts[0]?.message).toBe("new");
+  });
+});
+
+describe("applyStageUpdate preservation (recette #649)", () => {
+  it("keeps accommodations/selection when the endpoint is stable", () => {
+    const store = useTripStore.getState();
+    const acc = makeAccommodation("Gîte du Tour");
+    const current = makeStage(1);
+    current.accommodations = [acc];
+    current.selectedAccommodation = acc;
+    store.setStages([current]);
+
+    // stage_updated payload after a re-route carries an empty list.
+    const incoming = makeStage(1);
+    store.applyStageUpdate(0, incoming);
+
+    const result = useTripStore.getState().stages[0]!;
+    expect(result.accommodations).toEqual([acc]);
+    expect(result.selectedAccommodation).toEqual(acc);
+  });
+
+  it("takes incoming accommodations when the endpoint moved", () => {
+    const store = useTripStore.getState();
+    const current = makeStage(1);
+    current.accommodations = [makeAccommodation("Old")];
+    store.setStages([current]);
+
+    const incoming = makeStage(1);
+    incoming.endPoint = { lat: 9, lon: 9, ele: 0 };
+    incoming.accommodations = [makeAccommodation("New")];
+    store.applyStageUpdate(0, incoming);
+
+    const result = useTripStore.getState().stages[0]!;
+    expect(result.accommodations[0]?.name).toBe("New");
   });
 });
