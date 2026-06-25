@@ -366,7 +366,6 @@
     "userWaypoint": "Waypoints utilisateur"
   },
   "stageAlerts": {
-    "title": "{count, plural, one {# alerte} other {# alertes}}",
     "heading": "Alertes ({count})"
   },
   "alertGroup": {
