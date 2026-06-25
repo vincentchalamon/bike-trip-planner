@@ -576,7 +576,7 @@ export async function sendTripChat(
     }
     return {
       data: null,
-      error: errorCode ?? `HTTP ${res.status}`,
+      error: `HTTP ${res.status}`,
       errorCode,
       status: res.status,
     };

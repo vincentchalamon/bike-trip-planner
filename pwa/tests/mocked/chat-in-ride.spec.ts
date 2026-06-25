@@ -164,3 +164,45 @@ test.describe("Chat in-ride — POI suggestions", () => {
     expect(body.position?.lon).toBeCloseTo(2.3522, 3);
   });
 });
+
+test.describe("Chat — provider error mapping (#761)", () => {
+  test("shows the settings CTA banner instead of a retry bubble on a 422 invalid token", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await mockedPage.route(chatHistoryUrlPattern(), (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/ld+json",
+        body: JSON.stringify({ member: [] }),
+      }),
+    );
+
+    // No geolocation → planning mode, the branch that maps a rejected key to a
+    // 422 with a discrete error code (the in-ride POI branch degrades instead).
+    await mockedPage.route(chatUrlPattern(), async (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      await route.fulfill({
+        status: 422,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "ai_invalid_token" }),
+      });
+    });
+
+    await createFullTrip();
+    await mockedPage.getByTestId("ai-bubble").click();
+
+    await mockedPage
+      .getByTestId("ai-chat-panel-input")
+      .fill("Quel est mon dénivelé total ?");
+    await mockedPage.getByTestId("ai-chat-panel-send").click();
+
+    // The actionable banner + settings CTA replace the generic "retry" bubble.
+    await expect(
+      mockedPage.getByTestId("ai-chat-panel-config-error"),
+    ).toBeVisible({ timeout: 5_000 });
+    await expect(
+      mockedPage.getByTestId("ai-chat-panel-configure-cta"),
+    ).toHaveAttribute("href", "/account/settings#ai");
+  });
+});

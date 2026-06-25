@@ -10,6 +10,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\TripChatContext;
 use App\ApiResource\Stage;
 use App\ApiResource\TripChatRequest;
+use App\ApiResource\TripChatResponse;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\TripChatMessage;
@@ -94,7 +95,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest("Coupe l'étape 3 en deux", new TripChatContext(currentStage: 3)),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -127,7 +129,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Coupe la dernière étape en deux'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -152,7 +155,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Fusionne les étapes 2 et 3'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -183,7 +187,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Fusionne les étapes 2 et 3'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -209,7 +214,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Ajoute un détour par le Mont Cassel'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -246,7 +252,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest("Ajoute un point d'eau quelque part"),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -272,7 +279,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Sur cette étape je préfère dormir en gîte'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -301,7 +309,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Camping pour la dernière étape'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -328,7 +337,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest("Allonge l'étape 5 à 95 km"),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -353,7 +363,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest("C'est quoi le gravel ?"),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -381,7 +392,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest("Change l'itinéraire pour passer par la côte"),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -405,7 +417,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest("Coupe l'étape 99"),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -592,7 +605,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $this->newMessageBus(),
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Bonjour'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -635,7 +649,8 @@ final class TripChatProcessorTest extends TestCase
             logger: $logger,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Bonjour'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -742,6 +757,25 @@ final class TripChatProcessorTest extends TestCase
         self::assertSame(429, $result->getStatusCode());
         self::assertSame('{"error":"ai_rate_limited"}', $result->getContent());
         self::assertSame('12', $result->headers->get('Retry-After'));
+    }
+
+    /**
+     * Runs a planning-mode chat turn and narrows the union return type to the
+     * success DTO — a provider failure would return a JsonResponse instead
+     * (#761). Mirrors the assertInstanceOf guard in TripAiChatProcessorTest.
+     *
+     * @param array<string, string> $uriVariables
+     */
+    private function processTurn(
+        TripChatProcessor $processor,
+        TripChatRequest $request,
+        Post $operation,
+        array $uriVariables,
+    ): TripChatResponse {
+        $result = $processor->process($request, $operation, $uriVariables);
+        self::assertInstanceOf(TripChatResponse::class, $result);
+
+        return $result;
     }
 
     /**
