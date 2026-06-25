@@ -89,7 +89,11 @@ function dispatchEvent(event: MercureEvent): void {
             startLabel: null,
             endLabel: null,
             weather: null,
-            alerts: [],
+            // Preserve the existing alerts (like the accommodations below) until
+            // the recompute's fresh per-category alert events replace them, so a
+            // stage's alerts don't flash empty between `stages_computed` and those
+            // follow-up events (e.g. after selecting an accommodation) (recette #649).
+            alerts: existing?.alerts ?? [],
             pois: [],
             supplyTimeline: [],
             events: [],
@@ -197,6 +201,11 @@ function dispatchEvent(event: MercureEvent): void {
           "accommodations",
         );
       }
+      // Settle the "Recherche d'hébergements" spinner as soon as results land.
+      // A standalone scan (expand-radius / 409 re-scan) never emits a terminal
+      // trip_ready/trip_complete, so without this the spinner spins forever even
+      // though the accommodations are already shown (recette #649).
+      useUiStore.getState().setAccommodationScanning(false);
       break;
 
     case "events_found":
@@ -674,7 +683,7 @@ function enrichedPayloadToStageData(payload: EnrichedStagePayload): StageData {
   };
 }
 
-async function resolveStageLabels(
+export async function resolveStageLabels(
   stages: {
     startPoint: { lat: number; lon: number };
     endPoint: { lat: number; lon: number };

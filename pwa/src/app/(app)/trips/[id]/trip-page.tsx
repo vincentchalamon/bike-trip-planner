@@ -16,6 +16,7 @@ import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import { apiFetch } from "@/lib/api/client";
 import { API_URL } from "@/lib/constants";
+import { resolveStageLabels } from "@/hooks/use-mercure";
 import type { StageData } from "@/lib/validation/schemas";
 import type { AccommodationType } from "@/lib/accommodation-types";
 import type { components } from "@/lib/api/schema";
@@ -145,6 +146,16 @@ function TripLoader({ tripId }: { tripId: string }) {
           sourceType: "persisted",
           title: data.title ?? null,
         });
+
+        // The backend does not persist reverse-geocoded labels (they are a
+        // client-side concern), and on a reload no Mercure event fires to fill
+        // them — so the stage cards would fall back to raw GPS coordinates.
+        // Resolve them here, after hydration, like the Mercure path does
+        // (recette #649).
+        void resolveStageLabels(
+          stages,
+          stages.map((_, i) => i),
+        );
       }
 
       // Drive the synchronous-flow loader vs. trip view from `status`
