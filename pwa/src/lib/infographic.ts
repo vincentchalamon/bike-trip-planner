@@ -56,12 +56,14 @@ const MAP_WIDTH = Math.round((CONTENT_WIDTH - COLUMN_GAP) * 0.7); // ~510
 // Layout positions (fixed, always reserve space for the date line)
 const SEP_Y = PADDING + 32 + 24 + 8; // 92
 const CONTENT_TOP = SEP_Y + 16; // 108
-// Reserve a line under the map for the OSM attribution and a footer band for
-// the branding line, then let the map fill the rest of the left column.
-const MAP_ATTRIBUTION_H = 16;
+// Reserve a band under the map for the OSM attribution (with a clear gap above
+// the copyright line) and a footer band for the branding line, then let the
+// map fill the rest of the left column.
+const MAP_ATTRIBUTION_GAP = 12;
+const MAP_ATTRIBUTION_H = 16 + MAP_ATTRIBUTION_GAP;
 const FOOTER_BAND_H = 28;
 const CONTENT_BOTTOM = CARD_HEIGHT - FOOTER_BAND_H; // 452
-const MAP_HEIGHT = CONTENT_BOTTOM - CONTENT_TOP - MAP_ATTRIBUTION_H; // 328
+const MAP_HEIGHT = CONTENT_BOTTOM - CONTENT_TOP - MAP_ATTRIBUTION_H; // 316
 // Right column: fixed-height stat rows, then the elevation profile fills the
 // remaining height down to the map's baseline.
 const STAT_ROW_H = 40;
@@ -159,7 +161,7 @@ export async function renderInfographic(
   ctx.fillText(
     "© OpenStreetMap contributors",
     PADDING,
-    CONTENT_TOP + MAP_HEIGHT + 4,
+    CONTENT_TOP + MAP_HEIGHT + MAP_ATTRIBUTION_GAP,
   );
 
   // Right column (~30% width): stats stacked above the elevation profile.
@@ -498,7 +500,15 @@ function drawElevationProfile(
 
   const minEle = allEles.reduce((a, b) => (b < a ? b : a), allEles[0]!);
   const maxEle = allEles.reduce((a, b) => (b > a ? b : a), allEles[0]!);
-  const eleRange = maxEle - minEle || 1;
+  // Match the app's ElevationProfile.tsx padded domain so the PNG profile uses
+  // the same vertical scale (terrain in the bottom third, peaks breathing)
+  // instead of stretching the stage's own min/max to fill the box.
+  const elevRange = maxEle - minEle;
+  const bufferBelow = Math.max(elevRange * 0.1, 10);
+  const bufferAbove = Math.max(elevRange * 1.5, 100);
+  const displayMinEle = minEle - bufferBelow;
+  const displayMaxEle = maxEle + bufferAbove;
+  const displayRange = displayMaxEle - displayMinEle || 1;
   const padY = 4;
   const ph = h - padY * 2;
   const totalPoints = allEles.length;
@@ -506,7 +516,7 @@ function drawElevationProfile(
   const toCanvasX = (globalIdx: number) =>
     x + (globalIdx / (totalPoints - 1)) * w;
   const toCanvasY = (ele: number) =>
-    y + h - padY - ((ele - minEle) / eleRange) * ph;
+    y + h - padY - ((ele - displayMinEle) / displayRange) * ph;
 
   // Filled area under the profile (subtle gradient per segment)
   let globalIdx = 0;
