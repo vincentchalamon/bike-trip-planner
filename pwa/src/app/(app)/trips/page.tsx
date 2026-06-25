@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import Link from "next/link";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
@@ -160,19 +159,12 @@ export default function TripsPage() {
 
   return (
     <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+      {/* Header — the "Nouveau voyage" entry lives in the global top bar
+          (recette #649), so it is no longer duplicated here. */}
+      <div className="mb-8">
         <h1 className="font-serif text-3xl md:text-4xl font-semibold tracking-tight">
           {t("title")}
         </h1>
-        <Button
-          asChild
-          size="sm"
-          className="bg-brand-fill hover:bg-brand-fill-hover font-semibold text-white"
-          data-testid="new-trip-button"
-        >
-          <Link href="/trips/new">{t("newTrip")}</Link>
-        </Button>
       </div>
 
       {/* Filters */}
@@ -255,7 +247,6 @@ export default function TripsPage() {
         <TripsEmptyState
           variant={hasActiveFilters ? "no-results" : "empty"}
           activeFiltersLabel={activeFiltersLabel}
-          onResetFilters={hasActiveFilters ? resetFilters : undefined}
         />
       )}
 

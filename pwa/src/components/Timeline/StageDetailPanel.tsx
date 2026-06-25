@@ -220,8 +220,8 @@ export function StageDetailPanel({
                 : "opacity-60 hover:opacity-80",
             ].join(" ")}
           >
-            {/* Day heading — anchor preserved so StageProgressBar segments
-                remain clickable / scroll-to-able from the sticky header. */}
+            {/* Day heading — anchor preserved for scroll-spy and in-app
+                scroll-to-day navigation. */}
             <header
               id={`timeline-day-${stage.dayNumber}`}
               className="flex items-baseline justify-between gap-3 scroll-mt-20"

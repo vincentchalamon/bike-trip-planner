@@ -11,6 +11,7 @@ import {
   Download,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { isAiFeatureEnabled } from "@/lib/constants";
 
 type CardKey =
   | "terrain"
@@ -100,7 +101,10 @@ export function LandingBentoGrid() {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 auto-rows-fr gap-4 md:gap-5"
           data-testid="bento-grid"
         >
-          {CARDS.map((card) => {
+          {/* Hide the AI feature card while the AI feature is off (recette #649). */}
+          {CARDS.filter(
+            (card) => card.key !== "ai" || isAiFeatureEnabled(),
+          ).map((card) => {
             const Icon = card.icon;
             return (
               <article

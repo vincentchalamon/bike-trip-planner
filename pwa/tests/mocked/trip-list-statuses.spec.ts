@@ -163,10 +163,12 @@ test.describe("trip list statuses", () => {
     );
   });
 
-  test("new trip button is visible and links to trip creation", async ({
+  test("new trip nav button is visible and links to trip creation", async ({
     page,
   }) => {
-    const newTripButton = page.getByTestId("new-trip-button");
+    // The page-level "Nouveau voyage" button was removed (recette #649); the
+    // entry now lives in the global top bar.
+    const newTripButton = page.getByTestId("nav-new-trip");
     await expect(newTripButton).toBeVisible();
     await newTripButton.click();
     await expect(page).toHaveURL(/\/trips\/new/, { timeout: 5000 });

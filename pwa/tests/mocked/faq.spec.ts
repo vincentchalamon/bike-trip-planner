@@ -10,13 +10,13 @@ test.describe("/faq page", () => {
     });
   });
 
-  test("renders the public chrome: top bar, sections rail and footer", async ({
+  test("renders the shared chrome: top bar, sections rail and footer", async ({
     page,
   }) => {
     await page.goto("/faq");
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByTestId("public-top-bar")).toBeVisible();
+    await expect(page.getByTestId("top-bar")).toBeVisible();
     await expect(page.getByTestId("faq-sections-rail")).toBeVisible();
     // One rail link per category, anchored to its heading.
     await expect(page.getByTestId("faq-sections-link-project")).toHaveAttribute(

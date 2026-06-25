@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { StageDetailPanel } from "./StageDetailPanel";
-import { StageProgressBar } from "@/components/stage-progress-bar";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 import type { StageData, AccommodationData } from "@/lib/validation/schemas";
@@ -76,8 +75,8 @@ export function RoadbookMasterDetail(props: RoadbookMasterDetailProps) {
   const setActiveDayNumber = useUiStore((s) => s.setActiveDayNumber);
 
   // Keep the legacy `activeDayNumber` UI flag in sync with the selected stage,
-  // so the StageProgressBar / sticky header continue to highlight the correct
-  // day. Scroll changes (scroll-spy) update `selectedStageIndex` directly.
+  // so the sticky header continues to highlight the correct day. Scroll changes
+  // (scroll-spy) update `selectedStageIndex` directly.
   useEffect(() => {
     const stage = stages[selectedStageIndex];
     setActiveDayNumber(stage?.dayNumber ?? null);
@@ -85,19 +84,6 @@ export function RoadbookMasterDetail(props: RoadbookMasterDetailProps) {
 
   return (
     <div className="flex flex-col gap-6" data-testid="roadbook-master-detail">
-      {/* Horizontal day timeline — always shown above the days (recette #649).
-          Replaces the former vertical sidebar so each stage card gets the full
-          width. Sticky so it stays reachable while scrolling the day list;
-          clicking a marker scrolls to the day, and scrolling activates the
-          matching day automatically (scroll-spy in StageDetailPanel). */}
-      {stages.length > 0 && (
-        <div className="sticky top-0 z-20 -mx-1 px-1 pt-1 pb-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="rounded-xl border border-border bg-card/60 px-4 pt-3 pb-2">
-            <StageProgressBar />
-          </div>
-        </div>
-      )}
-
       {/* Detail panel — full width. */}
       <div className="min-w-0">
         <StageDetailPanel

@@ -32,6 +32,7 @@ export function TopBar() {
   const pathname = usePathname();
   const setHelpModalOpen = useUiStore((s) => s.setHelpModalOpen);
   const email = useAuthStore((s) => s.user?.email ?? "");
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   // The help "?" opens the roadbook help modal, which SiteChrome mounts on the
   // app chrome. Show the button only on the planner routes (home dashboard, new
@@ -69,48 +70,51 @@ export function TopBar() {
         </Link>
 
         {/* 2. Navigation tabs — hidden on the smallest screens to keep the bar
-            within the viewport; the brand logo still links back home. */}
-        <nav
-          className="hidden sm:flex items-center gap-1 ml-2"
-          aria-label={tNav("primary")}
-        >
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "h-9 gap-1 cursor-pointer",
-              isNewTripActive && "bg-accent text-accent-foreground",
-            )}
-            data-testid="nav-new-trip"
+            within the viewport; the brand logo still links back home. Only for
+            authenticated users (public pages share this bar, recette #649). */}
+        {isAuthenticated && (
+          <nav
+            className="hidden sm:flex items-center gap-1 ml-2"
+            aria-label={tNav("primary")}
           >
-            <Link
-              href="/trips/new"
-              aria-current={isNewTripActive ? "page" : undefined}
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "h-9 gap-1 cursor-pointer",
+                isNewTripActive && "bg-accent text-accent-foreground",
+              )}
+              data-testid="nav-new-trip"
             >
-              <Plus className="h-4 w-4" />
-              <span className="hidden md:inline">{tNav("newTrip")}</span>
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "h-9 gap-1 cursor-pointer",
-              isActive("/trips") && "bg-accent text-accent-foreground",
-            )}
-            data-testid="nav-my-trips"
-          >
-            <Link
-              href="/trips"
-              aria-current={isActive("/trips") ? "page" : undefined}
+              <Link
+                href="/trips/new"
+                aria-current={isNewTripActive ? "page" : undefined}
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden md:inline">{tNav("newTrip")}</span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "h-9 gap-1 cursor-pointer",
+                isActive("/trips") && "bg-accent text-accent-foreground",
+              )}
+              data-testid="nav-my-trips"
             >
-              <Map className="h-4 w-4" />
-              <span className="hidden md:inline">{tNav("myTrips")}</span>
-            </Link>
-          </Button>
-        </nav>
+              <Link
+                href="/trips"
+                aria-current={isActive("/trips") ? "page" : undefined}
+              >
+                <Map className="h-4 w-4" />
+                <span className="hidden md:inline">{tNav("myTrips")}</span>
+              </Link>
+            </Button>
+          </nav>
+        )}
 
         {/* Spacer */}
         <div className="flex-1" />
@@ -136,29 +140,41 @@ export function TopBar() {
         {/* 5. Theme toggle */}
         <ThemeToggle />
 
-        {/* 6. Profile circle */}
-        <Button
-          asChild
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 cursor-pointer rounded-full"
-          title={tNav("accountSettings")}
-          aria-label={tNav("accountSettings")}
-          data-testid="profile-button"
-        >
-          <Link href="/account/settings">
-            {initial !== "?" ? (
-              <span
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-fill text-xs font-semibold text-white"
-                data-testid="profile-initial"
-              >
-                {initial}
-              </span>
-            ) : (
-              <User className="h-4 w-4" />
-            )}
-          </Link>
-        </Button>
+        {/* 6. Profile circle (authenticated) or sign-in (public pages) */}
+        {isAuthenticated ? (
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 cursor-pointer rounded-full"
+            title={tNav("accountSettings")}
+            aria-label={tNav("accountSettings")}
+            data-testid="profile-button"
+          >
+            <Link href="/account/settings">
+              {initial !== "?" ? (
+                <span
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-fill text-xs font-semibold text-white"
+                  data-testid="profile-initial"
+                >
+                  {initial}
+                </span>
+              ) : (
+                <User className="h-4 w-4" />
+              )}
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="ml-1"
+            data-testid="top-bar-login"
+          >
+            <Link href="/login">{tNav("login")}</Link>
+          </Button>
+        )}
       </div>
     </header>
   );

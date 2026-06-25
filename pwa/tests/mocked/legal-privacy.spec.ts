@@ -101,13 +101,13 @@ for (const page_ of PAGES) {
       await expect(privacyLink).toHaveAttribute("href", "/privacy");
     });
 
-    test("renders the public top bar header (#649)", async ({ page }) => {
+    test("renders the shared top bar header (#649)", async ({ page }) => {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
 
-      const header = page.getByTestId("public-top-bar");
+      const header = page.getByTestId("top-bar");
       await expect(header).toBeVisible();
-      await expect(page.getByTestId("public-top-bar-brand")).toHaveAttribute(
+      await expect(page.getByTestId("top-bar-brand")).toHaveAttribute(
         "href",
         "/",
       );

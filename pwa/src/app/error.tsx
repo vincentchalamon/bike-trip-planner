@@ -13,7 +13,7 @@ import {
  */
 export default function ErrorBoundary(props: ErrorBoundaryProps) {
   return (
-    <SiteChrome variant="app">
+    <SiteChrome>
       <ErrorBoundaryContent {...props} />
     </SiteChrome>
   );

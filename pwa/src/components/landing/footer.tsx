@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { AttributionFooter } from "@/components/attribution-footer";
+import { useAuthStore } from "@/store/auth-store";
 
 // lucide-react 1.x dropped brand icons; inline the GitHub mark.
 function GithubIcon({ className }: { className?: string }) {
@@ -28,6 +31,7 @@ function GithubIcon({ className }: { className?: string }) {
 export function LandingFooter() {
   const t = useTranslations("landing.footer");
   const year = new Date().getFullYear();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   return (
     <footer
@@ -49,14 +53,16 @@ export function LandingFooter() {
           {/* Links */}
           <nav aria-label={t("links")}>
             <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link
-                  href="/login"
-                  className="hover:text-foreground transition-colors"
-                >
-                  {t("login")}
-                </Link>
-              </li>
+              {!isAuthenticated && (
+                <li>
+                  <Link
+                    href="/login"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    {t("login")}
+                  </Link>
+                </li>
+              )}
               <li>
                 <Link
                   href="/faq"

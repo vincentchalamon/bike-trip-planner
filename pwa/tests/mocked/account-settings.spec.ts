@@ -53,7 +53,6 @@ test.describe("Account settings", () => {
 
     await expect(page.getByTestId("account-settings-page")).toBeVisible();
     await expect(page.getByTestId("account-section")).toBeVisible();
-    await expect(page.getByTestId("preferences-section")).toBeVisible();
     await expect(page.getByTestId("ai-provider-section")).toBeVisible();
     await expect(page.getByTestId("data-section")).toBeVisible();
     await expect(page.getByTestId("danger-zone-section")).toBeVisible();
@@ -78,8 +77,8 @@ test.describe("Account settings", () => {
       "test@example.com",
     );
     await expect(page.getByTestId("section-footer")).toBeVisible();
-    // The help modal is only mounted by the trip planner, so the help button
-    // is suppressed here (showHelp={false}).
+    // SiteChrome mounts the help modal app-wide, but the top-bar help button
+    // is route-gated (only "/" and "/trips/*"), so it is suppressed here.
     await expect(page.getByTestId("help-button")).toHaveCount(0);
   });
 
@@ -314,7 +313,9 @@ test.describe("AI provider settings (ADR-042)", () => {
     await expect(page.getByTestId("ai-token-status")).toHaveText(
       "Aucune clé API enregistrée.",
     );
-    await expect(page.getByTestId("ai-settings-save")).toHaveText("Enregistrer");
+    await expect(page.getByTestId("ai-settings-save")).toHaveText(
+      "Enregistrer",
+    );
   });
 
   test("saving sends PUT and confirms the configured state", async ({
@@ -344,10 +345,12 @@ test.describe("AI provider settings (ADR-042)", () => {
     await page.getByTestId("ai-token-input").fill("sk-test-key");
     await page.getByTestId("ai-settings-save").click();
 
-    await expect.poll(() => putBody).toEqual({
-      provider: "openai",
-      token: "sk-test-key",
-    });
+    await expect
+      .poll(() => putBody)
+      .toEqual({
+        provider: "openai",
+        token: "sk-test-key",
+      });
     await expect(page.getByTestId("ai-token-status")).toHaveText(
       "Une clé API est enregistrée.",
     );

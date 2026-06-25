@@ -215,15 +215,6 @@
     "unnamedWaterPoint": "Cemetery (water tap)",
     "unnamedFoodPoint": "{category}"
   },
-  "progressBar": {
-    "ariaLabel": "Trip progress by day",
-    "segmentAriaLabel": "Day {day} — {distance} km",
-    "segmentTitle": "Day {day} — {distance} km",
-    "segmentLabel": "Day {day} · {distance} km",
-    "segmentRestDayAriaLabel": "Day {day} — Rest",
-    "segmentRestDayTitle": "Day {day} — Rest",
-    "segmentRestDayLabel": "Day {day} · Rest"
-  },
   "config": {
     "title": "Settings",
     "close": "Close settings",
@@ -431,7 +422,6 @@
   },
   "tripList": {
     "title": "My Trips",
-    "newTrip": "New trip",
     "backToList": "Back to trips",
     "noTrips": "No trips yet. Create your first trip!",
     "loading": "Loading trips...",
@@ -471,8 +461,7 @@
       "filterTitle": "title \"{value}\"",
       "filterDates": "dates {value}",
       "filterFrom": "from {value}",
-      "filterUntil": "until {value}",
-      "resetFilters": "Reset filters"
+      "filterUntil": "until {value}"
     }
   },
   "noDates": {
@@ -906,8 +895,8 @@
       "faq": "FAQ",
       "legal": "Legal notice",
       "privacy": "Privacy",
-      "github": "GitHub (open-source)",
-      "copyright": "© {year} Bike Trip Planner. Open-source project."
+      "github": "GitHub",
+      "copyright": "© {year} Bike Trip Planner."
     }
   },
   "offline": {
@@ -959,14 +948,6 @@
       "changeEmail": "Change via magic link",
       "changeEmailSent": "A change link has been sent to your email.",
       "changeEmailFailed": "Could not send the change link."
-    },
-    "preferences": {
-      "title": "Preferences",
-      "description": "Customise the language and appearance of the app.",
-      "languageLabel": "Language",
-      "themeLabel": "Theme",
-      "themeLight": "Light",
-      "themeDark": "Dark"
     },
     "data": {
       "title": "My data",

@@ -211,8 +211,9 @@ test.describe("/trips empty states", () => {
     await expect(page.getByTestId("trips-empty-no-results")).toBeVisible();
     await expect(page.getByTestId("trips-empty-active-filters")).toBeVisible();
 
-    // Click reset-filters → original trips reappear.
-    await page.getByTestId("trips-empty-reset-filters").click();
+    // Click the filter-bar clear button → original trips reappear. The
+    // empty-state reset/new-trip buttons were removed (recette #649).
+    await page.getByTestId("clear-filters-button").click();
 
     await expect(page.getByText("Tour des Alpes")).toBeVisible();
     await expect(page.getByText("Bretagne coastal")).toBeVisible();
