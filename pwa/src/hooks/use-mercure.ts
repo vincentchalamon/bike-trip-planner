@@ -695,7 +695,7 @@ export async function resolveStageLabels(
   const promises = stages.flatMap((stage, i) => {
     const storeIndex = indices ? (indices[i] ?? i) : i;
     return [
-      reverseGeocode(stage.startPoint.lat, stage.startPoint.lon).then(
+      reverseGeocode(stage.startPoint.lat, stage.startPoint.lon, signal).then(
         (result) => {
           // Drop late responses after the caller aborted (e.g. unmount /
           // trip-switch) so a stale Nominatim reply cannot overwrite the labels
@@ -704,10 +704,12 @@ export async function resolveStageLabels(
             store.updateStageLabel(storeIndex, "startLabel", result.name);
         },
       ),
-      reverseGeocode(stage.endPoint.lat, stage.endPoint.lon).then((result) => {
-        if (result && !signal?.aborted)
-          store.updateStageLabel(storeIndex, "endLabel", result.name);
-      }),
+      reverseGeocode(stage.endPoint.lat, stage.endPoint.lon, signal).then(
+        (result) => {
+          if (result && !signal?.aborted)
+            store.updateStageLabel(storeIndex, "endLabel", result.name);
+        },
+      ),
     ];
   });
 

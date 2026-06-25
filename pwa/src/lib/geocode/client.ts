@@ -21,9 +21,13 @@ export async function searchPlaces(query: string): Promise<GeocodeResult[]> {
 export async function reverseGeocode(
   lat: number,
   lon: number,
+  signal?: AbortSignal,
 ): Promise<GeocodeResult | null> {
   const res = await apiFetch(
     `${API_URL}/geocode/reverse?lat=${lat}&lon=${lon}`,
+    {
+      signal,
+    },
   );
   if (!res.ok) return null;
   const data = (await res.json()) as { results: GeocodeResult[] };
