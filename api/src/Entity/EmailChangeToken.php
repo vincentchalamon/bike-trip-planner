@@ -44,7 +44,7 @@ class EmailChangeToken
         ?Uuid $id = null,
     ) {
         $this->id = $id ?? Uuid::v7();
-        $this->createdAt = new \DateTimeImmutable();
+        $this->createdAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
     }
 
     public function getId(): Uuid
@@ -79,14 +79,14 @@ class EmailChangeToken
 
     public function consume(): self
     {
-        $this->consumedAt = new \DateTimeImmutable();
+        $this->consumedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 
         return $this;
     }
 
     public function isValid(): bool
     {
-        return !$this->consumedAt instanceof \DateTimeImmutable && $this->expiresAt > new \DateTimeImmutable();
+        return !$this->consumedAt instanceof \DateTimeImmutable && $this->expiresAt > new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
     }
 
     public function getCreatedAt(): \DateTimeImmutable

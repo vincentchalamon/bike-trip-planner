@@ -41,7 +41,7 @@ final class EmailChangeTokenRepository extends ServiceEntityRepository
         $this->expirePendingForUser($user);
 
         $token = bin2hex(random_bytes(64));
-        $expiresAt = new \DateTimeImmutable(\sprintf('+%d minutes', self::TTL_MINUTES));
+        $expiresAt = new \DateTimeImmutable(\sprintf('+%d minutes', self::TTL_MINUTES), new \DateTimeZone('UTC'));
 
         $emailChangeToken = new EmailChangeToken($user, $token, $newEmail, $expiresAt);
         $this->getEntityManager()->persist($emailChangeToken);
@@ -112,7 +112,7 @@ final class EmailChangeTokenRepository extends ServiceEntityRepository
             ->set('ect.consumedAt', ':now')
             ->where('ect.user = :user')
             ->andWhere('ect.consumedAt IS NULL')
-            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('now', new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
             ->setParameter('user', $user)
             ->getQuery()
             ->execute();
