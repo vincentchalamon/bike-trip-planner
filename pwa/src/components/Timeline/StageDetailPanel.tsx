@@ -115,12 +115,13 @@ export function StageDetailPanel({
     selectedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selectedIndex]);
 
-  // Scroll-spy: mark a stage active as soon as it reaches the top of the
-  // viewport while scrolling (recette #649). An IntersectionObserver with a
-  // top-anchored root margin defines a thin band just below the sticky header;
-  // the topmost section currently inside that band becomes the selected stage.
-  // Visibility is tracked in a Map because the observer callback only reports
-  // sections whose intersection *changed* — not every visible one.
+  // Scroll-spy: mark a stage active as soon as it reaches the middle of the
+  // viewport (~50% of its height) while scrolling (recette #649). An
+  // IntersectionObserver with a centred, zero-height root margin defines a thin
+  // band at the vertical middle; the topmost section currently crossing that
+  // line becomes the selected stage. Visibility is tracked in a Map because the
+  // observer callback only reports sections whose intersection *changed* — not
+  // every visible one.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -157,9 +158,10 @@ export function StageDetailPanel({
         fromScrollSpyRef.current = true;
         setSelectedStageIndex(bestIndex);
       },
-      // Anchor near the top of the viewport (below the sticky header) so the
-      // stage occupying that band is the "current" one.
-      { rootMargin: "-96px 0px -65% 0px", threshold: 0 },
+      // Anchor a thin band at ~50% of the viewport height: the stage crossing
+      // the vertical middle is the "current" one, so a day activates as soon as
+      // it scrolls past the middle of the screen.
+      { rootMargin: "-50% 0px -50% 0px", threshold: 0 },
     );
 
     sections.forEach((section) => observer.observe(section));
@@ -214,7 +216,7 @@ export function StageDetailPanel({
             className={[
               "flex flex-col gap-4 rounded-xl p-1 transition-colors",
               isSelected
-                ? "ring-2 ring-brand/20 ring-offset-2"
+                ? "ring-2 ring-brand/20"
                 : "opacity-60 hover:opacity-80",
             ].join(" ")}
           >
