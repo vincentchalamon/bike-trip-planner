@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
+import { SiteChrome } from "@/components/site-chrome";
 import { logger } from "@/lib/logger";
 
 interface Copy {
@@ -39,75 +40,77 @@ export default async function NotFound() {
   }
 
   return (
-    <main
-      className="flex min-h-screen items-center justify-center px-4 py-12 bg-[var(--color-surface)] text-[var(--color-ink)]"
-      data-testid="not-found-page"
-    >
-      <div className="text-center space-y-6 max-w-md">
-        {/* Minimalist illustration: lost cyclist on a mountain ridge */}
-        <svg
-          aria-label={copy.illustrationAlt}
-          role="img"
-          viewBox="0 0 200 120"
-          className="mx-auto h-32 w-auto text-[var(--color-accent-brand)]"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          data-testid="not-found-illustration"
-        >
-          {/* Mountain ridge */}
-          <path d="M0 90 L40 50 L70 75 L110 30 L150 70 L200 45 L200 120 L0 120 Z" />
-          {/* Sun / moon */}
-          <circle cx="160" cy="25" r="8" />
-          {/* Bike wheels */}
-          <circle cx="55" cy="100" r="9" />
-          <circle cx="85" cy="100" r="9" />
-          {/* Bike frame */}
-          <path d="M55 100 L70 80 L85 100 M70 80 L78 80 L85 100 M70 80 L65 70" />
-          {/* Question mark above the rider */}
-          <path d="M70 60 q2 -8 6 -8 q4 0 4 4 q0 4 -4 6 q-2 1 -2 4" />
-          <circle cx="74" cy="70" r="0.5" fill="currentColor" />
-        </svg>
-
-        <div
-          className="font-serif text-7xl md:text-8xl font-medium italic leading-none tracking-tight text-[var(--color-accent-brand)]"
-          data-testid="not-found-code"
-          aria-hidden="true"
-        >
-          404
-        </div>
-
-        <div className="space-y-3">
-          <h1
-            className="font-serif text-4xl md:text-5xl font-semibold tracking-tight"
-            data-testid="not-found-title"
+    <SiteChrome variant="app">
+      <main
+        className="flex min-h-[60vh] flex-1 items-center justify-center px-4 py-12 bg-[var(--color-surface)] text-[var(--color-ink)]"
+        data-testid="not-found-page"
+      >
+        <div className="text-center space-y-6 max-w-md">
+          {/* Minimalist illustration: lost cyclist on a mountain ridge */}
+          <svg
+            aria-label={copy.illustrationAlt}
+            role="img"
+            viewBox="0 0 200 120"
+            className="mx-auto h-32 w-auto text-[var(--color-accent-brand)]"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            data-testid="not-found-illustration"
           >
-            {copy.title}
-          </h1>
-          <p
-            className="font-sans text-base md:text-lg text-[var(--color-ink)]/70"
-            data-testid="not-found-subtitle"
-          >
-            {copy.subtitle}
-          </p>
-        </div>
+            {/* Mountain ridge */}
+            <path d="M0 90 L40 50 L70 75 L110 30 L150 70 L200 45 L200 120 L0 120 Z" />
+            {/* Sun / moon */}
+            <circle cx="160" cy="25" r="8" />
+            {/* Bike wheels */}
+            <circle cx="55" cy="100" r="9" />
+            <circle cx="85" cy="100" r="9" />
+            {/* Bike frame */}
+            <path d="M55 100 L70 80 L85 100 M70 80 L78 80 L85 100 M70 80 L65 70" />
+            {/* Question mark above the rider */}
+            <path d="M70 60 q2 -8 6 -8 q4 0 4 4 q0 4 -4 6 q-2 1 -2 4" />
+            <circle cx="74" cy="70" r="0.5" fill="currentColor" />
+          </svg>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button asChild size="lg" data-testid="not-found-home-link">
-            <Link href="/">{copy.backHome}</Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            data-testid="not-found-trips-link"
+          <div
+            className="font-serif text-7xl md:text-8xl font-medium italic leading-none tracking-tight text-[var(--color-accent-brand)]"
+            data-testid="not-found-code"
+            aria-hidden="true"
           >
-            <Link href="/trips">{copy.myTrips}</Link>
-          </Button>
+            404
+          </div>
+
+          <div className="space-y-3">
+            <h1
+              className="font-serif text-4xl md:text-5xl font-semibold tracking-tight"
+              data-testid="not-found-title"
+            >
+              {copy.title}
+            </h1>
+            <p
+              className="font-sans text-base md:text-lg text-[var(--color-ink)]/70"
+              data-testid="not-found-subtitle"
+            >
+              {copy.subtitle}
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button asChild size="lg" data-testid="not-found-home-link">
+              <Link href="/">{copy.backHome}</Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              data-testid="not-found-trips-link"
+            >
+              <Link href="/trips">{copy.myTrips}</Link>
+            </Button>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </SiteChrome>
   );
 }

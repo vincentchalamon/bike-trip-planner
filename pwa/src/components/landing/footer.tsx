@@ -61,6 +61,7 @@ export function LandingFooter() {
                 <Link
                   href="/faq"
                   className="hover:text-foreground transition-colors"
+                  data-testid="footer-faq-link"
                 >
                   {t("faq")}
                 </Link>

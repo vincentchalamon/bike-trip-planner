@@ -6,6 +6,7 @@ import { HydrationBoundary } from "@/components/hydration-boundary";
 import { TripPlanner } from "@/components/trip-planner";
 import { TripPlannerErrorBoundary } from "@/components/trip-planner-error-boundary";
 import { LandingPage } from "@/components/landing-page";
+import { SiteChrome } from "@/components/site-chrome";
 
 /**
  * Client half of the home page. `initialAuthed` is the server's read of the
@@ -72,12 +73,14 @@ export function HomeContent({
   }
 
   return (
-    <HydrationBoundary>
-      <TripPlannerErrorBoundary>
-        <Suspense fallback={null}>
-          <TripPlanner />
-        </Suspense>
-      </TripPlannerErrorBoundary>
-    </HydrationBoundary>
+    <SiteChrome variant="app">
+      <HydrationBoundary>
+        <TripPlannerErrorBoundary>
+          <Suspense fallback={null}>
+            <TripPlanner />
+          </Suspense>
+        </TripPlannerErrorBoundary>
+      </HydrationBoundary>
+    </SiteChrome>
   );
 }

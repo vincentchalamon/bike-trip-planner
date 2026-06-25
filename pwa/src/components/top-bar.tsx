@@ -26,21 +26,19 @@ import { useAuthStore } from "@/store/auth-store";
  * live here but were moved next to the trip title (recette #649) so the global
  * bar only carries app-wide controls.
  */
-export function TopBar({
-  showHelp = true,
-}: {
-  /**
-   * Whether to show the help "?" button. Defaults to true (roadbook context).
-   * The help modal is only mounted by the trip planner, so pages that mount the
-   * bar standalone (e.g. /trips) pass false to avoid a dead button.
-   */
-  showHelp?: boolean;
-}) {
+export function TopBar() {
   const t = useTranslations();
   const tNav = useTranslations("navigation");
   const pathname = usePathname();
   const setHelpModalOpen = useUiStore((s) => s.setHelpModalOpen);
   const email = useAuthStore((s) => s.user?.email ?? "");
+
+  // The help "?" opens the roadbook help modal, which SiteChrome mounts on the
+  // app chrome. Show the button only on the planner routes (home dashboard, new
+  // trip, trip view) — not on the trips list or account settings — so it is
+  // never a dead button there (recette #649). The bar is shared via the layout
+  // now, so the visibility is decided here from the route rather than a prop.
+  const showHelp = pathname === "/" || pathname.startsWith("/trips/");
 
   const initial = email.trim().charAt(0).toUpperCase() || "?";
 
