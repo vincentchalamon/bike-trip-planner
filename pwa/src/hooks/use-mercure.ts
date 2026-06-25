@@ -689,6 +689,7 @@ export async function resolveStageLabels(
     endPoint: { lat: number; lon: number };
   }[],
   indices?: number[],
+  signal?: AbortSignal,
 ): Promise<void> {
   const store = useTripStore.getState();
   const promises = stages.flatMap((stage, i) => {
@@ -696,12 +697,16 @@ export async function resolveStageLabels(
     return [
       reverseGeocode(stage.startPoint.lat, stage.startPoint.lon).then(
         (result) => {
-          if (result)
+          // Drop late responses after the caller aborted (e.g. unmount /
+          // trip-switch) so a stale Nominatim reply cannot overwrite the labels
+          // of a different trip (#787).
+          if (result && !signal?.aborted)
             store.updateStageLabel(storeIndex, "startLabel", result.name);
         },
       ),
       reverseGeocode(stage.endPoint.lat, stage.endPoint.lon).then((result) => {
-        if (result) store.updateStageLabel(storeIndex, "endLabel", result.name);
+        if (result && !signal?.aborted)
+          store.updateStageLabel(storeIndex, "endLabel", result.name);
       }),
     ];
   });

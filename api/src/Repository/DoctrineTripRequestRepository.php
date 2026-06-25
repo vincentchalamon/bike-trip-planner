@@ -188,9 +188,50 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             return;
         }
 
-        // Compute the expensive PostGIS metrics once, here at store time, so the
-        // trip-detail read path stays O(1) on reload (issue #775). The fractions
-        // are index-aligned with $stages.
+        // The on-cycle-network fraction and out-of-zone flag are derived purely
+        // from the route geometry, so they only change when the geometry does
+        // (initial compute, route recalculation). storeStages() also runs on
+        // every enrichment/edit pass (weather, accommodation select, distance
+        // edit), which leaves the geometry untouched — guard the two heavy PostGIS
+        // scans behind a geometry-change check so frequent edits reuse the already
+        // persisted values (issue #775, perf review on #787).
+        [$cycleNetwork, $outOfZone] = $this->geometryUnchanged($trip, $stages)
+            ? [$this->persistedCycleNetwork($trip), $trip->outOfZone]
+            : $this->computeRouteMetrics($stages);
+
+        $this->getEntityManager()->wrapInTransaction(function () use ($trip, $stages, $cycleNetwork, $outOfZone): void {
+            // Bulk delete: O(1) vs O(N) orphan-removal DELETEs (1 SELECT + N DELETE)
+            $this->getEntityManager()
+                ->createQuery('DELETE FROM App\Entity\Stage s WHERE s.trip = :trip')
+                ->setParameter('trip', $trip)
+                ->execute();
+            $trip->clearStages(); // Keep UoW in sync with the deleted rows
+
+            // Mutate the managed entity inside the transaction so a flush failure
+            // does not leave a stale out-of-zone flag on the in-memory entity
+            // (correctness review on #787).
+            $trip->outOfZone = $outOfZone;
+
+            foreach ($stages as $index => $stageDto) {
+                $stageEntity = $this->stageDtoToEntity($stageDto, $trip, $index);
+                $stageEntity->setOnCycleNetwork($cycleNetwork[$index] ?? 0.0);
+                $trip->addStage($stageEntity);
+            }
+
+            $this->getEntityManager()->flush();
+        });
+    }
+
+    /**
+     * Computes the geometry-derived trip-detail metrics: the per-stage on-cycle-network
+     * fraction (index-aligned with $stages) and the out-of-zone flag.
+     *
+     * @param list<StageDto> $stages
+     *
+     * @return array{0: list<float>, 1: bool}
+     */
+    private function computeRouteMetrics(array $stages): array
+    {
         $cycleNetwork = $this->cycleRouteRepository->onNetworkFractions(
             array_map(
                 static fn (StageDto $stage): array => array_map(
@@ -202,24 +243,68 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             self::CYCLE_NETWORK_TOLERANCE_METERS,
         );
 
-        $trip->outOfZone = $this->coverageRepository->isRouteOutOfZone($this->stageRoutePoints($stages));
+        $outOfZone = $this->coverageRepository->isRouteOutOfZone($this->stageRoutePoints($stages));
 
-        $this->getEntityManager()->wrapInTransaction(function () use ($trip, $stages, $cycleNetwork): void {
-            // Bulk delete: O(1) vs O(N) orphan-removal DELETEs (1 SELECT + N DELETE)
-            $this->getEntityManager()
-                ->createQuery('DELETE FROM App\Entity\Stage s WHERE s.trip = :trip')
-                ->setParameter('trip', $trip)
-                ->execute();
-            $trip->clearStages(); // Keep UoW in sync with the deleted rows
+        return [$cycleNetwork, $outOfZone];
+    }
 
-            foreach ($stages as $index => $stageDto) {
-                $stageEntity = $this->stageDtoToEntity($stageDto, $trip, $index);
-                $stageEntity->setOnCycleNetwork($cycleNetwork[$index] ?? 0.0);
-                $trip->addStage($stageEntity);
+    /**
+     * Returns true when the incoming stage geometry (and endpoints) match what is
+     * already persisted, so the geometry-derived PostGIS metrics can be reused.
+     *
+     * @param list<StageDto> $stages
+     */
+    private function geometryUnchanged(TripRequest $trip, array $stages): bool
+    {
+        $persisted = $trip->stages;
+        if ($persisted->count() !== \count($stages)) {
+            return false;
+        }
+
+        foreach ($persisted->getValues() as $index => $entity) {
+            if ($this->stageGeometrySignature($stages[$index]) !== $this->entityGeometrySignature($entity)) {
+                return false;
             }
+        }
 
-            $this->getEntityManager()->flush();
-        });
+        return true;
+    }
+
+    /** @return list<float> The persisted on-cycle-network fractions, index-aligned with the stages. */
+    private function persistedCycleNetwork(TripRequest $trip): array
+    {
+        return array_map(
+            static fn (StageEntity $entity): float => $entity->getOnCycleNetwork(),
+            $trip->stages->getValues(),
+        );
+    }
+
+    /** @return list<array{float, float}> Endpoints + geometry coordinates of an incoming stage DTO. */
+    private function stageGeometrySignature(StageDto $stage): array
+    {
+        $signature = [
+            [$stage->startPoint->lat, $stage->startPoint->lon],
+            [$stage->endPoint->lat, $stage->endPoint->lon],
+        ];
+        foreach ($stage->geometry as $coord) {
+            $signature[] = [$coord->lat, $coord->lon];
+        }
+
+        return $signature;
+    }
+
+    /** @return list<array{float, float}> Endpoints + geometry coordinates of a persisted stage entity. */
+    private function entityGeometrySignature(StageEntity $entity): array
+    {
+        $signature = [
+            [$entity->getStartLat(), $entity->getStartLon()],
+            [$entity->getEndLat(), $entity->getEndLon()],
+        ];
+        foreach ($entity->getGeometry() as $coord) {
+            $signature[] = [$coord['lat'], $coord['lon']];
+        }
+
+        return $signature;
     }
 
     /** @return list<StageDto>|null */

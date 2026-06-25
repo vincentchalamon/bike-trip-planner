@@ -281,17 +281,20 @@ function TripLoader({ tripId }: { tripId: string }) {
     const stages = useTripStore.getState().stages;
     if (stages.length === 0) return;
 
-    let cancelled = false;
+    const controller = new AbortController();
     const timer = setTimeout(() => {
-      if (cancelled) return;
+      if (controller.signal.aborted) return;
       void resolveStageLabels(
         stages,
         stages.map((_, i) => i),
+        controller.signal,
       );
     }, 0);
 
     return () => {
-      cancelled = true;
+      // Abort on unmount / trip-switch so in-flight Nominatim responses are
+      // dropped instead of corrupting another trip's labels (#787).
+      controller.abort();
       clearTimeout(timer);
     };
   }, [isLoaded]);
