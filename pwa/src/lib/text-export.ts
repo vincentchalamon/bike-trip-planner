@@ -42,7 +42,7 @@ function formatStageLine(
   const elevUp = `⬆️ ${Math.round(stage.elevation)}m`;
   const elevDown = `⬇️ ${Math.round(stage.elevationLoss ?? 0)}m`;
 
-  let line = `*${date}* : ${distance}, ${elevUp} ${elevDown}`;
+  let line = `${date} : ${distance}, ${elevUp} ${elevDown}`;
 
   const acc = isLast
     ? null
@@ -111,14 +111,12 @@ export function buildTripText(params: TextExportParams): string {
   const lines: string[] = [];
 
   // Title
-  lines.push(`*${title}*`);
+  lines.push(title);
   lines.push("");
 
   // Global stats
   if (totalDistance !== null) {
-    lines.push(
-      `- 🚴‍ ${labels.totalDistance} : ${Math.round(totalDistance)}km`,
-    );
+    lines.push(`- 🚴 ${labels.totalDistance} : ${Math.round(totalDistance)}km`);
   }
   if (totalElevation !== null) {
     lines.push(
