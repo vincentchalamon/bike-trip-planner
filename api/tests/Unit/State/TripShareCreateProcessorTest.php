@@ -62,13 +62,17 @@ final class TripShareCreateProcessorTest extends TestCase
 
         $this->tripShareRepository->expects($this->once())->method('findActiveByTrip')->willReturn(null);
 
-        $share = new TripShare();
-        $this->persistProcessor->expects($this->once())->method('process')->with($share)->willReturn($share);
+        // The processor builds a fresh active share (it never reuses the incoming,
+        // possibly soft-deleted, entity). Persist echoes back what it receives.
+        $this->persistProcessor->expects($this->once())->method('process')
+            ->with($this->isInstanceOf(TripShare::class))
+            ->willReturnArgument(0);
 
-        $result = $this->processor->process($share, new Post(), ['tripId' => (string) $tripId]);
+        $result = $this->processor->process(new TripShare(), new Post(), ['tripId' => (string) $tripId]);
 
         self::assertSame($trip, $result->getTrip());
         self::assertNotEmpty($result->getToken());
+        self::assertTrue($result->isActive());
     }
 
     #[Test]
@@ -83,13 +87,15 @@ final class TripShareCreateProcessorTest extends TestCase
 
         $this->tripShareRepository->expects($this->once())->method('findActiveByTrip')->willReturn(null);
 
-        $share = new TripShare();
-        $this->persistProcessor->expects($this->once())->method('process')->with($share)->willReturn($share);
+        $this->persistProcessor->expects($this->once())->method('process')
+            ->with($this->isInstanceOf(TripShare::class))
+            ->willReturnArgument(0);
 
-        $result = $this->processor->process($share, new Post(), ['tripId' => $tripId]);
+        $result = $this->processor->process(new TripShare(), new Post(), ['tripId' => $tripId]);
 
         self::assertSame($trip, $result->getTrip());
         self::assertNotEmpty($result->getToken());
+        self::assertTrue($result->isActive());
     }
 
     #[Test]
@@ -100,12 +106,35 @@ final class TripShareCreateProcessorTest extends TestCase
         $this->entityManager->expects($this->never())->method('find');
         $this->tripShareRepository->expects($this->once())->method('findActiveByTrip')->willReturn(null);
 
-        $share = new TripShare();
-        $this->persistProcessor->expects($this->once())->method('process')->with($share)->willReturn($share);
+        $this->persistProcessor->expects($this->once())->method('process')
+            ->with($this->isInstanceOf(TripShare::class))
+            ->willReturnArgument(0);
 
-        $result = $this->processor->process($share, new Post(), ['tripId' => $trip]);
+        $result = $this->processor->process(new TripShare(), new Post(), ['tripId' => $trip]);
 
         self::assertSame($trip, $result->getTrip());
+        self::assertNotEmpty($result->getToken());
+        self::assertTrue($result->isActive());
+    }
+
+    #[Test]
+    public function itIgnoresASoftDeletedIncomingEntityAndCreatesAFreshActiveShare(): void
+    {
+        $trip = new TripRequest();
+
+        $this->tripShareRepository->expects($this->once())->method('findActiveByTrip')->willReturn(null);
+        $this->persistProcessor->expects($this->once())->method('process')
+            ->with($this->isInstanceOf(TripShare::class))
+            ->willReturnArgument(0);
+
+        // Simulate API Platform handing us the previously revoked row.
+        $revoked = new TripShare();
+        $revoked->softDelete();
+
+        $result = $this->processor->process($revoked, new Post(), ['tripId' => $trip]);
+
+        self::assertNotSame($revoked, $result);
+        self::assertTrue($result->isActive());
         self::assertNotEmpty($result->getToken());
     }
 

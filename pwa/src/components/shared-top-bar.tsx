@@ -8,6 +8,8 @@ import { TripDownloads } from "@/components/trip-downloads";
 interface SharedTopBarProps {
   /** Trip title rendered next to the brand. Omitted when not loaded yet. */
   tripTitle?: string;
+  /** When true (e.g. revoked/404 share), hide the GPX/FIT download links. */
+  isError?: boolean;
 }
 
 /**
@@ -21,7 +23,7 @@ interface SharedTopBarProps {
  * Garmin Connect sync (direct upload to the watch) remains out of scope — see
  * issue #404.
  */
-export function SharedTopBar({ tripTitle }: SharedTopBarProps) {
+export function SharedTopBar({ tripTitle, isError }: SharedTopBarProps) {
   const t = useTranslations("sharedTopBar");
 
   return (
@@ -54,10 +56,13 @@ export function SharedTopBar({ tripTitle }: SharedTopBarProps) {
         {/* Spacer when no title to push the download button to the right */}
         {!tripTitle && <div className="flex-1" />}
 
-        {/* Global GPX / FIT download — only action available in read-only mode */}
-        <div className="shrink-0">
-          <TripDownloads tripId={undefined} tripTitle={tripTitle ?? ""} />
-        </div>
+        {/* Global GPX / FIT download — only action available in read-only mode.
+            Hidden on error pages (e.g. revoked share) where no trip exists. */}
+        {!isError && (
+          <div className="shrink-0">
+            <TripDownloads tripId={undefined} tripTitle={tripTitle ?? ""} />
+          </div>
+        )}
       </div>
     </header>
   );
