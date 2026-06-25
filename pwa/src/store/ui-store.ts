@@ -120,7 +120,7 @@ interface UiState {
    * 422 from the chat endpoint (invalid token / exhausted quota, #761); cleared
    * on the next successful turn.
    */
-  chatConfigErrorKey: string | null;
+  chatConfigErrorKey: "errorInvalidToken" | "errorQuotaExceeded" | null;
   /**
    * Whether the user has ever opened the AI bubble. Stored in
    * `localStorage` so the "Nouveau" badge only shows on the first visit.
@@ -171,7 +171,9 @@ interface UiState {
   /** Flip the in-flight indicator that drives the typing dots. */
   setChatSending: (value: boolean) => void;
   /** Show / hide the actionable provider-config error banner (#761). */
-  setChatConfigError: (key: string | null) => void;
+  setChatConfigError: (
+    key: "errorInvalidToken" | "errorQuotaExceeded" | null,
+  ) => void;
   /** Update the runtime AI availability (from the `/api/health` probe, #304). */
   setAiAvailable: (value: boolean) => void;
   /** Update whether the account has a configured AI provider (ADR-042). */
