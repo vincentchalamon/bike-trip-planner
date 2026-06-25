@@ -1,0 +1,12 @@
+email_change:
+  requested: "Un email de confirmation a été envoyé à ta nouvelle adresse."
+  email:
+    subject: "Confirme ta nouvelle adresse email — Bike Trip Planner"
+    body: "Tu as demandé à changer l'adresse email de ton compte. Clique sur le bouton ci-dessous pour confirmer ta nouvelle adresse."
+    button: "Confirmer mon adresse"
+    expires: "Ce lien expire dans %minutes% minutes et ne peut être utilisé qu'une seule fois."
+    ignore: "Si tu n'as pas demandé ce changement, tu peux ignorer cet email : ton adresse actuelle reste inchangée."
+  error:
+    same_email: "Cette adresse est déjà celle de ton compte."
+    email_taken: "Cette adresse email est déjà utilisée."
+    invalid_link: "Lien invalide ou expiré."

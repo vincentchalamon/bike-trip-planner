@@ -11,25 +11,47 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
 import { useAuthStore } from "@/store/auth-store";
+import { requestEmailChange } from "@/lib/api/client";
 
 /**
- * "Mon compte" section: shows the current email and lets the user trigger an
- * email change through the existing passwordless magic-link flow.
+ * "Mon compte" section: shows the current email and lets the user request an
+ * email change. The new address is captured in a dialog and a confirmation
+ * link is sent to it (#777) — distinct from the login magic link, which only
+ * re-authenticates the current email.
  */
 export function AccountSection() {
   const t = useTranslations("accountSettings.account");
   const email = useAuthStore((s) => s.user?.email ?? "");
-  const requestMagicLink = useAuthStore((s) => s.requestMagicLink);
+  const [open, setOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
   const [isSending, setIsSending] = useState(false);
 
-  async function handleChangeEmail() {
-    if (!email) return;
+  const trimmed = newEmail.trim();
+  const isValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed);
+
+  async function handleSubmit() {
+    if (!isValid || isSending) return;
     setIsSending(true);
     try {
-      await requestMagicLink(email);
-      toast.success(t("changeEmailSent"));
+      const result = await requestEmailChange(trimmed);
+      if (result.ok) {
+        toast.success(t("changeEmailSent"));
+        setOpen(false);
+        setNewEmail("");
+      } else {
+        toast.error(result.error.message || t("changeEmailFailed"));
+      }
     } catch {
       toast.error(t("changeEmailFailed"));
     } finally {
@@ -55,18 +77,64 @@ export function AccountSection() {
         <Button
           variant="outline"
           className="gap-2 cursor-pointer"
-          onClick={() => void handleChangeEmail()}
-          disabled={isSending || !email}
+          onClick={() => setOpen(true)}
+          disabled={!email}
           data-testid="change-email-button"
         >
-          {isSending ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <Mail className="h-4 w-4" aria-hidden="true" />
-          )}
+          <Mail className="h-4 w-4" aria-hidden="true" />
           {t("changeEmail")}
         </Button>
       </CardContent>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent data-testid="change-email-dialog">
+          <DialogHeader>
+            <DialogTitle>{t("changeEmailDialogTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("changeEmailDialogDescription")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-muted-foreground">
+              {t("newEmailLabel")}
+            </span>
+            <Input
+              type="email"
+              autoComplete="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleSubmit();
+              }}
+              placeholder={t("newEmailPlaceholder")}
+              data-testid="new-email-input"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => setOpen(false)}
+              disabled={isSending}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              className="gap-2 cursor-pointer"
+              onClick={() => void handleSubmit()}
+              disabled={!isValid || isSending}
+              data-testid="send-email-change-button"
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Mail className="h-4 w-4" aria-hidden="true" />
+              )}
+              {t("sendChangeLink")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

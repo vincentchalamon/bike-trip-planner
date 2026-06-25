@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { parseJwtPayload } from "./auth-store";
+import { afterEach, describe, expect, it } from "vitest";
+import { parseJwtPayload, useAuthStore } from "./auth-store";
 
 // Helper: build a JWT with a given payload (no signature verification needed)
 function buildJwt(payload: Record<string, unknown>): string {
@@ -59,5 +59,27 @@ describe("parseJwtPayload", () => {
       sub: "uuid-with-special/chars+here",
       email: "user@example.com",
     });
+  });
+});
+
+describe("setUserEmail", () => {
+  afterEach(() => {
+    useAuthStore.getState().clearAuth();
+  });
+
+  it("updates the current user's email after an email change (#777)", () => {
+    useAuthStore
+      .getState()
+      .setAuth("token", { id: "u1", email: "old@example.com" });
+
+    useAuthStore.getState().setUserEmail("new@example.com");
+
+    expect(useAuthStore.getState().user?.email).toBe("new@example.com");
+  });
+
+  it("is a no-op when no user is set", () => {
+    useAuthStore.getState().setUserEmail("new@example.com");
+
+    expect(useAuthStore.getState().user).toBeNull();
   });
 });
