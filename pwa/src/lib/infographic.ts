@@ -63,7 +63,7 @@ const MAP_ATTRIBUTION_GAP = 12;
 const MAP_ATTRIBUTION_H = 16 + MAP_ATTRIBUTION_GAP;
 const FOOTER_BAND_H = 28;
 const CONTENT_BOTTOM = CARD_HEIGHT - FOOTER_BAND_H; // 452
-const MAP_HEIGHT = CONTENT_BOTTOM - CONTENT_TOP - MAP_ATTRIBUTION_H; // 328
+const MAP_HEIGHT = CONTENT_BOTTOM - CONTENT_TOP - MAP_ATTRIBUTION_H; // 316
 // Right column: fixed-height stat rows, then the elevation profile fills the
 // remaining height down to the map's baseline.
 const STAT_ROW_H = 40;
