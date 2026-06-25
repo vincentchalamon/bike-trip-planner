@@ -16,6 +16,8 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Enum\AlertType;
+use App\Osm\CoverageRepositoryInterface;
+use App\Osm\CycleRouteRepositoryInterface;
 use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -35,6 +37,10 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
     private CacheItemPoolInterface&MockObject $cache;
 
+    private CycleRouteRepositoryInterface&MockObject $cycleRouteRepository;
+
+    private CoverageRepositoryInterface&MockObject $coverageRepository;
+
     private DoctrineTripRequestRepository $repository;
 
     #[\Override]
@@ -49,10 +55,17 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->cache = $this->createMock(CacheItemPoolInterface::class);
 
+        // The PostGIS metrics are computed at storeStages() time (#775); stub them
+        // with neutral defaults so the persistence round-trips stay deterministic.
+        $this->cycleRouteRepository = $this->createMock(CycleRouteRepositoryInterface::class);
+        $this->cycleRouteRepository->method('onNetworkFractions')->willReturn([]);
+        $this->coverageRepository = $this->createMock(CoverageRepositoryInterface::class);
+        $this->coverageRepository->method('isRouteOutOfZone')->willReturn(false);
+
         $registry = $this->createMock(ManagerRegistry::class);
         $registry->method('getManagerForClass')->willReturn($this->entityManager);
 
-        $this->repository = new DoctrineTripRequestRepository($registry, $this->cache);
+        $this->repository = new DoctrineTripRequestRepository($registry, $this->cache, $this->cycleRouteRepository, $this->coverageRepository);
     }
 
     #[Test]
@@ -95,7 +108,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $registry2 = $this->createMock(ManagerRegistry::class);
         $registry2->method('getManagerForClass')->willReturn($em2);
 
-        $repo2 = new DoctrineTripRequestRepository($registry2, $this->cache);
+        $repo2 = new DoctrineTripRequestRepository($registry2, $this->cache, $this->cycleRouteRepository, $this->coverageRepository);
         $result = $repo2->getRequest($tripId);
 
         self::assertSame($request, $result);
