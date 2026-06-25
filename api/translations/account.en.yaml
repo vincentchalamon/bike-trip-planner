@@ -9,4 +9,5 @@ email_change:
   error:
     same_email: "This address is already your account's email."
     email_taken: "This email address is already in use."
+    rate_limited: "Too many email-change requests. Please try again in a moment."
     invalid_link: "Invalid or expired link."

@@ -19,6 +19,18 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '900 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
+            'email_change_user' => [
+                'policy' => 'sliding_window',
+                'limit' => 3,
+                'interval' => '900 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            'email_change_ip' => [
+                'policy' => 'sliding_window',
+                'limit' => 10,
+                'interval' => '900 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
             'trip_create' => [
                 'policy' => 'sliding_window',
                 'limit' => 10,

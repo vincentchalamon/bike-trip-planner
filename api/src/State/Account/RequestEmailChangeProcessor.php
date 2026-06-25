@@ -14,11 +14,14 @@ use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
 
@@ -42,6 +45,11 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
         private Environment $twig,
         private TranslatorInterface $translator,
         private LoggerInterface $logger,
+        private RequestStack $requestStack,
+        #[Autowire(service: 'limiter.email_change_user')]
+        private RateLimiterFactory $emailChangeUserLimiter,
+        #[Autowire(service: 'limiter.email_change_ip')]
+        private RateLimiterFactory $emailChangeIpLimiter,
         #[Autowire(env: 'FRONTEND_URL')]
         private string $frontendUrl = 'https://localhost',
     ) {
@@ -54,6 +62,18 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
     {
         $user = $this->security->getUser();
         \assert($user instanceof User);
+
+        // Dual rate limiting (per-user + per-IP), mirroring the magic-link endpoint,
+        // to throttle confirmation-email spam toward arbitrary addresses (#777 review).
+        $userLimit = $this->emailChangeUserLimiter->create($user->getId()->toRfc4122())->consume();
+        $clientIp = $this->requestStack->getCurrentRequest()?->getClientIp() ?? 'unknown';
+        $ipLimit = $this->emailChangeIpLimiter->create($clientIp)->consume();
+        if (!$userLimit->isAccepted() || !$ipLimit->isAccepted()) {
+            $limit = $userLimit->isAccepted() ? $ipLimit : $userLimit;
+            $secondsUntilRetry = max(0, $limit->getRetryAfter()->getTimestamp() - new \DateTimeImmutable()->getTimestamp());
+
+            throw new TooManyRequestsHttpException(retryAfter: $secondsUntilRetry, message: $this->translator->trans('email_change.error.rate_limited', [], 'account'));
+        }
 
         $newEmail = mb_strtolower(trim($data->newEmail));
 

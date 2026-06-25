@@ -47,7 +47,9 @@ test.describe("Email change verification (#777)", () => {
     await expect.poll(() => verifyCalled).toBe(true);
     await expect(page.getByTestId("email-change-success")).toBeVisible();
     await expect(
-      page.getByText("Ton adresse e-mail a été mise à jour."),
+      page
+        .getByTestId("email-change-success")
+        .getByText("Ton adresse e-mail a été mise à jour."),
     ).toBeVisible();
 
     // The back button returns to the account settings page.
