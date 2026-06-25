@@ -1073,6 +1073,37 @@ Findings de la 3ᵉ passe de recette manuelle ([#649 commentaire du 21/06](https
 
 ---
 
+## Sprint 42 — Recette #649 (round 5) : batch UI + bugs
+
+Findings de la passe de recette du 25/06 (lien Komoot `https://www.komoot.com/fr-fr/tour/2795080048`, recette iso-prod à jour). Vraies régressions/bugs confirmés par diagnostic code (cause racine identifiée par issue, agents read-only). Modèle worktree-parallèle (`/sprint`).
+
+| Ordre | ID                                                                      | Titre                                                                              | Effort | Dépend de | PR / Statut |
+|-------|-------------------------------------------------------------------------|------------------------------------------------------------------------------------|--------|-----------|-------------|
+| 1     | [#769](https://github.com/vincentchalamon/bike-trip-planner/issues/769) | fix(ui): chrome cohérent, nettoyage Mon compte/Mes voyages, masquage IA & progress bar | L      | —         | [#779](https://github.com/vincentchalamon/bike-trip-planner/pull/779) ✅ mergé |
+| 1     | [#770](https://github.com/vincentchalamon/bike-trip-planner/issues/770) | fix(pwa): loader hébergements parasite + alertes/hébergements disparaissent (trip_ready) | M      | —         | [#780](https://github.com/vincentchalamon/bike-trip-planner/pull/780) ✅ mergé |
+| 1     | [#772](https://github.com/vincentchalamon/bike-trip-planner/issues/772) | fix(pwa): infographie PNG — carte centrée + marge + profil à l'échelle             | S      | —         | [#781](https://github.com/vincentchalamon/bike-trip-planner/pull/781) ✅ mergé |
+| 1     | [#773](https://github.com/vincentchalamon/bike-trip-planner/issues/773) | fix(pwa): texte de partage — bouton copier, tooltip budget, espacement, gras WhatsApp | S      | —         | [#782](https://github.com/vincentchalamon/bike-trip-planner/pull/782) ✅ mergé |
+| 1     | [#777](https://github.com/vincentchalamon/bike-trip-planner/issues/777) | feat(account): changement d'email par magic link (entité + processors + mailer + front) | L      | —         | [#783](https://github.com/vincentchalamon/bike-trip-planner/pull/783) 🚧 en cours |
+| 2     | [#771](https://github.com/vincentchalamon/bike-trip-planner/issues/771) | fix(pwa): roadbook — bordure jour actif, largeur, alertes=événements, ravito off    | M      | #769      | [#784](https://github.com/vincentchalamon/bike-trip-planner/pull/784) 🚧 en cours |
+| 2     | [#774](https://github.com/vincentchalamon/bike-trip-planner/issues/774) | fix(trip): modif distance d'étape ne persiste pas (STAGES_COMPUTED legacy)         | M      | #770      | [#785](https://github.com/vincentchalamon/bike-trip-planner/pull/785) 🚧 en cours |
+| 2     | [#776](https://github.com/vincentchalamon/bike-trip-planner/issues/776) | fix(share): révocation/recréation lien + masquer GPX/FIT sur 404                   | M      | #773      | [#786](https://github.com/vincentchalamon/bike-trip-planner/pull/786) ✅ mergé |
+| 3     | [#775](https://github.com/vincentchalamon/bike-trip-planner/issues/775) | perf(trip): chargement ~7s + vue partagée lente + libellé singulier                | L      | #774      | [#787](https://github.com/vincentchalamon/bike-trip-planner/pull/787) ✅ mergé (stack #785) |
+
+> **Dépendances (conflits de fichiers)** : #771 dép #769 (`RoadbookMasterDetail`), #774 dép #770 (`use-mercure.ts`), #775 dép #774 (`use-mercure.ts`), #776 dép #773 (`share-modal.tsx`). #777 indépendant (backend auth/account).
+
+### Recette Sprint 42
+
+- **Checklist manuelle :**
+  - [ ] Footer : pas de "Connexion" si connecté, pas de "Projet open-source.", "GitHub" simple ; FAQ/legal même thème.
+  - [ ] Mon compte sans Préférences ; Mes voyages sans boutons doublons ; FAQ sans Assistant IA.
+  - [ ] Étape : pas de loader hébergements au 1er chargement ; alertes/hébergements ne disparaissent plus ; sélection hébergement OK.
+  - [ ] Roadbook : pas de bordure jour actif, bloc pleine largeur, alertes = événements, timeline ravito masquée.
+  - [ ] Distance 80→60 km persiste (et au reload).
+  - [ ] PNG : carte centrée + marge, profil à l'échelle ; texte sans `*`, bouton copier (icône), tooltip budget.
+  - [ ] Partage : révocation/recréation OK, pas de GPX/FIT sur 404 ; reload trip < 7s ; vue partagée < 15s.
+
+---
+
 ## Hors Sprints
 
 | ID  | Titre                            | Note                     |
