@@ -97,6 +97,30 @@ final class EmailChangeTest extends ApiTestCase
     }
 
     #[Test]
+    public function requestBeyondUserRateLimitReturns429(): void
+    {
+        $fixtures = $this->createUser('throttled@example.com');
+        $client = self::createClient();
+        $headers = ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']];
+
+        // The per-user limiter allows 3 requests / 15 min; the 4th must be throttled.
+        for ($i = 0; $i < 3; ++$i) {
+            $client->request('POST', '/users/me/email-change', [
+                'headers' => $headers,
+                'json' => ['newEmail' => \sprintf('throttled+%d@example.com', $i)],
+            ]);
+            $this->assertResponseStatusCodeSame(202);
+        }
+
+        $client->request('POST', '/users/me/email-change', [
+            'headers' => $headers,
+            'json' => ['newEmail' => 'throttled+final@example.com'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(429);
+    }
+
+    #[Test]
     public function requestRequiresAuthentication(): void
     {
         self::createClient()->request('POST', '/users/me/email-change', [

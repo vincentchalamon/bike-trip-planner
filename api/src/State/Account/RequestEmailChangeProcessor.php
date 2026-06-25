@@ -9,6 +9,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Account\EmailChange;
 use App\Entity\User;
 use App\Repository\EmailChangeTokenRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -41,6 +42,7 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
         private Security $security,
         private EntityManagerInterface $entityManager,
         private EmailChangeTokenRepository $emailChangeTokenRepository,
+        private UserRepository $userRepository,
         private MailerInterface $mailer,
         private Environment $twig,
         private TranslatorInterface $translator,
@@ -81,7 +83,7 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
             throw new UnprocessableEntityHttpException($this->translator->trans('email_change.error.same_email', [], 'account'));
         }
 
-        $existing = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $newEmail]);
+        $existing = $this->userRepository->findOneBy(['email' => $newEmail]);
         if ($existing instanceof User) {
             throw new UnprocessableEntityHttpException($this->translator->trans('email_change.error.email_taken', [], 'account'));
         }
