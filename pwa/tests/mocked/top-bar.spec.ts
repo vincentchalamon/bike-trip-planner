@@ -1,8 +1,6 @@
 import { test as base } from "@playwright/test";
 import { test, expect } from "../fixtures/base.fixture";
-
-const FAKE_JWT =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJ1c2VybmFtZSI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjk5OTk5OTk5OTl9.ZmFrZS1zaWduYXR1cmU";
+import { FAKE_JWT_TOKEN } from "../fixtures/api-mocks";
 
 /**
  * E2E coverage for the desktop top bar (#384).
@@ -175,7 +173,7 @@ base.describe("Top bar — auth-conditional state (#769)", () => {
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ token: FAKE_JWT }),
+        body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
       });
     });
 

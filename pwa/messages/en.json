@@ -422,7 +422,6 @@
   },
   "tripList": {
     "title": "My Trips",
-    "newTrip": "New trip",
     "backToList": "Back to trips",
     "noTrips": "No trips yet. Create your first trip!",
     "loading": "Loading trips...",

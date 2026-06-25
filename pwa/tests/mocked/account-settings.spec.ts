@@ -77,8 +77,8 @@ test.describe("Account settings", () => {
       "test@example.com",
     );
     await expect(page.getByTestId("section-footer")).toBeVisible();
-    // The help modal is only mounted by the trip planner, so the help button
-    // is suppressed here (showHelp={false}).
+    // SiteChrome mounts the help modal app-wide, but the top-bar help button
+    // is route-gated (only "/" and "/trips/*"), so it is suppressed here.
     await expect(page.getByTestId("help-button")).toHaveCount(0);
   });
 

@@ -422,7 +422,6 @@
   },
   "tripList": {
     "title": "Mes voyages",
-    "newTrip": "Nouveau voyage",
     "backToList": "Retour aux voyages",
     "noTrips": "Aucun voyage pour l'instant. Crée ton premier voyage !",
     "loading": "Chargement des voyages...",
