@@ -179,7 +179,7 @@ function SharedTripLoader({ code }: { code: string }) {
   if (loadError) {
     return (
       <ShareProvider value={null}>
-        <SharedTopBar />
+        <SharedTopBar isError />
         <div data-testid="share-error">
           <TripNotFound variant="share" />
         </div>

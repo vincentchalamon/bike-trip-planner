@@ -40,8 +40,14 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
 
         $trip = $this->resolveTrip($uriVariables);
 
+        // Always create a brand-new active share. The POST shares its URI template
+        // with GET/DELETE, so API Platform may hand us a previously soft-deleted
+        // row; reusing it would yield an invalid ("revoked") link. Starting from a
+        // fresh entity guarantees a clean, active share even after a revoke.
+        $share = new TripShare();
+
         if ($trip instanceof TripRequest) {
-            $data->setTrip($trip);
+            $share->setTrip($trip);
 
             // Only one active share per trip
             if ($this->tripShareRepository->findActiveByTrip((string) $trip->id) instanceof TripShare) {
@@ -49,10 +55,10 @@ final readonly class TripShareCreateProcessor implements ProcessorInterface
             }
         }
 
-        $data->generateToken();
+        $share->generateToken();
 
         try {
-            $result = $this->persistProcessor->process($data, $operation, $uriVariables, $context);
+            $result = $this->persistProcessor->process($share, $operation, $uriVariables, $context);
         } catch (UniqueConstraintViolationException) {
             throw new ConflictHttpException('An active share link already exists for this trip.');
         }
