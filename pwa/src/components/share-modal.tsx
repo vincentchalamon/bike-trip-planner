@@ -11,6 +11,7 @@ import {
   Download,
   Image as ImageIcon,
   FileText,
+  Info,
   Loader2,
   Trash2,
 } from "lucide-react";
@@ -419,26 +420,31 @@ export function ShareModal({
           >
             <FileText className="h-4 w-4" />
             {t("textTitle")}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-muted-foreground cursor-help"
+                    aria-label={tTextExport("budgetNote")}
+                  >
+                    <Info className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  {tTextExport("budgetNote")}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </h3>
 
-          <div className="whitespace-pre-wrap break-words rounded-md bg-muted p-4 text-sm leading-relaxed max-h-[30vh] overflow-y-auto">
-            {fullText.split("\n").map((line, i) => (
-              <p key={i} className="min-h-[1em]">
-                {renderTextLine(line)}
-              </p>
-            ))}
-          </div>
-
-          <p className="text-xs text-muted-foreground/70 leading-relaxed mt-2">
-            {tTextExport("budgetNote")}
-          </p>
-
-          <div className="flex justify-end mt-2">
+          <div className="relative">
             <Button
               onClick={() => void handleCopyText()}
               variant="outline"
-              size="sm"
-              className="gap-2 cursor-pointer"
+              size="icon"
+              className="absolute top-2 right-2 cursor-pointer"
+              aria-label={textCopied ? t("textCopiedBtn") : t("copyText")}
               data-testid="share-copy-text-button"
             >
               {textCopied ? (
@@ -446,8 +452,15 @@ export function ShareModal({
               ) : (
                 <Copy className="h-4 w-4" />
               )}
-              {textCopied ? t("textCopiedBtn") : t("copyText")}
             </Button>
+
+            <div className="whitespace-pre-wrap break-words rounded-md bg-muted p-4 pr-14 text-sm leading-relaxed max-h-[30vh] overflow-y-auto">
+              {fullText.split("\n").map((line, i) => (
+                <p key={i} className="min-h-[1em]">
+                  {renderTextLine(line, i === 0)}
+                </p>
+              ))}
+            </div>
           </div>
         </section>
       </DialogContent>
@@ -456,15 +469,15 @@ export function ShareModal({
 }
 
 /**
- * Render a single line of text, converting *bold* markers to <strong>
- * and URLs to clickable links.
+ * Render a single line of text, rendering the title line as bold and
+ * URLs as clickable links. The exported text contains no bold markers.
  */
-function renderTextLine(line: string): React.ReactNode[] {
-  const parts = line.split(/(\*[^*]+\*|https?:\/\/[^\s,)]+)/);
+function renderTextLine(line: string, isTitle = false): React.ReactNode[] {
+  if (isTitle && line) {
+    return [<strong key="title">{line}</strong>];
+  }
+  const parts = line.split(/(https?:\/\/[^\s,)]+)/);
   return parts.map((part, j) => {
-    if (/^\*[^*]+\*$/.test(part)) {
-      return <strong key={j}>{part.slice(1, -1)}</strong>;
-    }
     if (/^https?:\/\//.test(part)) {
       return (
         <a
