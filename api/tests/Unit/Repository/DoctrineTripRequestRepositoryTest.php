@@ -784,6 +784,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         // A moved endpoint changes the geometry signature → recompute.
         $moved = $this->stageWithGeometry($tripId);
         $moved->endPoint = new Coordinate(49.0, 3.0, 0.0);
+
         $repository->storeStages($tripId, [$moved]);
     }
 
