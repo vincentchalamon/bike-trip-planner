@@ -35,7 +35,7 @@ export function ErrorBoundaryContent({ error, reset }: ErrorBoundaryProps) {
 
   return (
     <main
-      className="flex min-h-[60vh] flex-1 items-center justify-center px-4 py-12"
+      className="flex min-h-[60vh] flex-1 items-center justify-center px-4 py-12 bg-[var(--color-surface)] text-[var(--color-ink)]"
       data-testid="error-page"
     >
       <div className="text-center space-y-6 max-w-md">
