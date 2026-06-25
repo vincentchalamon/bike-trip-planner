@@ -439,29 +439,20 @@ export function ShareModal({
           </h3>
 
           <div className="relative">
-            <TooltipProvider>
-              <Tooltip open={textCopied}>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => void handleCopyText()}
-                    variant="outline"
-                    size="icon"
-                    className="absolute top-2 right-2 cursor-pointer"
-                    aria-label={t("copyText")}
-                    data-testid="share-copy-text-button"
-                  >
-                    {textCopied ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  {t("textCopiedBtn")}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              onClick={() => void handleCopyText()}
+              variant="outline"
+              size="icon"
+              className="absolute top-2 right-2 cursor-pointer"
+              aria-label={textCopied ? t("textCopiedBtn") : t("copyText")}
+              data-testid="share-copy-text-button"
+            >
+              {textCopied ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
 
             <div className="whitespace-pre-wrap break-words rounded-md bg-muted p-4 pr-14 text-sm leading-relaxed max-h-[30vh] overflow-y-auto">
               {fullText.split("\n").map((line, i) => (
