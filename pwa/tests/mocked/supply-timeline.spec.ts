@@ -279,7 +279,8 @@ test.describe.skip("Supply timeline", () => {
   });
 });
 
-test.describe("supply timeline — marker clustering", () => {
+// Supply timeline disabled pending an UX redesign (#771, follow-up #778).
+test.describe.skip("supply timeline — marker clustering", () => {
   test("two nearby markers are merged into a single cluster", async ({
     submitUrl,
     injectSequence,
