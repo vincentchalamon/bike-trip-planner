@@ -79,4 +79,44 @@ test.describe("Email change verification (#777)", () => {
     // The success card must never appear on failure.
     await expect(page.getByTestId("email-change-success")).toHaveCount(0);
   });
+
+  test("silentRefresh failure clears auth and redirects to login (#777)", async ({
+    page,
+  }) => {
+    // First /auth/refresh = AuthGuard mount (succeeds); the second = the
+    // silentRefresh() after the email change (fails) → clearAuth + redirect.
+    let refreshCount = 0;
+    await page.route("**/auth/refresh", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      refreshCount++;
+      return route.fulfill(
+        refreshCount === 1
+          ? {
+              status: 200,
+              contentType: "application/json",
+              body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
+            }
+          : {
+              status: 401,
+              contentType: "application/json",
+              body: JSON.stringify({}),
+            },
+      );
+    });
+    await page.route("**/.well-known/mercure*", (route) => route.abort());
+
+    await page.route("**/users/me/email-change/verify", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ email: "new@example.com" }),
+      });
+    });
+
+    await page.goto(VERIFY_URL);
+    await page.waitForLoadState("networkidle");
+
+    await expect(page).toHaveURL(/\/login$/);
+  });
 });
