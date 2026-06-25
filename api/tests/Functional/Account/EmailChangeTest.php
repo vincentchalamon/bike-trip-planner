@@ -101,6 +101,10 @@ final class EmailChangeTest extends ApiTestCase
     {
         $fixtures = $this->createUser('throttled@example.com');
         $client = self::createClient();
+        // Keep the same kernel across requests so the in-memory rate-limiter
+        // cache pool accumulates (the browser reboots the kernel by default,
+        // which would reset the counter and never trip the limit).
+        $client->disableReboot();
         $headers = ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']];
 
         // The per-user limiter allows 3 requests / 15 min; the 4th must be throttled.
