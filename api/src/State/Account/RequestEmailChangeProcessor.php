@@ -34,8 +34,6 @@ use Twig\Environment;
  */
 final readonly class RequestEmailChangeProcessor implements ProcessorInterface
 {
-    private const int TTL_MINUTES = 30;
-
     public function __construct(
         private Security $security,
         private EntityManagerInterface $entityManager,
@@ -77,7 +75,7 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
         $html = $this->twig->render('email/email_change.html.twig', [
             'verifyUrl' => $verifyUrl,
             'newEmail' => $newEmail,
-            'expiresInMinutes' => self::TTL_MINUTES,
+            'expiresInMinutes' => EmailChangeTokenRepository::TTL_MINUTES,
             'locale' => $locale,
         ]);
 

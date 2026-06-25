@@ -16,14 +16,18 @@ use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
- * Verifies an email-change token (#777): atomically consumes it (single-use,
- * not expired) and commits the new address on the owning user.
+ * Verifies an email-change token (#777): checks ownership first, then atomically
+ * consumes it (single-use, not expired) and commits the new address.
  *
- * The token must belong to the authenticated user. Email uniqueness is enforced
+ * Order matters for security: the token's ownership is verified BEFORE it is
+ * consumed, so a valid token belonging to another account is rejected (403)
+ * without being burned. An invalid/expired/already-used token is a 422 (the
+ * caller is authenticated, so 401 would be wrong). Email uniqueness is enforced
  * at the DB level — if the target address was taken between request and verify,
  * the unique constraint violation is mapped to a 422.
  *
@@ -48,17 +52,32 @@ final readonly class VerifyEmailChangeProcessor implements ProcessorInterface
         $user = $this->security->getUser();
         \assert($user instanceof User);
 
-        $token = $this->emailChangeTokenRepository->consumeByToken($data->token);
+        // Look up the token WITHOUT consuming it so ownership can be checked
+        // before the single-use consumption is committed.
+        $token = $this->emailChangeTokenRepository->findValidByToken($data->token);
 
-        // Invalid, expired, already consumed, or belonging to another account:
-        // neutral failure (the atomic UPDATE already marked it consumed if valid).
-        if (!$token instanceof EmailChangeToken || $token->getUser()->getId() != $user->getId()) {
+        // Missing, expired or already consumed: the user is authenticated, so
+        // this is a 422 (unprocessable token), not a 401.
+        if (!$token instanceof EmailChangeToken) {
             $this->logger->debug('Email change verify invalid token', ['user' => $user->getId()->toRfc4122()]);
 
-            return new JsonResponse(
-                ['error' => $this->translator->trans('email_change.error.invalid_link', [], 'account')],
-                Response::HTTP_UNAUTHORIZED,
-            );
+            throw new UnprocessableEntityHttpException($this->translator->trans('email_change.error.invalid_link', [], 'account'));
+        }
+
+        // A valid token belonging to someone else must be rejected WITHOUT being
+        // consumed (403): never burn another account's pending change.
+        if ($token->getUser()->getId() != $user->getId()) {
+            $this->logger->warning('Email change verify ownership mismatch', ['user' => $user->getId()->toRfc4122()]);
+
+            throw new AccessDeniedHttpException($this->translator->trans('email_change.error.invalid_link', [], 'account'));
+        }
+
+        // Atomically consume (scoped to this user). Losing the race here means a
+        // concurrent request already consumed it — treat as an invalid token.
+        if (!$this->emailChangeTokenRepository->consumeByTokenForUser($data->token, $user)) {
+            $this->logger->debug('Email change verify token consumed concurrently', ['user' => $user->getId()->toRfc4122()]);
+
+            throw new UnprocessableEntityHttpException($this->translator->trans('email_change.error.invalid_link', [], 'account'));
         }
 
         $newEmail = $token->getNewEmail();

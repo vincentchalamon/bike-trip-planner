@@ -17,6 +17,11 @@ import { verifyEmailChange } from "@/lib/api/client";
  * backend commits the new email. It then runs a silent refresh so the JWT (and
  * the in-memory session) carry the updated address, and optimistically updates
  * the store immediately.
+ *
+ * Session coherence: the JWT minted before the change still carries the OLD
+ * email, so the refresh is mandatory. If it fails, the in-memory session would
+ * keep a stale identity — so we clear it and bounce to /login rather than leave
+ * the user authenticated under a no-longer-valid email.
  */
 export default function EmailChangeVerifyPage() {
   const t = useTranslations("accountSettings.account.verify");
@@ -24,6 +29,7 @@ export default function EmailChangeVerifyPage() {
   const router = useRouter();
   const setUserEmail = useAuthStore((s) => s.setUserEmail);
   const silentRefresh = useAuthStore((s) => s.silentRefresh);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
   const [status, setStatus] = useState<"verifying" | "success" | "error">(
     "verifying",
   );
@@ -37,22 +43,30 @@ export default function EmailChangeVerifyPage() {
     const run = async () => {
       try {
         const newEmail = await verifyEmailChange(params.token);
-        if (newEmail) {
-          setUserEmail(newEmail);
-          // Re-issue the JWT so the session carries the new identity.
-          await silentRefresh();
-          setStatus("success");
-          toast.success(t("success"));
+        if (!newEmail) {
+          setStatus("error");
           return;
         }
-        setStatus("error");
+        setUserEmail(newEmail);
+        // Re-issue the JWT so the session carries the new identity. The token
+        // minted before the change still holds the old email, so a failed
+        // refresh leaves a stale-identity session: clear it and force re-login.
+        const refreshed = await silentRefresh();
+        if (!refreshed) {
+          clearAuth();
+          toast.success(t("successReLogin"));
+          router.replace("/login");
+          return;
+        }
+        setStatus("success");
+        toast.success(t("success"));
       } catch {
         setStatus("error");
       }
     };
 
     void run();
-  }, [params.token, setUserEmail, silentRefresh, t]);
+  }, [params.token, setUserEmail, silentRefresh, clearAuth, router, t]);
 
   if (status === "verifying") {
     return (

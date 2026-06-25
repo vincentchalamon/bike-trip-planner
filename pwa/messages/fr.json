@@ -959,7 +959,8 @@
         "verifying": "Confirmation en cours...",
         "success": "Ton adresse e-mail a été mise à jour.",
         "failed": "Lien invalide ou expiré. Relance une demande depuis ton compte.",
-        "backToAccount": "Retour à mon compte"
+        "backToAccount": "Retour à mon compte",
+        "successReLogin": "Ton adresse e-mail a été mise à jour. Reconnecte-toi pour continuer."
       }
     },
     "data": {

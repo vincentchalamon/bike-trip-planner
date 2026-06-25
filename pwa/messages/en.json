@@ -959,7 +959,8 @@
         "verifying": "Confirming...",
         "success": "Your email address has been updated.",
         "failed": "Invalid or expired link. Start a new request from your account.",
-        "backToAccount": "Back to my account"
+        "backToAccount": "Back to my account",
+        "successReLogin": "Your email address has been updated. Please log in again to continue."
       }
     },
     "data": {

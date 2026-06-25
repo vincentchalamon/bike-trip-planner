@@ -189,8 +189,10 @@ final class EmailChangeTest extends ApiTestCase
     }
 
     #[Test]
-    public function verifyExpiredTokenReturns401(): void
+    public function verifyExpiredTokenReturns422(): void
     {
+        // An authenticated user submitting an expired token is a 422
+        // (unprocessable), not a 401 — the caller IS authenticated.
         $fixtures = $this->createUser('expired-old@example.com');
         $this->createTokenForUser(
             $fixtures['user'],
@@ -204,44 +206,77 @@ final class EmailChangeTest extends ApiTestCase
             'json' => ['token' => 'expired-change-token'],
         ]);
 
-        $this->assertResponseStatusCodeSame(401);
+        $this->assertResponseStatusCodeSame(422);
     }
 
     #[Test]
-    public function verifyAlreadyConsumedTokenReturns401(): void
+    public function verifyUnknownTokenReturns422(): void
     {
-        $fixtures = $this->createUser('reuse-old@example.com');
-        $this->createTokenForUser($fixtures['user'], 'reuse-new@example.com', 'reuse-change-token');
+        $fixtures = $this->createUser('unknown-token@example.com');
 
-        $client = self::createClient();
-
-        $client->request('POST', '/users/me/email-change/verify', [
+        self::createClient()->request('POST', '/users/me/email-change/verify', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
-            'json' => ['token' => 'reuse-change-token'],
+            'json' => ['token' => 'does-not-exist'],
         ]);
-        $this->assertResponseStatusCodeSame(200);
 
-        // A second verify with the same single-use token must fail.
-        $client->request('POST', '/users/me/email-change/verify', [
-            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
-            'json' => ['token' => 'reuse-change-token'],
-        ]);
-        $this->assertResponseStatusCodeSame(401);
+        $this->assertResponseStatusCodeSame(422);
     }
 
     #[Test]
-    public function verifyTokenBelongingToAnotherUserReturns401(): void
+    public function verifyAlreadyConsumedTokenReturns422(): void
+    {
+        // A single-use token that was already consumed is rejected (422). The
+        // token is pre-consumed so the user's email (and thus their JWT) stays
+        // valid — verifying single-use independently of the post-change JWT
+        // rotation, which is exercised separately.
+        $fixtures = $this->createUser('reuse-old@example.com');
+        $token = $this->createTokenForUser($fixtures['user'], 'reuse-new@example.com', 'reuse-change-token');
+
+        $em = $this->getEntityManager();
+        $token->consume();
+        $em->flush();
+
+        self::createClient()->request('POST', '/users/me/email-change/verify', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$fixtures['jwt']],
+            'json' => ['token' => 'reuse-change-token'],
+        ]);
+        $this->assertResponseStatusCodeSame(422);
+    }
+
+    #[Test]
+    public function verifyTokenBelongingToAnotherUserReturns403AndDoesNotConsumeIt(): void
     {
         $owner = $this->createUser('owner@example.com');
         $attacker = $this->createUser('attacker@example.com');
-        $this->createTokenForUser($owner['user'], 'stolen@example.com', 'someone-elses-token');
+        $this->createTokenForUser($owner['user'], 'owner-new@example.com', 'someone-elses-token');
 
-        self::createClient()->request('POST', '/users/me/email-change/verify', [
+        $client = self::createClient();
+
+        // The attacker cannot use the owner's token: rejected with 403.
+        $client->request('POST', '/users/me/email-change/verify', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$attacker['jwt']],
             'json' => ['token' => 'someone-elses-token'],
         ]);
+        $this->assertResponseStatusCodeSame(403);
 
-        $this->assertResponseStatusCodeSame(401);
+        // Crucially, the foreign token must NOT have been consumed: its rightful
+        // owner can still complete the change with it.
+        $token = $this->getEntityManager()->getRepository(EmailChangeToken::class)->findOneBy(['token' => 'someone-elses-token']);
+        $this->assertInstanceOf(EmailChangeToken::class, $token);
+        $this->assertNull($token->getConsumedAt(), 'A foreign token must never be consumed by a non-owner');
+
+        $client->request('POST', '/users/me/email-change/verify', [
+            'headers' => ['Content-Type' => 'application/ld+json', 'Authorization' => 'Bearer '.$owner['jwt']],
+            'json' => ['token' => 'someone-elses-token'],
+        ]);
+        $this->assertResponseStatusCodeSame(200);
+
+        $em = $this->getEntityManager();
+        $em->clear();
+
+        $reloaded = $em->getRepository(User::class)->find($owner['user']->getId());
+        $this->assertInstanceOf(User::class, $reloaded);
+        $this->assertSame('owner-new@example.com', $reloaded->getEmail());
     }
 
     #[Test]
