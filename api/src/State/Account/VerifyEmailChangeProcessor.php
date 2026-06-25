@@ -65,8 +65,10 @@ final readonly class VerifyEmailChangeProcessor implements ProcessorInterface
         }
 
         // A valid token belonging to someone else must be rejected WITHOUT being
-        // consumed (403): never burn another account's pending change.
-        if ($token->getUser()->getId() != $user->getId()) {
+        // consumed (403): never burn another account's pending change. Use the
+        // Uuid identity comparison, not a loose object `!=` (which would compare
+        // object properties and is fragile).
+        if (!$token->getUser()->getId()->equals($user->getId())) {
             $this->logger->warning('Email change verify ownership mismatch', ['user' => $user->getId()->toRfc4122()]);
 
             throw new AccessDeniedHttpException($this->translator->trans('email_change.error.invalid_link', [], 'account'));
