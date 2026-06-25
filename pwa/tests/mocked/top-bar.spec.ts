@@ -1,4 +1,8 @@
+import { test as base } from "@playwright/test";
 import { test, expect } from "../fixtures/base.fixture";
+
+const FAKE_JWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJ1c2VybmFtZSI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjk5OTk5OTk5OTl9.ZmFrZS1zaWduYXR1cmU";
 
 /**
  * E2E coverage for the desktop top bar (#384).
@@ -135,5 +139,53 @@ test.describe("Desktop top bar", () => {
       "true",
     );
     await expect(mockedPage.getByTestId("help-tab-faq-panel")).toBeVisible();
+  });
+});
+
+/**
+ * Auth-conditional top bar (#769).
+ *
+ * Since recette #649, the shared {@link TopBar} renders on public pages too
+ * (FAQ, legal, privacy) — `/faq` is the reachable public route that mounts it.
+ * The bar adapts to the auth state: signed-in users get the nav tabs + profile
+ * (and no "Connexion"), while signed-out visitors get a "Connexion" link and
+ * neither the nav tabs nor the profile button.
+ */
+base.describe("Top bar — auth-conditional state (#769)", () => {
+  base("signed-out: shows Connexion, hides nav + profile", async ({ page }) => {
+    // 401 → unauthenticated. /faq is public, so the page renders the top bar.
+    await page.route("**/auth/refresh", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      return route.fulfill({ status: 401, body: "" });
+    });
+
+    await page.goto("/faq");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByTestId("top-bar")).toBeVisible();
+    await expect(page.getByTestId("top-bar-login")).toBeVisible();
+    await expect(page.getByTestId("nav-new-trip")).toHaveCount(0);
+    await expect(page.getByTestId("nav-my-trips")).toHaveCount(0);
+    await expect(page.getByTestId("profile-button")).toHaveCount(0);
+  });
+
+  base("signed-in: shows nav + profile, hides Connexion", async ({ page }) => {
+    await page.route("**/auth/refresh", (route, request) => {
+      if (request.method() !== "POST") return route.fallback();
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ token: FAKE_JWT }),
+      });
+    });
+
+    await page.goto("/faq");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByTestId("top-bar")).toBeVisible();
+    await expect(page.getByTestId("nav-new-trip")).toBeVisible();
+    await expect(page.getByTestId("nav-my-trips")).toBeVisible();
+    await expect(page.getByTestId("profile-button")).toBeVisible();
+    await expect(page.getByTestId("top-bar-login")).toHaveCount(0);
   });
 });
