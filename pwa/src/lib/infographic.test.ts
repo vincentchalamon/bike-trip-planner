@@ -71,6 +71,7 @@ function makeFakeCanvas(): HTMLCanvasElement {
     fillRect: vi.fn(),
     fillText: vi.fn(),
     strokeRect: vi.fn(),
+    rect: vi.fn(),
     beginPath: vi.fn(),
     closePath: vi.fn(),
     moveTo: vi.fn(),

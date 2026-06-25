@@ -48,19 +48,24 @@ export function stageColor(index: number): string {
 export const CARD_WIDTH = 800;
 export const CARD_HEIGHT = 480;
 const PADDING = 28;
-// 70 / 30 split of the content row between the map and the stats column.
+// 70 / 30 split of the content row: an enlarged map fills the left column, the
+// stats and the elevation profile stack in the right column.
 const CONTENT_WIDTH = CARD_WIDTH - PADDING * 2; // 744
 const COLUMN_GAP = 16;
 const MAP_WIDTH = Math.round((CONTENT_WIDTH - COLUMN_GAP) * 0.7); // ~510
-const MAP_HEIGHT = 210;
-const ELEV_HEIGHT = 88;
 // Layout positions (fixed, always reserve space for the date line)
 const SEP_Y = PADDING + 32 + 24 + 8; // 92
 const CONTENT_TOP = SEP_Y + 16; // 108
-// Reserve a line under the map for the OSM attribution.
+// Reserve a line under the map for the OSM attribution and a footer band for
+// the branding line, then let the map fill the rest of the left column.
 const MAP_ATTRIBUTION_H = 16;
-const SEP2_Y = CONTENT_TOP + MAP_HEIGHT + MAP_ATTRIBUTION_H + 12;
-const ELEV_Y = SEP2_Y + 12;
+const FOOTER_BAND_H = 28;
+const CONTENT_BOTTOM = CARD_HEIGHT - FOOTER_BAND_H; // 452
+const MAP_HEIGHT = CONTENT_BOTTOM - CONTENT_TOP - MAP_ATTRIBUTION_H; // 328
+// Right column: fixed-height stat rows, then the elevation profile fills the
+// remaining height down to the map's baseline.
+const STAT_ROW_H = 40;
+const ELEV_GAP = 16;
 
 function computeOverallDifficulty(
   stages: StageData[],
@@ -109,8 +114,7 @@ export async function renderInfographic(
   gradient.addColorStop(0, "#1e293b");
   gradient.addColorStop(1, "#0f172a");
   ctx.fillStyle = gradient;
-  roundRect(ctx, 0, 0, CARD_WIDTH, CARD_HEIGHT, 16);
-  ctx.fill();
+  ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
 
   // Title
   ctx.fillStyle = "#ffffff";
@@ -158,7 +162,7 @@ export async function renderInfographic(
     CONTENT_TOP + MAP_HEIGHT + 4,
   );
 
-  // Stats column (right side of content row, ~30% width) — single column
+  // Right column (~30% width): stats stacked above the elevation profile.
   const statsX = PADDING + MAP_WIDTH + COLUMN_GAP;
   const colWidth = CARD_WIDTH - statsX - PADDING;
 
@@ -214,10 +218,9 @@ export async function renderInfographic(
     },
   ];
 
-  const statRowH = MAP_HEIGHT / stats.length;
   stats.forEach((stat, i) => {
     const sx = statsX;
-    const sy = CONTENT_TOP + i * statRowH;
+    const sy = CONTENT_TOP + i * STAT_ROW_H;
 
     ctx.font = "18px system-ui, -apple-system, sans-serif";
     ctx.fillStyle = "#ffffff";
@@ -230,24 +233,31 @@ export async function renderInfographic(
 
     ctx.font = "bold 14px system-ui, -apple-system, sans-serif";
     ctx.fillStyle = stat.color;
-    ctx.fillText(truncateText(ctx, stat.value, colWidth - 28), sx + 28, sy + 15);
+    ctx.fillText(
+      truncateText(ctx, stat.value, colWidth - 28),
+      sx + 28,
+      sy + 15,
+    );
   });
 
-  // Second separator
+  // Divider between the stats and the elevation profile (right column only).
+  const statsBottom = CONTENT_TOP + stats.length * STAT_ROW_H;
   ctx.strokeStyle = "#334155";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(PADDING, SEP2_Y);
-  ctx.lineTo(CARD_WIDTH - PADDING, SEP2_Y);
+  ctx.moveTo(statsX, statsBottom + ELEV_GAP / 2);
+  ctx.lineTo(CARD_WIDTH - PADDING, statsBottom + ELEV_GAP / 2);
   ctx.stroke();
 
-  // Elevation profile
+  // Elevation profile — under the right column, its baseline aligned with the
+  // bottom of the enlarged map.
+  const elevY = statsBottom + ELEV_GAP;
   drawElevationProfile(
     ctx,
-    PADDING,
-    ELEV_Y,
-    CARD_WIDTH - PADDING * 2,
-    ELEV_HEIGHT,
+    statsX,
+    elevY,
+    colWidth,
+    CONTENT_TOP + MAP_HEIGHT - elevY,
     data.stages,
   );
 
@@ -327,8 +337,7 @@ async function drawRouteMap(
 ): Promise<void> {
   // Dark fallback background
   ctx.fillStyle = "#0f2340";
-  roundRect(ctx, x, y, w, h, 8);
-  ctx.fill();
+  ctx.fillRect(x, y, w, h);
 
   const activeStages = stages.filter(
     (s) => !s.isRestDay && s.geometry.length >= 2,
@@ -404,9 +413,10 @@ async function drawRouteMap(
     }
   }
 
-  // Clip to rounded map rect
+  // Clip to the map rect so tiles never bleed into the stats column.
   ctx.save();
-  roundRect(ctx, x, y, w, h, 8);
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
   ctx.clip();
 
   const tiles = await Promise.all(tilePromises);
@@ -567,27 +577,6 @@ export function downloadInfographicPng(
 // ---------------------------------------------------------------------------
 // Canvas utilities
 // ---------------------------------------------------------------------------
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
 
 function truncateText(
   ctx: CanvasRenderingContext2D,
