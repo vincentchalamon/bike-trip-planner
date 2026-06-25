@@ -10,7 +10,6 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Llm\LlmAnalysisTrackerInterface;
-use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\RecalculateStages;
 use App\Message\ScanAccommodations;
@@ -46,14 +45,17 @@ final class RecalculateStagesHandlerTest extends TestCase
     }
 
     #[Test]
-    public function stagesComputedPayloadIncludesGeometry(): void
+    public function publishesPerStageUpdatedWithGeometryAndStoredDistance(): void
     {
         $coordinate = new Coordinate(48.8566, 2.3522, 35.0);
 
+        // A stage whose distance was set by the user (e.g. 80km -> 60km via
+        // StageUpdateProcessor::applyDistanceChange). The handler must surface
+        // this stored value verbatim through the per-stage `stage_updated` event.
         $stage = new Stage(
             tripId: 'trip-1',
             dayNumber: 1,
-            distance: 80.0,
+            distance: 60.0,
             elevation: 500.0,
             startPoint: $coordinate,
             endPoint: new Coordinate(49.0, 2.5, 50.0),
@@ -68,21 +70,17 @@ final class RecalculateStagesHandlerTest extends TestCase
 
         $publisher = $this->createMock(TripUpdatePublisherInterface::class);
         $publisher->expects($this->once())
-            ->method('publish')
+            ->method('publishStageUpdated')
             ->with(
                 'trip-1',
-                MercureEventType::STAGES_COMPUTED,
-                $this->callback(static function (array $data): bool {
-                    $geometry = $data['stages'][0]['geometry'] ?? null;
-
-                    return \is_array($geometry)
-                        && 1 === \count($geometry)
-                        && \is_array($geometry[0])
-                        && 48.8566 === $geometry[0]['lat']
-                        && 2.3522 === $geometry[0]['lon']
-                        && 35.0 === $geometry[0]['ele'];
-                }),
+                $this->callback(static fn (Stage $s): bool => 60.0 === $s->distance
+                    && 1 === \count($s->geometry)
+                    && 48.8566 === $s->geometry[0]->lat),
             );
+        // The legacy wholesale STAGES_COMPUTED must NOT be re-published on the
+        // inline recompute path: it raced the per-stage update and reverted the
+        // user-requested distance (issue #774).
+        $publisher->expects($this->never())->method('publish');
 
         $handler = $this->createHandler($tripStateManager, $publisher, $messageBus);
 

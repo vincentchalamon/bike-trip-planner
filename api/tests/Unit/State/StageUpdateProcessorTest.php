@@ -330,4 +330,72 @@ final class StageUpdateProcessorTest extends TestCase
             self::assertSame(423, $httpException->getStatusCode());
         }
     }
+
+    #[Test]
+    public function editedStageStoresRequestedSplitDistance(): void
+    {
+        // Reduce an 80km stage: splitting the route yields a 60km segment that
+        // must be persisted verbatim (issue #774). The stored value is what the
+        // RecalculateStages recompute later replays to the frontend.
+        $p = $this->decimatedPoints;
+
+        $stages = [
+            new Stage(tripId: 't', dayNumber: 1, distance: 80.0, elevation: 500.0, startPoint: $p[0], endPoint: $p[3]),
+            new Stage(tripId: 't', dayNumber: 2, distance: 40.0, elevation: 200.0, startPoint: $p[3], endPoint: $p[4]),
+        ];
+
+        $splitPoint = new Coordinate(48.25, 2.25, 25.0);
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('splitAtDistance')->willReturn([
+            [$p[0], $splitPoint],
+            [$splitPoint, $p[3], $p[4]],
+            20.0,
+        ]);
+        $distanceCalculator->method('findClosestIndex')->willReturn(0);
+        $distanceCalculator->method('calculateTotalDistance')->willReturn(60.0);
+
+        $elevationCalculator = $this->createStub(ElevationCalculatorInterface::class);
+        $elevationCalculator->method('calculateTotalAscent')->willReturn(300.0);
+        $elevationCalculator->method('calculateTotalDescent')->willReturn(100.0);
+
+        $routeSimplifier = $this->createStub(RouteSimplifierInterface::class);
+        $routeSimplifier->method('simplify')->willReturnArgument(0);
+
+        $storedStages = null;
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn($stages);
+        $tripStateManager->method('getDecimatedPoints')->willReturn($this->decimatedPointsRaw);
+        $tripStateManager->method('getRequest')->willReturn($this->makeUnlockedRequest());
+        $tripStateManager->method('storeStages')->willReturnCallback(
+            static function (string $tripId, array $stages) use (&$storedStages): void {
+                $storedStages = $stages;
+            },
+        );
+
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturn(new Envelope(new \stdClass()));
+
+        $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $generationTracker->method('increment')->willReturn(2);
+
+        $processor = new StageUpdateProcessor(
+            $tripStateManager,
+            $messageBus,
+            $distanceCalculator,
+            $elevationCalculator,
+            $routeSimplifier,
+            new StageResponseMapper($this->createStub(ComputationTrackerInterface::class)),
+            $generationTracker,
+            new TripLocker(),
+        );
+
+        $request = new StageRequest();
+        $request->distance = 60.0;
+
+        $response = $processor->process($request, new Patch(), ['tripId' => 't', 'index' => 0]);
+
+        self::assertNotNull($storedStages);
+        self::assertSame(60.0, $storedStages[0]->distance, 'Edited stage must store the requested split distance');
+        self::assertSame(60.0, $response->distance, 'PATCH response must echo the requested distance');
+    }
 }
