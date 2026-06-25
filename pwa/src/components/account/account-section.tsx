@@ -86,7 +86,13 @@ export function AccountSection() {
         </Button>
       </CardContent>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) setNewEmail("");
+        }}
+      >
         <DialogContent data-testid="change-email-dialog">
           <DialogHeader>
             <DialogTitle>{t("changeEmailDialogTitle")}</DialogTitle>
@@ -95,10 +101,14 @@ export function AccountSection() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-muted-foreground">
+            <label
+              htmlFor="new-email"
+              className="text-sm font-medium text-muted-foreground"
+            >
               {t("newEmailLabel")}
-            </span>
+            </label>
             <Input
+              id="new-email"
               type="email"
               autoComplete="email"
               value={newEmail}
@@ -114,7 +124,10 @@ export function AccountSection() {
             <Button
               variant="outline"
               className="cursor-pointer"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                setNewEmail("");
+              }}
               disabled={isSending}
             >
               {t("cancel")}
