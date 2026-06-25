@@ -435,6 +435,7 @@
     "backToList": "Retour aux voyages",
     "noTrips": "Aucun voyage pour l'instant. Crée ton premier voyage !",
     "loading": "Chargement des voyages...",
+    "loadingOne": "Chargement du voyage...",
     "loadingError": "Impossible de charger les voyages.",
     "stages": "{count, plural, one {# étape} other {# étapes}}",
     "noDates": "Dates non définies",

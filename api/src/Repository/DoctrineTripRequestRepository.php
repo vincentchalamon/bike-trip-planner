@@ -15,6 +15,8 @@ use App\ApiResource\TripRequest;
 use App\Entity\Stage as StageEntity;
 use App\Enum\AlertType;
 use App\Llm\Dto\StageAiAnalysis;
+use App\Osm\CoverageRepositoryInterface;
+use App\Osm\CycleRouteRepositoryInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Cache\CacheItemPoolInterface;
@@ -30,10 +32,15 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
 {
     private const int CACHE_TTL = 1800; // 30 minutes for transient data
 
+    /** Tolerance (m) between the stage line and a cycle route to count as "on network". */
+    private const int CYCLE_NETWORK_TOLERANCE_METERS = 30;
+
     public function __construct(
         ManagerRegistry $registry,
         #[Autowire(service: 'cache.trip_state')]
         private readonly CacheItemPoolInterface $tripStateCache,
+        private readonly CycleRouteRepositoryInterface $cycleRouteRepository,
+        private readonly CoverageRepositoryInterface $coverageRepository,
     ) {
         parent::__construct($registry, TripRequest::class);
     }
@@ -181,7 +188,23 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             return;
         }
 
-        $this->getEntityManager()->wrapInTransaction(function () use ($trip, $stages): void {
+        // Compute the expensive PostGIS metrics once, here at store time, so the
+        // trip-detail read path stays O(1) on reload (issue #775). The fractions
+        // are index-aligned with $stages.
+        $cycleNetwork = $this->cycleRouteRepository->onNetworkFractions(
+            array_map(
+                static fn (StageDto $stage): array => array_map(
+                    static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
+                    $stage->geometry,
+                ),
+                $stages,
+            ),
+            self::CYCLE_NETWORK_TOLERANCE_METERS,
+        );
+
+        $trip->outOfZone = $this->coverageRepository->isRouteOutOfZone($this->stageRoutePoints($stages));
+
+        $this->getEntityManager()->wrapInTransaction(function () use ($trip, $stages, $cycleNetwork): void {
             // Bulk delete: O(1) vs O(N) orphan-removal DELETEs (1 SELECT + N DELETE)
             $this->getEntityManager()
                 ->createQuery('DELETE FROM App\Entity\Stage s WHERE s.trip = :trip')
@@ -191,6 +214,7 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
 
             foreach ($stages as $index => $stageDto) {
                 $stageEntity = $this->stageDtoToEntity($stageDto, $trip, $index);
+                $stageEntity->setOnCycleNetwork($cycleNetwork[$index] ?? 0.0);
                 $trip->addStage($stageEntity);
             }
 
@@ -259,6 +283,35 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
     }
 
     // --- Private helpers ---
+
+    /**
+     * Flattens the stage geometries into the route's coordinates for the coverage
+     * test, falling back to stage start/end points when geometry is unavailable.
+     *
+     * @param list<StageDto> $stages
+     *
+     * @return list<array{lat: float, lon: float}>
+     */
+    private function stageRoutePoints(array $stages): array
+    {
+        $points = [];
+        foreach ($stages as $stage) {
+            foreach ($stage->geometry as $coord) {
+                $points[] = ['lat' => $coord->lat, 'lon' => $coord->lon];
+            }
+        }
+
+        if ([] !== $points) {
+            return $points;
+        }
+
+        foreach ($stages as $stage) {
+            $points[] = ['lat' => $stage->startPoint->lat, 'lon' => $stage->startPoint->lon];
+            $points[] = ['lat' => $stage->endPoint->lat, 'lon' => $stage->endPoint->lon];
+        }
+
+        return $points;
+    }
 
     private function findTripRequest(string $tripId): ?TripRequest
     {
@@ -371,6 +424,8 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             elevationLoss: $entity->getElevationLoss(),
             isRestDay: $entity->isRestDay(),
         );
+
+        $dto->onCycleNetwork = $entity->getOnCycleNetwork();
 
         // Weather
         /** @var array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int, humidity: int, comfortIndex: int, relativeWindDirection: string}|null $weatherData */

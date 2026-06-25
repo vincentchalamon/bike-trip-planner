@@ -265,10 +265,21 @@ final class TripDetailTest extends ApiTestCase
     #[Test]
     public function detailFlagsOutOfZoneFromStageEndpointsWhenGeometryIsEmpty(): void
     {
-        // Exercises the routePoints() fallback (no stage geometry → start/end points)
-        // against the real ST_Covers query: endpoints sit at lon 10, outside the
-        // seeded coverage polygon (2..4 lon, 48..50 lat), so the trip is out of zone.
+        // Exercises the stageRoutePoints() fallback (no stage geometry → start/end
+        // points) against the real ST_Covers query: endpoints sit at lon 10, outside
+        // the seeded coverage polygon (2..4 lon, 48..50 lat), so the trip is out of
+        // zone. The flag is now computed and persisted at storeStages() time (#775),
+        // so the coverage polygon must exist before storing the stages.
         $repo = $this->seedTrip(self::TRIP_ID);
+
+        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        \assert($connection instanceof Connection);
+        $connection->executeStatement('TRUNCATE osm.coverage');
+        $connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.coverage (geom) VALUES (
+                ST_Multi(ST_SetSRID(ST_GeomFromText('POLYGON((2 48, 4 48, 4 50, 2 50, 2 48))'), 4326))
+            )
+            SQL);
 
         $stage = new StageDto(
             tripId: self::TRIP_ID,
@@ -280,21 +291,59 @@ final class TripDetailTest extends ApiTestCase
         );
         $repo->storeStages(self::TRIP_ID, [$stage]);
 
-        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
-        \assert($connection instanceof Connection);
-        $connection->executeStatement('TRUNCATE osm.coverage');
-        $connection->executeStatement(<<<'SQL'
-            INSERT INTO osm.coverage (geom) VALUES (
-                ST_Multi(ST_SetSRID(ST_GeomFromText('POLYGON((2 48, 4 48, 4 50, 2 50, 2 48))'), 4326))
-            )
-            SQL);
-
         $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
             'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
         ]);
 
         $this->assertResponseIsSuccessful();
         $this->assertTrue($response->toArray(false)['outOfZone']);
+    }
+
+    #[Test]
+    public function detailReadsPersistedOnCycleNetworkFraction(): void
+    {
+        // #775: onCycleNetwork is computed by the expensive PostGIS query once at
+        // storeStages() time and persisted on the stage row, then read back O(1)
+        // by the detail provider. Seed a cycle route, store a stage running along
+        // it, and assert the persisted fraction surfaces in the detail payload.
+        $repo = $this->seedTrip(self::TRIP_ID);
+
+        $connection = self::getContainer()->get('doctrine.dbal.default_connection');
+        \assert($connection instanceof Connection);
+        $connection->executeStatement('TRUNCATE osm.cycle_routes');
+        $connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.cycle_routes (osm_id, name, network, ref, tags, geom) VALUES
+              (1, 'EuroVelo Test', 'icn', 'EV-T', '{}'::jsonb,
+                  ST_Multi(ST_SetSRID(ST_GeomFromText('LINESTRING(2 48, 2 49)'), 4326)))
+            SQL);
+
+        $stage = new StageDto(
+            tripId: self::TRIP_ID,
+            dayNumber: 1,
+            distance: 55.0,
+            elevation: 100.0,
+            startPoint: new Coordinate(48.1, 2.0, 0.0),
+            endPoint: new Coordinate(48.9, 2.0, 0.0),
+            geometry: [
+                new Coordinate(48.1, 2.0, 0.0),
+                new Coordinate(48.5, 2.0, 0.0),
+                new Coordinate(48.9, 2.0, 0.0),
+            ],
+        );
+        $repo->storeStages(self::TRIP_ID, [$stage]);
+
+        // Verify the value is actually persisted on the row (not recomputed on read).
+        $persisted = $connection->fetchOne('SELECT on_cycle_network FROM stage WHERE trip_id = :id', ['id' => self::TRIP_ID]);
+        self::assertIsNumeric($persisted);
+        self::assertGreaterThan(0.95, (float) $persisted);
+
+        $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $data = $response->toArray(false);
+        self::assertGreaterThan(0.95, $data['stages'][0]['onCycleNetwork']);
     }
 
     #[Test]

@@ -160,6 +160,12 @@ final class Stage
 
     public ?Accommodation $selectedAccommodation = null;
 
+    /**
+     * Fraction (0..1) of the stage line that follows a signed cycle route,
+     * persisted at stage-store time and read back here (issue #775).
+     */
+    public float $onCycleNetwork = 0.0;
+
     /** @var Event[] */
     public array $events = [];
 
