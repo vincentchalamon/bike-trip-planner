@@ -764,7 +764,7 @@ final class TripChatProcessorTest extends TestCase
      * success DTO — a provider failure would return a JsonResponse instead
      * (#761). Mirrors the assertInstanceOf guard in TripAiChatProcessorTest.
      *
-     * @param array<string, string> $uriVariables
+     * @param array{id?: string} $uriVariables
      */
     private function processTurn(
         TripChatProcessor $processor,
