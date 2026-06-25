@@ -946,9 +946,22 @@
       "title": "My account",
       "description": "Email address linked to your account.",
       "emailLabel": "Email address",
-      "changeEmail": "Change via magic link",
-      "changeEmailSent": "A change link has been sent to your email.",
-      "changeEmailFailed": "Could not send the change link."
+      "changeEmail": "Change my email address",
+      "changeEmailSent": "A confirmation email has been sent to your new address.",
+      "changeEmailFailed": "Could not send the confirmation link.",
+      "changeEmailDialogTitle": "Change email address",
+      "changeEmailDialogDescription": "Enter your new address. A confirmation link will be sent to it; your current address stays unchanged until confirmation.",
+      "newEmailLabel": "New email address",
+      "newEmailPlaceholder": "you@example.com",
+      "sendChangeLink": "Send confirmation link",
+      "cancel": "Cancel",
+      "verify": {
+        "verifying": "Confirming...",
+        "success": "Your email address has been updated.",
+        "failed": "Invalid or expired link. Start a new request from your account.",
+        "backToAccount": "Back to my account",
+        "successReLogin": "Your email address has been updated. Please log in again to continue."
+      }
     },
     "data": {
       "title": "My data",

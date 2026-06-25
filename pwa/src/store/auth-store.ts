@@ -15,6 +15,7 @@ interface AuthState {
   isAuthenticated: boolean;
 
   setAuth: (token: string, user: AuthUser) => void;
+  setUserEmail: (email: string) => void;
   requestMagicLink: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   silentRefresh: () => Promise<boolean>;
@@ -91,6 +92,16 @@ export const useAuthStore = create<AuthState>()(
         state.accessToken = token;
         state.user = user;
         state.isAuthenticated = true;
+      }),
+
+    // Optimistic email update after an email change (#777). The authoritative
+    // value comes from the next silentRefresh (the new JWT carries it), but
+    // updating here keeps the UI consistent immediately.
+    setUserEmail: (email) =>
+      set((state) => {
+        if (state.user) {
+          state.user.email = email;
+        }
       }),
 
     requestMagicLink: async (email: string) => {

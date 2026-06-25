@@ -74,6 +74,14 @@ class User implements UserInterface
         return $this->email;
     }
 
+    /** @param non-empty-string $email */
+    public function setEmail(string $email): self
+    {
+        $this->email = $email;
+
+        return $this;
+    }
+
     /** @return non-empty-string */
     public function getUserIdentifier(): string
     {

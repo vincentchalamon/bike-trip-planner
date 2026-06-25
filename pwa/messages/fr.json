@@ -946,9 +946,22 @@
       "title": "Mon compte",
       "description": "Adresse e-mail associée à ton compte.",
       "emailLabel": "Adresse e-mail",
-      "changeEmail": "Modifier via magic link",
-      "changeEmailSent": "Un lien de modification t'a été envoyé par e-mail.",
-      "changeEmailFailed": "Impossible d'envoyer le lien de modification."
+      "changeEmail": "Modifier mon adresse e-mail",
+      "changeEmailSent": "Un e-mail de confirmation a été envoyé à ta nouvelle adresse.",
+      "changeEmailFailed": "Impossible d'envoyer le lien de confirmation.",
+      "changeEmailDialogTitle": "Changer d'adresse e-mail",
+      "changeEmailDialogDescription": "Saisis ta nouvelle adresse. Un lien de confirmation y sera envoyé ; ton adresse actuelle reste inchangée jusqu'à la confirmation.",
+      "newEmailLabel": "Nouvelle adresse e-mail",
+      "newEmailPlaceholder": "toi@exemple.com",
+      "sendChangeLink": "Envoyer le lien de confirmation",
+      "cancel": "Annuler",
+      "verify": {
+        "verifying": "Confirmation en cours...",
+        "success": "Ton adresse e-mail a été mise à jour.",
+        "failed": "Lien invalide ou expiré. Relance une demande depuis ton compte.",
+        "backToAccount": "Retour à mon compte",
+        "successReLogin": "Ton adresse e-mail a été mise à jour. Reconnecte-toi pour continuer."
+      }
     },
     "data": {
       "title": "Mes données",

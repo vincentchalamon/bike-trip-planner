@@ -1019,6 +1019,54 @@ export async function clearAiSettings(): Promise<boolean> {
 }
 
 /**
+ * Request an email change (#777): asks the backend to send a confirmation link
+ * to {newEmail} (`POST /users/me/email-change`). The current email is unchanged
+ * until the link is verified.
+ *
+ * @returns `{ ok: true }` on HTTP 202, or `{ ok: false, error }` with the parsed
+ * {@link ApiError} (e.g. 422 same-email / already-used / invalid format).
+ */
+export async function requestEmailChange(
+  newEmail: string,
+): Promise<{ ok: true } | { ok: false; error: ApiError }> {
+  const res = await apiFetch(`${API_URL}/users/me/email-change`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/ld+json",
+      Accept: "application/ld+json",
+    },
+    body: JSON.stringify({ newEmail }),
+  });
+  if (res.ok) return { ok: true };
+  const body = (await res.json().catch(() => null)) as unknown;
+  return { ok: false, error: parseApiError(res.status, body) };
+}
+
+/**
+ * Verify an email-change token (#777): consumes the single-use {token} from the
+ * confirmation link (`POST /users/me/email-change/verify`) and commits the new
+ * address server-side.
+ *
+ * @returns the confirmed new email on success, or null on any failure (invalid /
+ * expired / already consumed token, or the target address taken since request).
+ */
+export async function verifyEmailChange(token: string): Promise<string | null> {
+  const res = await apiFetch(`${API_URL}/users/me/email-change/verify`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/ld+json",
+      Accept: "application/ld+json",
+    },
+    body: JSON.stringify({ token }),
+  });
+  if (!res.ok) return null;
+  const body = (await res.json().catch(() => null)) as {
+    email?: string;
+  } | null;
+  return body?.email ?? null;
+}
+
+/**
  * Build the frontend share URL from a short code.
  */
 export function buildShareUrl(shortCode: string): string {
