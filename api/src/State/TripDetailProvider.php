@@ -17,8 +17,6 @@ use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Enum\TripStatus;
-use App\Osm\CoverageRepositoryInterface;
-use App\Osm\CycleRouteRepositoryInterface;
 use App\Repository\DoctrineTripRequestRepository;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Uuid;
@@ -33,14 +31,9 @@ use Symfony\Component\Uid\Uuid;
  */
 final readonly class TripDetailProvider implements ProviderInterface
 {
-    /** Tolerance (m) between the stage line and a cycle route to count as "on network". */
-    private const int CYCLE_NETWORK_TOLERANCE_METERS = 30;
-
     public function __construct(
         private DoctrineTripRequestRepository $tripStateManager,
         private TripLocker $tripLocker,
-        private CoverageRepositoryInterface $coverageRepository,
-        private CycleRouteRepositoryInterface $cycleRouteRepository,
         private ComputationTrackerInterface $computationTracker,
     ) {
     }
@@ -65,18 +58,6 @@ final readonly class TripDetailProvider implements ProviderInterface
 
         $statuses = $this->computationTracker->getStatuses($id);
 
-        // One batched query for the on-cycle-network fraction of every stage.
-        $cycleNetwork = $this->cycleRouteRepository->onNetworkFractions(
-            array_map(
-                static fn (Stage $stage): array => array_map(
-                    static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon],
-                    $stage->geometry,
-                ),
-                $stages,
-            ),
-            self::CYCLE_NETWORK_TOLERANCE_METERS,
-        );
-
         return new TripDetail(
             id: $request->id->toRfc4122(),
             title: $request->title,
@@ -91,13 +72,14 @@ final readonly class TripDetailProvider implements ProviderInterface
             departureHour: $request->departureHour,
             enabledAccommodationTypes: $request->enabledAccommodationTypes,
             isLocked: $this->tripLocker->isLocked($request),
-            outOfZone: $this->coverageRepository->isRouteOutOfZone($this->routePoints($stages)),
+            // Persisted at stage-store time (issue #775) — no PostGIS query here.
+            outOfZone: $request->outOfZone,
             // Fallback for trips persisted before the status column existed: infer
             // readiness from whether stages are present.
             status: '' !== $request->status ? $request->status : ([] !== $stages ? TripStatus::READY->value : TripStatus::DRAFT->value),
             weatherStatus: $this->deriveBlockStatus($this->computationsInCategory('weather'), $statuses),
             aiStatus: $this->deriveBlockStatus($this->computationsInCategory('ai_analysis'), $statuses),
-            stages: array_map($this->serializeStage(...), $stages, $cycleNetwork),
+            stages: array_map($this->serializeStage(...), $stages),
         );
     }
 
@@ -172,40 +154,11 @@ final readonly class TripDetailProvider implements ProviderInterface
     }
 
     /**
-     * Flattens the stage geometries into the route's coordinates for the coverage
-     * test, falling back to stage start/end points when geometry is unavailable.
-     *
-     * @param list<Stage> $stages
-     *
-     * @return list<array{lat: float, lon: float}>
-     */
-    private function routePoints(array $stages): array
-    {
-        $points = [];
-        foreach ($stages as $stage) {
-            foreach ($stage->geometry as $coord) {
-                $points[] = ['lat' => $coord->lat, 'lon' => $coord->lon];
-            }
-        }
-
-        if ([] !== $points) {
-            return $points;
-        }
-
-        foreach ($stages as $stage) {
-            $points[] = ['lat' => $stage->startPoint->lat, 'lon' => $stage->startPoint->lon];
-            $points[] = ['lat' => $stage->endPoint->lat, 'lon' => $stage->endPoint->lon];
-        }
-
-        return $points;
-    }
-
-    /**
      * Converts a Stage DTO to the JSON shape the frontend Zustand store expects.
      *
      * @return array<string, mixed>
      */
-    private function serializeStage(Stage $stage, float $onCycleNetwork): array
+    private function serializeStage(Stage $stage): array
     {
         return [
             'dayNumber' => $stage->dayNumber,
@@ -217,7 +170,7 @@ final readonly class TripDetailProvider implements ProviderInterface
             'geometry' => array_map($this->serializeCoord(...), $stage->geometry),
             'label' => $stage->label,
             'isRestDay' => $stage->isRestDay,
-            'onCycleNetwork' => $onCycleNetwork,
+            'onCycleNetwork' => $stage->onCycleNetwork,
             'weather' => $stage->weather instanceof WeatherForecast ? $this->serializeWeather($stage->weather) : null,
             'alerts' => array_map($this->serializeAlert(...), $stage->alerts),
             'pois' => array_map($this->serializePoi(...), $stage->pois),

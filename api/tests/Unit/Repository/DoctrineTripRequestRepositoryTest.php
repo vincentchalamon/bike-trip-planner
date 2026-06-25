@@ -16,6 +16,8 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\Enum\AlertType;
+use App\Osm\CoverageRepositoryInterface;
+use App\Osm\CycleRouteRepositoryInterface;
 use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -35,6 +37,10 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
     private CacheItemPoolInterface&MockObject $cache;
 
+    private CycleRouteRepositoryInterface&MockObject $cycleRouteRepository;
+
+    private CoverageRepositoryInterface&MockObject $coverageRepository;
+
     private DoctrineTripRequestRepository $repository;
 
     #[\Override]
@@ -49,10 +55,17 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         $this->cache = $this->createMock(CacheItemPoolInterface::class);
 
+        // The PostGIS metrics are computed at storeStages() time (#775); stub them
+        // with neutral defaults so the persistence round-trips stay deterministic.
+        $this->cycleRouteRepository = $this->createMock(CycleRouteRepositoryInterface::class);
+        $this->cycleRouteRepository->method('onNetworkFractions')->willReturn([]);
+        $this->coverageRepository = $this->createMock(CoverageRepositoryInterface::class);
+        $this->coverageRepository->method('isRouteOutOfZone')->willReturn(false);
+
         $registry = $this->createMock(ManagerRegistry::class);
         $registry->method('getManagerForClass')->willReturn($this->entityManager);
 
-        $this->repository = new DoctrineTripRequestRepository($registry, $this->cache);
+        $this->repository = new DoctrineTripRequestRepository($registry, $this->cache, $this->cycleRouteRepository, $this->coverageRepository);
     }
 
     #[Test]
@@ -95,7 +108,7 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $registry2 = $this->createMock(ManagerRegistry::class);
         $registry2->method('getManagerForClass')->willReturn($em2);
 
-        $repo2 = new DoctrineTripRequestRepository($registry2, $this->cache);
+        $repo2 = new DoctrineTripRequestRepository($registry2, $this->cache, $this->cycleRouteRepository, $this->coverageRepository);
         $result = $repo2->getRequest($tripId);
 
         self::assertSame($request, $result);
@@ -726,5 +739,86 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
         $this->entityManager->expects(self::never())->method('createQuery');
 
         $this->repository->updateTripAiOverview('not-a-uuid', null);
+    }
+
+    #[Test]
+    public function storeStagesSkipsPostGisScansWhenGeometryIsUnchanged(): void
+    {
+        // #787: the heavy PostGIS metrics are geometry-derived, so a second store
+        // of the identical route (an enrichment/edit pass that leaves geometry
+        // untouched) must reuse the persisted values instead of re-scanning.
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+
+        $cycleRoute = $this->createMock(CycleRouteRepositoryInterface::class);
+        $cycleRoute->expects(self::once())->method('onNetworkFractions')->willReturn([0.42]);
+        $coverage = $this->createMock(CoverageRepositoryInterface::class);
+        $coverage->expects(self::once())->method('isRouteOutOfZone')->willReturn(false);
+
+        $repository = $this->repositoryWithOsm($trip, $cycleRoute, $coverage);
+
+        $repository->storeStages($tripId, [$this->stageWithGeometry($tripId)]);
+        // Re-storing the same geometry must not trigger another PostGIS scan.
+        $repository->storeStages($tripId, [$this->stageWithGeometry($tripId)]);
+
+        // The persisted fraction is preserved across the guarded second store.
+        $stages = $repository->getStages($tripId);
+        self::assertNotNull($stages);
+        self::assertEqualsWithDelta(0.42, $stages[0]->onCycleNetwork, 0.0001);
+    }
+
+    #[Test]
+    public function storeStagesRecomputesPostGisScansWhenGeometryChanges(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+
+        $cycleRoute = $this->createMock(CycleRouteRepositoryInterface::class);
+        $cycleRoute->expects(self::exactly(2))->method('onNetworkFractions')->willReturn([0.1]);
+        $coverage = $this->createMock(CoverageRepositoryInterface::class);
+        $coverage->expects(self::exactly(2))->method('isRouteOutOfZone')->willReturn(false);
+
+        $repository = $this->repositoryWithOsm($trip, $cycleRoute, $coverage);
+
+        $repository->storeStages($tripId, [$this->stageWithGeometry($tripId)]);
+        // A moved endpoint changes the geometry signature → recompute.
+        $moved = $this->stageWithGeometry($tripId);
+        $moved->endPoint = new Coordinate(49.0, 3.0, 0.0);
+
+        $repository->storeStages($tripId, [$moved]);
+    }
+
+    private function stageWithGeometry(string $tripId): StageDto
+    {
+        return new StageDto(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 55.0,
+            elevation: 100.0,
+            startPoint: new Coordinate(48.1, 2.0, 0.0),
+            endPoint: new Coordinate(48.9, 2.0, 0.0),
+            geometry: [
+                new Coordinate(48.1, 2.0, 0.0),
+                new Coordinate(48.5, 2.0, 0.0),
+                new Coordinate(48.9, 2.0, 0.0),
+            ],
+        );
+    }
+
+    private function repositoryWithOsm(
+        TripRequest $trip,
+        CycleRouteRepositoryInterface&MockObject $cycleRoute,
+        CoverageRepositoryInterface&MockObject $coverage,
+    ): DoctrineTripRequestRepository {
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('wrapInTransaction')->willReturnCallback(static fn (callable $cb): mixed => $cb());
+        $em->method('getClassMetadata')->willReturn(new ClassMetadata(TripRequest::class));
+        $em->method('find')->willReturn($trip);
+        $em->method('createQuery')->willReturn($this->createStub(Query::class));
+
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManagerForClass')->willReturn($em);
+
+        return new DoctrineTripRequestRepository($registry, $this->cache, $cycleRoute, $coverage);
     }
 }

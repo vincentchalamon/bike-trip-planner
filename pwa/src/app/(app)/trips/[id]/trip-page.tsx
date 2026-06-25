@@ -146,16 +146,6 @@ function TripLoader({ tripId }: { tripId: string }) {
           sourceType: "persisted",
           title: data.title ?? null,
         });
-
-        // The backend does not persist reverse-geocoded labels (they are a
-        // client-side concern), and on a reload no Mercure event fires to fill
-        // them — so the stage cards would fall back to raw GPS coordinates.
-        // Resolve them here, after hydration, like the Mercure path does
-        // (recette #649).
-        void resolveStageLabels(
-          stages,
-          stages.map((_, i) => i),
-        );
       }
 
       // Drive the synchronous-flow loader vs. trip view from `status`
@@ -278,6 +268,37 @@ function TripLoader({ tripId }: { tripId: string }) {
     clearTrip,
   ]);
 
+  // Defer reverse-geocoding off the load critical path (issue #775): the backend
+  // does not persist reverse-geocoded labels (a client-side concern) and no
+  // Mercure event fires on reload, so the stage cards fall back to raw GPS
+  // coordinates until these resolve. Running the N Nominatim calls inside the
+  // hydrate path blocked the first render for several seconds; instead we kick
+  // them off only once the trip view is rendered, after first paint. The cards
+  // already show coordinates meanwhile and update live as each label lands.
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const stages = useTripStore.getState().stages;
+    if (stages.length === 0) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      if (controller.signal.aborted) return;
+      void resolveStageLabels(
+        stages,
+        stages.map((_, i) => i),
+        controller.signal,
+      );
+    }, 0);
+
+    return () => {
+      // Abort on unmount / trip-switch so in-flight Nominatim responses are
+      // dropped instead of corrupting another trip's labels (#787).
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [isLoaded]);
+
   if (loadError) {
     return <TripNotFound />;
   }
@@ -292,7 +313,7 @@ function TripLoader({ tripId }: { tripId: string }) {
         <TripSummarySkeleton />
         <div className="flex items-center justify-center gap-3 text-muted-foreground text-sm">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          <span>{t("loading")}</span>
+          <span>{t("loadingOne")}</span>
         </div>
         {/* Single-column roadbook skeleton — mirrors the new layout where the
             horizontal day timeline sits above the stage cards (recette #649). */}
