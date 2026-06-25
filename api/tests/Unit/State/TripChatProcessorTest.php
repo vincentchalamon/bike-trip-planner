@@ -10,6 +10,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\TripChatContext;
 use App\ApiResource\Stage;
 use App\ApiResource\TripChatRequest;
+use App\ApiResource\TripChatResponse;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\TripChatMessage;
@@ -42,7 +43,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
-use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -94,7 +95,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest("Coupe l'étape 3 en deux", new TripChatContext(currentStage: 3)),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -127,7 +129,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Coupe la dernière étape en deux'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -152,7 +155,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Fusionne les étapes 2 et 3'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -183,7 +187,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Fusionne les étapes 2 et 3'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -209,7 +214,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Ajoute un détour par le Mont Cassel'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -246,7 +252,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest("Ajoute un point d'eau quelque part"),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -272,7 +279,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Sur cette étape je préfère dormir en gîte'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -301,7 +309,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Camping pour la dernière étape'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -328,7 +337,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest("Allonge l'étape 5 à 95 km"),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -353,7 +363,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest("C'est quoi le gravel ?"),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -381,7 +392,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest("Change l'itinéraire pour passer par la côte"),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -405,7 +417,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $bus,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest("Coupe l'étape 99"),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -592,7 +605,8 @@ final class TripChatProcessorTest extends TestCase
             messageBus: $this->newMessageBus(),
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Bonjour'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -635,7 +649,8 @@ final class TripChatProcessorTest extends TestCase
             logger: $logger,
         );
 
-        $response = $processor->process(
+        $response = $this->processTurn(
+            $processor,
             new TripChatRequest('Bonjour'),
             new Post(),
             ['id' => self::TRIP_ID],
@@ -646,12 +661,12 @@ final class TripChatProcessorTest extends TestCase
     }
 
     #[Test]
-    public function returnsServiceUnavailableAndLogsCriticalWhenProviderUnreachable(): void
+    public function returns503AndLogsCriticalWhenProviderUnreachable(): void
     {
         // AI configured but the chat call hits an unreachable provider: 503 + `critical` log (#304).
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('log')
-            ->with('critical', self::stringContains('AI provider unreachable'), self::anything());
+            ->with('critical', self::stringContains('AI provider call failed'), self::anything());
 
         $processor = $this->newProcessor(
             llmContent: '',
@@ -661,23 +676,26 @@ final class TripChatProcessorTest extends TestCase
             chatException: new AiUnavailableException('boom'),
         );
 
-        $this->expectException(ServiceUnavailableHttpException::class);
-
-        $processor->process(
+        $result = $processor->process(
             new TripChatRequest('Bonjour'),
             new Post(),
             ['id' => self::TRIP_ID],
         );
+
+        self::assertInstanceOf(JsonResponse::class, $result);
+        self::assertSame(503, $result->getStatusCode());
+        self::assertSame('{"error":"ai_unavailable"}', $result->getContent());
     }
 
     #[Test]
-    public function logsWarningNotCriticalForUserConfigErrors(): void
+    public function returns422AndLogsWarningForInvalidToken(): void
     {
-        // A bad key / exhausted quota is a user-config error: warning, not critical
-        // (no on-call page). Still returns 503 on the in-ride path for now.
+        // A bad key is a user-config error: warning, not critical (no on-call page),
+        // and an actionable 422 the UI surfaces with a settings CTA (#761) rather
+        // than a misleading "retry" 503.
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('log')
-            ->with('warning', self::stringContains('AI provider unreachable'), self::anything());
+            ->with('warning', self::stringContains('AI provider call failed'), self::anything());
 
         $processor = $this->newProcessor(
             llmContent: '',
@@ -687,13 +705,77 @@ final class TripChatProcessorTest extends TestCase
             chatException: new AiUnavailableException('bad key', AiFailureReason::INVALID_TOKEN),
         );
 
-        $this->expectException(ServiceUnavailableHttpException::class);
-
-        $processor->process(
+        $result = $processor->process(
             new TripChatRequest('Bonjour'),
             new Post(),
             ['id' => self::TRIP_ID],
         );
+
+        self::assertInstanceOf(JsonResponse::class, $result);
+        self::assertSame(422, $result->getStatusCode());
+        self::assertSame('{"error":"ai_invalid_token"}', $result->getContent());
+    }
+
+    #[Test]
+    public function returns422ForExhaustedQuota(): void
+    {
+        $processor = $this->newProcessor(
+            llmContent: '',
+            stagesCount: 1,
+            messageBus: $this->newMessageBus(),
+            chatException: new AiUnavailableException('no credit', AiFailureReason::QUOTA_EXCEEDED),
+        );
+
+        $result = $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertInstanceOf(JsonResponse::class, $result);
+        self::assertSame(422, $result->getStatusCode());
+        self::assertSame('{"error":"ai_quota_exceeded"}', $result->getContent());
+    }
+
+    #[Test]
+    public function returns429WithRetryAfterWhenRateLimitedByProvider(): void
+    {
+        $processor = $this->newProcessor(
+            llmContent: '',
+            stagesCount: 1,
+            messageBus: $this->newMessageBus(),
+            chatException: new AiUnavailableException('slow down', AiFailureReason::RATE_LIMITED, retryAfter: 12),
+        );
+
+        $result = $processor->process(
+            new TripChatRequest('Bonjour'),
+            new Post(),
+            ['id' => self::TRIP_ID],
+        );
+
+        self::assertInstanceOf(JsonResponse::class, $result);
+        self::assertSame(429, $result->getStatusCode());
+        self::assertSame('{"error":"ai_rate_limited"}', $result->getContent());
+        self::assertSame('12', $result->headers->get('Retry-After'));
+    }
+
+    /**
+     * Runs a planning-mode chat turn and narrows the union return type to the
+     * success DTO — a provider failure would return a JsonResponse instead
+     * (#761). Mirrors the assertInstanceOf guard in TripAiChatProcessorTest.
+     *
+     * @param array{id?: string} $uriVariables
+     */
+    private function processTurn(
+        TripChatProcessor $processor,
+        TripChatRequest $request,
+        Post $operation,
+        array $uriVariables,
+    ): TripChatResponse {
+        $result = $processor->process($request, $operation, $uriVariables);
+        self::assertInstanceOf(TripChatResponse::class, $result);
+
+        return $result;
     }
 
     /**

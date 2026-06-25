@@ -32,6 +32,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
@@ -51,12 +53,14 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
  * 4. Parse the JSON envelope into a {@see ChatAction} via {@see ChatActionInterpreter}.
  * 5. Flag the response as `dispatched` for actions that require recomputation.
  *
- * Degradation: when AI is not configured (no provider/token)
- * the endpoint returns 200 with an `info` action hinting the rider to configure
- * a provider; when the configured provider is unreachable it returns 503 with a
- * reason-aware message so the frontend can react precisely.
+ * Degradation: when AI is not configured (no provider/token) the endpoint
+ * returns 200 with an `info` action hinting the rider to configure a provider;
+ * when the configured provider fails it maps the reason to an actionable HTTP
+ * status (#761) — 422 `{error: ai_invalid_token|ai_quota_exceeded}`, 429
+ * `{error: ai_rate_limited}` + `Retry-After`, or 503 `{error: ai_unavailable}` —
+ * mirroring TripAiChatProcessor so the frontend can react precisely.
  *
- * @implements ProcessorInterface<TripChatRequest, TripChatResponse>
+ * @implements ProcessorInterface<TripChatRequest, TripChatResponse|JsonResponse>
  */
 final readonly class TripChatProcessor implements ProcessorInterface
 {
@@ -101,7 +105,7 @@ final readonly class TripChatProcessor implements ProcessorInterface
      * @param Post               $operation
      * @param array{id?: string} $uriVariables
      */
-    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): TripChatResponse
+    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): TripChatResponse|JsonResponse
     {
         \assert($data instanceof TripChatRequest);
 
@@ -168,11 +172,27 @@ final readonly class TripChatProcessor implements ProcessorInterface
             // false on-call alerts.
             $this->logger->log(
                 AiFailureReason::UNAVAILABLE === $reason ? 'critical' : 'warning',
-                'AI provider unreachable — chat endpoint returning 503.',
+                'AI provider call failed — in-ride chat endpoint degrading.',
                 ['tripId' => $tripId, 'reason' => $reason->value, 'error' => $aiUnavailableException->getMessage()],
             );
 
-            throw new ServiceUnavailableHttpException(retryAfter: $aiUnavailableException->getRetryAfter(), message: $this->unavailableMessage($aiUnavailableException), previous: $aiUnavailableException);
+            // Map the classified reason to an actionable HTTP status (aligned with
+            // TripAiChatProcessor, #761): an invalid token or an exhausted quota is
+            // a 422 the UI surfaces with a settings CTA, a rate limit a 429, and a
+            // genuine outage a 503 — never a misleading "retry" for the first two.
+            [$status, $error] = match ($reason) {
+                AiFailureReason::INVALID_TOKEN => [Response::HTTP_UNPROCESSABLE_ENTITY, 'ai_invalid_token'],
+                AiFailureReason::QUOTA_EXCEEDED => [Response::HTTP_UNPROCESSABLE_ENTITY, 'ai_quota_exceeded'],
+                AiFailureReason::RATE_LIMITED => [Response::HTTP_TOO_MANY_REQUESTS, 'ai_rate_limited'],
+                AiFailureReason::UNAVAILABLE => [Response::HTTP_SERVICE_UNAVAILABLE, 'ai_unavailable'],
+            };
+
+            $headers = [];
+            if (AiFailureReason::RATE_LIMITED === $reason && null !== $aiUnavailableException->getRetryAfter()) {
+                $headers['Retry-After'] = (string) $aiUnavailableException->getRetryAfter();
+            }
+
+            return new JsonResponse(['error' => $error], $status, $headers);
         }
 
         if (null === $response) {
@@ -239,18 +259,6 @@ final readonly class TripChatProcessor implements ProcessorInterface
             params: [],
             response: "Configurez une IA dans vos réglages pour discuter avec l'assistant et obtenir une analyse plus approfondie.",
         );
-    }
-
-    /**
-     * Maps a provider failure to a rider-facing message keyed on its reason.
-     */
-    private function unavailableMessage(AiUnavailableException $exception): string
-    {
-        return match ($exception->getReason()) {
-            AiFailureReason::INVALID_TOKEN => 'Votre clé IA semble invalide. Vérifiez-la dans vos réglages.',
-            AiFailureReason::QUOTA_EXCEEDED => 'Le quota de votre offre IA est épuisé. Vérifiez votre compte chez le fournisseur.',
-            default => 'Assistant IA temporairement indisponible. Réessayez dans un instant.',
-        };
     }
 
     /**

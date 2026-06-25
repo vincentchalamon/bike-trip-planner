@@ -249,7 +249,7 @@ final class TripChatTest extends ApiTestCase
     }
 
     #[Test]
-    public function chatReturns503WithInvalidTokenMessageWhenTokenRejected(): void
+    public function chatReturns422WithInvalidTokenErrorWhenTokenRejected(): void
     {
         $this->seedTrip(self::TRIP_ID);
 
@@ -264,8 +264,10 @@ final class TripChatTest extends ApiTestCase
             ],
         );
 
-        $this->assertResponseStatusCodeSame(503);
-        $this->assertStringContainsString('clé IA', $response->getContent(false));
+        // #761: an invalid token is now an actionable 422 with a discrete error
+        // code (the UI surfaces a settings CTA) instead of a misleading 503.
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertStringContainsString('ai_invalid_token', $response->getContent(false));
     }
 
     #[Test]
@@ -284,7 +286,9 @@ final class TripChatTest extends ApiTestCase
             ],
         );
 
-        $this->assertResponseStatusCodeSame(503);
+        // #761: a provider rate-limit maps to 429 (mirrors TripAiChatProcessor),
+        // propagating the upstream Retry-After hint.
+        $this->assertResponseStatusCodeSame(429);
         $this->assertResponseHeaderSame('Retry-After', '60');
     }
 

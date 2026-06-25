@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripChatRequest;
+use App\ApiResource\TripChatResponse;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
@@ -121,6 +122,7 @@ final class TripChatPlanningRegressionTest extends TestCase
             ['id' => self::TRIP_ID],
         );
 
+        self::assertInstanceOf(TripChatResponse::class, $response);
         self::assertSame($action, $response->action);
         self::assertSame($expectedDispatched, $response->dispatched);
         self::assertSame($expectedRequiresFullAnalysis, $response->requiresFullAnalysis);

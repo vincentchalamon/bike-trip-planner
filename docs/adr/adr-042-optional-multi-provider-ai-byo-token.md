@@ -99,7 +99,7 @@ A provider call can fail in ways the old single-tenant Ollama daemon never did (
 
 Degraded behaviour:
 
-- **Synchronous chat** degrades to an HTTP **503** with a **reason-aware message** (e.g. "your API key was rejected" vs "the provider is temporarily unavailable"), so the user can act (fix the key, wait, top up).
+- **Synchronous chat** maps the reason to an actionable HTTP status carrying a discrete `{error}` code — **422** (`ai_invalid_token` / `ai_quota_exceeded`), **429** (`ai_rate_limited`, with `Retry-After`), or **503** (`ai_unavailable`) — so the UI can act precisely (fix the key via a settings CTA, wait, or retry) instead of a blanket "retry". Both the brief chat (`/trips/ai-chat`) and the loaded-trip chat (`/trips/{id}/ai-chat`) share this mapping (#760, #761).
 - **Asynchronous analysis** (per-stage + overview, ADR-027 Phase 2) is **best-effort**: on failure it is **skipped**, not retried to failure; trip computation and rule-based alerts (ADR-012) are unaffected.
 - **AI not configured** is **not an error**: the chat surfaces a graceful in-chat `info` hint ("configure a provider to enable the assistant"), not a 503.
 

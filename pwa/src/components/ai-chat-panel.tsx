@@ -9,6 +9,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { Send, Sparkles, X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "@/components/ui/button";
@@ -71,13 +72,15 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
   const t = useTranslations("aiBubble");
   const tGeoloc = useTranslations("chat.inRide");
 
-  const { chatHistory, isChatSending, currentContext } = useUiStore(
-    useShallow((s) => ({
-      chatHistory: s.chatHistory,
-      isChatSending: s.isChatSending,
-      currentContext: s.currentContext,
-    })),
-  );
+  const { chatHistory, isChatSending, currentContext, chatConfigErrorKey } =
+    useUiStore(
+      useShallow((s) => ({
+        chatHistory: s.chatHistory,
+        isChatSending: s.isChatSending,
+        currentContext: s.currentContext,
+        chatConfigErrorKey: s.chatConfigErrorKey,
+      })),
+    );
 
   const tripId = useTripStore((s) => s.trip?.id ?? null);
   const { sendChatMessage, relaunchFullAnalysis } = useTripPlanner();
@@ -264,6 +267,29 @@ export function AiChatPanel({ onClose }: AiChatPanelProps) {
           >
             {t("relaunchAnalysis")}
           </Button>
+        </div>
+      )}
+
+      {chatConfigErrorKey && (
+        <div
+          data-testid="ai-chat-panel-config-error"
+          role="alert"
+          className="flex flex-col gap-2 border-t border-brand/30 bg-brand/5 px-4 py-3 text-sm text-foreground"
+        >
+          <span className="flex items-center gap-2">
+            <Sparkles
+              className="h-4 w-4 shrink-0 text-brand"
+              aria-hidden="true"
+            />
+            <span>{t(chatConfigErrorKey)}</span>
+          </span>
+          <Link
+            href="/account/settings#ai"
+            className="self-start text-sm font-medium text-brand hover:underline"
+            data-testid="ai-chat-panel-configure-cta"
+          >
+            {t("configureCta")}
+          </Link>
         </div>
       )}
 

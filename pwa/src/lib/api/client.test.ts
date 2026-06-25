@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { localizedApiErrorMessage, parseApiError } from "./client";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  localizedApiErrorMessage,
+  parseApiError,
+  sendTripChat,
+} from "./client";
 
 describe("parseApiError", () => {
   it("returns validation error with joined messages for 422", () => {
@@ -81,5 +85,47 @@ describe("localizedApiErrorMessage", () => {
     expect(
       localizedApiErrorMessage({ type: "validation", message: "" }, t),
     ).toBe("t:errors.validationError");
+  });
+});
+
+describe("sendTripChat error-code extraction (#761)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each([
+    ["ai_invalid_token", 422],
+    ["ai_quota_exceeded", 422],
+    ["ai_unavailable", 503],
+  ])(
+    "surfaces the discrete %s error code from a %i body",
+    async (code, status) => {
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockResolvedValue(
+            new Response(JSON.stringify({ error: code }), { status }),
+          ),
+      );
+
+      const result = await sendTripChat("trip-1", { message: "Bonjour" });
+
+      expect(result.status).toBe(status);
+      expect(result.errorCode).toBe(code);
+      expect(result.data).toBeNull();
+    },
+  );
+
+  it("leaves errorCode null when the error body is not JSON", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(new Response("<html>502</html>", { status: 502 })),
+    );
+
+    const result = await sendTripChat("trip-1", { message: "Bonjour" });
+
+    expect(result.errorCode).toBeNull();
+    expect(result.error).toBe("HTTP 502");
   });
 });

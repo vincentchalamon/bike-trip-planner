@@ -538,6 +538,12 @@ export async function sendTripChat(
 ): Promise<{
   data: TripChatResponseBody | null;
   error: string | null;
+  /**
+   * Discrete machine-readable error code from the backend body (`{ error }`),
+   * e.g. `ai_invalid_token` / `ai_quota_exceeded` (#761). Null on success or
+   * when the error body carries no code (non-JSON / network error).
+   */
+  errorCode: string | null;
   status: number;
 }> {
   const res = await apiFetch(`${API_URL}/trips/${tripId}/ai-chat`, {
@@ -551,7 +557,29 @@ export async function sendTripChat(
   });
 
   if (!res.ok) {
-    return { data: null, error: `HTTP ${res.status}`, status: res.status };
+    // Surface the backend's discrete error code (#761) so the in-ride panel can
+    // tell an actionable config error (422 `ai_invalid_token` / `ai_quota_exceeded`)
+    // apart from a transient outage and show the matching settings CTA.
+    let errorCode: string | null = null;
+    try {
+      const errorBody: unknown = await res.json();
+      if (
+        errorBody !== null &&
+        typeof errorBody === "object" &&
+        "error" in errorBody &&
+        typeof errorBody.error === "string"
+      ) {
+        errorCode = errorBody.error;
+      }
+    } catch {
+      // Non-JSON error body (proxy / HTML page) — leave errorCode null.
+    }
+    return {
+      data: null,
+      error: `HTTP ${res.status}`,
+      errorCode,
+      status: res.status,
+    };
   }
 
   const raw: unknown = await res.json();
@@ -560,11 +588,17 @@ export async function sendTripChat(
     return {
       data: null,
       error: "Invalid response shape",
+      errorCode: null,
       status: res.status,
     };
   }
 
-  return { data: parsed.data, error: null, status: res.status };
+  return {
+    data: parsed.data,
+    error: null,
+    errorCode: null,
+    status: res.status,
+  };
 }
 
 /**

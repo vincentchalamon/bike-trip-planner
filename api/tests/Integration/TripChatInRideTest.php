@@ -10,6 +10,7 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\GeoPosition;
 use App\ApiResource\Stage;
 use App\ApiResource\TripChatRequest;
+use App\ApiResource\TripChatResponse;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Entity\User;
@@ -108,6 +109,7 @@ final class TripChatInRideTest extends TestCase
             ['id' => self::TRIP_ID],
         );
 
+        self::assertInstanceOf(TripChatResponse::class, $response);
         self::assertSame(ChatAction::ACTION_FIND_POI, $response->action);
         self::assertSame(['category' => PoiSuggestion::CATEGORY_WATER], $response->params);
         self::assertFalse($response->dispatched);
@@ -147,6 +149,7 @@ final class TripChatInRideTest extends TestCase
             ['id' => self::TRIP_ID],
         );
 
+        self::assertInstanceOf(TripChatResponse::class, $response);
         self::assertSame(ChatAction::ACTION_FIND_POI, $response->action);
         self::assertSame(['category' => PoiSuggestion::CATEGORY_UNKNOWN], $response->params);
         self::assertIsArray($response->pois);

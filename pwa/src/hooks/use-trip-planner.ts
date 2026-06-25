@@ -888,7 +888,7 @@ export function useTripPlanner() {
     chatAbortRef.current = controller;
 
     try {
-      const { data, error, status } = await sendTripChat(
+      const { data, error, errorCode, status } = await sendTripChat(
         tripId,
         {
           message: trimmed,
@@ -905,6 +905,20 @@ export function useTripPlanner() {
       }
 
       if (error || !data) {
+        // An actionable provider-config error (invalid token / exhausted quota,
+        // #761) is surfaced as a settings-CTA banner rather than a misleading
+        // "retry" bubble — mirrors the brief chat (ai-chat-card).
+        const configErrorKey =
+          status === 422 && errorCode === "ai_invalid_token"
+            ? "errorInvalidToken"
+            : status === 422 && errorCode === "ai_quota_exceeded"
+              ? "errorQuotaExceeded"
+              : null;
+        if (configErrorKey) {
+          useUiStore.getState().setChatConfigError(configErrorKey);
+          return null;
+        }
+
         const message =
           status === 429
             ? t("aiBubble.errorRateLimit")
@@ -919,6 +933,8 @@ export function useTripPlanner() {
         return null;
       }
 
+      // A successful turn clears any lingering config-error banner.
+      useUiStore.getState().setChatConfigError(null);
       useUiStore.getState().appendMessage({
         role: "assistant",
         content: data.response,
