@@ -73,7 +73,7 @@ export function HomeContent({
   }
 
   return (
-    <SiteChrome variant="app">
+    <SiteChrome>
       <HydrationBoundary>
         <TripPlannerErrorBoundary>
           <Suspense fallback={null}>

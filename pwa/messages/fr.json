@@ -215,15 +215,6 @@
     "unnamedWaterPoint": "Cimetière (eau)",
     "unnamedFoodPoint": "{category}"
   },
-  "progressBar": {
-    "ariaLabel": "Progression du voyage par jour",
-    "segmentAriaLabel": "Jour {day} — {distance} km",
-    "segmentTitle": "Jour {day} — {distance} km",
-    "segmentLabel": "J{day} · {distance} km",
-    "segmentRestDayAriaLabel": "Jour {day} — Repos",
-    "segmentRestDayTitle": "Jour {day} — Repos",
-    "segmentRestDayLabel": "J{day} · Repos"
-  },
   "config": {
     "title": "Paramètres",
     "close": "Fermer les paramètres",
@@ -471,8 +462,7 @@
       "filterTitle": "titre « {value} »",
       "filterDates": "dates {value}",
       "filterFrom": "à partir du {value}",
-      "filterUntil": "jusqu'au {value}",
-      "resetFilters": "Réinitialiser les filtres"
+      "filterUntil": "jusqu'au {value}"
     }
   },
   "noDates": {
@@ -906,8 +896,8 @@
       "faq": "FAQ",
       "legal": "Mentions légales",
       "privacy": "Confidentialité",
-      "github": "GitHub (open-source)",
-      "copyright": "© {year} Bike Trip Planner. Projet open-source."
+      "github": "GitHub",
+      "copyright": "© {year} Bike Trip Planner."
     }
   },
   "offline": {
@@ -959,14 +949,6 @@
       "changeEmail": "Modifier via magic link",
       "changeEmailSent": "Un lien de modification t'a été envoyé par e-mail.",
       "changeEmailFailed": "Impossible d'envoyer le lien de modification."
-    },
-    "preferences": {
-      "title": "Préférences",
-      "description": "Personnalise la langue et l'apparence de l'application.",
-      "languageLabel": "Langue",
-      "themeLabel": "Thème",
-      "themeLight": "Clair",
-      "themeDark": "Sombre"
     },
     "data": {
       "title": "Mes données",

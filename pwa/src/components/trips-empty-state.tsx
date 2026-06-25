@@ -11,8 +11,6 @@ interface TripsEmptyStateProps {
   variant: TripsEmptyStateVariant;
   /** Human-readable summary of currently active filters (no-results only). */
   activeFiltersLabel?: string;
-  /** Reset all filters (no-results only). */
-  onResetFilters?: () => void;
 }
 
 /**
@@ -23,7 +21,6 @@ interface TripsEmptyStateProps {
 export function TripsEmptyState({
   variant,
   activeFiltersLabel,
-  onResetFilters,
 }: TripsEmptyStateProps) {
   const t = useTranslations("tripList.emptyState");
 
@@ -51,24 +48,6 @@ export function TripsEmptyState({
             {t("activeFilters")} {activeFiltersLabel}
           </p>
         )}
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          {onResetFilters && (
-            <Button
-              variant="default"
-              onClick={onResetFilters}
-              data-testid="trips-empty-reset-filters"
-            >
-              {t("resetFilters")}
-            </Button>
-          )}
-          <Button
-            asChild
-            variant="ghost"
-            data-testid="trips-empty-new-trip-secondary"
-          >
-            <Link href="/trips/new">{t("newTrip")}</Link>
-          </Button>
-        </div>
       </section>
     );
   }

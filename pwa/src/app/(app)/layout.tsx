@@ -9,5 +9,5 @@ import { SiteChrome } from "@/components/site-chrome";
  * URLs unchanged (the parentheses are stripped from the path).
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
-  return <SiteChrome variant="app">{children}</SiteChrome>;
+  return <SiteChrome>{children}</SiteChrome>;
 }

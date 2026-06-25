@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import { AccountRail } from "@/components/account/account-rail";
 import { AccountSection } from "@/components/account/account-section";
-import { PreferencesSection } from "@/components/account/preferences-section";
 import { AiProviderSection } from "@/components/account/ai-provider-section";
 import { DataSection } from "@/components/account/data-section";
 import { DangerZoneSection } from "@/components/account/danger-zone-section";
@@ -21,9 +20,9 @@ import { isAiFeatureEnabled } from "@/lib/constants";
  * red logout), the content cards, and the shared {@link LandingFooter}. The
  * rail stacks above the content under the `md` breakpoint.
  *
- * Content sections: account (email + magic-link change), preferences (language
- * + theme), data export (GDPR) and danger zone (account deletion). Logout lives
- * in the rail.
+ * Content sections: account (email + magic-link change), data export (GDPR) and
+ * danger zone (account deletion). Language and theme live in the header (recette
+ * #649), so the former "Préférences" block was dropped. Logout lives in the rail.
  */
 export default function AccountSettingsPage() {
   const t = useTranslations("accountSettings");
@@ -44,7 +43,6 @@ export default function AccountSettingsPage() {
         <AccountRail />
         <div className="flex flex-col gap-6 min-w-0">
           <AccountSection />
-          <PreferencesSection />
           {isAiFeatureEnabled() && <AiProviderSection />}
           <DataSection />
           <DangerZoneSection />

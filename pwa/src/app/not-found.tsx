@@ -40,7 +40,7 @@ export default async function NotFound() {
   }
 
   return (
-    <SiteChrome variant="app">
+    <SiteChrome>
       <main
         className="flex min-h-[60vh] flex-1 items-center justify-center px-4 py-12 bg-[var(--color-surface)] text-[var(--color-ink)]"
         data-testid="not-found-page"

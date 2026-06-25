@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { FaqAccordion, type FaqCategory } from "@/components/faq-accordion";
+import { isAiFeatureEnabled } from "@/lib/constants";
 
 export default async function FaqPage() {
   const t = await getTranslations("faq");
@@ -34,14 +35,19 @@ export default async function FaqPage() {
         { question: t("q9"), answer: t("a9") },
       ],
     },
-    {
-      id: "ai",
-      label: t("categoryAi"),
-      items: [
-        { question: t("q10"), answer: t("a10") },
-        { question: t("q11"), answer: t("a11") },
-      ],
-    },
+    // "Assistant IA" category — hidden while the AI feature is off (recette #649).
+    ...(isAiFeatureEnabled()
+      ? [
+          {
+            id: "ai",
+            label: t("categoryAi"),
+            items: [
+              { question: t("q10"), answer: t("a10") },
+              { question: t("q11"), answer: t("a11") },
+            ],
+          },
+        ]
+      : []),
   ];
 
   return (

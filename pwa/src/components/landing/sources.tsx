@@ -7,6 +7,7 @@ import {
   RideWithGpsLogo,
   GpxLogo,
 } from "@/components/landing/source-logos";
+import { isAiFeatureEnabled } from "@/lib/constants";
 
 type Source = {
   key: "komoot" | "strava" | "rwgps" | "gpx" | "ai";
@@ -80,7 +81,10 @@ export function LandingSources() {
         </p>
 
         <ul className="flex flex-wrap items-stretch justify-center gap-4 md:gap-5">
-          {SOURCES.map((source) => {
+          {/* Hide the AI source while the AI feature is off (recette #649). */}
+          {SOURCES.filter(
+            (source) => source.key !== "ai" || isAiFeatureEnabled(),
+          ).map((source) => {
             const Logo = source.Logo;
             const content = (
               <span className="flex h-full flex-col items-center justify-center gap-3 rounded-2xl border border-border/60 bg-card px-6 py-5 min-w-[136px] transition-all hover:border-brand/40 hover:shadow-md">
