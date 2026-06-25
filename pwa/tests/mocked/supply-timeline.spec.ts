@@ -7,7 +7,9 @@ import {
   supplyTimelineClusterEvent,
 } from "../fixtures/mock-data";
 
-test.describe("Supply timeline", () => {
+// Supply timeline disabled pending an UX redesign (#771, follow-up #778).
+// Re-enable these specs alongside the new UX.
+test.describe.skip("Supply timeline", () => {
   test("is not visible before supply data arrives", async ({
     submitUrl,
     injectSequence,

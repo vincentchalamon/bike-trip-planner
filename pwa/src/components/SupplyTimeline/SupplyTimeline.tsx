@@ -20,6 +20,12 @@ import type {
  */
 const CLUSTER_THRESHOLD_PCT = 4;
 
+/**
+ * Per-day supply timeline disabled pending an UX redesign (recette #649,
+ * issue #771). The component code is kept intact for the follow-up rework.
+ */
+const SUPPLY_TIMELINE_ENABLED = false;
+
 interface ClusteredMarker {
   type: SupplyMarkerData["type"];
   /** Average distanceFromStart of all clustered markers (km). */
@@ -237,6 +243,10 @@ export function SupplyTimeline({
   const handleOpenChange = useCallback((index: number, isOpen: boolean) => {
     setOpenClusterIndex(isOpen ? index : null);
   }, []);
+
+  if (!SUPPLY_TIMELINE_ENABLED) {
+    return null;
+  }
 
   if (markers.length === 0 || stageDistance <= 0) {
     return null;

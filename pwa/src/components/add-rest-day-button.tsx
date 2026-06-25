@@ -21,7 +21,7 @@ export function AddRestDayButton({
   return (
     <Button
       variant="outline"
-      className="w-full md:max-w-[80%] border-dashed border-muted-icon bg-muted/30 text-muted-icon hover:text-foreground hover:border-brand hover:bg-muted/50 cursor-pointer"
+      className="w-full flex-1 border-dashed border-muted-icon bg-muted/30 text-muted-icon hover:text-foreground hover:border-brand hover:bg-muted/50 cursor-pointer"
       onClick={onClick}
       disabled={disabled}
       aria-label={t("ariaLabel", { dayNumber })}
