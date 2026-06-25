@@ -214,10 +214,8 @@ export function StageDetailPanel({
             aria-label={tStage("day", { dayNumber: stage.dayNumber })}
             data-stage-index={i}
             className={[
-              "flex flex-col gap-4 rounded-xl p-1 transition-colors",
-              isSelected
-                ? "ring-2 ring-brand/20"
-                : "opacity-60 hover:opacity-80",
+              "flex w-full flex-col gap-4 rounded-xl p-1 transition-colors",
+              isSelected ? "" : "opacity-60 hover:opacity-80",
             ].join(" ")}
           >
             {/* Day heading — anchor preserved for scroll-spy and in-app
@@ -300,7 +298,7 @@ export function StageDetailPanel({
             {!readOnly &&
               i < stages.length - 1 &&
               (onAddStage || onInsertRestDay) && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex w-full flex-wrap gap-2">
                   {onInsertRestDay &&
                     !stage.isRestDay &&
                     !stages[i + 1]?.isRestDay && (

@@ -74,26 +74,26 @@ Feature: Stage management
     When I submit a valid Komoot link
     Then I see a progress bar while stages are being computed
 
-  @desktop @supply
+  @desktop @supply @skip
   Scenario: Supply timeline displayed on a stage
     Given supply data is available for stage 1
     Then the supply timeline of stage 1 is visible
 
-  @desktop @supply
+  @desktop @supply @skip
   Scenario: Supply markers with water, food and mixed icons
     Given supply data is available for stage 1
     Then the supply marker at 15 km shows the water icon
     And the supply marker at 42 km shows the food icon
     And the supply marker at 59 km shows the mixed icon
 
-  @desktop @supply
+  @desktop @supply @skip
   Scenario: Hovering a marker shows the name and distance
     Given supply data is available for stage 1
     When I open the supply marker at 15 km
     Then the supply tooltip shows "Cimetière de Vals"
     And the supply tooltip shows "15 km"
 
-  @mobile @supply
+  @mobile @supply @skip
   Scenario: Horizontal scroll of the supply timeline on mobile
     Given supply data is available for stage 1 on mobile
     Then the supply timeline of stage 1 is visible

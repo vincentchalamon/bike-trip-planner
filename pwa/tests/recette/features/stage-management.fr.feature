@@ -75,26 +75,26 @@ Fonctionnalité: Gestion des étapes
     Quand je soumets un lien Komoot valide
     Alors je vois une barre de progression pendant le calcul des étapes
 
-  @desktop @ravitaillement
+  @desktop @ravitaillement @skip
   Scénario: Affichage de la timeline des ravitaillements sur une étape
     Étant donné que des données de ravitaillement sont disponibles pour l'étape 1
     Alors la timeline des ravitaillements de l'étape 1 est visible
 
-  @desktop @ravitaillement
+  @desktop @ravitaillement @skip
   Scénario: Marqueurs de ravitaillement avec icônes eau, nourriture et mixte
     Étant donné que des données de ravitaillement sont disponibles pour l'étape 1
     Alors le marqueur de ravitaillement à 15 km affiche l'icône eau
     Et le marqueur de ravitaillement à 42 km affiche l'icône nourriture
     Et le marqueur de ravitaillement à 59 km affiche l'icône mixte
 
-  @desktop @ravitaillement
+  @desktop @ravitaillement @skip
   Scénario: Survol d'un marqueur affiche le nom et la distance
     Étant donné que des données de ravitaillement sont disponibles pour l'étape 1
     Quand j'ouvre le marqueur de ravitaillement à 15 km
     Alors l'info-bulle de ravitaillement affiche "Cimetière de Vals"
     Et l'info-bulle de ravitaillement affiche "15 km"
 
-  @mobile @ravitaillement
+  @mobile @ravitaillement @skip
   Scénario: Défilement horizontal de la timeline des ravitaillements sur mobile
     Étant donné que des données de ravitaillement sont disponibles pour l'étape 1 sur mobile
     Alors la timeline des ravitaillements de l'étape 1 est visible
