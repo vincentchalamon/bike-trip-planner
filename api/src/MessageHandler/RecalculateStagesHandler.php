@@ -5,12 +5,9 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\ApiResource\TripRequest;
-use App\ApiResource\Model\Coordinate;
-use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Llm\LlmAnalysisTrackerInterface;
-use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
 use App\Message\CheckBikeShops;
@@ -76,44 +73,19 @@ final readonly class RecalculateStagesHandler extends AbstractTripMessageHandler
 
         // Mode 2 — inline modification (Act 3): emit one `stage_updated` event per
         // affected stage so the frontend mutates the corresponding slice of its
-        // store without rebuilding the whole trip. Also publish the legacy
-        // `STAGES_COMPUTED` event so consumers still relying on the wholesale
-        // payload (progress bar, undo, offline snapshot) keep working until the
-        // downstream refactor (#323 / #325) removes it.
+        // store without rebuilding the whole trip. The per-stage events carry the
+        // authoritative stored values (including a user-requested distance honored
+        // by StageUpdateProcessor::applyDistanceChange). We intentionally do NOT
+        // also publish the legacy wholesale `STAGES_COMPUTED` here: its partial-merge
+        // branch on the frontend re-hydrated the edited stage from the wire payload,
+        // racing the `stage_updated` slice and reverting a user-set distance
+        // (e.g. 80km -> 60km snapping back). The initial generation path still emits
+        // `STAGES_COMPUTED` (GenerateStagesHandler / GpxUploadService) (issue #774).
         foreach ($affectedIndices as $idx) {
             if (isset($stages[$idx])) {
                 $this->publisher->publishStageUpdated($tripId, $stages[$idx]);
             }
         }
-
-        $this->publisher->publish($tripId, MercureEventType::STAGES_COMPUTED, [
-            'stages' => array_map(
-                static fn (Stage $s): array => [
-                    'dayNumber' => $s->dayNumber,
-                    'distance' => round($s->distance, 1),
-                    'elevation' => (int) $s->elevation,
-                    'elevationLoss' => (int) $s->elevationLoss,
-                    'startPoint' => [
-                        'lat' => $s->startPoint->lat,
-                        'lon' => $s->startPoint->lon,
-                        'ele' => $s->startPoint->ele,
-                    ],
-                    'endPoint' => [
-                        'lat' => $s->endPoint->lat,
-                        'lon' => $s->endPoint->lon,
-                        'ele' => $s->endPoint->ele,
-                    ],
-                    'label' => $s->label,
-                    'isRestDay' => $s->isRestDay,
-                    'geometry' => array_map(
-                        static fn (Coordinate $c): array => ['lat' => $c->lat, 'lon' => $c->lon, 'ele' => $c->ele],
-                        $s->geometry,
-                    ),
-                ],
-                $stages,
-            ),
-            'affectedIndices' => array_values($affectedIndices),
-        ]);
 
         // Dispatch POI/Accommodation/BikeShop scans for affected stages
         if ([] !== $affectedIndices && !$message->skipGeographicScans) {
