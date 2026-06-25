@@ -118,23 +118,49 @@ test.describe("Account settings", () => {
     await expect.poll(() => exportCalled).toBe(true);
   });
 
-  test("change email button triggers a magic link request", async ({
+  test("change email opens a dialog and POSTs the new address (#777)", async ({
     page,
   }) => {
     await mockAuthenticated(page);
 
-    let linkRequested = false;
-    await page.route("**/auth/request-link", (route, request) => {
+    let changeBody: Record<string, unknown> | null = null;
+    await page.route("**/users/me/email-change", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
-      linkRequested = true;
-      return route.fulfill({ status: 202, body: "" });
+      changeBody = JSON.parse(request.postData() ?? "{}") as Record<
+        string,
+        unknown
+      >;
+      return route.fulfill({
+        status: 202,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "ok" }),
+      });
     });
 
     await page.goto("/account/settings");
     await page.waitForLoadState("networkidle");
 
+    // The trigger opens the dialog; no request fires until the new address is
+    // submitted (distinct from the obsolete login-magic-link reuse).
     await page.getByTestId("change-email-button").click();
-    await expect.poll(() => linkRequested).toBe(true);
+    await expect(page.getByTestId("change-email-dialog")).toBeVisible();
+
+    // Submit is disabled until a valid email is typed.
+    const submit = page.getByTestId("send-email-change-button");
+    await expect(submit).toBeDisabled();
+
+    await page.getByTestId("new-email-input").fill("new@example.com");
+    await expect(submit).toBeEnabled();
+    await submit.click();
+
+    await expect
+      .poll(() => changeBody)
+      .toEqual({ newEmail: "new@example.com" });
+    // Success closes the dialog and surfaces a confirmation toast.
+    await expect(page.getByTestId("change-email-dialog")).toBeHidden();
+    await expect(
+      page.getByText("Un e-mail de confirmation a été envoyé à ta nouvelle"),
+    ).toBeVisible();
   });
 
   test("delete account requires typing SUPPRIMER then logs out", async ({
