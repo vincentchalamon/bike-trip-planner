@@ -19,6 +19,7 @@ use App\Message\FetchWeather;
 use App\Message\GenerateStages;
 use App\Message\RecalculateRouteSegment;
 use App\Message\RecalculateStages;
+use App\Message\ResolveStageLabels;
 use App\Message\ScanAccommodations;
 use App\Message\ScanEvents;
 use App\Message\ScanPois;
@@ -79,6 +80,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 CheckWaterPoints::class => 'async',
                 RecalculateRouteSegment::class => 'async',
                 RecalculateStages::class => 'async',
+                ResolveStageLabels::class => 'async',
                 ScanEvents::class => 'async',
                 AllEnrichmentsCompleted::class => 'async',
                 AnalyzeStageWithLlmMessage::class => 'llm',
