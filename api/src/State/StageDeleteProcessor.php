@@ -90,10 +90,10 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         // exactly one calendar day per stage (rest days included), so removing a
         // stage shifts the end date back so the global range, the export and a
         // later re-pacing all stay consistent (recette #649). Mirrors
-        // StageCreateProcessor / RestDayInsertProcessor.
-        $tripRequest = $this->tripStateManager->getRequest($tripId);
-        $startDate = $tripRequest?->startDate;
-        if ($tripRequest instanceof TripRequest && $startDate instanceof \DateTimeImmutable) {
+        // StageCreateProcessor / RestDayInsertProcessor. Reuse the request
+        // asserted above — storeStages only flushes, never detaches it (review).
+        $startDate = $tripRequest->startDate;
+        if ($startDate instanceof \DateTimeImmutable) {
             $tripRequest->endDate = $startDate->modify(\sprintf('+%d days', \count($stages) - 1));
             $this->tripStateManager->storeRequest($tripId, $tripRequest);
         }
