@@ -195,7 +195,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
             // The lunch/resupply alerts added above are delivered live via Mercure
             // (above); AnalyzeTerrain owns the persisted alerts column.
             foreach ($stages as $stage) {
-                $this->tripStateManager->updateStagePois($tripId, $stage->dayNumber, $stage->pois);
+                $this->tripStateManager->updateStagePois($tripId, $stage->dayNumber, array_values($stage->pois));
             }
         }, $generation);
     }
