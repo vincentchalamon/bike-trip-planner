@@ -180,6 +180,7 @@ final class TripAnalyzeTest extends ApiTestCase
             CheckRailwayStations::class,
             CheckBorderCrossing::class,
             ScanEvents::class,
+            ResolveStageLabels::class,
         ];
 
         $this->assertSame($expected, $dispatched, 'Exactly one message per enrichment step must be dispatched, in order.');

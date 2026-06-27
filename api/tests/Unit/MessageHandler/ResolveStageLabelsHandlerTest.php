@@ -39,7 +39,7 @@ final class ResolveStageLabelsHandlerTest extends TestCase
             ->method('updateStageLabels')
             ->with(self::TRIP_ID, 1, 'Lyon', 'Lyon');
 
-        $tracker = $this->createMock(TripGenerationTrackerInterface::class);
+        $tracker = $this->createStub(TripGenerationTrackerInterface::class);
         $tracker->method('current')->willReturn(null);
 
         $handler = new ResolveStageLabelsHandler($repo, $this->geocoder('Lyon'), $tracker);
@@ -53,7 +53,7 @@ final class ResolveStageLabelsHandlerTest extends TestCase
         $repo->expects(self::never())->method('getStages');
         $repo->expects(self::never())->method('updateStageLabels');
 
-        $tracker = $this->createMock(TripGenerationTrackerInterface::class);
+        $tracker = $this->createStub(TripGenerationTrackerInterface::class);
         $tracker->method('current')->willReturn(5); // newer than the message's generation 2
 
         // No HTTP responses queued: a geocoding call would throw, proving none happens.
@@ -82,7 +82,7 @@ final class ResolveStageLabelsHandlerTest extends TestCase
             ->method('updateStageLabels')
             ->with(self::TRIP_ID, 2, 'Lyon', 'Lyon');
 
-        $tracker = $this->createMock(TripGenerationTrackerInterface::class);
+        $tracker = $this->createStub(TripGenerationTrackerInterface::class);
         $tracker->method('current')->willReturn(null);
 
         // A single queued response: a second HTTP call would throw, so the rest day
@@ -94,6 +94,23 @@ final class ResolveStageLabelsHandlerTest extends TestCase
 
         $handler = new ResolveStageLabelsHandler($repo, $geocoder, $tracker);
         $handler(new ResolveStageLabels(self::TRIP_ID, generation: 1));
+    }
+
+    #[Test]
+    public function doesNothingWhenNoStagesAreFound(): void
+    {
+        $repo = $this->createMock(TripRequestRepositoryInterface::class);
+        $repo->method('getStages')->willReturn(null);
+        $repo->expects(self::never())->method('updateStageLabels');
+
+        $tracker = $this->createStub(TripGenerationTrackerInterface::class);
+        $tracker->method('current')->willReturn(null);
+
+        // No HTTP responses queued: a geocoding call would throw, proving none happens.
+        $geocoder = new ReverseGeocoder(new MockHttpClient([]), new ArrayAdapter());
+
+        $handler = new ResolveStageLabelsHandler($repo, $geocoder, $tracker);
+        $handler(new ResolveStageLabels(self::TRIP_ID));
     }
 
     private function geocoder(string $city): ReverseGeocoder
