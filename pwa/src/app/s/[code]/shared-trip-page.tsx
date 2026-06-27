@@ -85,8 +85,11 @@ function SharedTripLoader({ code }: { code: string }) {
           },
           geometry: (s.geometry as StageData["geometry"]) ?? [],
           label: (s.label as string) ?? null,
-          startLabel: null,
-          endLabel: null,
+          // Server-persisted reverse-geocoded labels (recette #649 #3c): the
+          // anonymous shared view cannot call the auth-gated /geocode endpoint,
+          // so it relies entirely on these to show city names, not coordinates.
+          startLabel: (s.startLabel as string) ?? null,
+          endLabel: (s.endLabel as string) ?? null,
           weather: (s.weather as StageData["weather"]) ?? null,
           alerts: (s.alerts as StageData["alerts"]) ?? [],
           pois: (s.pois as StageData["pois"]) ?? [],
