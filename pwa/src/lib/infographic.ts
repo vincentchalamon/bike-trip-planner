@@ -48,14 +48,18 @@ export function stageColor(index: number): string {
 export const CARD_WIDTH = 800;
 export const CARD_HEIGHT = 480;
 const PADDING = 28;
-// 70 / 30 split of the content row: an enlarged map fills the left column, the
-// stats and the elevation profile stack in the right column.
+// The map fills the left column; the stats and elevation profile stack in the
+// right column. The map column is sized to the route's aspect ratio at render
+// time (clamped to [MIN, MAX]) so the right column tightens onto the route
+// instead of leaving dead space beside it (recette #649).
 const CONTENT_WIDTH = CARD_WIDTH - PADDING * 2; // 744
 const COLUMN_GAP = 16;
-const MAP_WIDTH = Math.round((CONTENT_WIDTH - COLUMN_GAP) * 0.7); // ~510
-// Layout positions (fixed, always reserve space for the date line)
-const SEP_Y = PADDING + 32 + 24 + 8; // 92
-const CONTENT_TOP = SEP_Y + 16; // 108
+const MAP_WIDTH_MAX = Math.round((CONTENT_WIDTH - COLUMN_GAP) * 0.7); // ~510
+const MAP_WIDTH_MIN = 260;
+// Layout positions. The title carries no date subtitle (the dates already
+// appear in the right-column stats), so the separator sits just under it.
+const SEP_Y = PADDING + 36; // 64
+const CONTENT_TOP = SEP_Y + 16; // 80
 // Reserve a band under the map for the OSM attribution (with a clear gap above
 // the copyright line) and a footer band for the branding line, then let the
 // map fill the rest of the left column.
@@ -125,17 +129,6 @@ export async function renderInfographic(
   const titleText = truncateText(ctx, data.title, CARD_WIDTH - PADDING * 2);
   ctx.fillText(titleText, PADDING, PADDING);
 
-  // Date range subtitle (space always reserved so layout stays fixed)
-  if (data.startDate || data.endDate) {
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "14px system-ui, -apple-system, sans-serif";
-    ctx.fillText(
-      formatDateRange(data.startDate, data.endDate),
-      PADDING,
-      PADDING + 32,
-    );
-  }
-
   // First separator
   ctx.strokeStyle = "#334155";
   ctx.lineWidth = 1;
@@ -144,15 +137,18 @@ export async function renderInfographic(
   ctx.lineTo(CARD_WIDTH - PADDING, SEP_Y);
   ctx.stroke();
 
-  // Route map (left side of content row, ~70% width) — async tile fetch
-  await drawRouteMap(
-    ctx,
-    PADDING,
-    CONTENT_TOP,
-    MAP_WIDTH,
-    MAP_HEIGHT,
-    data.stages,
-  );
+  // Size the map column to the route's aspect ratio so the right column sits
+  // just past the route, with no background and no dead space (recette #649).
+  const aspect = routeBboxAspect(data.stages);
+  const mapWidth = aspect !== null
+    ? Math.min(
+        MAP_WIDTH_MAX,
+        Math.max(MAP_WIDTH_MIN, Math.round(MAP_HEIGHT * aspect)),
+      )
+    : MAP_WIDTH_MAX;
+
+  // Route map (left of the content row), left-aligned — async tile fetch
+  await drawRouteMap(ctx, PADDING, CONTENT_TOP, mapWidth, MAP_HEIGHT, data.stages);
 
   // OSM attribution, directly under the map
   ctx.fillStyle = "#475569";
@@ -164,8 +160,8 @@ export async function renderInfographic(
     CONTENT_TOP + MAP_HEIGHT + MAP_ATTRIBUTION_GAP,
   );
 
-  // Right column (~30% width): stats stacked above the elevation profile.
-  const statsX = PADDING + MAP_WIDTH + COLUMN_GAP;
+  // Right column: stats stacked above the elevation profile.
+  const statsX = PADDING + mapWidth + COLUMN_GAP;
   const colWidth = CARD_WIDTH - statsX - PADDING;
 
   const activeStages = data.stages.filter((s) => !s.isRestDay);
@@ -329,6 +325,40 @@ function loadTile(url: string): Promise<HTMLImageElement | null> {
   });
 }
 
+/**
+ * Aspect ratio (width / height, in WebMercator) of the route's padded bounding
+ * box, or null when there is no drawable route. Zoom-independent — lon and lat
+ * pixels share the same scale factor — so the infographic can size the map
+ * column to the route before any tiles are fetched.
+ */
+function routeBboxAspect(stages: StageData[]): number | null {
+  const activeStages = stages.filter(
+    (s) => !s.isRestDay && s.geometry.length >= 2,
+  );
+  const allPoints = activeStages.flatMap((s) => s.geometry);
+  if (allPoints.length < 2) return null;
+
+  const lats = allPoints.map((p) => p.lat);
+  const lons = allPoints.map((p) => p.lon);
+  const rawMinLat = lats.reduce((a, b) => (b < a ? b : a), lats[0]!);
+  const rawMaxLat = lats.reduce((a, b) => (b > a ? b : a), lats[0]!);
+  const rawMinLon = lons.reduce((a, b) => (b < a ? b : a), lons[0]!);
+  const rawMaxLon = lons.reduce((a, b) => (b > a ? b : a), lons[0]!);
+  const latPad = Math.max((rawMaxLat - rawMinLat) * 0.08, 0.005);
+  const lonPad = Math.max((rawMaxLon - rawMinLon) * 0.08, 0.005);
+
+  const mercY = (lat: number) => {
+    const rad = (lat * Math.PI) / 180;
+    return (1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2;
+  };
+  const widthFrac = (rawMaxLon + lonPad - (rawMinLon - lonPad)) / 360;
+  const heightFrac = Math.abs(
+    mercY(rawMinLat - latPad) - mercY(rawMaxLat + latPad),
+  );
+  if (!Number.isFinite(heightFrac) || heightFrac <= 0) return null;
+  return widthFrac / heightFrac;
+}
+
 async function drawRouteMap(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -337,10 +367,6 @@ async function drawRouteMap(
   h: number,
   stages: StageData[],
 ): Promise<void> {
-  // Dark fallback background
-  ctx.fillStyle = "#0f2340";
-  ctx.fillRect(x, y, w, h);
-
   const activeStages = stages.filter(
     (s) => !s.isRestDay && s.geometry.length >= 2,
   );
@@ -387,7 +413,7 @@ async function drawRouteMap(
   const scale = Math.min(w / bboxPxW, h / bboxPxH);
   const scaledBboxW = bboxPxW * scale;
   const scaledBboxH = bboxPxH * scale;
-  const offX = x + (w - scaledBboxW) / 2;
+  const offX = x; // left-align the route; the column width already matches it
   const offY = y + (h - scaledBboxH) / 2;
 
   const toCanvas = (lon: number, lat: number): [number, number] => {
