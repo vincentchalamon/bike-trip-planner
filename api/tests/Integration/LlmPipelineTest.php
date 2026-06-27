@@ -474,6 +474,10 @@ final class InMemoryTripRequestRepository implements TripRequestRepositoryInterf
     {
     }
 
+    public function updateStageLabels(string $tripId, int $dayNumber, ?string $startLabel, ?string $endLabel): void
+    {
+    }
+
     public function storeTracksData(string $tripId, array $tracksData): void
     {
     }

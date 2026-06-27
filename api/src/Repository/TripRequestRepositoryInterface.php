@@ -105,6 +105,11 @@ interface TripRequestRepositoryInterface
     public function updateStageAccommodations(string $tripId, int $dayNumber, array $accommodations): void;
 
     /**
+     * Persists a single stage's reverse-geocoded endpoint labels atomically (see {@see self::updateStageWeather()}).
+     */
+    public function updateStageLabels(string $tripId, int $dayNumber, ?string $startLabel, ?string $endLabel): void;
+
+    /**
      * Stores multi-track data for Komoot Collection source type.
      *
      * @param list<list<array{lat: float, lon: float, ele: float}>> $tracksData

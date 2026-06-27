@@ -57,6 +57,18 @@ class Stage
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $label = null;
 
+    /**
+     * Reverse-geocoded city names for the stage endpoints, resolved server-side
+     * and persisted (recette #649) so the anonymous shared view — which cannot
+     * call the auth-gated /geocode endpoint — and a reloaded trip both show city
+     * names instead of raw GPS coordinates. Null until {@see \App\MessageHandler\ResolveStageLabelsHandler} fills them.
+     */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $startLabel = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $endLabel = null;
+
     #[ORM\Column]
     private bool $isRestDay = false;
 
@@ -274,6 +286,30 @@ class Stage
     public function setLabel(?string $label): self
     {
         $this->label = $label;
+
+        return $this;
+    }
+
+    public function getStartLabel(): ?string
+    {
+        return $this->startLabel;
+    }
+
+    public function setStartLabel(?string $startLabel): self
+    {
+        $this->startLabel = $startLabel;
+
+        return $this;
+    }
+
+    public function getEndLabel(): ?string
+    {
+        return $this->endLabel;
+    }
+
+    public function setEndLabel(?string $endLabel): self
+    {
+        $this->endLabel = $endLabel;
 
         return $this;
     }

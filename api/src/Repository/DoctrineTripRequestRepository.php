@@ -439,6 +439,22 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             ->execute();
     }
 
+    public function updateStageLabels(string $tripId, int $dayNumber, ?string $startLabel, ?string $endLabel): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        $this->getEntityManager()->createQuery(
+            'UPDATE App\Entity\Stage s SET s.startLabel = :startLabel, s.endLabel = :endLabel WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('dayNumber', $dayNumber)
+            ->setParameter('startLabel', $startLabel)
+            ->setParameter('endLabel', $endLabel)
+            ->execute();
+    }
+
     // --- Private helpers ---
 
     /**
@@ -511,6 +527,8 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         $entity->setEndLon($dto->endPoint->lon);
         $entity->setEndEle($dto->endPoint->ele);
         $entity->setLabel($dto->label);
+        $entity->setStartLabel($dto->startLabel);
+        $entity->setEndLabel($dto->endLabel);
         $entity->setIsRestDay($dto->isRestDay);
 
         // Geometry: list<Coordinate> → list<array{lat, lon, ele}>
@@ -583,6 +601,8 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         );
 
         $dto->onCycleNetwork = $entity->getOnCycleNetwork();
+        $dto->startLabel = $entity->getStartLabel();
+        $dto->endLabel = $entity->getEndLabel();
 
         // Weather
         /** @var array{icon: string, description: string, tempMin: float, tempMax: float, windSpeed: float, windDirection: string, precipitationProbability: int, humidity: int, comfortIndex: int, relativeWindDirection: string}|null $weatherData */
