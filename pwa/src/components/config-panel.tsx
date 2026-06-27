@@ -124,6 +124,16 @@ export function ConfigPanel({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, setConfigPanelOpen]);
 
+  // Lock body scroll while the panel is open so the page behind it stays put.
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [isOpen]);
+
   // Trap focus inside panel when open
   useEffect(() => {
     if (!isOpen) return;

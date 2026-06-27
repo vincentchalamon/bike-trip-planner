@@ -31,6 +31,7 @@ function NewTripContent() {
     ui.setAccommodationScanning(false);
     ui.setBlockStatus("weather", null);
     ui.setBlockStatus("ai", null);
+    ui.setConfigPanelOpen(false);
     // Run once on mount: arriving on `/trips/new` is an explicit fresh-start
     // intent. Subsequent in-page state changes must not re-clear the trip.
     // eslint-disable-next-line react-hooks/exhaustive-deps

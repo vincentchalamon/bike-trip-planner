@@ -47,6 +47,29 @@ test.describe("ConfigPanel", () => {
     await expect(dialog).not.toBeInViewport();
   });
 
+  test("locks body scroll while open and restores it on close", async ({
+    createFullTrip,
+    mockedPage,
+  }) => {
+    await createFullTrip();
+    await mockedPage
+      .getByRole("button", { name: "Ouvrir les paramètres" })
+      .click();
+    await expect(
+      mockedPage.getByRole("dialog", { name: "Paramètres" }),
+    ).toBeInViewport();
+    expect(await mockedPage.evaluate(() => document.body.style.overflow)).toBe(
+      "hidden",
+    );
+
+    await mockedPage
+      .getByRole("button", { name: "Fermer les paramètres" })
+      .click();
+    expect(await mockedPage.evaluate(() => document.body.style.overflow)).toBe(
+      "",
+    );
+  });
+
   test("toggling the last enabled accommodation type is a no-op", async ({
     createFullTrip,
     mockedPage,

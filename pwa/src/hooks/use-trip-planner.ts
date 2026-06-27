@@ -838,6 +838,7 @@ export function useTripPlanner() {
       actions.clearTrip();
       useUiStore.getState().setProcessing(false);
       useUiStore.getState().setAccommodationScanning(false);
+      useUiStore.getState().setConfigPanelOpen(false);
       router.push("/trips");
       return true;
     } catch (err) {

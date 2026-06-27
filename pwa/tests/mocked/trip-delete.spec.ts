@@ -146,4 +146,37 @@ test.describe("Delete trip from the config panel", () => {
     // No navigation on failure.
     await expect(page).toHaveURL(new RegExp(`/trips/${TRIP_ID}`));
   });
+
+  test("config panel stays closed after delete then new trip", async ({
+    page,
+  }) => {
+    await page.route(`**/trips/${TRIP_ID}`, (route, request) => {
+      if (request.method() !== "DELETE") return route.fallback();
+      return route.fulfill({ status: 204, body: "" });
+    });
+    await page.route(/\/trips\?/, (route, request) => {
+      if (request.method() !== "GET") return route.fallback();
+      return route.fulfill({
+        status: 200,
+        headers: { "Content-Type": "application/ld+json; charset=utf-8" },
+        body: JSON.stringify({ member: [], totalItems: 0 }),
+      });
+    });
+
+    await openConfig(page);
+    await page.getByTestId("delete-trip-button").click();
+    await expect(page.getByTestId("delete-trip-dialog")).toBeVisible();
+    await page.getByTestId("delete-trip-dialog-confirm").click();
+    await page.waitForURL(/\/trips$/, { timeout: 5000 });
+
+    // Regression (recette #649): the stale isConfigPanelOpen flag used to survive
+    // client-side navigation and reopen the panel over the fresh-start screen.
+    // Navigate via the empty-state CTA (a next/link SPA transition, not page.goto,
+    // which would reset the in-memory Zustand store and pass even without the fix).
+    await page.getByTestId("trips-empty-new-trip-primary").click();
+    await page.waitForURL(/\/trips\/new/);
+    await expect(
+      page.getByRole("dialog", { name: "Paramètres" }),
+    ).not.toBeInViewport();
+  });
 });
