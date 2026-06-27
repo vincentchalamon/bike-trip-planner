@@ -13,6 +13,7 @@ import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { HydrationBoundary } from "@/components/hydration-boundary";
 import { SharedTopBar } from "@/components/shared-top-bar";
 import { SharedViewBanner } from "@/components/shared-view-banner";
+import { LandingFooter } from "@/components/landing/footer";
 import { fetchSharedTrip } from "@/lib/api/client";
 import { ShareProvider } from "@/lib/share-context";
 import { useUiStore } from "@/store/ui-store";
@@ -305,6 +306,10 @@ function SharedTripLoader({ code }: { code: string }) {
           </div>
         </div>
       </main>
+
+      {/* Site footer — the shared view uses SharedTopBar (not SiteChrome), so
+          the homepage footer must be rendered explicitly here (recette #649). */}
+      <LandingFooter />
     </ShareProvider>
   );
 }
