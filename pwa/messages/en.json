@@ -366,7 +366,8 @@
     "userWaypoint": "User waypoints"
   },
   "stageAlerts": {
-    "heading": "Alerts ({count})"
+    "heading": "Alerts ({count})",
+    "culturalHeading": "Cultural recommendations ({count})"
   },
   "alertGroup": {
     "title": {

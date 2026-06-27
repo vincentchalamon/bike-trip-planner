@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Landmark,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -14,51 +19,91 @@ interface StageAlertsProps {
 }
 
 /**
- * Section wrapper for the per-stage alerts. The section itself is collapsible
- * (`stage-alerts-toggle`); inside, alerts are rendered by `AlertList`, which
- * groups them by severity (Critical expanded by default; Warning + Nudge
- * collapsed) — see #397.
+ * Per-stage alerts + cultural recommendations. Cultural-POI suggestions arrive
+ * tagged `source: "cultural_poi"` (live via Mercure); they are split out of the
+ * "Alertes" list into a dedicated "Recommandations culturelles" section so they
+ * no longer inflate the alert count (recette #649 round 7). Each section is
+ * collapsible; inside, `AlertList` groups by severity (#397).
  */
 export function StageAlerts({ alerts, onAddPoiWaypoint }: StageAlertsProps) {
   const t = useTranslations("stageAlerts");
-  const [expanded, setExpanded] = useState(true);
+  const [alertsExpanded, setAlertsExpanded] = useState(true);
+  const [culturalExpanded, setCulturalExpanded] = useState(true);
 
-  const toggleExpanded = useCallback(() => setExpanded((prev) => !prev), []);
+  const toggleAlerts = useCallback(() => setAlertsExpanded((p) => !p), []);
+  const toggleCultural = useCallback(() => setCulturalExpanded((p) => !p), []);
+
+  const cultural = alerts.filter((a) => a.source === "cultural_poi");
+  const others = alerts.filter((a) => a.source !== "cultural_poi");
 
   if (alerts.length === 0) return null;
 
   return (
-    <div data-testid="stage-alerts">
-      {/* Section header — mirrors the events panel layout (icon + count). */}
-      <Separator className="mt-4 mb-3" />
-      <Button
-        variant="ghost"
-        className="w-full justify-between px-0 h-auto py-1 text-sm font-medium hover:bg-transparent cursor-pointer"
-        onClick={toggleExpanded}
-        aria-expanded={expanded}
-        data-testid="stage-alerts-toggle"
-      >
-        <span className="flex items-center gap-1.5">
-          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          <span data-testid="stage-alerts-count">
-            {t("heading", { count: alerts.length })}
-          </span>
-        </span>
-        {expanded ? (
-          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        )}
-      </Button>
+    <>
+      {others.length > 0 && (
+        <div data-testid="stage-alerts">
+          <Separator className="mt-4 mb-3" />
+          <Button
+            variant="ghost"
+            className="w-full justify-between px-0 h-auto py-1 text-sm font-medium hover:bg-transparent cursor-pointer"
+            onClick={toggleAlerts}
+            aria-expanded={alertsExpanded}
+            data-testid="stage-alerts-toggle"
+          >
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <span data-testid="stage-alerts-count">
+                {t("heading", { count: others.length })}
+              </span>
+            </span>
+            {alertsExpanded ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </Button>
 
-      {/* Collapsible body — alerts are grouped by severity inside. Left
-          padding lines the content up with the header title (past the icon)
-          and right padding gives it breathing room. */}
-      {expanded && (
-        <div className="mt-2 pl-[22px] pr-1" data-testid="stage-alerts-body">
-          <AlertList alerts={alerts} onAddPoiWaypoint={onAddPoiWaypoint} />
+          {alertsExpanded && (
+            <div className="mt-2 pl-[22px] pr-1" data-testid="stage-alerts-body">
+              <AlertList alerts={others} onAddPoiWaypoint={onAddPoiWaypoint} />
+            </div>
+          )}
         </div>
       )}
-    </div>
+
+      {cultural.length > 0 && (
+        <div data-testid="stage-cultural">
+          <Separator className="mt-4 mb-3" />
+          <Button
+            variant="ghost"
+            className="w-full justify-between px-0 h-auto py-1 text-sm font-medium hover:bg-transparent cursor-pointer"
+            onClick={toggleCultural}
+            aria-expanded={culturalExpanded}
+            data-testid="stage-cultural-toggle"
+          >
+            <span className="flex items-center gap-1.5">
+              <Landmark className="h-4 w-4 text-muted-foreground" />
+              <span data-testid="stage-cultural-count">
+                {t("culturalHeading", { count: cultural.length })}
+              </span>
+            </span>
+            {culturalExpanded ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </Button>
+
+          {culturalExpanded && (
+            <div
+              className="mt-2 pl-[22px] pr-1"
+              data-testid="stage-cultural-body"
+            >
+              <AlertList alerts={cultural} onAddPoiWaypoint={onAddPoiWaypoint} />
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 }
