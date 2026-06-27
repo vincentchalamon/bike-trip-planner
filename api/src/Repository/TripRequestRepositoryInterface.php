@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\ApiResource\Model\Accommodation;
+use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\PointOfInterest;
+use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 
@@ -68,6 +72,37 @@ interface TripRequestRepositoryInterface
      * @param array{narrative: string, patterns: list<string>, recommendations: list<string>, crossStageAlerts: list<string>, model: string, promptVersion: int, generatedAt: string}|null $aiOverview
      */
     public function updateTripAiOverview(string $tripId, ?array $aiOverview): void;
+
+    /**
+     * Persists a single stage's weather atomically, keyed by dayNumber.
+     *
+     * Parallel enrichment handlers each own one JSONB column; routing them through
+     * {@see self::storeStages()} re-writes the whole stages collection, so a slow
+     * handler reading a stale snapshot overwrites a sibling's freshly-written column
+     * (the weather/accommodations "disappear" bug — recette #649).
+     */
+    public function updateStageWeather(string $tripId, int $dayNumber, ?WeatherForecast $weather): void;
+
+    /**
+     * Persists a single stage's alerts atomically (see {@see self::updateStageWeather()}).
+     *
+     * @param list<Alert> $alerts
+     */
+    public function updateStageAlerts(string $tripId, int $dayNumber, array $alerts): void;
+
+    /**
+     * Persists a single stage's POIs atomically (see {@see self::updateStageWeather()}).
+     *
+     * @param list<PointOfInterest> $pois
+     */
+    public function updateStagePois(string $tripId, int $dayNumber, array $pois): void;
+
+    /**
+     * Persists a single stage's accommodations atomically (see {@see self::updateStageWeather()}).
+     *
+     * @param list<Accommodation> $accommodations
+     */
+    public function updateStageAccommodations(string $tripId, int $dayNumber, array $accommodations): void;
 
     /**
      * Stores multi-track data for Komoot Collection source type.

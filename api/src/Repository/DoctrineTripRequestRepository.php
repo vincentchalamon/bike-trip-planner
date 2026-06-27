@@ -367,6 +367,78 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             ->execute();
     }
 
+    // Atomic per-stage UPDATE of one JSONB column, keyed by dayNumber: lets parallel
+    // enrichment handlers persist only their own column instead of the whole-collection
+    // read-modify-write of storeStages() (which let a slow handler overwrite a sibling's
+    // freshly-written column — recette #649). One literal DQL per column (a dynamic,
+    // sprintf-built query string is not validated by phpstan-doctrine and avoids any
+    // column-name interpolation). Mirrors updateStageAiAnalysis(). The value is bound as a
+    // single 'jsonb' parameter — without the explicit type Doctrine infers
+    // ArrayParameterType and expands the list into $1, $2, … .
+
+    public function updateStageWeather(string $tripId, int $dayNumber, ?WeatherForecast $weather): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        $this->getEntityManager()->createQuery(
+            'UPDATE App\Entity\Stage s SET s.weather = :value WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('dayNumber', $dayNumber)
+            ->setParameter('value', $weather instanceof WeatherForecast ? $this->weatherToArray($weather) : null, 'jsonb')
+            ->execute();
+    }
+
+    /** @param list<Alert> $alerts */
+    public function updateStageAlerts(string $tripId, int $dayNumber, array $alerts): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        $this->getEntityManager()->createQuery(
+            'UPDATE App\Entity\Stage s SET s.alerts = :value WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('dayNumber', $dayNumber)
+            ->setParameter('value', array_map($this->alertToArray(...), $alerts), 'jsonb')
+            ->execute();
+    }
+
+    /** @param list<PointOfInterest> $pois */
+    public function updateStagePois(string $tripId, int $dayNumber, array $pois): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        $this->getEntityManager()->createQuery(
+            'UPDATE App\Entity\Stage s SET s.pois = :value WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('dayNumber', $dayNumber)
+            ->setParameter('value', array_map($this->poiToArray(...), $pois), 'jsonb')
+            ->execute();
+    }
+
+    /** @param list<Accommodation> $accommodations */
+    public function updateStageAccommodations(string $tripId, int $dayNumber, array $accommodations): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        $this->getEntityManager()->createQuery(
+            'UPDATE App\Entity\Stage s SET s.accommodations = :value WHERE s.trip = :tripId AND s.dayNumber = :dayNumber',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('dayNumber', $dayNumber)
+            ->setParameter('value', array_map($this->accommodationToArray(...), $accommodations), 'jsonb')
+            ->execute();
+    }
+
     // --- Private helpers ---
 
     /**

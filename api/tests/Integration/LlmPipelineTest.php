@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration;
 
+use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
@@ -454,6 +455,22 @@ final class InMemoryTripRequestRepository implements TripRequestRepositoryInterf
     }
 
     public function storeStages(string $tripId, array $stages): void
+    {
+    }
+
+    public function updateStageWeather(string $tripId, int $dayNumber, ?WeatherForecast $weather): void
+    {
+    }
+
+    public function updateStageAlerts(string $tripId, int $dayNumber, array $alerts): void
+    {
+    }
+
+    public function updateStagePois(string $tripId, int $dayNumber, array $pois): void
+    {
+    }
+
+    public function updateStageAccommodations(string $tripId, int $dayNumber, array $accommodations): void
     {
     }
 

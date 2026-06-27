@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\ApiResource\Model\Accommodation;
+use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\PointOfInterest;
+use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
 use App\Llm\Dto\StageAiAnalysis;
@@ -120,6 +124,72 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
             foreach ($stages as $stage) {
                 if ($stage->dayNumber === $dayNumber) {
                     $stage->aiAnalysis = null === $aiAnalysis ? null : StageAiAnalysis::fromArray($aiAnalysis);
+                    $changed = true;
+                    break;
+                }
+            }
+
+            if ($changed) {
+                $this->storeStages($tripId, $stages);
+            }
+        } finally {
+            $lock->release();
+        }
+    }
+
+    public function updateStageWeather(string $tripId, int $dayNumber, ?WeatherForecast $weather): void
+    {
+        $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($weather): void {
+            $stage->weather = $weather;
+        });
+    }
+
+    /** @param list<Alert> $alerts */
+    public function updateStageAlerts(string $tripId, int $dayNumber, array $alerts): void
+    {
+        $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($alerts): void {
+            $stage->alerts = $alerts;
+        });
+    }
+
+    /** @param list<PointOfInterest> $pois */
+    public function updateStagePois(string $tripId, int $dayNumber, array $pois): void
+    {
+        $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($pois): void {
+            $stage->pois = $pois;
+        });
+    }
+
+    /** @param list<Accommodation> $accommodations */
+    public function updateStageAccommodations(string $tripId, int $dayNumber, array $accommodations): void
+    {
+        $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($accommodations): void {
+            $stage->accommodations = $accommodations;
+        });
+    }
+
+    /**
+     * Lock-guarded read-modify-write of a single stage (matched by dayNumber) in the
+     * monolithic blob, so concurrent enrichment handlers can't lose each other's
+     * column updates (recette #649). Mirrors {@see self::updateStageAiAnalysis()}.
+     *
+     * @param callable(Stage): void $mutator
+     */
+    private function updateStageField(string $tripId, int $dayNumber, callable $mutator): void
+    {
+        $lock = $this->lockFactory->createLock(\sprintf('trip.%s.stages.update', $tripId), ttl: 5);
+        $lock->acquire(blocking: true);
+
+        try {
+            $stages = $this->getStages($tripId);
+            if (null === $stages) {
+                return;
+            }
+
+            $changed = false;
+            foreach ($stages as $stage) {
+                if ($stage->dayNumber === $dayNumber) {
+                    $mutator($stage);
                     $changed = true;
                     break;
                 }

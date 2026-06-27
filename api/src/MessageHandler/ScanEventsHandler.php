@@ -88,10 +88,12 @@ final readonly class ScanEventsHandler extends AbstractTripMessageHandler
                     'events' => array_map($this->eventToArray(...), $events),
                 ]);
 
-                $stages[$i] = $stage;
             }
 
-            $this->tripStateManager->storeStages($tripId, array_values($stages));
+            // Events are not a persisted stage column (no Stage::events DB column);
+            // they are delivered live via Mercure above. The previous storeStages()
+            // call persisted nothing useful and re-wrote the whole stages collection,
+            // wiping concurrent weather/accommodations writes (recette #649).
         }, $generation);
     }
 

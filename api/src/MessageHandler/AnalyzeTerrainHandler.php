@@ -84,7 +84,13 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                 }
             }
 
-            $this->tripStateManager->storeStages($tripId, $stages);
+            // Persist alerts with an atomic per-column UPDATE per stage (recette #649).
+            // AnalyzeTerrain is the authority for persisted alerts; the extra
+            // lunch/seasonal alerts from pois/accommodations are delivered live via
+            // Mercure only.
+            foreach ($stages as $stage) {
+                $this->tripStateManager->updateStageAlerts($tripId, $stage->dayNumber, array_values($stage->alerts));
+            }
 
             $alertsData = [];
             foreach ($stages as $i => $stage) {
