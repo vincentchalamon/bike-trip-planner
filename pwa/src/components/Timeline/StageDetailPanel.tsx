@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import dayjs from "dayjs";
+import "dayjs/locale/fr";
+import "dayjs/locale/en";
 import { StageCard } from "@/components/stage-card";
 import { StagePanelSkeleton } from "@/components/stage-panel-skeleton";
 import { StageSkeleton } from "@/components/stage-skeleton";
@@ -47,16 +50,16 @@ interface StageDetailPanelProps {
   onClearNewAcc?: () => void;
 }
 
-function formatDayDate(startDate: string | null, dayNumber: number): string {
-  const base = startDate ? new Date(`${startDate}T00:00:00`) : new Date();
-  const date = new Date(base);
-  date.setDate(date.getDate() + dayNumber - 1);
-  return date.toLocaleDateString(undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+function formatDayDate(
+  startDate: string | null,
+  dayNumber: number,
+  locale: string,
+): string {
+  const base = startDate ? dayjs(`${startDate}T00:00:00`) : dayjs();
+  return base
+    .add(dayNumber - 1, "day")
+    .locale(locale)
+    .format("dddd D MMMM YYYY");
 }
 
 /**
@@ -88,6 +91,7 @@ export function StageDetailPanel({
   onClearNewAcc,
 }: StageDetailPanelProps) {
   const tStage = useTranslations("stage");
+  const locale = useLocale();
   const recomputingStages = useTripStore((s) => s.recomputingStages);
   const setSelectedStageIndex = useTripStore((s) => s.setSelectedStageIndex);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -228,7 +232,7 @@ export function StageDetailPanel({
                 {tStage("day", { dayNumber: stage.dayNumber })}
               </h2>
               <span className="text-xs md:text-sm text-muted-foreground">
-                {formatDayDate(startDate, stage.dayNumber)}
+                {formatDayDate(startDate, stage.dayNumber, locale)}
               </span>
             </header>
 
