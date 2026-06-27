@@ -169,6 +169,13 @@ const authMiddleware: Middleware = {
       request,
       request.body ? await request.clone().text() : null,
     );
+    // Wait for the initial auth check to settle so we attach the resolved token
+    // rather than firing before the app's bootstrap silent-refresh has run — the
+    // primary cause of the `?link=` 401→retry round-trip (recette #649 #8). The
+    // refresh is deduped, so this triggers at most one per session; once settled
+    // it is a no-op. The 401 retry below remains the safety net for a token that
+    // expires mid-session.
+    await useAuthStore.getState().ensureResolved();
     const authValue = getAuthHeader();
     if (authValue) {
       request.headers.set("Authorization", authValue);
