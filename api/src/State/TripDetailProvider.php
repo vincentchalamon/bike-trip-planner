@@ -169,6 +169,8 @@ final readonly class TripDetailProvider implements ProviderInterface
             'endPoint' => $this->serializeCoord($stage->endPoint),
             'geometry' => array_map($this->serializeCoord(...), $stage->geometry),
             'label' => $stage->label,
+            'startLabel' => $stage->startLabel,
+            'endLabel' => $stage->endLabel,
             'isRestDay' => $stage->isRestDay,
             'onCycleNetwork' => $stage->onCycleNetwork,
             'weather' => $stage->weather instanceof WeatherForecast ? $this->serializeWeather($stage->weather) : null,

@@ -108,8 +108,8 @@ function TripLoader({ tripId }: { tripId: string }) {
           },
           geometry: (s.geometry as StageData["geometry"]) ?? [],
           label: s.label ?? null,
-          startLabel: null,
-          endLabel: null,
+          startLabel: s.startLabel ?? null,
+          endLabel: s.endLabel ?? null,
           weather: (s.weather as StageData["weather"]) ?? null,
           // Tag persisted alerts with their producing group so a later
           // `terrain_alerts` Mercure event (e.g. after selecting an
@@ -286,15 +286,21 @@ function TripLoader({ tripId }: { tripId: string }) {
   useEffect(() => {
     if (!isLoaded) return;
 
+    // The backend now persists reverse-geocoded labels (recette #649), so only
+    // resolve stages that still lack one (e.g. their async resolution hasn't
+    // landed yet) — a fully-labelled trip skips the Nominatim round-trips.
     const stages = useTripStore.getState().stages;
-    if (stages.length === 0) return;
+    const pending = stages
+      .map((s, i) => ({ s, i }))
+      .filter(({ s }) => s.startLabel === null || s.endLabel === null);
+    if (pending.length === 0) return;
 
     const controller = new AbortController();
     const timer = setTimeout(() => {
       if (controller.signal.aborted) return;
       void resolveStageLabels(
-        stages,
-        stages.map((_, i) => i),
+        pending.map(({ s }) => s),
+        pending.map(({ i }) => i),
         controller.signal,
       );
     }, 0);

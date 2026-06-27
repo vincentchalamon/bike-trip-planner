@@ -23,6 +23,7 @@ use App\Message\CheckHealthServices;
 use App\Message\CheckRailwayStations;
 use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
+use App\Message\ResolveStageLabels;
 use App\Message\ScanAccommodations;
 use App\Message\ScanEvents;
 use App\Message\ScanPois;
@@ -180,6 +181,7 @@ final class TripAnalyzeTest extends ApiTestCase
             CheckRailwayStations::class,
             CheckBorderCrossing::class,
             ScanEvents::class,
+            ResolveStageLabels::class,
         ];
 
         $this->assertSame($expected, $dispatched, 'Exactly one message per enrichment step must be dispatched, in order.');

@@ -171,6 +171,18 @@ final class Stage
     #[ApiProperty(writable: false)]
     public float $onCycleNetwork = 0.0;
 
+    /**
+     * Reverse-geocoded city names for the stage endpoints (recette #649, #3c/#9),
+     * resolved server-side and persisted so the anonymous shared view and a
+     * reloaded trip render city names instead of raw GPS coordinates. Readable
+     * (the frontend consumes them) but never writable.
+     */
+    #[ApiProperty(writable: false)]
+    public ?string $startLabel = null;
+
+    #[ApiProperty(writable: false)]
+    public ?string $endLabel = null;
+
     /** @var Event[] */
     public array $events = [];
 

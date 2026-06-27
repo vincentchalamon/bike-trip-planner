@@ -192,6 +192,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/me/email-change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates a EmailChange resource.
+         * @description Creates a EmailChange resource.
+         */
+        post: operations["api_usersmeemail-change_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/email-change/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates a EmailChange resource.
+         * @description Creates a EmailChange resource.
+         */
+        post: operations["api_usersmeemail-changeverify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{tripId}/stages": {
         parameters: {
             query?: never;
@@ -974,6 +1014,23 @@ export interface components {
             lon?: number;
             ele?: number;
         };
+        /**
+         * @description Email-change-by-magic-link flow for the authenticated user (#777).
+         *
+         *     - POST /users/me/email-change         request a change to {newEmail}; a
+         *       confirmation link is sent to the NEW address.
+         *     - POST /users/me/email-change/verify  consume the {token} from that link and
+         *       commit the new email (single-use, atomic, email uniqueness enforced).
+         *
+         *     The current user is always resolved from the security token, never from a URL
+         *     identifier (no IDOR surface). Distinct from the login magic link, which only
+         *     re-authenticates the SAME email.
+         */
+        EmailChange: {
+            /** Format: email */
+            newEmail: string;
+            token?: string;
+        };
         /** @description A representation of common errors. */
         Error: {
             /** @description A short, human-readable summary of the problem. */
@@ -1233,6 +1290,20 @@ export interface components {
             pois?: components["schemas"]["PointOfInterest.fit"][];
             accommodations?: components["schemas"]["Accommodation.fit"][];
             selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
+            /**
+             * @description Fraction (0..1) of the stage line that follows a signed cycle route,
+             *     persisted at stage-store time and read back here (issue #775).
+             * @default 0
+             */
+            readonly onCycleNetwork: number;
+            /**
+             * @description Reverse-geocoded city names for the stage endpoints (recette #649, #3c/#9),
+             *     resolved server-side and persisted so the anonymous shared view and a
+             *     reloaded trip render city names instead of raw GPS coordinates. Readable
+             *     (the frontend consumes them) but never writable.
+             */
+            readonly startLabel?: string | null;
+            readonly endLabel?: string | null;
             events?: components["schemas"]["Event.fit"][];
             readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.fit"] | null;
             tripId?: string;
@@ -1252,6 +1323,20 @@ export interface components {
             pois?: components["schemas"]["PointOfInterest.gpx"][];
             accommodations?: components["schemas"]["Accommodation.gpx"][];
             selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
+            /**
+             * @description Fraction (0..1) of the stage line that follows a signed cycle route,
+             *     persisted at stage-store time and read back here (issue #775).
+             * @default 0
+             */
+            readonly onCycleNetwork: number;
+            /**
+             * @description Reverse-geocoded city names for the stage endpoints (recette #649, #3c/#9),
+             *     resolved server-side and persisted so the anonymous shared view and a
+             *     reloaded trip render city names instead of raw GPS coordinates. Readable
+             *     (the frontend consumes them) but never writable.
+             */
+            readonly startLabel?: string | null;
+            readonly endLabel?: string | null;
             events?: components["schemas"]["Event.gpx"][];
             readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.gpx"] | null;
             tripId?: string;
@@ -1271,6 +1356,20 @@ export interface components {
             pois?: components["schemas"]["PointOfInterest.jsonld"][];
             accommodations?: components["schemas"]["Accommodation.jsonld"][];
             selectedAccommodation?: components["schemas"]["Accommodation.jsonld"] | null;
+            /**
+             * @description Fraction (0..1) of the stage line that follows a signed cycle route,
+             *     persisted at stage-store time and read back here (issue #775).
+             * @default 0
+             */
+            readonly onCycleNetwork: number;
+            /**
+             * @description Reverse-geocoded city names for the stage endpoints (recette #649, #3c/#9),
+             *     resolved server-side and persisted so the anonymous shared view and a
+             *     reloaded trip render city names instead of raw GPS coordinates. Readable
+             *     (the frontend consumes them) but never writable.
+             */
+            readonly startLabel?: string | null;
+            readonly endLabel?: string | null;
             events?: components["schemas"]["Event.jsonld"][];
             readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.jsonld"] | null;
             tripId?: string;
@@ -1619,6 +1718,8 @@ export interface components {
                     ele?: number;
                 }[];
                 label?: string | null;
+                startLabel?: string | null;
+                endLabel?: string | null;
                 isRestDay?: boolean;
                 /** Format: float */
                 onCycleNetwork?: number;
@@ -1700,6 +1801,20 @@ export interface components {
             pois?: components["schemas"]["PointOfInterest.fit"][];
             accommodations?: components["schemas"]["Accommodation.fit"][];
             selectedAccommodation?: components["schemas"]["Accommodation.fit"] | null;
+            /**
+             * @description Fraction (0..1) of the stage line that follows a signed cycle route,
+             *     persisted at stage-store time and read back here (issue #775).
+             * @default 0
+             */
+            readonly onCycleNetwork: number;
+            /**
+             * @description Reverse-geocoded city names for the stage endpoints (recette #649, #3c/#9),
+             *     resolved server-side and persisted so the anonymous shared view and a
+             *     reloaded trip render city names instead of raw GPS coordinates. Readable
+             *     (the frontend consumes them) but never writable.
+             */
+            readonly startLabel?: string | null;
+            readonly endLabel?: string | null;
             events?: components["schemas"]["Event.fit"][];
             readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.fit"] | null;
             tripId?: string;
@@ -1719,6 +1834,20 @@ export interface components {
             pois?: components["schemas"]["PointOfInterest.gpx"][];
             accommodations?: components["schemas"]["Accommodation.gpx"][];
             selectedAccommodation?: components["schemas"]["Accommodation.gpx"] | null;
+            /**
+             * @description Fraction (0..1) of the stage line that follows a signed cycle route,
+             *     persisted at stage-store time and read back here (issue #775).
+             * @default 0
+             */
+            readonly onCycleNetwork: number;
+            /**
+             * @description Reverse-geocoded city names for the stage endpoints (recette #649, #3c/#9),
+             *     resolved server-side and persisted so the anonymous shared view and a
+             *     reloaded trip render city names instead of raw GPS coordinates. Readable
+             *     (the frontend consumes them) but never writable.
+             */
+            readonly startLabel?: string | null;
+            readonly endLabel?: string | null;
             events?: components["schemas"]["Event.gpx"][];
             readonly aiAnalysis?: components["schemas"]["StageAiAnalysis.gpx"] | null;
             tripId?: string;
@@ -1806,6 +1935,8 @@ export interface components {
                     ele?: number;
                 }[];
                 label?: string | null;
+                startLabel?: string | null;
+                endLabel?: string | null;
                 isRestDay?: boolean;
                 /** Format: float */
                 onCycleNetwork?: number;
@@ -2402,6 +2533,118 @@ export interface operations {
             };
             /** @description Invalid input */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    "api_usersmeemail-change_post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The new EmailChange resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["EmailChange"];
+            };
+        };
+        responses: {
+            /** @description EmailChange resource created */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description An error occurred */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
+                    "application/problem+json": components["schemas"]["ConstraintViolation"];
+                    "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    "api_usersmeemail-changeverify_post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The new EmailChange resource */
+        requestBody: {
+            content: {
+                "application/ld+json": components["schemas"]["EmailChange"];
+            };
+        };
+        responses: {
+            /** @description EmailChange resource created */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

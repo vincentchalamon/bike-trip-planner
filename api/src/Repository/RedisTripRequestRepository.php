@@ -168,6 +168,14 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         });
     }
 
+    public function updateStageLabels(string $tripId, int $dayNumber, ?string $startLabel, ?string $endLabel): void
+    {
+        $this->updateStageField($tripId, $dayNumber, static function (Stage $stage) use ($startLabel, $endLabel): void {
+            $stage->startLabel = $startLabel;
+            $stage->endLabel = $endLabel;
+        });
+    }
+
     /**
      * Lock-guarded read-modify-write of a single stage (matched by dayNumber) in the
      * monolithic blob, so concurrent enrichment handlers can't lose each other's

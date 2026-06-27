@@ -15,6 +15,7 @@ use App\Message\CheckHealthServices;
 use App\Message\CheckRailwayStations;
 use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
+use App\Message\ResolveStageLabels;
 use App\Message\ScanAccommodations;
 use App\Message\ScanEvents;
 use App\Message\ScanPois;
@@ -60,5 +61,6 @@ final readonly class TripAnalysisDispatcher
         $this->messageBus->dispatch(new CheckBorderCrossing($tripId, $generation));
         $this->messageBus->dispatch(new CheckFerries($tripId, $generation));
         $this->messageBus->dispatch(new ScanEvents($tripId, $generation));
+        $this->messageBus->dispatch(new ResolveStageLabels($tripId, $generation));
     }
 }
