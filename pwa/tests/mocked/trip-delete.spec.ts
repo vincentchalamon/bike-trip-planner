@@ -170,8 +170,11 @@ test.describe("Delete trip from the config panel", () => {
     await page.waitForURL(/\/trips$/, { timeout: 5000 });
 
     // Regression (recette #649): the stale isConfigPanelOpen flag used to survive
-    // SPA navigation and reopen the panel over the fresh-start screen.
-    await page.goto("/trips/new");
+    // client-side navigation and reopen the panel over the fresh-start screen.
+    // Navigate via the empty-state CTA (a next/link SPA transition, not page.goto,
+    // which would reset the in-memory Zustand store and pass even without the fix).
+    await page.getByTestId("trips-empty-new-trip-primary").click();
+    await page.waitForURL(/\/trips\/new/);
     await expect(
       page.getByRole("dialog", { name: "Paramètres" }),
     ).not.toBeInViewport();
