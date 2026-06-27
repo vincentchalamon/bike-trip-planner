@@ -41,6 +41,12 @@ interface TripSummaryProps {
    * config drawer that the CTA opens is not mounted.
    */
   showNoDatesBanner?: boolean;
+  /**
+   * Read-only (shared) view: render the dates / profile as plain labels with no
+   * edit affordance (no click, no pencil), since the config drawer they would
+   * open is not mounted there (recette #649).
+   */
+  readOnly?: boolean;
 }
 
 export function TripSummary({
@@ -59,6 +65,7 @@ export function TripSummary({
   maxDistancePerDay,
   averageSpeed,
   showNoDatesBanner = false,
+  readOnly = false,
 }: TripSummaryProps) {
   const t = useTranslations("tripSummary");
   const tPacing = useTranslations("pacing");
@@ -171,40 +178,59 @@ export function TripSummary({
           )}
         {/* Force line break on mobile */}
         <div className="basis-full h-0 md:hidden" aria-hidden="true" />
-        {/* Dates chip — clickable → opens ConfigPanel dates section. The pencil
-            hints that dates are editable (recette #649). */}
-        <button
-          type="button"
-          className="group flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
-          onClick={() => openConfigPanelAt("dates")}
-          aria-label={t("datesLabel")}
-          title={t("editDatesHint")}
-          data-testid="summary-dates"
-        >
-          <CalendarDays className="h-4 w-4 text-brand" />
-          <span>{datesDisplay}</span>
-          <Pencil
-            className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground transition-colors"
-            aria-hidden="true"
-          />
-        </button>
-        {/* Cyclo profile chip — clickable → opens ConfigPanel pacing section.
-            The pencil hints that the profile is editable (recette #649). */}
-        <button
-          type="button"
-          className="group flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
-          onClick={() => openConfigPanelAt("pacing")}
-          aria-label={t("profileLabel")}
-          title={t("editProfileHint")}
-          data-testid="summary-profile"
-        >
-          <User className="h-4 w-4 text-brand" />
-          <span>{profileLabel}</span>
-          <Pencil
-            className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground transition-colors"
-            aria-hidden="true"
-          />
-        </button>
+        {/* Dates chip — clickable (editable view) → opens ConfigPanel dates
+            section with a pencil hint; a plain, non-interactive label in the
+            read-only shared view (recette #649). */}
+        {readOnly ? (
+          <div className="flex items-center gap-1.5" data-testid="summary-dates">
+            <CalendarDays className="h-4 w-4 text-brand" />
+            <span>{datesDisplay}</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="group flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
+            onClick={() => openConfigPanelAt("dates")}
+            aria-label={t("datesLabel")}
+            title={t("editDatesHint")}
+            data-testid="summary-dates"
+          >
+            <CalendarDays className="h-4 w-4 text-brand" />
+            <span>{datesDisplay}</span>
+            <Pencil
+              className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground transition-colors"
+              aria-hidden="true"
+            />
+          </button>
+        )}
+        {/* Cyclo profile chip — clickable (editable view) → opens ConfigPanel
+            pacing section with a pencil hint; a plain label in the read-only
+            shared view (recette #649). */}
+        {readOnly ? (
+          <div
+            className="flex items-center gap-1.5"
+            data-testid="summary-profile"
+          >
+            <User className="h-4 w-4 text-brand" />
+            <span>{profileLabel}</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="group flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
+            onClick={() => openConfigPanelAt("pacing")}
+            aria-label={t("profileLabel")}
+            title={t("editProfileHint")}
+            data-testid="summary-profile"
+          >
+            <User className="h-4 w-4 text-brand" />
+            <span>{profileLabel}</span>
+            <Pencil
+              className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground transition-colors"
+              aria-hidden="true"
+            />
+          </button>
+        )}
       </div>
 
       {/* No-dates alert — moved here (recette #649) so it sits directly under

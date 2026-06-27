@@ -235,6 +235,7 @@ function SharedTripLoader({ code }: { code: string }) {
             elevationPenalty={pacingConfig?.elevationPenalty ?? 50}
             maxDistancePerDay={pacingConfig?.maxDistancePerDay ?? 80}
             averageSpeed={pacingConfig?.averageSpeed ?? 15}
+            readOnly
           />
 
           {/* View mode toggle */}
