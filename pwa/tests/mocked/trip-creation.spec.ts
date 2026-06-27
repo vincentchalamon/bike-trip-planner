@@ -22,22 +22,16 @@ test.describe("Trip creation flow", () => {
     const input = mockedPage.getByTestId("magic-link-input");
     await input.fill("not-a-url");
     await input.press("Enter");
-    await expect(
-      mockedPage.getByText("Entre une URL valide."),
-    ).toBeVisible();
+    await expect(mockedPage.getByText("Entre une URL valide.")).toBeVisible();
   });
 
   test("clears validation error when typing", async ({ mockedPage }) => {
     const input = mockedPage.getByTestId("magic-link-input");
     await input.fill("not-a-url");
     await input.press("Enter");
-    await expect(
-      mockedPage.getByText("Entre une URL valide."),
-    ).toBeVisible();
+    await expect(mockedPage.getByText("Entre une URL valide.")).toBeVisible();
     await input.fill("https://");
-    await expect(
-      mockedPage.getByText("Entre une URL valide."),
-    ).toBeHidden();
+    await expect(mockedPage.getByText("Entre une URL valide.")).toBeHidden();
   });
 
   test("creates trip on valid URL submit", async ({
@@ -194,6 +188,22 @@ test.describe("Trip creation flow", () => {
         .getByTestId("trip-loader")
         .or(mockedPage.getByTestId("trip-title")),
     ).not.toBeVisible();
+  });
+
+  test("back-navigation after ?link= creation does not re-trigger the hook (#800)", async ({
+    mockedPage,
+  }) => {
+    await mockedPage.goto(
+      "/?link=" +
+        encodeURIComponent("https://www.komoot.com/fr-fr/tour/2795080048"),
+    );
+    await expect(mockedPage).toHaveURL(/\/trips\//, { timeout: 5000 });
+
+    // The param is stripped from history in place, so Back lands on a clean "/"
+    // instead of re-running useLinkParam and creating a duplicate trip.
+    await mockedPage.goBack();
+    await expect(mockedPage).not.toHaveURL(/\?link=/);
+    await expect(mockedPage).not.toHaveURL(/\/trips\//);
   });
 
   test("shows stage locations after geocode resolves", async ({

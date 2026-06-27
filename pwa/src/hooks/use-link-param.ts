@@ -34,13 +34,17 @@ export function useLinkParam(onSubmit: (url: string) => Promise<void>) {
       return;
     }
 
-    // Valid link: hand it to the planner, which redirects to /trips/{id} on
-    // success. Crucially we do NOT also `router.replace("/")` here — that extra
-    // navigation to the home route raced the trip-creation redirect (the real
-    // POST takes seconds, vs. an instant mock in tests), stranding the planner
-    // on "/" so the trip never opened (recette #649 #8). `onSubmit` resolves the
-    // address bar by navigating away; a failed creation simply leaves `?link=`
-    // in place — a sensible retry-on-reload.
+    // Strip the param from the CURRENT history entry before handing off, so that
+    // pressing Back from the resulting /trips/{id} lands on a clean "/" and does
+    // not re-mount this hook (fresh consumedRef) → which would create a duplicate
+    // trip on every Back (review on #800). We use window.history.replaceState —
+    // a Next-supported in-place URL rewrite that syncs with useSearchParams —
+    // rather than router.replace("/"): the latter is a real navigation that raced
+    // the trip-creation redirect and stranded the planner on "/" (recette #649 #8).
+    window.history.replaceState(null, "", "/");
+
+    // Hand the link to the planner, which redirects to /trips/{id} on success.
+    // A failed creation leaves the user on "/" — they can retry from the planner.
     void onSubmitRef.current(link);
   }, [searchParams, router]);
 }
