@@ -213,9 +213,6 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                 }
 
                 $this->publisher->publish($tripId, MercureEventType::ACCOMMODATIONS_FOUND, $payload);
-
-                // Update the stage in the full stages array
-                $stages[$i] = $stage;
             }
 
             // Persist accommodations with an atomic per-column UPDATE, only for the
