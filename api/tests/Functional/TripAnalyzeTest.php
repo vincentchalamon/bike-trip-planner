@@ -23,6 +23,7 @@ use App\Message\CheckHealthServices;
 use App\Message\CheckRailwayStations;
 use App\Message\CheckWaterPoints;
 use App\Message\FetchWeather;
+use App\Message\ResolveStageLabels;
 use App\Message\ScanAccommodations;
 use App\Message\ScanEvents;
 use App\Message\ScanPois;
