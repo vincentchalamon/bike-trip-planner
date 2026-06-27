@@ -140,7 +140,7 @@ export async function renderInfographic(
   // Size the map column to the route's aspect ratio so the right column sits
   // just past the route, with no background and no dead space (recette #649).
   const aspect = routeBboxAspect(data.stages);
-  const mapWidth = aspect
+  const mapWidth = aspect !== null
     ? Math.min(
         MAP_WIDTH_MAX,
         Math.max(MAP_WIDTH_MIN, Math.round(MAP_HEIGHT * aspect)),
@@ -355,7 +355,7 @@ function routeBboxAspect(stages: StageData[]): number | null {
   const heightFrac = Math.abs(
     mercY(rawMinLat - latPad) - mercY(rawMaxLat + latPad),
   );
-  if (heightFrac <= 0) return null;
+  if (!Number.isFinite(heightFrac) || heightFrac <= 0) return null;
   return widthFrac / heightFrac;
 }
 
