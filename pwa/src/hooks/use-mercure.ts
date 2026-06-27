@@ -668,7 +668,11 @@ function enrichedPayloadToStageData(payload: EnrichedStagePayload): StageData {
     startLabel: null,
     endLabel: null,
     weather: payload.weather,
-    alerts: payload.alerts,
+    // Tag with the producing group so a later terrain_alerts event REPLACES
+    // (not duplicates) these. AnalyzeTerrain is the sole writer of the persisted
+    // alerts column since #794 (recette #649 round 7, #2; mirrors the trip-page
+    // hydrate). Covers stages_computed / trip_ready / stage_updated payloads.
+    alerts: (payload.alerts ?? []).map((a) => ({ ...a, _group: "terrain" })),
     pois: payload.pois,
     accommodations: payload.accommodations,
     selectedAccommodation: payload.selectedAccommodation,
