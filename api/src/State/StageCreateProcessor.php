@@ -84,8 +84,15 @@ final readonly class StageCreateProcessor implements ProcessorInterface
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, [$position], generation: $generation));
 
+        // Keep the trip's day window in step with the stage count: a trip spans
+        // exactly one calendar day per stage (rest days included), so adding a
+        // stage shifts the end date forward so the global range, the export and a
+        // later re-pacing all stay consistent (recette #649).
         $tripRequest = $this->tripStateManager->getRequest($tripId);
-        if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
+        $startDate = $tripRequest?->startDate;
+        if ($tripRequest instanceof TripRequest && $startDate instanceof \DateTimeImmutable) {
+            $tripRequest->endDate = $startDate->modify(\sprintf('+%d days', \count($stages) - 1));
+            $this->tripStateManager->storeRequest($tripId, $tripRequest);
             $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
             $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }

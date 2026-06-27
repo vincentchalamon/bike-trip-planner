@@ -395,4 +395,29 @@ final class StageCreateTest extends ApiTestCase
             $this->assertSame($i + 1, $stage->dayNumber, \sprintf('Stage at index %d should have dayNumber %d', $i, $i + 1));
         }
     }
+
+    #[Test]
+    public function extendsEndDateToMatchStageCount(): void
+    {
+        $this->seedTripWithStages(self::TRIP_ID, 3);
+
+        $this->client->request('POST', '/trips/'.self::TRIP_ID.'/stages', [
+            'headers' => ['Content-Type' => 'application/ld+json', ...$this->authHeader($this->jwtToken)],
+            'json' => [
+                'startPoint' => ['lat' => 44.0, 'lon' => 4.0],
+                'endPoint' => ['lat' => 44.5, 'lon' => 4.5],
+            ],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+
+        // 3 → 4 stages: the trip now spans 4 days, so the end date shifts from
+        // 2026-07-03 to 2026-07-04 (recette #649).
+        /** @var TripRequestRepositoryInterface $repo */
+        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        $request = $repo->getRequest(self::TRIP_ID);
+
+        $this->assertNotNull($request);
+        $this->assertSame('2026-07-04', $request->endDate?->format('Y-m-d'));
+    }
 }

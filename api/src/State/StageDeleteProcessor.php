@@ -86,6 +86,18 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         $affectedIndices = null !== $mergedIndex ? [$mergedIndex] : [];
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: $isRestDayDeletion, generation: $generation));
 
+        // Keep the trip's day window in step with the stage count: a trip spans
+        // exactly one calendar day per stage (rest days included), so removing a
+        // stage shifts the end date back so the global range, the export and a
+        // later re-pacing all stay consistent (recette #649). Mirrors
+        // StageCreateProcessor / RestDayInsertProcessor.
+        $tripRequest = $this->tripStateManager->getRequest($tripId);
+        $startDate = $tripRequest?->startDate;
+        if ($tripRequest instanceof TripRequest && $startDate instanceof \DateTimeImmutable) {
+            $tripRequest->endDate = $startDate->modify(\sprintf('+%d days', \count($stages) - 1));
+            $this->tripStateManager->storeRequest($tripId, $tripRequest);
+        }
+
         $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
         $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
     }
