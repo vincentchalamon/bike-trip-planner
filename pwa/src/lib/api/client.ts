@@ -68,6 +68,11 @@ export async function apiFetch(
   input: string,
   init?: RequestInit,
 ): Promise<Response> {
+  // Wait for the initial auth check to settle so the call carries the resolved
+  // token instead of firing before the bootstrap silent-refresh — same gating as
+  // the openapi-fetch middleware (recette #649 #8). Every apiFetch endpoint is
+  // authenticated; the anonymous shared view uses a raw fetch, not apiFetch.
+  await useAuthStore.getState().ensureResolved();
   const authHeader = getAuthHeader();
   const baseHeaders: Record<string, string> = {
     "Accept-Language": getBrowserLocale(),
