@@ -129,8 +129,10 @@ export async function apiFetch(
  * 2. If refresh succeeds → retry the original request with the new token
  * 3. If refresh fails → redirect to `/login`
  */
-// Cache request bodies before they are consumed by fetch, so the retry can reuse them.
-const requestBodyCache = new WeakMap<Request, BodyInit | null>();
+// Cache request bodies (as text) before fetch consumes them, so a 401 retry can
+// resend them. A string body is single-shot-safe and needs no `duplex` option,
+// unlike the ReadableStream a cloned Request exposes (recette #649 #8).
+const requestBodyCache = new WeakMap<Request, string | null>();
 
 /**
  * openapi-fetch middleware that propagates the correlation ID:
@@ -156,11 +158,17 @@ const requestIdMiddleware: Middleware = {
 };
 
 const authMiddleware: Middleware = {
-  onRequest({ request }) {
-    // Clone body before it is consumed so the retry in onResponse can reuse it.
-    // request.body is a ReadableStream — once fetch() consumes it, it's locked.
-    // request.clone() creates an independent copy whose stream remains unconsumed.
-    requestBodyCache.set(request, request.body ? request.clone().body : null);
+  async onRequest({ request }) {
+    // Read the body to TEXT before fetch consumes it, so the 401 retry in
+    // onResponse can resend it. Caching the cloned ReadableStream instead made
+    // the retry POST go out with an EMPTY body (a stream body is single-use and
+    // needs `duplex: "half"`), so the API saw no payload → 400 "Syntax error".
+    // This broke `?link=` trip creation, whose POST fires before the access
+    // token is ready (401 → retry) (recette #649 #8).
+    requestBodyCache.set(
+      request,
+      request.body ? await request.clone().text() : null,
+    );
     const authValue = getAuthHeader();
     if (authValue) {
       request.headers.set("Authorization", authValue);
