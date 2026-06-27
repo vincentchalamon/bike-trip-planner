@@ -728,7 +728,18 @@ export const useTripStore = create<TripState>()(
             ? (prev.selectedAccommodation ?? stage.selectedAccommodation)
             : stage.selectedAccommodation,
           alerts:
-            endMatch && prev.alerts.length > 0 ? prev.alerts : stage.alerts,
+            endMatch && prev.alerts.length > 0
+              ? prev.alerts
+              : [
+                  // Cultural-POI recommendations come from a separate scan and
+                  // are absent from this terrain-only payload, so a bare replace
+                  // on reroute (e.g. accommodation selection moves the endpoint)
+                  // would make the dedicated "cultural recommendations" section
+                  // vanish. Preserve them from `prev`, take the rest from the
+                  // incoming payload (recette #649).
+                  ...prev.alerts.filter((a) => a.source === "cultural_poi"),
+                  ...stage.alerts.filter((a) => a.source !== "cultural_poi"),
+                ],
         };
       }),
 

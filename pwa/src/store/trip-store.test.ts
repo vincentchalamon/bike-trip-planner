@@ -294,4 +294,27 @@ describe("applyStageUpdate preservation (recette #649)", () => {
     const result = useTripStore.getState().stages[0]!;
     expect(result.alerts[0]?.message).toBe("new");
   });
+
+  it("preserves cultural-POI recommendations when the endpoint moved (recette #649)", () => {
+    const store = useTripStore.getState();
+    const cultural: AlertData = {
+      ...makeAlert("Visit the abbey"),
+      source: "cultural_poi",
+    };
+    const current = makeStage(1);
+    current.alerts = [cultural, makeAlert("old terrain")];
+    store.setStages([current]);
+
+    // Accommodation selection re-routes the stage (endpoint moves) and carries a
+    // terrain-only payload; the cultural recommendation must not vanish.
+    const incoming = makeStage(1);
+    incoming.endPoint = { lat: 9, lon: 9, ele: 0 };
+    incoming.alerts = [makeAlert("new terrain")];
+    store.applyStageUpdate(0, incoming);
+
+    const result = useTripStore.getState().stages[0]!;
+    expect(result.alerts.some((a) => a.source === "cultural_poi")).toBe(true);
+    expect(result.alerts.some((a) => a.message === "new terrain")).toBe(true);
+    expect(result.alerts.some((a) => a.message === "old terrain")).toBe(false);
+  });
 });
