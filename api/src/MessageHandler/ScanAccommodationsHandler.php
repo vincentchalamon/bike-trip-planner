@@ -218,7 +218,12 @@ final readonly class ScanAccommodationsHandler extends AbstractTripMessageHandle
                 $stages[$i] = $stage;
             }
 
-            $this->tripStateManager->storeStages($tripId, array_values($stages));
+            // Persist accommodations with an atomic per-column UPDATE, only for the
+            // processed stage(s) (single-stage expand or all) — recette #649. The
+            // seasonal alert is delivered live via Mercure (above), not persisted here.
+            foreach ($stagesToProcess as $stage) {
+                $this->tripStateManager->updateStageAccommodations($tripId, $stage->dayNumber, $stage->accommodations);
+            }
         }, $generation);
     }
 

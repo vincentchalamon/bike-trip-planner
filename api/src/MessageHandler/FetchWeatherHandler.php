@@ -161,7 +161,12 @@ final readonly class FetchWeatherHandler extends AbstractTripMessageHandler
                 }
             }
 
-            $this->tripStateManager->storeStages($tripId, $stages);
+            // Persist each stage's weather with an atomic per-column UPDATE so a
+            // slower sibling handler (pois/terrain) re-writing the whole collection
+            // can no longer wipe it (recette #649).
+            foreach ($stages as $stage) {
+                $this->tripStateManager->updateStageWeather($tripId, $stage->dayNumber, $stage->weather);
+            }
 
             $this->publisher->publish($tripId, MercureEventType::WEATHER_FETCHED, [
                 'stagesWithWeather' => \count(array_filter(

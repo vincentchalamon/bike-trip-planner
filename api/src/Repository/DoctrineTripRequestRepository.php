@@ -367,6 +367,55 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
             ->execute();
     }
 
+    public function updateStageWeather(string $tripId, int $dayNumber, ?WeatherForecast $weather): void
+    {
+        $this->updateStageColumn($tripId, $dayNumber, 'weather', $weather instanceof WeatherForecast ? $this->weatherToArray($weather) : null);
+    }
+
+    /** @param list<Alert> $alerts */
+    public function updateStageAlerts(string $tripId, int $dayNumber, array $alerts): void
+    {
+        $this->updateStageColumn($tripId, $dayNumber, 'alerts', array_map($this->alertToArray(...), $alerts));
+    }
+
+    /** @param list<PointOfInterest> $pois */
+    public function updateStagePois(string $tripId, int $dayNumber, array $pois): void
+    {
+        $this->updateStageColumn($tripId, $dayNumber, 'pois', array_map($this->poiToArray(...), $pois));
+    }
+
+    /** @param list<Accommodation> $accommodations */
+    public function updateStageAccommodations(string $tripId, int $dayNumber, array $accommodations): void
+    {
+        $this->updateStageColumn($tripId, $dayNumber, 'accommodations', array_map($this->accommodationToArray(...), $accommodations));
+    }
+
+    /**
+     * Atomic per-stage UPDATE of one JSONB column, keyed by dayNumber. Lets parallel
+     * enrichment handlers persist only their own column instead of the whole-collection
+     * read-modify-write of {@see self::storeStages()} (which let a slow handler overwrite
+     * a sibling's freshly-written column — recette #649). Mirrors {@see self::updateStageAiAnalysis()}.
+     *
+     * @param 'weather'|'alerts'|'pois'|'accommodations' $column
+     * @param array<mixed>|null                          $value
+     */
+    private function updateStageColumn(string $tripId, int $dayNumber, string $column, ?array $value): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        $this->getEntityManager()->createQuery(
+            \sprintf('UPDATE App\Entity\Stage s SET s.%s = :value WHERE s.trip = :tripId AND s.dayNumber = :dayNumber', $column),
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
+            ->setParameter('dayNumber', $dayNumber)
+            // Bind as a single JSONB value (see updateStageAiAnalysis): without the
+            // explicit type Doctrine infers ArrayParameterType and expands the list.
+            ->setParameter('value', $value, 'jsonb')
+            ->execute();
+    }
+
     // --- Private helpers ---
 
     /**
