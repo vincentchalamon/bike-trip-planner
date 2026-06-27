@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { enableMapSet } from "immer";
+import dayjs from "dayjs";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 import type {
   StageData,
@@ -565,6 +566,13 @@ export const useTripStore = create<TripState>()(
         if (state.selectedStageIndex > max) {
           state.selectedStageIndex = max;
         }
+        // Shrink the trip's day window to match the new stage count (recette
+        // #649) — see insertRestDay.
+        if (state.startDate) {
+          state.endDate = dayjs(state.startDate)
+            .add(state.stages.length - 1, "day")
+            .format("YYYY-MM-DD");
+        }
       });
     },
 
@@ -602,6 +610,14 @@ export const useTripStore = create<TripState>()(
         state.stages.forEach((s, i) => {
           s.dayNumber = i + 1;
         });
+        // A trip spans one calendar day per stage (rest days included): extend
+        // the end date so the global range and the export reflect the new day
+        // immediately (recette #649). The backend mirrors this on persist.
+        if (state.startDate) {
+          state.endDate = dayjs(state.startDate)
+            .add(state.stages.length - 1, "day")
+            .format("YYYY-MM-DD");
+        }
       });
     },
 
@@ -615,6 +631,13 @@ export const useTripStore = create<TripState>()(
         state.stages.forEach((s, i) => {
           s.dayNumber = i + 1;
         });
+        // Extend the trip's day window to match the new stage count (recette
+        // #649) — see insertRestDay.
+        if (state.startDate) {
+          state.endDate = dayjs(state.startDate)
+            .add(state.stages.length - 1, "day")
+            .format("YYYY-MM-DD");
+        }
       });
     },
 

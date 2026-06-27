@@ -272,4 +272,25 @@ final class StageDeleteTest extends ApiTestCase
             $this->assertSame($i + 1, $stage->dayNumber, \sprintf('Stage at index %d should have dayNumber %d', $i, $i + 1));
         }
     }
+
+    #[Test]
+    public function shrinksEndDateToMatchStageCount(): void
+    {
+        $this->seedTripWithStages(self::TRIP_ID, 4, SourceType::KOMOOT_TOUR->value);
+
+        $this->client->request('DELETE', '/trips/'.self::TRIP_ID.'/stages/1', [
+            'headers' => $this->authHeader($this->jwtToken),
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+
+        // 4 → 3 stages: the trip now spans 3 days, so the end date shifts back to
+        // 2026-07-03 (recette #649).
+        /** @var TripRequestRepositoryInterface $repo */
+        $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
+        $request = $repo->getRequest(self::TRIP_ID);
+
+        $this->assertNotNull($request);
+        $this->assertSame('2026-07-03', $request->endDate?->format('Y-m-d'));
+    }
 }

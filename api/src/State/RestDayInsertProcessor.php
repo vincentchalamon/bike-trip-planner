@@ -90,8 +90,15 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         $affectedIndices = range($insertedIndex, count($stages) - 1);
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: true, generation: $generation));
 
-        $tripRequest = $this->tripStateManager->getRequest($tripId);
-        if ($tripRequest?->startDate instanceof \DateTimeImmutable) {
+        // Keep the trip's day window in step with the stage count: a trip spans
+        // exactly one calendar day per stage (rest days included), so adding a
+        // rest day shifts the end date forward so the global range, the export and
+        // a later re-pacing all stay consistent (recette #649). Reuse the request
+        // asserted above — storeStages only flushes, never detaches it (review).
+        $startDate = $tripRequest->startDate;
+        if ($startDate instanceof \DateTimeImmutable) {
+            $tripRequest->endDate = $startDate->modify(\sprintf('+%d days', \count($stages) - 1));
+            $this->tripStateManager->storeRequest($tripId, $tripRequest);
             $this->messageBus->dispatch(new FetchWeather($tripId, $generation));
             $this->messageBus->dispatch(new CheckCalendar($tripId, $generation));
         }

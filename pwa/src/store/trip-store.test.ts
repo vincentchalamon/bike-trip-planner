@@ -318,3 +318,39 @@ describe("applyStageUpdate preservation (recette #649)", () => {
     expect(result.alerts.some((a) => a.message === "old terrain")).toBe(false);
   });
 });
+
+describe("date window stays in sync with stage count (recette #649)", () => {
+  it("extends endDate when a rest day is inserted", () => {
+    const store = useTripStore.getState();
+    store.setStages([makeStage(1), makeStage(2)]);
+    store.updateDatesInternal("2026-07-10", "2026-07-11"); // 2 stages → 2 days
+    store.insertRestDay(0);
+    // 3 stages → 3 days: 10–12 July.
+    expect(useTripStore.getState().endDate).toBe("2026-07-12");
+  });
+
+  it("extends endDate when a stage is inserted", () => {
+    const store = useTripStore.getState();
+    store.setStages([makeStage(1), makeStage(2)]);
+    store.updateDatesInternal("2026-07-10", "2026-07-11");
+    store.insertStagePlaceholder(0, makeStage(99));
+    expect(useTripStore.getState().endDate).toBe("2026-07-12");
+  });
+
+  it("shrinks endDate when a stage is deleted", () => {
+    const store = useTripStore.getState();
+    store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
+    store.updateDatesInternal("2026-07-10", "2026-07-12"); // 3 stages → 3 days
+    store.deleteStage(1);
+    // 2 stages → 2 days: 10–11 July.
+    expect(useTripStore.getState().endDate).toBe("2026-07-11");
+  });
+
+  it("leaves the (unset) dates untouched when no start date is set", () => {
+    const store = useTripStore.getState();
+    store.setStages([makeStage(1), makeStage(2)]);
+    store.updateDatesInternal(null, null);
+    store.insertRestDay(0);
+    expect(useTripStore.getState().endDate).toBeNull();
+  });
+});
