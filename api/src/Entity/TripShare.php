@@ -17,6 +17,7 @@ use App\ApiResource\TripDetail;
 use App\ApiResource\TripRequest;
 use App\Repository\TripShareRepository;
 use App\State\TripShareCreateProcessor;
+use App\State\TripShareCreateProvider;
 use App\State\TripShareDeleteProcessor;
 use App\State\TripShareGpxProvider;
 use App\State\TripShareProvider;
@@ -42,6 +43,7 @@ use Symfony\Component\Uid\Uuid;
             status: 201,
             openapi: new Operation(summary: 'Create a read-only share link for a trip.'),
             security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
+            provider: TripShareCreateProvider::class,
             processor: TripShareCreateProcessor::class,
         ),
         new Get(

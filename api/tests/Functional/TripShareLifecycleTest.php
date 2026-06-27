@@ -119,4 +119,35 @@ final class TripShareLifecycleTest extends ApiTestCase
         $activeBody = $active->toArray();
         $this->assertSame($secondBody['shortCode'], $activeBody['shortCode']);
     }
+
+    #[Test]
+    public function recreateSucceedsAfterMultipleRevocations(): void
+    {
+        $this->seedTripWithStages(self::TRIP_ID);
+
+        // Two full create→revoke cycles leave TWO soft-deleted shares for the
+        // trip. The POST shares its URI template with GET/DELETE, so the default
+        // item provider would run getOneOrNullResult() across both revoked rows
+        // and throw NonUniqueResultException (HTTP 500), permanently blocking
+        // every new share (recette #649).
+        for ($i = 0; $i < 2; ++$i) {
+            $this->client->request('POST', \sprintf('/trips/%s/share', self::TRIP_ID), [
+                'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+                'json' => [],
+            ]);
+            $this->assertResponseStatusCodeSame(201);
+
+            $this->client->request('DELETE', \sprintf('/trips/%s/share', self::TRIP_ID), [
+                'headers' => $this->authHeader($this->jwtToken),
+            ]);
+            $this->assertResponseStatusCodeSame(204);
+        }
+
+        // A third create, now with two revoked rows present, must still succeed.
+        $this->client->request('POST', \sprintf('/trips/%s/share', self::TRIP_ID), [
+            'headers' => array_merge(['Content-Type' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+            'json' => [],
+        ]);
+        $this->assertResponseStatusCodeSame(201);
+    }
 }
