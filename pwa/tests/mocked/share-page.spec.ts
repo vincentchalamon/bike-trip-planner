@@ -92,6 +92,9 @@ test.describe("/s/[code] page", () => {
 
     // Read-only banner
     await expect(page.getByTestId("read-only-banner")).toBeVisible();
+
+    // Footer restored in the shared view (recette #649 fix #4).
+    await expect(page.getByTestId("section-footer")).toBeVisible();
   });
 
   test("shows error state for an invalid short code", async ({ page }) => {

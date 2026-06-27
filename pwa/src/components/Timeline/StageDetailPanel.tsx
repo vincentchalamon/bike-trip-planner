@@ -50,7 +50,8 @@ interface StageDetailPanelProps {
   onClearNewAcc?: () => void;
 }
 
-function formatDayDate(
+// Exported for unit testing the locale-aware formatting (recette #649 #6).
+export function formatDayDate(
   startDate: string | null,
   dayNumber: number,
   locale: string,
