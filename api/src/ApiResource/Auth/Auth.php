@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\ApiResource\Auth;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\Post;
 use App\State\Auth\AuthLogoutProcessor;
 use App\State\Auth\AuthRefreshProcessor;
 use App\State\Auth\AuthRequestLinkProcessor;
+use App\State\Auth\AuthSessionProvider;
 use App\State\Auth\AuthVerifyProcessor;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -41,6 +43,11 @@ use Symfony\Component\Validator\Constraints as Assert;
             input: false,
             output: false,
             processor: AuthLogoutProcessor::class,
+        ),
+        new Get(
+            uriTemplate: '/auth/session',
+            output: AuthSession::class,
+            provider: AuthSessionProvider::class,
         ),
     ],
 )]
