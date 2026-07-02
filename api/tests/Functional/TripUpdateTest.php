@@ -278,15 +278,16 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function rejectsEndDateBeforeStartDate(): void
     {
+        $startDate = new \DateTimeImmutable('today +1 year');
         $this->seedTrip(
             self::TRIP_ID,
-            startDate: new \DateTimeImmutable('2026-07-15'),
+            startDate: $startDate,
         );
 
         $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
             'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
-                'endDate' => '2026-07-01T00:00:00+00:00',
+                'endDate' => $startDate->modify('-14 days')->format(\DateTimeInterface::ATOM),
             ],
         ]);
 
@@ -302,15 +303,16 @@ final class TripUpdateTest extends ApiTestCase
     #[Test]
     public function rejectsEndDateEqualToStartDate(): void
     {
+        $startDate = new \DateTimeImmutable('today +1 year');
         $this->seedTrip(
             self::TRIP_ID,
-            startDate: new \DateTimeImmutable('2026-07-15'),
+            startDate: $startDate,
         );
 
         $this->client->request('PATCH', '/trips/'.self::TRIP_ID, [
             'headers' => array_merge(['Content-Type' => 'application/merge-patch+json'], $this->authHeader($this->jwtToken)),
             'json' => [
-                'endDate' => '2026-07-15T00:00:00+00:00',
+                'endDate' => $startDate->format(\DateTimeInterface::ATOM),
             ],
         ]);
 
