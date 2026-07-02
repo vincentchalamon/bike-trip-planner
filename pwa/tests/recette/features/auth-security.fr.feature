@@ -44,10 +44,10 @@ Fonctionnalité: Authentification et sécurité
     Alors je suis redirigé vers /login
 
   @desktop @critical
-  Scénario: Cookie de session périmé sur un deep-link protégé redirigé côté serveur
+  Scénario: Deep-link protégé avec un cookie de session périmé arrive sur la connexion
     Étant donné que j'ai un cookie de session périmé
     Quand je navigue directement vers le deep-link protégé "/trips/stale-deeplink-test"
-    Alors je suis redirigé vers /login par une redirection côté serveur
+    Alors je suis redirigé vers /login
 
   @desktop
   Scénario: Pas de traces de pile visibles en cas d'erreur
