@@ -292,7 +292,7 @@ final class StageDeleteTest extends ApiTestCase
 
         $this->assertNotNull($request);
         $this->assertSame(
-            (new \DateTimeImmutable('today +1 year'))->modify('+2 days')->format('Y-m-d'),
+            new \DateTimeImmutable('today +1 year')->modify('+2 days')->format('Y-m-d'),
             $request->endDate?->format('Y-m-d'),
         );
     }

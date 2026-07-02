@@ -419,7 +419,7 @@ final class StageCreateTest extends ApiTestCase
 
         $this->assertNotNull($request);
         $this->assertSame(
-            (new \DateTimeImmutable('today +1 year'))->modify('+3 days')->format('Y-m-d'),
+            new \DateTimeImmutable('today +1 year')->modify('+3 days')->format('Y-m-d'),
             $request->endDate?->format('Y-m-d'),
         );
     }
