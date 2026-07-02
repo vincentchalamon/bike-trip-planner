@@ -68,6 +68,11 @@ export async function apiFetch(
   input: string,
   init?: RequestInit,
 ): Promise<Response> {
+  // Wait for the initial auth check to settle so the call carries the resolved
+  // token instead of firing before the bootstrap silent-refresh — same gating as
+  // the openapi-fetch middleware (recette #649 #8). Every apiFetch endpoint is
+  // authenticated; the anonymous shared view uses a raw fetch, not apiFetch.
+  await useAuthStore.getState().ensureResolved();
   const authHeader = getAuthHeader();
   const baseHeaders: Record<string, string> = {
     "Accept-Language": getBrowserLocale(),
@@ -129,8 +134,10 @@ export async function apiFetch(
  * 2. If refresh succeeds → retry the original request with the new token
  * 3. If refresh fails → redirect to `/login`
  */
-// Cache request bodies before they are consumed by fetch, so the retry can reuse them.
-const requestBodyCache = new WeakMap<Request, BodyInit | null>();
+// Cache request bodies (as text) before fetch consumes them, so a 401 retry can
+// resend them. A string body is single-shot-safe and needs no `duplex` option,
+// unlike the ReadableStream a cloned Request exposes (recette #649 #8).
+const requestBodyCache = new WeakMap<Request, string | null>();
 
 /**
  * openapi-fetch middleware that propagates the correlation ID:
@@ -156,11 +163,24 @@ const requestIdMiddleware: Middleware = {
 };
 
 const authMiddleware: Middleware = {
-  onRequest({ request }) {
-    // Clone body before it is consumed so the retry in onResponse can reuse it.
-    // request.body is a ReadableStream — once fetch() consumes it, it's locked.
-    // request.clone() creates an independent copy whose stream remains unconsumed.
-    requestBodyCache.set(request, request.body ? request.clone().body : null);
+  async onRequest({ request }) {
+    // Read the body to TEXT before fetch consumes it, so the 401 retry in
+    // onResponse can resend it. Caching the cloned ReadableStream instead made
+    // the retry POST go out with an EMPTY body (a stream body is single-use and
+    // needs `duplex: "half"`), so the API saw no payload → 400 "Syntax error".
+    // This broke `?link=` trip creation, whose POST fires before the access
+    // token is ready (401 → retry) (recette #649 #8).
+    requestBodyCache.set(
+      request,
+      request.body ? await request.clone().text() : null,
+    );
+    // Wait for the initial auth check to settle so we attach the resolved token
+    // rather than firing before the app's bootstrap silent-refresh has run — the
+    // primary cause of the `?link=` 401→retry round-trip (recette #649 #8). The
+    // refresh is deduped, so this triggers at most one per session; once settled
+    // it is a no-op. The 401 retry below remains the safety net for a token that
+    // expires mid-session.
+    await useAuthStore.getState().ensureResolved();
     const authValue = getAuthHeader();
     if (authValue) {
       request.headers.set("Authorization", authValue);

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseJwtPayload, useAuthStore } from "./auth-store";
 
 // Helper: build a JWT with a given payload (no signature verification needed)
@@ -81,5 +81,35 @@ describe("setUserEmail", () => {
     useAuthStore.getState().setUserEmail("new@example.com");
 
     expect(useAuthStore.getState().user).toBeNull();
+  });
+});
+
+describe("ensureResolved (recette #649 #8)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it("runs a one-time bootstrap refresh, then is a no-op", async () => {
+    const token = buildJwt({ sub: "u1", username: "rider@example.com" });
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ token }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    // Fresh module so the one-shot `authChecked` flag starts unset.
+    vi.resetModules();
+    const { useAuthStore: store } = await import("./auth-store");
+
+    await store.getState().ensureResolved();
+    expect(store.getState().isAuthenticated).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Already settled → no second /auth/refresh.
+    await store.getState().ensureResolved();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -19,6 +19,13 @@ interface AuthState {
   requestMagicLink: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   silentRefresh: () => Promise<boolean>;
+  /**
+   * Resolves once the initial auth state has settled (authenticated or
+   * anonymous). Triggers a one-time bootstrap `silentRefresh` if none has run
+   * yet, then is a no-op. Lets API callers wait for a known token instead of
+   * firing early and round-tripping through a 401 (recette #649 #8).
+   */
+  ensureResolved: () => Promise<void>;
   clearAuth: () => void;
 }
 
@@ -80,6 +87,10 @@ export function parseJwtPayload(
 // flight, all callers share the same promise rather than firing multiple
 // /auth/refresh requests.
 let pendingRefresh: Promise<boolean> | null = null;
+
+// Set once the first silentRefresh has settled (regardless of outcome), so the
+// bootstrap in ensureResolved() runs at most once per session.
+let authChecked = false;
 
 export const useAuthStore = create<AuthState>()(
   immer((set, get) => ({
@@ -184,10 +195,16 @@ export const useAuthStore = create<AuthState>()(
           return false;
         } finally {
           pendingRefresh = null;
+          authChecked = true;
         }
       })();
 
       return pendingRefresh;
+    },
+
+    ensureResolved: async (): Promise<void> => {
+      if (authChecked) return;
+      await get().silentRefresh();
     },
 
     clearAuth: () =>

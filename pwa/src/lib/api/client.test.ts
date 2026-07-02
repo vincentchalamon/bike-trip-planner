@@ -129,3 +129,49 @@ describe("sendTripChat error-code extraction (#761)", () => {
     expect(result.error).toBe("HTTP 502");
   });
 });
+
+describe("apiClient 401 retry (recette #649 #8)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("resends the original body on the post-refresh retry, not an empty one", async () => {
+    const bodies: unknown[] = [];
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      bodies.push(init?.body);
+      // First call: 401 (the access token isn't ready yet, as on a fresh
+      // `?link=` load). The post-refresh retry must succeed.
+      return new Response("{}", {
+        status: bodies.length === 1 ? 401 : 201,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    // Stub BEFORE importing the client so openapi-fetch captures the mock + a
+    // valid absolute base URL (the test env injects NEXT_PUBLIC_API_URL="").
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "https://localhost");
+    vi.resetModules();
+
+    const { useAuthStore } = await import("@/store/auth-store");
+    useAuthStore.setState({
+      accessToken: "stale-token",
+      silentRefresh: vi.fn(async () => {
+        useAuthStore.setState({ accessToken: "fresh-token" });
+        return true;
+      }),
+    } as never);
+
+    const { apiClient } = await import("./client");
+    await apiClient.POST("/trips", {
+      body: { sourceUrl: "https://www.komoot.com/fr-fr/tour/1" } as never,
+    });
+
+    // The 401 triggers exactly one retry...
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // ...and it must carry the original payload. The bug cached the body as a
+    // single-use ReadableStream, so the retry POST went out empty → 400.
+    expect(String(bodies[1] ?? "")).toContain("komoot");
+  });
+});
