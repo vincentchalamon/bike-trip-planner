@@ -9,6 +9,7 @@ use App\Entity\RefreshToken;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
+use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
 use Zenstruck\Foundry\Test\Factories;
@@ -58,12 +59,19 @@ final class AuthSessionTest extends ApiTestCase
 
     private function getSession(?string $cookieToken = null): ResponseInterface
     {
-        $headers = ['Accept' => 'application/ld+json'];
+        $client = self::createClient();
         if (null !== $cookieToken) {
-            $headers['Cookie'] = 'refresh_token='.$cookieToken;
+            // A raw `Cookie` header maps to $server['HTTP_COOKIE'] but never
+            // populates $request->cookies; the provider reads the cookie bag, so
+            // the token must go through the BrowserKit CookieJar (host localhost).
+            $client->getCookieJar()->set(
+                new BrowserKitCookie('refresh_token', $cookieToken, null, '/', 'localhost'),
+            );
         }
 
-        return self::createClient()->request('GET', '/auth/session', ['headers' => $headers]);
+        return $client->request('GET', '/auth/session', [
+            'headers' => ['Accept' => 'application/ld+json'],
+        ]);
     }
 
     #[Test]
@@ -143,6 +151,7 @@ final class AuthSessionTest extends ApiTestCase
         // ...and the token is NOT rotated (its successor pointer stays NULL).
         $em = $this->getEntityManager();
         $em->clear();
+
         $token = $em->getRepository(RefreshToken::class)->findOneBy(['token' => 'idempotent-token']);
         $this->assertNotNull($token);
         $this->assertNull($token->getReplacedByToken(), 'session must not rotate the token');

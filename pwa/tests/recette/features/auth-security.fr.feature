@@ -43,6 +43,12 @@ Fonctionnalité: Authentification et sécurité
     Quand je tente d'accéder à mes voyages
     Alors je suis redirigé vers /login
 
+  @desktop @critical
+  Scénario: Deep-link anonyme vers une route protégée redirigé côté serveur
+    Étant donné que je ne suis pas connecté
+    Quand je navigue directement vers le deep-link protégé "/trips/anon-deeplink-test"
+    Alors je suis redirigé vers /login par une redirection côté serveur
+
   @desktop
   Scénario: Pas de traces de pile visibles en cas d'erreur
     Quand une erreur serveur se produit

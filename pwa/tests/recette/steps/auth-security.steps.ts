@@ -1,7 +1,12 @@
+import type { Page, Response as PwResponse } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
 import { FAKE_JWT_TOKEN, mockAllApis } from "../../fixtures/api-mocks";
 import { expandLinkCard } from "../../fixtures/base.fixture";
+
+// The navigation response of the last "navigate directly to …" step, so the
+// follow-up Then can inspect its HTTP redirect chain (ADR-047 server-side gate).
+const lastDirectNavigation = new WeakMap<Page, PwResponse | null>();
 
 // ---------------------------------------------------------------------------
 // Auth & Security — FR + EN
@@ -364,5 +369,56 @@ Then(
         return errorTextVisible || loginVisible || backLinkVisible;
       })
       .toBe(true);
+  },
+);
+
+// --- Server-side gate for anonymous deep-links (ADR-047) ---
+
+async function navigateDirectly(page: Page, path: string): Promise<void> {
+  // Raw goto (no expandLinkCard): a protected deep-link must redirect before any
+  // landing/link-card chrome exists.
+  lastDirectNavigation.set(page, await page.goto(path));
+}
+
+When(
+  "je navigue directement vers le deep-link protégé {string}",
+  async ({ page }, path: string) => {
+    await navigateDirectly(page, path);
+  },
+);
+
+When(
+  "I navigate directly to the protected deep-link {string}",
+  async ({ page }, path: string) => {
+    await navigateDirectly(page, path);
+  },
+);
+
+function assertServerSideLoginRedirect(page: Page): void {
+  // Prove the redirect was server-side (RSC gate, ADR-047), not the client
+  // AuthGuard: the navigation must have followed an HTTP 3xx away from the
+  // protected route. A client-side router.replace produces no such chain.
+  const chain: string[] = [];
+  let req = lastDirectNavigation.get(page)?.request().redirectedFrom() ?? null;
+  while (req) {
+    chain.push(req.url());
+    req = req.redirectedFrom();
+  }
+  expect(chain.some((url) => url.includes("/trips/"))).toBe(true);
+}
+
+Then(
+  "je suis redirigé vers /login par une redirection côté serveur",
+  async ({ page }) => {
+    await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
+    assertServerSideLoginRedirect(page);
+  },
+);
+
+Then(
+  "I am redirected to /login by a server-side redirect",
+  async ({ page }) => {
+    await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
+    assertServerSideLoginRedirect(page);
   },
 );

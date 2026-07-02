@@ -42,6 +42,12 @@ Feature: Authentication and security
     When I try to access my trips
     Then I am redirected to /login
 
+  @desktop @critical
+  Scenario: Anonymous deep-link to a protected route is redirected server-side
+    Given I am not logged in
+    When I navigate directly to the protected deep-link "/trips/anon-deeplink-test"
+    Then I am redirected to /login by a server-side redirect
+
   @desktop
   Scenario: No stack traces visible on error
     When a server error occurs
