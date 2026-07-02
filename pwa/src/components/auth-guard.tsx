@@ -37,6 +37,12 @@ function isPublicPath(pathname: string): boolean {
  *
  * Renders a blank screen during the initial auth check to prevent
  * flashing protected content before the redirect.
+ *
+ * Since ADR-047 this guard is the JWT bootstrap (its silent refresh mints the
+ * in-memory access token on every platform) and the redirect **backstop** for
+ * the mobile static build (no server) and the web fail-open path (a backend
+ * blip). On the web happy path the server-side `(app)` layout gate resolves auth
+ * and redirects anonymous users before render, so step 2 there is a no-op.
  */
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
