@@ -71,6 +71,33 @@ final class TripAiChatProcessorTest extends TestCase
     }
 
     #[Test]
+    public function forcesStructuredJsonOutputOnTheProvider(): void
+    {
+        // Pin the response_format pass-through: it stops the brief-chat drifting
+        // to prose across turns (recette #649). A refactor dropping the options
+        // argument must fail here, not silently regress.
+        $llmClient = $this->createMock(LlmClientInterface::class);
+        $llmClient->expects(self::once())
+            ->method('chat')
+            ->with(
+                self::anything(),
+                self::anything(),
+                self::anything(),
+                self::callback(static fn (array $options): bool => isset($options['response_format']['json_schema']['schema'])),
+            )
+            ->willReturn(['message' => ['role' => 'assistant', 'content' => '{"reply":"ok","readyToGenerate":false,"collected":{}}']]);
+
+        $processor = $this->newProcessor(configured: true, llmContent: '', llmClient: $llmClient);
+
+        $result = $processor->process(
+            new AiChatRequest([new AiChatMessage('user', 'Bonjour')]),
+            new Post(),
+        );
+
+        self::assertInstanceOf(AiChatResponse::class, $result);
+    }
+
+    #[Test]
     public function nonJsonReplyFallsBackToRawTextWithReadyFalse(): void
     {
         $processor = $this->newProcessor(

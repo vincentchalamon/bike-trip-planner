@@ -105,22 +105,6 @@ function briefValue(value: unknown): string | null {
 }
 
 /**
- * Maps a `collected` key to the itinerary-spec vocabulary the generation prompt
- * expects (`durationDays` → `days`), so the model maps the brief straight onto
- * its spec fields instead of guessing.
- */
-const BRIEF_KEYS: Readonly<Record<string, string>> = {
-  start: "start",
-  end: "end",
-  loop: "loop",
-  durationDays: "days",
-  profile: "profile",
-  elevationTolerance: "elevation_tolerance",
-  dates: "dates",
-  resupply: "resupply",
-};
-
-/**
  * Whether the brief carries a geocodable departure. This is the single hard
  * gate on the launch button (ADR-045): without a non-empty `collected.start`
  * the AI route generation has nothing to geocode, so we never let the rider
@@ -145,7 +129,7 @@ function buildBrief(
 ): string {
   const structured = RECAP_FIELDS.map(({ key }) => {
     const value = briefValue(collected[key]);
-    return value === null ? null : `${BRIEF_KEYS[key] ?? key}: ${value}`;
+    return value === null ? null : `${key}: ${value}`;
   }).filter((line): line is string => line !== null);
 
   const transcript = userTurns.map((t) => t.trim()).filter(Boolean);
