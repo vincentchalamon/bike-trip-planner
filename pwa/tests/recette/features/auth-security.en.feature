@@ -42,6 +42,12 @@ Feature: Authentication and security
     When I try to access my trips
     Then I am redirected to /login
 
+  @desktop @critical
+  Scenario: Protected deep-link with a stale session cookie lands on login
+    Given I have a stale session cookie
+    When I navigate directly to the protected deep-link "/trips/stale-deeplink-test"
+    Then I am redirected to /login
+
   @desktop
   Scenario: No stack traces visible on error
     When a server error occurs

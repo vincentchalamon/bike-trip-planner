@@ -37,7 +37,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         'access_control' => [
             ['path' => '^/api/health(z)?$', 'roles' => 'PUBLIC_ACCESS'],
             ['path' => '^/docs', 'roles' => 'PUBLIC_ACCESS'],
-            ['path' => '^/auth/(request-link|refresh|verify)$', 'roles' => 'PUBLIC_ACCESS'],
+            ['path' => '^/auth/(request-link|refresh|verify|session)$', 'roles' => 'PUBLIC_ACCESS'],
             ['path' => '^/access-requests(/verify)?$', 'roles' => 'PUBLIC_ACCESS'],
             ['path' => '^/auth/logout', 'roles' => 'IS_AUTHENTICATED_FULLY'],
             ['path' => '^/s/', 'roles' => 'PUBLIC_ACCESS'],

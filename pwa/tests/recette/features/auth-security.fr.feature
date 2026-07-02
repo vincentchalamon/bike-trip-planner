@@ -43,6 +43,12 @@ Fonctionnalité: Authentification et sécurité
     Quand je tente d'accéder à mes voyages
     Alors je suis redirigé vers /login
 
+  @desktop @critical
+  Scénario: Deep-link protégé avec un cookie de session périmé arrive sur la connexion
+    Étant donné que j'ai un cookie de session périmé
+    Quand je navigue directement vers le deep-link protégé "/trips/stale-deeplink-test"
+    Alors je suis redirigé vers /login
+
   @desktop
   Scénario: Pas de traces de pile visibles en cas d'erreur
     Quand une erreur serveur se produit

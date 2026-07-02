@@ -168,59 +168,27 @@ test.describe("Landing page", () => {
       });
     });
 
-    test("session cookie shows the dashboard, not the landing (#649)", async ({
+    test("an unvalidated session cookie renders the landing server-side, not a dashboard shell (#649, ADR-047)", async ({
       page,
     }, testInfo) => {
-      // Seed the refresh-token cookie the backend sets on a logged-in user, so
-      // the server (not the client) decides what `/` renders.
+      // ADR-047: the server VALIDATES the refresh_token (via /auth/session) — it
+      // no longer trusts mere presence (the old cookies().has() heuristic). A
+      // cookie the backend rejects must yield the landing in the SSR HTML, with
+      // no stale-cookie dashboard shell that then snaps back.
       const baseURL = testInfo.project.use.baseURL ?? "https://localhost";
       await page
         .context()
         .addCookies([
-          { name: "refresh_token", value: "seed-session", url: baseURL },
+          { name: "refresh_token", value: "unvalidated-seed", url: baseURL },
         ]);
-
-      await page.route("**/auth/refresh", (route, request) => {
-        if (request.method() !== "POST") return route.fallback();
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ token: FAKE_JWT_TOKEN }),
-        });
-      });
-      await page.route(
-        (url) => url.pathname === "/trips",
-        (route, request) => {
-          if (request.method() !== "GET") return route.fallback();
-          return route.fulfill({
-            status: 200,
-            contentType: "application/ld+json",
-            body: JSON.stringify({
-              "@context": "/contexts/Trip",
-              "@id": "/trips",
-              "@type": "hydra:Collection",
-              "hydra:totalItems": 0,
-              "hydra:member": [],
-              member: [],
-              totalItems: 0,
-            }),
-          });
-        },
-      );
       await page.route("**/.well-known/mercure*", (route) => route.abort());
 
-      // Assert on the raw SSR HTML (the navigation response, before any JS) so
-      // this pins the SERVER-side decision — not just the final client DOM,
-      // which the client path alone would also produce. The logged-in user then
-      // mounts the dashboard, and the landing is never shown (#649).
+      // Assert on the raw SSR HTML (before any JS) to pin the SERVER-side
+      // decision: an unvalidatable cookie renders the landing, not a dashboard.
       const response = await page.goto("/");
       if (!response) throw new Error("no navigation response for /");
       expect(response.ok()).toBe(true);
-      expect(await response.text()).not.toContain('data-testid="landing-page"');
-      await expect(page.getByTestId("card-selection")).toBeVisible({
-        timeout: 5000,
-      });
-      await expect(page.getByTestId("landing-page")).not.toBeVisible();
+      expect(await response.text()).toContain('data-testid="landing-page"');
     });
 
     test("stale cookie (refresh fails) falls back to the landing (#649)", async ({

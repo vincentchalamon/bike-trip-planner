@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
 import { FAKE_JWT_TOKEN, mockAllApis } from "../../fixtures/api-mocks";
@@ -366,3 +367,53 @@ Then(
       .toBe(true);
   },
 );
+
+// --- Server-side gate for stale-cookie deep-links (ADR-047) ---
+
+async function setStaleRefreshCookie(page: Page): Promise<void> {
+  // A present-but-invalid refresh_token the real backend rejects: the server
+  // gate must VALIDATE it (not merely detect presence) and redirect. A missing
+  // cookie fails open (client-gated), so the cookie must be present here.
+  // Use `url` (not domain/path) so it actually attaches over https, matching
+  // landing-page.spec.ts.
+  await page.context().addCookies([
+    {
+      name: "refresh_token",
+      value: "stale-invalid-refresh-token",
+      url: process.env.PLAYWRIGHT_BASE_URL ?? "https://localhost",
+    },
+  ]);
+}
+
+Given("j'ai un cookie de session périmé", async ({ page }) => {
+  await setStaleRefreshCookie(page);
+});
+
+Given("I have a stale session cookie", async ({ page }) => {
+  await setStaleRefreshCookie(page);
+});
+
+async function navigateDirectly(page: Page, path: string): Promise<void> {
+  // Raw goto (no expandLinkCard): a protected deep-link with a bad session must
+  // land on /login, never on the landing/link-card chrome.
+  await page.goto(path);
+}
+
+When(
+  "je navigue directement vers le deep-link protégé {string}",
+  async ({ page }, path: string) => {
+    await navigateDirectly(page, path);
+  },
+);
+
+When(
+  "I navigate directly to the protected deep-link {string}",
+  async ({ page }, path: string) => {
+    await navigateDirectly(page, path);
+  },
+);
+
+// The redirect itself is asserted by the shared "je suis redirigé vers /login"
+// / "I am redirected to /login" steps (common.steps). The gate's server-side
+// half is covered by the resolveServerSession unit tests + the landing-page
+// SSR test; asserting server-vs-client redirect in-browser proved brittle.

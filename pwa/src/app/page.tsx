@@ -1,24 +1,20 @@
 import { Suspense } from "react";
 import { HomeContent } from "@/components/home-content";
+import { resolveServerSession } from "@/lib/auth/server-session";
 
 /**
  * Home page (dual-state: anonymous landing / authenticated dashboard).
  *
- * On the web (standalone) the server reads the refresh-token cookie so a
- * logged-in user is never shown the landing (the browser-only dashboard then
- * renders on mount), instead of flashing the landing while `silentRefresh`
- * runs. The static mobile/Capacitor build (`output: export`) cannot read
- * cookies — and a `cookies()` call would break that build — so the read is
- * guarded behind the build target; mobile falls back to the client-side silent
- * refresh (`initialAuthed = null`).
+ * On the web the server resolves the REAL auth state (validated refresh-token
+ * cookie, not a mere presence check) so a logged-in user is never shown the
+ * landing and a stale/revoked cookie no longer flashes the dashboard shell
+ * (ADR-047). `resolveServerSession()` returns `null` on the static
+ * mobile/Capacitor build (`output: export`, no server) or a backend blip →
+ * `initialAuthed = null` falls back to the client-side silent refresh.
  */
 export default async function Page() {
-  let initialAuthed: boolean | null = null;
-
-  if (process.env.NEXT_PUBLIC_IS_MOBILE_BUILD !== "1") {
-    const { cookies } = await import("next/headers");
-    initialAuthed = (await cookies()).has("refresh_token");
-  }
+  const session = await resolveServerSession();
+  const initialAuthed = session?.authenticated ?? null;
 
   return (
     <Suspense fallback={null}>
