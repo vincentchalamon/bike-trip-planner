@@ -55,7 +55,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
 
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/987654321';
-        $request->startDate = new \DateTimeImmutable('2026-07-01');
+        $request->startDate = new \DateTimeImmutable('today +1 year');
 
         $repo->initializeTrip($tripId, $request);
         $repo->storeSourceType($tripId, SourceType::KOMOOT_TOUR->value);
@@ -176,7 +176,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
 
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/987654321';
-        $request->startDate = new \DateTimeImmutable('2026-07-01');
+        $request->startDate = new \DateTimeImmutable('today +1 year');
 
         $repo->initializeTrip($tripId, $request);
         $repo->storeSourceType($tripId, SourceType::KOMOOT_TOUR->value);
@@ -272,7 +272,7 @@ final class StageSelectAccommodationTest extends ApiTestCase
 
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/987654321';
-        $request->startDate = new \DateTimeImmutable('2026-07-01');
+        $request->startDate = new \DateTimeImmutable('today +1 year');
 
         $repo->initializeTrip($tripId, $request);
         $repo->storeSourceType($tripId, SourceType::KOMOOT_TOUR->value);
