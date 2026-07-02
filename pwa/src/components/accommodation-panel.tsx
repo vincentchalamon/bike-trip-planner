@@ -162,6 +162,7 @@ export function AccommodationPanel({
             {displayIndex > 0 && <Separator className="my-2" />}
             <AccommodationItem
               accommodation={acc}
+              readOnly={readOnly}
               isSelected={isAccommodationSelected(originalIndex)}
               onUpdate={(data) => {
                 onUpdate(originalIndex, data);
