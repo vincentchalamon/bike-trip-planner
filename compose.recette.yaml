@@ -42,6 +42,17 @@ services:
     environment:
       <<: *recette-env
 
+  # Recette re-enables the AI surface to be tested end-to-end (ADR-046's
+  # default-off is a prod fail-safe; recette is where AI is exercised — see the
+  # header note). NEXT_PUBLIC_ENABLE_AI is inlined into the PWA bundle at build
+  # time, so this only takes effect on a rebuild: after toggling, run
+  #   docker compose -f compose.yaml -f compose.recette.yaml build pwa
+  # (`make start-recette` uses `up --wait`, which does not rebuild on its own).
+  pwa:
+    build:
+      args:
+        NEXT_PUBLIC_ENABLE_AI: "true"
+
   mailcatcher:
     # Pinned by digest: schickling/mailcatcher has no versioned tags, and the
     # mutable tag would let an upstream rebuild change the HTTP API recette-seed.sh relies on.

@@ -41,7 +41,7 @@ enum AiProvider: string
     {
         return match ($this) {
             self::ANTHROPIC => 'claude-haiku-4-5-20251001',
-            self::GEMINI => 'gemini-2.0-flash',
+            self::GEMINI => 'gemini-2.5-flash-lite',
             self::OPENAI => 'gpt-4o-mini',
         };
     }
@@ -53,7 +53,7 @@ enum AiProvider: string
     {
         return match ($this) {
             self::ANTHROPIC => 'claude-sonnet-4-6',
-            self::GEMINI => 'gemini-2.0-flash',
+            self::GEMINI => 'gemini-2.5-flash-lite',
             self::OPENAI => 'gpt-4o-mini',
         };
     }

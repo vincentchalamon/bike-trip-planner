@@ -58,15 +58,6 @@ function toAiChatMessage(entry: TripChatMessageHistoryEntry): AiChatMessage {
 }
 
 /**
- * Module-level set of trip IDs whose persisted history has already been pulled
- * during this PWA session. The chat panel unmounts (and remounts) the loader
- * every time the rider closes the drawer, so without this guard each reopen
- * would refetch and wipe any in-memory messages added since the last fetch —
- * notably in-ride POI turns that are persisted asynchronously.
- */
-const hydratedTrips = new Set<string>();
-
-/**
  * Rehydrates the floating chat panel with the persisted history for a given
  * trip.
  *
@@ -81,12 +72,21 @@ export function ChatHistoryLoader({
   children,
 }: ChatHistoryLoaderProps) {
   const t = useTranslations("chat.history");
-  const alreadyHydrated = hydratedTrips.has(tripId);
-  const [isLoading, setIsLoading] = useState(!alreadyHydrated);
-  const [isHydrated, setIsHydrated] = useState(alreadyHydrated);
+  // Gate on the in-memory history, not a one-shot "already fetched" flag: the
+  // panel unmounts on close and the history is wiped on a trip switch
+  // (use-trip-planner clears it), so a reopen must be able to re-pull the
+  // persisted turns from PostgreSQL. We skip the fetch only when the store
+  // still holds turns (freshly typed, or an async in-ride POI turn) that a
+  // refetch could wipe (recette #649).
+  const [isLoading, setIsLoading] = useState(
+    () => useUiStore.getState().chatHistory.length === 0,
+  );
+  const [isHydrated, setIsHydrated] = useState(
+    () => useUiStore.getState().chatHistory.length > 0,
+  );
 
   useEffect(() => {
-    if (hydratedTrips.has(tripId)) {
+    if (useUiStore.getState().chatHistory.length > 0) {
       setIsLoading(false);
       setIsHydrated(true);
       return;
@@ -106,16 +106,13 @@ export function ChatHistoryLoader({
 
         const ui = useUiStore.getState();
         // Race guard: if the rider sent a message while the fetch was in
-        // flight the in-memory store is no longer empty. Wiping it via
-        // clearHistory() would discard their freshly-typed turn (already on
-        // its way to the backend), so we skip seeding entirely and let the
-        // next reload pick up the merged history from PostgreSQL.
+        // flight the in-memory store is no longer empty. Seeding would then
+        // duplicate the live turn, so skip it and keep what's on screen.
         if (entries.length > 0 && ui.chatHistory.length === 0) {
           for (const entry of entries) {
             ui.appendMessage(toAiChatMessage(entry));
           }
         }
-        hydratedTrips.add(tripId);
         setIsHydrated(true);
       } catch {
         // Silent fail — the rider can still chat without prior history.

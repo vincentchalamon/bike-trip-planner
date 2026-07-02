@@ -55,6 +55,49 @@ final readonly class TripAiChatProcessor implements ProcessorInterface
 {
     public const string PROMPT_NAME = 'brief-chat';
 
+    /**
+     * Structured-output contract for the brief-chat turn. Passed as the provider
+     * `response_format` (symfony/ai standard, honoured by the Gemini/OpenAI/
+     * Anthropic bridges) so the model is forced to emit a single valid JSON object
+     * every turn. Without it, the model drifts to plain prose across turns — the
+     * conversation history the client re-sends carries only the assistant `reply`
+     * text, so the model mimics prose and {@see BriefChatInterpreter} falls back to
+     * an empty `collected` / `readyToGenerate:false`, emptying the recap and
+     * disabling the launch button (recette #649). The prompt still describes the
+     * shape; this only guarantees the envelope is machine-parseable.
+     *
+     * @var array<string, mixed>
+     */
+    private const array RESPONSE_FORMAT = [
+        'response_format' => [
+            'type' => 'json_schema',
+            'json_schema' => [
+                'name' => 'brief_chat_reply',
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'reply' => ['type' => 'string'],
+                        'readyToGenerate' => ['type' => 'boolean'],
+                        'collected' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'start' => ['type' => 'string'],
+                                'end' => ['type' => 'string'],
+                                'loop' => ['type' => 'boolean'],
+                                'durationDays' => ['type' => 'integer'],
+                                'profile' => ['type' => 'string'],
+                                'elevationTolerance' => ['type' => 'string'],
+                                'dates' => ['type' => 'string'],
+                                'resupply' => ['type' => 'string'],
+                            ],
+                        ],
+                    ],
+                    'required' => ['reply', 'readyToGenerate', 'collected'],
+                ],
+            ],
+        ],
+    ];
+
     public function __construct(
         private UserLlmResolverInterface $clientFactory,
         private SystemPromptLoader $promptLoader,
@@ -108,6 +151,7 @@ final readonly class TripAiChatProcessor implements ProcessorInterface
                 model: $resolved->provider->chatModel(),
                 messages: $messages,
                 systemPrompt: $systemPrompt,
+                options: self::RESPONSE_FORMAT,
             );
         } catch (AiUnavailableException $aiUnavailableException) {
             $reason = $aiUnavailableException->getReason();

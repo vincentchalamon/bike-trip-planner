@@ -94,9 +94,18 @@ final readonly class BriefChatInterpreter
     }
 
     /**
+     * A brief field is a short scalar (a city, a duration, a profile word). This
+     * caps string values so a model that leaks its chain-of-thought into a field
+     * — Gemini 2.5-flash occasionally dumps reasoning into e.g. `resupply` — cannot
+     * pollute the recap or the consolidated generation brief.
+     */
+    private const int MAX_COLLECTED_VALUE_LENGTH = 120;
+
+    /**
      * Keeps only string-keyed scalar (or null) entries from the model's
      * `collected` map, so the structured recap forwarded to the client stays a
-     * flat, predictable shape regardless of model noise.
+     * flat, predictable shape regardless of model noise. Over-long strings are
+     * dropped as noise, not truncated: a paragraph is never a real brief value.
      *
      * @param array<array-key, mixed> $collected
      *
@@ -110,7 +119,14 @@ final readonly class BriefChatInterpreter
                 continue;
             }
 
-            if (null === $value || \is_scalar($value)) {
+            if (\is_string($value)) {
+                $value = trim($value);
+                if ('' === $value || mb_strlen($value) > self::MAX_COLLECTED_VALUE_LENGTH) {
+                    continue;
+                }
+
+                $result[$key] = $value;
+            } elseif (null === $value || \is_scalar($value)) {
                 $result[$key] = $value;
             }
         }
