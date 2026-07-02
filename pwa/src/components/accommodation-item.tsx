@@ -50,6 +50,8 @@ interface AccommodationItemProps {
   initialEditing?: boolean;
   onHoverStart?: () => void;
   onHoverEnd?: () => void;
+  /** Read-only surfaces (shared view): hide every mutating control. */
+  readOnly?: boolean;
 }
 
 export function AccommodationItem({
@@ -62,6 +64,7 @@ export function AccommodationItem({
   initialEditing = false,
   onHoverStart,
   onHoverEnd,
+  readOnly = false,
 }: AccommodationItemProps) {
   const t = useTranslations("accommodation");
   const [editing, setEditing] = useState(initialEditing);
@@ -220,52 +223,56 @@ export function AccommodationItem({
       onMouseEnter={onHoverStart}
       onMouseLeave={onHoverEnd}
     >
-      {/* Action buttons */}
-      <div className="absolute top-2 right-0 flex gap-0.5">
-        {(onSelect || onDeselect) && (
+      {/* Action buttons — hidden on read-only surfaces (shared view) so the
+          accommodation, including the selected one, cannot be re-selected,
+          edited or removed. */}
+      {!readOnly && (
+        <div className="absolute top-2 right-0 flex gap-0.5">
+          {(onSelect || onDeselect) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-6 w-6 transition-opacity cursor-pointer ${
+                isSelected
+                  ? "text-primary opacity-100"
+                  : "text-muted-icon opacity-100 md:opacity-0 md:group-hover:opacity-100"
+              }`}
+              onClick={isSelected ? onDeselect : onSelect}
+              aria-label={isSelected ? t("deselect") : t("select")}
+              title={isSelected ? t("deselect") : t("selectTooltip")}
+            >
+              {isSelected ? (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              ) : (
+                <Circle className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
-            className={`h-6 w-6 transition-opacity cursor-pointer ${
-              isSelected
-                ? "text-primary opacity-100"
-                : "text-muted-icon opacity-100 md:opacity-0 md:group-hover:opacity-100"
-            }`}
-            onClick={isSelected ? onDeselect : onSelect}
-            aria-label={isSelected ? t("deselect") : t("select")}
-            title={isSelected ? t("deselect") : t("selectTooltip")}
+            className="h-6 w-6 text-muted-icon opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-pointer"
+            onClick={startEditing}
+            aria-label={t("edit")}
+            title={t("edit")}
           >
-            {isSelected ? (
-              <CheckCircle2 className="h-3.5 w-3.5" />
-            ) : (
-              <Circle className="h-3.5 w-3.5" />
-            )}
+            <Pencil className="h-3.5 w-3.5" />
           </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 text-muted-icon opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-pointer"
-          onClick={startEditing}
-          aria-label={t("edit")}
-          title={t("edit")}
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 text-muted-icon opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-pointer"
-          onClick={() => {
-            if (isSelected) onDeselect?.();
-            onRemove();
-          }}
-          aria-label={t("remove")}
-          title={t("remove")}
-        >
-          <X className="h-3.5 w-3.5" />
-        </Button>
-      </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-muted-icon opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity cursor-pointer"
+            onClick={() => {
+              if (isSelected) onDeselect?.();
+              onRemove();
+            }}
+            aria-label={t("remove")}
+            title={t("remove")}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
 
       {/* Name + URL */}
       <div className="font-semibold text-sm pr-16 flex items-center gap-2 flex-wrap">

@@ -92,6 +92,19 @@ function formatRecapValue(value: unknown): string | null {
 }
 
 /**
+ * Serialize a `collected` value for the brief text handed to the generator.
+ * Unlike the recap display (booleans → "✓"), the brief must be unambiguous for
+ * the LLM spec extraction: a boolean becomes the literal `true`/`false`, so
+ * `loop` is not lost as a checkmark and generation keeps it a loop (recette #649).
+ */
+function briefValue(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "boolean") return value ? "true" : "false";
+  const str = String(value).trim();
+  return str === "" ? null : str;
+}
+
+/**
  * Whether the brief carries a geocodable departure. This is the single hard
  * gate on the launch button (ADR-045): without a non-empty `collected.start`
  * the AI route generation has nothing to geocode, so we never let the rider
@@ -115,7 +128,7 @@ function buildBrief(
   userTurns: ReadonlyArray<string>,
 ): string {
   const structured = RECAP_FIELDS.map(({ key }) => {
-    const value = formatRecapValue(collected[key]);
+    const value = briefValue(collected[key]);
     return value === null ? null : `${key}: ${value}`;
   }).filter((line): line is string => line !== null);
 
@@ -270,7 +283,11 @@ export function AiChatCard({
           ...prev,
           { id: nextId(), role: "assistant", content: result.data.reply },
         ]);
-        setCollected(result.data.collected);
+        // Merge, don't overwrite: the recap accumulates across turns, so a turn
+        // that returns a partial (or, on a parse miss, empty) `collected` never
+        // wipes a departure already known — which would empty the recap and
+        // disable the launch button mid-conversation (recette #649).
+        setCollected((prev) => ({ ...prev, ...result.data.collected }));
         setReadyToGenerate(result.data.readyToGenerate);
         setConfigErrorKey(null);
         break;

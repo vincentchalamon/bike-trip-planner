@@ -730,7 +730,12 @@ export async function fetchTripChatHistory(
 const tripChatResponseSchema = z.object({
   tripId: z.string(),
   action: z.string(),
-  params: z.record(z.string(), z.unknown()),
+  // PHP serialises an empty params map as a JSON array (`[]`), which a bare
+  // `z.record` rejects (parsed type "array") — failing the WHOLE parse and
+  // surfacing a spurious "Une erreur est survenue" on every `info` reply
+  // (recette #649). `.catch({})` coerces that (and any malformed value) to an
+  // empty map, mirroring the brief-chat `collected` schema.
+  params: z.record(z.string(), z.unknown()).catch({}),
   response: z.string(),
   dispatched: z.boolean(),
   impactedStageNumbers: z.array(z.number()).optional(),

@@ -31,7 +31,7 @@ services:
       JWT_SECRET_KEY: /app/config/jwt/private.pem
       JWT_PUBLIC_KEY: /app/config/jwt/public.pem
       JWT_PASSPHRASE: ""
-      FRONTEND_URL: "https://${SERVER_NAME:-localhost}"
+      FRONTEND_URL: "${FRONTEND_URL:-https://${SERVER_NAME:-localhost}}"
     secrets: !reset null
     extra_hosts:
       # Ensure that host.docker.internal is correctly defined on Linux
@@ -62,7 +62,7 @@ services:
       JWT_SECRET_KEY: /app/config/jwt/private.pem
       JWT_PUBLIC_KEY: /app/config/jwt/public.pem
       JWT_PASSPHRASE: ""
-      FRONTEND_URL: "https://${SERVER_NAME:-localhost}"
+      FRONTEND_URL: "${FRONTEND_URL:-https://${SERVER_NAME:-localhost}}"
     secrets: !reset null
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -83,7 +83,7 @@ services:
       JWT_SECRET_KEY: /app/config/jwt/private.pem
       JWT_PUBLIC_KEY: /app/config/jwt/public.pem
       JWT_PASSPHRASE: ""
-      FRONTEND_URL: "https://${SERVER_NAME:-localhost}"
+      FRONTEND_URL: "${FRONTEND_URL:-https://${SERVER_NAME:-localhost}}"
     secrets: !reset null
     extra_hosts:
       - host.docker.internal:host-gateway
@@ -103,6 +103,14 @@ services:
       # and its code keeps being exercised while it is masked in prod/recette.
       # `next dev` reads NEXT_PUBLIC_* from the runtime env (no rebuild needed).
       NEXT_PUBLIC_ENABLE_AI: "true"
+      # Client API base. Default empty → the browser calls the API on the SAME
+      # origin it loaded from (relative URLs), so the app works unchanged whether
+      # served on https://localhost or through a tunnel (ngrok) for mobile
+      # testing. SSR keeps using the internal API_BACKEND_URL (http://php).
+      NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL-}"
+      # Mercure hub the browser subscribes to. Point it at the tunnel origin to
+      # get live SSE updates on mobile; the localhost default is fine on desktop.
+      NEXT_PUBLIC_MERCURE_URL: "${NEXT_PUBLIC_MERCURE_URL:-https://localhost/.well-known/mercure}"
     volumes: !override
       - ./pwa:/srv/app
       - pwa_node_modules:/srv/app/node_modules

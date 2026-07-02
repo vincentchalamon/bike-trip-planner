@@ -128,6 +128,25 @@ final class BriefChatInterpreterTest extends TestCase
     }
 
     #[Test]
+    public function dropsOverLongCollectedValuesAndTrimsShortOnes(): void
+    {
+        // A "thinking" model (Gemini 2.5-flash) occasionally leaks its reasoning
+        // into a field value; such a paragraph is never a real brief field.
+        $blob = str_repeat('la ', 100); // 300 chars
+
+        $reply = $this->interpreter->interpret(
+            json_encode([
+                'reply' => 'OK.',
+                'readyToGenerate' => true,
+                'collected' => ['start' => '  Lille  ', 'resupply' => $blob],
+            ], \JSON_THROW_ON_ERROR),
+        );
+
+        // The over-long value is dropped; the short one is trimmed and kept.
+        $this->assertSame(['start' => 'Lille'], $reply->collected);
+    }
+
+    #[Test]
     public function readyToGenerateIsFalseUnlessStrictlyTrue(): void
     {
         $reply = $this->interpreter->interpret(

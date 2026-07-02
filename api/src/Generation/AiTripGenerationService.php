@@ -38,6 +38,42 @@ final readonly class AiTripGenerationService implements AiTripGenerationServiceI
      */
     private const float TARGET_TOLERANCE = 0.4;
 
+    /**
+     * Structured-output contract for the itinerary spec. Passed as the provider
+     * `response_format` (symfony/ai standard, honoured by the Gemini/OpenAI/
+     * Anthropic bridges) so the model returns a single valid JSON object with the
+     * right field TYPES — `loop` a real boolean, `days`/`km_per_day` real integers.
+     * Without it, weaker models (e.g. gemini-2.5-flash-lite) drift to prose or drop
+     * `loop`/`days`, so a "2-day loop" brief degrades to a 1-day point-to-point
+     * (recette #649). The prompt still describes the semantics; this guarantees the
+     * envelope is machine-parseable and complete.
+     *
+     * @var array<string, mixed>
+     */
+    private const array RESPONSE_FORMAT = [
+        'response_format' => [
+            'type' => 'json_schema',
+            'json_schema' => [
+                'name' => 'itinerary_spec',
+                'schema' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'start' => ['type' => 'string'],
+                        'loop' => ['type' => 'boolean'],
+                        'end' => ['type' => 'string'],
+                        'days' => ['type' => 'integer'],
+                        'km_per_day' => ['type' => 'integer'],
+                        'accommodation' => ['type' => 'string'],
+                        'waypoints' => ['type' => 'array', 'items' => ['type' => 'string']],
+                        'out_of_zone' => ['type' => 'boolean'],
+                        'out_of_zone_reason' => ['type' => 'string'],
+                    ],
+                    'required' => ['start', 'loop', 'days', 'km_per_day'],
+                ],
+            ],
+        ],
+    ];
+
     public function __construct(
         private SystemPromptLoader $promptLoader,
         private GeocoderInterface $geocoder,
@@ -164,7 +200,7 @@ final readonly class AiTripGenerationService implements AiTripGenerationServiceI
      */
     private function extractSpec(ResolvedLlmClient $resolved, string $model, string $systemPrompt, string $userMessage): ?array
     {
-        $response = $resolved->client->generate($model, $userMessage, $systemPrompt);
+        $response = $resolved->client->generate($model, $userMessage, $systemPrompt, self::RESPONSE_FORMAT);
         $raw = $response['response'] ?? null;
         if (!\is_string($raw)) {
             return null;

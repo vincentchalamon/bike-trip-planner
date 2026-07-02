@@ -47,6 +47,14 @@ ARG NEXT_PUBLIC_SENTRY_DSN
 # AI must stay visible (CI E2E in ci.yml, dev in compose.dev.yaml). The code and
 # endpoints are kept for a later re-enable; this is a single reversible switch.
 ARG NEXT_PUBLIC_ENABLE_AI=false
+# Client-facing origins, inlined at build time. Empty API URL → the browser calls
+# the API on the SAME origin it was served from (relative URLs), so the build
+# works unchanged on https://localhost, in prod (PWA + API share the origin), and
+# behind a tunnel (ngrok) for mobile testing. Empty Mercure URL → the client
+# derives the hub from the current origin too (see use-mercure). Only the native
+# Capacitor build sets NEXT_PUBLIC_MERCURE_URL to reach its remote hub.
+ARG NEXT_PUBLIC_API_URL=
+ARG NEXT_PUBLIC_MERCURE_URL=
 
 COPY --link pwa/. .
 
@@ -59,6 +67,8 @@ RUN --mount=type=secret,id=sentry_auth_token \
     NEXT_PUBLIC_APP_ENV="${NEXT_PUBLIC_APP_ENV}" \
     NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
     NEXT_PUBLIC_ENABLE_AI="${NEXT_PUBLIC_ENABLE_AI}" \
+    NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
+    NEXT_PUBLIC_MERCURE_URL="${NEXT_PUBLIC_MERCURE_URL}" \
     npm run build
 
 

@@ -45,10 +45,12 @@ Cloud providers only. No self-hosted Ollama.
 | Provider | `symfony/ai` bridge | Default chat model | Default analysis model |
 |----------|---------------------|--------------------|------------------------|
 | **Anthropic (Claude)** | `symfony/ai-anthropic-platform` | `claude-haiku-4-5-20251001` | `claude-sonnet-4-6` |
-| **Google (Gemini)** | `symfony/ai-gemini-platform` | `gemini-2.0-flash` | `gemini-2.0-flash` |
+| **Google (Gemini)** | `symfony/ai-gemini-platform` | `gemini-2.5-flash-lite` | `gemini-2.5-flash-lite` |
 | **OpenAI** | `symfony/ai-open-ai-platform` | `gpt-4o-mini` | `gpt-4o-mini` |
 
 Models are chosen cheap-but-capable per provider. They are **not user-selectable in v1** — the user picks a provider, not a model.
+
+> **Update (2026-07-02):** the Gemini default moved `gemini-2.0-flash` → `gemini-2.5-flash` → `gemini-2.5-flash-lite`. Google's free tier returns `limit: 0` for `generate_content` on `gemini-2.0-flash` (a `quota_exceeded` failure even with a valid key). `gemini-2.5-flash` works but its free tier is capped at **20 requests/day (RPD) and 5 RPM**, which recette testing exhausts quickly; **`gemini-2.5-flash-lite`** has a separate, higher free-tier budget (10 RPM, its own 20 RPD) — the current pin so testing isn't blocked by the daily cap. Limits are **per model**, so switching models resets the counter. Pinned in `AiProvider::chatModel()`/`analysisModel()`; a config/env override (instead of a hardcoded pin) is the natural next step if models need to change without a rebuild.
 
 ### 3. Encrypted per-user token + account API
 

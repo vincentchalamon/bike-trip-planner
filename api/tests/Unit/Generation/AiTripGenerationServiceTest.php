@@ -60,6 +60,31 @@ final class AiTripGenerationServiceTest extends TestCase
     }
 
     #[Test]
+    public function forcesStructuredJsonOutputOnTheProvider(): void
+    {
+        // Pin the response_format pass-through: it is the fix for the "AI does
+        // nothing / drifts to prose" defect (recette #649). A future refactor
+        // dropping the options argument must fail here, not silently regress.
+        $client = $this->createMock(LlmClientInterface::class);
+        $client->expects(self::once())
+            ->method('generate')
+            ->with(
+                self::anything(),
+                self::anything(),
+                self::anything(),
+                self::callback(static fn (array $options): bool => isset($options['response_format']['json_schema']['schema'])),
+            )
+            ->willReturn(['response' => '{"start":"Lille","loop":true,"days":2,"km_per_day":80,"waypoints":["Cambrai"]}']);
+
+        $result = $this->service(
+            geocoder: $this->geocoderReturning(new Coordinate(50.6, 3.0)),
+            routing: $this->routingReturning(150_000.0),
+        )->generate('boucle Lille 80 km/j', $this->resolved($client));
+
+        self::assertSame(AiGenerationOutcome::SUCCESS, $result->outcome);
+    }
+
+    #[Test]
     public function generatesAPointToPointRoute(): void
     {
         // Exercises the loop:false branch: $to = last coordinate, $via excludes both endpoints.
