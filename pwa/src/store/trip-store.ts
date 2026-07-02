@@ -371,7 +371,35 @@ export const useTripStore = create<TripState>()(
 
     setStages: (stages) =>
       set((state) => {
-        state.stages = stages;
+        const existing = state.stages;
+        state.stages = stages.map((incoming, i) => {
+          const prev = existing[i];
+          const startMatch =
+            prev &&
+            prev.startPoint.lat === incoming.startPoint.lat &&
+            prev.startPoint.lon === incoming.startPoint.lon;
+          const endMatch =
+            prev &&
+            prev.endPoint.lat === incoming.endPoint.lat &&
+            prev.endPoint.lon === incoming.endPoint.lon;
+
+          return {
+            ...incoming,
+            // Preserve client-only reverse-geocoded labels across a raw
+            // re-hydrate/resync when the endpoint has not moved and the
+            // incoming payload lacks a label (the backend has not persisted it
+            // yet). Without this, a resync `/detail` replace would blank labels
+            // the client just resolved for a Komoot trip — whose stages arrive
+            // after a stageless draft — until `trip_ready` (~30s). Mirrors the
+            // preservation in applyTripReady/applyStageUpdate (recette #649).
+            startLabel: startMatch
+              ? (incoming.startLabel ?? prev.startLabel)
+              : incoming.startLabel,
+            endLabel: endMatch
+              ? (incoming.endLabel ?? prev.endLabel)
+              : incoming.endLabel,
+          };
+        });
         const max = Math.max(0, stages.length - 1);
         if (state.selectedStageIndex > max) {
           state.selectedStageIndex = max;
