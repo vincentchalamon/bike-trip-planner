@@ -378,12 +378,13 @@ async function setStaleRefreshCookie(page: Page): Promise<void> {
   // A present-but-invalid refresh_token the real backend rejects: the server
   // gate must VALIDATE it (not merely detect presence) and redirect. A missing
   // cookie fails open (client-gated), so the cookie must be present here.
+  // Use `url` (not domain/path) so it actually attaches over https, matching
+  // landing-page.spec.ts.
   await page.context().addCookies([
     {
       name: "refresh_token",
       value: "stale-invalid-refresh-token",
-      domain: "localhost",
-      path: "/",
+      url: process.env.PLAYWRIGHT_BASE_URL ?? "https://localhost",
     },
   ]);
 }
