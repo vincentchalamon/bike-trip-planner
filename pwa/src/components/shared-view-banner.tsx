@@ -6,7 +6,7 @@ import { Eye } from "lucide-react";
 /**
  * Permanent read-only banner displayed on the shared trip view (`/s/[code]`).
  *
- * Sits directly under the {@link SharedTopBar} to make the read-only nature of
+ * Sits directly under the app {@link TopBar} to make the read-only nature of
  * the page unambiguous, distinguishing it from the owner roadbook
  * (`/trips/[id]`) that uses the same master/detail layout.
  *

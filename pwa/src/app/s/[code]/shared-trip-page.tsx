@@ -11,9 +11,9 @@ import { TripSummary } from "@/components/trip-summary";
 import { MapPanel } from "@/components/Map/MapPanel";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
 import { HydrationBoundary } from "@/components/hydration-boundary";
-import { SharedTopBar } from "@/components/shared-top-bar";
+import { SiteChrome } from "@/components/site-chrome";
 import { SharedViewBanner } from "@/components/shared-view-banner";
-import { LandingFooter } from "@/components/landing/footer";
+import { TripDownloads } from "@/components/trip-downloads";
 import { fetchSharedTrip } from "@/lib/api/client";
 import { ShareProvider } from "@/lib/share-context";
 import { useUiStore } from "@/store/ui-store";
@@ -183,10 +183,11 @@ function SharedTripLoader({ code }: { code: string }) {
   if (loadError) {
     return (
       <ShareProvider value={null}>
-        <SharedTopBar isError />
-        <div data-testid="share-error">
-          <TripNotFound variant="share" />
-        </div>
+        <SiteChrome>
+          <div data-testid="share-error">
+            <TripNotFound variant="share" />
+          </div>
+        </SiteChrome>
       </ShareProvider>
     );
   }
@@ -194,13 +195,14 @@ function SharedTripLoader({ code }: { code: string }) {
   if (!isLoaded) {
     return (
       <ShareProvider value={null}>
-        <SharedTopBar />
-        <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
-          <div className="flex items-center justify-center min-h-[60vh] gap-3 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span>{t("loading")}</span>
-          </div>
-        </main>
+        <SiteChrome>
+          <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
+            <div className="flex items-center justify-center min-h-[60vh] gap-3 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>{t("loading")}</span>
+            </div>
+          </main>
+        </SiteChrome>
       </ShareProvider>
     );
   }
@@ -210,109 +212,118 @@ function SharedTripLoader({ code }: { code: string }) {
 
   return (
     <ShareProvider value={{ shortCode: code, title: title ?? "" }}>
-      <SharedTopBar tripTitle={title ?? undefined} />
+      <SiteChrome>
+        <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-6 md:py-8">
+          <div className="space-y-6">
+            {/* Permanent read-only banner — sits under the top bar. */}
+            <SharedViewBanner />
 
-      <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-6 md:py-8">
-        <div className="space-y-6">
-          {/* Permanent read-only banner — sits under the top bar. */}
-          <SharedViewBanner />
-
-          {/* Trip title (hero) — separate from the compact title in the top
-              bar so the page still has a clear heading hierarchy. */}
-          {title && (
-            <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          )}
-
-          {/* Summary */}
-          <TripSummary
-            totalDistance={totalDistance}
-            totalElevation={totalElevation}
-            totalElevationLoss={totalElevationLoss}
-            weather={stages[0]?.weather ?? null}
-            isWeatherLoading={false}
-            isProcessing={false}
-            estimatedBudgetMin={estimatedBudget.min}
-            estimatedBudgetMax={estimatedBudget.max}
-            startDate={startDate}
-            endDate={endDate}
-            fatigueFactor={pacingConfig?.fatigueFactor ?? 0.9}
-            elevationPenalty={pacingConfig?.elevationPenalty ?? 50}
-            maxDistancePerDay={pacingConfig?.maxDistancePerDay ?? 80}
-            averageSpeed={pacingConfig?.averageSpeed ?? 15}
-            readOnly
-          />
-
-          {/* View mode toggle */}
-          <div className="flex justify-end">
-            <ViewModeToggle />
-          </div>
-
-          {/* Master/detail roadbook + map (read-only). The configuration
-              panel, undo/redo, and "+" insertion controls are intentionally
-              omitted in the shared view. */}
-          <div
-            className={[
-              "flex gap-8",
-              viewMode === "split" ? "lg:flex-row flex-col" : "",
-            ].join(" ")}
-            data-testid="split-view-container"
-          >
-            {showTimeline && (
-              <div
-                className={
-                  viewMode === "split" ? "lg:flex-1 lg:min-w-0" : "w-full"
-                }
-              >
-                {stages.length > 0 ? (
-                  <RoadbookMasterDetail
-                    stages={stages}
-                    startDate={startDate}
-                    isProcessing={false}
-                    readOnly
-                    onDeleteStage={noop}
-                    onAddAccommodation={noop}
-                    onUpdateAccommodation={noop}
-                    onRemoveAccommodation={noop}
-                  />
-                ) : (
-                  <p className="text-center text-muted-foreground">
-                    {t("noStages")}
-                  </p>
+            {/* Trip title (hero) + whole-trip downloads on the same line,
+                aligned to the right — mirrors the edit view's TripActions
+                placement (recette #649). The shared view is read-only, so only
+                the GPX/FIT downloads are exposed (no undo/redo, share, config).
+                Downloads resolve via the share short code (ShareContext). */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                {title && (
+                  <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
                 )}
               </div>
-            )}
-
-            {showMap && (
               <div
-                className={
-                  viewMode === "split"
-                    ? "lg:w-[520px] lg:shrink-0"
-                    : "w-full h-[calc(100vh-12rem)]"
-                }
+                className="shrink-0 flex items-center gap-0.5 sm:gap-1"
+                data-testid="trip-actions"
               >
+                <TripDownloads tripId={undefined} tripTitle={title ?? ""} />
+              </div>
+            </div>
+
+            {/* Summary */}
+            <TripSummary
+              totalDistance={totalDistance}
+              totalElevation={totalElevation}
+              totalElevationLoss={totalElevationLoss}
+              weather={stages[0]?.weather ?? null}
+              isWeatherLoading={false}
+              isProcessing={false}
+              estimatedBudgetMin={estimatedBudget.min}
+              estimatedBudgetMax={estimatedBudget.max}
+              startDate={startDate}
+              endDate={endDate}
+              fatigueFactor={pacingConfig?.fatigueFactor ?? 0.9}
+              elevationPenalty={pacingConfig?.elevationPenalty ?? 50}
+              maxDistancePerDay={pacingConfig?.maxDistancePerDay ?? 80}
+              averageSpeed={pacingConfig?.averageSpeed ?? 15}
+              readOnly
+            />
+
+            {/* View mode toggle */}
+            <div className="flex justify-end">
+              <ViewModeToggle />
+            </div>
+
+            {/* Master/detail roadbook + map (read-only). The configuration
+              panel, undo/redo, and "+" insertion controls are intentionally
+              omitted in the shared view. */}
+            <div
+              className={[
+                "flex gap-8",
+                viewMode === "split" ? "lg:flex-row flex-col" : "",
+              ].join(" ")}
+              data-testid="split-view-container"
+            >
+              {showTimeline && (
+                <div
+                  className={
+                    viewMode === "split" ? "lg:flex-1 lg:min-w-0" : "w-full"
+                  }
+                >
+                  {stages.length > 0 ? (
+                    <RoadbookMasterDetail
+                      stages={stages}
+                      startDate={startDate}
+                      isProcessing={false}
+                      readOnly
+                      onDeleteStage={noop}
+                      onAddAccommodation={noop}
+                      onUpdateAccommodation={noop}
+                      onRemoveAccommodation={noop}
+                    />
+                  ) : (
+                    <p className="text-center text-muted-foreground">
+                      {t("noStages")}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {showMap && (
                 <div
                   className={
                     viewMode === "split"
-                      ? "h-[calc(100dvh-6rem)] lg:sticky lg:top-20"
-                      : "w-full h-full"
+                      ? "lg:w-[520px] lg:shrink-0"
+                      : "w-full h-[calc(100vh-12rem)]"
                   }
                 >
-                  <MapPanel
-                    focusedStageIndex={focusedStageIndex}
-                    onStageClick={handleStageClick}
-                    onResetView={handleResetView}
-                    stages={stages}
-                  />
+                  <div
+                    className={
+                      viewMode === "split"
+                        ? "h-[calc(100dvh-6rem)] lg:sticky lg:top-20"
+                        : "w-full h-full"
+                    }
+                  >
+                    <MapPanel
+                      focusedStageIndex={focusedStageIndex}
+                      onStageClick={handleStageClick}
+                      onResetView={handleResetView}
+                      stages={stages}
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      </main>
-
-      {/* Site footer — the shared view uses SharedTopBar (not SiteChrome), so
-          the homepage footer must be rendered explicitly here (recette #649). */}
-      <LandingFooter />
+        </main>
+      </SiteChrome>
     </ShareProvider>
   );
 }

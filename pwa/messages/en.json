@@ -790,10 +790,6 @@
     "readOnlyBanner": "Shared view — read only",
     "noStages": "This trip has no stages yet."
   },
-  "sharedTopBar": {
-    "brand": "Bike Trip Planner",
-    "brandHome": "Bike Trip Planner — home"
-  },
   "landing": {
     "hero": {
       "badge": "Private beta · access on request",
