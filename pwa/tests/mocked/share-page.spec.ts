@@ -73,14 +73,17 @@ test.describe("/s/[code] page", () => {
       page.getByRole("heading", { name: "Tour de Bretagne" }),
     ).toBeVisible({ timeout: 10000 });
 
-    // Shared top bar with trip title and GPX download
-    const topBar = page.getByTestId("shared-top-bar");
-    await expect(topBar).toBeVisible();
-    const topBarTitle = page.getByTestId("shared-top-bar-title");
-    await expect(topBarTitle).toBeVisible();
-    await expect(topBarTitle).toHaveText("Tour de Bretagne");
+    // App header (auth-aware) is shared with the rest of the app; the shared
+    // view no longer renders a bespoke bar and no longer duplicates the title
+    // in the header (recette #649).
+    await expect(page.getByTestId("top-bar")).toBeVisible();
+
+    // Whole-trip GPX download sits on the hero title line (right-aligned),
+    // mirroring the edit view.
     await expect(
-      topBar.getByRole("button", { name: "Télécharger le GPX complet" }),
+      page
+        .getByTestId("trip-actions")
+        .getByRole("button", { name: "Télécharger le GPX complet" }),
     ).toBeVisible();
 
     // Trip summary stats
@@ -110,8 +113,8 @@ test.describe("/s/[code] page", () => {
       timeout: 10000,
     });
 
-    // Top bar stays mounted in the error branch so the user has a home link
-    await expect(page.getByTestId("shared-top-bar")).toBeVisible();
+    // App header stays mounted in the error branch so the user has a home link
+    await expect(page.getByTestId("top-bar")).toBeVisible();
 
     // Back to home link
     await expect(page.getByRole("link").first()).toBeVisible();
