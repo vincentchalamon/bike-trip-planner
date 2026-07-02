@@ -45,7 +45,7 @@ Rejected. Would remove the client token entirely but contradicts the decoupled "
 Adopt **Option A**. Concretely:
 
 - **Backend** — `GET /auth/session` (`Auth` ApiResource) → `AuthSessionProvider` reusing the *validation half* of `AuthRefreshProcessor` **minus rotation**; `PUBLIC_ACCESS` (an anonymous caller gets `{authenticated:false}`, not a `401`). **Rotation vs introspection are now distinct**: `/auth/refresh` mutates (rotates the token, sets the cookie, mints a JWT); `/auth/session` only reads/validates. This is why it is safe to call on every render/deep-link.
-- **Web gate (RSC)** — `resolveServerSession()` (`pwa/src/lib/auth/server-session.ts`) → `app/page.tsx` (validated `initialAuthed`) + `(app)/layout.tsx` (server redirect of anonymous users). **Fail-open:** on the mobile build, or any backend error/timeout, it returns `null` → the client bootstrap stays authoritative.
+- **Web gate (RSC)** — `resolveServerSession()` (`pwa/src/lib/auth/server-session.ts`) → `app/page.tsx` (validated `initialAuthed`) + `(app)/layout.tsx` (server redirect when the session is resolved-and-invalid). **Fail-open:** on the mobile build, when there is **no cookie to validate**, or on any backend error/timeout, it returns `null` → the client bootstrap stays authoritative. The gate is therefore scoped to what the server can actually *verify*: a **present-but-invalid/expired** cookie (the stale-shell case). A genuinely anonymous visitor (no cookie) is still gated client-side by `AuthGuard` — the server can't distinguish "never logged in" from "browser-layer-mocked test session", so treating a missing cookie as a hard redirect would break the mocked E2E suite for no security gain (protected content is already client-gated).
 - **State-only, no token in HTML** — the server returns auth *state*, never a JWT. The client still mints its in-memory token via `silentRefresh` (the XSS posture of ADR-023 is preserved).
 - **Client** — the JWT bootstrap, the `ensureResolved()` request-gate and the `401` retry (PR #800) **stay** (they mint the token, cover the 15-min mid-session expiry, and are the mobile path). `home-content.tsx` drops its duplicate bootstrap and defers to the shared, deduped `ensureResolved()`. `AuthGuard` remains the JWT bootstrap on every platform and the redirect **backstop** for mobile + web fail-open; on the web happy path its redirect is a no-op (the `(app)` layout preempts it).
 
@@ -54,7 +54,7 @@ Adopt **Option A**. Concretely:
 ### Positive
 
 - No landing flash and no stale-cookie dashboard shell on the web; the landing-vs-dashboard decision is server-validated before first paint.
-- Anonymous protected deep-links (e.g. `/trips/{id}`) are redirected to `/login` server-side, before any protected chrome renders.
+- A protected deep-link (e.g. `/trips/{id}`) opened with a stale/revoked cookie is redirected to `/login` server-side, before any protected chrome renders (no stale-cookie shell). A no-cookie anonymous visitor keeps the pre-existing client-side redirect.
 - Removes the *cause* of the #8 "wait for auth" dance for web loads (the request now carries the token the server already knows is warranted); PR #800's retry becomes a pure mid-session-expiry safety net.
 
 ### Negative / Neutral

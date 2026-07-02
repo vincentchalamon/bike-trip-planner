@@ -30,16 +30,14 @@ describe("resolveServerSession", () => {
     expect(mockedCookies).not.toHaveBeenCalled();
   });
 
-  it("returns unauthenticated without a network call when the cookie is absent", async () => {
+  it("fails open (null) without a network call when the cookie is absent", async () => {
     vi.stubEnv("NEXT_PUBLIC_IS_MOBILE_BUILD", "");
     stubRefreshCookie(undefined);
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    expect(await resolveServerSession()).toEqual({
-      authenticated: false,
-      user: null,
-    });
+    // No cookie → nothing to validate → let the client decide (mobile-parity).
+    expect(await resolveServerSession()).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

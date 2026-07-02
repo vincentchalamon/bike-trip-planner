@@ -44,9 +44,9 @@ Fonctionnalité: Authentification et sécurité
     Alors je suis redirigé vers /login
 
   @desktop @critical
-  Scénario: Deep-link anonyme vers une route protégée redirigé côté serveur
-    Étant donné que je ne suis pas connecté
-    Quand je navigue directement vers le deep-link protégé "/trips/anon-deeplink-test"
+  Scénario: Cookie de session périmé sur un deep-link protégé redirigé côté serveur
+    Étant donné que j'ai un cookie de session périmé
+    Quand je navigue directement vers le deep-link protégé "/trips/stale-deeplink-test"
     Alors je suis redirigé vers /login par une redirection côté serveur
 
   @desktop

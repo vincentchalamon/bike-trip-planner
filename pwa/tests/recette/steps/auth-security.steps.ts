@@ -372,7 +372,29 @@ Then(
   },
 );
 
-// --- Server-side gate for anonymous deep-links (ADR-047) ---
+// --- Server-side gate for stale-cookie deep-links (ADR-047) ---
+
+async function setStaleRefreshCookie(page: Page): Promise<void> {
+  // A present-but-invalid refresh_token the real backend rejects: the server
+  // gate must VALIDATE it (not merely detect presence) and redirect. A missing
+  // cookie fails open (client-gated), so the cookie must be present here.
+  await page.context().addCookies([
+    {
+      name: "refresh_token",
+      value: "stale-invalid-refresh-token",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+}
+
+Given("j'ai un cookie de session périmé", async ({ page }) => {
+  await setStaleRefreshCookie(page);
+});
+
+Given("I have a stale session cookie", async ({ page }) => {
+  await setStaleRefreshCookie(page);
+});
 
 async function navigateDirectly(page: Page, path: string): Promise<void> {
   // Raw goto (no expandLinkCard): a protected deep-link must redirect before any
@@ -408,7 +430,7 @@ function assertServerSideLoginRedirect(page: Page): void {
 }
 
 Then(
-  "je suis redirigé vers /login par une redirection côté serveur",
+  /^je suis redirigé vers \/login par une redirection côté serveur$/,
   async ({ page }) => {
     await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
     assertServerSideLoginRedirect(page);
@@ -416,7 +438,7 @@ Then(
 );
 
 Then(
-  "I am redirected to /login by a server-side redirect",
+  /^I am redirected to \/login by a server-side redirect$/,
   async ({ page }) => {
     await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
     assertServerSideLoginRedirect(page);

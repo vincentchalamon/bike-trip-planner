@@ -43,9 +43,9 @@ Feature: Authentication and security
     Then I am redirected to /login
 
   @desktop @critical
-  Scenario: Anonymous deep-link to a protected route is redirected server-side
-    Given I am not logged in
-    When I navigate directly to the protected deep-link "/trips/anon-deeplink-test"
+  Scenario: Stale session cookie on a protected deep-link is redirected server-side
+    Given I have a stale session cookie
+    When I navigate directly to the protected deep-link "/trips/stale-deeplink-test"
     Then I am redirected to /login by a server-side redirect
 
   @desktop
