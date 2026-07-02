@@ -49,6 +49,11 @@ function TripLoader({ tripId }: { tripId: string }) {
   const setIsLocked = useTripStore((s) => s.setIsLocked);
   const setOutOfZone = useTripStore((s) => s.setOutOfZone);
   const clearTrip = useTripStore((s) => s.clearTrip);
+  // Track the stage count so the label-fill effect below re-runs when a Komoot
+  // trip's stages transition from empty (stageless draft) to populated — the
+  // first hydrate has no stages, so gating on `isLoaded` alone would never fill
+  // labels for that flow (recette #649).
+  const stageCount = useTripStore((s) => s.stages.length);
 
   useEffect(() => {
     let cancelled = false;
@@ -311,7 +316,11 @@ function TripLoader({ tripId }: { tripId: string }) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [isLoaded]);
+    // `stageCount` re-fires this effect when stages appear (Komoot draft →
+    // populated) or their number changes; it stays stable while labels resolve
+    // (updateStageLabel does not change the count), so resolution runs once per
+    // transition without spamming /geocode/reverse (recette #649).
+  }, [isLoaded, stageCount]);
 
   if (loadError) {
     return <TripNotFound />;

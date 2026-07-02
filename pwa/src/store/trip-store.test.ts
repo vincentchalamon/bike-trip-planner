@@ -193,6 +193,57 @@ describe("selectedStageIndex (master/detail)", () => {
   });
 });
 
+describe("setStages label preservation (recette #649)", () => {
+  it("keeps a client-resolved label when a resync payload has null labels and the endpoint is stable", () => {
+    const store = useTripStore.getState();
+    const current = makeStage(1);
+    current.startLabel = "Lille";
+    current.endLabel = "Roubaix";
+    store.setStages([current]);
+
+    // Resync /detail re-hydrate: server has not persisted labels yet (null).
+    const incoming = makeStage(1);
+    store.setStages([incoming]);
+
+    const result = useTripStore.getState().stages[0]!;
+    expect(result.startLabel).toBe("Lille");
+    expect(result.endLabel).toBe("Roubaix");
+  });
+
+  it("prefers the incoming label when the server has persisted one", () => {
+    const store = useTripStore.getState();
+    const current = makeStage(1);
+    current.startLabel = "Lille";
+    store.setStages([current]);
+
+    const incoming = makeStage(1);
+    incoming.startLabel = "Lille Centre";
+    store.setStages([incoming]);
+
+    expect(useTripStore.getState().stages[0]!.startLabel).toBe("Lille Centre");
+  });
+
+  it("does not leak a label onto a stage whose coordinates differ", () => {
+    const store = useTripStore.getState();
+    const current = makeStage(1);
+    current.startPoint = { lat: 50.63, lon: 3.05, ele: 0 };
+    current.endPoint = { lat: 50.69, lon: 3.18, ele: 0 };
+    current.startLabel = "Lille";
+    current.endLabel = "Roubaix";
+    store.setStages([current]);
+
+    // A genuinely different stage lands at index 0 (null labels).
+    const incoming = makeStage(1);
+    incoming.startPoint = { lat: 48.85, lon: 2.35, ele: 0 };
+    incoming.endPoint = { lat: 48.9, lon: 2.4, ele: 0 };
+    store.setStages([incoming]);
+
+    const result = useTripStore.getState().stages[0]!;
+    expect(result.startLabel).toBeNull();
+    expect(result.endLabel).toBeNull();
+  });
+});
+
 describe("applyTripReady preservation (recette #649)", () => {
   it("keeps accommodations/selection/alerts when the endpoint is stable", () => {
     const store = useTripStore.getState();
