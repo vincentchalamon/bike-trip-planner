@@ -11,9 +11,23 @@ import { toast } from "@/components/ui/sonner";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
 import type { StageData } from "@/lib/validation/schemas";
 
-const MERCURE_URL =
-  process.env.NEXT_PUBLIC_MERCURE_URL ??
-  "https://localhost/.well-known/mercure";
+/**
+ * The Mercure hub the browser subscribes to. An explicit
+ * `NEXT_PUBLIC_MERCURE_URL` wins (the native Capacitor build targets its remote
+ * hub); otherwise the hub is taken from the CURRENT origin, so the web app works
+ * unchanged on https://localhost, in prod (same origin), and behind a tunnel
+ * (ngrok) for mobile testing — without baking a URL into the bundle. The
+ * localhost fallback only applies during SSR, where no EventSource is opened.
+ */
+function resolveMercureHubUrl(): string {
+  if (process.env.NEXT_PUBLIC_MERCURE_URL) {
+    return process.env.NEXT_PUBLIC_MERCURE_URL;
+  }
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/.well-known/mercure`;
+  }
+  return "https://localhost/.well-known/mercure";
+}
 
 const stageDiffTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
@@ -743,7 +757,10 @@ export function useMercure(
     if (!tripId) return;
 
     // TODO: wire authHeaderFactory when auth store is implemented (#78)
-    const client = new MercureClient(MERCURE_URL, `/trips/${tripId}`);
+    const client = new MercureClient(
+      resolveMercureHubUrl(),
+      `/trips/${tripId}`,
+    );
     if (mercureToken) {
       client.setMercureToken(mercureToken);
     }
