@@ -48,6 +48,10 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/auth/session',
             output: AuthSession::class,
             provider: AuthSessionProvider::class,
+            // Per-user PII keyed on the refresh_token cookie: must never be
+            // shared-cached, and any cache must vary by Cookie (this endpoint is
+            // reachable on the public origin).
+            cacheHeaders: ['vary' => ['Cookie'], 'public' => false],
         ),
     ],
 )]
