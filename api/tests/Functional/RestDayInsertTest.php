@@ -48,7 +48,7 @@ final class RestDayInsertTest extends ApiTestCase
 
         $request = new TripRequest(Uuid::fromString($tripId));
         $request->sourceUrl = 'https://www.komoot.com/tour/123456789';
-        $request->startDate = new \DateTimeImmutable('2026-07-01');
+        $request->startDate = new \DateTimeImmutable('today +1 year');
 
         $repo->initializeTrip($tripId, $request);
         $repo->storeSourceType($tripId, SourceType::KOMOOT_TOUR->value);
@@ -109,13 +109,16 @@ final class RestDayInsertTest extends ApiTestCase
 
         $this->assertResponseStatusCodeSame(202);
 
-        // 2 → 3 stages: the trip now spans 3 days, so the end date shifts from
-        // 2026-07-02 to 2026-07-03 (recette #649).
+        // 2 → 3 stages: the trip now spans 3 days, so the end date shifts one day
+        // forward to start date + 2 (recette #649).
         /** @var TripRequestRepositoryInterface $repo */
         $repo = self::getContainer()->get(TripRequestRepositoryInterface::class);
         $request = $repo->getRequest(self::TRIP_ID);
 
         $this->assertNotNull($request);
-        $this->assertSame('2026-07-03', $request->endDate?->format('Y-m-d'));
+        $this->assertSame(
+            new \DateTimeImmutable('today +1 year')->modify('+2 days')->format('Y-m-d'),
+            $request->endDate?->format('Y-m-d'),
+        );
     }
 }
