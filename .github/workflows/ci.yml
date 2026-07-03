@@ -46,22 +46,28 @@ jobs:
           fi
           echo "Changed files:"; printf '%s\n' "$files"
 
-          # Recognised zones. Repo meta files (.git*, .github/** except workflows) and the whole
-          # docs/ tree (incl. non-markdown assets such as screenshots) have no code impact, so they
-          # are recognised here and skip the code/heavy jobs. Fail-safe: run the full suite on
+          # Non-code assets: raster images and markdown never affect TS/PHP/tests. They are
+          # recognised (so they don't trip the fail-safe) but excluded from the code zones, so an
+          # image/doc-only change runs at most the markdown jobs -- never the code/E2E jobs.
+          # (.svg stays "code": it can be imported as a component via SVGR.)
+          noncode='\.md$|\.(png|jpe?g|gif|webp|avif|ico)$'
+          # Recognised zones. Repo meta files (.git*, .github/** except workflows), the docs/ tree
+          # and the non-code assets above have no code impact. Fail-safe: run the full suite on
           # non-PR events, on workflow changes, or when a file matches no zone.
-          known='^api/|^provisioner/|^pwa/|^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$|^\.git|^docs/|\.md$'
+          known='^api/|^provisioner/|^pwa/|^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$|^\.git|^docs/|'"$noncode"
           run_all=false
           if [ "$EVENT_NAME" != "pull_request" ]; then run_all=true; fi
           if printf '%s\n' "$files" | grep -qE '^\.github/workflows/'; then run_all=true; fi
           if [ -n "$files" ] && printf '%s\n' "$files" | grep -qvE "$known"; then run_all=true; fi
 
-          flag() { if [ "$run_all" = true ] || printf '%s\n' "$files" | grep -qE "$1"; then echo true; else echo false; fi; }
+          # Code-relevant files = changed files that are neither markdown nor image assets.
+          code="$(printf '%s\n' "$files" | grep -vE "$noncode" || true)"
+          flag() { if [ "$run_all" = true ] || printf '%s\n' "$code" | grep -qE "$1"; then echo true; else echo false; fi; }
           api=$(flag '^api/')
           provisioner=$(flag '^provisioner/')
           pwa=$(flag '^pwa/')
           docker=$(flag '^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$')
-          docs=$(flag '^docs/|\.md$')
+          if [ "$run_all" = true ] || printf '%s\n' "$files" | grep -qE '\.md$'; then docs=true; else docs=false; fi
           if [ "$api" = true ] || [ "$pwa" = true ] || [ "$docker" = true ]; then e2e=true; else e2e=false; fi
 
           {
@@ -73,13 +79,12 @@ jobs:
             echo "e2e=$e2e"
           } | tee -a "$GITHUB_OUTPUT"
 
-  phpunit:
-    name: PHPUnit
+  phpunit-api:
+    name: PHPUnit (api)
     needs: changes
     if: >-
       !cancelled() &&
-      (needs.changes.outputs.api == 'true' || needs.changes.outputs.provisioner == 'true' ||
-      needs.changes.result == 'failure')
+      (needs.changes.outputs.api == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
       image: docker.io/esoledad/php:8.5
@@ -107,22 +112,13 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - "api"
-          - "provisioner"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Fix repository ownership
         run: git config --global --add safe.directory $(pwd)
-      - name: Install osmium
-        if: ${{ matrix.project == 'provisioner' }}
-        run: apt-get update && apt-get install -y --no-install-recommends osmium-tool
       - name: Get Composer cache directory
-        working-directory: ${{ matrix.project }}
+        working-directory: api
         id: composer-cache
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
       - name: Cache dependencies
@@ -132,17 +128,16 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
       - name: Install dependencies
-        working-directory: ${{ matrix.project }}
+        working-directory: api
         run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
       - name: Generate JWT keypair
-        if: matrix.project == 'api'
         working-directory: api
         run: |
           mkdir -p config/jwt
           openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:test
           openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem -passin pass:test
       - name: Run PHPUnit with coverage
-        working-directory: ${{ matrix.project }}
+        working-directory: api
         env:
           XDEBUG_MODE: coverage
           DATABASE_URL: "postgresql://app:!ChangeMe!@database:5432/app?serverVersion=18&charset=utf8"
@@ -153,8 +148,73 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-${{ matrix.project }}
-          path: ${{ matrix.project }}/coverage/clover.xml
+          name: coverage-api
+          path: api/coverage/clover.xml
+          retention-days: 7
+
+  phpunit-provisioner:
+    name: PHPUnit (provisioner)
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.provisioner == 'true' || needs.changes.result == 'failure')
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/esoledad/php:8.5
+      options: --user root
+    services:
+      database:
+        image: postgis/postgis:18-3.6-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: "!ChangeMe!"
+          POSTGRES_DB: app_test
+        options: >-
+          --health-cmd "pg_isready -U app -d app_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Fix repository ownership
+        run: git config --global --add safe.directory $(pwd)
+      - name: Install osmium
+        run: apt-get update && apt-get install -y --no-install-recommends osmium-tool
+      - name: Get Composer cache directory
+        working-directory: provisioner
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+      - name: Cache dependencies
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+      - name: Install dependencies
+        working-directory: provisioner
+        run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
+      - name: Run PHPUnit with coverage
+        working-directory: provisioner
+        env:
+          XDEBUG_MODE: coverage
+          DATABASE_URL: "postgresql://app:!ChangeMe!@database:5432/app?serverVersion=18&charset=utf8"
+          REDIS_URL: "redis://redis:6379"
+          FRONTEND_URL: "https://localhost"
+        run: vendor/bin/phpunit --coverage-clover coverage/clover.xml
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-provisioner
+          path: provisioner/coverage/clover.xml
           retention-days: 7
 
   openapi-lint:
@@ -204,27 +264,20 @@ jobs:
         with:
           dockerfile: .docker/**/Dockerfile
 
-  php-cs-fixer:
-    name: PHP CS Fixer
+  php-cs-fixer-api:
+    name: PHP CS Fixer (api)
     needs: changes
     if: >-
       !cancelled() &&
-      (needs.changes.outputs.api == 'true' || needs.changes.outputs.provisioner == 'true' ||
-      needs.changes.result == 'failure')
+      (needs.changes.outputs.api == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - "api"
-          - "provisioner"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Get PHP CS Fixer cache
         uses: actions/cache@v6
         with:
-          path: ${{ matrix.project }}/.php-cs-fixer.cache
+          path: api/.php-cs-fixer.cache
           key: ${{ runner.OS }}-phpcsfixer-${{ github.sha }}
           restore-keys: |
             ${{ runner.OS }}-phpcsfixer-
@@ -232,19 +285,54 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
         with:
-          files: ${{ matrix.project }}/**/*.php
+          files: api/**/*.php
       - name: Get Extra Arguments for PHP-CS-Fixer
         id: phpcs-intersection
         run: |
           CHANGED_FILES=$(echo "${{ steps.changed-files.outputs.all_modified_files }}" | tr ' ' '\n' | while read -r f; do [ -n "$f" ] && [ -f "$f" ] && echo "$f"; done || true)
-          if ! echo "${CHANGED_FILES}" | grep -qE "^${{ matrix.project }}\/(\\.php-cs-fixer(\\.dist)?\\.php|composer\\.lock)$"; then EXTRA_ARGS=$(printf -- '--path-mode=intersection\n--\n%s' "${CHANGED_FILES}"); else EXTRA_ARGS=''; fi
+          if ! echo "${CHANGED_FILES}" | grep -qE "^api\/(\\.php-cs-fixer(\\.dist)?\\.php|composer\\.lock)$"; then EXTRA_ARGS=$(printf -- '--path-mode=intersection\n--\n%s' "${CHANGED_FILES}"); else EXTRA_ARGS=''; fi
           echo "PHPCS_EXTRA_ARGS<<EOF" >> $GITHUB_ENV
           echo "$EXTRA_ARGS" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
       - name: Run PHP CS Fixer
         uses: docker://oskarstark/php-cs-fixer-ga
         with:
-          args: --config=${{ matrix.project }}/.php-cs-fixer.dist.php -v --dry-run --stop-on-violation --using-cache=no ${{ env.PHPCS_EXTRA_ARGS }}"
+          args: --config=api/.php-cs-fixer.dist.php -v --dry-run --stop-on-violation --using-cache=no ${{ env.PHPCS_EXTRA_ARGS }}"
+
+  php-cs-fixer-provisioner:
+    name: PHP CS Fixer (provisioner)
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.provisioner == 'true' || needs.changes.result == 'failure')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Get PHP CS Fixer cache
+        uses: actions/cache@v6
+        with:
+          path: provisioner/.php-cs-fixer.cache
+          key: ${{ runner.OS }}-phpcsfixer-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.OS }}-phpcsfixer-
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          files: provisioner/**/*.php
+      - name: Get Extra Arguments for PHP-CS-Fixer
+        id: phpcs-intersection
+        run: |
+          CHANGED_FILES=$(echo "${{ steps.changed-files.outputs.all_modified_files }}" | tr ' ' '\n' | while read -r f; do [ -n "$f" ] && [ -f "$f" ] && echo "$f"; done || true)
+          if ! echo "${CHANGED_FILES}" | grep -qE "^provisioner\/(\\.php-cs-fixer(\\.dist)?\\.php|composer\\.lock)$"; then EXTRA_ARGS=$(printf -- '--path-mode=intersection\n--\n%s' "${CHANGED_FILES}"); else EXTRA_ARGS=''; fi
+          echo "PHPCS_EXTRA_ARGS<<EOF" >> $GITHUB_ENV
+          echo "$EXTRA_ARGS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      - name: Run PHP CS Fixer
+        uses: docker://oskarstark/php-cs-fixer-ga
+        with:
+          args: --config=provisioner/.php-cs-fixer.dist.php -v --dry-run --stop-on-violation --using-cache=no ${{ env.PHPCS_EXTRA_ARGS }}"
 
   markdown-lint:
     name: Markdown Lint
@@ -284,56 +372,61 @@ jobs:
       - name: Check Markdown links & anchors (internal)
         run: node scripts/check-md-links.mjs
 
-  symfony-security-check:
-    name: Security Check
+  security-check-api:
+    name: Security Check (api)
     needs: changes
     if: >-
       !cancelled() &&
-      (needs.changes.outputs.api == 'true' || needs.changes.outputs.provisioner == 'true' ||
-      needs.changes.result == 'failure')
+      (needs.changes.outputs.api == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
       image: docker.io/esoledad/php:8.5
       options: --user root
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - "api"
-          - "provisioner"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Fix repository ownership
         run: git config --global --add safe.directory $(pwd)
       - name: Run Symfony Security Check
-        working-directory: ${{ matrix.project }}
+        working-directory: api
         run: symfony check:security
 
-  phpstan:
-    name: PHPStan
+  security-check-provisioner:
+    name: Security Check (provisioner)
     needs: changes
     if: >-
       !cancelled() &&
-      (needs.changes.outputs.api == 'true' || needs.changes.outputs.provisioner == 'true' ||
-      needs.changes.result == 'failure')
+      (needs.changes.outputs.provisioner == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
       image: docker.io/esoledad/php:8.5
       options: --user root
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - "api"
-          - "provisioner"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Fix repository ownership
+        run: git config --global --add safe.directory $(pwd)
+      - name: Run Symfony Security Check
+        working-directory: provisioner
+        run: symfony check:security
+
+  phpstan-api:
+    name: PHPStan (api)
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.api == 'true' || needs.changes.result == 'failure')
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/esoledad/php:8.5
+      options: --user root
     steps:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Fix repository ownership
         run: git config --global --add safe.directory $(pwd)
       - name: Get Composer cache directory
-        working-directory: ${{ matrix.project }}
+        working-directory: api
         id: composer-cache
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
       - name: Cache dependencies
@@ -343,42 +436,34 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
       - name: Install dependencies
-        working-directory: ${{ matrix.project }}
+        working-directory: api
         run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
       - name: WarmUp Cache
-        if: ${{ matrix.project == 'api' }}
         env:
           APP_ENV: dev # required for parameters.symfony.containerXmlPath
-        working-directory: ${{ matrix.project }}
+        working-directory: api
         run: bin/console cache:warmup --no-optional-warmers
       - name: Run PHPStan
-        working-directory: ${{ matrix.project }}
+        working-directory: api
         run: vendor/bin/phpstan analyse -c phpstan.dist.neon
 
-  rector:
-    name: Rector
+  phpstan-provisioner:
+    name: PHPStan (provisioner)
     needs: changes
     if: >-
       !cancelled() &&
-      (needs.changes.outputs.api == 'true' || needs.changes.outputs.provisioner == 'true' ||
-      needs.changes.result == 'failure')
+      (needs.changes.outputs.provisioner == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
       image: docker.io/esoledad/php:8.5
       options: --user root
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - "api"
-          - "provisioner"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Fix repository ownership
         run: git config --global --add safe.directory $(pwd)
       - name: Get Composer cache directory
-        working-directory: ${{ matrix.project }}
+        working-directory: provisioner
         id: composer-cache
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
       - name: Cache dependencies
@@ -388,10 +473,74 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
       - name: Install dependencies
-        working-directory: ${{ matrix.project }}
+        working-directory: provisioner
+        run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
+      - name: Run PHPStan
+        working-directory: provisioner
+        run: vendor/bin/phpstan analyse -c phpstan.dist.neon
+
+  rector-api:
+    name: Rector (api)
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.api == 'true' || needs.changes.result == 'failure')
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/esoledad/php:8.5
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Fix repository ownership
+        run: git config --global --add safe.directory $(pwd)
+      - name: Get Composer cache directory
+        working-directory: api
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+      - name: Cache dependencies
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+      - name: Install dependencies
+        working-directory: api
         run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
       - name: Run Rector
-        working-directory: ${{ matrix.project }}
+        working-directory: api
+        run: vendor/bin/rector process --dry-run
+
+  rector-provisioner:
+    name: Rector (provisioner)
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.provisioner == 'true' || needs.changes.result == 'failure')
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/esoledad/php:8.5
+      options: --user root
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Fix repository ownership
+        run: git config --global --add safe.directory $(pwd)
+      - name: Get Composer cache directory
+        working-directory: provisioner
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+      - name: Cache dependencies
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+      - name: Install dependencies
+        working-directory: provisioner
+        run: composer install --no-interaction --prefer-dist --no-scripts --no-progress
+      - name: Run Rector
+        working-directory: provisioner
         run: vendor/bin/rector process --dry-run
 
   playwright:
