@@ -14,7 +14,7 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
      * never declares a DTD, so a DOCTYPE only ever introduces entity/XXE
      * vectors — refusing it up front is the first XXE defense layer.
      */
-    private static function hasDoctype(string $content): bool
+    private function hasDoctype(string $content): bool
     {
         return 1 === preg_match('/<!DOCTYPE/i', $content);
     }
@@ -25,7 +25,7 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
      */
     public function extractTitle(string $content): ?string
     {
-        if (self::hasDoctype($content)) {
+        if ($this->hasDoctype($content)) {
             return null;
         }
 
@@ -85,7 +85,7 @@ final class GpxStreamRouteParser implements GpxRouteParserInterface
      */
     public function parse(string $content): array
     {
-        if (self::hasDoctype($content)) {
+        if ($this->hasDoctype($content)) {
             throw new \RuntimeException('GPX documents with a DOCTYPE are not allowed.');
         }
 

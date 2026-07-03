@@ -14,23 +14,23 @@ use PHPUnit\Framework\TestCase;
  */
 final class GpxStreamRouteParserTest extends TestCase
 {
-    private const string VALID_GPX = <<<'GPX'
-        <?xml version="1.0" encoding="UTF-8"?>
-        <gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">
-        <trk><name>My Trip</name><trkseg>
-        <trkpt lat="50.6292" lon="3.0573"><ele>20</ele></trkpt>
-        <trkpt lat="50.6400" lon="3.0800"><ele>30</ele></trkpt>
-        </trkseg></trk></gpx>
-        GPX;
+    private const string VALID_GPX = <<<'GPX_WRAP'
+    <?xml version="1.0" encoding="UTF-8"?>
+    <gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">
+    <trk><name>My Trip</name><trkseg>
+    <trkpt lat="50.6292" lon="3.0573"><ele>20</ele></trkpt>
+    <trkpt lat="50.6400" lon="3.0800"><ele>30</ele></trkpt>
+    </trkseg></trk></gpx>
+    GPX_WRAP;
 
     #[Test]
-    public function it_extracts_the_track_title_from_a_valid_gpx(): void
+    public function itExtractsTheTrackTitleFromAValidGpx(): void
     {
         self::assertSame('My Trip', new GpxStreamRouteParser()->extractTitle(self::VALID_GPX));
     }
 
     #[Test]
-    public function it_parses_track_points_from_a_valid_gpx(): void
+    public function itParsesTrackPointsFromAValidGpx(): void
     {
         $points = new GpxStreamRouteParser()->parse(self::VALID_GPX);
 
@@ -39,7 +39,7 @@ final class GpxStreamRouteParserTest extends TestCase
     }
 
     #[Test]
-    public function it_does_not_substitute_an_external_entity_when_extracting_the_title(): void
+    public function itDoesNotSubstituteAnExternalEntityWhenExtractingTheTitle(): void
     {
         $secret = tempnam(sys_get_temp_dir(), 'xxe');
         self::assertIsString($secret);
@@ -48,10 +48,10 @@ final class GpxStreamRouteParserTest extends TestCase
         try {
             $payload = \sprintf(
                 "<?xml version=\"1.0\"?>\n<!DOCTYPE gpx [<!ENTITY xxe SYSTEM \"file://%s\">]>\n"
-                ."<gpx version=\"1.1\" xmlns=\"http://www.topografix.com/GPX/1/1\">"
-                ."<trk><name>&xxe;</name><trkseg>"
-                ."<trkpt lat=\"50.6\" lon=\"3.0\"><ele>20</ele></trkpt>"
-                ."</trkseg></trk></gpx>",
+                .'<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">'
+                .'<trk><name>&xxe;</name><trkseg>'
+                .'<trkpt lat="50.6" lon="3.0"><ele>20</ele></trkpt>'
+                .'</trkseg></trk></gpx>',
                 $secret,
             );
 
@@ -65,7 +65,7 @@ final class GpxStreamRouteParserTest extends TestCase
     }
 
     #[Test]
-    public function it_rejects_a_gpx_carrying_a_doctype_when_parsing(): void
+    public function itRejectsAGpxCarryingADoctypeWhenParsing(): void
     {
         $this->expectException(\RuntimeException::class);
 
