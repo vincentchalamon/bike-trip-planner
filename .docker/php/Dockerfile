@@ -4,7 +4,7 @@
 
 
 # Versions
-FROM docker.io/dunglas/frankenphp:1-php8.5@sha256:7b8b0b86f32a72878f7ea1aeb7f2ae9822705405fbac8d2b736a5f487e92985f AS frankenphp_upstream
+FROM docker.io/dunglas/frankenphp:1-php8.5@sha256:37d7976c890be30c1b06ad370de0a3c5e572e2c11b4720196950287eb7f3fd88 AS frankenphp_upstream
 
 
 # The different stages of this Dockerfile are meant to be built into separate images
