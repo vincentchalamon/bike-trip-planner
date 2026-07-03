@@ -46,9 +46,10 @@ jobs:
           fi
           echo "Changed files:"; printf '%s\n' "$files"
 
-          # Fail-safe: run the full suite on non-PR events, on CI-definition changes,
-          # or as soon as a changed file falls outside every recognised zone.
-          known='^api/|^provisioner/|^pwa/|^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$|\.md$'
+          # Recognised zones. Repo meta files (.git*, .github/** except workflows) have no code
+          # impact, so they are recognised here and skip the code/heavy jobs. Fail-safe: run the
+          # full suite on non-PR events, on workflow changes, or when a file matches no zone.
+          known='^api/|^provisioner/|^pwa/|^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$|^\.git|\.md$'
           run_all=false
           [ "$EVENT_NAME" != "pull_request" ] && run_all=true || true
           printf '%s\n' "$files" | grep -qE '^\.github/workflows/' && run_all=true || true
