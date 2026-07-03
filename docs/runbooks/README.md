@@ -16,12 +16,13 @@ Every runbook follows the same four sections:
 | Runbook | Purpose |
 |---|---|
 | [severity-levels.md](severity-levels.md) | P1/P2/P3 definitions (used by `incident-create.yml`) |
+| [incident-alerting.md](incident-alerting.md) | Auto-incident pipeline: monitoring alerts → deduplicated GitHub issues |
 | [worker-stuck.md](worker-stuck.md) | Messenger workers blocked or failing |
 | [database-disk-full.md](database-disk-full.md) | PostgreSQL disk pressure |
 | [redis-out-of-memory.md](redis-out-of-memory.md) | Redis `OOM` evictions or refused writes |
 | [mercure-disconnected.md](mercure-disconnected.md) | SSE clients cannot reconnect |
 | [valhalla-overpass-rebuild.md](valhalla-overpass-rebuild.md) | Routing tiles or POI cache rebuild |
-| [osm-france-refresh.md](osm-france-refresh.md) | Monthly France-wide OSM build + tile upload |
+| [osm-france-refresh.md](osm-france-refresh.md) | On-demand France-wide OSM build + tile upload |
 | [oracle-vm-reclaimed.md](oracle-vm-reclaimed.md) | Oracle Always Free instance reclaimed |
 | [incident-template.md](incident-template.md) | Post-mortem template |
 | [release-rollback.md](release-rollback.md) | Roll back a bad deploy via Coolify |

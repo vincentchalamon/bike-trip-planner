@@ -4,8 +4,7 @@ Documentation for **Bike Trip Planner**, organised by what you need to do. It fo
 [Diátaxis](https://diataxis.fr/) principle — separate guidance for **learning**, **doing**,
 **looking things up**, and **understanding** — without forcing the literal folder names.
 
-Looking for the product overview instead? See the README ([English](../README.md) ·
-[Français](../README.fr.md)).
+Looking for the product overview instead? See the [README](../README.md).
 
 ## Start here — learning
 
@@ -26,7 +25,7 @@ Looking for the product overview instead? See the README ([English](../README.md
 
 | Document | For |
 |---|---|
-| [Features](../FEATURES.md) | Complete feature inventory with delivery status |
+| [Features](../README.md#features) | Product feature overview |
 | [Alert engine](../README.md#alert-engine) | Canonical alert-rule table (severity, priority, trigger) |
 | [External data sources](../README.md#external-data-sources) | OSM, DataTourisme, Wikidata, Open-Meteo |
 | [Legal & Licensing](legal-and-licensing.md) | Project licence, data attribution, GDPR posture |
@@ -42,6 +41,4 @@ Looking for the product overview instead? See the README ([English](../README.md
 
 ---
 
-French translations exist for the learning and how-to docs (`*.fr.md`) and for the product
-README. Reference and explanation docs (deployment, runbooks, ADRs, architecture) are
-maintained in English. Index in French: [docs/README.fr.md](README.fr.md).
+Documentation is maintained in English.

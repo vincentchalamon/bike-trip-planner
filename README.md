@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/vincentchalamon/bike-trip-planner/actions/workflows/ci.yml"><img src="https://github.com/vincentchalamon/bike-trip-planner/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <a href="https://github.com/vincentchalamon/bike-trip-planner/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License" /></a>
   <img src="https://img.shields.io/badge/PHP-8.5-777BB4?logo=php&logoColor=white" alt="PHP 8.5" />
   <img src="https://img.shields.io/badge/Symfony-8-000000?logo=symfony&logoColor=white" alt="Symfony 8" />
@@ -176,7 +177,7 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 | Frontend | Next.js 16 (App Router), React 19, TypeScript (strict) |
 | State | Zustand + Immer (in-memory), Mercure SSE (real-time) |
 | Styling | Tailwind CSS |
-| Testing | PHPUnit 13 (backend), Playwright 1.58 (E2E) |
+| Testing | PHPUnit 13 (backend), Playwright 1.61 (E2E) |
 | Quality | PHPStan level 9, PHP-CS-Fixer, ESLint, Prettier |
 | Async | Symfony Messenger, Redis transport, 5 workers |
 | Runtime | Docker (Caddy, Mercure, Redis, PostgreSQL, Node) |
@@ -191,7 +192,7 @@ Type safety is enforced end-to-end: PHP DTOs define the schema -> API Platform e
 | [Getting Started](docs/getting-started.md) | Requirements, installation, and local setup |
 | [Contributing](docs/contributing.md) | Development workflow, standards, and tooling |
 | [Deployment](docs/deployment.md) | CI/CD pipeline, required secrets, rollback procedure |
-| [Architecture Decisions](docs/adr/) | 35 ADRs explaining every major technical choice |
+| [Architecture Decisions](docs/adr/) | 47 ADRs explaining every major technical choice |
 | [Runbooks](docs/runbooks/) | On-call playbooks: workers, DB, Redis, Mercure, releases |
 | [Claude Code Tooling](docs/claude-code-tooling.md) | MCP servers, hooks, and skills for AI-assisted development |
 | [Architecture](docs/architecture.md) | System overview and the reasoning behind the ADRs |

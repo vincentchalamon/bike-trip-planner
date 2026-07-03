@@ -1,7 +1,5 @@
 # Contributing
 
-*[Version francaise](contributing.fr.md)*
-
 This guide covers everything you need to contribute to Bike Trip Planner: setting up your development environment, configuring AI-assisted tooling, and following the project's quality standards.
 
 ---
@@ -267,7 +265,7 @@ bike-trip-planner/
 │   │   ├── Mercure/              # Mercure event publishing
 │   │   ├── Geo/                  # Geospatial utilities
 │   │   ├── Routing/              # Valhalla routing
-│   │   ├── Osm/                  # Overpass API queries
+│   │   ├── Osm/                  # OSM reference data queries (PostGIS)
 │   │   ├── Pricing/              # Accommodation heuristic pricing
 │   │   ├── Enum/                 # Enumerations
 │   │   ├── Controller/           # Special controllers (file exports)
@@ -297,12 +295,9 @@ bike-trip-planner/
 │       └── integration/          # Smoke test against real backend
 ├── docs/
 │   ├── adr/                      # Architecture Decision Records
-│   ├── getting-started.md        # Getting started guide (EN)
-│   ├── getting-started.fr.md     # Getting started guide (FR)
-│   ├── contributing.md           # This file (EN)
-│   ├── contributing.fr.md        # Contributing guide (FR)
-│   ├── claude-code-tooling.md    # Claude Code tooling (EN)
-│   └── claude-code-tooling.fr.md # Claude Code tooling (FR)
+│   ├── getting-started.md        # Getting started guide
+│   ├── contributing.md           # This file
+│   └── claude-code-tooling.md    # Claude Code tooling
 ├── .github/
 │   └── workflows/
 │       ├── claude.yml              # @claude pick + free-form on issues/PRs

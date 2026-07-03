@@ -1,7 +1,5 @@
 # Getting Started
 
-*[Version francaise](getting-started.fr.md)*
-
 This guide walks you through installing, configuring, and running Bike Trip Planner on your local machine.
 
 ---
@@ -59,7 +57,7 @@ This boots multiple services:
 
 The application is ready when all services are healthy.
 
-> **Accounts & AI:** sign-in is passwordless — you receive a magic link by email. The optional AI features (per-stage and whole-trip summaries, chat assistant) require the `ollama` service; when it is unavailable, AI summaries are simply hidden and all alerts remain available.
+> **Accounts & AI:** sign-in is passwordless — you receive a magic link by email. The optional AI features (per-stage and whole-trip summaries, chat assistant) are off by default and fully opt-in: enable them in your account settings by choosing a provider (Anthropic, Google Gemini, or OpenAI) and pasting your own API key (see [ADR-042](adr/adr-042-optional-multi-provider-ai-byo-token.md)). Without a key, the AI summaries are simply hidden and all alerts remain available.
 
 ---
 
@@ -81,15 +79,13 @@ You should receive an OpenAPI JSON document.
 
 ```bash
 make start         # Start all containers (production-iso mode)
-make start-dev     # Start in development mode (hot reload; AI tier off by default)
-make start-recette # Production-iso + Mailcatcher + Ollama (AI on) for the recette
+make start-dev     # Start in development mode (hot reload)
+make start-recette # Production-iso + Mailcatcher for the recette
 make stop          # Stop all containers (preserves data)
 make clean         # Stop all containers and erase all data (use with caution)
 ```
 
 See `make help` for the full list of available targets.
-
-> **One project, no ordering.** Locally, every `make start*` target boots the app and the Ollama LLM tier as a **single** Compose project, so the shared `bike-trip-planner-llm` network is created once and you never have to start one before the other. In production the LLM tier is a *separate* resource with its own startup model — see [deployment.md](deployment.md#llm-tier-ollama-and-the-shared-network).
 
 ---
 

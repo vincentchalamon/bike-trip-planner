@@ -23,7 +23,7 @@ The app combines several open datasets; each keeps its own licence and attributi
 
 | Source | Licence | Obligation |
 |---|---|---|
-| OpenStreetMap (Overpass, Valhalla tiles) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) | Display "© OpenStreetMap contributors" (rendered on the map) |
+| OpenStreetMap (PostGIS index, Valhalla tiles) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) | Display "© OpenStreetMap contributors" (rendered on the map) |
 | DataTourisme | [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence) | Credit the source; commercial use and modification allowed |
 | Wikidata | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Public domain — no attribution required |
 | Open-Meteo | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Credit Open-Meteo |

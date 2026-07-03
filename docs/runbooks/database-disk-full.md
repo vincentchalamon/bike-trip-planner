@@ -1,6 +1,6 @@
 # Database Disk Full
 
-PostgreSQL 18 persists trip configurations and stages (JSONB) per ADR-022. The boot volume of the Oracle Always Free VM is 150 GB shared with Docker, Valhalla tiles, Overpass DB, and Ollama models — disk pressure is the most likely "silent killer".
+PostgreSQL 18 persists trip configurations and stages (JSONB) per ADR-022. The boot volume of the Oracle Always Free VM is 150 GB shared with Docker, Valhalla tiles, and the PostGIS reference index — disk pressure is the most likely "silent killer".
 
 ## Symptômes
 
