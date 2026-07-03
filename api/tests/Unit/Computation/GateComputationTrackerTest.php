@@ -9,6 +9,8 @@ use App\Enum\ComputationName;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 
 /**
  * Targets the gate semantics added in issue #299:
@@ -29,7 +31,7 @@ final class GateComputationTrackerTest extends TestCase
     #[\Override]
     protected function setUp(): void
     {
-        $this->tracker = new ComputationTracker(new ArrayAdapter());
+        $this->tracker = new ComputationTracker(new ArrayAdapter(), new LockFactory(new InMemoryStore()));
     }
 
     #[Test]
