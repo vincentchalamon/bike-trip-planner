@@ -351,6 +351,9 @@ final class GpxUploadTest extends ApiTestCase
     {
         // SEC-006: the GPX upload path consumes limiter.gpx_upload (10/60s per user),
         // so a scripted burst is throttled with 429 like POST /trips.
+        // Keep the kernel across requests so the in-memory (array) limiter store
+        // accumulates instead of resetting on each rebooted request.
+        $this->client->disableReboot();
         $status = 0;
         for ($i = 0; $i < 11; ++$i) {
             $file = new UploadedFile(
