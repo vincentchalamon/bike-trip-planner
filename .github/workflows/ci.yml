@@ -51,8 +51,8 @@ jobs:
           # full suite on non-PR events, on workflow changes, or when a file matches no zone.
           known='^api/|^provisioner/|^pwa/|^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$|^\.git|\.md$'
           run_all=false
-          [ "$EVENT_NAME" != "pull_request" ] && run_all=true || true
-          printf '%s\n' "$files" | grep -qE '^\.github/workflows/' && run_all=true || true
+          if [ "$EVENT_NAME" != "pull_request" ]; then run_all=true; fi
+          if printf '%s\n' "$files" | grep -qE '^\.github/workflows/'; then run_all=true; fi
           if [ -n "$files" ] && printf '%s\n' "$files" | grep -qvE "$known"; then run_all=true; fi
 
           flag() { if [ "$run_all" = true ] || printf '%s\n' "$files" | grep -qE "$1"; then echo true; else echo false; fi; }
