@@ -16,8 +16,68 @@ env:
   NODE_ENV: test
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      provisioner: ${{ steps.filter.outputs.provisioner }}
+      pwa: ${{ steps.filter.outputs.pwa }}
+      docker: ${{ steps.filter.outputs.docker }}
+      docs: ${{ steps.filter.outputs.docs }}
+      e2e: ${{ steps.filter.outputs.e2e }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # merge-base required for the PR diff
+      - name: Compute changed areas
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            files="$(git diff --name-only "$BASE_SHA...$HEAD_SHA")"
+          else
+            files=""
+          fi
+          echo "Changed files:"; printf '%s\n' "$files"
+
+          # Fail-safe: run the full suite on non-PR events, on CI-definition changes,
+          # or as soon as a changed file falls outside every recognised zone.
+          known='^api/|^provisioner/|^pwa/|^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$|\.md$'
+          run_all=false
+          [ "$EVENT_NAME" != "pull_request" ] && run_all=true || true
+          printf '%s\n' "$files" | grep -qE '^\.github/workflows/' && run_all=true || true
+          if [ -n "$files" ] && printf '%s\n' "$files" | grep -qvE "$known"; then run_all=true; fi
+
+          flag() { if [ "$run_all" = true ] || printf '%s\n' "$files" | grep -qE "$1"; then echo true; else echo false; fi; }
+          api=$(flag '^api/')
+          provisioner=$(flag '^provisioner/')
+          pwa=$(flag '^pwa/')
+          docker=$(flag '^\.docker/|^\.dockerignore$|^compose[^/]*\.yaml$')
+          docs=$(flag '\.md$')
+          if [ "$api" = true ] || [ "$pwa" = true ] || [ "$docker" = true ]; then e2e=true; else e2e=false; fi
+
+          {
+            echo "api=$api"
+            echo "provisioner=$provisioner"
+            echo "pwa=$pwa"
+            echo "docker=$docker"
+            echo "docs=$docs"
+            echo "e2e=$e2e"
+          } | tee -a "$GITHUB_OUTPUT"
+
   phpunit:
     name: PHPUnit
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.provisioner == 'true' ||
+      needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
       image: docker.io/esoledad/php:8.5
@@ -97,6 +157,10 @@ jobs:
 
   openapi-lint:
     name: OpenAPI Lint
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.api == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
       image: docker.io/esoledad/php:8.5
@@ -125,6 +189,10 @@ jobs:
 
   hadolint:
     name: Hadolint
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.docker == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -136,6 +204,11 @@ jobs:
 
   php-cs-fixer:
     name: PHP CS Fixer
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.provisioner == 'true' ||
+      needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -173,6 +246,10 @@ jobs:
 
   markdown-lint:
     name: Markdown Lint
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.docs == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
       image: davidanson/markdownlint-cli2
@@ -185,6 +262,10 @@ jobs:
 
   markdown-links:
     name: Markdown Links
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.docs == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -203,6 +284,11 @@ jobs:
 
   symfony-security-check:
     name: Security Check
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.provisioner == 'true' ||
+      needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
       image: docker.io/esoledad/php:8.5
@@ -224,6 +310,11 @@ jobs:
 
   phpstan:
     name: PHPStan
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.provisioner == 'true' ||
+      needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
       image: docker.io/esoledad/php:8.5
@@ -264,6 +355,11 @@ jobs:
 
   rector:
     name: Rector
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.provisioner == 'true' ||
+      needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     container:
       image: docker.io/esoledad/php:8.5
@@ -298,6 +394,10 @@ jobs:
 
   playwright:
     name: Playwright
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.e2e == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     env:
       COMPOSE_FILE: compose.yaml
@@ -360,6 +460,10 @@ jobs:
 
   playwright-recette:
     name: Playwright BDD Recette
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.e2e == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     env:
       COMPOSE_FILE: compose.yaml
@@ -424,6 +528,10 @@ jobs:
 
   eslint:
     name: Eslint
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.pwa == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -443,6 +551,10 @@ jobs:
 
   npm-audit:
     name: npm audit
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.pwa == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -462,6 +574,10 @@ jobs:
 
   i18n-check:
     name: i18n check
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.pwa == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -481,6 +597,10 @@ jobs:
 
   typescript-check:
     name: TypeScript Check
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.pwa == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -500,6 +620,10 @@ jobs:
 
   unit-tests:
     name: Unit Tests (Vitest)
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.pwa == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -519,6 +643,10 @@ jobs:
 
   mobile-build:
     name: Mobile APK Build
+    needs: changes
+    if: >-
+      !cancelled() &&
+      (needs.changes.outputs.pwa == 'true' || needs.changes.result == 'failure')
     runs-on: ubuntu-latest
     continue-on-error: true # TODO: remove once APK build is consistently stable
     steps:
