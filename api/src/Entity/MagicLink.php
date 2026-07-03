@@ -33,9 +33,20 @@ class MagicLink
         #[ORM\Column]
         private \DateTimeImmutable $expiresAt,
         ?Uuid $id = null,
+        /**
+         * The un-hashed token, present only on a freshly created instance (never
+         * hydrated from the DB — not mapped). Only its hash is persisted in
+         * `token` (SEC-003); this is what the caller sends to the user.
+         */
+        private ?string $plainToken = null,
     ) {
         $this->id = $id ?? Uuid::v7();
         $this->createdAt = new \DateTimeImmutable();
+    }
+
+    public function getPlainToken(): ?string
+    {
+        return $this->plainToken;
     }
 
     public function getId(): Uuid

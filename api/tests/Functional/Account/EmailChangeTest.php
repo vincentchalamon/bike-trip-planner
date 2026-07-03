@@ -156,7 +156,8 @@ final class EmailChangeTest extends ApiTestCase
         $em = $this->getEntityManager();
         $entity = new EmailChangeToken(
             $user,
-            $token,
+            // Stored hashed at rest (SEC-003); the plaintext is what the verify endpoint receives.
+            hash('sha256', $token),
             $newEmail,
             $expiresAt ?? new \DateTimeImmutable('+30 minutes'),
         );

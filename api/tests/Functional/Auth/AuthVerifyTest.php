@@ -39,7 +39,8 @@ final class AuthVerifyTest extends ApiTestCase
 
         $magicLink = new MagicLink(
             $user,
-            $token,
+            // Stored hashed at rest (SEC-003); the plaintext is what /auth/verify receives.
+            hash('sha256', $token),
             $expiresAt ?? new \DateTimeImmutable('+30 minutes'),
         );
         $em->persist($magicLink);
