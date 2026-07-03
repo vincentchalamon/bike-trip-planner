@@ -28,6 +28,12 @@ secrets:
 x-recette-env: &recette-env
   MAILER_DSN: smtp://mailcatcher:1025
   JWT_PASSPHRASE: recette
+  # Non-default Mercure key so the SEC-004 fail-closed boot guard passes locally.
+  # Publisher/subscriber/secret must match for the embedded hub to verify the
+  # app-issued subscriber tokens (HS256).
+  MERCURE_PUBLISHER_JWT_KEY: recette-mercure-jwt-secret
+  MERCURE_SUBSCRIBER_JWT_KEY: recette-mercure-jwt-secret
+  MERCURE_JWT_SECRET: recette-mercure-jwt-secret
 
 services:
   php:

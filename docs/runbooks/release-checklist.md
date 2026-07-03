@@ -29,7 +29,7 @@ A green release is one where every line below is checked. If any line is unknown
 ### 3. Smoke on staging
 
 - [ ] Stack started cleanly on staging (`docker compose up -d`)
-- [ ] `curl https://staging.../api/healthz` returns 200 with the staging commit SHA
+- [ ] `curl https://staging.../api/healthz` returns 200 (the commit SHA is no longer exposed publicly — SEC-011; check the deployed SHA via the image label / deployment logs instead)
 - [ ] `curl https://staging.../api/health | jq` reports every dependency `ok`
 - [ ] End-to-end trip creation through the PWA succeeded on staging (`make test-e2e` against staging if applicable)
 

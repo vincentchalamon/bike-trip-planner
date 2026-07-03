@@ -15,8 +15,6 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
     $containerConfigurator->parameters()
-        ->set('app.commit_sha', '%env(default:default_commit_sha:APP_COMMIT)%')
-        ->set('default_commit_sha', 'unknown')
         // AI token encryption key (ADR-042). PRODUCTION MUST set AI_TOKEN_ENC_KEY;
         // the dev/CI default below only keeps the container bootable (throwaway dev
         // tokens, never used to protect real credentials).

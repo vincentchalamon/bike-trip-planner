@@ -9,6 +9,18 @@
 # See docs/adr/adr-032-migrations-and-rollback-strategy.md
 set -e
 
+# Fail closed (SEC-004): the Mercure hub is internet-facing and verifies subscriber
+# JWTs with this key, so booting prod on the public API Platform skeleton default
+# would let anyone forge a token and read every trip's live stream. compose resolves
+# MERCURE_JWT_KEY into MERCURE_JWT_SECRET, so we check the resolved container value.
+# CI and local iso-prod (recette) provide a non-default key; real prod MUST set one.
+case "${MERCURE_JWT_SECRET:-}" in
+	'' | *'!ChangeThisMercureHubJWTSecretKey!'*)
+		echo 'FATAL: MERCURE_JWT_KEY is unset or still the public skeleton default; refusing to boot (SEC-004). Set a strong MERCURE_JWT_KEY.' >&2
+		exit 1
+		;;
+esac
+
 if [ "${MIGRATIONS_ON_BOOT:-false}" = "true" ]; then
 	# Wait for the database to accept connections before migrating. The compose
 	# healthcheck (pg_isready) can briefly report ready during Postgres' init
