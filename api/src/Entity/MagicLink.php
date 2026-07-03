@@ -35,8 +35,11 @@ class MagicLink
         ?Uuid $id = null,
         /**
          * The un-hashed token, present only on a freshly created instance (never
-         * hydrated from the DB — not mapped). Only its hash is persisted in
-         * `token` (SEC-003); this is what the caller sends to the user.
+         * hydrated from the DB — not mapped). Only its hash is persisted in `token`
+         * (SEC-003); this is what the caller sends to the user. Declared outside the
+         * constructor (not promoted) so it defaults to null on entities Doctrine
+         * hydrates via newInstanceWithoutConstructor(), rather than staying
+         * uninitialized and throwing on read.
          */
         private ?string $plainToken = null,
     ) {
