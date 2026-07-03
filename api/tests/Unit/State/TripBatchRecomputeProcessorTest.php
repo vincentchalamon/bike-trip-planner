@@ -22,6 +22,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 
 final class TripBatchRecomputeProcessorTest extends TestCase
 {
@@ -68,6 +70,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
             $messageBus,
             $computationTracker,
             new TripAnalysisDispatcher($messageBus),
+            new RateLimiterFactory(['id' => 'trip_recompute_test', 'policy' => 'no_limit'], new InMemoryStorage()),
         );
 
         $request = new TripBatchRecomputeRequest([

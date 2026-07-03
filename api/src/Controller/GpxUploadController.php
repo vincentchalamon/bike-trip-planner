@@ -8,10 +8,13 @@ use App\ApiResource\TripRequest;
 use App\Entity\User;
 use App\Service\GpxUploadService;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -27,12 +30,23 @@ final readonly class GpxUploadController
     public function __construct(
         private GpxUploadService $gpxUploadService,
         private Security $security,
+        #[Autowire(service: 'limiter.gpx_upload')]
+        private RateLimiterFactory $gpxUploadLimiter,
     ) {
     }
 
     #[Route('/trips/gpx-upload', methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {
+        /** @var User $user */
+        $user = $this->security->getUser();
+
+        // GPX upload is a second trip-creation entry point: throttle it per user
+        // like POST /trips so it cannot be scripted to exhaust storage/workers (SEC-006).
+        if (!$this->gpxUploadLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
+            throw new TooManyRequestsHttpException();
+        }
+
         $file = $request->files->get('gpxFile');
 
         if (!$file instanceof UploadedFile) {
@@ -103,9 +117,6 @@ final readonly class GpxUploadController
 
         $locale = $request->getPreferredLanguage(['en', 'fr']) ?? 'en';
 
-        /** @var User $user */
-        $user = $this->security->getUser();
-
         $result = $this->gpxUploadService->createTrip($points, $title, $tripRequest, $locale, $user);
 
         $response = [
@@ -150,14 +161,24 @@ final readonly class GpxUploadController
             }
         }
 
+        // Enforce the same bounds as the TripRequest DTO (Assert\Range / Assert\Positive):
+        // this custom controller bypasses API Platform validation, and an out-of-range
+        // value — notably elevationPenalty=0 — would reach the pacing engine and throw
+        // DivisionByZeroError (HTTP 500) after a partial trip was already persisted (BUG-002).
         $fatigueFactor = $request->request->get('fatigueFactor');
         if (null !== $fatigueFactor && '' !== $fatigueFactor && is_numeric($fatigueFactor)) {
-            $tripRequest->fatigueFactor = (float) $fatigueFactor;
+            $value = (float) $fatigueFactor;
+            if ($value >= 0.5 && $value <= 1.0) {
+                $tripRequest->fatigueFactor = $value;
+            }
         }
 
         $elevationPenalty = $request->request->get('elevationPenalty');
         if (null !== $elevationPenalty && '' !== $elevationPenalty && is_numeric($elevationPenalty)) {
-            $tripRequest->elevationPenalty = (float) $elevationPenalty;
+            $value = (float) $elevationPenalty;
+            if ($value > 0.0) {
+                $tripRequest->elevationPenalty = $value;
+            }
         }
 
         $ebikeMode = $request->request->get('ebikeMode');

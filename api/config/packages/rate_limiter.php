@@ -37,6 +37,37 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'interval' => '60 seconds',
                 'cache_pool' => 'cache.rate_limiter',
             ],
+            // GPX upload is a second trip-creation entry point: throttle it like
+            // trip_create so it cannot bypass the create limiter (SEC-006).
+            'gpx_upload' => [
+                'policy' => 'sliding_window',
+                'limit' => 10,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            // Trip duplication clones DB rows + Redis blobs; cap per user (SEC-009).
+            'trip_duplicate' => [
+                'policy' => 'sliding_window',
+                'limit' => 10,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            // Recompute re-dispatches the full enrichment pipeline onto the shared
+            // workers; cap per user so it cannot be scripted faster than they drain (SEC-010).
+            'trip_recompute' => [
+                'policy' => 'sliding_window',
+                'limit' => 10,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
+            // Geocoding proxies to the public Nominatim instance (1 req/s policy,
+            // IP bans for bulk use); cap per user to protect the shared app IP (SEC-005).
+            'geocode' => [
+                'policy' => 'sliding_window',
+                'limit' => 30,
+                'interval' => '60 seconds',
+                'cache_pool' => 'cache.rate_limiter',
+            ],
             'access_request_ip' => [
                 'policy' => 'sliding_window',
                 'limit' => 3,
