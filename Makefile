@@ -103,7 +103,7 @@ phpunit: test-php ## Alias for "test-php"
 openapi-lint: ## Run OpenAPI lint
 	@docker compose run --rm --no-deps php bin/console api:openapi:export --yaml | docker compose exec -T php redocly lint /dev/stdin
 
-redocly: openapi-lint ## Alias for "test-php"
+redocly: openapi-lint ## Alias for "openapi-lint"
 
 security-check: ## Run Security Check
 	@docker compose run --rm --no-deps php symfony check:security
