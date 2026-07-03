@@ -20,6 +20,7 @@ use App\State\AccommodationScanProcessor;
             ],
             status: 202,
             openapi: new Operation(summary: 'Re-scan accommodations for all stages with a custom radius.'),
+            security: "is_granted('TRIP_EDIT', request.attributes.get('tripId'))",
             input: AccommodationScanRequest::class,
             output: Trip::class,
             processor: AccommodationScanProcessor::class,
