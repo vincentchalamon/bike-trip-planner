@@ -58,7 +58,10 @@ class EmailChangeToken
 
     public function getPlainToken(): ?string
     {
-        return $this->plainToken;
+        // `?? null` (not a bare read): plainToken is a promoted, non-mapped property,
+        // so on an entity Doctrine hydrates via newInstanceWithoutConstructor() it is
+        // uninitialized; `??` yields null instead of throwing (SEC-003).
+        return $this->plainToken ?? null;
     }
 
     public function getId(): Uuid
