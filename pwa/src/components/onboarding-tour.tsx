@@ -95,7 +95,6 @@ export function OnboardingTour() {
           popover: {
             title: t("step3Title"),
             description: t.raw("step3Description"),
-            side: "over",
           },
         },
         {
@@ -103,7 +102,6 @@ export function OnboardingTour() {
           popover: {
             title: t("step4Title"),
             description: t.raw("step4Description"),
-            side: "over",
           },
         },
       ],
