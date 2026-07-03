@@ -183,7 +183,7 @@ export function TripSummary({
             read-only shared view (recette #649). */}
         {readOnly ? (
           <div className="flex items-center gap-1.5" data-testid="summary-dates">
-            <CalendarDays className="h-4 w-4 text-brand" />
+            <CalendarDays className="h-4 w-4 text-brand" aria-hidden="true" />
             <span>{datesDisplay}</span>
           </div>
         ) : (
@@ -191,11 +191,13 @@ export function TripSummary({
             type="button"
             className="group flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
             onClick={() => openConfigPanelAt("dates")}
-            aria-label={t("datesLabel")}
+            // No aria-label: it would override the visible dates and break WCAG
+            // 2.5.3 (Label in Name). The visible text is the accessible name; the
+            // edit affordance is conveyed by the title (A11Y-002).
             title={t("editDatesHint")}
             data-testid="summary-dates"
           >
-            <CalendarDays className="h-4 w-4 text-brand" />
+            <CalendarDays className="h-4 w-4 text-brand" aria-hidden="true" />
             <span>{datesDisplay}</span>
             <Pencil
               className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground transition-colors"
@@ -211,7 +213,7 @@ export function TripSummary({
             className="flex items-center gap-1.5"
             data-testid="summary-profile"
           >
-            <User className="h-4 w-4 text-brand" />
+            <User className="h-4 w-4 text-brand" aria-hidden="true" />
             <span>{profileLabel}</span>
           </div>
         ) : (
@@ -219,11 +221,12 @@ export function TripSummary({
             type="button"
             className="group flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
             onClick={() => openConfigPanelAt("pacing")}
-            aria-label={t("profileLabel")}
+            // No aria-label: it would override the visible profile and break WCAG
+            // 2.5.3 (Label in Name). The visible text is the accessible name (A11Y-002).
             title={t("editProfileHint")}
             data-testid="summary-profile"
           >
-            <User className="h-4 w-4 text-brand" />
+            <User className="h-4 w-4 text-brand" aria-hidden="true" />
             <span>{profileLabel}</span>
             <Pencil
               className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground transition-colors"
@@ -244,8 +247,8 @@ export function TripSummary({
         </div>
       )}
 
-      <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground/70">
-        <Info className="h-3 w-3" />
+      <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+        <Info className="h-3 w-3" aria-hidden="true" />
         {t("disclaimer")}
       </p>
     </div>

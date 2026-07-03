@@ -53,10 +53,8 @@
     "downloadGpx": "Download full trip GPX",
     "downloadFit": "Download full trip FIT",
     "downloadFailed": "Download failed. Please try again.",
-    "datesLabel": "Trip dates",
     "editDatesHint": "Edit dates",
     "noDates": "Dates not set",
-    "profileLabel": "Rider profile",
     "editProfileHint": "Edit rider profile",
     "customProfile": "Custom",
     "loadingAriaLabel": "Loading trip summary"
