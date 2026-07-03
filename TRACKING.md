@@ -865,21 +865,23 @@ DoD : toutes les issues P0-P3 fermées ou explicitement reportées ; golden path
 
 ---
 
+> **Sprints reportés — déploiement & exploitation.** Les sprints ci-dessous (36-39) couvrent la mise en production et l'exploitation (Garmin OAuth, déploiement, perf/résilience, backup). Ils sont **différés** : le développement fonctionnel continue sans déploiement. Ils restent en fin de plan, à reprendre à l'ouverture de la beta.
+
 ## Sprint 36 — Garmin Connect
 
-Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase 2). Voir [ADR-018](docs/adr/adr-018-garmin-export-and-device-sync-strategy.md). Test local via ngrok pour le callback OAuth. Le visuel des menus downloads et de la modale partage a déjà été refondu en sprint 27 — cette implémentation y ajoute l'option FIT et la 4ᵉ section Garmin Connect en consommant les tokens design en place.
+Push vers Garmin Connect via OAuth 2.0 PKCE (Phase 2). **L'export FIT natif (Phase 1) est déjà livré** (`FitEncoder` + `TripFitNormalizer`, format `fit` sur `Trip`/`Stage`) ; reste le flux OAuth + push de course. Voir [ADR-018](docs/adr/adr-018-garmin-export-and-device-sync-strategy.md) (statut : Proposed). Test local via ngrok pour le callback OAuth. Le visuel downloads/partage (sprint 27) et l'auth ([#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76), livrée par [#248](https://github.com/vincentchalamon/bike-trip-planner/pull/248)) sont en place ; cette implémentation ajoute la 4ᵉ section Garmin Connect en consommant les tokens design.
 
-> **Prérequis :** s'inscrire au [Garmin Developer Program](https://developer.garmin.com/) quelques sprints en avance (~2 jours d'approbation).
+> **Prérequis :** s'inscrire au [Garmin Developer Program](https://developer.garmin.com/) quelques sprints en avance (~2 jours d'approbation) ; le callback OAuth de production nécessite une URL HTTPS publique (**dépend du sprint 37 — Déploiement**).
 
 | Ordre | ID                                                                    | Titre          | Effort | PRs | Dépend de                                                                                                                                                  |
 |-------|-----------------------------------------------------------------------|----------------|--------|-----|------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1     | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Garmin Connect | L      | 3   | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76), sprint 27                                                                            |
+| 1     | [#65](https://github.com/vincentchalamon/bike-trip-planner/issues/65) | Push OAuth Garmin Connect (Phase 2 ; FIT Phase 1 déjà livrée) | M | ~2 | [#76](https://github.com/vincentchalamon/bike-trip-planner/issues/76) ✅, sprint 27, sprint 37 (callback prod) |
 
 ### Recette Sprint 36
 
 - **Tests E2E :** `tests/recette/sprint-36.spec.ts`
 - **Checklist manuelle :**
-  - [ ] Export FIT téléchargeable par étape
+  - [ ] Export FIT téléchargeable par étape (Phase 1 déjà livrée — non-régression)
   - [ ] Flux OAuth Garmin Connect complet (via ngrok)
   - [ ] Push course vers Garmin Connect fonctionnel
   - [ ] Gestion erreurs : token expiré, API indisponible
@@ -888,7 +890,7 @@ Export FIT natif (Phase 1) et push vers Garmin Connect via OAuth 2.0 PKCE (Phase
 
 ## Sprint 37 — Déploiement
 
-Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructure-strategy.md). Issues GitHub à créer au moment venu. **Inclut Ollama** dans la stack production (conséquence de la décision « Ollama = dépendance dure » prise au sprint 29).
+Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructure-strategy.md) (statut : Proposed, amendé par [ADR-039](docs/adr/adr-039-beta-right-sizing-free-tier.md)). Cible : Oracle Cloud Always Free + Coolify + FreeDNS. Issues GitHub à créer au moment venu. **Plus d'infra IA à déployer** : l'IA est passée en providers cloud BYO-token ([ADR-042](docs/adr/adr-042-optional-multi-provider-ai-byo-token.md), Ollama retiré) et masquée en prod ([ADR-046](docs/adr/adr-046-temporary-ai-feature-flag.md)). Intègre l'auth résolue côté serveur ([ADR-047](docs/adr/adr-047-server-side-web-auth-resolution.md) : `API_BACKEND_URL` interne + `/auth/session`) et le **build PWA origin-relative** (même origine que l'API, pas de sous-domaine `api.` séparé).
 
 | Ordre | Étape                                              | Effort |
 |-------|----------------------------------------------------|--------|
@@ -896,23 +898,22 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 | 2     | Oracle Cloud (OCI) Always Free provisioning        | M      |
 | 3     | Coolify installation + configuration               | M      |
 | 4     | Configuration DNS (FreeDNS)                        | S      |
-| 5     | Docker configs production (PostgreSQL, Redis, Mercure, Caddy, **Ollama** + healthcheck) | L      |
-| 6     | Monitoring & healthchecks (incl. Ollama latence/disponibilité) | M      |
-| 7     | Migration données + smoke test production (incl. passe LLaMA 8B) | M      |
+| 5     | Docker configs production (FrankenPHP/Caddy + Mercure embarqués, PostgreSQL/PostGIS, Redis, Valhalla, provisioner) + healthchecks | L      |
+| 6     | Monitoring & healthchecks (Sentry SaaS + Uptime Kuma/UptimeRobot ; latence Valhalla/DB/Redis) | M      |
+| 7     | Migration données + smoke test production (golden path Komoot) | M      |
 | 8     | [#312](https://github.com/vincentchalamon/bike-trip-planner/issues/312) Feature-deploy : preview par PR (Étapes 1-7) | L |
-| 9     | [#270](https://github.com/vincentchalamon/bike-trip-planner/issues/270) Génération du keypair JWT sur le serveur (compose secrets + runbook `secrets-inventory.md`) | S |
+| 9     | [#270](https://github.com/vincentchalamon/bike-trip-planner/issues/270) Génération du keypair JWT sur le serveur — infra déjà en place (secrets `compose.yaml` + `secrets-inventory.md` via [#533](https://github.com/vincentchalamon/bike-trip-planner/pull/533)), reste à câbler la génération serveur | S |
 
 ### Recette Sprint 37
 
 - **Checklist manuelle :**
-  - [ ] Application accessible via URL publique
+  - [ ] Application accessible via URL publique (même origine PWA + API)
   - [ ] HTTPS fonctionnel (certificat TLS auto Caddy)
-  - [ ] PostgreSQL + Redis opérationnels en production
+  - [ ] PostgreSQL/PostGIS + Redis + Valhalla opérationnels en production
   - [ ] Mercure SSE fonctionnel en production
-  - [ ] **Ollama opérationnel** (modèles llama3.1:8b et llama3.2:3b chargés, healthcheck OK)
-  - [ ] **Pipeline LLaMA 8B fonctionnel en prod** (passe 1 + passe 2 → TRIP_READY)
-  - [ ] CI/CD : déploiement automatique sur push main
-  - [ ] Monitoring : healthchecks + alertes basiques (incl. latence Ollama)
+  - [ ] Auth serveur ([ADR-047](docs/adr/adr-047-server-side-web-auth-resolution.md)) : `/auth/session` + gate RSC OK derrière le reverse-proxy
+  - [ ] CI/CD : déploiement automatique sur push main (webhook Coolify)
+  - [ ] Monitoring : healthchecks + alertes basiques (Sentry SaaS, Uptime Kuma/UptimeRobot)
   - [ ] Garmin Connect : callback OAuth sur URL production
   - [ ] Preview déployée via label `deploy:preview` sur une PR de test
   - [ ] URL `pr-<N>.biketrip.example.com` accessible en HTTPS
@@ -924,7 +925,7 @@ Mise en production basée sur [ADR-019](docs/adr/adr-019-deployment-infrastructu
 
 Suite à Sprint 35 (recette + audits standards), Sprint 38 industrialise l'analyse de performance avancée : micro-benchs PHP, load testing scriptable, profiling à la demande, observabilité applicative ciblée, audit infrastructure, résilience aux pannes, et empreinte carbone publiée. Tests menés en iso-prod sur la VM Oracle pré-ouverture, avec validation device physique (Samsung Galaxy S20 FE).
 
-> **Prérequis :** Sprint 37 (Déploiement) terminé, app déployée iso-prod sur Oracle + Coolify, GlitchTip + Uptime Kuma opérationnels (ADR-031).
+> **Prérequis :** Sprint 37 (Déploiement) terminé, app déployée iso-prod sur Oracle + Coolify, observabilité opérationnelle ([ADR-031](docs/adr/adr-031-error-tracking-strategy.md) : Sentry SaaS en beta — GlitchTip auto-hébergé étant la cible ultérieure — + Uptime Kuma/UptimeRobot).
 
 | Ordre | ID                                                                    | Titre                                                                                                              | Effort | PRs | Dépend de                                                                                                                                                  |
 |-------|-----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|--------|-----|------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -935,15 +936,15 @@ Suite à Sprint 35 (recette + audits standards), Sprint 38 industrialise l'analy
 | 5     | [#512](https://github.com/vincentchalamon/bike-trip-planner/issues/512) | feat(perf): Lighthouse CI desktop + mobile (S20 FE preset)                                                       | S      | —   | —                                                                                                                                                          |
 | 6     | [#513](https://github.com/vincentchalamon/bike-trip-planner/issues/513) | docs(perf): S20 FE physical device test checklist + IndexedDB perf                                               | S      | —   | —                                                                                                                                                          |
 | 7     | [#514](https://github.com/vincentchalamon/bike-trip-planner/issues/514) | feat(eco): Carbon footprint measure + public /eco page + CarbonStatsCard                                         | M      | —   | [#512](https://github.com/vincentchalamon/bike-trip-planner/issues/512)                                                                                    |
-| 8     | [#515](https://github.com/vincentchalamon/bike-trip-planner/issues/515) | feat(observability): Sentry custom spans backend (Ollama/InRide/Overpass/Valhalla/TripDetail/TripChat/Mercure)    | M      | —   | —                                                                                                                                                          |
+| 8     | [#515](https://github.com/vincentchalamon/bike-trip-planner/issues/515) | feat(observability): Sentry custom spans backend (Valhalla/TripDetail/Mercure ; InRide/TripChat = IA masquée) | M | — | — |
 | 9     | [#516](https://github.com/vincentchalamon/bike-trip-planner/issues/516) | feat(observability): Sentry spans frontend + Mercure SSE end-to-end latency                                      | M      | —   | [#515](https://github.com/vincentchalamon/bike-trip-planner/issues/515)                                                                                    |
 | 10    | [#517](https://github.com/vincentchalamon/bike-trip-planner/issues/517) | fix(perf): ChatHistoryLoader AbortController + PoiCard React.memo                                                | S      | —   | —                                                                                                                                                          |
 | 11    | [#518](https://github.com/vincentchalamon/bike-trip-planner/issues/518) | feat(perf): Excimer + Speedscope ad-hoc profiling on iso-prod                                                    | M      | —   | —                                                                                                                                                          |
 | 12    | [#519](https://github.com/vincentchalamon/bike-trip-planner/issues/519) | feat(ci): smoke-test extended with latency assertions + Lighthouse post-deploy                                   | S      | —   | [#512](https://github.com/vincentchalamon/bike-trip-planner/issues/512)                                                                                    |
-| 13    | [#520](https://github.com/vincentchalamon/bike-trip-planner/issues/520) | docs(perf): GlitchTip dashboards documentation + slow-trip-computation runbook                                   | S      | —   | [#515](https://github.com/vincentchalamon/bike-trip-planner/issues/515), [#516](https://github.com/vincentchalamon/bike-trip-planner/issues/516)            |
+| 13    | [#520](https://github.com/vincentchalamon/bike-trip-planner/issues/520) | docs(perf): Sentry/GlitchTip dashboards documentation + slow-trip-computation runbook | S | — | [#515](https://github.com/vincentchalamon/bike-trip-planner/issues/515), [#516](https://github.com/vincentchalamon/bike-trip-planner/issues/516) |
 | 14    | [#521](https://github.com/vincentchalamon/bike-trip-planner/issues/521) | chore(infra): Caddy audit (Brotli, cache headers, HTTP/3, Server-Timing)                                         | S      | —   | —                                                                                                                                                          |
-| 15    | [#522](https://github.com/vincentchalamon/bike-trip-planner/issues/522) | chore(infra): Postgres indexes audit + Redis bigkeys audit                                                       | M      | —   | [#510](https://github.com/vincentchalamon/bike-trip-planner/issues/510)                                                                                    |
-| 16    | [#523](https://github.com/vincentchalamon/bike-trip-planner/issues/523) | feat(resilience): chaos test scripts (Ollama/Overpass/Valhalla/Mercure/Redis/Postgres down) + resilience-tests doc | M      | —   | —                                                                                                                                                          |
+| 15    | [#522](https://github.com/vincentchalamon/bike-trip-planner/issues/522) | chore(infra): Postgres/PostGIS indexes audit (GiST corridor) + Redis bigkeys audit | M | — | [#510](https://github.com/vincentchalamon/bike-trip-planner/issues/510) |
+| 16    | [#523](https://github.com/vincentchalamon/bike-trip-planner/issues/523) | feat(resilience): chaos test scripts (Valhalla/Mercure/Redis/Postgres down) + resilience-tests doc | M | — | — |
 | 17    | [#524](https://github.com/vincentchalamon/bike-trip-planner/issues/524) | feat(resilience): OOM / VM recovery test + update oracle-vm-reclaimed runbook                                    | S      | —   | [#523](https://github.com/vincentchalamon/bike-trip-planner/issues/523)                                                                                    |
 | 18    | [#525](https://github.com/vincentchalamon/bike-trip-planner/issues/525) | feat(perf): inter-release baselines comparison script + CI diff comment                                          | S      | —   | [#508](https://github.com/vincentchalamon/bike-trip-planner/issues/508), [#509](https://github.com/vincentchalamon/bike-trip-planner/issues/509), [#512](https://github.com/vincentchalamon/bike-trip-planner/issues/512) |
 
@@ -955,13 +956,13 @@ Suite à Sprint 35 (recette + audits standards), Sprint 38 industrialise l'analy
   - [ ] `make perf-load TARGET=https://biketrip.mooo.com` exécute les 5 scénarios k6 cold + hot, baselines stockées
   - [ ] Workflow CI `perf.yml` exécute Lighthouse desktop + mobile à chaque PR avec assertions
   - [ ] Page `/eco` publique affiche l'empreinte carbone mesurée, lien depuis footer
-  - [ ] GlitchTip Performance UI montre les transactions custom (Ollama, InRide, Mercure, etc.)
+  - [ ] Sentry/GlitchTip Performance UI montre les transactions custom (Valhalla, TripDetail, Mercure, etc.)
   - [ ] `coolify env set EXCIMER_ENABLED=1` + `curl -H "X-Profile: 1" .../api/trips/<id>` produit un Speedscope JSON exploitable
   - [ ] Smoke-test post-deploy échoue si `/api/health` deps latency dépasse les seuils
   - [ ] Session S20 FE physique : checklist `docs/perf/mobile-device-test.md` complétée, baselines enregistrées
   - [ ] Caddy : Brotli actif, cache headers immutable sur statics, HTTP/3 activé
   - [ ] Postgres `pg_stat_statements` actif, slow query log opérationnel
-  - [ ] Chaos tests : Ollama/Overpass/Valhalla/Mercure down → app dégrade proprement (pas de 500, message user clair)
+  - [ ] Chaos tests : Valhalla/Mercure/Redis/Postgres down → app dégrade proprement (pas de 500, message user clair)
   - [ ] OOM test : time-to-recovery VM mesuré, runbook `oracle-vm-reclaimed.md` updaté
   - [ ] `scripts/perf-diff.sh <a> <b>` produit un Markdown lisible de comparaison de releases
   - [ ] Tous les SLOs cibles du plan validés ou écarts documentés en issues `[perf-debt]`
@@ -970,15 +971,15 @@ Suite à Sprint 35 (recette + audits standards), Sprint 38 industrialise l'analy
 
 ## Sprint 39 — Backup & Disaster Recovery
 
-Sprint dédié à la résilience de la donnée en production. ADR-032 (Migrations & Rollback) appelle explicitement un "future plan PostgreSQL backup" en §51-59 : c'est ce sprint. La stack opérationnelle (Coolify, GlitchTip, Uptime Kuma, /api/health, 14 runbooks) et la résilience services (Sprint 38 chaos tests + OOM recovery) sont en place ; il reste à protéger la donnée elle-même. Sans ce sprint, un DROP TABLE accidentel, une destructive migration shippée par erreur, ou une perte de la VM Oracle entraîne une perte de données irréversible.
+Sprint dédié à la résilience de la donnée en production. ADR-032 (Migrations & Rollback) appelle explicitement un "future plan PostgreSQL backup" en §51-59 : c'est ce sprint. La stack opérationnelle (Coolify, Sentry SaaS, Uptime Kuma/UptimeRobot, /api/health, runbooks) et la résilience services (Sprint 38 chaos tests + OOM recovery) sont en place ; il reste à protéger la donnée elle-même. Sans ce sprint, un DROP TABLE accidentel, une destructive migration shippée par erreur, ou une perte de la VM Oracle entraîne une perte de données irréversible.
 
-> **Prérequis :** Sprint 37 (Déploiement) et Sprint 38 (Perf & Resilience) terminés. App déployée iso-prod sur Oracle + Coolify, GlitchTip + Uptime Kuma + Sentry spans + chaos tests opérationnels.
+> **Prérequis :** Sprint 37 (Déploiement) et Sprint 38 (Perf & Resilience) terminés. App déployée iso-prod sur Oracle + Coolify, Sentry SaaS + Uptime Kuma/UptimeRobot + spans + chaos tests opérationnels.
 >
 > **Bloque :** ouverture publique. Tant que ce sprint n'est pas livré, le projet reste en iso-prod sans données utilisateur réelles.
 
 | Ordre | ID                                                                      | Titre                                                                                  | Effort | PRs | Dépend de                                                                                                                                                                                                                                                                                       |
 |-------|-------------------------------------------------------------------------|----------------------------------------------------------------------------------------|--------|-----|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1     | [#527](https://github.com/vincentchalamon/bike-trip-planner/issues/527) | docs(adr): add adr-038 backup and disaster recovery strategy                           | S      | —   | —                                                                                                                                                                                                                                                                                               |
+| 1     | [#527](https://github.com/vincentchalamon/bike-trip-planner/issues/527) | docs(adr): add adr-048 backup and disaster recovery strategy | S | — | — |
 | 2     | [#528](https://github.com/vincentchalamon/bike-trip-planner/issues/528) | feat(backup): add backup container with pg_dump + age + zstd (local volume)            | M      | —   | [#527](https://github.com/vincentchalamon/bike-trip-planner/issues/527)                                                                                                                                                                                                                         |
 | 3     | [#529](https://github.com/vincentchalamon/bike-trip-planner/issues/529) | feat(backup): wire OCI Object Storage + Backblaze B2 destinations with object lock     | M      | —   | [#528](https://github.com/vincentchalamon/bike-trip-planner/issues/528)                                                                                                                                                                                                                         |
 | 4     | [#530](https://github.com/vincentchalamon/bike-trip-planner/issues/530) | feat(backup): add secrets bundle export (Coolify API + JWT PEMs)                       | S      | —   | [#528](https://github.com/vincentchalamon/bike-trip-planner/issues/528)                                                                                                                                                                                                                         |
@@ -988,7 +989,7 @@ Sprint dédié à la résilience de la donnée en production. ADR-032 (Migration
 | 8     | [#535](https://github.com/vincentchalamon/bike-trip-planner/issues/535) | ci: pre-deploy backup step in deploy workflow with [skip backup] bypass                | S      | —   | [#529](https://github.com/vincentchalamon/bike-trip-planner/issues/529)                                                                                                                                                                                                                         |
 | 9     | [#536](https://github.com/vincentchalamon/bike-trip-planner/issues/536) | ci: monthly restore drill workflow dispatching incident-create on failure              | M      | —   | [#529](https://github.com/vincentchalamon/bike-trip-planner/issues/529), [#532](https://github.com/vincentchalamon/bike-trip-planner/issues/532)                                                                                                                                                 |
 
-> **Réalignement (#533).** L'inventaire des secrets (`docs/runbooks/secrets-inventory.md`) et la politique de rotation (`docs/runbooks/secrets-rotation.md`) ont été livrés en avance par la PR #533. #532 ne couvre donc plus que `disaster-recovery.md` + `backup-architecture.md` et doit _lier_ la rotation existante plutôt que la redocumenter ; #527 crée l'ADR-038 (033 étant déjà pris par l'OSM refresh) et doit référencer ces deux runbooks.
+> **Réalignement (#533).** L'inventaire des secrets (`docs/runbooks/secrets-inventory.md`) et la politique de rotation (`docs/runbooks/secrets-rotation.md`) ont été livrés en avance par la PR [#533](https://github.com/vincentchalamon/bike-trip-planner/pull/533) (mergée). #532 ne couvre donc plus que `disaster-recovery.md` + `backup-architecture.md` et doit _lier_ la rotation existante plutôt que la redocumenter ; #527 crée l'**ADR-048** (le numéro 038 est déjà pris par « hide-forbidden-as-not-found », 033/036 par l'OSM refresh — prochain numéro libre : 048) et doit référencer ces deux runbooks.
 
 ### Recette Sprint 39
 
@@ -1007,100 +1008,6 @@ Sprint dédié à la résilience de la donnée en production. ADR-032 (Migration
   - [ ] Tag annoté `v0.0.1-hotfix [skip backup]` → pre-deploy backup skippé.
   - [ ] Runbook DR ouvert par un opérateur qui n'a jamais vu le projet, restauration complète end-to-end < 2 h.
   - [ ] Triple stockage clé age vérifié (Bitwarden + papier + USB chiffré).
-
----
-
-## Sprint 40 — Recette #649 (round 2) : boot iso-prod + correctifs UI
-
-Findings de la 2ᵉ passe de recette manuelle ([#649 commentaire bloquant du 20/06](https://github.com/vincentchalamon/bike-trip-planner/issues/649#issuecomment-4758501208)). Diagnostic runtime (recette iso-prod, authentifié) : les symptômes "données" remontés — Komoot **"Voyage introuvable"** et config IA **"Resource not found"** — ne sont **pas** des bugs métier mais **une cause infra unique** côté boot iso-prod (cache DI prod figé par le volume `php_var`, antérieur à #689/#695 et à la feature IA ; + workers restés `Created`). Modèle worktree-parallèle (`/sprint`).
-
-| Ordre | ID                                                                      | Titre                                                                        | Effort | PRs | Dépend de |
-|-------|-------------------------------------------------------------------------|------------------------------------------------------------------------------|--------|-----|-----------|
-| 1     | [#728](https://github.com/vincentchalamon/bike-trip-planner/issues/728) | fix(docker): intégrité du boot iso-prod (cache DI prod figé + workers)       | M      | —   | —         |
-| 2     | [#729](https://github.com/vincentchalamon/bike-trip-planner/issues/729) | fix(wizard): parcours GPX + breadcrumb sous le header + largeur bloc "Dates" | M      | —   | —         |
-| 3     | [#730](https://github.com/vincentchalamon/bike-trip-planner/issues/730) | fix(pwa): thème "système" hors Préférences + erreurs API en français         | S      | —   | —         |
-
-**Reste manuel** (hors `/sprint` — nécessite la stack up) :
-
-- [#731](https://github.com/vincentchalamon/bike-trip-planner/issues/731) `chore(landing)` — régénérer les screenshots "Aperçu" (`make screenshots`).
-- Re-vérifier l'**upload GPX neuf** end-to-end après #728 : en recette le GPX restait à 0 stage, mais confondu par le flush d'un backlog de 30 min (erreurs `Could not acknowledge redis message`) — à reproduire proprement workers OK + cache frais.
-
-### Recette Sprint 40
-
-- **Checklist manuelle :**
-  - [ ] Voyage Komoot (lien) : création → page voyage avec stages, plus de "Voyage introuvable".
-  - [ ] Upload GPX : création → stages calculés, parcours sans blocage à l'étape 2.
-  - [ ] Config IA : enregistrement clé Gemini → 200 ; messages d'erreur affichés en français.
-  - [ ] Préférences : thème Clair/Sombre uniquement, défaut suivant l'OS.
-  - [ ] Screenshots landing à jour.
-
----
-
-## Sprint 41 — Recette #649 (round 3) : correctifs + refonte du flux en modèle synchrone (ADR-043)
-
-Findings de la 3ᵉ passe de recette manuelle ([#649 commentaire du 21/06](https://github.com/vincentchalamon/bike-trip-planner/issues/649#issuecomment-4762100806)). Deux volets : (a) correctifs ciblés livrés en PRs directes ; (b) **refonte du flux de création** — la migration PostGIS (ADR-040) rend le calcul structurel quasi-instantané, donc on supprime les étapes Aperçu/Analyse et le gate two-phase (ADR-027) au profit d'un **calcul structurel synchrone + enrichissements réseau/IA asynchrones par bloc** ([ADR-043](docs/adr/adr-043-synchronous-structural-computation-async-enrichments.md)).
-
-### Correctifs livrés (PRs directes)
-
-| PR | Titre | Statut |
-|----|-------|--------|
-| [#737](https://github.com/vincentchalamon/bike-trip-planner/pull/737) | fix(alerts): pas de nudge jour de repos sur la dernière étape | mergé |
-| [#736](https://github.com/vincentchalamon/bike-trip-planner/pull/736) | fix(ai): IA disponible avec un token cloud BYO (ADR-042) | mergé |
-| [#738](https://github.com/vincentchalamon/bike-trip-planner/pull/738) | feat(ai): état « clé configurée » sans révéler la clé | mergé |
-| [#739](https://github.com/vincentchalamon/bike-trip-planner/pull/739) | chore(i18n): tutoiement dans toute l'UI française | en cours |
-| [#740](https://github.com/vincentchalamon/bike-trip-planner/pull/740) | fix(trip): publier l'event terminal même si une computation échoue | en cours |
-| [#741](https://github.com/vincentchalamon/bike-trip-planner/pull/741) | build(provisioner): cible `make provision-recette` (iso-prod) | en cours |
-
-### Refonte flux synchrone — ADR-043 (5 PRs, ordre imposé)
-
-| Ordre | Titre | Effort | Dépend de |
-|-------|-------|--------|-----------|
-| PR1 | perf(osm): borner `WaysRepository::findInCorridor` (LIMIT + filtre `highway`, éviter le cast `::geography`) | S | — |
-| PR2 | refactor(trip): calcul structurel synchrone (pacing + scans PostGIS + alertes), suppression du gate two-phase + de `POST /trips/{id}/analyze`, statut trip `draft`→`ready` + états par bloc dans `/detail` | L | PR1, #740 |
-| PR3 | feat(trip): enrichissements météo + IA asynchrones par bloc (spinner par bloc ; IA auto si token + régénérer, chat à la demande ; édition `skipAiAnalysis` par défaut) | M | PR2 |
-| PR4 | feat(pwa): effondrer le wizard (Saisie → loader → Voyage), spinners par bloc, édition recalculée en place | L | PR2, PR3 |
-| PR5 | test: aligner specs mockées + BDD recette + baselines visuelles (VR) sur le flux synchrone | M | PR4 |
-
-> **Dépendance dure :** PR1 (`WaysRepository` borné) doit land **avant** PR2, sinon le calcul structurel synchrone peut dépasser le budget (~1s) sur un long itinéraire dense. PR2/PR3 supposent [#740](https://github.com/vincentchalamon/bike-trip-planner/pull/740) mergé (le `TripCompletionGate` coordonne les blocs météo/IA asynchrones restants).
-
-### Recette Sprint 41
-
-- **Checklist manuelle :**
-  - [ ] Provisioning PostGIS (Nord-Pas-de-Calais) : hébergements/POI détectés sur le tour de test, plus de faux positif « lunch ».
-  - [ ] Création (GPX & lien) : un seul loader → page voyage complète (étapes, distances, hébergements, alertes), sans étapes Aperçu/Analyse.
-  - [ ] Météo + rapport IA : se remplissent en place avec spinner par bloc ; chat à la demande.
-  - [ ] Édition distance/profil : recalcul en place quasi-instantané, sans re-analyse bloquante.
-
----
-
-## Sprint 42 — Recette #649 (round 5) : batch UI + bugs
-
-Findings de la passe de recette du 25/06 (lien Komoot `https://www.komoot.com/fr-fr/tour/2795080048`, recette iso-prod à jour). Vraies régressions/bugs confirmés par diagnostic code (cause racine identifiée par issue, agents read-only). Modèle worktree-parallèle (`/sprint`).
-
-| Ordre | ID                                                                      | Titre                                                                              | Effort | Dépend de | PR / Statut |
-|-------|-------------------------------------------------------------------------|------------------------------------------------------------------------------------|--------|-----------|-------------|
-| 1     | [#769](https://github.com/vincentchalamon/bike-trip-planner/issues/769) | fix(ui): chrome cohérent, nettoyage Mon compte/Mes voyages, masquage IA & progress bar | L      | —         | [#779](https://github.com/vincentchalamon/bike-trip-planner/pull/779) ✅ mergé |
-| 1     | [#770](https://github.com/vincentchalamon/bike-trip-planner/issues/770) | fix(pwa): loader hébergements parasite + alertes/hébergements disparaissent (trip_ready) | M      | —         | [#780](https://github.com/vincentchalamon/bike-trip-planner/pull/780) ✅ mergé |
-| 1     | [#772](https://github.com/vincentchalamon/bike-trip-planner/issues/772) | fix(pwa): infographie PNG — carte centrée + marge + profil à l'échelle             | S      | —         | [#781](https://github.com/vincentchalamon/bike-trip-planner/pull/781) ✅ mergé |
-| 1     | [#773](https://github.com/vincentchalamon/bike-trip-planner/issues/773) | fix(pwa): texte de partage — bouton copier, tooltip budget, espacement, gras WhatsApp | S      | —         | [#782](https://github.com/vincentchalamon/bike-trip-planner/pull/782) ✅ mergé |
-| 1     | [#777](https://github.com/vincentchalamon/bike-trip-planner/issues/777) | feat(account): changement d'email par magic link (entité + processors + mailer + front) | L      | —         | [#783](https://github.com/vincentchalamon/bike-trip-planner/pull/783) 🚧 en cours |
-| 2     | [#771](https://github.com/vincentchalamon/bike-trip-planner/issues/771) | fix(pwa): roadbook — bordure jour actif, largeur, alertes=événements, ravito off    | M      | #769      | [#784](https://github.com/vincentchalamon/bike-trip-planner/pull/784) 🚧 en cours |
-| 2     | [#774](https://github.com/vincentchalamon/bike-trip-planner/issues/774) | fix(trip): modif distance d'étape ne persiste pas (STAGES_COMPUTED legacy)         | M      | #770      | [#785](https://github.com/vincentchalamon/bike-trip-planner/pull/785) 🚧 en cours |
-| 2     | [#776](https://github.com/vincentchalamon/bike-trip-planner/issues/776) | fix(share): révocation/recréation lien + masquer GPX/FIT sur 404                   | M      | #773      | [#786](https://github.com/vincentchalamon/bike-trip-planner/pull/786) ✅ mergé |
-| 3     | [#775](https://github.com/vincentchalamon/bike-trip-planner/issues/775) | perf(trip): chargement ~7s + vue partagée lente + libellé singulier                | L      | #774      | [#787](https://github.com/vincentchalamon/bike-trip-planner/pull/787) ✅ mergé (stack #785) |
-
-> **Dépendances (conflits de fichiers)** : #771 dép #769 (`RoadbookMasterDetail`), #774 dép #770 (`use-mercure.ts`), #775 dép #774 (`use-mercure.ts`), #776 dép #773 (`share-modal.tsx`). #777 indépendant (backend auth/account).
-
-### Recette Sprint 42
-
-- **Checklist manuelle :**
-  - [ ] Footer : pas de "Connexion" si connecté, pas de "Projet open-source.", "GitHub" simple ; FAQ/legal même thème.
-  - [ ] Mon compte sans Préférences ; Mes voyages sans boutons doublons ; FAQ sans Assistant IA.
-  - [ ] Étape : pas de loader hébergements au 1er chargement ; alertes/hébergements ne disparaissent plus ; sélection hébergement OK.
-  - [ ] Roadbook : pas de bordure jour actif, bloc pleine largeur, alertes = événements, timeline ravito masquée.
-  - [ ] Distance 80→60 km persiste (et au reload).
-  - [ ] PNG : carte centrée + marge, profil à l'échelle ; texte sans `*`, bouton copier (icône), tooltip budget.
-  - [ ] Partage : révocation/recréation OK, pas de GPX/FIT sur 404 ; reload trip < 7s ; vue partagée < 15s.
 
 ---
 
@@ -1161,10 +1068,8 @@ Findings de la passe de recette du 25/06 (lien Komoot `https://www.komoot.com/fr
 | 34        | Analytics Plausible + RGPD + parcours compte | 10    | ~10          |
 | 34.5      | Right-sizing beta Free Tier              | 8       | ~8           |
 | 35        | Recette complète & Audit                 | 36      | ~12          |
-| 36        | Garmin Connect                           | 1       | 3            |
-| 37        | Déploiement (incl. Ollama prod)          | 8       | ~8           |
+| 36        | Garmin Connect                           | 1       | ~2           |
+| 37        | Déploiement (Oracle + Coolify)           | 8       | ~8           |
 | 38        | Performance & Resilience Deep Dive       | 18      | ~12          |
 | 39        | Backup & Disaster Recovery               | 9       | ~9           |
-| 40        | Recette #649 round 2 (boot iso-prod + UI) | 4       | ~4           |
-| 41        | Recette #649 round 3 (correctifs + flux synchrone ADR-043) | —       | ~12          |
-| **Total** |                                          | **235** | **~251**     |
+| **Total** |                                          | **231** | **~237**     |
