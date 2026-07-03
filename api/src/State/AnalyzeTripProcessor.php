@@ -110,6 +110,6 @@ final readonly class AnalyzeTripProcessor implements ProcessorInterface
      */
     private function isAnalysisRunning(array $statuses): bool
     {
-        return array_any(self::ANALYSIS_COMPUTATIONS, fn ($computation): bool => ($statuses[$computation->value] ?? null) === 'running');
+        return array_any(self::ANALYSIS_COMPUTATIONS, fn (ComputationName $computation): bool => ($statuses[$computation->value] ?? null) === 'running');
     }
 }

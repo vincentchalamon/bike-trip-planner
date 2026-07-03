@@ -202,7 +202,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
     private function hasResupplyPoi(Stage $stage): bool
     {
-        return array_any($stage->pois, fn ($poi): bool => \in_array($poi->category, self::RESUPPLY_CATEGORIES, true));
+        return array_any($stage->pois, fn (PointOfInterest $poi): bool => \in_array($poi->category, self::RESUPPLY_CATEGORIES, true));
     }
 
     /**
