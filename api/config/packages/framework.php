@@ -82,6 +82,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'routing.client' => [
                     'base_uri' => 'http://valhalla:8002',
                     'timeout' => 5,
+                    // Direct internal Valhalla API — never redirects; refuse to follow
+                    // any 3xx so a compromised response can't pivot to another internal
+                    // host (SEC-007), consistent with the invariant documented above.
+                    'max_redirects' => 0,
                 ],
                 'nominatim.client' => [
                     'base_uri' => 'https://nominatim.openstreetmap.org',
