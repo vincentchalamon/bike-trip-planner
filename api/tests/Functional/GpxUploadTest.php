@@ -322,6 +322,58 @@ final class GpxUploadTest extends ApiTestCase
     }
 
     #[Test]
+    public function uploadWithZeroElevationPenaltyReturns202NotServerError(): void
+    {
+        // BUG-002 regression: elevationPenalty=0 is numeric but out of range. It must
+        // be clamped (ignored), never reach the pacing engine as a DivisionByZeroError
+        // (which surfaced as an unhandled HTTP 500 before the fix).
+        $file = new UploadedFile(
+            self::FIXTURES_DIR.'/valid-route.gpx',
+            'valid-route.gpx',
+            'application/gpx+xml',
+            null,
+            true,
+        );
+
+        $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
+            'extra' => [
+                'files' => ['gpxFile' => $file],
+                'parameters' => ['elevationPenalty' => '0', 'fatigueFactor' => '0.3'],
+            ],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+    }
+
+    #[Test]
+    public function gpxUploadIsRateLimited(): void
+    {
+        // SEC-006: the GPX upload path consumes limiter.gpx_upload (10/60s per user),
+        // so a scripted burst is throttled with 429 like POST /trips.
+        $status = 0;
+        for ($i = 0; $i < 11; ++$i) {
+            $file = new UploadedFile(
+                self::FIXTURES_DIR.'/valid-route.gpx',
+                'valid-route.gpx',
+                'application/gpx+xml',
+                null,
+                true,
+            );
+            $response = $this->client->request('POST', '/trips/gpx-upload', [
+                'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
+                'extra' => ['files' => ['gpxFile' => $file]],
+            ]);
+            $status = $response->getStatusCode();
+            if (429 === $status) {
+                break;
+            }
+        }
+
+        $this->assertSame(429, $status, 'An upload burst beyond the per-user limit must be throttled (429).');
+    }
+
+    #[Test]
     public function uploadWithOptionalParameters(): void
     {
         $file = new UploadedFile(
