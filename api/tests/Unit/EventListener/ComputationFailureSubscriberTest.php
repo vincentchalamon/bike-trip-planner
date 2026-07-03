@@ -17,6 +17,8 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\Store\InMemoryStore;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Event\WorkerMessageFailedEvent;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -37,7 +39,7 @@ final class ComputationFailureSubscriberTest extends TestCase
     #[\Override]
     protected function setUp(): void
     {
-        $this->tracker = new ComputationTracker(new ArrayAdapter());
+        $this->tracker = new ComputationTracker(new ArrayAdapter(), new LockFactory(new InMemoryStore()));
     }
 
     #[Test]

@@ -7,6 +7,7 @@ namespace App\ComputationTracker;
 use App\Enum\ComputationName;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Lock\LockFactory;
 
 final readonly class ComputationTracker implements ComputationTrackerInterface
 {
@@ -23,6 +24,7 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
     public function __construct(
         #[Autowire(service: 'cache.trip_state')]
         private CacheItemPoolInterface $tripStateCache,
+        private LockFactory $lockFactory,
     ) {
     }
 
@@ -137,11 +139,25 @@ final readonly class ComputationTracker implements ComputationTrackerInterface
         return $result;
     }
 
+    /**
+     * The whole status map lives under one Redis key, so a naive get-modify-set
+     * lets two parallel enrichment workers clobber each other's write — a lost
+     * `done` reverts a computation to `running` for good, and the completion gate
+     * never fires (loader spins forever on a computed trip). Serialise the
+     * read-modify-write behind a per-trip lock, mirroring LlmAnalysisTracker.
+     */
     private function updateStatus(string $tripId, ComputationName $computation, string $status): void
     {
-        $statuses = $this->getStatuses($tripId) ?? [];
-        $statuses[$computation->value] = $status;
-        $this->set($this->statusKey($tripId), $statuses);
+        $lock = $this->lockFactory->createLock(\sprintf('trip.%s.computation_status.update', $tripId), ttl: 5);
+        $lock->acquire(blocking: true);
+
+        try {
+            $statuses = $this->getStatuses($tripId) ?? [];
+            $statuses[$computation->value] = $status;
+            $this->set($this->statusKey($tripId), $statuses);
+        } finally {
+            $lock->release();
+        }
     }
 
     private function set(string $key, mixed $value): void
