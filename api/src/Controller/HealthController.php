@@ -37,8 +37,6 @@ final readonly class HealthController
         private RateLimiterFactory $healthLivenessLimiter,
         #[Autowire(service: 'limiter.health_readiness')]
         private RateLimiterFactory $healthReadinessLimiter,
-        #[Autowire(param: 'app.commit_sha')]
-        private string $commitSha,
         private RedisHealthClientFactory $redisClientFactory,
     ) {
     }
@@ -53,7 +51,6 @@ final readonly class HealthController
 
         return new JsonResponse([
             'status' => 'ok',
-            'commit' => $this->commitSha,
         ]);
     }
 
@@ -100,7 +97,6 @@ final readonly class HealthController
 
         return new JsonResponse([
             'status' => $status,
-            'commit' => $this->commitSha,
             'deps' => $deps,
         ], $httpStatus);
     }

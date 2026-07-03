@@ -406,6 +406,9 @@ jobs:
       JWT_PASSPHRASE: "ci-test-passphrase"
       FRONTEND_URL: "https://localhost"
       MAILER_DSN: "null://null"
+      # Non-default so the SEC-004 fail-closed boot guard passes (the prod image
+      # refuses to boot on the public Mercure skeleton default).
+      MERCURE_JWT_KEY: "ci-test-mercure-key"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -472,6 +475,9 @@ jobs:
       JWT_PASSPHRASE: "ci-test-passphrase"
       FRONTEND_URL: "https://localhost"
       MAILER_DSN: "null://null"
+      # Non-default so the SEC-004 fail-closed boot guard passes (the prod image
+      # refuses to boot on the public Mercure skeleton default).
+      MERCURE_JWT_KEY: "ci-test-mercure-key"
     steps:
       - name: Checkout
         uses: actions/checkout@v7

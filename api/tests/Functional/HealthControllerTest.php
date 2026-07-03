@@ -39,7 +39,7 @@ final class HealthControllerTest extends ApiTestCase
     }
 
     #[Test]
-    public function livenessReturns200WithCommitSha(): void
+    public function livenessReturns200(): void
     {
         $response = $this->client->request('GET', '/api/healthz');
 
@@ -47,8 +47,8 @@ final class HealthControllerTest extends ApiTestCase
 
         $data = $response->toArray();
         $this->assertSame('ok', $data['status']);
-        $this->assertArrayHasKey('commit', $data);
-        $this->assertIsString($data['commit']);
+        // The commit SHA is no longer exposed on the public endpoint (SEC-011).
+        $this->assertArrayNotHasKey('commit', $data);
     }
 
     #[Test]
