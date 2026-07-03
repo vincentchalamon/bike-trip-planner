@@ -38,10 +38,12 @@ final class MagicLinkRepository extends ServiceEntityRepository
             return null;
         }
 
-        $token = bin2hex(random_bytes(64));
+        $plainToken = bin2hex(random_bytes(64));
         $expiresAt = new \DateTimeImmutable(\sprintf('+%d minutes', self::TTL_MINUTES));
 
-        $magicLink = new MagicLink($user, $token, $expiresAt);
+        // Store only the hash at rest (SEC-003): the plaintext travels in the
+        // magic link and never touches the database.
+        $magicLink = new MagicLink($user, hash('sha256', $plainToken), $expiresAt, plainToken: $plainToken);
         $this->getEntityManager()->persist($magicLink);
 
         $this->logger->debug('Magic link created', ['email' => $user->getEmail(), 'expires_at' => $expiresAt->format('c')]);
@@ -66,9 +68,11 @@ final class MagicLinkRepository extends ServiceEntityRepository
         // for TIMESTAMP WITHOUT TIME ZONE columns.
         $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         $formatted = $now->format('Y-m-d H:i:s');
+        // The stored value is the hash of the token that travelled in the link.
+        $tokenHash = hash('sha256', $token);
         $affected = $this->getEntityManager()->getConnection()->executeStatement(
             'UPDATE magic_link SET consumed_at = :now WHERE token = :token AND consumed_at IS NULL AND expires_at > :now',
-            ['token' => $token, 'now' => $formatted],
+            ['token' => $tokenHash, 'now' => $formatted],
         );
 
         if (0 === $affected) {
@@ -77,7 +81,7 @@ final class MagicLinkRepository extends ServiceEntityRepository
             return null;
         }
 
-        $magicLink = $this->findOneBy(['token' => $token]);
+        $magicLink = $this->findOneBy(['token' => $tokenHash]);
 
         $this->logger->debug('Magic link consumed', ['email' => $magicLink?->getUser()->getEmail()]);
 

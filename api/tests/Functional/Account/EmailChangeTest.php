@@ -156,7 +156,8 @@ final class EmailChangeTest extends ApiTestCase
         $em = $this->getEntityManager();
         $entity = new EmailChangeToken(
             $user,
-            $token,
+            // Stored hashed at rest (SEC-003); the plaintext is what the verify endpoint receives.
+            hash('sha256', $token),
             $newEmail,
             $expiresAt ?? new \DateTimeImmutable('+30 minutes'),
         );
@@ -261,7 +262,8 @@ final class EmailChangeTest extends ApiTestCase
 
         // Crucially, the foreign token must NOT have been consumed: its rightful
         // owner can still complete the change with it.
-        $token = $this->getEntityManager()->getRepository(EmailChangeToken::class)->findOneBy(['token' => 'someone-elses-token']);
+        // The token is stored hashed at rest (SEC-003), so look it up by digest.
+        $token = $this->getEntityManager()->getRepository(EmailChangeToken::class)->findOneBy(['token' => hash('sha256', 'someone-elses-token')]);
         $this->assertInstanceOf(EmailChangeToken::class, $token);
         $this->assertNull($token->getConsumedAt(), 'A foreign token must never be consumed by a non-owner');
 

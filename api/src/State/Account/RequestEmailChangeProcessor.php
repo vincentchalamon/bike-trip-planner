@@ -91,7 +91,7 @@ final readonly class RequestEmailChangeProcessor implements ProcessorInterface
         $token = $this->emailChangeTokenRepository->create($user, $newEmail);
         $this->entityManager->flush();
 
-        $verifyUrl = \sprintf('%s/account/email-change/verify/%s', rtrim($this->frontendUrl, '/'), $token->getToken());
+        $verifyUrl = \sprintf('%s/account/email-change/verify/%s', rtrim($this->frontendUrl, '/'), (string) $token->getPlainToken());
         $locale = $user->getLocale();
 
         $html = $this->twig->render('email/email_change.html.twig', [

@@ -42,9 +42,26 @@ class EmailChangeToken
         #[ORM\Column]
         private \DateTimeImmutable $expiresAt,
         ?Uuid $id = null,
+        /**
+         * The un-hashed token, present only on a freshly created instance (never
+         * hydrated from the DB — not mapped). Only its hash is persisted in `token`
+         * (SEC-003); this is what the caller sends to the user. Declared outside the
+         * constructor (not promoted) so it defaults to null on entities Doctrine
+         * hydrates via newInstanceWithoutConstructor(), rather than staying
+         * uninitialized and throwing on read.
+         */
+        private ?string $plainToken = null,
     ) {
         $this->id = $id ?? Uuid::v7();
         $this->createdAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+    }
+
+    public function getPlainToken(): ?string
+    {
+        // `?? null` (not a bare read): plainToken is a promoted, non-mapped property,
+        // so on an entity Doctrine hydrates via newInstanceWithoutConstructor() it is
+        // uninitialized; `??` yields null instead of throwing (SEC-003).
+        return $this->plainToken ?? null;
     }
 
     public function getId(): Uuid

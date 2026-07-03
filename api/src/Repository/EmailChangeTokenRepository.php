@@ -40,10 +40,12 @@ final class EmailChangeTokenRepository extends ServiceEntityRepository
     {
         $this->expirePendingForUser($user);
 
-        $token = bin2hex(random_bytes(64));
+        $plainToken = bin2hex(random_bytes(64));
         $expiresAt = new \DateTimeImmutable(\sprintf('+%d minutes', self::TTL_MINUTES), new \DateTimeZone('UTC'));
 
-        $emailChangeToken = new EmailChangeToken($user, $token, $newEmail, $expiresAt);
+        // Store only the hash at rest (SEC-003): the plaintext travels in the
+        // confirmation link and never touches the database.
+        $emailChangeToken = new EmailChangeToken($user, hash('sha256', $plainToken), $newEmail, $expiresAt, plainToken: $plainToken);
         $this->getEntityManager()->persist($emailChangeToken);
 
         $this->logger->debug('Email change token created', ['user' => $user->getId()->toRfc4122(), 'expires_at' => $expiresAt->format('c')]);
@@ -59,7 +61,7 @@ final class EmailChangeTokenRepository extends ServiceEntityRepository
      */
     public function findValidByToken(string $token): ?EmailChangeToken
     {
-        $entity = $this->findOneBy(['token' => $token]);
+        $entity = $this->findOneBy(['token' => hash('sha256', $token)]);
 
         if (!$entity instanceof EmailChangeToken || !$entity->isValid()) {
             return null;
@@ -89,7 +91,7 @@ final class EmailChangeTokenRepository extends ServiceEntityRepository
         $formatted = $now->format('Y-m-d H:i:s');
         $affected = $this->getEntityManager()->getConnection()->executeStatement(
             'UPDATE email_change_token SET consumed_at = :now WHERE token = :token AND user_id = :user AND consumed_at IS NULL AND expires_at > :now',
-            ['token' => $token, 'user' => $user->getId()->toRfc4122(), 'now' => $formatted],
+            ['token' => hash('sha256', $token), 'user' => $user->getId()->toRfc4122(), 'now' => $formatted],
         );
 
         if (0 === $affected) {

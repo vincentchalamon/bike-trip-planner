@@ -159,9 +159,19 @@ Full OAuth2 authorization server (e.g., league/oauth2-server-bundle).
 
 | Token | Storage | Lifetime | Purpose |
 |---|---|---|---|
-| **Magic link token** | PostgreSQL (`magic_link_tokens` table) | 30 min, single use | One-time authentication |
+| **Magic link token** | PostgreSQL (`magic_link` table), **SHA-256 hashed at rest** | 30 min, single use | One-time authentication |
 | **Access token (JWT)** | In-memory (JavaScript variable) | 15 min | API request authorization |
-| **Refresh token** | HttpOnly SameSite=Strict cookie | 30 days | Silent access token renewal |
+| **Refresh token** | HttpOnly SameSite=Strict cookie; row in `refresh_token` (see note) | 30 days | Silent access token renewal |
+
+> **Token-at-rest hardening (2026-07 security audit — token-at-rest finding; distinct from the audit-report.md `SEC-003` clickjacking item already fixed in #630).** The magic-link and email-change tokens are
+> high-entropy random values that ARE the credential, so only their **SHA-256 hash**
+> is persisted (the plaintext travels in the link and is hashed on verify). This
+> supersedes an earlier draft of this ADR that described the column as `token (hashed)`
+> without the code implementing it. **The refresh token is still stored in plaintext**:
+> the grace-window rotation (recette #649) must re-serve the successor token value on a
+> reload race, which a one-way hash makes impossible; protecting it at rest requires an
+> encrypt-at-rest scheme (reversible, à la `AiTokenEncryptor`) and is tracked as a
+> dedicated follow-up.
 
 ### Uniform Response Policy
 
@@ -208,7 +218,7 @@ In Capacitor WebView, HttpOnly cookies may not be reliably transmitted. When the
 
 - **LexikJWTAuthenticationBundle** for JWT generation and validation
 - **Custom authenticator** for magic link token verification
-- **Doctrine entity** `MagicLinkToken` with columns: `token` (hashed), `email`, `expires_at`, `consumed_at`
+- **Doctrine entity** `MagicLink` (table `magic_link`) with columns: `token` (SHA-256 hash of the emitted value), `user_id` (FK), `expires_at`, `consumed_at`
 - **Symfony Mailer** with Resend SMTP transport for magic link delivery
 - **Symfony RateLimiter** for throttling (Redis-backed sliding window)
 - **Custom API Platform State Processor** for the `/auth/request-link` endpoint
