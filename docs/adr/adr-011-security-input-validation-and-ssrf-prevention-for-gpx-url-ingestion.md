@@ -141,36 +141,36 @@ final class TripRequest
 
 ### 10.3 — Hardening the XML GPX Parser (XXE Protection)
 
-Although PHP 8.0+ (and libxml2 >= 2.9.0) disables external entity loading by default, we will explicitly configure the
-`XMLReader` (from ADR-004) to prevent any network calls or entity substitutions during parsing, acting as a
-defense-in-depth measure.
+We harden `XMLReader` (from ADR-004) against XXE with two layers: reject any document
+declaring a `DOCTYPE` (legitimate GPX is schema-based and never uses a DTD), and parse
+with `LIBXML_NONET` only.
 
-**File:** `api/src/Spatial/GpxStreamParser.php`
+> **Correction (audit SEC-001, 2026-07).** An earlier revision of this ADR recommended
+> `LIBXML_NONET | LIBXML_NOENT`, described as "disable entity substitution". That is wrong
+> and was actively dangerous: `LIBXML_NOENT` **enables** entity substitution/loading, and
+> `LIBXML_NONET` only blocks the *network* scheme — not `file://`. The combination allowed
+> an authenticated user to read arbitrary server files (e.g. the JWT signing key) by
+> declaring an external `SYSTEM` entity and referencing it in `<trk><name>`, with the file
+> contents reflected as the trip title. The fix removes `LIBXML_NOENT` (so external entities
+> are never substituted) and rejects `DOCTYPE` up front. Billion-laughs is separately
+> capped by libxml's entity-amplification guard.
+
+**File:** `api/src/RouteParser/GpxStreamRouteParser.php`
 
 ```php
-namespace App\Spatial;
-
 use XMLReader;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
-final class GpxStreamParser
-{
-    public function parse(string $filePath): iterable
-    {
-        $reader = new XMLReader();
-        
-        // Disable network access for the XML parser (prevents fetching external DTDs)
-        // Disable entity substitution (prevents Billion Laughs DoS)
-        $options = LIBXML_NONET | LIBXML_NOENT; 
-        
-        if (!$reader->open($filePath, null, $options)) {
-            throw new BadRequestHttpException('Invalid or corrupted GPX file.');
-        }
+// Reject any DOCTYPE (no legitimate GPX declares one).
+if (preg_match('/<!DOCTYPE/i', $content)) {
+    throw new \RuntimeException('GPX documents with a DOCTYPE are not allowed.');
+}
 
-        // ... continue with stream parsing as defined in ADR-004
-        
-        $reader->close();
-    }
+$reader = new XMLReader();
+
+// LIBXML_NONET blocks network entity fetches. LIBXML_NOENT is deliberately NOT set:
+// it would re-enable external-entity substitution (XXE / file:// local-file read).
+if (!$reader->XML($content, null, LIBXML_NONET)) {
+    throw new \RuntimeException('Invalid or corrupted GPX file.');
 }
 ```
 
