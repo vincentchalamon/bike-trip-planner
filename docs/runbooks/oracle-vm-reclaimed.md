@@ -1,6 +1,6 @@
 # Oracle VM Reclaimed
 
-Oracle Cloud Infrastructure can reclaim Always Free instances after 7 consecutive days where p95 CPU < 20 %, network < 20 %, and memory < 20 % (ADR-019). The application stack is sized to stay above the threshold, but a long quiet period plus an Ollama or worker crash can trip it.
+Oracle Cloud Infrastructure can reclaim Always Free instances after 7 consecutive days where p95 CPU < 20 %, network < 20 %, and memory < 20 % (ADR-019). The application stack is sized to stay above the threshold, but a long quiet period plus a worker crash can trip it.
 
 ## Symptômes
 
@@ -42,7 +42,6 @@ In the OCI console:
    - Restore PostgreSQL from the most recent backup (see backups plan — out of scope of this ADR but referenced)
    - In Coolify, re-import the project from the GitHub repository; environment variables must be re-entered (publisher/JWT secrets, OAuth credentials, `INCIDENT_DISPATCH_TOKEN`)
    - Re-run `make provision` to rebuild Valhalla tiles for the configured regions
-   - Re-pull Ollama models (see `ollama-down.md`)
    - Update FreeDNS A record to point to the new public IP
 
 4. **Notify users** — the status page (`status.biketrip.mooo.com`) is also down. Use the GitHub repository issue or a pinned banner once the PWA is back.

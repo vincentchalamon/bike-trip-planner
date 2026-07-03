@@ -4,9 +4,8 @@
 > **only the external UptimeRobot monitor** on `/api/healthz`. The self-hosted
 > Uptime Kuma stack (`.docker/uptime-kuma/`) is **not deployed** — its files
 > stay in the repository for reversibility but no container runs on the VM. The
-> single off-host probe on `/api/healthz` (which transitively pings Ollama via
-> the readiness chain) is enough to detect a host-level outage and raise an
-> incident. Re-enable Uptime Kuma later by deploying the stack and restoring the
+> single off-host probe on `/api/healthz` is enough to detect a host-level
+> outage and raise an incident. Re-enable Uptime Kuma later by deploying the stack and restoring the
 > "Self-hosted" layer below. See [ADR-031](../adr/adr-031-error-tracking-strategy.md)
 > for the parallel Sentry-SaaS beta posture.
 

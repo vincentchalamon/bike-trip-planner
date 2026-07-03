@@ -2,7 +2,7 @@
 
 A one-page overview of how Bike Trip Planner fits together, plus a thematic index into the
 [Architecture Decision Records](adr/) that justify each choice. For the product view see the
-[README](../README.md); for the feature inventory see [FEATURES.md](../FEATURES.md).
+[README](../README.md), which also lists the product features.
 
 ## Shape
 
@@ -22,7 +22,7 @@ Decoupled, stateless-compute architecture:
 Browser (Next.js 16)            PHP backend (API Platform 4.3)
   Zustand + Immer (in-memory)     Stateless computation
   Zod validation                  GPX parsing + pacing engine
-  openapi-fetch (typed)           Valhalla routing + OSM/weather APIs
+  openapi-fetch (typed)           Valhalla routing + PostGIS + weather
   Mercure SSE (real-time)  <--    Async workers (Symfony Messenger)
                                   PostgreSQL + Redis + Mercure publisher
 ```
@@ -66,11 +66,13 @@ table and in `ALERT_RULE_MAP` — this coupling is enforced by `AlertDocumentati
 
 ## AI pipeline
 
-Self-hosted Ollama serves LLaMA models through `symfony/ai`. A two-pass analysis (per-stage, then
-whole-trip) plus a context-aware chat assistant enrich the roadbook; everything degrades
-gracefully when Ollama is unreachable. See
-[ADR-028](adr/adr-028-ollama-llama-integration.md) and
-[ADR-030](adr/adr-030-symfony-ai-adoption.md).
+AI is optional, off by default, and per-user: each account brings its own API key for a chosen
+provider — Anthropic (Claude), Google (Gemini), or OpenAI — through `symfony/ai`. A two-pass
+analysis (per-stage, then whole-trip) plus a context-aware chat assistant enrich the roadbook;
+everything degrades gracefully when no key is set or the provider is unreachable, keeping the
+rule-based alerts fully visible. Keys are encrypted at rest and never returned by the API. See
+[ADR-042](adr/adr-042-optional-multi-provider-ai-byo-token.md); the earlier self-hosted Ollama
+stack (ADR-028, ADR-030) was removed.
 
 ## Deployment & operations
 
@@ -83,20 +85,26 @@ Uptime Kuma stacks kept in-repo but not deployed (reversible — see ADR-031). S
 ## ADR index by theme
 
 - **Foundations:** ADR-001 (global architecture), ADR-002 (type contract), ADR-003 (local-first
-  state & migrations), ADR-009 (QA & testing), ADR-010 (DX & local infra).
+  state & migrations), ADR-009 (QA & testing), ADR-010 (DX & local infra), ADR-037 (Docker
+  dev/prod convergence).
 - **Geospatial & routing:** ADR-004, ADR-005 (external-API caching), ADR-006 (pacing engine),
-  ADR-017, ADR-025, ADR-033.
+  ADR-017 (Valhalla), ADR-040 (local-first PostGIS reference data), ADR-041 (provisioner
+  resilience), ADR-036 (manual OSM refresh).
 - **Alerts & enrichment:** ADR-012, ADR-013 (accommodation pricing), ADR-014, ADR-015, ADR-026
-  (multi-source data).
+  (multi-source data), ADR-044 (data.gouv.fr markets source removed).
 - **Frontend & state:** ADR-007.
-- **Pipeline & performance:** ADR-016, ADR-027.
+- **Pipeline & performance:** ADR-016, ADR-027, ADR-043 (synchronous structural compute, async
+  enrichments).
 - **Export & devices:** ADR-018 (Garmin), ADR-021 (enriched GPX), ADR-024 (mobile / Capacitor).
 - **Auth, access & privacy:** ADR-023 (magic link), ADR-029 (early access), ADR-034 (analytics),
-  ADR-035 (GDPR erasure).
-- **AI:** ADR-028, ADR-030.
+  ADR-035 (GDPR erasure), ADR-038 (hide forbidden as not-found), ADR-047 (server-side web auth).
+- **AI:** ADR-042 (optional multi-provider, bring-your-own token), ADR-045 (conversational
+  trip-brief chat), ADR-046 (temporary AI feature flag).
 - **Infrastructure & ops:** ADR-019 (hosting), ADR-022 (storage), ADR-031 (error tracking),
-  ADR-032 (migrations & rollback).
+  ADR-032 (migrations & rollback), ADR-039 (beta right-sizing free tier).
 - **Security:** ADR-011 (SSRF / XXE prevention).
 
-A few early ADRs are superseded or revoked (e.g. ADR-008 PDF roadbook, ADR-020 dynamic Overpass
-provisioning); they are kept in `adr/` for historical context.
+Several ADRs are superseded or revoked and kept in `adr/` for historical context: ADR-008 (PDF
+roadbook, revoked), ADR-020 & ADR-025 (self-hosted Overpass, replaced by PostGIS in ADR-040),
+ADR-028 & ADR-030 (self-hosted Ollama/Symfony AI, replaced by ADR-042), and ADR-033 (nightly OSM
+refresh, replaced by ADR-036).

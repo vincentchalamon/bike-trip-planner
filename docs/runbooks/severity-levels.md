@@ -12,7 +12,6 @@ Active user impact. The application is unusable for all or most users.
 - Caddy / Mercure / PHP container in restart loop
 - Error rate > 5 % per minute on any `/api/*` route
 - Oracle VM reclaimed or unreachable for more than 5 minutes
-- Ollama unreachable (hard runtime dependency per ADR-028 — gate pipeline blocked, no fallback path)
 
 **SLO**: acknowledge < 15 min, mitigate < 60 min. Post-mortem mandatory.
 
@@ -25,7 +24,7 @@ Service is up but a feature is degraded or one redundancy is lost.
 - One Messenger worker stuck or in a retry loop while the others process
 - `/api/health` latency > 2 s (slow dependency, but green)
 - Valhalla `/status` red — routing fallback unavailable, new trips cannot be computed
-- Overpass / external API cache miss rate > 50 % for more than 30 min
+- External API cache miss rate > 50 % for more than 30 min
 - Redis memory > 80 % `maxmemory`
 - GlitchTip event spike > 100 events/h for a single fingerprint
 
@@ -61,5 +60,4 @@ GitHub label: `incident`, `severity-p3`.
 ## References
 
 - ADR-019 — Deployment infrastructure on Oracle Always Free + Coolify
-- ADR-028 — Ollama hard dependency (no graceful fallback)
 - `incident-template.md` — post-mortem template
