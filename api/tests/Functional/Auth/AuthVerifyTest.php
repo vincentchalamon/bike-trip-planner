@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Auth;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\Entity\MagicLink;
 use App\Entity\User;
+use App\Repository\MagicLinkRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -26,6 +27,35 @@ final class AuthVerifyTest extends ApiTestCase
     private function getEntityManager(): EntityManagerInterface
     {
         return self::getContainer()->get('doctrine.orm.entity_manager');
+    }
+
+    #[Test]
+    public function verifyRealCreatedMagicLinkLogsIn(): void
+    {
+        // End-to-end round-trip through the real create() path: the emitted
+        // plaintext must verify while only its hash is stored. Guards against
+        // emitting the stored hash instead of the plaintext (SEC-003 regression,
+        // the class of bug that let CreateUserCommand ship the hash).
+        $em = $this->getEntityManager();
+        $user = new User('roundtrip@example.com');
+        $em->persist($user);
+        $em->flush();
+
+        /** @var MagicLinkRepository $repo */
+        $repo = self::getContainer()->get(MagicLinkRepository::class);
+        $magicLink = $repo->create($user);
+        self::assertInstanceOf(MagicLink::class, $magicLink);
+        $plainToken = $magicLink->getPlainToken();
+        self::assertIsString($plainToken);
+        $em->flush();
+
+        $response = self::createClient()->request('POST', '/auth/verify', [
+            'headers' => ['Content-Type' => 'application/ld+json'],
+            'json' => ['token' => $plainToken],
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        self::assertArrayHasKey('token', $response->toArray());
     }
 
     private function createUserWithMagicLink(

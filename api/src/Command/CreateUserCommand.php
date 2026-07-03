@@ -109,7 +109,9 @@ final class CreateUserCommand extends Command
             return Command::SUCCESS;
         }
 
-        $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), $magicLink->getToken());
+        // getPlainToken() (not getToken(), which is the hash stored at rest): the
+        // magic link must carry the plaintext the verify endpoint will hash (SEC-003).
+        $verifyUrl = \sprintf('%s/auth/verify/%s', rtrim($this->frontendUrl, '/'), (string) $magicLink->getPlainToken());
 
         $html = $this->twig->render('email/invitation.html.twig', [
             'verifyUrl' => $verifyUrl,
