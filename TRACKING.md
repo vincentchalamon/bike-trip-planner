@@ -1068,8 +1068,8 @@ Sprint dédié à la résilience de la donnée en production. ADR-032 (Migration
 | 34        | Analytics Plausible + RGPD + parcours compte | 10    | ~10          |
 | 34.5      | Right-sizing beta Free Tier              | 8       | ~8           |
 | 35        | Recette complète & Audit                 | 36      | ~12          |
-| 36        | Garmin Connect                           | 1       | 3            |
+| 36        | Garmin Connect                           | 1       | ~2           |
 | 37        | Déploiement (Oracle + Coolify)           | 8       | ~8           |
 | 38        | Performance & Resilience Deep Dive       | 18      | ~12          |
 | 39        | Backup & Disaster Recovery               | 9       | ~9           |
-| **Total** |                                          | **231** | **~238**     |
+| **Total** |                                          | **231** | **~237**     |
