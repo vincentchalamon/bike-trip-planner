@@ -49,7 +49,7 @@ export function StageDownloads({
       <Button
         variant="ghost"
         size="sm"
-        className="h-6 gap-1 text-muted-icon px-1.5 cursor-pointer"
+        className="h-6 gap-1 text-muted-foreground px-1.5 cursor-pointer"
         disabled={(!tripId && !share) || !!downloading}
         onClick={() => void handleDownload("gpx")}
         aria-label={t("downloadGpx", { dayNumber })}
@@ -65,7 +65,7 @@ export function StageDownloads({
       <Button
         variant="ghost"
         size="sm"
-        className="h-6 gap-1 text-muted-icon px-1.5 cursor-pointer"
+        className="h-6 gap-1 text-muted-foreground px-1.5 cursor-pointer"
         disabled={(!tripId && !share) || !!downloading}
         onClick={() => void handleDownload("fit")}
         aria-label={t("downloadFit", { dayNumber })}

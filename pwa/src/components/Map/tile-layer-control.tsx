@@ -96,7 +96,10 @@ export function TileLayerControl({
               "transition-colors",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
               isActive
-                ? "bg-[var(--brand)] text-white shadow-sm"
+                // --brand-fill (not --brand): in dark mode --brand is the light
+                // accent #e08040 where white text fails AA (2.86); --brand-fill is
+                // the darker amber tuned for white-on-fill contrast (A11Y-001).
+                ? "bg-[var(--brand-fill)] text-white shadow-sm"
                 : "text-[var(--ink)] hover:bg-[var(--accent)]",
             ].join(" ")}
           >
