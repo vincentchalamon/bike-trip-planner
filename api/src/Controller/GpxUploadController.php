@@ -38,15 +38,6 @@ final readonly class GpxUploadController
     #[Route('/trips/gpx-upload', methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {
-        /** @var User $user */
-        $user = $this->security->getUser();
-
-        // GPX upload is a second trip-creation entry point: throttle it per user
-        // like POST /trips so it cannot be scripted to exhaust storage/workers (SEC-006).
-        if (!$this->gpxUploadLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
-            throw new TooManyRequestsHttpException();
-        }
-
         $file = $request->files->get('gpxFile');
 
         if (!$file instanceof UploadedFile) {
@@ -116,6 +107,17 @@ final readonly class GpxUploadController
         $this->applyOptionalParameters($tripRequest, $request);
 
         $locale = $request->getPreferredLanguage(['en', 'fr']) ?? 'en';
+
+        /** @var User $user */
+        $user = $this->security->getUser();
+
+        // GPX upload is a second trip-creation entry point: throttle it per user like
+        // POST /trips, just before the expensive createTrip, so it cannot be scripted
+        // to exhaust storage/workers (SEC-006). Cheap early validation 4xx are not
+        // throttled (and need no authenticated user).
+        if (!$this->gpxUploadLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
+            throw new TooManyRequestsHttpException();
+        }
 
         $result = $this->gpxUploadService->createTrip($points, $title, $tripRequest, $locale, $user);
 
