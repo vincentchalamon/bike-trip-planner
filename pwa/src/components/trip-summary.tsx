@@ -183,7 +183,7 @@ export function TripSummary({
             read-only shared view (recette #649). */}
         {readOnly ? (
           <div className="flex items-center gap-1.5" data-testid="summary-dates">
-            <CalendarDays className="h-4 w-4 text-brand" />
+            <CalendarDays className="h-4 w-4 text-brand" aria-hidden="true" />
             <span>{datesDisplay}</span>
           </div>
         ) : (
@@ -213,7 +213,7 @@ export function TripSummary({
             className="flex items-center gap-1.5"
             data-testid="summary-profile"
           >
-            <User className="h-4 w-4 text-brand" />
+            <User className="h-4 w-4 text-brand" aria-hidden="true" />
             <span>{profileLabel}</span>
           </div>
         ) : (
