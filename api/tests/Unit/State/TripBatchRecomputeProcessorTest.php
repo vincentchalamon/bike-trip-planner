@@ -20,11 +20,47 @@ use App\Service\TripAnalysisDispatcher;
 use App\State\TripBatchRecomputeProcessor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 
 final class TripBatchRecomputeProcessorTest extends TestCase
 {
+    #[Test]
+    public function recomputeIsRateLimited(): void
+    {
+        // SEC-010: once the per-trip recompute limiter is exhausted, the endpoint
+        // must reject with 429 instead of re-dispatching the enrichment pipeline.
+        $messageBus = $this->createStub(MessageBusInterface::class);
+        $messageBus->method('dispatch')->willReturnCallback(static fn (object $m): Envelope => new Envelope($m));
+
+        $limiter = new RateLimiterFactory(
+            ['id' => 'trip_recompute', 'policy' => 'sliding_window', 'limit' => 1, 'interval' => '60 seconds'],
+            new InMemoryStorage(),
+        );
+        // Exhaust the single token for this trip so the processor's own consume() fails.
+        $limiter->create('t')->consume();
+
+        $processor = new TripBatchRecomputeProcessor(
+            $this->createStub(TripRequestRepositoryInterface::class),
+            $this->createStub(TripGenerationTrackerInterface::class),
+            new ComputationDependencyResolver(),
+            $messageBus,
+            $this->createStub(ComputationTrackerInterface::class),
+            new TripAnalysisDispatcher($messageBus),
+            $limiter,
+        );
+
+        $this->expectException(TooManyRequestsHttpException::class);
+        $processor->process(
+            new TripBatchRecomputeRequest([new TripModification(type: 'pacing')]),
+            new Post(),
+            ['id' => 't'],
+        );
+    }
+
     /**
      * Runs a `pacing` recompute with the given tracker progress and returns the
      * dispatched message class names.
@@ -68,6 +104,7 @@ final class TripBatchRecomputeProcessorTest extends TestCase
             $messageBus,
             $computationTracker,
             new TripAnalysisDispatcher($messageBus),
+            new RateLimiterFactory(['id' => 'trip_recompute_test', 'policy' => 'no_limit'], new InMemoryStorage()),
         );
 
         $request = new TripBatchRecomputeRequest([

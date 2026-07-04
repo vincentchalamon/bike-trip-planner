@@ -322,6 +322,40 @@ final class GpxUploadTest extends ApiTestCase
     }
 
     #[Test]
+    public function uploadWithZeroElevationPenaltyReturns202NotServerError(): void
+    {
+        // BUG-002 regression: elevationPenalty=0 is numeric but out of range. It must
+        // be clamped (ignored), never reach the pacing engine as a DivisionByZeroError
+        // (which surfaced as an unhandled HTTP 500 before the fix).
+        $file = new UploadedFile(
+            self::FIXTURES_DIR.'/valid-route.gpx',
+            'valid-route.gpx',
+            'application/gpx+xml',
+            null,
+            true,
+        );
+
+        $this->client->request('POST', '/trips/gpx-upload', [
+            'headers' => array_merge(['Content-Type' => 'multipart/form-data'], $this->authHeader($this->jwtToken)),
+            'extra' => [
+                'files' => ['gpxFile' => $file],
+                'parameters' => ['elevationPenalty' => '0', 'fatigueFactor' => '0.3'],
+            ],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+    }
+
+    // Note: a functional "11 uploads → 429" test is intentionally omitted. The
+    // test cache pool is cache.adapter.array, which implements ResetInterface and
+    // is cleared by Symfony's service resetter after every request (independently
+    // of disableReboot()), so a real sliding-window limiter never accumulates
+    // across HTTP requests here. This is why the existing 429 tests in the suite
+    // mock a provider 429 rather than exhausting a real limiter. The limiter
+    // wiring itself (limiter.gpx_upload consumed before createTrip) is covered by
+    // the controller change.
+
+    #[Test]
     public function uploadWithOptionalParameters(): void
     {
         $file = new UploadedFile(

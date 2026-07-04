@@ -20,6 +20,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -37,6 +39,8 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
         private Security $security,
         #[Autowire(service: 'cache.trip_state')]
         private CacheItemPoolInterface $tripStateCache,
+        #[Autowire(service: 'limiter.trip_duplicate')]
+        private RateLimiterFactory $duplicateLimiter,
     ) {
     }
 
@@ -48,6 +52,14 @@ final readonly class TripDuplicateProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): Trip
     {
         \assert($data instanceof TripRequest);
+
+        // Cap per user: duplication clones DB rows + Redis blobs (SEC-009).
+        $user = $this->security->getUser();
+        \assert($user instanceof User);
+        if (!$this->duplicateLimiter->create($user->getId()->toRfc4122())->consume()->isAccepted()) {
+            throw new TooManyRequestsHttpException();
+        }
+
         $source = $data;
         $sourceId = $uriVariables['id'] ?? '';
 

@@ -15,9 +15,12 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Repository\TripRequestRepositoryInterface;
 use App\Service\ComputationDependencyResolver;
 use App\Service\TripAnalysisDispatcher;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 /**
  * Processes the batch recompute endpoint: applies N pending modifications in a
@@ -42,6 +45,8 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
         private MessageBusInterface $messageBus,
         private ComputationTrackerInterface $computationTracker,
         private TripAnalysisDispatcher $analysisDispatcher,
+        #[Autowire(service: 'limiter.trip_recompute')]
+        private RateLimiterFactory $recomputeLimiter,
     ) {
     }
 
@@ -57,6 +62,12 @@ final readonly class TripBatchRecomputeProcessor implements ProcessorInterface
 
         if ('' === $tripId) {
             throw new NotFoundHttpException('Trip not found.');
+        }
+
+        // Cap per trip: recompute re-dispatches the full enrichment pipeline onto
+        // the shared workers, so it must not be scriptable faster than they drain (SEC-010).
+        if (!$this->recomputeLimiter->create($tripId)->consume()->isAccepted()) {
+            throw new TooManyRequestsHttpException();
         }
 
         $stages = $this->tripStateManager->getStages($tripId);
