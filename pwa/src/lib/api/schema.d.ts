@@ -172,6 +172,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Retrieves a Auth resource.
+         * @description Retrieves a Auth resource.
+         */
+        get: operations["api_authsession_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/verify": {
         parameters: {
             query?: never;
@@ -946,6 +966,11 @@ export interface components {
             /** Format: email */
             email: string;
             token?: string;
+        };
+        "Auth.AuthSession.jsonld": components["schemas"]["HydraItemBaseSchema"] & {
+            authenticated?: boolean;
+            userId?: string | null;
+            email?: string | null;
         };
         /** @description Unprocessable entity */
         ConstraintViolation: {
@@ -2128,6 +2153,17 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description An error occurred */
             422: {
                 headers: {
@@ -2506,6 +2542,37 @@ export interface operations {
                     "application/ld+json": components["schemas"]["ConstraintViolation.jsonld"];
                     "application/problem+json": components["schemas"]["ConstraintViolation"];
                     "application/json": components["schemas"]["ConstraintViolation"];
+                };
+            };
+        };
+    };
+    api_authsession_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Auth resource */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Auth.AuthSession.jsonld"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": components["schemas"]["Error.jsonld"];
+                    "application/problem+json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
