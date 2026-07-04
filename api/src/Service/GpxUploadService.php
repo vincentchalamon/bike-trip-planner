@@ -35,7 +35,7 @@ use Symfony\Component\Uid\Uuid;
  * response already carries the computed stages and the persisted `ready` status.
  * Only the network/LLM enrichments stay asynchronous (dispatched at the end).
  */
-final readonly class GpxUploadService
+final readonly class GpxUploadService implements GpxUploadServiceInterface
 {
     public function __construct(
         private GpxRouteParserInterface $gpxParser,
