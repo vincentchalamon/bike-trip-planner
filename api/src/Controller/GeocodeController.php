@@ -32,7 +32,8 @@ final readonly class GeocodeController
 
     /**
      * Throttles outbound calls to the public Nominatim instance (1 req/s policy,
-     * IP bans for bulk use) per user, protecting the shared app IP (SEC-005).
+     * IP bans for bulk use) per user, protecting the shared app IP
+     * (geocode rate-limit — 2026-07 security audit).
      */
     private function throttleOutbound(): void
     {

@@ -61,7 +61,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'cache_pool' => 'cache.rate_limiter',
             ],
             // Geocoding proxies to the public Nominatim instance (1 req/s policy,
-            // IP bans for bulk use); cap per user to protect the shared app IP (SEC-005).
+            // IP bans for bulk use); cap per user to protect the shared app IP
+            // (geocode rate-limit — 2026-07 security audit).
             'geocode' => [
                 'policy' => 'sliding_window',
                 'limit' => 30,
