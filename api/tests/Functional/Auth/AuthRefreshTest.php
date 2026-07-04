@@ -75,6 +75,7 @@ final class AuthRefreshTest extends ApiTestCase
 
         $em = $this->getEntityManager();
         $em->clear();
+
         $stored = $em->getRepository(RefreshToken::class)->findOneBy([
             'tokenDigest' => RefreshTokenEncryptor::digest('plaintext-at-rest'),
         ]);
