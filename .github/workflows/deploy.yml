@@ -83,7 +83,6 @@ jobs:
           push: true
           tags: ${{ steps.tags.outputs.tags }}
           build-args: |
-            COMMIT_SHA=${{ github.sha }}
             NEXT_PUBLIC_APP_RELEASE=${{ github.sha }}
             NEXT_PUBLIC_APP_ENV=production
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
