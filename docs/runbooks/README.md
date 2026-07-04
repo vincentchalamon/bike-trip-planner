@@ -30,6 +30,7 @@ Every runbook follows the same four sections:
 | [uptime-monitoring.md](uptime-monitoring.md) | Uptime Kuma + UptimeRobot configuration |
 | [secrets-inventory.md](secrets-inventory.md) | Source of truth for every production secret |
 | [secrets-rotation.md](secrets-rotation.md) | Rotation policy + per-class procedures |
+| [base-image-cve-maintenance.md](base-image-cve-maintenance.md) | Base-image CVE refresh cadence (triage `fixed` vs Debian won't-fix) |
 
 ## Conventions
 

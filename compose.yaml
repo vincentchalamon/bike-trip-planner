@@ -19,8 +19,6 @@ services:
       context: ./
       dockerfile: .docker/php/Dockerfile
       target: frankenphp_prod
-      args:
-        COMMIT_SHA: ${COMMIT_SHA:-unknown}
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -71,11 +69,6 @@ services:
       # Error tracking (P1.1 / ADR-031). Leave SENTRY_DSN empty to disable.
       SENTRY_DSN: "${SENTRY_DSN:-}"
       APP_RELEASE: "${APP_RELEASE:-}"
-      # APP_COMMIT is baked into the image at build time (ARG COMMIT_SHA →
-      # ENV APP_COMMIT in .docker/php/Dockerfile). Do NOT set it here: a compose
-      # `environment:` entry overrides the image ENV, and COMMIT_SHA is a CI
-      # build-time concept absent from the Coolify runtime, so it would collapse
-      # to "unknown" and /api/healthz would lose the deployed git SHA.
       # Doctrine migrations executed at container boot via entrypoint.sh (ADR-032).
       # Set to "false" if a migration is suspected to be problematic — then run migrations manually.
       MIGRATIONS_ON_BOOT: "${MIGRATIONS_ON_BOOT:-true}"

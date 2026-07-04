@@ -79,9 +79,7 @@ CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile", "--watch" ]
 # Prod FrankenPHP image
 FROM frankenphp_base AS frankenphp_prod
 
-ARG COMMIT_SHA=unknown
 ENV APP_ENV=prod
-ENV APP_COMMIT=${COMMIT_SHA}
 # Default to running Doctrine migrations at boot in prod (see ADR-032).
 ENV MIGRATIONS_ON_BOOT=true
 
