@@ -288,6 +288,8 @@ jobs:
         with:
           name: openapi-spec
           path: openapi.json
+          # Consumed seconds later by openapi-typegen-drift in the same run.
+          retention-days: 1
 
   openapi-typegen-drift:
     name: OpenAPI → TS drift
