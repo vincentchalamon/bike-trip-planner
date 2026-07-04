@@ -7,6 +7,7 @@ namespace App\Tests\Functional\Auth;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\Entity\RefreshToken;
 use App\Entity\User;
+use App\Security\RefreshTokenEncryptor;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Component\BrowserKit\Cookie as BrowserKitCookie;
@@ -46,8 +47,9 @@ final class AuthSessionTest extends ApiTestCase
         $user = new User($email);
         $em->persist($user);
 
-        $refreshToken = new RefreshToken(
+        $refreshToken = RefreshToken::issue(
             $user,
+            self::getContainer()->get(RefreshTokenEncryptor::class),
             $token,
             $expiresAt ?? new \DateTimeImmutable('+30 days'),
         );
@@ -152,7 +154,9 @@ final class AuthSessionTest extends ApiTestCase
         $em = $this->getEntityManager();
         $em->clear();
 
-        $token = $em->getRepository(RefreshToken::class)->findOneBy(['token' => 'idempotent-token']);
+        $token = $em->getRepository(RefreshToken::class)->findOneBy([
+            'tokenDigest' => RefreshTokenEncryptor::digest('idempotent-token'),
+        ]);
         $this->assertNotNull($token);
         $this->assertNull($token->getReplacedByToken(), 'session must not rotate the token');
     }

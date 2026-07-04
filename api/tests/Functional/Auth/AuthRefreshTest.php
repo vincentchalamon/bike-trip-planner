@@ -8,6 +8,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\Entity\RefreshToken;
 use App\Entity\User;
+use App\Security\RefreshTokenEncryptor;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -38,8 +39,9 @@ final class AuthRefreshTest extends ApiTestCase
         $user = new User($email);
         $em->persist($user);
 
-        $refreshToken = new RefreshToken(
+        $refreshToken = RefreshToken::issue(
             $user,
+            self::getContainer()->get(RefreshTokenEncryptor::class),
             $token,
             $expiresAt ?? new \DateTimeImmutable('+30 days'),
         );
@@ -62,6 +64,25 @@ final class AuthRefreshTest extends ApiTestCase
             ],
             'json' => ['refresh_token' => $refreshToken],
         ]);
+    }
+
+    #[Test]
+    public function storesTheTokenEncryptedAtRest(): void
+    {
+        // SEC-003: the row must not hold the plaintext credential; it stores a
+        // reversible ciphertext, looked up by digest.
+        $this->createUserWithRefreshToken('atrest@example.com', 'plaintext-at-rest');
+
+        $em = $this->getEntityManager();
+        $em->clear();
+        $stored = $em->getRepository(RefreshToken::class)->findOneBy([
+            'tokenDigest' => RefreshTokenEncryptor::digest('plaintext-at-rest'),
+        ]);
+        $this->assertNotNull($stored);
+        $this->assertNotSame('plaintext-at-rest', $stored->getEncryptedToken());
+
+        $encryptor = self::getContainer()->get(RefreshTokenEncryptor::class);
+        $this->assertSame('plaintext-at-rest', $encryptor->decrypt($stored->getEncryptedToken()));
     }
 
     #[Test]
@@ -153,7 +174,9 @@ final class AuthRefreshTest extends ApiTestCase
         $em = $this->getEntityManager();
         $em->clear();
 
-        $old = $em->getRepository(RefreshToken::class)->findOneBy(['token' => 'rotated-token']);
+        $old = $em->getRepository(RefreshToken::class)->findOneBy([
+            'tokenDigest' => RefreshTokenEncryptor::digest('rotated-token'),
+        ]);
 
         $this->assertNotNull($old, 'Rotated token is kept for reload-race idempotency');
         $this->assertNotNull($old->getReplacedByToken(), 'Rotated token points at its successor');
