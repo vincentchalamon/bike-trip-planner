@@ -20,6 +20,14 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             'log' => true,
         ],
         'http_client' => [
+            // SSRF control (ADR-011): each outbound client is host-locked (base_uri
+            // or a scope regex), and the route fetchers only ever interpolate a
+            // numeric id captured by an anchored regex into a fixed relative path,
+            // so a user URL never sets the host. The route clients keep a small
+            // max_redirects for the third parties' legitimate locale redirects
+            // (host-locked, so a redirect to an internal host requires the third
+            // party's own origin to be compromised — low residual risk); clients
+            // that never legitimately redirect use max_redirects: 0.
             'scoped_clients' => [
                 'komoot.client' => [
                     'base_uri' => 'https://www.komoot.com',
@@ -74,10 +82,19 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 'routing.client' => [
                     'base_uri' => 'http://valhalla:8002',
                     'timeout' => 5,
+                    // Direct internal Valhalla API — never redirects; refuse to follow
+                    // any 3xx so a compromised response can't pivot to another internal
+                    // host (SEC-007), consistent with the invariant documented above.
+                    'max_redirects' => 0,
                 ],
                 'nominatim.client' => [
                     'base_uri' => 'https://nominatim.openstreetmap.org',
                     'timeout' => 10,
+                    // Nominatim's /search and /reverse are direct API endpoints that
+                    // never legitimately redirect, so refuse to follow any 3xx: base_uri
+                    // does not constrain a redirect's host, and following one could reach
+                    // an internal target (SSRF, SEC-007).
+                    'max_redirects' => 0,
                     'headers' => [
                         'Accept' => 'application/json',
                         'User-Agent' => 'BikeTripPlanner/1.0',
