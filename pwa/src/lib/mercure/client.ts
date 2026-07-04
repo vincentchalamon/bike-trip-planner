@@ -41,7 +41,13 @@ export class MercureClient {
   onEvent(callback: (event: MercureEvent) => void): void {
     this.callback = callback;
     this.connect();
-    this.listenForTestEvents();
+    // Test-only SSE injection hook (E2E). Gated behind an explicit build flag
+    // so it is tree-shaken out of the real production bundle; the mocked E2E
+    // suite runs against the prod image, so NODE_ENV cannot be the signal here
+    // — the flag is set only in dev and the CI mocked build (SEC-012).
+    if (process.env.NEXT_PUBLIC_ENABLE_TEST_HOOKS === "true") {
+      this.listenForTestEvents();
+    }
   }
 
   close(): void {

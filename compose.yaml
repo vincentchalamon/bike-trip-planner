@@ -290,6 +290,10 @@ services:
         # Override to "true" only where AI must show (CI E2E bake args, dev). The
         # code and endpoints are kept for a later re-enable (ADR-042).
         NEXT_PUBLIC_ENABLE_AI: "${NEXT_PUBLIC_ENABLE_AI:-false}"
+        # Test-only SSE injection hook (SEC-012): default-off so the prod/recette
+        # bundle tree-shakes it out. Override to "true" only for the mocked E2E
+        # build (CI bake args, dev).
+        NEXT_PUBLIC_ENABLE_TEST_HOOKS: "${NEXT_PUBLIC_ENABLE_TEST_HOOKS:-false}"
         # Client API + Mercure origins. Empty by default → the browser uses the
         # SAME origin it was served from (relative API calls, same-origin Mercure
         # hub), so the build is origin-agnostic: it works on https://localhost, in
