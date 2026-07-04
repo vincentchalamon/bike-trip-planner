@@ -291,7 +291,7 @@ export const GpxDropZoneCard = forwardRef<HTMLDivElement, GpxDropZoneCardProps>(
                 {t("browse")}
               </Button>
               {sizeHintMb && (
-                <p className="text-xs text-muted-foreground/70">
+                <p className="text-xs text-muted-foreground">
                   {t("sizeLimit", { size: sizeHintMb })}
                 </p>
               )}
