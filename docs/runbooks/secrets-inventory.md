@@ -20,6 +20,7 @@ Pour la rotation : voir [secrets-rotation.md](secrets-rotation.md).
 | `JWT_PUBLIC_KEY_PATH` (PEM) | PEM RSA | Fichier monté `/etc/bike-trip-planner/jwt/public.pem` (VM) | `php`, `worker` (LexikJWT) | Oui | On-compromise (avec la clé privée) | ADR-023 |
 | `JWT_PASSPHRASE` | Passphrase | Coolify env | `php`, `worker` | Oui | On-compromise (avec la clé privée) | ADR-023 |
 | `MERCURE_JWT_KEY` | Passphrase HS256 | Coolify env | `php` (publisher + subscriber + Mercure hub) | Oui | On-compromise | `compose.yaml` |
+| `AI_TOKEN_ENC_KEY` | Clé de chiffrement (libsodium) | Coolify env | `php`, `worker`, `worker-llm` | Oui | On-compromise (invalide tokens IA + sessions refresh → re-login) | ADR-042 / SEC-003 |
 | `DATABASE_USERNAME` | Identifiant Postgres | Coolify env | `php`, `worker`, `database` | Oui | Statique | ADR-022 |
 | `DATABASE_PASSWORD` | Password Postgres | Coolify env | `php`, `worker`, `database` | Oui | Bi-annuel + on-compromise | ADR-022 |
 | `DATABASE_NAME` | Nom de base | Coolify env | `php`, `worker`, `database` | Oui | Statique | ADR-022 |

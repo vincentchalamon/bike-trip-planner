@@ -55,6 +55,10 @@ services:
       MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
       MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      # Encrypts AI provider tokens + refresh tokens at rest. Forwarded from the
+      # Coolify/host env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot
+      # guard fails closed rather than silently using the committed dev default.
+      AI_TOKEN_ENC_KEY: "${AI_TOKEN_ENC_KEY:-}"
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
@@ -144,6 +148,10 @@ services:
       MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
       MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      # Encrypts AI provider tokens + refresh tokens at rest. Forwarded from the
+      # Coolify/host env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot
+      # guard fails closed rather than silently using the committed dev default.
+      AI_TOKEN_ENC_KEY: "${AI_TOKEN_ENC_KEY:-}"
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379
@@ -219,6 +227,10 @@ services:
       MERCURE_URL: ${MERCURE_URL:-http://php/.well-known/mercure}
       MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
       MERCURE_JWT_SECRET: "${MERCURE_JWT_KEY:-!ChangeThisMercureHubJWTSecretKey!}"
+      # Encrypts AI provider tokens + refresh tokens at rest. Forwarded from the
+      # Coolify/host env (like MERCURE_JWT_KEY); empty here so the SEC-003 boot
+      # guard fails closed rather than silently using the committed dev default.
+      AI_TOKEN_ENC_KEY: "${AI_TOKEN_ENC_KEY:-}"
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/messages
       MESSENGER_FAILED_DSN: redis://redis:6379/failed
       REDIS_URL: redis://redis:6379

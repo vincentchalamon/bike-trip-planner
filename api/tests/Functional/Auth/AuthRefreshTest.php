@@ -95,26 +95,17 @@ final class AuthRefreshTest extends ApiTestCase
         // or a garbage token.
         $em = $this->getEntityManager();
         $user = new User('rotated-key@example.com');
-        $em->persist($user);
-
         $grace = new \DateTimeImmutable('+20 seconds');
-        // Successor ciphertext under a different key → undecryptable by the app key.
-        $successor = RefreshToken::issue(
-            $user,
-            new RefreshTokenEncryptor('a-since-rotated-key'),
-            'successor-plain',
-            $grace,
-        );
-        $em->persist($successor);
+
+        // Successor ciphertext under a since-rotated key → undecryptable by the app key.
+        $successor = RefreshToken::issue($user, new RefreshTokenEncryptor('a-since-rotated-key'), 'successor-plain', $grace);
 
         // Predecessor still in its grace window, pointing at the successor's digest.
-        $predecessor = RefreshToken::issue(
-            $user,
-            self::getContainer()->get(RefreshTokenEncryptor::class),
-            'predecessor-plain',
-            $grace,
-        );
+        $predecessor = RefreshToken::issue($user, self::getContainer()->get(RefreshTokenEncryptor::class), 'predecessor-plain', $grace);
         $predecessor->replaceWith(RefreshTokenEncryptor::digest('successor-plain'), $grace);
+
+        $em->persist($user);
+        $em->persist($successor);
         $em->persist($predecessor);
         $em->flush();
         $em->clear();
