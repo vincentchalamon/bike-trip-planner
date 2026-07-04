@@ -654,6 +654,7 @@ jobs:
             pwa.cache-from=type=gha,scope=pwa
             pwa.cache-from=type=gha,scope=pwa-main
             pwa.args.NEXT_PUBLIC_ENABLE_AI=true
+            pwa.args.NEXT_PUBLIC_ENABLE_TEST_HOOKS=true
       - name: Start services
         run: docker compose up -d database php pwa worker redis --no-build --wait
       - name: Generate BDD test files
