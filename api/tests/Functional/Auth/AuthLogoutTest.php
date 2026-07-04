@@ -8,6 +8,7 @@ use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\Entity\RefreshToken;
 use App\Entity\User;
 use App\Repository\RefreshTokenRepository;
+use App\Security\RefreshTokenEncryptor;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -36,8 +37,9 @@ final class AuthLogoutTest extends ApiTestCase
         $user = new User($email);
         $em->persist($user);
 
-        $refreshToken = new RefreshToken(
+        $refreshToken = RefreshToken::issue(
             $user,
+            self::getContainer()->get(RefreshTokenEncryptor::class),
             bin2hex(random_bytes(32)),
             new \DateTimeImmutable('+30 days'),
         );

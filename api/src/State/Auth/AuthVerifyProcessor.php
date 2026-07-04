@@ -82,15 +82,19 @@ final readonly class AuthVerifyProcessor implements ProcessorInterface
 
         $isCapacitor = $this->isCapacitorRequest();
 
+        // Plaintext is available on the freshly minted token (stored encrypted).
+        $plainToken = $refreshToken->getPlainToken();
+        \assert(null !== $plainToken);
+
         $this->logger->debug('Auth verify token verified', ['user' => $user->getEmail()]);
 
         $responseData = ['token' => $jwt];
         if ($isCapacitor) {
-            $responseData['refresh_token'] = $refreshToken->getToken();
+            $responseData['refresh_token'] = $plainToken;
         }
 
         $response = new JsonResponse($responseData);
-        $this->setRefreshTokenCookie($response, $refreshToken->getToken(), $refreshToken->getExpiresAt());
+        $this->setRefreshTokenCookie($response, $plainToken, $refreshToken->getExpiresAt());
 
         return $response;
     }

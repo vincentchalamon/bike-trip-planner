@@ -8,6 +8,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\Entity\RefreshToken;
 use App\Entity\User;
+use App\Security\RefreshTokenEncryptor;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Zenstruck\Foundry\Attribute\ResetDatabase;
@@ -38,8 +39,9 @@ final class AuthRefreshTest extends ApiTestCase
         $user = new User($email);
         $em->persist($user);
 
-        $refreshToken = new RefreshToken(
+        $refreshToken = RefreshToken::issue(
             $user,
+            self::getContainer()->get(RefreshTokenEncryptor::class),
             $token,
             $expiresAt ?? new \DateTimeImmutable('+30 days'),
         );
@@ -62,6 +64,55 @@ final class AuthRefreshTest extends ApiTestCase
             ],
             'json' => ['refresh_token' => $refreshToken],
         ]);
+    }
+
+    #[Test]
+    public function storesTheTokenEncryptedAtRest(): void
+    {
+        // SEC-003: the row must not hold the plaintext credential; it stores a
+        // reversible ciphertext, looked up by digest.
+        $this->createUserWithRefreshToken('atrest@example.com', 'plaintext-at-rest');
+
+        $em = $this->getEntityManager();
+        $em->clear();
+
+        $stored = $em->getRepository(RefreshToken::class)->findOneBy([
+            'tokenDigest' => RefreshTokenEncryptor::digest('plaintext-at-rest'),
+        ]);
+        $this->assertNotNull($stored);
+        $this->assertNotSame('plaintext-at-rest', $stored->getEncryptedToken());
+
+        $encryptor = self::getContainer()->get(RefreshTokenEncryptor::class);
+        $this->assertSame('plaintext-at-rest', $encryptor->decrypt($stored->getEncryptedToken()));
+    }
+
+    #[Test]
+    public function refreshFailsClosedWhenSuccessorCiphertextIsUndecryptable(): void
+    {
+        // Grace-window path (SEC-003): the successor loaded from the DB must be
+        // decrypted to be re-served. If it was encrypted under a since-rotated key,
+        // decrypt() returns null and the request must fail closed (401), never 500
+        // or a garbage token.
+        $em = $this->getEntityManager();
+        $user = new User('rotated-key@example.com');
+        $grace = new \DateTimeImmutable('+20 seconds');
+
+        // Successor ciphertext under a since-rotated key → undecryptable by the app key.
+        $successor = RefreshToken::issue($user, new RefreshTokenEncryptor('a-since-rotated-key'), 'successor-plain', $grace);
+
+        // Predecessor still in its grace window, pointing at the successor's digest.
+        $predecessor = RefreshToken::issue($user, self::getContainer()->get(RefreshTokenEncryptor::class), 'predecessor-plain', $grace);
+        $predecessor->replaceWith(RefreshTokenEncryptor::digest('successor-plain'), $grace);
+
+        $em->persist($user);
+        $em->persist($successor);
+        $em->persist($predecessor);
+        $em->flush();
+        $em->clear();
+
+        $this->sendRefreshRequest('predecessor-plain');
+
+        $this->assertResponseStatusCodeSame(401);
     }
 
     #[Test]
@@ -153,7 +204,9 @@ final class AuthRefreshTest extends ApiTestCase
         $em = $this->getEntityManager();
         $em->clear();
 
-        $old = $em->getRepository(RefreshToken::class)->findOneBy(['token' => 'rotated-token']);
+        $old = $em->getRepository(RefreshToken::class)->findOneBy([
+            'tokenDigest' => RefreshTokenEncryptor::digest('rotated-token'),
+        ]);
 
         $this->assertNotNull($old, 'Rotated token is kept for reload-race idempotency');
         $this->assertNotNull($old->getReplacedByToken(), 'Rotated token points at its successor');

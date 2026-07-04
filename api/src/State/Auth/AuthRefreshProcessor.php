@@ -12,6 +12,7 @@ use App\Entity\RefreshToken;
 use App\Entity\User;
 use App\Repository\RefreshTokenRepository;
 use App\Security\AuthCookies;
+use App\Security\RefreshTokenEncryptor;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -45,6 +46,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         private RequestStack $requestStack,
         private LoggerInterface $logger,
         private TranslatorInterface $translator,
+        private RefreshTokenEncryptor $encryptor,
     ) {
     }
 
@@ -95,12 +97,22 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         // that clears the cookie and destroys the session (recette #649).
         $replacedBy = $existing->getReplacedByToken();
         $live = null !== $replacedBy
-            ? $this->refreshTokenRepository->findValidByToken($replacedBy)
+            ? $this->refreshTokenRepository->findValidByDigest($replacedBy)
             : $this->rotate($existing, $user);
 
         if (!$live instanceof RefreshToken) {
             // The successor itself fell out of its grace window: genuinely stale.
             $this->logger->debug('Auth refresh successor no longer valid');
+
+            return $this->unauthorized();
+        }
+
+        // Recover the plaintext to re-serve: fresh on the just-minted successor,
+        // decrypted from the stored ciphertext on the grace-window path.
+        $livePlain = $live->getPlainToken() ?? $this->encryptor->decrypt($live->getEncryptedToken());
+        if (null === $livePlain) {
+            // Ciphertext undecryptable (encryption key rotated): treat as stale.
+            $this->logger->warning('Auth refresh successor could not be decrypted');
 
             return $this->unauthorized();
         }
@@ -111,11 +123,11 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
 
         $responseData = ['token' => $jwt];
         if ($isCapacitor) {
-            $responseData['refresh_token'] = $live->getToken();
+            $responseData['refresh_token'] = $livePlain;
         }
 
         $response = new JsonResponse($responseData);
-        $this->setRefreshTokenCookie($response, $live->getToken(), $live->getExpiresAt());
+        $this->setRefreshTokenCookie($response, $livePlain, $live->getExpiresAt());
 
         return $response;
     }
@@ -140,7 +152,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
             $claimed = $this->entityManager->getConnection()->executeStatement(
                 'UPDATE refresh_token SET replaced_by_token = :new, expires_at = :grace WHERE id = :id AND replaced_by_token IS NULL AND expires_at > NOW()',
                 [
-                    'new' => $successor->getToken(),
+                    'new' => $successor->getTokenDigest(),
                     'grace' => $grace->format('Y-m-d H:i:s'),
                     'id' => $existing->getId()->toRfc4122(),
                 ],
@@ -150,7 +162,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
                 // Won: mirror the claim onto the managed entity so the successor is
                 // flushed and the mapped property is assigned in PHP (PHPStan can't
                 // see Doctrine's hydration of replaced_by_token).
-                $existing->replaceWith($successor->getToken(), $grace);
+                $existing->replaceWith($successor->getTokenDigest(), $grace);
             } else {
                 // Lost: drop the pending successor so the flush can't INSERT it.
                 $this->entityManager->detach($successor);
@@ -165,7 +177,7 @@ final readonly class AuthRefreshProcessor implements ProcessorInterface
         $this->entityManager->refresh($existing);
         $replacedBy = $existing->getReplacedByToken();
 
-        return null !== $replacedBy ? $this->refreshTokenRepository->findValidByToken($replacedBy) : null;
+        return null !== $replacedBy ? $this->refreshTokenRepository->findValidByDigest($replacedBy) : null;
     }
 
     private function unauthorized(): JsonResponse

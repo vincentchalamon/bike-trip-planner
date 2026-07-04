@@ -8,6 +8,7 @@ use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use App\Entity\RefreshToken;
 use App\Entity\User;
 use App\Repository\RefreshTokenRepository;
+use App\Security\RefreshTokenEncryptor;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
@@ -24,6 +25,11 @@ final class PurgeExpiredTokensCommandTest extends ApiTestCase
     private function getEntityManager(): EntityManagerInterface
     {
         return self::getContainer()->get('doctrine.orm.entity_manager');
+    }
+
+    private function refreshToken(User $user, string $plain, \DateTimeImmutable $expiresAt): RefreshToken
+    {
+        return RefreshToken::issue($user, self::getContainer()->get(RefreshTokenEncryptor::class), $plain, $expiresAt);
     }
 
     private function createCommandTester(): CommandTester
@@ -43,11 +49,7 @@ final class PurgeExpiredTokensCommandTest extends ApiTestCase
         $user = new User('purge@example.com');
         $em->persist($user);
 
-        $expiredToken = new RefreshToken(
-            $user,
-            'expired-token-abc',
-            new \DateTimeImmutable('-1 day'),
-        );
+        $expiredToken = $this->refreshToken($user, 'expired-token-abc', new \DateTimeImmutable('-1 day'));
         $em->persist($expiredToken);
         $em->flush();
 
@@ -71,11 +73,7 @@ final class PurgeExpiredTokensCommandTest extends ApiTestCase
         $user = new User('keep@example.com');
         $em->persist($user);
 
-        $validToken = new RefreshToken(
-            $user,
-            'valid-token-xyz',
-            new \DateTimeImmutable('+30 days'),
-        );
+        $validToken = $this->refreshToken($user, 'valid-token-xyz', new \DateTimeImmutable('+30 days'));
         $em->persist($validToken);
         $em->flush();
 
@@ -99,18 +97,10 @@ final class PurgeExpiredTokensCommandTest extends ApiTestCase
         $user = new User('mixed@example.com');
         $em->persist($user);
 
-        $expiredToken = new RefreshToken(
-            $user,
-            'expired-one',
-            new \DateTimeImmutable('-2 days'),
-        );
+        $expiredToken = $this->refreshToken($user, 'expired-one', new \DateTimeImmutable('-2 days'));
         $em->persist($expiredToken);
 
-        $validToken = new RefreshToken(
-            $user,
-            'still-valid',
-            new \DateTimeImmutable('+15 days'),
-        );
+        $validToken = $this->refreshToken($user, 'still-valid', new \DateTimeImmutable('+15 days'));
         $em->persist($validToken);
         $em->flush();
 
@@ -124,7 +114,10 @@ final class PurgeExpiredTokensCommandTest extends ApiTestCase
         $repo = self::getContainer()->get(RefreshTokenRepository::class);
         $remaining = $repo->findAll();
         $this->assertCount(1, $remaining);
-        $this->assertSame('still-valid', $remaining[0]->getToken());
+        $this->assertSame(
+            RefreshTokenEncryptor::digest('still-valid'),
+            $remaining[0]->getTokenDigest(),
+        );
     }
 
     #[Test]
@@ -148,18 +141,10 @@ final class PurgeExpiredTokensCommandTest extends ApiTestCase
         $user2 = new User('user2@example.com');
         $em->persist($user2);
 
-        $expired1 = new RefreshToken(
-            $user1,
-            'expired-user1',
-            new \DateTimeImmutable('-3 days'),
-        );
+        $expired1 = $this->refreshToken($user1, 'expired-user1', new \DateTimeImmutable('-3 days'));
         $em->persist($expired1);
 
-        $expired2 = new RefreshToken(
-            $user2,
-            'expired-user2',
-            new \DateTimeImmutable('-1 day'),
-        );
+        $expired2 = $this->refreshToken($user2, 'expired-user2', new \DateTimeImmutable('-1 day'));
         $em->persist($expired2);
         $em->flush();
 

@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\RefreshToken;
 use App\Entity\User;
+use App\Security\RefreshTokenEncryptor;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -16,33 +17,48 @@ final class RefreshTokenRepository extends ServiceEntityRepository
 {
     private const int TTL_DAYS = 30;
 
-    public function __construct(ManagerRegistry $registry)
-    {
+    public function __construct(
+        ManagerRegistry $registry,
+        private readonly RefreshTokenEncryptor $encryptor,
+    ) {
         parent::__construct($registry, RefreshToken::class);
     }
 
     /**
-     * Creates a new refresh token for the given user.
+     * Creates a new refresh token for the given user. The token is stored
+     * encrypted at rest and looked up by its digest; the plaintext is kept on
+     * the returned entity ({@see RefreshToken::getPlainToken()}) for immediate
+     * re-serving to the client.
      *
      * Persists the entity but does NOT flush — the caller is responsible for flushing.
      */
     public function createForUser(User $user): RefreshToken
     {
-        $token = bin2hex(random_bytes(64));
+        $plain = bin2hex(random_bytes(64));
         $expiresAt = new \DateTimeImmutable(\sprintf('+%d days', self::TTL_DAYS));
 
-        $refreshToken = new RefreshToken($user, $token, $expiresAt);
+        $refreshToken = RefreshToken::issue($user, $this->encryptor, $plain, $expiresAt);
         $this->getEntityManager()->persist($refreshToken);
 
         return $refreshToken;
     }
 
     /**
-     * Finds a valid (non-expired) refresh token by its token string.
+     * Finds a valid (non-expired) refresh token by its plaintext token string,
+     * matching on the stored digest.
      */
-    public function findValidByToken(string $token): ?RefreshToken
+    public function findValidByToken(#[\SensitiveParameter] string $token): ?RefreshToken
     {
-        $refreshToken = $this->findOneBy(['token' => $token]);
+        return $this->findValidByDigest(RefreshTokenEncryptor::digest($token));
+    }
+
+    /**
+     * Finds a valid (non-expired) refresh token by its digest (used to follow a
+     * rotation chain, where the predecessor stores its successor's digest).
+     */
+    public function findValidByDigest(string $digest): ?RefreshToken
+    {
+        $refreshToken = $this->findOneBy(['tokenDigest' => $digest]);
 
         if (null === $refreshToken || !$refreshToken->isValid()) {
             return null;
