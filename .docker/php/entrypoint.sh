@@ -21,6 +21,17 @@ case "${MERCURE_JWT_SECRET:-}" in
 		;;
 esac
 
+# Fail closed (SEC-003): AI_TOKEN_ENC_KEY encrypts AI provider tokens AND refresh
+# tokens at rest. Unset, it falls back to the committed dev default in services.php,
+# so both bearer credentials would be "encrypted" under a key anyone with the source
+# can read. Refuse to boot on the missing/default key. CI and iso-prod set a real one.
+case "${AI_TOKEN_ENC_KEY:-}" in
+	'' | 'dev-only-ai-token-encryption-key-change-in-prod')
+		echo 'FATAL: AI_TOKEN_ENC_KEY is unset or still the dev default; refusing to boot (SEC-003). Set a strong AI_TOKEN_ENC_KEY.' >&2
+		exit 1
+		;;
+esac
+
 if [ "${MIGRATIONS_ON_BOOT:-false}" = "true" ]; then
 	# Wait for the database to accept connections before migrating. The compose
 	# healthcheck (pg_isready) can briefly report ready during Postgres' init

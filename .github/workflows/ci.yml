@@ -559,6 +559,9 @@ jobs:
       # Non-default so the SEC-004 fail-closed boot guard passes (the prod image
       # refuses to boot on the public Mercure skeleton default).
       MERCURE_JWT_KEY: "ci-test-mercure-key"
+      # Non-default so the SEC-003 fail-closed boot guard passes (the prod image
+      # refuses to boot on the committed dev token-encryption key).
+      AI_TOKEN_ENC_KEY: "ci-test-ai-enc-key"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -628,6 +631,9 @@ jobs:
       # Non-default so the SEC-004 fail-closed boot guard passes (the prod image
       # refuses to boot on the public Mercure skeleton default).
       MERCURE_JWT_KEY: "ci-test-mercure-key"
+      # Non-default so the SEC-003 fail-closed boot guard passes (the prod image
+      # refuses to boot on the committed dev token-encryption key).
+      AI_TOKEN_ENC_KEY: "ci-test-ai-enc-key"
     steps:
       - name: Checkout
         uses: actions/checkout@v7

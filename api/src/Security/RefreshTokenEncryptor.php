@@ -19,9 +19,11 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  *
  * Uses libsodium's authenticated `crypto_secretbox` (XSalsa20-Poly1305) with a
  * fresh random nonce per value (prepended to the ciphertext). Reuses the app's
- * token-encryption key (`AI_TOKEN_ENC_KEY`, already mandatory and fail-closed
- * at boot) rather than introducing a new mandatory prod secret; rotating that
- * key invalidates both AI tokens and refresh sessions (users simply re-login).
+ * token-encryption key (`AI_TOKEN_ENC_KEY`) rather than introducing a new
+ * mandatory prod secret; the prod entrypoint now refuses to boot when it is unset
+ * or still the committed dev default (SEC-003 fail-closed guard), so the key can
+ * never silently fall back to a public value. Rotating it invalidates both AI
+ * tokens and refresh sessions (users simply re-login).
  * Kept separate from AiTokenEncryptor so the auth subsystem does not depend on
  * the AI module.
  */

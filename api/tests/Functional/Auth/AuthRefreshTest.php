@@ -87,6 +87,44 @@ final class AuthRefreshTest extends ApiTestCase
     }
 
     #[Test]
+    public function refreshFailsClosedWhenSuccessorCiphertextIsUndecryptable(): void
+    {
+        // Grace-window path (SEC-003): the successor loaded from the DB must be
+        // decrypted to be re-served. If it was encrypted under a since-rotated key,
+        // decrypt() returns null and the request must fail closed (401), never 500
+        // or a garbage token.
+        $em = $this->getEntityManager();
+        $user = new User('rotated-key@example.com');
+        $em->persist($user);
+
+        $grace = new \DateTimeImmutable('+20 seconds');
+        // Successor ciphertext under a different key → undecryptable by the app key.
+        $successor = RefreshToken::issue(
+            $user,
+            new RefreshTokenEncryptor('a-since-rotated-key'),
+            'successor-plain',
+            $grace,
+        );
+        $em->persist($successor);
+
+        // Predecessor still in its grace window, pointing at the successor's digest.
+        $predecessor = RefreshToken::issue(
+            $user,
+            self::getContainer()->get(RefreshTokenEncryptor::class),
+            'predecessor-plain',
+            $grace,
+        );
+        $predecessor->replaceWith(RefreshTokenEncryptor::digest('successor-plain'), $grace);
+        $em->persist($predecessor);
+        $em->flush();
+        $em->clear();
+
+        $this->sendRefreshRequest('predecessor-plain');
+
+        $this->assertResponseStatusCodeSame(401);
+    }
+
+    #[Test]
     public function refreshWithValidTokenReturnsNewJwt(): void
     {
         $this->createUserWithRefreshToken('alice@example.com', 'alice-refresh-token');
