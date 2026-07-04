@@ -19,6 +19,11 @@
 > (`make lighthouse`). Restent 35.4 : couverture (COV-*/QUAL-001/002), DT-LIVE, F5, CHAOS-RESTART,
 > promotion CSP enforce, re-mesure Lighthouse.
 
+> **Audit distinct 2026-07-03.** Un nouvel audit multi-domaines a été mené après la recette #649
+> (numérotation `SEC-*`/`BUG-*`/… **propre**, sans rapport avec les IDs ci-dessous). Sa traçabilité
+> finding → PR est suivie dans [audit-2026-07.md](audit-2026-07.md) ; le rapport complet est conservé
+> hors dépôt.
+
 **Date :** 2026-06-03 (mis à jour 2026-06-04 : correctifs #616/#618 ; 2026-06-07 : batch pré-recette)
 
 **Périmètre :** features livrées sur `main` (sprints 1-33, design S25-27, IA S28-32, S34/34.5),
