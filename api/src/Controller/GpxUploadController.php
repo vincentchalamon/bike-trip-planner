@@ -6,7 +6,7 @@ namespace App\Controller;
 
 use App\ApiResource\TripRequest;
 use App\Entity\User;
-use App\Service\GpxUploadService;
+use App\Service\GpxUploadServiceInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -28,7 +28,7 @@ final readonly class GpxUploadController
     private const int MAX_FILE_SIZE = 30 * 1024 * 1024; // 30 MB
 
     public function __construct(
-        private GpxUploadService $gpxUploadService,
+        private GpxUploadServiceInterface $gpxUploadService,
         private Security $security,
         #[Autowire(service: 'limiter.gpx_upload')]
         private RateLimiterFactory $gpxUploadLimiter,
