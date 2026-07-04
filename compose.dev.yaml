@@ -103,6 +103,10 @@ services:
       # and its code keeps being exercised while it is masked in prod/recette.
       # `next dev` reads NEXT_PUBLIC_* from the runtime env (no rebuild needed).
       NEXT_PUBLIC_ENABLE_AI: "true"
+      # Test-only SSE injection hook (SEC-012): on in dev so the mocked E2E suite
+      # (`make test-e2e`) can inject Mercure events. `next dev` reads NEXT_PUBLIC_*
+      # from the runtime env (no rebuild needed).
+      NEXT_PUBLIC_ENABLE_TEST_HOOKS: "true"
       # Client API base. Default empty → the browser calls the API on the SAME
       # origin it loaded from (relative URLs), so the app works unchanged whether
       # served on https://localhost or through a tunnel (ngrok) for mobile

@@ -47,6 +47,10 @@ ARG NEXT_PUBLIC_SENTRY_DSN
 # AI must stay visible (CI E2E in ci.yml, dev in compose.dev.yaml). The code and
 # endpoints are kept for a later re-enable; this is a single reversible switch.
 ARG NEXT_PUBLIC_ENABLE_AI=false
+# Test-only SSE injection hook (SEC-012): default-off so the real prod bundle
+# tree-shakes it out. Set to "true" only where the mocked E2E suite runs (CI in
+# ci.yml, dev in compose.dev.yaml) — the mocked tests run against this prod image.
+ARG NEXT_PUBLIC_ENABLE_TEST_HOOKS=false
 # Client-facing origins, inlined at build time. Empty API URL → the browser calls
 # the API on the SAME origin it was served from (relative URLs), so the build
 # works unchanged on https://localhost, in prod (PWA + API share the origin), and
@@ -67,6 +71,7 @@ RUN --mount=type=secret,id=sentry_auth_token \
     NEXT_PUBLIC_APP_ENV="${NEXT_PUBLIC_APP_ENV}" \
     NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
     NEXT_PUBLIC_ENABLE_AI="${NEXT_PUBLIC_ENABLE_AI}" \
+    NEXT_PUBLIC_ENABLE_TEST_HOOKS="${NEXT_PUBLIC_ENABLE_TEST_HOOKS}" \
     NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
     NEXT_PUBLIC_MERCURE_URL="${NEXT_PUBLIC_MERCURE_URL}" \
     npm run build

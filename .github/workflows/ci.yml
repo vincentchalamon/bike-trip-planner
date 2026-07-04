@@ -586,6 +586,7 @@ jobs:
             pwa.cache-from=type=gha,scope=pwa-main
             pwa.cache-to=type=gha,scope=pwa,mode=max
             pwa.args.NEXT_PUBLIC_ENABLE_AI=true
+            pwa.args.NEXT_PUBLIC_ENABLE_TEST_HOOKS=true
       - name: Start services
         run: docker compose up -d database php pwa worker redis --no-build --wait
       - name: Dump PHP logs on failure
