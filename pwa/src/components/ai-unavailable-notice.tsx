@@ -33,6 +33,7 @@ export function AiUnavailableNotice({
   if (variant === "notConfigured") {
     return (
       <div
+        role="alert"
         data-testid="ai-not-configured-notice"
         className={cn(
           "flex flex-col gap-2 rounded-md border border-brand/30 bg-brand/5 px-3 py-2 text-sm text-foreground",
