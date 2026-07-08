@@ -52,10 +52,12 @@ export async function expandLinkCard(page: Page): Promise<void> {
 }
 
 /**
- * Expand the GPX card on the welcome screen so the drop zone and
- * file input become visible. No-op if already expanded or absent.
- * If the Link card is currently expanded (mutually exclusive), collapse
- * it first via the back button so the GPX card re-appears.
+ * Ensure the GPX card (with its inline drop zone + file input) is visible on
+ * the welcome screen. Since #834 the drop zone is rendered directly in the
+ * card with no "select the card" step, so this only has to bring the default
+ * three-choice grid back: if the Link/AI card is currently expanded (which
+ * collapses the grid and hides the GPX card), press the back button first.
+ * No-op if the card is already visible or absent (e.g. after a trip loads).
  */
 export async function expandGpxCard(page: Page): Promise<void> {
   const gpxCard = page.getByTestId("card-gpx");
@@ -65,9 +67,7 @@ export async function expandGpxCard(page: Page): Promise<void> {
       await back.click();
     }
   }
-  if (!(await gpxCard.isVisible().catch(() => false))) return;
-  const expanded = await gpxCard.getAttribute("data-expanded");
-  if (expanded !== "true") await gpxCard.click();
+  await gpxCard.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
 }
 
 interface MockedFixtures {
