@@ -133,16 +133,16 @@ export function AccommodationPanel({
                 ) : (
                   <>
                     <Button
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0 text-xs text-primary justify-start"
+                      variant="outline"
+                      size="xs"
+                      className="self-start"
                       onClick={async () => {
                         setExpandingFromRadius(searchRadiusKm);
                         const ok = await onExpandRadius(searchRadiusKm);
                         if (!ok) setExpandingFromRadius(null);
                       }}
                     >
-                      <ChevronRight className="h-3 w-3 mr-1" />
+                      <ChevronRight className="h-3 w-3" />
                       {t("expandRadius", { radius: nextRadiusKm })}
                     </Button>
                     <p className="text-xs text-muted-foreground">
@@ -214,16 +214,15 @@ export function AccommodationPanel({
         !isExpanding && (
           <div className="mt-2">
             <Button
-              variant="link"
-              size="sm"
-              className="h-auto p-0 text-xs text-primary"
+              variant="outline"
+              size="xs"
               onClick={async () => {
                 setExpandingFromRadius(searchRadiusKm);
                 const ok = await onExpandRadius(searchRadiusKm);
                 if (!ok) setExpandingFromRadius(null);
               }}
             >
-              <ChevronRight className="h-3 w-3 mr-1" />
+              <ChevronRight className="h-3 w-3" />
               {t("expandRadius", { radius: nextRadiusKm })}
             </Button>
           </div>
