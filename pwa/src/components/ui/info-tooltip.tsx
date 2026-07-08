@@ -9,11 +9,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-interface InfoTooltipProps {
-  /** Tooltip body — shown on hover/focus. */
-  content: ReactNode;
-  /** Accessible label for the trigger (falls back to a plain-text `content`). */
-  label?: string;
+interface InfoTooltipBaseProps {
   /** Side the tooltip opens on. */
   side?: "top" | "right" | "bottom" | "left";
   /** Icon size in `rem` via Tailwind size classes. */
@@ -23,6 +19,18 @@ interface InfoTooltipProps {
   className?: string;
   testId?: string;
 }
+
+/**
+ * `label` (the trigger's accessible name) is optional when `content` is a plain
+ * string — it falls back to that string. When `content` is a rich `ReactNode`,
+ * `label` is required, so the icon-only trigger can never end up without an
+ * accessible name.
+ */
+type InfoTooltipProps = InfoTooltipBaseProps &
+  (
+    | { content: string; label?: string }
+    | { content: Exclude<ReactNode, string>; label: string }
+  );
 
 /**
  * Factored "ⓘ info + tooltip" affordance: a `cursor-help` Info icon wrapped in a
