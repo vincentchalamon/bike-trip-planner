@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { DEFAULT_LOCALE } from "@/i18n/locale";
@@ -27,6 +27,13 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
 });
 
+// Next 16 requires `themeColor` in the `viewport` export (not in metadata).
+// Matches the manifest `theme_color` / `--brand` token, tinting the browser
+// UI and the standalone status bar once installed.
+export const viewport: Viewport = {
+  themeColor: "#a8561a",
+};
+
 export async function generateMetadata(): Promise<Metadata> {
   let title = "Bike Trip Planner";
   let description = "Plan your bikepacking trips";
@@ -47,6 +54,18 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(SITE_URL),
     title,
     description,
+    // PWA installability (issue #839). `manifest.ts` is served at
+    // /manifest.webmanifest by Next's file convention.
+    manifest: "/manifest.webmanifest",
+    icons: {
+      icon: "/icon-192x192.png",
+      apple: "/apple-touch-icon.png",
+    },
+    appleWebApp: {
+      capable: true,
+      title,
+      statusBarStyle: "default",
+    },
     openGraph: {
       title,
       description,
