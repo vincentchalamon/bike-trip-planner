@@ -481,4 +481,17 @@ describe("date window stays in sync with stage count (recette #649)", () => {
     store.insertRestDay(0);
     expect(useTripStore.getState().endDate).toBeNull();
   });
+
+  it("extends endDate when a last-stage edit appends a trailing day (#840)", () => {
+    const store = useTripStore.getState();
+    store.setStages([makeStage(1), makeStage(2)]);
+    store.updateDatesInternal("2026-07-10", "2026-07-11"); // 2 stages → 2 days
+    // A last-stage distance edit splits off a new day whose stage_updated
+    // lands at the next contiguous index.
+    const newDay = makeStage(3, 20);
+    newDay.endPoint = { lat: 3, lon: 3, ele: 0 };
+    store.applyStageUpdate(2, newDay);
+    // 3 stages → 3 days: 10–12 July.
+    expect(useTripStore.getState().endDate).toBe("2026-07-12");
+  });
 });

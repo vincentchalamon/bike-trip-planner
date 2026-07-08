@@ -787,6 +787,16 @@ export const useTripStore = create<TripState>()(
           // only be a stale/obsolete event, so ignore it.
           if (stageIndex === state.stages.length) {
             state.stages.push(stage);
+            // Keep the trip's day window in sync with the new stage count,
+            // mirroring insertRestDay/insertStagePlaceholder/deleteStage
+            // (recette #649). Otherwise a last-stage edit that splits off a
+            // day leaves endDate one day short for downstream readers
+            // (trip-summary, infographic export, date-range-picker, shared page).
+            if (state.startDate) {
+              state.endDate = dayjs(state.startDate)
+                .add(state.stages.length - 1, "day")
+                .format("YYYY-MM-DD");
+            }
           }
           return;
         }
