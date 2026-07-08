@@ -455,6 +455,19 @@ export function TripPlanner() {
              per-block spinners (ADR-043). === */}
         {isTripLoaded && (
           <>
+            {/* "Configure une IA" banner (feedback #830) — pinned just under
+                the site header, at the top of the trip content zone, so the
+                actionable CTA is the first thing the user sees rather than
+                buried above the AI overview. */}
+            {isAiFeatureEnabled() && !aiConfigured && (
+              <div className="mb-6">
+                <AiUnavailableNotice
+                  variant="notConfigured"
+                  context="analysis"
+                />
+              </div>
+            )}
+
             {/* Inline recomputation progress bar — thin bar at top of page */}
             <InlineRecomputationBar />
 
@@ -532,13 +545,8 @@ export function TripPlanner() {
                   user a high-level view before they dive into per-stage data. */}
               {isAiFeatureEnabled() && (
                 <>
-                  {!aiConfigured ? (
-                    <AiUnavailableNotice
-                      variant="notConfigured"
-                      context="analysis"
-                    />
-                  ) : (
-                    !aiAvailable && <AiUnavailableNotice context="analysis" />
+                  {aiConfigured && !aiAvailable && (
+                    <AiUnavailableNotice context="analysis" />
                   )}
                   <TripAiOverview
                     onRegenerate={() => void relaunchFullAnalysis()}
