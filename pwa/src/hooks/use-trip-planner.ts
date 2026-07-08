@@ -180,11 +180,13 @@ export function useTripPlanner() {
 
   // Clear the recompute safety-net timer on unmount so it can't fire against a
   // torn-down view (#840).
+  // Clear any pending safety-net timer on unmount and whenever the active trip
+  // changes, so a timer armed for one trip can never fire against another.
   useEffect(
     () => () => {
       if (recomputeTimerRef.current) clearTimeout(recomputeTimerRef.current);
     },
-    [],
+    [tripId],
   );
 
   async function handleMagicLink(sourceUrl: string) {
@@ -511,17 +513,27 @@ export function useTripPlanner() {
    * Arm a last-resort timer that lifts the `processing` overlay if the current
    * recompute never fully settles (lost/obsolete `stage_updated`, or a day-count
    * change that leaves marked indices without a matching event). The timer
-   * captures the recompute token at arm time and no-ops if a newer edit has
-   * since bumped it — so overlapping edits can't clear each other's overlay (#840).
+   * captures the recompute token (and the trip it belongs to) at arm time and
+   * no-ops if a newer edit has since bumped the token or the user switched
+   * trips — so overlapping edits (or a trip switch) can't clear each other's
+   * overlay (#840).
    */
   function armRecomputeSafetyNet() {
     if (recomputeTimerRef.current) clearTimeout(recomputeTimerRef.current);
     const version = useTripStore.getState().recomputeVersion;
+    const armedTripId = useTripStore.getState().trip?.id ?? null;
     recomputeTimerRef.current = setTimeout(() => {
       recomputeTimerRef.current = null;
       const s = useTripStore.getState();
-      // A newer recompute superseded this one, or everything already settled.
-      if (s.recomputeVersion !== version || s.recomputingStages.size === 0) {
+      // Bail if a newer recompute superseded this one, everything already
+      // settled, or the user switched trips since arming — otherwise a stale
+      // timer from a previous trip could force-clear a different trip's
+      // legitimately in-flight overlay.
+      if (
+        s.recomputeVersion !== version ||
+        s.recomputingStages.size === 0 ||
+        (s.trip?.id ?? null) !== armedTripId
+      ) {
         return;
       }
       s.clearRecomputingStages();
