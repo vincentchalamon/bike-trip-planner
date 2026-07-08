@@ -683,14 +683,26 @@ When("I reload the page", async ({ page }) => {
   await page.reload();
 });
 
+// The compact trigger now shows only the *active* locale (the switcher is a
+// Select, no longer two always-visible pills), so pin the locale to French
+// before loading to keep the "FR" assertion independent of any locale left
+// over by a previous scenario in the same worker.
+async function pinFrenchLocale(page: import("@playwright/test").Page) {
+  await page
+    .context()
+    .addCookies([{ name: "locale", value: "fr", url: "https://localhost" }]);
+}
+
 Given("j'affiche l'application sur un écran étroit", async ({ mockedPage }) => {
   await mockedPage.setViewportSize({ width: 390, height: 844 });
+  await pinFrenchLocale(mockedPage);
   await mockedPage.goto("/");
   await mockedPage.waitForLoadState("networkidle");
 });
 
 Given("I am displaying the app on a narrow screen", async ({ mockedPage }) => {
   await mockedPage.setViewportSize({ width: 390, height: 844 });
+  await pinFrenchLocale(mockedPage);
   await mockedPage.goto("/");
   await mockedPage.waitForLoadState("networkidle");
 });
