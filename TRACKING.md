@@ -1011,6 +1011,29 @@ Sprint dédié à la résilience de la donnée en production. ADR-032 (Migration
 
 ---
 
+## Sprint 43 — Feedbacks Thomas (cohérence UI, flux & bugs)
+
+Batch de feedbacks d'un dev testeur ([#830](https://github.com/vincentchalamon/bike-trip-planner/issues/830)) traité via `/sprint 43` en worktrees parallèles. Identité couleurs / animations homepage laissées hors scope (designer). PRs à merger par l'utilisateur ; deux paires partagent un fichier (conflits possibles selon l'ordre de merge) : #832/#837 (`StageStatsRow.tsx`), #835/#840 (`use-trip-planner.ts`).
+
+| Ordre | ID | Titre | Effort | PR | Statut | Dépend de |
+|-------|----|-------|--------|----|--------|-----------|
+| 1 | [#831](https://github.com/vincentchalamon/bike-trip-planner/issues/831) | Marque header/footer + LocaleSwitcher select | M | [#841](https://github.com/vincentchalamon/bike-trip-planner/pull/841) `feature/831` | 🚧 En cours | — |
+| 2 | [#832](https://github.com/vincentchalamon/bike-trip-planner/issues/832) | InfoTooltip réutilisable + difficulté | S | [#842](https://github.com/vincentchalamon/bike-trip-planner/pull/842) `feature/832` | 🚧 En cours | — |
+| 3 | [#833](https://github.com/vincentchalamon/bike-trip-planner/issues/833) | Boutons vs liens (Élargir le rayon) | S | [#843](https://github.com/vincentchalamon/bike-trip-planner/pull/843) `feature/833` | 🚧 En cours | — |
+| 4 | [#834](https://github.com/vincentchalamon/bike-trip-planner/issues/834) | Upload GPX direct depuis l'écran des 3 choix | M | [#844](https://github.com/vincentchalamon/bike-trip-planner/pull/844) `feature/834` | 🚧 En cours | — |
+| 5 | [#835](https://github.com/vincentchalamon/bike-trip-planner/issues/835) | Toast « voyage enregistré » après import | S | [#845](https://github.com/vincentchalamon/bike-trip-planner/pull/845) `feature/835` | 🚧 En cours | — |
+| 6 | [#836](https://github.com/vincentchalamon/bike-trip-planner/issues/836) | Alerte « Configure une IA » sous le header | S | [#846](https://github.com/vincentchalamon/bike-trip-planner/pull/846) `feature/836` | 🚧 En cours | — |
+| 7 | [#837](https://github.com/vincentchalamon/bike-trip-planner/issues/837) | Affordance du découpage par distance | M | [#847](https://github.com/vincentchalamon/bike-trip-planner/pull/847) `feature/837` | 🚧 En cours (check claude-review rouge = infra) | — |
+| 8 | [#838](https://github.com/vincentchalamon/bike-trip-planner/issues/838) | Polish structurel sidebar paramètres | M | [#848](https://github.com/vincentchalamon/bike-trip-planner/pull/848) `feature/838` | 🚧 En cours (baselines VR à régénérer) | — |
+| 9 | [#839](https://github.com/vincentchalamon/bike-trip-planner/issues/839) | Installabilité PWA minimale (bug macOS) | M | [#849](https://github.com/vincentchalamon/bike-trip-planner/pull/849) `feature/839` | 🚧 En cours | — |
+| 10 | [#840](https://github.com/vincentchalamon/bike-trip-planner/issues/840) | Races au recompute de distance | L | [#850](https://github.com/vincentchalamon/bike-trip-planner/pull/850) `feature/840` | 🚧 En cours | — |
+
+### Hors scope (confié à un designer)
+
+Identité visuelle / palette « trop IA / lourde », identité forte, animations de la homepage, restyling esthétique de la sidebar (#838 = structure uniquement).
+
+---
+
 ## Hors Sprints
 
 | ID  | Titre                            | Note                     |
@@ -1072,4 +1095,5 @@ Sprint dédié à la résilience de la donnée en production. ADR-032 (Migration
 | 37        | Déploiement (Oracle + Coolify)           | 8       | ~8           |
 | 38        | Performance & Resilience Deep Dive       | 18      | ~12          |
 | 39        | Backup & Disaster Recovery               | 9       | ~9           |
-| **Total** |                                          | **231** | **~237**     |
+| 43        | Feedbacks Thomas (cohérence UI & bugs)   | 10      | 10           |
+| **Total** |                                          | **241** | **~247**     |
