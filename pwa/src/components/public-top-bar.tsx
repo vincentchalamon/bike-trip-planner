@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Bike } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Brand } from "@/components/brand";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -31,18 +31,19 @@ export function PublicTopBar({ transparent = false }: { transparent?: boolean })
       <div className="max-w-[1200px] mx-auto flex items-center gap-1 sm:gap-2 px-3 sm:px-4 md:px-6 h-16">
         <Link
           href="/"
-          className="flex items-center gap-2 font-bold text-base text-brand hover:opacity-80 transition-opacity shrink-0"
+          className="flex items-center hover:opacity-80 transition-opacity shrink-0"
           aria-label={t("brandHome")}
           data-testid="public-top-bar-brand"
         >
-          <Bike className="h-5 w-5" aria-hidden="true" />
-          <span className="hidden sm:inline">{t("brand")}</span>
+          <Brand className="text-base" labelClassName="hidden sm:inline" />
         </Link>
 
         <div className="flex-1" />
 
-        <LocaleSwitcher />
-        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <LocaleSwitcher />
+          <ThemeToggle />
+        </div>
 
         <Button
           asChild

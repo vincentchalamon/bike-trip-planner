@@ -39,7 +39,7 @@ test.describe("/faq page", () => {
     await page.waitForLoadState("networkidle");
 
     // All accordion buttons should have aria-expanded="false" initially
-    const buttons = page.locator("button[aria-expanded]");
+    const buttons = page.getByTestId("faq-accordion-trigger");
     const count = await buttons.count();
     expect(count).toBeGreaterThan(0);
 
@@ -54,7 +54,7 @@ test.describe("/faq page", () => {
     await page.goto("/faq");
     await page.waitForLoadState("networkidle");
 
-    const firstButton = page.locator("button[aria-expanded]").first();
+    const firstButton = page.getByTestId("faq-accordion-trigger").first();
     await expect(firstButton).toHaveAttribute("aria-expanded", "false");
 
     await firstButton.click();
@@ -65,7 +65,7 @@ test.describe("/faq page", () => {
     await page.goto("/faq");
     await page.waitForLoadState("networkidle");
 
-    const firstButton = page.locator("button[aria-expanded]").first();
+    const firstButton = page.getByTestId("faq-accordion-trigger").first();
 
     // Open
     await firstButton.click();
@@ -82,7 +82,7 @@ test.describe("/faq page", () => {
     await page.goto("/faq");
     await page.waitForLoadState("networkidle");
 
-    const buttons = page.locator("button[aria-expanded]");
+    const buttons = page.getByTestId("faq-accordion-trigger");
     const firstButton = buttons.nth(0);
     const secondButton = buttons.nth(1);
 

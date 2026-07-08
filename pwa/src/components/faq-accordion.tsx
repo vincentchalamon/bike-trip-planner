@@ -33,6 +33,7 @@ function AccordionItem({
     <div className="border-b border-border last:border-0">
       <button
         type="button"
+        data-testid="faq-accordion-trigger"
         className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-medium transition-colors hover:text-foreground/80"
         aria-expanded={isOpen}
         aria-controls={panelId}

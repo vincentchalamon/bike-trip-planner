@@ -1,14 +1,14 @@
 import { expect } from "@playwright/test";
 import { Given, When, Then } from "../support/fixtures";
 
+// Since #831 the locale switcher is a compact <Select>: open the trigger, then
+// pick the fr/en option (options only render while the select is open).
 async function clickLocaleSwitch(
   page: import("@playwright/test").Page,
   localeCode: "fr" | "en",
 ): Promise<void> {
-  const switchButton = page.getByTestId(`locale-switch-${localeCode}`);
-  await switchButton.evaluate((element) => {
-    (element as HTMLButtonElement).click();
-  });
+  await page.getByTestId("locale-switch").click();
+  await page.getByTestId(`locale-switch-${localeCode}`).click();
 }
 
 // The theme toggle (#384) is a permanent control in the top bar that flips
@@ -61,9 +61,9 @@ Given(
 Given("l'interface est en anglais", async ({ mockedPage }) => {
   // The locale switcher lives permanently in the top bar (#384).
   await clickLocaleSwitch(mockedPage, "en");
-  await expect(mockedPage.getByTestId("locale-switch-en")).toHaveAttribute(
-    "aria-pressed",
-    "true",
+  await expect(mockedPage.getByTestId("locale-switch")).toHaveAttribute(
+    "data-locale",
+    "en",
     { timeout: 5000 },
   );
 });
@@ -118,9 +118,9 @@ Given(
 Given("the interface is in English", async ({ mockedPage }) => {
   // The locale switcher lives permanently in the top bar (#384).
   await clickLocaleSwitch(mockedPage, "en");
-  await expect(mockedPage.getByTestId("locale-switch-en")).toHaveAttribute(
-    "aria-pressed",
-    "true",
+  await expect(mockedPage.getByTestId("locale-switch")).toHaveAttribute(
+    "data-locale",
+    "en",
     { timeout: 5000 },
   );
 });
@@ -300,17 +300,17 @@ Then("la modification est rétablie", async ({ mockedPage }) => {
 });
 
 Then("l'interface s'affiche en anglais", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("locale-switch-en")).toHaveAttribute(
-    "aria-pressed",
-    "true",
+  await expect(mockedPage.getByTestId("locale-switch")).toHaveAttribute(
+    "data-locale",
+    "en",
     { timeout: 5000 },
   );
 });
 
 Then("l'interface s'affiche en français", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("locale-switch-fr")).toHaveAttribute(
-    "aria-pressed",
-    "true",
+  await expect(mockedPage.getByTestId("locale-switch")).toHaveAttribute(
+    "data-locale",
+    "fr",
     { timeout: 5000 },
   );
 });
@@ -384,17 +384,17 @@ Then("the modification is redone", async ({ mockedPage }) => {
 });
 
 Then("the interface is displayed in English", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("locale-switch-en")).toHaveAttribute(
-    "aria-pressed",
-    "true",
+  await expect(mockedPage.getByTestId("locale-switch")).toHaveAttribute(
+    "data-locale",
+    "en",
     { timeout: 5000 },
   );
 });
 
 Then("the interface is displayed in French", async ({ mockedPage }) => {
-  await expect(mockedPage.getByTestId("locale-switch-fr")).toHaveAttribute(
-    "aria-pressed",
-    "true",
+  await expect(mockedPage.getByTestId("locale-switch")).toHaveAttribute(
+    "data-locale",
+    "fr",
     { timeout: 5000 },
   );
 });
@@ -661,7 +661,7 @@ Then(
   "le label compact de langue {string} est visible",
   async ({ mockedPage }, label: string) => {
     await expect(
-      mockedPage.getByTestId("locale-switch-fr").getByText(label, {
+      mockedPage.getByTestId("locale-switch").getByText(label, {
         exact: true,
       }),
     ).toBeVisible({ timeout: 5000 });
@@ -672,7 +672,7 @@ Then(
   "the compact language label {string} is visible",
   async ({ mockedPage }, label: string) => {
     await expect(
-      mockedPage.getByTestId("locale-switch-fr").getByText(label, {
+      mockedPage.getByTestId("locale-switch").getByText(label, {
         exact: true,
       }),
     ).toBeVisible({ timeout: 5000 });
@@ -683,14 +683,26 @@ When("I reload the page", async ({ page }) => {
   await page.reload();
 });
 
+// The compact trigger now shows only the *active* locale (the switcher is a
+// Select, no longer two always-visible pills), so pin the locale to French
+// before loading to keep the "FR" assertion independent of any locale left
+// over by a previous scenario in the same worker.
+async function pinFrenchLocale(page: import("@playwright/test").Page) {
+  await page
+    .context()
+    .addCookies([{ name: "locale", value: "fr", url: "https://localhost" }]);
+}
+
 Given("j'affiche l'application sur un écran étroit", async ({ mockedPage }) => {
   await mockedPage.setViewportSize({ width: 390, height: 844 });
+  await pinFrenchLocale(mockedPage);
   await mockedPage.goto("/");
   await mockedPage.waitForLoadState("networkidle");
 });
 
 Given("I am displaying the app on a narrow screen", async ({ mockedPage }) => {
   await mockedPage.setViewportSize({ width: 390, height: 844 });
+  await pinFrenchLocale(mockedPage);
   await mockedPage.goto("/");
   await mockedPage.waitForLoadState("networkidle");
 });
