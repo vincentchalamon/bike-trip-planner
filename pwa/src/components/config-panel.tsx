@@ -54,6 +54,27 @@ interface ConfigPanelProps {
   onDelete?: () => Promise<boolean> | void;
 }
 
+function SectionHeader({
+  id,
+  title,
+  description,
+}: {
+  id: string;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div className="mb-3 space-y-0.5">
+      <h3 id={id} className="text-sm font-semibold text-foreground">
+        {title}
+      </h3>
+      {description ? (
+        <p className="text-xs text-muted-foreground">{description}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function ConfigPanel({
   startDate,
   endDate,
@@ -218,12 +239,14 @@ export function ConfigPanel({
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-6">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-5">
           {/* Dates */}
           <section ref={datesSectionRef} aria-labelledby="config-dates-heading">
-            <h3 id="config-dates-heading" className="text-sm font-medium mb-3">
-              {t("datesTitle")}
-            </h3>
+            <SectionHeader
+              id="config-dates-heading"
+              title={t("datesTitle")}
+              description={t("datesDescription")}
+            />
             <DateRangePicker
               startDate={startDate}
               endDate={endDate}
@@ -239,9 +262,11 @@ export function ConfigPanel({
             ref={pacingSectionRef}
             aria-labelledby="config-pacing-heading"
           >
-            <h3 id="config-pacing-heading" className="text-sm font-medium mb-3">
-              {t("pacingTitle")}
-            </h3>
+            <SectionHeader
+              id="config-pacing-heading"
+              title={t("pacingTitle")}
+              description={t("pacingDescription")}
+            />
             <fieldset
               disabled={readOnly}
               className={cn("border-0 p-0 m-0", readOnly && "opacity-60")}
@@ -265,23 +290,38 @@ export function ConfigPanel({
 
           {/* Accommodation type filters */}
           <section aria-labelledby="config-accommodation-heading">
-            <h3
+            <SectionHeader
               id="config-accommodation-heading"
-              className="text-sm font-medium mb-3"
-            >
-              {t("accommodationTitle")}
-            </h3>
+              title={t("accommodationTitle")}
+              description={t("accommodationDescription")}
+            />
             <fieldset
               disabled={readOnly}
               className={cn("border-0 p-0 m-0", readOnly && "opacity-60")}
             >
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col">
                 {FILTERABLE_ACCOMMODATION_TYPES.map((type) => {
                   const isEnabled = enabledAccommodationTypes.includes(type);
                   const isLastEnabled =
                     isEnabled && enabledAccommodationTypes.length <= 1;
+                  const label = tAccommodation(
+                    `type_${type}` as Parameters<typeof tAccommodation>[0],
+                  );
                   return (
-                    <div key={type} className="flex items-center gap-2">
+                    <div
+                      key={type}
+                      className="flex items-center justify-between gap-3 py-1.5"
+                    >
+                      <label
+                        htmlFor={`acc-type-${type}`}
+                        className={cn(
+                          "text-sm cursor-pointer flex-1 min-w-0 truncate",
+                          (isLastEnabled || readOnly) &&
+                            "opacity-50 cursor-not-allowed",
+                        )}
+                      >
+                        {label}
+                      </label>
                       <Switch
                         id={`acc-type-${type}`}
                         size="sm"
@@ -290,26 +330,8 @@ export function ConfigPanel({
                           handleAccommodationTypeToggle(type)
                         }
                         disabled={isLastEnabled || readOnly}
-                        aria-label={tAccommodation(
-                          `type_${type}` as Parameters<
-                            typeof tAccommodation
-                          >[0],
-                        )}
+                        aria-label={label}
                       />
-                      <label
-                        htmlFor={`acc-type-${type}`}
-                        className={cn(
-                          "text-sm cursor-pointer",
-                          (isLastEnabled || readOnly) &&
-                            "opacity-50 cursor-not-allowed",
-                        )}
-                      >
-                        {tAccommodation(
-                          `type_${type}` as Parameters<
-                            typeof tAccommodation
-                          >[0],
-                        )}
-                      </label>
                     </div>
                   );
                 })}
@@ -321,12 +343,11 @@ export function ConfigPanel({
 
           {/* Trip actions */}
           <section aria-labelledby="config-trip-actions-heading">
-            <h3
+            <SectionHeader
               id="config-trip-actions-heading"
-              className="text-sm font-medium mb-3"
-            >
-              {t("tripActionsTitle")}
-            </h3>
+              title={t("tripActionsTitle")}
+              description={t("tripActionsDescription")}
+            />
             <div className="flex flex-col gap-2">
               <Button
                 variant="outline"
