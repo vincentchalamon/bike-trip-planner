@@ -73,6 +73,15 @@ interface TripState {
    */
   recomputingStages: Set<number>;
   /**
+   * Monotonic counter bumped every time a recomputation is started
+   * ({@link startStageRecomputation}). Acts as a concurrency token: the hook
+   * captures the value when it dispatches an edit and a safety-net timer only
+   * lifts the `processing` overlay if the token is still current, so a rapid
+   * follow-up edit (which bumps the token) invalidates the earlier, obsolete
+   * completion path (#840).
+   */
+  recomputeVersion: number;
+  /**
    * Map of stage index → set of changed field names, populated after a
    * `stage_updated` event lands. Each entry expires after ~3 seconds via a
    * client-side timer. Used by `DiffHighlight` to transiently highlight the
@@ -202,7 +211,8 @@ interface TripState {
   applyStageUpdate: (stageIndex: number, stage: StageData) => void;
   /**
    * Mark a set of stage indices as "recomputing" — their cards show a shimmer
-   * skeleton until the corresponding `stage_updated` events arrive.
+   * skeleton until the corresponding `stage_updated` events arrive. Also bumps
+   * {@link recomputeVersion} so overlapping edits can be disambiguated (#840).
    */
   startStageRecomputation: (indices: number[]) => void;
   /**
@@ -273,6 +283,7 @@ const initialState = {
   stages: [],
   computationStatus: {},
   recomputingStages: new Set<number>(),
+  recomputeVersion: 0,
   stageDiffs: new Map<number, Set<string>>(),
   pendingModifications: [] as Modification[],
   selectedStageIndex: 0,
@@ -403,6 +414,13 @@ export const useTripStore = create<TripState>()(
         const max = Math.max(0, stages.length - 1);
         if (state.selectedStageIndex > max) {
           state.selectedStageIndex = max;
+        }
+        // Drop recomputing markers for indices that no longer exist after the
+        // array changed length. Otherwise a phantom index (e.g. a stage that
+        // vanished when the day count shrank) is never cleared by a matching
+        // `stage_updated`, holding the `processing` overlay open forever (#840).
+        for (const i of [...state.recomputingStages]) {
+          if (i >= state.stages.length) state.recomputingStages.delete(i);
         }
       }),
 
@@ -743,7 +761,17 @@ export const useTripStore = create<TripState>()(
     applyStageUpdate: (stageIndex, stage) =>
       set((state) => {
         const prev = state.stages[stageIndex];
-        if (!prev) return;
+        if (!prev) {
+          // Reducing the last stage's distance splits off a brand-new trailing
+          // day on the backend (StageUpdateProcessor::applyDistanceChange),
+          // whose `stage_updated` lands at the next contiguous index. Append it
+          // so the new day is not silently dropped (#840). A larger index can
+          // only be a stale/obsolete event, so ignore it.
+          if (stageIndex === state.stages.length) {
+            state.stages.push(stage);
+          }
+          return;
+        }
 
         const endMatch =
           prev.endPoint.lat === stage.endPoint.lat &&
@@ -796,6 +824,9 @@ export const useTripStore = create<TripState>()(
 
     startStageRecomputation: (indices) =>
       set((state) => {
+        // Bump the concurrency token so a rapid follow-up edit supersedes any
+        // in-flight safety-net timer keyed to the previous value (#840).
+        state.recomputeVersion += 1;
         for (const index of indices) {
           state.recomputingStages.add(index);
         }

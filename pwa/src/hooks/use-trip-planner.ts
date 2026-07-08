@@ -45,6 +45,14 @@ export function importEventForUrl(url: string): PlausibleEvent | null {
   return null;
 }
 
+/**
+ * Last-resort delay after which a recompute that never fully settled (a lost
+ * or obsolete `stage_updated`, e.g. after the day count changed) has its
+ * `processing` overlay force-lifted. Generous enough to outlast a real
+ * recompute + enrichment pass so it only fires on a genuinely stuck run (#840).
+ */
+const RECOMPUTE_OVERLAY_TIMEOUT_MS = 30000;
+
 /** Read current pacing + config state from the store without subscribing. */
 function getPacingState() {
   const s = useTripStore.getState();
@@ -154,6 +162,7 @@ export function useTripPlanner() {
     typeof getUndoableSlice
   > | null>(null);
   const chatAbortRef = useRef<AbortController | null>(null);
+  const recomputeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const tripId = trip?.id ?? null;
   useMercure(tripId, mercureToken);
@@ -168,6 +177,15 @@ export function useTripPlanner() {
     chatAbortRef.current = null;
     useUiStore.getState().clearHistory();
   }, [tripId]);
+
+  // Clear the recompute safety-net timer on unmount so it can't fire against a
+  // torn-down view (#840).
+  useEffect(
+    () => () => {
+      if (recomputeTimerRef.current) clearTimeout(recomputeTimerRef.current);
+    },
+    [],
+  );
 
   async function handleMagicLink(sourceUrl: string) {
     actions.clearTrip();
@@ -489,6 +507,29 @@ export function useTripPlanner() {
     }
   }
 
+  /**
+   * Arm a last-resort timer that lifts the `processing` overlay if the current
+   * recompute never fully settles (lost/obsolete `stage_updated`, or a day-count
+   * change that leaves marked indices without a matching event). The timer
+   * captures the recompute token at arm time and no-ops if a newer edit has
+   * since bumped it — so overlapping edits can't clear each other's overlay (#840).
+   */
+  function armRecomputeSafetyNet() {
+    if (recomputeTimerRef.current) clearTimeout(recomputeTimerRef.current);
+    const version = useTripStore.getState().recomputeVersion;
+    recomputeTimerRef.current = setTimeout(() => {
+      recomputeTimerRef.current = null;
+      const s = useTripStore.getState();
+      // A newer recompute superseded this one, or everything already settled.
+      if (s.recomputeVersion !== version || s.recomputingStages.size === 0) {
+        return;
+      }
+      s.clearRecomputingStages();
+      setProcessing(false);
+      setAccommodationScanning(false);
+    }, RECOMPUTE_OVERLAY_TIMEOUT_MS);
+  }
+
   async function handleDistanceChange(index: number, distance: number) {
     if (!tripId) return;
 
@@ -512,8 +553,18 @@ export function useTripPlanner() {
         useTripTemporalStore.getState()._push(snapshot);
         setProcessing(true);
         setAccommodationScanning(true);
-        // Mark this stage as recomputing so the shimmer skeleton appears.
-        actions.startStageRecomputation([index]);
+        // Mark this stage and every subsequent one as recomputing: the backend
+        // re-splits from `index` onward (StageUpdateProcessor dispatches
+        // RecalculateStages over `range(index, count-1)`), so the shimmer must
+        // cover the same range instead of the single edited card (#840).
+        const stageCount = useTripStore.getState().stages.length;
+        actions.startStageRecomputation(
+          Array.from(
+            { length: Math.max(1, stageCount - index) },
+            (_, k) => index + k,
+          ),
+        );
+        armRecomputeSafetyNet();
       }
     } catch {
       toast.error(t("errors.failedUpdateLocation"));

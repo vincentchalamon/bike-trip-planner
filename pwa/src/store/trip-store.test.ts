@@ -370,6 +370,71 @@ describe("applyStageUpdate preservation (recette #649)", () => {
   });
 });
 
+describe("recompute concurrency guard (#840)", () => {
+  it("bumps recomputeVersion on every startStageRecomputation", () => {
+    const store = useTripStore.getState();
+    store.clearTrip();
+    const before = useTripStore.getState().recomputeVersion;
+    store.startStageRecomputation([0]);
+    store.startStageRecomputation([1]);
+    expect(useTripStore.getState().recomputeVersion).toBe(before + 2);
+  });
+
+  it("appends the new trailing day when its stage_updated lands out of bounds", () => {
+    const store = useTripStore.getState();
+    store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
+
+    // Reducing the last stage's distance split off a brand-new day at index 3;
+    // its stage_updated lands at the next contiguous index.
+    const newDay = makeStage(4, 25);
+    newDay.endPoint = { lat: 1, lon: 1, ele: 0 };
+    store.applyStageUpdate(3, newDay);
+
+    const stages = useTripStore.getState().stages;
+    expect(stages).toHaveLength(4);
+    expect(stages[3]?.distance).toBe(25);
+  });
+
+  it("ignores a far out-of-range stage_updated (stale event)", () => {
+    const store = useTripStore.getState();
+    store.setStages([makeStage(1), makeStage(2)]);
+    store.applyStageUpdate(5, makeStage(6));
+    expect(useTripStore.getState().stages).toHaveLength(2);
+  });
+
+  it("prunes recomputing markers for indices that no longer exist (overlay unstuck)", () => {
+    const store = useTripStore.getState();
+    store.clearTrip();
+    store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
+    store.startStageRecomputation([0, 1, 2]);
+    // Day count shrinks: indices 1 and 2 can never receive a stage_updated.
+    store.setStages([makeStage(1)]);
+    expect([...useTripStore.getState().recomputingStages]).toEqual([0]);
+  });
+
+  it("lifts the overlay on a last-stage edit that adds a day, losing no data", () => {
+    const store = useTripStore.getState();
+    store.clearTrip();
+    store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
+    // Edit last stage: mark the affected range (single last index here).
+    store.startStageRecomputation([2]);
+
+    // Backend re-splits and emits stage_updated for the edited stage and the
+    // freshly created trailing day.
+    store.applyStageUpdate(2, makeStage(3, 40));
+    store.finishStageRecomputation(2);
+    const newDay = makeStage(4, 20);
+    newDay.endPoint = { lat: 2, lon: 2, ele: 0 };
+    store.applyStageUpdate(3, newDay);
+
+    const state = useTripStore.getState();
+    expect(state.stages).toHaveLength(4);
+    expect(state.stages[3]?.distance).toBe(20);
+    // The set is empty, so use-mercure's `size === 0` branch lifts `processing`.
+    expect(state.recomputingStages.size).toBe(0);
+  });
+});
+
 describe("date window stays in sync with stage count (recette #649)", () => {
   it("extends endDate when a rest day is inserted", () => {
     const store = useTripStore.getState();
