@@ -5,6 +5,10 @@ import type { MetadataRoute } from "next";
 // (`--surface` #faf7f0 as background, `--brand` #a8561a as theme). In the
 // mobile `output: export` build this is emitted as a static
 // /manifest.webmanifest file (no dynamic APIs used).
+// `force-static` is required so the route handler is prerendered under
+// `output: export` (Capacitor mobile build) instead of failing the build.
+export const dynamic = "force-static";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Bike Trip Planner",
