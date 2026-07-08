@@ -3,8 +3,9 @@
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Bike, HelpCircle, Plus, Map, User } from "lucide-react";
+import { HelpCircle, Plus, Map, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Brand } from "@/components/brand";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -61,12 +62,11 @@ export function TopBar() {
         {/* 1. Brand */}
         <Link
           href="/"
-          className="flex items-center gap-2 font-bold text-base text-brand hover:opacity-80 transition-opacity shrink-0"
+          className="flex items-center hover:opacity-80 transition-opacity shrink-0"
           aria-label={tNav("brandHome")}
           data-testid="top-bar-brand"
         >
-          <Bike className="h-5 w-5" aria-hidden="true" />
-          <span className="hidden sm:inline">{tNav("brand")}</span>
+          <Brand className="text-base" labelClassName="hidden sm:inline" />
         </Link>
 
         {/* 2. Navigation tabs — hidden on the smallest screens to keep the bar
@@ -134,11 +134,11 @@ export function TopBar() {
           </Button>
         )}
 
-        {/* 4. Language pills */}
-        <LocaleSwitcher />
-
-        {/* 5. Theme toggle */}
-        <ThemeToggle />
+        {/* 4-5. Language + theme (grouped for a consistent gap) */}
+        <div className="flex items-center gap-1">
+          <LocaleSwitcher />
+          <ThemeToggle />
+        </div>
 
         {/* 6. Profile circle (authenticated) or sign-in (public pages) */}
         {isAuthenticated ? (

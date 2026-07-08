@@ -17,8 +17,7 @@ test.describe("Desktop top bar", () => {
     await expect(mockedPage.getByTestId("nav-new-trip")).toBeVisible();
     await expect(mockedPage.getByTestId("nav-my-trips")).toBeVisible();
     await expect(mockedPage.getByTestId("help-button")).toBeVisible();
-    await expect(mockedPage.getByTestId("locale-switch-fr")).toBeVisible();
-    await expect(mockedPage.getByTestId("locale-switch-en")).toBeVisible();
+    await expect(mockedPage.getByTestId("locale-switch")).toBeVisible();
     await expect(mockedPage.getByTestId("theme-toggle")).toBeVisible();
     await expect(mockedPage.getByTestId("profile-button")).toBeVisible();
   });
@@ -72,19 +71,17 @@ test.describe("Desktop top bar", () => {
     ).toBeVisible({ timeout: 5000 });
   });
 
-  test("language pills toggle the active locale", async ({ mockedPage }) => {
-    const fr = mockedPage.getByTestId("locale-switch-fr");
-    const en = mockedPage.getByTestId("locale-switch-en");
+  test("language select toggles the active locale", async ({ mockedPage }) => {
+    const trigger = mockedPage.getByTestId("locale-switch");
+    await expect(trigger).toHaveAttribute("data-locale", "fr");
 
-    await expect(fr).toHaveAttribute("aria-pressed", "true");
-    await expect(en).toHaveAttribute("aria-pressed", "false");
-
-    // Clicking EN triggers the locale change (router.refresh under the hood)
-    await en.click();
+    // Open the select and pick EN — triggers the locale change (router.refresh)
+    await trigger.click();
+    await mockedPage.getByTestId("locale-switch-en").click();
     await mockedPage.waitForLoadState("networkidle");
-    await expect(mockedPage.getByTestId("locale-switch-en")).toHaveAttribute(
-      "aria-pressed",
-      "true",
+    await expect(mockedPage.getByTestId("locale-switch")).toHaveAttribute(
+      "data-locale",
+      "en",
     );
   });
 

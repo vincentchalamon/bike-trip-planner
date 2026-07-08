@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { AttributionFooter } from "@/components/attribution-footer";
+import { Brand } from "@/components/brand";
 import { useAuthStore } from "@/store/auth-store";
 
 // lucide-react 1.x dropped brand icons; inline the GitHub mark.
@@ -42,9 +43,7 @@ export function LandingFooter() {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
           {/* Brand */}
           <div>
-            <p className="font-serif text-xl font-semibold text-brand mb-1">
-              Bike Trip Planner
-            </p>
+            <Brand className="text-xl mb-1" />
             <p className="text-sm text-muted-foreground max-w-xs">
               {t("tagline")}
             </p>
