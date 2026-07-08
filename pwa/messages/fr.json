@@ -290,7 +290,8 @@
     "elevation": "Dénivelé",
     "physicalDetail": "{distance} km parcourus",
     "technicalDetail": "{ratio} m de D+ par km — proxy de pente moyenne",
-    "elevationDetail": "{elevation} m de dénivelé positif"
+    "elevationDetail": "{elevation} m de dénivelé positif",
+    "overallTooltip": "Difficulté globale de l'étape (Facile, Moyen ou Difficile), calculée à partir de la distance et du dénivelé positif."
   },
   "surfaceBreakdown": {
     "ariaLabel": "Répartition des surfaces",

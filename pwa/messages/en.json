@@ -290,7 +290,8 @@
     "elevation": "Elevation",
     "physicalDetail": "{distance} km covered",
     "technicalDetail": "{ratio} m of climbing per km — average slope proxy",
-    "elevationDetail": "{elevation} m of total ascent"
+    "elevationDetail": "{elevation} m of total ascent",
+    "overallTooltip": "Overall stage difficulty (Easy, Medium or Hard), based on distance and total ascent."
   },
   "surfaceBreakdown": {
     "ariaLabel": "Surface breakdown",

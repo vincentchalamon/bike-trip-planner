@@ -6,6 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { Bike, Mountain, Wrench } from "lucide-react";
 import {
   DIFFICULTY_THRESHOLDS,
@@ -192,11 +193,17 @@ export function StageDifficultyComposed({
         data-overall={overall}
         aria-label={t("ariaLabel")}
       >
-        <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-          <span aria-hidden="true" className="text-muted-foreground">
-            <Mountain className="h-3.5 w-3.5" />
+        <div className="flex items-center justify-between gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span aria-hidden="true" className="text-muted-foreground">
+              <Mountain className="h-3.5 w-3.5" />
+            </span>
+            <span className="truncate">{t("title")}</span>
           </span>
-          <span className="truncate">{t("title")}</span>
+          <InfoTooltip
+            content={t("overallTooltip")}
+            testId="stage-difficulty-info"
+          />
         </div>
         <div>{overallPill}</div>
       </div>
