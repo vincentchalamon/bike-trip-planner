@@ -198,7 +198,7 @@ export function StageStatsRow({
                 onCancel={() => setEditingDistance(false)}
               />
             ) : distance !== null ? (
-              <span className="flex items-center gap-1.5">
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span>
                   {Number.isInteger(distance) ? distance : distance.toFixed(1)}
                   <span className="ml-1 text-sm font-normal text-muted-foreground">
@@ -209,14 +209,15 @@ export function StageStatsRow({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-muted-icon cursor-pointer"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 gap-1 px-2 text-xs font-medium text-brand border-brand/40 hover:bg-brand/10 hover:text-brand cursor-pointer"
                         onClick={() => setEditingDistance(true)}
                         aria-label={tStage("editDistance")}
                         data-testid="stat-distance-edit"
                       >
                         <Pencil className="h-3.5 w-3.5" />
+                        {tStage("editDistance")}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-[15rem]">
@@ -228,6 +229,14 @@ export function StageStatsRow({
             ) : (
               <Skeleton className="w-16 h-5" />
             )
+          }
+          hint={
+            !readOnly &&
+            onDistanceChange &&
+            !editingDistance &&
+            distance !== null
+              ? t("distanceEditHint")
+              : null
           }
         />
       </DiffHighlight>
@@ -242,7 +251,10 @@ export function StageStatsRow({
         value={
           elevation !== null ? (
             <span className="inline-flex items-center gap-1">
-              <ArrowUp className="h-3.5 w-3.5 text-red-500" aria-hidden="true" />
+              <ArrowUp
+                className="h-3.5 w-3.5 text-red-500"
+                aria-hidden="true"
+              />
               {Math.round(elevation)}
               <span className="text-sm font-normal text-muted-foreground">
                 m

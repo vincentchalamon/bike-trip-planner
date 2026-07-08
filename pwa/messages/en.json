@@ -268,6 +268,7 @@
     "durationUnavailable": "—",
     "budget": "Budget",
     "distanceEditTooltip": "Edit this stage's distance. The rest of the route is recalculated accordingly.",
+    "distanceEditHint": "Editing the distance re-splits the following days.",
     "budgetTooltip": "Estimate based on the day's meals and accommodation (selected option or average of nearby options)."
   },
   "stageAiSummary": {
@@ -385,7 +386,9 @@
     "step3Title": "Configure your rider profile",
     "step3Description": "Open Settings to adjust your <strong>pacing</strong>, fatigue factor, elevation penalty, and accommodation preferences before computing your stages.",
     "step4Title": "Explore your stages",
-    "step4Description": "Once your trip is loaded, stages appear in the <strong>timeline</strong>. Each stage shows distance, elevation, travel time, alerts, and accommodation suggestions. You can reorder, split, or add rest days as needed."
+    "step4Description": "Once your trip is loaded, stages appear in the <strong>timeline</strong>. Each stage shows distance, elevation, travel time, alerts, and accommodation suggestions. You can reorder, split, or add rest days as needed.",
+    "step5Title": "Adjust a day's distance",
+    "step5Description": "Click <strong>Edit distance</strong> on a stage to change that day's mileage. The rest of the trip is automatically <strong>re-split</strong>: this is the main lever to fine-tune your day-by-day breakdown."
   },
   "undoRedo": {
     "undoTitle": "Undo (Ctrl+Z)",

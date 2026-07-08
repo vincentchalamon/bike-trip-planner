@@ -12,11 +12,12 @@ import { useAuthStore } from "@/store/auth-store";
  * OnboardingTour — renders nothing in the DOM.
  *
  * On an authenticated user's first home-page visit (no localStorage flag), it
- * starts a 4-step driver.js tour through the core workflow:
+ * starts a 5-step driver.js tour through the core workflow:
  *   1. Paste a Komoot link
  *   2. Upload a GPX file (alternative input)
  *   3. Configure the rider profile (pacing / fatigue)
  *   4. Read stages in the timeline (shown after a trip loads)
+ *   5. Edit a day's distance to re-split the following days
  *
  * Steps 1–2 target elements that only exist on the authenticated home page
  * (`card-link` / `card-gpx`). Steps 3–4 are centred modals (no DOM target):
@@ -102,6 +103,19 @@ export function OnboardingTour() {
           popover: {
             title: t("step4Title"),
             description: t.raw("step4Description"),
+          },
+        },
+        {
+          // Step 5 — points at the inline distance editor. The target only
+          // exists on an open trip's stage detail panel; on the welcome screen
+          // driver.js falls back to a centred modal, so this step still explains
+          // that editing a day's distance re-splits the following days (#837).
+          element: "[data-testid='stat-distance-edit']",
+          popover: {
+            title: t("step5Title"),
+            description: t.raw("step5Description"),
+            side: "bottom",
+            align: "start",
           },
         },
       ],
