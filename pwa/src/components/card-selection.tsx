@@ -111,14 +111,13 @@ export function CardSelection({
           />
         )}
 
-        {/* Card: GPX */}
-        {(selected === null || selected === "gpx") && (
-          <GpxCard
-            expanded={selected === "gpx"}
-            disabled={disabled}
-            onSelect={() => handleSelect("gpx")}
-            onUpload={onUploadFile}
-          />
+        {/* Card: GPX — the drop zone / file input is rendered inline, so a
+            rider can drop or pick a GPX straight from the three-choice screen
+            without the extra "select the card" click (#834). It is only shown
+            in the default grid; picking Link or AI collapses the grid and hides
+            it. */}
+        {selected === null && (
+          <GpxCard disabled={disabled} onUpload={onUploadFile} />
         )}
 
         {/* Card: AI Assistant - natural-language brief to AI route generation
@@ -298,13 +297,11 @@ function LinkCard({ expanded, disabled, onSelect, onSubmit }: LinkCardProps) {
 }
 
 interface GpxCardProps {
-  expanded: boolean;
   disabled: boolean;
-  onSelect: () => void;
   onUpload: (file: File) => Promise<void> | void;
 }
 
-function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
+function GpxCard({ disabled, onUpload }: GpxCardProps) {
   const t = useTranslations("cardSelection");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dropZoneState, setDropZoneState] = useState<
@@ -312,14 +309,6 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
     | { status: "uploading"; fileName: string; progress?: number | null }
     | { status: "error"; message: string }
   >({ status: "idle" });
-  const dropZoneRef = useRef<HTMLDivElement>(null);
-
-  // Auto-focus the drop zone when the card expands so keyboard users
-  // don't have to tab again to reach it. Mirrors the LinkCard's
-  // auto-focus on its URL input.
-  useEffect(() => {
-    if (expanded) dropZoneRef.current?.focus();
-  }, [expanded]);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -359,46 +348,43 @@ function GpxCard({ expanded, disabled, onSelect, onUpload }: GpxCardProps) {
     <CardShell
       testId="card-gpx"
       ariaLabel={t("ariaSelectGpx")}
-      expanded={expanded}
+      expanded={false}
+      selectable={false}
       disabled={disabled}
-      onSelect={onSelect}
       icon={<FileUp className="h-6 w-6" aria-hidden="true" />}
       title={t("gpxTitle")}
       description={t("gpxDescription")}
     >
-      {expanded && (
-        <div className="flex flex-col gap-3 w-full">
-          <GpxDropZoneCard
-            ref={dropZoneRef}
-            state={dropZoneState}
-            disabled={disabled}
-            maxBytes={MAX_GPX_SIZE_BYTES}
-            onFileSelected={(file) => void handleFile(file)}
-            dropZoneTestId="card-gpx-dropzone"
-            fileInputTestId="gpx-file-input"
-          />
+      <div className="flex flex-col gap-3 w-full">
+        <GpxDropZoneCard
+          state={dropZoneState}
+          disabled={disabled}
+          maxBytes={MAX_GPX_SIZE_BYTES}
+          onFileSelected={(file) => void handleFile(file)}
+          dropZoneTestId="card-gpx-dropzone"
+          fileInputTestId="gpx-file-input"
+        />
 
-          {selectedFile && dropZoneState.status !== "uploading" && (
-            <div
-              className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
-              data-testid="card-gpx-file-feedback"
+        {selectedFile && dropZoneState.status !== "uploading" && (
+          <div
+            className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
+            data-testid="card-gpx-file-feedback"
+          >
+            <span
+              className="truncate font-medium"
+              data-testid="card-gpx-file-name"
             >
-              <span
-                className="truncate font-medium"
-                data-testid="card-gpx-file-name"
-              >
-                {selectedFile.name}
-              </span>
-              <span
-                className="text-muted-foreground shrink-0 ml-3"
-                data-testid="card-gpx-file-size"
-              >
-                {t("gpxFileSize", { size: fileSizeMb ?? "0" })}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
+              {selectedFile.name}
+            </span>
+            <span
+              className="text-muted-foreground shrink-0 ml-3"
+              data-testid="card-gpx-file-size"
+            >
+              {t("gpxFileSize", { size: fileSizeMb ?? "0" })}
+            </span>
+          </div>
+        )}
+      </div>
     </CardShell>
   );
 }
@@ -454,7 +440,13 @@ interface CardShellProps {
   ariaLabel: string;
   expanded: boolean;
   disabled: boolean;
-  onSelect: () => void;
+  onSelect?: () => void;
+  /**
+   * When `false`, the shell is never a clickable button: the interactive
+   * element lives inside `children` (e.g. the GPX drop zone, #834). Defaults
+   * to `true` for the link / AI cards that still expand on card click.
+   */
+  selectable?: boolean;
   icon: React.ReactNode;
   title: string;
   description: string;
@@ -468,13 +460,14 @@ function CardShell({
   expanded,
   disabled,
   onSelect,
+  selectable = true,
   icon,
   title,
   description,
   badge,
   children,
 }: CardShellProps) {
-  const interactive = !expanded && !disabled;
+  const interactive = selectable && !expanded && !disabled;
 
   return (
     <div
@@ -488,7 +481,7 @@ function CardShell({
           ? (e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                onSelect();
+                onSelect?.();
               }
             }
           : undefined

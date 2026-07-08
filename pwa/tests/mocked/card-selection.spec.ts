@@ -18,9 +18,12 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     await expect(page.getByTestId("card-gpx")).toBeVisible();
     await expect(page.getByTestId("card-ai")).toBeVisible();
 
-    // No input fields are rendered while no card is selected
+    // The link / AI inputs stay collapsed until their card is selected, but
+    // the GPX drop zone is rendered inline so a file can be dropped or picked
+    // straight from the three-choice screen (#834).
     await expect(page.getByTestId("magic-link-input")).toBeHidden();
-    await expect(page.getByTestId("card-gpx-dropzone")).toBeHidden();
+    await expect(page.getByTestId("card-gpx-dropzone")).toBeVisible();
+    await expect(page.getByTestId("gpx-file-input")).toBeAttached();
     await expect(page.getByTestId("ai-chat-card")).toBeHidden();
   });
 
@@ -97,22 +100,20 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
     await expect(page.getByTestId("card-ai")).toBeHidden();
   });
 
-  test("selecting GPX card reveals drop zone and hides Link card", async ({
+  test("GPX drop zone is available inline without a select step (#834)", async ({
     page,
   }) => {
-    await page.getByTestId("card-gpx").click();
-
-    // GPX card is expanded and drop zone is visible
-    await expect(page.getByTestId("card-gpx")).toHaveAttribute(
-      "data-expanded",
-      "true",
-    );
+    // No click on the card: the drop zone and file input are rendered directly
+    // in the three-choice grid.
     await expect(page.getByTestId("card-gpx-dropzone")).toBeVisible();
     await expect(page.getByTestId("gpx-file-input")).toBeAttached();
 
-    // Link and AI cards are collapsed / hidden
-    await expect(page.getByTestId("card-link")).toBeHidden();
-    await expect(page.getByTestId("card-ai")).toBeHidden();
+    // The GPX card is not a mutually-exclusive selection: the Link and AI cards
+    // stay visible and no back button (the intermediate-screen affordance)
+    // appears.
+    await expect(page.getByTestId("card-link")).toBeVisible();
+    await expect(page.getByTestId("card-ai")).toBeVisible();
+    await expect(page.getByTestId("card-selection-back")).toBeHidden();
   });
 
   test("back button restores the default card grid", async ({ page }) => {
@@ -165,7 +166,8 @@ test.describe("Card Selection — Acte 1 Préparation", () => {
   test("oversized GPX file blocks upload and shows error alert", async ({
     page,
   }) => {
-    await page.getByTestId("card-gpx").click();
+    // The drop zone is available inline (#834) — no card selection needed.
+    await expect(page.getByTestId("card-gpx-dropzone")).toBeVisible();
 
     // Track whether POST /trips is called — it must NOT be for an oversized file
     let uploadCalled = false;
