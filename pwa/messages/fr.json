@@ -603,7 +603,8 @@
     "errorGeneric": "Une erreur est survenue. Réessaie."
   },
   "planner": {
-    "computing": "Calcul de ton itinéraire en cours…"
+    "computing": "Calcul de ton itinéraire en cours…",
+    "tripSavedToAccount": "Voyage enregistré dans Mes voyages."
   },
   "tripPreview": {
     "title": "Aperçu de ton itinéraire",

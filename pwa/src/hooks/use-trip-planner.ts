@@ -203,6 +203,7 @@ export function useTripPlanner() {
       const importEvent = importEventForUrl(sourceUrl);
       if (importEvent) trackEvent(importEvent);
       trackEvent("trip_created", { source: importEvent ?? "url" });
+      toast.success(t("planner.tripSavedToAccount"));
       router.push(`/trips/${data.id ?? ""}`);
     } catch (err) {
       if (isNetworkError(err)) {
@@ -291,6 +292,7 @@ export function useTripPlanner() {
       });
       trackEvent("import_gpx");
       trackEvent("trip_created", { source: "gpx" });
+      toast.success(t("planner.tripSavedToAccount"));
       // Navigate to /trips/{id} like the magic-link flow (#729): the planner
       // re-hydrates from the detail endpoint and the async Mercure lifecycle
       // (route_parsed → stages_computed → preview) drives the wizard. Without

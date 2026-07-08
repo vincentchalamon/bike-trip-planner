@@ -603,7 +603,8 @@
     "errorGeneric": "Something went wrong. Please try again."
   },
   "planner": {
-    "computing": "Computing your route…"
+    "computing": "Computing your route…",
+    "tripSavedToAccount": "Trip saved to My trips."
   },
   "tripPreview": {
     "title": "Your route preview",
