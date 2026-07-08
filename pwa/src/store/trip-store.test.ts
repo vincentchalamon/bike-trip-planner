@@ -433,6 +433,18 @@ describe("recompute concurrency guard (#840)", () => {
     // The set is empty, so use-mercure's `size === 0` branch lifts `processing`.
     expect(state.recomputingStages.size).toBe(0);
   });
+
+  it("prunes out-of-bounds recomputing markers when a stage is deleted", () => {
+    const store = useTripStore.getState();
+    store.clearTrip();
+    store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
+    store.startStageRecomputation([0, 1, 2]);
+    // Deleting a stage shrinks the array; index 2 can no longer be settled.
+    store.deleteStage(2);
+    expect([...useTripStore.getState().recomputingStages].sort()).toEqual([
+      0, 1,
+    ]);
+  });
 });
 
 describe("date window stays in sync with stage count (recette #649)", () => {

@@ -360,6 +360,21 @@ export function getUndoableSlice(state: {
  */
 type StageAlert = AlertData & { _group?: string };
 
+/**
+ * Drop recompute markers for indices that fell out of bounds after the stage
+ * array changed length. Shared by every mutation that resizes `state.stages`
+ * (resync, delete, rest-day/placeholder insert) so an in-flight recompute
+ * never holds the `processing` overlay open on a phantom index (#840).
+ */
+function pruneStaleRecomputing(state: {
+  stages: StageData[];
+  recomputingStages: Set<number>;
+}): void {
+  for (const i of [...state.recomputingStages]) {
+    if (i >= state.stages.length) state.recomputingStages.delete(i);
+  }
+}
+
 export const useTripStore = create<TripState>()(
   immer((set) => ({
     ...initialState,
@@ -419,9 +434,7 @@ export const useTripStore = create<TripState>()(
         // array changed length. Otherwise a phantom index (e.g. a stage that
         // vanished when the day count shrank) is never cleared by a matching
         // `stage_updated`, holding the `processing` overlay open forever (#840).
-        for (const i of [...state.recomputingStages]) {
-          if (i >= state.stages.length) state.recomputingStages.delete(i);
-        }
+        pruneStaleRecomputing(state);
       }),
 
     updateStageWeather: (dayNumber, weather) =>
@@ -612,6 +625,9 @@ export const useTripStore = create<TripState>()(
         if (state.selectedStageIndex > max) {
           state.selectedStageIndex = max;
         }
+        // The array shrank: drop recompute markers that fell out of bounds so a
+        // structural edit mid-recompute can't strand the overlay (#840).
+        pruneStaleRecomputing(state);
         // Shrink the trip's day window to match the new stage count (recette
         // #649) — see insertRestDay.
         if (state.startDate) {
@@ -656,6 +672,7 @@ export const useTripStore = create<TripState>()(
         state.stages.forEach((s, i) => {
           s.dayNumber = i + 1;
         });
+        pruneStaleRecomputing(state);
         // A trip spans one calendar day per stage (rest days included): extend
         // the end date so the global range and the export reflect the new day
         // immediately (recette #649). The backend mirrors this on persist.
@@ -677,6 +694,7 @@ export const useTripStore = create<TripState>()(
         state.stages.forEach((s, i) => {
           s.dayNumber = i + 1;
         });
+        pruneStaleRecomputing(state);
         // Extend the trip's day window to match the new stage count (recette
         // #649) — see insertRestDay.
         if (state.startDate) {
