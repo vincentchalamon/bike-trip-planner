@@ -17,9 +17,12 @@ const ACCOMMODATION_SECTION_HEADING =
   /Types d'hébergements|Accommodation types/i;
 
 function getAccommodationSwitches(page: import("@playwright/test").Page) {
+  // Target the enclosing <section> rather than the heading's direct parent:
+  // the section heading is now wrapped in a SectionHeader block, so the
+  // switches are no longer siblings of the heading element.
   return page
     .getByRole("heading", { name: ACCOMMODATION_SECTION_HEADING })
-    .locator("..")
+    .locator("xpath=ancestor::section[1]")
     .getByRole("switch");
 }
 
