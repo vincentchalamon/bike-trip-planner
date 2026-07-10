@@ -2,7 +2,7 @@
 
 
 # Versions
-FROM docker.io/node:26@sha256:b46a10d964ad15136ebdf9012142131481caa0697d7a4d4eafe4bbabd818f876 AS node_upstream
+FROM docker.io/node:26@sha256:926d6cafec97f338577041890465522f70fe74aa6fe4b021a4fd7f87a5996b25 AS node_upstream
 
 
 # Base stage for dev and build
