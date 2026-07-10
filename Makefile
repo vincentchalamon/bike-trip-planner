@@ -37,8 +37,18 @@ start-dev: ensure-default-pbf ## Start the Docker environment (Detached) in deve
 build: ## Build the Docker environment in production mode
 	@docker compose -f compose.yaml build
 
-start: ensure-default-pbf ## Start the Docker environment (Detached) in production mode
-	@docker compose -f compose.yaml up --wait
+# compose.yaml keeps the iso-prod fail-closed defaults (read as-is by CI/Coolify):
+# the prod entrypoint refuses to boot on a default/unset Mercure key (SEC-004) or
+# AI token-encryption key (SEC-003), and reads the JWT keypair from Docker secrets.
+# So `make start` supplies non-default local placeholders + the generated keypair to
+# boot, mirroring the CI env and the compose.recette.yaml overlay.
+start: ensure-default-pbf ensure-jwt-recette ## Start the Docker environment (Detached) in production mode
+	@MERCURE_JWT_KEY=local-iso-prod-mercure-key \
+		AI_TOKEN_ENC_KEY=local-iso-prod-ai-enc-key \
+		JWT_PASSPHRASE=recette \
+		JWT_PRIVATE_KEY_PATH=.docker/jwt-recette/private.pem \
+		JWT_PUBLIC_KEY_PATH=.docker/jwt-recette/public.pem \
+		docker compose -f compose.yaml up --wait
 
 start-recette: ensure-default-pbf ensure-jwt-recette ## Boot iso-prod + Mailcatcher for the recette. Re-routing needs `make provision` + `--profile routing`.
 	@docker compose -f compose.yaml -f compose.recette.yaml up --wait
