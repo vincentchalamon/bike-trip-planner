@@ -10,7 +10,6 @@ import {
   Clock,
   Wallet,
   Pencil,
-  Info,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { StageDistanceEditor } from "@/components/stage-distance-editor";
 import { DiffHighlight } from "@/components/diff-highlight";
 import { computeStageTimes, formatDecimalHour } from "@/lib/travel-time";
@@ -242,7 +242,10 @@ export function StageStatsRow({
         value={
           elevation !== null ? (
             <span className="inline-flex items-center gap-1">
-              <ArrowUp className="h-3.5 w-3.5 text-red-500" aria-hidden="true" />
+              <ArrowUp
+                className="h-3.5 w-3.5 text-red-500"
+                aria-hidden="true"
+              />
               {Math.round(elevation)}
               <span className="text-sm font-normal text-muted-foreground">
                 m
@@ -295,21 +298,7 @@ export function StageStatsRow({
         icon={<Wallet className="h-3.5 w-3.5 text-emerald-500" />}
         testId="stat-budget"
         trailing={
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center text-muted-foreground hover:text-foreground transition-colors cursor-help"
-                aria-label={t("budgetTooltip")}
-                data-testid="stat-budget-info"
-              >
-                <Info className="h-3.5 w-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-[15rem]">
-              {t("budgetTooltip")}
-            </TooltipContent>
-          </Tooltip>
+          <InfoTooltip content={t("budgetTooltip")} testId="stat-budget-info" />
         }
         value={
           isProcessing && distance === null ? (
