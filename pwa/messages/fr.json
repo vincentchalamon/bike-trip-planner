@@ -268,6 +268,7 @@
     "durationUnavailable": "—",
     "budget": "Budget",
     "distanceEditTooltip": "Modifie la distance de cette étape. Le reste de l'itinéraire est recalculé en conséquence.",
+    "distanceEditHint": "Modifier la distance redécoupe les jours suivants.",
     "budgetTooltip": "Estimation basée sur les repas de la journée et l'hébergement (sélectionné ou moyenne des options trouvées)."
   },
   "stageAiSummary": {
@@ -386,7 +387,9 @@
     "step3Title": "Configure ton profil cyclo",
     "step3Description": "Ouvre les Paramètres pour ajuster le <strong>pacing</strong>, le facteur de fatigue, l'indice de dénivelé et tes préférences d'hébergements avant de calculer tes étapes.",
     "step4Title": "Explore tes étapes",
-    "step4Description": "Une fois ton voyage chargé, les étapes apparaissent dans la <strong>timeline</strong>. Chaque étape affiche distance, dénivelé, temps de trajet, alertes et suggestions d'hébergements. Tu peux réordonner, fractionner ou insérer des jours de repos."
+    "step4Description": "Une fois ton voyage chargé, les étapes apparaissent dans la <strong>timeline</strong>. Chaque étape affiche distance, dénivelé, temps de trajet, alertes et suggestions d'hébergements. Tu peux réordonner, fractionner ou insérer des jours de repos.",
+    "step5Title": "Ajuste la distance d'un jour",
+    "step5Description": "Clique sur <strong>Modifier la distance</strong> d'une étape pour changer le kilométrage de la journée. Le reste du voyage est automatiquement <strong>redécoupé</strong> : c'est le levier principal pour ajuster ton découpage jour par jour."
   },
   "undoRedo": {
     "undoTitle": "Annuler (Ctrl+Z)",
