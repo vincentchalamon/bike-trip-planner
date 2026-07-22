@@ -82,6 +82,8 @@ final readonly class StageMoveProcessor implements ProcessorInterface
 
         // Bump generation: stage moves invalidate in-flight computations
         $generation = $this->generationTracker->increment($tripId);
+        // Trip data changed → flag any existing AI overview as outdated.
+        $this->tripStateManager->markAiOverviewStale($tripId);
 
         // Dispatch continuity check for all stages; weather/calendar for all stages
         $this->messageBus->dispatch(new RecalculateStages($tripId, [], generation: $generation));

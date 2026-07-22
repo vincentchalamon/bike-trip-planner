@@ -222,6 +222,19 @@ final readonly class RedisTripRequestRepository implements TripRequestRepository
         }
 
         $request->aiOverviewData = $aiOverview;
+        // Writing the overview clears the stale flag (mirrors the Doctrine impl).
+        $request->aiOverviewStale = false;
+        $this->set($this->requestKey($tripId), $request);
+    }
+
+    public function markAiOverviewStale(string $tripId): void
+    {
+        $request = $this->getRequest($tripId);
+        if (!$request instanceof TripRequest || null === $request->aiOverviewData) {
+            return;
+        }
+
+        $request->aiOverviewStale = true;
         $this->set($this->requestKey($tripId), $request);
     }
 

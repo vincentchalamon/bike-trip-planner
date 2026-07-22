@@ -35,11 +35,19 @@ final readonly class OsmAccommodationSource implements AccommodationSourceInterf
 
         $candidates = [];
         foreach ($this->accommodationRepository->findNear($points, $radiusMeters, $enabledTypes) as $accommodation) {
+            // Skip unnamed entries: a nameless "shelter" surfaced as its raw OSM
+            // category ("shelter", labelled "Autre" in the UI) is meaningless to
+            // the rider, who cannot tell such candidates apart (recette).
+            $name = $accommodation['name'];
+            if (null === $name || '' === trim($name)) {
+                continue;
+            }
+
             $tags = $accommodation['tags'];
             $pricing = $this->pricingEngine->estimatePrice($accommodation['category'], $tags);
 
             $candidates[] = [
-                'name' => $accommodation['name'] ?? $accommodation['category'],
+                'name' => $name,
                 'type' => $accommodation['category'],
                 'lat' => $accommodation['lat'],
                 'lon' => $accommodation['lon'],

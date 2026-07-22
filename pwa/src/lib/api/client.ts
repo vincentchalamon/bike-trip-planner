@@ -910,6 +910,20 @@ function triggerBlobDownload(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+/** Sanitize a trip title into a filesystem-safe base name. */
+function sanitizeFileBase(title: string): string {
+  return title.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
+}
+
+/** e.g. "Entre Sensée et Escaut" + day 1 → "Entre-Sens-e-et-Escaut-stage-1.gpx". */
+export function stageFileName(
+  tripTitle: string,
+  dayNumber: number,
+  format: "gpx" | "fit",
+): string {
+  return `${sanitizeFileBase(tripTitle)}-stage-${dayNumber}.${format}`;
+}
+
 export async function downloadTripFile(
   tripId: string,
   tripTitle: string,
@@ -918,8 +932,7 @@ export async function downloadTripFile(
   const res = await apiFetch(`${API_URL}/trips/${tripId}.${format}`);
   if (!res.ok) throw new Error(`Download failed with status ${res.status}`);
   const blob = await res.blob();
-  const safeName = tripTitle.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
-  triggerBlobDownload(blob, `${safeName}.${format}`);
+  triggerBlobDownload(blob, `${sanitizeFileBase(tripTitle)}.${format}`);
 }
 
 export async function downloadStageFile(
@@ -927,13 +940,14 @@ export async function downloadStageFile(
   stageIndex: number,
   format: "gpx" | "fit",
   dayNumber: number,
+  tripTitle: string,
 ): Promise<void> {
   const res = await apiFetch(
     `${API_URL}/trips/${tripId}/stages/${stageIndex}/export.${format}`,
   );
   if (!res.ok) throw new Error(`Download failed with status ${res.status}`);
   const blob = await res.blob();
-  triggerBlobDownload(blob, `stage-${dayNumber}.${format}`);
+  triggerBlobDownload(blob, stageFileName(tripTitle, dayNumber, format));
 }
 
 /**
@@ -1182,8 +1196,7 @@ export async function downloadSharedTripFile(
   );
   if (!res.ok) throw new Error("Download failed");
   const blob = await res.blob();
-  const safeName = tripTitle.trim().replace(/[^a-z0-9\-_]/gi, "-") || "trip";
-  triggerBlobDownload(blob, `${safeName}.${format}`);
+  triggerBlobDownload(blob, `${sanitizeFileBase(tripTitle)}.${format}`);
 }
 
 /**
@@ -1194,11 +1207,12 @@ export async function downloadSharedStageFile(
   stageIndex: number,
   format: "gpx" | "fit",
   dayNumber: number,
+  tripTitle: string,
 ): Promise<void> {
   const res = await fetch(
     `${API_URL}/s/${encodeURIComponent(shortCode)}/stages/${stageIndex}.${format}`,
   );
   if (!res.ok) throw new Error("Download failed");
   const blob = await res.blob();
-  triggerBlobDownload(blob, `stage-${dayNumber}.${format}`);
+  triggerBlobDownload(blob, stageFileName(tripTitle, dayNumber, format));
 }

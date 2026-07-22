@@ -550,6 +550,25 @@ export function useTripPlanner() {
     // Capture state before the mutation so we can push it on success.
     const snapshot = getUndoableSlice(useTripStore.getState());
 
+    // Show the per-stage skeleton immediately — BEFORE awaiting the PATCH — so
+    // the edited card and every subsequent one indicate loading and block
+    // further edits while the backend re-splits. Otherwise the card keeps
+    // showing the old distance for the whole request round-trip, only updating
+    // when the `stage_updated` events land (recette: "la distance reste
+    // identique un moment"). The backend re-splits from `index` onward
+    // (StageUpdateProcessor → RecalculateStages over range(index, count-1)), so
+    // the shimmer covers the same range (#840).
+    const stageCount = useTripStore.getState().stages.length;
+    setProcessing(true);
+    setAccommodationScanning(true);
+    actions.startStageRecomputation(
+      Array.from(
+        { length: Math.max(1, stageCount - index) },
+        (_, k) => index + k,
+      ),
+    );
+    armRecomputeSafetyNet();
+
     try {
       const { error, response } = await apiClient.PATCH(
         "/trips/{tripId}/stages/{index}",
@@ -560,27 +579,21 @@ export function useTripPlanner() {
         },
       );
       if (error) {
+        // Roll back the optimistic loading state so the cards become editable
+        // again instead of shimmering forever on a rejected edit.
+        useTripStore.getState().clearRecomputingStages();
+        setProcessing(false);
+        setAccommodationScanning(false);
         const apiError = parseApiError(response.status, error);
         toast.error(localizedApiErrorMessage(apiError, t));
       } else {
         // Push snapshot only after a successful PATCH to avoid phantom undo entries
         useTripTemporalStore.getState()._push(snapshot);
-        setProcessing(true);
-        setAccommodationScanning(true);
-        // Mark this stage and every subsequent one as recomputing: the backend
-        // re-splits from `index` onward (StageUpdateProcessor dispatches
-        // RecalculateStages over `range(index, count-1)`), so the shimmer must
-        // cover the same range instead of the single edited card (#840).
-        const stageCount = useTripStore.getState().stages.length;
-        actions.startStageRecomputation(
-          Array.from(
-            { length: Math.max(1, stageCount - index) },
-            (_, k) => index + k,
-          ),
-        );
-        armRecomputeSafetyNet();
       }
     } catch {
+      useTripStore.getState().clearRecomputingStages();
+      setProcessing(false);
+      setAccommodationScanning(false);
       toast.error(t("errors.failedUpdateLocation"));
     }
   }
@@ -845,8 +858,9 @@ export function useTripPlanner() {
       }
       setProcessing(true);
       // Clear stale AI overview so the card does not show outdated data
-      // while the new analysis is in flight.
+      // while the new analysis is in flight, and drop the "outdated" banner.
       useTripStore.getState().setAiOverview(null);
+      useTripStore.getState().setAiOverviewStale(false);
       setAccommodationScanning(true);
       useUiStore.getState().setBlockStatus("weather", "running");
       useUiStore.getState().setBlockStatus("ai", "running");

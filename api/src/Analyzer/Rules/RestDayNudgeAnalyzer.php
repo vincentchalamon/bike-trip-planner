@@ -82,6 +82,14 @@ final readonly class RestDayNudgeAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
+        // The rider already rests the day right after this block: the "consider a
+        // rest day" nudge is moot, so suppress it. Removing that rest day makes
+        // this analyzer emit again (the nudge is restored) — recette.
+        $nextStage = $allStages[$stageIndex + 1] ?? null;
+        if ($nextStage instanceof Stage && $nextStage->isRestDay) {
+            return [];
+        }
+
         return [new Alert(
             type: AlertType::NUDGE,
             message: $this->translator->trans(

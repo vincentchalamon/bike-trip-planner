@@ -62,10 +62,7 @@
   "tripTitle": {
     "fallback": "My Trip",
     "placeholder": "Trip name",
-    "ariaLabel": "Trip title",
-    "suggestion": "Suggestion: {name}",
-    "apply": "Apply",
-    "dismissSuggestion": "Dismiss suggestion"
+    "ariaLabel": "Trip title"
   },
   "stage": {
     "day": "Day {dayNumber}",
@@ -273,6 +270,7 @@
     "budget": "Budget",
     "distanceEditTooltip": "Edit this stage's distance. The rest of the route is recalculated accordingly.",
     "distanceEditHint": "Editing the distance re-splits the following days.",
+    "distanceEditHintLabel": "About distance re-splitting",
     "budgetTooltip": "Estimate based on the day's meals and accommodation (selected option or average of nearby options)."
   },
   "stageAiSummary": {
@@ -691,7 +689,8 @@
     "collapseAria": "Collapse the AI summary",
     "loading": "The assistant is analysing your trip…",
     "failed": "The AI analysis could not complete.",
-    "regenerate": "Regenerate"
+    "regenerate": "Regenerate",
+    "staleNotice": "Analysis outdated after recent trip changes."
   },
   "aiRefinement": {
     "title": "Refine with the AI assistant",

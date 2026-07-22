@@ -81,6 +81,8 @@ final readonly class StageCreateProcessor implements ProcessorInterface
         $this->tripStateManager->storeStages($tripId, $stages);
 
         $generation = $this->generationTracker->increment($tripId);
+        // Trip data changed → flag any existing AI overview as outdated.
+        $this->tripStateManager->markAiOverviewStale($tripId);
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, [$position], generation: $generation));
 

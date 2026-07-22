@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useTripAiOverview } from "@/store/trip-store";
+import { useTripAiOverview, useTripAiOverviewStale } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
 
 /**
@@ -38,6 +38,7 @@ export function TripAiOverview({
 } = {}) {
   const t = useTranslations("aiOverview");
   const overview = useTripAiOverview();
+  const aiStale = useTripAiOverviewStale();
   const aiBlockStatus = useUiStore((s) => s.blockStatus.ai);
   const aiConfigured = useUiStore((s) => s.aiCapability.configured);
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
@@ -137,6 +138,29 @@ export function TripAiOverview({
       )}
     >
       <CardContent className="flex flex-col gap-4">
+        {/* Outdated banner: the trip changed since this analysis ran. We do not
+            auto-recompute (credit cost); the rider regenerates manually once. */}
+        {aiStale && (
+          <div
+            data-testid="trip-ai-overview-stale"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
+          >
+            <span>{t("staleNotice")}</span>
+            {onRegenerate && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onRegenerate}
+                className="inline-flex items-center gap-2"
+                data-testid="trip-ai-overview-stale-regenerate"
+              >
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                {t("regenerate")}
+              </Button>
+            )}
+          </div>
+        )}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <span

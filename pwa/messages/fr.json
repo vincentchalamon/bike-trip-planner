@@ -62,10 +62,7 @@
   "tripTitle": {
     "fallback": "Mon voyage",
     "placeholder": "Nom du voyage",
-    "ariaLabel": "Titre du voyage",
-    "suggestion": "Suggestion : {name}",
-    "apply": "Appliquer",
-    "dismissSuggestion": "Fermer la suggestion"
+    "ariaLabel": "Titre du voyage"
   },
   "stage": {
     "day": "Jour {dayNumber}",
@@ -273,6 +270,7 @@
     "budget": "Budget",
     "distanceEditTooltip": "Modifie la distance de cette étape. Le reste de l'itinéraire est recalculé en conséquence.",
     "distanceEditHint": "Modifier la distance redécoupe les jours suivants.",
+    "distanceEditHintLabel": "À propos du redécoupage par distance",
     "budgetTooltip": "Estimation basée sur les repas de la journée et l'hébergement (sélectionné ou moyenne des options trouvées)."
   },
   "stageAiSummary": {
@@ -691,7 +689,8 @@
     "collapseAria": "Réduire la synthèse IA",
     "loading": "L'assistant analyse ton voyage…",
     "failed": "L'analyse IA n'a pas pu aboutir.",
-    "regenerate": "Régénérer"
+    "regenerate": "Régénérer",
+    "staleNotice": "Analyse obsolète suite aux dernières modifications du voyage."
   },
   "aiRefinement": {
     "title": "Affiner avec l'assistant IA",

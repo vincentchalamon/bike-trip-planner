@@ -401,6 +401,10 @@ final class InMemoryTripRequestRepository implements TripRequestRepositoryInterf
         $this->aiOverview = $aiOverview;
     }
 
+    public function markAiOverviewStale(string $tripId): void
+    {
+    }
+
     /**
      * @return array<string, mixed>|null
      */

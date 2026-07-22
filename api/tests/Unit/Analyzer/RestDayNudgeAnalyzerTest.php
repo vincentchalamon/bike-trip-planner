@@ -129,6 +129,25 @@ final class RestDayNudgeAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function noNudgeWhenNextDayIsRestDay(): void
+    {
+        $analyzer = new RestDayNudgeAnalyzer($this->translator, 3);
+        // Fri(1), Sat(2), new(3) reach the 3-day threshold, but a rest day is
+        // planned right after (4) so the nudge is moot — recette.
+        $stages = [
+            $this->createStage(1, false),
+            $this->createStage(2, false),
+            $this->createStage(3, false),
+            $this->createStage(4, true), // rest day right after the 3-day block
+            $this->createStage(5, false),
+        ];
+
+        $alerts = $analyzer->analyze($stages[2], ['allStages' => $stages]);
+
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
     public function noNudgeOnRestDayItself(): void
     {
         $analyzer = new RestDayNudgeAnalyzer($this->translator, 3);

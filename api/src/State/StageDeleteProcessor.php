@@ -12,6 +12,7 @@ use App\ApiResource\Stage;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\SourceType;
+use App\Message\AnalyzeTerrain;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
@@ -82,9 +83,18 @@ final readonly class StageDeleteProcessor implements ProcessorInterface
         $this->tripStateManager->storeStages($tripId, $stages);
 
         $generation = $this->generationTracker->increment($tripId);
+        // Trip data changed → flag any existing AI overview as outdated.
+        $this->tripStateManager->markAiOverviewStale($tripId);
 
         $affectedIndices = null !== $mergedIndex ? [$mergedIndex] : [];
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: $isRestDayDeletion, generation: $generation));
+        // Deleting a rest day skips geographic scans (no geometry change) but the
+        // rest-day nudge is context-dependent: removing the rest day must restore
+        // the "consider a rest day" nudge on the day that preceded it. Re-run the
+        // terrain/pacing analysis explicitly since RecalculateStages won't (recette).
+        if ($isRestDayDeletion) {
+            $this->messageBus->dispatch(new AnalyzeTerrain($tripId, $generation));
+        }
 
         // Keep the trip's day window in step with the stage count: a trip spans
         // exactly one calendar day per stage (rest days included), so removing a

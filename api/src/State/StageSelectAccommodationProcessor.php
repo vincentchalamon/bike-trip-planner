@@ -83,6 +83,8 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
             // Note: endPoint intentionally not reverted — accommodation coords serve as
             // stage boundary until Valhalla (ADR-017) provides proper re-route.
             $generation = $this->generationTracker->increment($tripId);
+            // Trip data changed → flag any existing AI overview as outdated.
+            $this->tripStateManager->markAiOverviewStale($tripId);
             $this->messageBus->dispatch(new ScanAccommodations($tripId, stageIndex: $index, enabledAccommodationTypes: $request->enabledAccommodationTypes, generation: $generation));
             $affectedDeselect = isset($stages[$index + 1]) ? [$index, $index + 1] : [$index];
             $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedDeselect, skipAccommodationScan: true, generation: $generation));
@@ -143,6 +145,8 @@ final readonly class StageSelectAccommodationProcessor implements ProcessorInter
         }
 
         $generation = $this->generationTracker->increment($tripId);
+        // Trip data changed → flag any existing AI overview as outdated.
+        $this->tripStateManager->markAiOverviewStale($tripId);
 
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipAccommodationScan: true, generation: $generation));
 

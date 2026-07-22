@@ -33,7 +33,8 @@ use App\State\TripDetailProvider;
 final readonly class TripDetail
 {
     /**
-     * @param list<array<string, mixed>> $stages Serialized stage DTOs
+     * @param array<string, mixed>|null  $aiOverview Persisted trip-level AI overview
+     * @param list<array<string, mixed>> $stages     Serialized stage DTOs
      */
     public function __construct(
         public string $id,
@@ -67,6 +68,25 @@ final readonly class TripDetail
             openapiContext: ['type' => ['string', 'null'], 'enum' => ['pending', 'running', 'done', 'failed', null]],
         )]
         public ?string $aiStatus,
+        #[ApiProperty(
+            description: 'Persisted LLaMA pass-2 trip overview (issue #302), so the AI narrative is restored on reload instead of being lost. Null when the trip was never analysed.',
+            openapiContext: ['type' => ['object', 'null'], 'properties' => [
+                'narrative' => ['type' => 'string'],
+                'patterns' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'recommendations' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'crossStageAlerts' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'model' => ['type' => 'string'],
+                'promptVersion' => ['type' => 'integer'],
+                'generatedAt' => ['type' => 'string'],
+            ]],
+        )]
+        /** @var array<string, mixed>|null */
+        public ?array $aiOverview,
+        #[ApiProperty(
+            description: 'True when the trip data changed since the AI overview was generated: the frontend shows an "analysis outdated" note + a manual regenerate button.',
+            openapiContext: ['type' => 'boolean'],
+        )]
+        public bool $aiStale,
         #[ApiProperty(openapiContext: [
             'type' => 'array',
             'items' => [
@@ -132,6 +152,14 @@ final readonly class TripDetail
                         'url' => ['oneOf' => [['type' => 'string'], ['type' => 'null']]],
                         'possibleClosed' => ['type' => 'boolean'],
                         'distanceToEndPoint' => ['type' => 'number'],
+                    ]], ['type' => 'null']]],
+                    'aiAnalysis' => ['oneOf' => [['type' => 'object', 'properties' => [
+                        'narrative' => ['type' => 'string'],
+                        'insights' => ['type' => 'array', 'items' => ['type' => 'string']],
+                        'suggestions' => ['type' => 'array', 'items' => ['type' => 'string']],
+                        'model' => ['type' => 'string'],
+                        'promptVersion' => ['type' => 'integer'],
+                        'generatedAt' => ['type' => 'string'],
                     ]], ['type' => 'null']]],
                 ],
             ],

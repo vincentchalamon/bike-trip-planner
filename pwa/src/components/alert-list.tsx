@@ -142,7 +142,12 @@ export function AlertList({ alerts, onAddPoiWaypoint }: AlertListProps) {
               const isDismissed = dismissedKeys.has(key);
               const action = alert.action ?? null;
               const category = resolveCategory(alert.source);
-              const CategoryIcon = category ? MarkerIcon[category] : null;
+              // Uniform alert template: only cultural POIs keep a leading
+              // category icon (their dedicated enriched card). Every other
+              // alert (water drop, etc.) shows the severity icon alone so all
+              // alerts read the same (recette: "supprimer le logo goutte d'eau").
+              const CategoryIcon =
+                category === "cultural-poi" ? MarkerIcon[category] : null;
               const isEnrichedCulturalPoi =
                 category === "cultural-poi" &&
                 Boolean(

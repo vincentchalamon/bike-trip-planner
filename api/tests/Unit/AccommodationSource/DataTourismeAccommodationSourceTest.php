@@ -46,7 +46,7 @@ final class DataTourismeAccommodationSourceTest extends TestCase
     {
         $repository = $this->createStub(AccommodationRepositoryInterface::class);
         $repository->method('findNear')->willReturn([
-            ['name' => null, 'category' => 'hotel', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => null, 'price' => null, 'description' => null],
+            ['name' => 'Hôtel du Parc', 'category' => 'hotel', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => null, 'price' => null, 'description' => null],
         ]);
 
         $engine = new PricingHeuristicEngine();
@@ -55,9 +55,26 @@ final class DataTourismeAccommodationSourceTest extends TestCase
         $result = new DataTourismeAccommodationSource($repository, $engine)
             ->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel']);
 
-        self::assertSame('hotel', $result[0]['name'], 'a null name falls back to the category');
+        self::assertSame('Hôtel du Parc', $result[0]['name']);
         self::assertSame($expected['min'], $result[0]['priceMin']);
         self::assertSame($expected['max'], $result[0]['priceMax']);
         self::assertFalse($result[0]['isExact']);
+    }
+
+    #[Test]
+    public function skipsUnnamedEntries(): void
+    {
+        $repository = $this->createStub(AccommodationRepositoryInterface::class);
+        $repository->method('findNear')->willReturn([
+            ['name' => null, 'category' => 'hotel', 'lat' => 48.0, 'lon' => 2.0, 'capacity' => null, 'price' => null, 'description' => null],
+            ['name' => '   ', 'category' => 'apartment', 'lat' => 48.1, 'lon' => 2.1, 'capacity' => null, 'price' => null, 'description' => null],
+            ['name' => 'Gîte du Lac', 'category' => 'apartment', 'lat' => 48.2, 'lon' => 2.2, 'capacity' => 4, 'price' => 75.0, 'description' => null],
+        ]);
+
+        $result = new DataTourismeAccommodationSource($repository, new PricingHeuristicEngine())
+            ->fetch([new Coordinate(48.0, 2.0)], 5000, ['hotel', 'apartment']);
+
+        self::assertCount(1, $result);
+        self::assertSame('Gîte du Lac', $result[0]['name']);
     }
 }

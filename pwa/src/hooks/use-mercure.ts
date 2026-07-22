@@ -244,6 +244,14 @@ function dispatchEvent(event: MercureEvent): void {
         existing.push(nudge);
         calendarByStage.set(nudge.stageIndex, existing);
       }
+      // The payload is a full replacement of the calendar nudges: clear the
+      // group on EVERY stage first, otherwise a stage that dropped out of the
+      // new set (e.g. no longer a Sunday after a rest-day insert) keeps its
+      // stale nudge because the loop below only visits stages present in the
+      // payload (recette bug: "L'étape 3 tombe un dimanche" on a Tuesday).
+      for (let i = 0; i < store.stages.length; i++) {
+        store.updateStageAlerts(i, [], "calendar");
+      }
       for (const [stageIndex, nudges] of calendarByStage) {
         store.updateStageAlerts(
           stageIndex,
@@ -530,6 +538,9 @@ function dispatchEvent(event: MercureEvent): void {
         event.data.aiOverview,
       );
       store.setAiOverview(parsedOverview.success ? parsedOverview.data : null);
+      // A fresh full analysis just landed → the overview is in sync again
+      // (clears the "outdated" banner without waiting for a reload).
+      store.setAiOverviewStale(false);
       // The terminal enrichment payload landed — resolve both async block
       // spinners (ADR-043). Weather rides along in the atomic swap, so mark it
       // done too in case `weather_fetched` never fired separately.
@@ -693,7 +704,7 @@ function enrichedPayloadToStageData(payload: EnrichedStagePayload): StageData {
     accommodationSearchRadiusKm: DEFAULT_ACCOMMODATION_RADIUS_KM,
     isRestDay: payload.isRestDay ?? false,
     supplyTimeline: [],
-    events: payload.events,
+    events: payload.events ?? [],
     // LLaMA pass-1 stage analysis (issue #306). Forwarded as-is so the
     // {@link StageAiSummary} can render it atomically with the rest of the
     // stage data. Null/undefined when the AI pipeline is off or pending.

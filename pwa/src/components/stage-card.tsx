@@ -127,9 +127,7 @@ export function StageCard({
       // navigation) lands the card *below* the progress bar rather than
       // underneath it. Without this offset, hit-tests on inline controls
       // (e.g. the distance pencil button) fall on the sticky header.
-      className={`border-border shadow-sm rounded-xl relative scroll-mt-24 ${
-        isSplit ? "w-full md:max-w-[80%]" : "w-full"
-      }`}
+      className="border-border shadow-sm rounded-xl relative scroll-mt-24 w-full"
       data-testid={`stage-card-${stage.dayNumber}`}
     >
       <CardContent className="p-4 md:p-6 space-y-4">

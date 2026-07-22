@@ -12,6 +12,7 @@ use App\ApiResource\Stage;
 use App\ApiResource\StageResponse;
 use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Mapper\StageResponseMapper;
+use App\Message\AnalyzeTerrain;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
@@ -85,10 +86,17 @@ final readonly class RestDayInsertProcessor implements ProcessorInterface
         $this->tripStateManager->storeStages($tripId, $stages);
 
         $generation = $this->generationTracker->increment($tripId);
+        // Trip data changed → flag any existing AI overview as outdated.
+        $this->tripStateManager->markAiOverviewStale($tripId);
 
         $insertedIndex = $index + 1;
         $affectedIndices = range($insertedIndex, count($stages) - 1);
         $this->messageBus->dispatch(new RecalculateStages($tripId, $affectedIndices, skipGeographicScans: true, generation: $generation));
+        // Re-run the terrain/pacing analysis across all stages: geographic scans
+        // are skipped (a rest day adds no geometry), but the rest-day nudge is
+        // context-dependent on the rest-day layout — inserting one must suppress
+        // the "consider a rest day" nudge on the preceding day (recette).
+        $this->messageBus->dispatch(new AnalyzeTerrain($tripId, $generation));
 
         // Keep the trip's day window in step with the stage count: a trip spans
         // exactly one calendar day per stage (rest days included), so adding a

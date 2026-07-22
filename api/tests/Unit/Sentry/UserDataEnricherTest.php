@@ -125,9 +125,7 @@ final class UserDataEnricherTest extends TestCase
 
     private function event(Request $request, int $type = HttpKernelInterface::MAIN_REQUEST): RequestEvent
     {
-        $kernel = $this->createMock(HttpKernelInterface::class);
-
-        return new RequestEvent($kernel, $request, $type);
+        return new RequestEvent($this->createStub(HttpKernelInterface::class), $request, $type);
     }
 
     private function capturingHub(Scope $scope): HubInterface

@@ -3,6 +3,7 @@ import { getUndoableSlice, useTripStore } from "./trip-store";
 import type {
   AccommodationData,
   AlertData,
+  EventData,
   StageData,
 } from "@/lib/validation/schemas";
 
@@ -47,6 +48,20 @@ function makeAccommodation(name: string): AccommodationData {
 function makeAlert(message: string): AlertData {
   return { type: "warning", message, source: "accommodations" };
 }
+
+function makeEvent(name: string): EventData {
+  return {
+    name,
+    type: "festival",
+    lat: 1,
+    lon: 1,
+    startDate: "2026-08-21",
+    endDate: "2026-08-22",
+    distanceToEndPoint: 0,
+    source: "datatourisme",
+  };
+}
+
 
 describe("getUndoableSlice", () => {
   it("extracts the undoable fields from state", () => {
@@ -367,6 +382,79 @@ describe("applyStageUpdate preservation (recette #649)", () => {
     expect(result.alerts.some((a) => a.source === "cultural_poi")).toBe(true);
     expect(result.alerts.some((a) => a.message === "new terrain")).toBe(true);
     expect(result.alerts.some((a) => a.message === "old terrain")).toBe(false);
+  });
+});
+
+describe("events preservation (recette)", () => {
+  it("keeps events on applyTripReady when the endpoint is stable and payload is empty", () => {
+    const store = useTripStore.getState();
+    const current = makeStage(1);
+    current.events = [makeEvent("Fête du vélo")];
+    store.setStages([current]);
+
+    // trip_ready payload arrives with an empty events list.
+    store.applyTripReady([makeStage(1)]);
+
+    expect(useTripStore.getState().stages[0]!.events).toHaveLength(1);
+  });
+
+  it("keeps events on applyStageUpdate when the endpoint is stable and payload is empty", () => {
+    const store = useTripStore.getState();
+    const current = makeStage(1);
+    current.events = [makeEvent("Fête du vélo")];
+    store.setStages([current]);
+
+    store.applyStageUpdate(0, makeStage(1));
+
+    expect(useTripStore.getState().stages[0]!.events).toHaveLength(1);
+  });
+
+  it("takes incoming events when the endpoint moved", () => {
+    const store = useTripStore.getState();
+    const current = makeStage(1);
+    current.events = [makeEvent("Old")];
+    store.setStages([current]);
+
+    const incoming = makeStage(1);
+    incoming.endPoint = { lat: 9, lon: 9, ele: 0 };
+    incoming.events = [makeEvent("New")];
+    store.applyStageUpdate(0, incoming);
+
+    const result = useTripStore.getState().stages[0]!;
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0]?.name).toBe("New");
+  });
+});
+
+describe("dropStaleDateAlerts on structural edits (recette Sunday nudge)", () => {
+  it("drops calendar-group nudges but keeps other groups on insertRestDay", () => {
+    const store = useTripStore.getState();
+    store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
+    // Tag a date-derived calendar nudge + a geographic terrain alert on day 3.
+    store.updateStageAlerts(2, [makeAlert("L'étape 3 tombe un dimanche")], "calendar");
+    store.updateStageAlerts(2, [makeAlert("segment sans piste cyclable")], "terrain");
+
+    store.insertRestDay(2); // rest day after day 3
+
+    const stages = useTripStore.getState().stages;
+    const allAlerts = stages.flatMap((s) => s.alerts);
+    // The calendar nudge is dropped (it will be republished by CheckCalendar)...
+    expect(allAlerts.some((a) => a.message.includes("dimanche"))).toBe(false);
+    // ...but the geographic terrain alert survives.
+    expect(allAlerts.some((a) => a.message.includes("piste cyclable"))).toBe(true);
+  });
+
+  it("drops calendar-group nudges on deleteStage", () => {
+    const store = useTripStore.getState();
+    store.setStages([makeStage(1), makeStage(2), makeStage(3)]);
+    store.updateStageAlerts(1, [makeAlert("L'étape 2 tombe un dimanche")], "calendar");
+
+    store.deleteStage(2);
+
+    const allAlerts = useTripStore
+      .getState()
+      .stages.flatMap((s) => s.alerts);
+    expect(allAlerts.some((a) => a.message.includes("dimanche"))).toBe(false);
   });
 });
 

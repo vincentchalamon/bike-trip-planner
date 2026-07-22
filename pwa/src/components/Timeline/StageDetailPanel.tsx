@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 import "dayjs/locale/en";
@@ -64,6 +64,22 @@ export function formatDayDate(
 }
 
 /**
+ * Capitalised weekday-date heading for a stage — but ONLY when a start date is
+ * set. Returns null with no dates (a supported state) so the caller falls back
+ * to the neutral "Jour N" label rather than fabricating a date from today.
+ * Exported for unit testing.
+ */
+export function formatDayHeading(
+  startDate: string | null,
+  dayNumber: number,
+  locale: string,
+): string | null {
+  if (!startDate) return null;
+  const label = formatDayDate(startDate, dayNumber, locale);
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+/**
  * Right-hand panel of the master/detail roadbook view.
  *
  * Renders ALL stages in a scrollable list and scrolls the selected stage into
@@ -91,8 +107,8 @@ export function StageDetailPanel({
   newAccKey,
   onClearNewAcc,
 }: StageDetailPanelProps) {
-  const tStage = useTranslations("stage");
   const locale = useLocale();
+  const tStage = useTranslations("stage");
   const recomputingStages = useTripStore((s) => s.recomputingStages);
   const setSelectedStageIndex = useTripStore((s) => s.setSelectedStageIndex);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -211,12 +227,19 @@ export function StageDetailPanel({
       {stages.map((stage, i) => {
         if (!stage) return null;
         const isSelected = i === safeIndex;
+        // Heading is the weekday date itself ("Vendredi 21 août 2026") instead
+        // of "Jour N" (recette) — but ONLY once a start date is set. With no
+        // dates yet (a supported state), fall back to "Jour N" rather than
+        // fabricating a date from today. Capitalise (dayjs lowercases in French).
+        const dayTitle =
+          formatDayHeading(startDate, stage.dayNumber, locale) ??
+          tStage("day", { dayNumber: stage.dayNumber });
 
         return (
           <section
             key={`stage-detail-${i}`}
             ref={isSelected ? selectedRef : undefined}
-            aria-label={tStage("day", { dayNumber: stage.dayNumber })}
+            aria-label={dayTitle}
             data-stage-index={i}
             className={[
               "flex w-full flex-col gap-4 rounded-xl p-1 transition-colors",
@@ -230,11 +253,8 @@ export function StageDetailPanel({
               className="flex items-baseline justify-between gap-3 scroll-mt-20"
             >
               <h2 className="text-xl md:text-2xl font-semibold text-foreground">
-                {tStage("day", { dayNumber: stage.dayNumber })}
+                {dayTitle}
               </h2>
-              <span className="text-xs md:text-sm text-muted-foreground">
-                {formatDayDate(startDate, stage.dayNumber, locale)}
-              </span>
             </header>
 
             {stage.isRestDay ? (
@@ -299,8 +319,12 @@ export function StageDetailPanel({
               />
             )}
 
-            {/* Footer actions — insert after this stage. */}
+            {/* Footer actions — insert after this stage. Hidden while this day
+                is recomputing (its skeleton is shown): inserting a rest day or
+                an intermediate stage mid-recompute would race the in-flight
+                re-split (recette). */}
             {!readOnly &&
+              !recomputingStages.has(i) &&
               i < stages.length - 1 &&
               (onAddStage || onInsertRestDay) && (
                 <div className="flex w-full flex-wrap gap-2">

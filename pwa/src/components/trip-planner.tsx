@@ -489,7 +489,6 @@ export function TripPlanner() {
                 <TripHeader
                   title={trip.title}
                   onTitleChange={handleTitleChange}
-                  showTitleSuggestion={totalDistance !== null}
                   isTitleLoading={isProcessing && totalDistance === null}
                 />
               </div>

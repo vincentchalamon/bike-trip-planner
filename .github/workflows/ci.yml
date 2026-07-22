@@ -923,3 +923,13 @@ jobs:
       - name: Build APK
         working-directory: pwa/android
         run: ./gradlew assembleDebug
+      - name: Upload APK artifact
+        # Lets a mobile build be downloaded and tested from any CI run, without
+        # having to cut a release just to get at the APK.
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-apk
+          path: pwa/android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+          if-no-files-found: warn

@@ -88,7 +88,7 @@ hadolint: ## Run Hadolint on Dockerfiles
 	@find .docker -name Dockerfile -exec sh -c 'echo "=> {}"; docker run --rm -i hadolint/hadolint < "{}"' \;
 
 markdownlint: ## Run Markdownlint
-	@docker run --rm -v $$(pwd):/app -w /app davidanson/markdownlint-cli2 "**/*.md" "!.claude/**" "!api/vendor/**" "!api/vendor-bin/**" "!provisioner/vendor/**" "!provisioner/vendor-bin/**" "!pwa/node_modules/**"
+	@docker run --rm -v $$(pwd):/app -w /app davidanson/markdownlint-cli2 "**/*.md" "!.claude/**" "!api/vendor/**" "!api/vendor-bin/**" "!provisioner/vendor/**" "!provisioner/vendor-bin/**" "!**/node_modules/**" "!pwa/.next/**"
 
 link-check: ## Check Markdown links & anchors (internal fatal; use `make link-check -- --external` to gate on external URLs)
 	@docker run --rm -v $(CURDIR):/app -w /app node:25-slim node scripts/check-md-links.mjs $(ARGS)

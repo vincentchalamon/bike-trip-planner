@@ -80,6 +80,9 @@ final readonly class StageUpdateProcessor implements ProcessorInterface
 
         // Bump generation: stage edits invalidate in-flight computations
         $generation = $this->generationTracker->increment($tripId);
+        // Trip data changed → flag any existing AI overview as outdated (the
+        // frontend surfaces a manual "regenerate" button; no auto-recompute).
+        $this->tripStateManager->markAiOverviewStale($tripId);
 
         // Distance-based editing: walk along decimated route to find new endPoint
         if (null !== $data->distance) {

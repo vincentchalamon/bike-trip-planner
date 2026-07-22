@@ -74,6 +74,13 @@ interface TripRequestRepositoryInterface
     public function updateTripAiOverview(string $tripId, ?array $aiOverview): void;
 
     /**
+     * Flags the trip's AI overview as outdated after a data modification, but
+     * only when an overview already exists (a trip never analysed has nothing to
+     * mark stale). No-op otherwise. Reset by {@see self::updateTripAiOverview()}.
+     */
+    public function markAiOverviewStale(string $tripId): void;
+
+    /**
      * Persists a single stage's weather atomically, keyed by dayNumber.
      *
      * Parallel enrichment handlers each own one JSONB column; routing them through

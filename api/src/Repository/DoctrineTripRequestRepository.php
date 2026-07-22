@@ -358,12 +358,29 @@ final class DoctrineTripRequestRepository extends ServiceEntityRepository implem
         }
 
         $this->getEntityManager()->createQuery(
-            'UPDATE App\ApiResource\TripRequest t SET t.aiOverviewData = :aiOverview WHERE t.id = :tripId',
+            // Writing the overview clears the stale flag: the analysis is now
+            // in sync with the current trip data (recette AI lifecycle).
+            'UPDATE App\ApiResource\TripRequest t SET t.aiOverviewData = :aiOverview, t.aiOverviewStale = false WHERE t.id = :tripId',
         )
             ->setParameter('tripId', Uuid::fromString($tripId))
             // Bind as a single JSONB value (see updateStageAiAnalysis): the explicit type
             // prevents Doctrine from expanding the array into an IN list.
             ->setParameter('aiOverview', $aiOverview, 'jsonb')
+            ->execute();
+    }
+
+    public function markAiOverviewStale(string $tripId): void
+    {
+        if (!Uuid::isValid($tripId)) {
+            return;
+        }
+
+        // Atomic flag flip, guarded so a trip that was never analysed stays
+        // clean (no "outdated" note without any analysis to regenerate).
+        $this->getEntityManager()->createQuery(
+            'UPDATE App\ApiResource\TripRequest t SET t.aiOverviewStale = true WHERE t.id = :tripId AND t.aiOverviewData IS NOT NULL',
+        )
+            ->setParameter('tripId', Uuid::fromString($tripId))
             ->execute();
     }
 

@@ -105,6 +105,13 @@ interface TripState {
   aiOverview: TripAiOverviewPayload | null;
 
   /**
+   * True when the trip was modified after its AI overview was generated
+   * (server-persisted flag, hydrated from `/detail`). Drives the "analysis
+   * outdated" note + manual regenerate button instead of auto-recomputing.
+   */
+  aiOverviewStale: boolean;
+
+  /**
    * Index of the stage currently displayed in the master/detail roadbook view
    * (sidebar timeline drives the right-hand detail panel). Defaults to 0 and
    * is automatically clamped when stages are mutated (delete, reorder, reset).
@@ -202,6 +209,7 @@ interface TripState {
    * produced a result.
    */
   setAiOverview: (overview: TripAiOverviewPayload | null) => void;
+  setAiOverviewStale: (stale: boolean) => void;
   /**
    * Mode 2 — Per-stage replacement when `stage_updated` arrives.
    *
@@ -288,6 +296,7 @@ const initialState = {
   pendingModifications: [] as Modification[],
   selectedStageIndex: 0,
   aiOverview: null as TripAiOverviewPayload | null,
+  aiOverviewStale: false,
 };
 
 /**
@@ -372,6 +381,24 @@ function pruneStaleRecomputing(state: {
 }): void {
   for (const i of [...state.recomputingStages]) {
     if (i >= state.stages.length) state.recomputingStages.delete(i);
+  }
+}
+
+/**
+ * Drop date-derived calendar nudges from every stage after a structural edit
+ * that shifts `dayNumber`s (rest-day / placeholder insert, delete). These
+ * alerts ("L'étape N tombe un dimanche") are keyed to a stage's date, but the
+ * splice keeps each stage's `alerts` array attached to the shifted object, so
+ * the message would otherwise ride along onto a day that is no longer a Sunday.
+ * They are recomputed and republished by CheckCalendar. Geographic groups
+ * (terrain, accommodations, water, bike_shop, cultural_poi) stay valid because
+ * the real stages' endpoints do not move on a rest-day insert.
+ */
+function dropStaleDateAlerts(state: { stages: StageData[] }): void {
+  for (const stage of state.stages) {
+    stage.alerts = (stage.alerts as StageAlert[]).filter(
+      (a) => a._group !== "calendar",
+    );
   }
 }
 
@@ -628,6 +655,8 @@ export const useTripStore = create<TripState>()(
         // The array shrank: drop recompute markers that fell out of bounds so a
         // structural edit mid-recompute can't strand the overlay (#840).
         pruneStaleRecomputing(state);
+        // dayNumbers shifted → stale "Sunday" nudges must not ride along.
+        dropStaleDateAlerts(state);
         // Shrink the trip's day window to match the new stage count (recette
         // #649) — see insertRestDay.
         if (state.startDate) {
@@ -673,6 +702,7 @@ export const useTripStore = create<TripState>()(
           s.dayNumber = i + 1;
         });
         pruneStaleRecomputing(state);
+        dropStaleDateAlerts(state);
         // A trip spans one calendar day per stage (rest days included): extend
         // the end date so the global range and the export reflect the new day
         // immediately (recette #649). The backend mirrors this on persist.
@@ -695,6 +725,7 @@ export const useTripStore = create<TripState>()(
           s.dayNumber = i + 1;
         });
         pruneStaleRecomputing(state);
+        dropStaleDateAlerts(state);
         // Extend the trip's day window to match the new stage count (recette
         // #649) — see insertRestDay.
         if (state.startDate) {
@@ -767,6 +798,15 @@ export const useTripStore = create<TripState>()(
                 ? prev.alerts
                 : incoming.alerts
               : incoming.alerts,
+            // Dated events arrive via their own `events_found` SSE, absent from
+            // the terminal trip_ready payload (which can carry an empty list).
+            // Preserve them when the endpoint is stable so they don't vanish
+            // once enrichment settles (same rule as accommodations/alerts).
+            events: endMatch
+              ? prev.events.length > 0
+                ? prev.events
+                : incoming.events
+              : incoming.events,
           };
         });
       }),
@@ -774,6 +814,11 @@ export const useTripStore = create<TripState>()(
     setAiOverview: (overview) =>
       set((state) => {
         state.aiOverview = overview;
+      }),
+
+    setAiOverviewStale: (stale) =>
+      set((state) => {
+        state.aiOverviewStale = stale;
       }),
 
     applyStageUpdate: (stageIndex, stage) =>
@@ -847,6 +892,11 @@ export const useTripStore = create<TripState>()(
                   ...prev.alerts.filter((a) => a.source === "cultural_poi"),
                   ...stage.alerts.filter((a) => a.source !== "cultural_poi"),
                 ],
+          // Keep dated events (from the separate `events_found` SSE) until a
+          // fresh ScanEvents delivers them again — the stage_updated payload
+          // does not carry them and would otherwise blank the list.
+          events:
+            endMatch && prev.events.length > 0 ? prev.events : stage.events,
         };
       }),
 
@@ -978,6 +1028,10 @@ export const useTripTemporalStore = createTemporalStore(
  */
 export const useTripAiOverview = (): TripAiOverviewPayload | null =>
   useTripStore((state) => state.aiOverview);
+
+/** True when the persisted AI overview is outdated vs the current trip data. */
+export const useTripAiOverviewStale = (): boolean =>
+  useTripStore((state) => state.aiOverviewStale);
 
 /**
  * Selector for the LLaMA pass-1 per-stage AI analysis (issue #306).

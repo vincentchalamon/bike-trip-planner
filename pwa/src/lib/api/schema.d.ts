@@ -1718,6 +1718,18 @@ export interface components {
              * @enum {string|null}
              */
             aiStatus?: "pending" | "running" | "done" | "failed" | null;
+            /** @description Persisted LLaMA pass-2 trip overview (issue #302), so the AI narrative is restored on reload instead of being lost. Null when the trip was never analysed. */
+            aiOverview?: {
+                narrative?: string;
+                patterns?: string[];
+                recommendations?: string[];
+                crossStageAlerts?: string[];
+                model?: string;
+                promptVersion?: number;
+                generatedAt?: string;
+            } | null;
+            /** @description True when the trip data changed since the AI overview was generated: the frontend shows an "analysis outdated" note + a manual regenerate button. */
+            aiStale?: boolean;
             /** @description Serialized stage DTOs */
             stages?: {
                 dayNumber?: number;
@@ -1797,6 +1809,14 @@ export interface components {
                     url?: string | null;
                     possibleClosed?: boolean;
                     distanceToEndPoint?: number;
+                } | null;
+                aiAnalysis?: {
+                    narrative?: string;
+                    insights?: string[];
+                    suggestions?: string[];
+                    model?: string;
+                    promptVersion?: number;
+                    generatedAt?: string;
                 } | null;
             }[];
         };
@@ -1935,6 +1955,18 @@ export interface components {
              * @enum {string|null}
              */
             aiStatus?: "pending" | "running" | "done" | "failed" | null;
+            /** @description Persisted LLaMA pass-2 trip overview (issue #302), so the AI narrative is restored on reload instead of being lost. Null when the trip was never analysed. */
+            aiOverview?: {
+                narrative?: string;
+                patterns?: string[];
+                recommendations?: string[];
+                crossStageAlerts?: string[];
+                model?: string;
+                promptVersion?: number;
+                generatedAt?: string;
+            } | null;
+            /** @description True when the trip data changed since the AI overview was generated: the frontend shows an "analysis outdated" note + a manual regenerate button. */
+            aiStale?: boolean;
             /** @description Serialized stage DTOs */
             stages?: {
                 dayNumber?: number;
@@ -2014,6 +2046,14 @@ export interface components {
                     url?: string | null;
                     possibleClosed?: boolean;
                     distanceToEndPoint?: number;
+                } | null;
+                aiAnalysis?: {
+                    narrative?: string;
+                    insights?: string[];
+                    suggestions?: string[];
+                    model?: string;
+                    promptVersion?: number;
+                    generatedAt?: string;
                 } | null;
             }[];
         };
