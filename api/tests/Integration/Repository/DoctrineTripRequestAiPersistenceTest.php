@@ -143,6 +143,63 @@ final class DoctrineTripRequestAiPersistenceTest extends KernelTestCase
         self::assertNull($trip->aiOverviewData);
     }
 
+    #[Test]
+    public function markAiOverviewStaleSetsTheFlagWhenAnOverviewExists(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $this->repository->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
+        $this->repository->updateTripAiOverview($tripId, [
+            'narrative' => 'x', 'patterns' => [], 'recommendations' => [],
+            'crossStageAlerts' => [], 'model' => 'm', 'promptVersion' => 1, 'generatedAt' => 'now',
+        ]);
+
+        $this->repository->markAiOverviewStale($tripId);
+
+        $this->entityManager->clear();
+
+        $trip = $this->repository->getRequest($tripId);
+        self::assertNotNull($trip);
+        self::assertTrue($trip->aiOverviewStale);
+    }
+
+    #[Test]
+    public function markAiOverviewStaleIsANoOpWhenNoOverviewExists(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $this->repository->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
+
+        // No overview generated yet → nothing to mark stale.
+        $this->repository->markAiOverviewStale($tripId);
+
+        $this->entityManager->clear();
+
+        $trip = $this->repository->getRequest($tripId);
+        self::assertNotNull($trip);
+        self::assertFalse($trip->aiOverviewStale);
+    }
+
+    #[Test]
+    public function updateTripAiOverviewResetsTheStaleFlag(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $this->repository->initializeTrip($tripId, new TripRequest(Uuid::fromString($tripId)));
+        $overview = [
+            'narrative' => 'x', 'patterns' => [], 'recommendations' => [],
+            'crossStageAlerts' => [], 'model' => 'm', 'promptVersion' => 1, 'generatedAt' => 'now',
+        ];
+        $this->repository->updateTripAiOverview($tripId, $overview);
+        $this->repository->markAiOverviewStale($tripId);
+
+        // Regenerating the overview clears the stale flag.
+        $this->repository->updateTripAiOverview($tripId, $overview);
+
+        $this->entityManager->clear();
+
+        $trip = $this->repository->getRequest($tripId);
+        self::assertNotNull($trip);
+        self::assertFalse($trip->aiOverviewStale);
+    }
+
     private function stage(string $tripId): StageDto
     {
         return new StageDto(

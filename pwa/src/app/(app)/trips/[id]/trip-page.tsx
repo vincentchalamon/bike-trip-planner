@@ -302,9 +302,12 @@ function TripLoader({ tripId }: { tripId: string }) {
   // trip is actually opened, to avoid burning credits. A trip that already has an
   // overview (or a run in progress/failed) is left alone; staleness is handled by
   // the manual regenerate button.
-  const autoLaunchedRef = useRef(false);
+  // Keyed by tripId (not a plain boolean): the App Router reuses this component
+  // instance when navigating /trips/A → /trips/B, so a boolean guard would stay
+  // true and skip the auto-launch for every trip after the first of the session.
+  const autoLaunchedForTripRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!isLoaded || autoLaunchedRef.current) return;
+    if (!isLoaded || autoLaunchedForTripRef.current === tripId) return;
 
     const ui = useUiStore.getState();
     const trip = useTripStore.getState();
@@ -314,7 +317,7 @@ function TripLoader({ tripId }: { tripId: string }) {
       ui.blockStatus.ai === null &&
       trip.stages.length > 0
     ) {
-      autoLaunchedRef.current = true;
+      autoLaunchedForTripRef.current = tripId;
       ui.setBlockStatus("ai", "running");
       void launchTripAnalysis(tripId);
     }
