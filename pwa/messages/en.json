@@ -62,10 +62,7 @@
   "tripTitle": {
     "fallback": "My Trip",
     "placeholder": "Trip name",
-    "ariaLabel": "Trip title",
-    "suggestion": "Suggestion: {name}",
-    "apply": "Apply",
-    "dismissSuggestion": "Dismiss suggestion"
+    "ariaLabel": "Trip title"
   },
   "stage": {
     "day": "Day {dayNumber}",
@@ -691,7 +688,8 @@
     "collapseAria": "Collapse the AI summary",
     "loading": "The assistant is analysing your trip…",
     "failed": "The AI analysis could not complete.",
-    "regenerate": "Regenerate"
+    "regenerate": "Regenerate",
+    "staleNotice": "Analysis outdated after recent trip changes."
   },
   "aiRefinement": {
     "title": "Refine with the AI assistant",

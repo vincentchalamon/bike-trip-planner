@@ -42,24 +42,4 @@ test.describe("Title editing", () => {
       "Mon voyage en Ardeche",
     );
   });
-
-  test("shows suggestion banner after route_parsed", async ({
-    submitUrl,
-    injectSequence,
-    mockedPage,
-  }) => {
-    await submitUrl();
-    // Send route_parsed + stages_computed to trigger a re-render cycle
-    // (the suggestion banner needs a second render after the useEffect sets hasShown)
-    await injectSequence([routeParsedEvent(), stagesComputedEvent()]);
-    // Wait for title to render
-    await expect(mockedPage.getByTestId("trip-title")).toBeVisible({
-      timeout: 5000,
-    });
-    // Suggestion banner with "Appliquer" button
-    await expect(
-      mockedPage.getByRole("button", { name: "Appliquer", exact: true }),
-    ).toBeVisible({ timeout: 5000 });
-    await expect(mockedPage.getByText("Suggestion :")).toBeVisible();
-  });
 });

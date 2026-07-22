@@ -30,8 +30,3 @@ export function getRandomTripName(): string {
     "My Trip"
   );
 }
-
-export function getSuggestionName(currentTitle: string): string {
-  const candidates = FEMINIST_NAMES.filter((n) => n !== currentTitle);
-  return candidates[Math.floor(Math.random() * candidates.length)] ?? "My Trip";
-}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import { Suspense } from "react";
@@ -14,9 +14,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { HydrationBoundary } from "@/components/hydration-boundary";
 import { useTripStore } from "@/store/trip-store";
 import { useUiStore } from "@/store/ui-store";
-import { apiFetch } from "@/lib/api/client";
+import { apiFetch, launchTripAnalysis } from "@/lib/api/client";
 import { API_URL } from "@/lib/constants";
 import { resolveStageLabels } from "@/hooks/use-mercure";
+import { TripAiOverviewSchema } from "@/lib/validation/schemas";
 import type { StageData } from "@/lib/validation/schemas";
 import type { AccommodationType } from "@/lib/accommodation-types";
 import type { components } from "@/lib/api/schema";
@@ -48,6 +49,8 @@ function TripLoader({ tripId }: { tripId: string }) {
   );
   const setIsLocked = useTripStore((s) => s.setIsLocked);
   const setOutOfZone = useTripStore((s) => s.setOutOfZone);
+  const setAiOverview = useTripStore((s) => s.setAiOverview);
+  const setAiOverviewStale = useTripStore((s) => s.setAiOverviewStale);
   const clearTrip = useTripStore((s) => s.clearTrip);
   // Track the stage count so the label-fill effect below re-runs when a Komoot
   // trip's stages transition from empty (stageless draft) to populated — the
@@ -136,6 +139,9 @@ function TripLoader({ tripId }: { tripId: string }) {
           onCycleNetwork: s.onCycleNetwork ?? 0,
           supplyTimeline: [],
           events: [],
+          // Persisted pass-1 analysis (recette AI lifecycle) so the per-stage
+          // summary is restored on reload rather than lost until a live event.
+          aiAnalysis: (s.aiAnalysis as StageData["aiAnalysis"]) ?? null,
         };
       });
 
@@ -175,6 +181,12 @@ function TripLoader({ tripId }: { tripId: string }) {
       // state). Mercure events keep these live afterwards.
       ui.setBlockStatus("weather", data.weatherStatus ?? null);
       ui.setBlockStatus("ai", data.aiStatus ?? null);
+
+      // Restore the persisted AI overview + staleness so the narrative survives
+      // a reload (it otherwise only lived in the one-shot Mercure trip_ready).
+      const parsedOverview = TripAiOverviewSchema.safeParse(data.aiOverview);
+      setAiOverview(parsedOverview.success ? parsedOverview.data : null);
+      setAiOverviewStale(data.aiStale === true);
     }
 
     async function fetchDetail(): Promise<Response | null> {
@@ -278,8 +290,35 @@ function TripLoader({ tripId }: { tripId: string }) {
     setEnabledAccommodationTypes,
     setIsLocked,
     setOutOfZone,
+    setAiOverview,
+    setAiOverviewStale,
     clearTrip,
   ]);
+
+  // Launch the AI analysis on trip open when the user configured an AI provider
+  // AFTER the trip was created (recette AI lifecycle): the trip has no persisted
+  // overview and no AI computation ever ran (aiStatus null). We do NOT run this
+  // in the background for every un-analysed trip — only lazily, once, when this
+  // trip is actually opened, to avoid burning credits. A trip that already has an
+  // overview (or a run in progress/failed) is left alone; staleness is handled by
+  // the manual regenerate button.
+  const autoLaunchedRef = useRef(false);
+  useEffect(() => {
+    if (!isLoaded || autoLaunchedRef.current) return;
+
+    const ui = useUiStore.getState();
+    const trip = useTripStore.getState();
+    if (
+      ui.aiCapability.configured &&
+      trip.aiOverview === null &&
+      ui.blockStatus.ai === null &&
+      trip.stages.length > 0
+    ) {
+      autoLaunchedRef.current = true;
+      ui.setBlockStatus("ai", "running");
+      void launchTripAnalysis(tripId);
+    }
+  }, [isLoaded, tripId]);
 
   // Defer reverse-geocoding off the load critical path (issue #775): the backend
   // does not persist reverse-geocoded labels (a client-side concern) and no

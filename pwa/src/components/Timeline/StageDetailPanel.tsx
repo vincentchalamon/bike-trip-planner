@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useLocale } from "next-intl";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 import "dayjs/locale/en";
@@ -91,7 +91,6 @@ export function StageDetailPanel({
   newAccKey,
   onClearNewAcc,
 }: StageDetailPanelProps) {
-  const tStage = useTranslations("stage");
   const locale = useLocale();
   const recomputingStages = useTripStore((s) => s.recomputingStages);
   const setSelectedStageIndex = useTripStore((s) => s.setSelectedStageIndex);
@@ -211,12 +210,17 @@ export function StageDetailPanel({
       {stages.map((stage, i) => {
         if (!stage) return null;
         const isSelected = i === safeIndex;
+        // Heading is the weekday date itself ("Vendredi 21 août 2026") instead
+        // of "Jour N" (recette). Capitalise the first letter — dayjs returns a
+        // lowercase weekday in French.
+        const dayLabel = formatDayDate(startDate, stage.dayNumber, locale);
+        const dayTitle = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
 
         return (
           <section
             key={`stage-detail-${i}`}
             ref={isSelected ? selectedRef : undefined}
-            aria-label={tStage("day", { dayNumber: stage.dayNumber })}
+            aria-label={dayTitle}
             data-stage-index={i}
             className={[
               "flex w-full flex-col gap-4 rounded-xl p-1 transition-colors",
@@ -230,11 +234,8 @@ export function StageDetailPanel({
               className="flex items-baseline justify-between gap-3 scroll-mt-20"
             >
               <h2 className="text-xl md:text-2xl font-semibold text-foreground">
-                {tStage("day", { dayNumber: stage.dayNumber })}
+                {dayTitle}
               </h2>
-              <span className="text-xs md:text-sm text-muted-foreground">
-                {formatDayDate(startDate, stage.dayNumber, locale)}
-              </span>
             </header>
 
             {stage.isRestDay ? (
@@ -299,8 +300,12 @@ export function StageDetailPanel({
               />
             )}
 
-            {/* Footer actions — insert after this stage. */}
+            {/* Footer actions — insert after this stage. Hidden while this day
+                is recomputing (its skeleton is shown): inserting a rest day or
+                an intermediate stage mid-recompute would race the in-flight
+                re-split (recette). */}
             {!readOnly &&
+              !recomputingStages.has(i) &&
               i < stages.length - 1 &&
               (onAddStage || onInsertRestDay) && (
                 <div className="flex w-full flex-wrap gap-2">

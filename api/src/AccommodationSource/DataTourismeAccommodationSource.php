@@ -38,6 +38,13 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
 
         $candidates = [];
         foreach ($this->accommodationRepository->findNear($points, $radiusMeters, $enabledTypes) as $accommodation) {
+            // Skip unnamed entries: an unnamed accommodation the rider cannot
+            // identify is not a usable suggestion (recette).
+            $name = $accommodation['name'];
+            if (null === $name || '' === trim($name)) {
+                continue;
+            }
+
             if (null !== $accommodation['price']) {
                 $priceMin = $accommodation['price'];
                 $priceMax = $accommodation['price'];
@@ -50,7 +57,7 @@ final readonly class DataTourismeAccommodationSource implements AccommodationSou
             }
 
             $candidates[] = [
-                'name' => $accommodation['name'] ?? $accommodation['category'],
+                'name' => $name,
                 'type' => $accommodation['category'],
                 'lat' => $accommodation['lat'],
                 'lon' => $accommodation['lon'],

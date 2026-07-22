@@ -42,13 +42,18 @@ final class OsmAccommodationSourceTest extends TestCase
     }
 
     #[Test]
-    public function fetchFallsBackToCategoryWhenNameIsNull(): void
+    public function fetchSkipsUnnamedEntries(): void
     {
-        $source = $this->createSource($this->repository([$this->row(category: 'shelter', name: null)]));
+        $source = $this->createSource($this->repository([
+            $this->row(category: 'shelter', name: null),
+            $this->row(category: 'shelter', name: '  '),
+            $this->row(category: 'hotel', name: 'Hotel du Nord'),
+        ]));
 
-        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['shelter']);
+        $results = $source->fetch([new Coordinate(48.5, 2.5)], 5000, ['shelter', 'hotel']);
 
-        $this->assertSame('shelter', $results[0]['name']);
+        $this->assertCount(1, $results);
+        $this->assertSame('Hotel du Nord', $results[0]['name']);
     }
 
     #[Test]

@@ -180,7 +180,7 @@ export function Timeline({
           <div key={i} className="flex items-start mb-4">
             <div className="w-4 shrink-0" aria-hidden="true" />
             <div className="ml-6 md:ml-12 flex-1">
-              <Skeleton className="w-full md:max-w-[80%] h-32 rounded-xl" />
+              <Skeleton className="w-full h-32 rounded-xl" />
             </div>
           </div>
         ))}

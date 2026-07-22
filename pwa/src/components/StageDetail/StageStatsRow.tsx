@@ -198,7 +198,7 @@ export function StageStatsRow({
                 onCancel={() => setEditingDistance(false)}
               />
             ) : distance !== null ? (
-              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="flex items-center gap-1.5">
                 <span>
                   {Number.isInteger(distance) ? distance : distance.toFixed(1)}
                   <span className="ml-1 text-sm font-normal text-muted-foreground">
@@ -209,15 +209,14 @@ export function StageStatsRow({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 gap-1 px-2 text-xs font-medium text-brand border-brand/40 hover:bg-brand/10 hover:text-brand cursor-pointer"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0 text-muted-foreground hover:text-brand hover:bg-brand/10 cursor-pointer"
                         onClick={() => setEditingDistance(true)}
                         aria-label={tStage("editDistance")}
                         data-testid="stat-distance-edit"
                       >
                         <Pencil className="h-3.5 w-3.5" />
-                        {tStage("editDistance")}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-[15rem]">
@@ -230,13 +229,13 @@ export function StageStatsRow({
               <Skeleton className="w-16 h-5" />
             )
           }
-          hint={
-            !readOnly &&
-            onDistanceChange &&
-            !editingDistance &&
-            distance !== null
-              ? t("distanceEditHint")
-              : null
+          trailing={
+            !readOnly && onDistanceChange ? (
+              <InfoTooltip
+                content={t("distanceEditHint")}
+                testId="stat-distance-info"
+              />
+            ) : undefined
           }
         />
       </DiffHighlight>

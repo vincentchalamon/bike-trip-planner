@@ -23,7 +23,7 @@ export function RestDayCard({
 
   return (
     <div
-      className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 p-4 flex items-center gap-3 w-full md:max-w-[80%]"
+      className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 p-4 flex items-center gap-3 w-full"
       data-testid={`rest-day-card-${stageIndex}`}
     >
       <BedDouble className="h-5 w-5 text-muted-foreground shrink-0" />

@@ -178,6 +178,17 @@ final class TripRequest
     #[ApiProperty(readable: false, writable: false)]
     public ?array $aiOverviewData = null;
 
+    /**
+     * True once the trip data has been modified since the AI overview was
+     * generated. Surfaced to the frontend so it can show an "analysis outdated"
+     * note and a manual "regenerate" button instead of silently recomputing on
+     * every edit (which would burn LLM credits). Reset to false by
+     * {@see \App\Repository\TripRequestRepositoryInterface::updateTripAiOverview()}.
+     */
+    #[ORM\Column(name: 'ai_overview_stale', type: 'boolean', options: ['default' => false])]
+    #[ApiProperty(readable: false, writable: false)]
+    public bool $aiOverviewStale = false;
+
     #[ApiProperty(description: 'LLaMA 8B pass-2 trip overview (issue #302).', writable: false, identifier: false)]
     public function getAiOverview(): ?TripAiOverview
     {

@@ -91,6 +91,10 @@ final readonly class TripUpdateProcessor implements ProcessorInterface
         if ([] !== $computationsToTrigger) {
             // Criteria changed: bump generation so in-flight messages become stale
             $generation = $this->generationTracker->increment($id);
+            // Computation-affecting fields changed (dates/pacing/…) → flag any
+            // existing AI overview as outdated. A title-only edit resolves to no
+            // computations and correctly leaves the analysis untouched.
+            $this->tripStateManager->markAiOverviewStale($id);
 
             foreach ($computationsToTrigger as $computation) {
                 $this->computationTracker->resetComputation($id, $computation);

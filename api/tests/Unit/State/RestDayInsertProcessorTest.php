@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Post;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ApiResource\TripRequest;
+use App\Message\AnalyzeTerrain;
 use App\Message\CheckCalendar;
 use App\Message\FetchWeather;
 use App\Message\RecalculateStages;
@@ -246,7 +247,9 @@ final class RestDayInsertProcessorTest extends TestCase
         $this->tripStateManager->method('getRequest')->willReturn($tripRequest);
 
         $dispatchedMessages = [];
-        $this->messageBus->expects($this->exactly(3))
+        // RecalculateStages + AnalyzeTerrain (pacing/rest-day nudge re-run) +
+        // FetchWeather + CheckCalendar = 4 dispatches when a start date is set.
+        $this->messageBus->expects($this->exactly(4))
             ->method('dispatch')
             ->willReturnCallback(static function (object $msg) use (&$dispatchedMessages): Envelope {
                 $dispatchedMessages[] = $msg;
@@ -258,9 +261,11 @@ final class RestDayInsertProcessorTest extends TestCase
 
         $weatherMessages = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof FetchWeather));
         $calendarMessages = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof CheckCalendar));
+        $terrainMessages = array_values(array_filter($dispatchedMessages, static fn (object $m): bool => $m instanceof AnalyzeTerrain));
         $this->assertCount(1, $weatherMessages);
         $this->assertSame('trip-1', $weatherMessages[0]->tripId);
         $this->assertCount(1, $calendarMessages);
         $this->assertSame('trip-1', $calendarMessages[0]->tripId);
+        $this->assertCount(1, $terrainMessages);
     }
 }

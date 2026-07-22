@@ -7,6 +7,7 @@ import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { downloadStageFile, downloadSharedStageFile } from "@/lib/api/client";
 import { useShareContext } from "@/lib/share-context";
+import { useTripStore } from "@/store/trip-store";
 
 interface StageDownloadsProps {
   tripId: string | undefined;
@@ -21,10 +22,15 @@ export function StageDownloads({
 }: StageDownloadsProps) {
   const t = useTranslations("stage");
   const share = useShareContext();
+  const storeTitle = useTripStore((s) => s.trip?.title ?? "");
   const [downloading, setDownloading] = useState<"gpx" | "fit" | false>(false);
 
   async function handleDownload(format: "gpx" | "fit") {
     if (!tripId && !share) return;
+    // Name the file after the trip so multi-stage downloads are distinguishable
+    // (e.g. "Entre-Sens-e-et-Escaut-stage-1.gpx"). The shared view carries the
+    // title in its context; the edit view reads it from the store.
+    const tripTitle = share ? share.title : storeTitle;
     setDownloading(format);
     try {
       if (share) {
@@ -33,9 +39,16 @@ export function StageDownloads({
           stageIndex,
           format,
           dayNumber,
+          tripTitle,
         );
       } else {
-        await downloadStageFile(tripId!, stageIndex, format, dayNumber);
+        await downloadStageFile(
+          tripId!,
+          stageIndex,
+          format,
+          dayNumber,
+          tripTitle,
+        );
       }
     } catch {
       toast.error(t("downloadFailed"));

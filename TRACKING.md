@@ -1152,16 +1152,16 @@ Batch de feedbacks d'un dev testeur ([#830](https://github.com/vincentchalamon/b
 
 | Ordre | ID | Titre | Effort | PR | Statut | Dépend de |
 |-------|----|-------|--------|----|--------|-----------|
-| 1 | [#831](https://github.com/vincentchalamon/bike-trip-planner/issues/831) | Marque header/footer + LocaleSwitcher select | M | [#841](https://github.com/vincentchalamon/bike-trip-planner/pull/841) `feature/831` | — |
-| 2 | [#832](https://github.com/vincentchalamon/bike-trip-planner/issues/832) | InfoTooltip réutilisable + difficulté | S | [#842](https://github.com/vincentchalamon/bike-trip-planner/pull/842) `feature/832` | — |
-| 3 | [#833](https://github.com/vincentchalamon/bike-trip-planner/issues/833) | Boutons vs liens (Élargir le rayon) | S | [#843](https://github.com/vincentchalamon/bike-trip-planner/pull/843) `feature/833` | — |
-| 4 | [#834](https://github.com/vincentchalamon/bike-trip-planner/issues/834) | Upload GPX direct depuis l'écran des 3 choix | M | [#844](https://github.com/vincentchalamon/bike-trip-planner/pull/844) `feature/834` | — |
-| 5 | [#835](https://github.com/vincentchalamon/bike-trip-planner/issues/835) | Toast « voyage enregistré » après import | S | [#845](https://github.com/vincentchalamon/bike-trip-planner/pull/845) `feature/835` | — |
-| 6 | [#836](https://github.com/vincentchalamon/bike-trip-planner/issues/836) | Alerte « Configure une IA » sous le header | S | [#846](https://github.com/vincentchalamon/bike-trip-planner/pull/846) `feature/836` | — |
-| 7 | [#837](https://github.com/vincentchalamon/bike-trip-planner/issues/837) | Affordance du découpage par distance | M | [#847](https://github.com/vincentchalamon/bike-trip-planner/pull/847) `feature/837` |  — |
-| 8 | [#838](https://github.com/vincentchalamon/bike-trip-planner/issues/838) | Polish structurel sidebar paramètres | M | [#848](https://github.com/vincentchalamon/bike-trip-planner/pull/848) `feature/838` |  — |
-| 9 | [#839](https://github.com/vincentchalamon/bike-trip-planner/issues/839) | Installabilité PWA minimale (bug macOS) | M | [#849](https://github.com/vincentchalamon/bike-trip-planner/pull/849) `feature/839` | — |
-| 10 | [#840](https://github.com/vincentchalamon/bike-trip-planner/issues/840) | Races au recompute de distance | L | [#850](https://github.com/vincentchalamon/bike-trip-planner/pull/850) `feature/840` | — |
+| 1 | [#831](https://github.com/vincentchalamon/bike-trip-planner/issues/831) | Marque header/footer + LocaleSwitcher select | M | [#841](https://github.com/vincentchalamon/bike-trip-planner/pull/841) `feature/831` | — | — |
+| 2 | [#832](https://github.com/vincentchalamon/bike-trip-planner/issues/832) | InfoTooltip réutilisable + difficulté | S | [#842](https://github.com/vincentchalamon/bike-trip-planner/pull/842) `feature/832` | — | — |
+| 3 | [#833](https://github.com/vincentchalamon/bike-trip-planner/issues/833) | Boutons vs liens (Élargir le rayon) | S | [#843](https://github.com/vincentchalamon/bike-trip-planner/pull/843) `feature/833` | — | — |
+| 4 | [#834](https://github.com/vincentchalamon/bike-trip-planner/issues/834) | Upload GPX direct depuis l'écran des 3 choix | M | [#844](https://github.com/vincentchalamon/bike-trip-planner/pull/844) `feature/834` | — | — |
+| 5 | [#835](https://github.com/vincentchalamon/bike-trip-planner/issues/835) | Toast « voyage enregistré » après import | S | [#845](https://github.com/vincentchalamon/bike-trip-planner/pull/845) `feature/835` | — | — |
+| 6 | [#836](https://github.com/vincentchalamon/bike-trip-planner/issues/836) | Alerte « Configure une IA » sous le header | S | [#846](https://github.com/vincentchalamon/bike-trip-planner/pull/846) `feature/836` | — | — |
+| 7 | [#837](https://github.com/vincentchalamon/bike-trip-planner/issues/837) | Affordance du découpage par distance | M | [#847](https://github.com/vincentchalamon/bike-trip-planner/pull/847) `feature/837` | — | — |
+| 8 | [#838](https://github.com/vincentchalamon/bike-trip-planner/issues/838) | Polish structurel sidebar paramètres | M | [#848](https://github.com/vincentchalamon/bike-trip-planner/pull/848) `feature/838` | — | — |
+| 9 | [#839](https://github.com/vincentchalamon/bike-trip-planner/issues/839) | Installabilité PWA minimale (bug macOS) | M | [#849](https://github.com/vincentchalamon/bike-trip-planner/pull/849) `feature/839` | — | — |
+| 10 | [#840](https://github.com/vincentchalamon/bike-trip-planner/issues/840) | Races au recompute de distance | L | [#850](https://github.com/vincentchalamon/bike-trip-planner/pull/850) `feature/840` | — | — |
 
 ### Hors scope (confié à un designer)
 
