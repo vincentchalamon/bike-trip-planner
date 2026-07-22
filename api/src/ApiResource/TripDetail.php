@@ -33,7 +33,8 @@ use App\State\TripDetailProvider;
 final readonly class TripDetail
 {
     /**
-     * @param list<array<string, mixed>> $stages Serialized stage DTOs
+     * @param array<string, mixed>|null  $aiOverview Persisted trip-level AI overview
+     * @param list<array<string, mixed>> $stages     Serialized stage DTOs
      */
     public function __construct(
         public string $id,

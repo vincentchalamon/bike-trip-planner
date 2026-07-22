@@ -233,6 +233,10 @@ export function StageStatsRow({
             !readOnly && onDistanceChange ? (
               <InfoTooltip
                 content={t("distanceEditHint")}
+                // Explicit label so the trigger's accessible name doesn't start
+                // with "Modifier la distance" (which would collide with the edit
+                // pencil button under a substring role-name match).
+                label={t("distanceEditHintLabel")}
                 testId="stat-distance-info"
               />
             ) : undefined

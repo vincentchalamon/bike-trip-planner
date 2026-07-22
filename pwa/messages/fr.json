@@ -270,6 +270,7 @@
     "budget": "Budget",
     "distanceEditTooltip": "Modifie la distance de cette étape. Le reste de l'itinéraire est recalculé en conséquence.",
     "distanceEditHint": "Modifier la distance redécoupe les jours suivants.",
+    "distanceEditHintLabel": "À propos du redécoupage par distance",
     "budgetTooltip": "Estimation basée sur les repas de la journée et l'hébergement (sélectionné ou moyenne des options trouvées)."
   },
   "stageAiSummary": {

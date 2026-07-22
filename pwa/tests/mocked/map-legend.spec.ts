@@ -85,7 +85,7 @@ test.describe("Map legend — unified pictogram registry (issue #390)", () => {
     await expect(mockedPage.getByTestId("map-legend")).not.toBeVisible();
   });
 
-  test("alert with source renders category icon in list and map marker", async ({
+  test("alert with source renders the category icon on the map marker only (not the list)", async ({
     injectSequence,
     mockedPage,
   }) => {
@@ -120,10 +120,11 @@ test.describe("Map legend — unified pictogram registry (issue #390)", () => {
       "Gare SNCF à proximité",
     );
 
-    // The category icon for railway-station should appear in the alert list
+    // Uniform alert template (recette): the category icon is NO LONGER shown in
+    // the alert list for non-cultural alerts — only the severity icon remains.
     await expect(
       mockedPage.getByTestId("alert-category-icon-railway-station"),
-    ).toBeVisible();
+    ).toHaveCount(0);
 
     // The map should render a marker with data-category="railway-station"
     await expect

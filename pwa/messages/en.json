@@ -270,6 +270,7 @@
     "budget": "Budget",
     "distanceEditTooltip": "Edit this stage's distance. The rest of the route is recalculated accordingly.",
     "distanceEditHint": "Editing the distance re-splits the following days.",
+    "distanceEditHintLabel": "About distance re-splitting",
     "budgetTooltip": "Estimate based on the day's meals and accommodation (selected option or average of nearby options)."
   },
   "stageAiSummary": {
