@@ -325,7 +325,15 @@ function TripLoader({ tripId }: { tripId: string }) {
     ) {
       autoLaunchedForTripRef.current = tripId;
       useUiStore.getState().setBlockStatus("ai", "running");
-      void launchTripAnalysis(tripId);
+      // Handle a failed launch (rejected promise OR falsy result) like the
+      // manual path does: otherwise the AI block spins on "running" forever and
+      // the tripId-keyed guard blocks any retry. Surfacing "failed" renders the
+      // error card + regenerate button so the rider can retry manually.
+      launchTripAnalysis(tripId)
+        .then((ok) => {
+          if (!ok) useUiStore.getState().setBlockStatus("ai", "failed");
+        })
+        .catch(() => useUiStore.getState().setBlockStatus("ai", "failed"));
     }
   }, [isLoaded, tripId, aiConfigured, aiOverview, aiStatus, stageCount]);
 
