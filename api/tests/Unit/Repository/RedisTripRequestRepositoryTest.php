@@ -94,6 +94,34 @@ final class RedisTripRequestRepositoryTest extends TestCase
     }
 
     #[Test]
+    public function markAiOverviewStaleSetsTheFlagWhenAnOverviewExists(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $request = new TripRequest(Uuid::fromString($tripId));
+        $request->aiOverviewData = [
+            'narrative' => 'g', 'patterns' => [], 'recommendations' => [],
+            'crossStageAlerts' => [], 'model' => 'm', 'promptVersion' => 1, 'generatedAt' => 'now',
+        ];
+
+        $readItem = $this->createMock(CacheItemInterface::class);
+        $readItem->method('isHit')->willReturn(true);
+        $readItem->method('get')->willReturn($request);
+
+        $writeItem = $this->createMock(CacheItemInterface::class);
+        $writeItem->expects(self::once())
+            ->method('set')
+            ->with(self::callback(static fn (TripRequest $stored): bool => $stored->aiOverviewStale));
+        $writeItem->method('expiresAfter')->willReturnSelf();
+
+        $this->cache->expects(self::exactly(2))
+            ->method('getItem')
+            ->willReturnOnConsecutiveCalls($readItem, $writeItem);
+        $this->cache->expects(self::atLeastOnce())->method('save');
+
+        $this->repository->markAiOverviewStale($tripId);
+    }
+
+    #[Test]
     public function updateStageAiAnalysisAssignsDtoUnderLock(): void
     {
         $tripId = Uuid::v7()->toRfc4122();
