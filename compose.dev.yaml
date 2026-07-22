@@ -95,6 +95,15 @@ services:
     image: bike-trip-planner-pwa:dev
     build:
       target: dev
+    # `next dev` + Turbopack compiles in-memory (measured ~1.4G anon working set)
+    # and needs far more than the prod standalone server's 512M budget (compose.yaml,
+    # sized for the #566 beta VM). Without this the container OOMs mid-compile,
+    # `unless-stopped` restarts it in a loop, and `docker compose up --wait` never
+    # sees it healthy (boot appears to hang). 3G leaves headroom for HMR/compile spikes.
+    deploy:
+      resources:
+        limits:
+          memory: 3G
     environment:
       NODE_ENV: development
       # Development usage only
