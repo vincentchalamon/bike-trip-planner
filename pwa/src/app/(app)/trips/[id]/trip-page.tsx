@@ -57,6 +57,12 @@ function TripLoader({ tripId }: { tripId: string }) {
   // first hydrate has no stages, so gating on `isLoaded` alone would never fill
   // labels for that flow (recette #649).
   const stageCount = useTripStore((s) => s.stages.length);
+  // Subscribed (not read via getState) so the auto-launch effect below re-runs
+  // when `useAiSettings` (mounted in the child TripPlanner) asynchronously flips
+  // `configured` true — otherwise the effect only ever sees the store default.
+  const aiConfigured = useUiStore((s) => s.aiCapability.configured);
+  const aiStatus = useUiStore((s) => s.blockStatus.ai);
+  const aiOverview = useTripStore((s) => s.aiOverview);
 
   useEffect(() => {
     let cancelled = false;
@@ -309,19 +315,19 @@ function TripLoader({ tripId }: { tripId: string }) {
   useEffect(() => {
     if (!isLoaded || autoLaunchedForTripRef.current === tripId) return;
 
-    const ui = useUiStore.getState();
-    const trip = useTripStore.getState();
+    // Depends on the subscribed AI store values so this re-evaluates once the
+    // async ai-settings fetch resolves — the flag isn't set at mount time.
     if (
-      ui.aiCapability.configured &&
-      trip.aiOverview === null &&
-      ui.blockStatus.ai === null &&
-      trip.stages.length > 0
+      aiConfigured &&
+      aiOverview === null &&
+      aiStatus === null &&
+      stageCount > 0
     ) {
       autoLaunchedForTripRef.current = tripId;
-      ui.setBlockStatus("ai", "running");
+      useUiStore.getState().setBlockStatus("ai", "running");
       void launchTripAnalysis(tripId);
     }
-  }, [isLoaded, tripId]);
+  }, [isLoaded, tripId, aiConfigured, aiOverview, aiStatus, stageCount]);
 
   // Defer reverse-geocoding off the load critical path (issue #775): the backend
   // does not persist reverse-geocoded labels (a client-side concern) and no
