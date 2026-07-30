@@ -1188,3 +1188,233 @@ Identité visuelle / palette « trop IA / lourde », identité forte, animations
 | [#308](https://github.com/vincentchalamon/bike-trip-planner/issues/308) | Fallback frontend sans LLaMA                           | Ollama = dépendance dure — impossible (issue #375 arbitrage v2)              |
 
 </details>
+
+<details><summary>
+
+## Sprint 44 - Alertes : fondement, unités, contrat
+
+</summary>
+Assainissement du moteur d'alertes : ce qui est faux, ce qui n'est pas fondé, ce qui n'est pas compréhensible. Indépendant de toute donnée nouvelle, donc lançable immédiatement, et c'est avec le sprint 45 ce qui porte l'essentiel de la valeur perçue.
+
+> **Prérequis :** aucun.
+>
+> **Ordre interne impératif :** #862 (formateur) **après** #859 (attribution). Formater joliment un nombre mal attribué est pire que de le laisser brut : « 43,9 km » se lit comme une mesure autorisée, `43871m` se lit comme un artefact machine.
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | [#859](https://github.com/vincentchalamon/bike-trip-planner/issues/859) | fix(terrain): attribute ways to the ridden route, not to a 100 m neighbourhood | - | - | - |
+| 2 | [#860](https://github.com/vincentchalamon/bike-trip-planner/issues/860) | fix(terrain): widen the unpaved surface vocabulary | - | - | - |
+| 3 | [#861](https://github.com/vincentchalamon/bike-trip-planner/issues/861) | fix(alerts): drop the tag-presence rules and the dead surface fallback | - | - | - |
+| 4 | [#862](https://github.com/vincentchalamon/bike-trip-planner/issues/862) | feat(alerts): locale-aware distance formatter and translated tag values | - | - | [#859](https://github.com/vincentchalamon/bike-trip-planner/issues/859) |
+| 5 | [#863](https://github.com/vincentchalamon/bike-trip-planner/issues/863) | fix(alerts): restore navigate and dismiss actions with coordinates end-to-end | - | - | - |
+| 6 | [#864](https://github.com/vincentchalamon/bike-trip-planner/issues/864) | fix(alerts): rest-day guard, local-time sunset and multi-year calendar | - | - | - |
+
+### Recette Sprint 44
+
+- **Tests E2E :** étendre `pwa/tests/mocked/alert-actions.spec.ts` (bouton d'action actif sur une alerte de terrain, aucun bouton pour un kind non câblé).
+- **Checklist manuelle :**
+  - [ ] Importer un tracé réel : aucune alerte ne mentionne la complétude d'OSM.
+  - [ ] Les longueurs cumulées s'affichent en km au-delà de 1 000 m, avec un séparateur décimal français.
+  - [ ] Aucun message ne contient de valeur de tag brute (`gravel`, `castle`), ni de nom de férié en anglais.
+  - [ ] Une alerte de continuité affiche un bouton cliquable qui ouvre la position sur la carte.
+  - [ ] Aucun bouton d'action désactivé n'apparaît.
+  - [ ] Une étape longeant une voie verte parallèle à une nationale ne déclenche pas d'alerte de trafic.
+  - [ ] Un jour de repos ne collecte plus d'alerte de terrain ni d'absence de service.
+  - [ ] Pour une étape en France en juin, l'heure de coucher du soleil affichée correspond à l'heure locale.
+
+</details>
+
+<details><summary>
+
+## Sprint 45 - Hébergements : débloquer l'existant
+
+</summary>
+Rendre exploitable ce qui est **déjà importé**. Le défaut dominant n'est pas l'absence de nom : **66,4 % des hébergements DataTourisme (82 523 sur 124 240) sont définitivement inatteignables** parce que `DataTourismeMapper::classify()` les rabat sur `apartment`, valeur absente de `TripRequest::ALL_ACCOMMODATION_TYPES`.
+
+> **Prérequis :** aucun. Aucune source nouvelle, aucun ré-import de schéma.
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | [#865](https://github.com/vincentchalamon/bike-trip-planner/issues/865) | feat(datatourisme): map rental accommodations and drop the silent category default | - | - | - |
+| 2 | [#866](https://github.com/vincentchalamon/bike-trip-planner/issues/866) | fix(pwa): complete the accommodation label and icon maps | - | - | - |
+| 3 | [#867](https://github.com/vincentchalamon/bike-trip-planner/issues/867) | fix(pwa): guard malformed accommodation urls and translate the wikipedia link | - | - | - |
+| 4 | [#868](https://github.com/vincentchalamon/bike-trip-planner/issues/868) | fix(accommodations): deterministic ordering and bounded result sets | - | - | - |
+| 5 | [#869](https://github.com/vincentchalamon/bike-trip-planner/issues/869) | feat(accommodations): rank candidates by completeness, use stars and capacity | - | - | [#868](https://github.com/vincentchalamon/bike-trip-planner/issues/868) |
+| 6 | [#870](https://github.com/vincentchalamon/bike-trip-planner/issues/870) | fix(trips): stop dropping accommodation enrichment on persist | - | - | - |
+
+### Recette Sprint 45
+
+- **Tests E2E :** étendre `pwa/tests/mocked/accommodation.spec.ts` (rechargement après scan, badge de source, lien de site). Les hébergements de `pwa/tests/fixtures/mock-data.ts` n'ont aujourd'hui ni `url`, ni `imageUrl`, ni `description` : à enrichir.
+- **Checklist manuelle :**
+  - [ ] `SELECT category, count(*) FROM tourism.accommodations GROUP BY 1` ne montre plus de bucket `apartment` fourre-tout.
+  - [ ] Le type gîte / meublé est **décoché par défaut** sur un nouveau voyage ; le cocher fait apparaître des gîtes.
+  - [ ] Un voyage créé avant le déploiement conserve exactement le même jeu de types.
+  - [ ] Un hébergement de type abri s'affiche « Abri », plus jamais « Autre ».
+  - [ ] Un hébergement dont le site OSM est saisi sans schéma (`www.hotel.fr`) n'empêche pas le rendu et produit un lien fonctionnel.
+  - [ ] Deux scans successifs du même voyage retournent exactement les mêmes hébergements, dans le même ordre.
+  - [ ] Après rechargement de la page, la fiche conserve vignette, description, lien Wikipédia et badge de source.
+
+</details>
+
+<details><summary>
+
+## Sprint 46 - Lien de vérification et données OSM
+
+</summary>
+Le lien et le téléphone cessent d'être du confort : depuis la décision d'obsolescence assumée, c'est l'utilisateur qui réserve donc qui vérifie, et ce sont **ses outils de vérification**. Ce sprint récupère aussi ce que le flux DataTourisme jette au mappage.
+
+> **Prérequis :** #876 dépend de #861 (sprint 44) : la liste des codes d'alerte doit refléter les règles conservées. **Dépendance inter-sprint, invisible pour `/sprint` :** la colonne `Dépend de` ne référence que des issues de la même table. À respecter manuellement.
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | [#871](https://github.com/vincentchalamon/bike-trip-planner/issues/871) | fix(datatourisme): stop truncating the flux tags to the type list | - | - | - |
+| 2 | [#872](https://github.com/vincentchalamon/bike-trip-planner/issues/872) | feat(datatourisme): add website, phone, wikidata and opening hours to tourism accommodations | - | - | [#871](https://github.com/vincentchalamon/bike-trip-planner/issues/871) |
+| 3 | [#873](https://github.com/vincentchalamon/bike-trip-planner/issues/873) | feat(api): expose accommodation url, phone and osm identity | - | - | [#872](https://github.com/vincentchalamon/bike-trip-planner/issues/872) |
+| 4 | [#874](https://github.com/vincentchalamon/bike-trip-planner/issues/874) | fix(poi): translated labels for unnamed pois and the dedup collision they cause | - | - | - |
+| 5 | [#875](https://github.com/vincentchalamon/bike-trip-planner/issues/875) | feat(poi): use real opening hours instead of hardcoded schedules | - | - | - |
+| 6 | [#876](https://github.com/vincentchalamon/bike-trip-planner/issues/876) | feat(alerts): stable alert code and hardened documentation test | - | - | - |
+
+### Recette Sprint 46
+
+- **Tests E2E :** lien `tel:` et lien « voir sur OSM » présents sur la fiche ; rejet d'alerte persistant après reformulation d'un message.
+- **Checklist manuelle :**
+  - [ ] `SELECT count(*) FROM tourism.accommodations WHERE website IS NOT NULL` est non nul après ré-import.
+  - [ ] `SELECT count(*) FROM tourism.cultural_pois WHERE website IS NOT NULL` est non nul (la colonne existait et n'était jamais peuplée).
+  - [ ] Un hébergement DataTourisme portant un `foaf:homepage` affiche un lien de site.
+  - [ ] Un hébergement OSM portant `contact:phone` affiche un lien `tel:` cliquable.
+  - [ ] Le lien « voir sur OSM » pointe sur le bon objet selon `osm_type` (node, way, relation).
+  - [ ] Deux POI anonymes de même catégorie à moins de 75 m sont **tous les deux** conservés.
+  - [ ] Aucun POI ne s'affiche avec un slug OSM brut comme nom.
+  - [ ] Un POI sans horaires connus ne déclenche pas l'alerte de créneau de ravitaillement.
+  - [ ] `AlertDocumentationTest` échoue si un code est émis sans ligne de README, et réciproquement.
+
+</details>
+
+<details><summary>
+
+## Sprint 47 - Mesure et spikes
+
+</summary>
+Sprint volontairement court : ce sont des mesures, et elles **arbitrent les sprints 49 et 50**. Sans chiffres, on supprime des règles et on choisit des sources à l'intuition, et c'est exactement ce qui a produit une inférence fausse pendant le diagnostic (« un rayon de 15 km sans pharmacie est un trou d'index » était une supposition, probablement démentie par la couverture OSM réelle).
+
+> ⚠️ **Ce sprint ne passe pas par `/sprint`.** #878 et #879 sont des spikes en lecture seule : ils ne produisent aucun commit, alors que le pipeline attend une branche, un `make qa`, un commit et une PR. À traiter manuellement, ou à convertir en issues produisant un rapport committé sous `docs/`. Seule #877 est du code.
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | [#877](https://github.com/vincentchalamon/bike-trip-planner/issues/877) | feat(provisioner): per-table completeness metrics in metadata and health | - | - | - |
+| 2 | [#878](https://github.com/vincentchalamon/bike-trip-planner/issues/878) | chore(quality): measure unnamed osm accommodations per category | - | - | - |
+| 3 | [#879](https://github.com/vincentchalamon/bike-trip-planner/issues/879) | chore(datatourisme): audit flux fields for accueil-velo and minimum stay | - | - | - |
+
+### Recette Sprint 47
+
+- **Tests E2E :** aucun (métriques internes, non exposées à l'utilisateur).
+- **Checklist manuelle :**
+  - [ ] `/api/health` expose les ratios de complétude par table sous `reference_data`, en dépendance non requise.
+  - [ ] `/api/health` expose un âge par source **sans** verdict de péremption ; `STALE_THRESHOLDS` a disparu.
+  - [ ] Les hébergements exposent le détail par catégorie, condition pour arbitrer l'exclusion des entrées sans nom.
+  - [ ] Le décompte des hébergements OSM sans nom, par catégorie, est publié dans #878 avec une recommandation explicite sur `shelter` et `wilderness_hut`.
+  - [ ] La présence ou l'absence du label « Accueil Vélo » dans le flux est tranchée par une mesure dans #879.
+  - [ ] Les métriques n'allongent pas notablement la durée du provisionnement.
+
+</details>
+
+<details><summary>
+
+## Sprint 48 - Découplage du routage, index administratif
+
+</summary>
+Prépare l'ouverture par zone. `default.osm.pbf` a aujourd'hui **deux consommateurs** reliés par un simple chemin de fichier : la source de l'import PostGIS et l'**unique entrée de Valhalla** (`compose.yaml:346`). Avec une zone par exécution, ouvrir la Bretagne **casserait le routage** en Hauts-de-France.
+
+> **Prérequis :** #882 dépend des mesures du sprint 47. L'ADR est écrit **en dernier** : rédiger la décision avant d'avoir les chiffres la figerait sur une intuition.
+>
+> ⚠️ **#881 requiert une vérification manuelle.** Elle supprime `ensure-default-pbf`, prérequis de `make start-dev` **et** de `make start` (`Makefile:34` et `:45`). Un agent worktree lançant `make qa` ne peut pas le valider, et `make test` ne démarre pas le profil `routing`.
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | [#880](https://github.com/vincentchalamon/bike-trip-planner/issues/880) | feat(provisioner): import administrative levels for offline locality labels | - | - | - |
+| 2 | [#881](https://github.com/vincentchalamon/bike-trip-planner/issues/881) | refactor(routing): decouple the valhalla dataset from the provisioner | - | - | - |
+| 3 | [#882](https://github.com/vincentchalamon/bike-trip-planner/issues/882) | docs(adr): add adr-049 zone opening and import-time completeness | - | - | [#880](https://github.com/vincentchalamon/bike-trip-planner/issues/880), [#881](https://github.com/vincentchalamon/bike-trip-planner/issues/881) |
+
+### Recette Sprint 48
+
+- **Tests E2E :** aucun. La vérification vit dans la checklist manuelle.
+- **Checklist manuelle :**
+  - [ ] `SELECT count(*) FROM osm.admin_boundaries WHERE admin_level = 2` sur le jeu local mono-slug. **Si le compte est nul**, `osm.coverage` est vide, tout voyage est « hors zone » et aucun pays n'est résolu : défaut à corriger en priorité.
+  - [ ] La résolution de localité d'un point fonctionne **sans appel réseau**.
+  - [ ] L'impact sur la taille du PBF filtré et sur la durée d'`osm2pgsql` est mesuré et documenté.
+  - [ ] `make routing-build france` construit un graphe fonctionnel, indépendamment de toute ouverture de zone.
+  - [ ] `make provision <zone>` ne touche plus aux tuiles ni au PBF de routage.
+  - [ ] `make start-dev` **et** `make start` démarrent depuis un état propre, sans `default.osm.pbf` ni stub.
+  - [ ] Le service `valhalla` ne construit plus rien et son `start_period` est de l'ordre de quelques secondes.
+  - [ ] Un calcul d'itinéraire réel aboutit après `make routing-build`.
+  - [ ] ADR-049 est bien le prochain numéro libre (048 réservé par #527, Sprint 39).
+
+</details>
+
+<details><summary>
+
+## Sprint 49 - Ouverture par zone, cache et gate
+
+</summary>
+Le cœur du chantier : ouverture manuelle zone par zone, cache d'enrichissement persistant, gate de complétude. Remplace le rebuild complet suivi d'un swap global de schéma, qui coûte aujourd'hui un ré-import de tout le jeu à chaque ajout de zone.
+
+> **Prérequis :** #881 (routage découplé, sprint 48) et #878 (mesure du « sans nom », sprint 47, qui arbitre le traitement de `shelter` et `wilderness_hut`). **Dépendances inter-sprints, invisibles pour `/sprint`.**
+>
+> ⚠️ **À traiter en `/pick` séquentiels plutôt qu'en `/sprint`.** Les quatre issues touchent les mêmes fichiers (`PostgisImporter`, `DataTourismeImporter`, `ProvisionCommand`) et la chaîne de dépendances les sérialise déjà : les vagues sont #883, puis #884, puis {#885, #886}. Le parallélisme n'apporte presque rien, la pile de PR imbriquées apporte tout le coût de rebase.
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | [#883](https://github.com/vincentchalamon/bike-trip-planner/issues/883) | feat(provisioner): zone registry, single-zone runs and transactional promotion | - | - | - |
+| 2 | [#884](https://github.com/vincentchalamon/bike-trip-planner/issues/884) | feat(provisioner): persistent enrichment cache, name resolver and completeness gate | - | - | [#883](https://github.com/vincentchalamon/bike-trip-planner/issues/883) |
+| 3 | [#885](https://github.com/vincentchalamon/bike-trip-planner/issues/885) | feat(provisioner): geometric matching between osm and datatourisme places | - | - | [#884](https://github.com/vincentchalamon/bike-trip-planner/issues/884) |
+| 4 | [#886](https://github.com/vincentchalamon/bike-trip-planner/issues/886) | feat(provisioner): zone opening report and manual override import | - | - | [#884](https://github.com/vincentchalamon/bike-trip-planner/issues/884) |
+
+### Recette Sprint 49
+
+- **Tests E2E :** aucun. La vérification est un scénario de provisionnement, décrit ci-dessous.
+- **Checklist manuelle :**
+  - [ ] `make provision` **sans** argument de zone échoue avec un message explicite.
+  - [ ] `make provision <zone>` importe cette seule zone et n'altère aucune autre.
+  - [ ] Ouvrir une seconde zone **conserve** intégralement la première.
+  - [ ] **Ré-ouvrir la même zone sans changement de source insère 0 ligne**, sans aucun appel réseau d'enrichissement, et le rapport annonce « 0 nouvelle entrée ». **C'est la preuve du gate.**
+  - [ ] Une exécution interrompue en cours de promotion ne laisse aucun état partiel.
+  - [ ] Ouvrir une zone non couverte par le graphe de routage est **refusé**, avec un message actionnable.
+  - [ ] Une entrée présente avec un champ NULL est complétée par COALESCE, **sans qu'aucune valeur existante ne soit remplacée**.
+  - [ ] Après incrément de `resolver_version`, une ré-ouverture réessaie les entrées `insufficient` et **seulement** elles.
+  - [ ] Une contrainte `CHECK` interdit d'insérer un hébergement réservable sans nom ; un point d'eau sans nom reste acceptable.
+  - [ ] Le fichier `rejected.tsv` est trié par proximité aux véloroutes, les entrées utiles en tête.
+  - [ ] Un `override.tsv` importé n'est plus réanalysé à la ré-ouverture suivante.
+  - [ ] `regions.json` et `RegionSelectionStore` ont disparu.
+
+</details>
+
+<details><summary>
+
+## Sprint 50 - Sources complémentaires et map-matching
+
+</summary>
+Sprint **conditionnel**. La source la plus rentable n'est pas nouvelle : c'est celle déjà téléchargée. Rien ne s'ajoute avant que le sprint 46 ait récupéré les champs du flux DataTourisme et que le sprint 47 ait chiffré ce qui manque encore.
+
+> **Prérequis :** mesures du sprint 47. #887 n'est ouverte que si les métriques confirment un déficit sur `shelter`, `wilderness_hut` et les points d'eau. #888 n'est ouverte que si #880 (`admin_level`) s'avère insuffisante pour libeller les entrées. #889 ne devient du code que si l'ADR retient le map-matching Valhalla.
+>
+> **Écartés après examen :** _Base Sirene_ (raisons sociales majoritairement inexploitables, position dérivée de l'adresse, appariement flou : donner un mauvais nom d'hébergement est pire que n'en donner aucun) et _OpenChargeMap_ (orienté voiture comme l'IRVE nationale, alors que la recharge VAE réelle est « un café avec une prise »).
+
+| Ordre | ID | Titre | Effort | PRs | Dépend de |
+|-------|----|-------|--------|-----|-----------|
+| 1 | [#887](https://github.com/vincentchalamon/bike-trip-planner/issues/887) | feat(provisioner): import refuges-info shelters and water points | - | - | - |
+| 2 | [#888](https://github.com/vincentchalamon/bike-trip-planner/issues/888) | feat(provisioner): import ban addresses for offline reverse geocoding | - | - | - |
+| 3 | [#889](https://github.com/vincentchalamon/bike-trip-planner/issues/889) | docs(adr): add adr-050 terrain attribution to the ridden route | - | - | - |
+
+### Recette Sprint 50
+
+- **Tests E2E :** aucun.
+- **Checklist manuelle :**
+  - [ ] Les métriques du sprint 47 justifiant l'ouverture de chaque issue sont citées dans la PR correspondante.
+  - [ ] Une indisponibilité de Refuges.info ou de la BAN ne fait pas échouer le provisionnement des autres sources (ADR-041 R1).
+  - [ ] Les abris et points d'eau importés sont dédupliqués contre OSM par l'appariement géométrique de #885, sans second mécanisme.
+  - [ ] L'attribution CC-BY-SA de Refuges.info est traitée et documentée.
+  - [ ] Le périmètre BAN importé est borné et son choix justifié par une mesure de volume et de disque.
+  - [ ] Aucune dépendance au runtime n'est introduite : les sources sont consommées dans le provisionner uniquement (ADR-040).
+  - [ ] ADR-050 tranche explicitement, y compris si la décision est de conserver l'option corridor déjà livrée.
+
+</details>
