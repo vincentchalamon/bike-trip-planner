@@ -1298,6 +1298,8 @@ Le lien et le téléphone cessent d'être du confort : depuis la décision d'obs
 Sprint volontairement court : ce sont des mesures, et elles **arbitrent les sprints 49 et 50**. Sans chiffres, on supprime des règles et on choisit des sources à l'intuition, et c'est exactement ce qui a produit une inférence fausse pendant le diagnostic (« un rayon de 15 km sans pharmacie est un trou d'index » était une supposition, probablement démentie par la couverture OSM réelle).
 
 > ⚠️ **Ce sprint ne passe pas par `/sprint`.** #878 et #879 sont des spikes en lecture seule : ils ne produisent aucun commit, alors que le pipeline attend une branche, un `make qa`, un commit et une PR. À traiter manuellement, ou à convertir en issues produisant un rapport committé sous `docs/`. Seule #877 est du code.
+>
+> Ces deux spikes sont des **mesures à exécuter** sur un jeu de données provisionné, pas des développements. Ils supposent donc une zone déjà ouverte, en local suffit.
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
@@ -1328,6 +1330,8 @@ Prépare l'ouverture par zone. `default.osm.pbf` a aujourd'hui **deux consommate
 > **Prérequis :** #882 dépend des mesures du sprint 47. L'ADR est écrit **en dernier** : rédiger la décision avant d'avoir les chiffres la figerait sur une intuition.
 >
 > ⚠️ **#881 requiert une vérification manuelle.** Elle supprime `ensure-default-pbf`, prérequis de `make start-dev` **et** de `make start` (`Makefile:34` et `:45`). Un agent worktree lançant `make qa` ne peut pas le valider, et `make test` ne démarre pas le profil `routing`.
+>
+> **Code contre exécution.** Les issues livrent le mécanisme ; les commandes de la checklist ci-dessous **vérifient** ce mécanisme, elles ne constituent pas le livrable. La procédure récurrente de construction du graphe est documentée par le runbook réécrit dans #881, et son pendant pour les données de référence par #891.
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
@@ -1360,7 +1364,11 @@ Le cœur du chantier : ouverture manuelle zone par zone, cache d'enrichissement 
 
 > **Prérequis :** #881 (routage découplé, sprint 48) et #878 (mesure du « sans nom », sprint 47, qui arbitre le traitement de `shelter` et `wilderness_hut`). **Dépendances inter-sprints, invisibles pour `/sprint`.**
 >
-> ⚠️ **À traiter en `/pick` séquentiels plutôt qu'en `/sprint`.** Les quatre issues touchent les mêmes fichiers (`PostgisImporter`, `DataTourismeImporter`, `ProvisionCommand`) et la chaîne de dépendances les sérialise déjà : les vagues sont #883, puis #884, puis {#885, #886}. Le parallélisme n'apporte presque rien, la pile de PR imbriquées apporte tout le coût de rebase.
+> **Ce sprint livre le mécanisme, pas l'exécution.** Distinction à ne pas confondre : les issues ci-dessous sont du **code** (registre en base, argument obligatoire, schéma de staging paramétrable, anti-join, promotion transactionnelle en remplacement du `DROP SCHEMA` global, contraintes de complétude, migration Doctrine). Aujourd'hui `make provision` ne prend **aucun** argument de zone, refusionne cumulativement et fait `DROP SCHEMA osm CASCADE` : « ouvrir une zone » n'existe pas encore comme opération.
+>
+> L'**exécution** — ouvrir une zone en production, ou en local pour développer — est un acte opérationnel récurrent. Elle apparaît ici en checklist de recette à titre de vérification, conformément à l'usage de tous les sprints de ce fichier, et sa **procédure** est documentée par #891 (runbook production et local). Il n'existe à ce jour aucun runbook pour l'import des données de référence : `osm-france-refresh.md` porte un nom trompeur, son contenu traite des tuiles Valhalla.
+>
+> ⚠️ **À traiter en `/pick` séquentiels plutôt qu'en `/sprint`.** Les cinq issues touchent les mêmes fichiers (`PostgisImporter`, `DataTourismeImporter`, `ProvisionCommand`) et la chaîne de dépendances les sérialise déjà : les vagues sont #883, puis #884, puis {#885, #886}, puis #891. Le parallélisme n'apporte presque rien, la pile de PR imbriquées apporte tout le coût de rebase.
 
 | Ordre | ID | Titre | Effort | PRs | Dépend de |
 |-------|----|-------|--------|-----|-----------|
@@ -1368,6 +1376,7 @@ Le cœur du chantier : ouverture manuelle zone par zone, cache d'enrichissement 
 | 2 | [#884](https://github.com/vincentchalamon/bike-trip-planner/issues/884) | feat(provisioner): persistent enrichment cache, name resolver and completeness gate | - | - | [#883](https://github.com/vincentchalamon/bike-trip-planner/issues/883) |
 | 3 | [#885](https://github.com/vincentchalamon/bike-trip-planner/issues/885) | feat(provisioner): geometric matching between osm and datatourisme places | - | - | [#884](https://github.com/vincentchalamon/bike-trip-planner/issues/884) |
 | 4 | [#886](https://github.com/vincentchalamon/bike-trip-planner/issues/886) | feat(provisioner): zone opening report and manual override import | - | - | [#884](https://github.com/vincentchalamon/bike-trip-planner/issues/884) |
+| 5 | [#891](https://github.com/vincentchalamon/bike-trip-planner/issues/891) | docs(runbooks): zone opening procedure for production and local use | - | - | [#883](https://github.com/vincentchalamon/bike-trip-planner/issues/883), [#886](https://github.com/vincentchalamon/bike-trip-planner/issues/886) |
 
 ### Recette Sprint 49
 
@@ -1385,6 +1394,8 @@ Le cœur du chantier : ouverture manuelle zone par zone, cache d'enrichissement 
   - [ ] Le fichier `rejected.tsv` est trié par proximité aux véloroutes, les entrées utiles en tête.
   - [ ] Un `override.tsv` importé n'est plus réanalysé à la ré-ouverture suivante.
   - [ ] `regions.json` et `RegionSelectionStore` ont disparu.
+  - [ ] Un opérateur qui n'a jamais vu le projet ouvre une zone **en local** en suivant le seul runbook, sans poser de question.
+  - [ ] Aucun runbook ne confond plus données de référence et graphe de routage.
 
 </details>
 
