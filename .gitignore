@@ -4,6 +4,7 @@
 .mcp.json
 /.env
 openapi.*
+.playwright-mcp/
 
 docker-compose.override.yaml
 docker-compose.override.yml
