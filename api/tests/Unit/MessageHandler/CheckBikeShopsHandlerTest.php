@@ -78,7 +78,6 @@ final class CheckBikeShopsHandlerTest extends TestCase
         $translator->method('trans')->willReturnCallback(
             static fn (string $id, array $params): string => match ($id) {
                 'alert.bike_shop.nudge' => \sprintf('No bike shop on stage %s.', $params['%stage%']),
-                'alert.bike_shop.no_repair_nudge' => \sprintf('Bike shop near stage %s, but no repair.', $params['%stage%']),
                 default => $id,
             },
         );
@@ -134,7 +133,7 @@ final class CheckBikeShopsHandlerTest extends TestCase
     }
 
     #[Test]
-    public function saleOnlyShopNearbyEmitsNoRepairNudge(): void
+    public function saleOnlyShopNearbyEmitsStandardNudge(): void
     {
         $tripStateManager = $this->tripStateManager('trip-1');
         $bikeShopRepository = $this->bikeShopRepository([
@@ -162,9 +161,10 @@ final class CheckBikeShopsHandlerTest extends TestCase
                     $message = $alerts[0]['message'];
                     \assert(\is_string($message));
 
+                    // A missing service:bicycle:repair tag must not produce its own variant.
                     return 6 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && str_contains($message, 'no repair')
+                        && str_contains($message, 'No bike shop on stage 1')
                         && 'navigate' === $action['kind']
                         && 48.5 === $payload['lat']
                         && 2.5 === $payload['lon'];

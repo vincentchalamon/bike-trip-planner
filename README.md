@@ -122,10 +122,9 @@ Rules are executed in priority order (lower = higher priority):
 | **Elevation** | 10 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Elevation gain > 1 200 m on a stage |
 | **Steep gradient** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Sustained >= 8 % gradient over >= 500 m |
 | **Surface** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Unpaved section >= 500 m (gravel, dirt, mud, grass, sand...) |
-| **Surface** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | OSM surface data missing on >= 30 % of ways |
 | **Traffic** | 20 | ![critical](https://img.shields.io/badge/-critical-d32f2f) | Primary/trunk road without cycle infrastructure >= 500 m |
-| **Traffic** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Secondary road, no cycleway, speed limit > 50 km/h |
-| **Traffic** | 20 | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Secondary road, speed limit <= 50 km/h |
+| **Traffic** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Secondary road, no cycleway, `maxspeed` tagged and > 50 km/h |
+| **Traffic** | 20 | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Secondary road, no cycleway, `maxspeed` <= 50 km/h or absent/unreadable |
 | **E-bike range** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Day distance > effective range (80 km - elevation / 25); action navigates to the nearest charging station within 2 km, else suggests shortening the stage |
 | **Sunset** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Estimated arrival time exceeds civil twilight end at stage end point |
 | **Calendar** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage falls on a French public holiday |
@@ -133,7 +132,6 @@ Rules are executed in priority order (lower = higher priority):
 | **Wind** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Headwind >= 25 km/h on >= 60 % of stages with weather data |
 | **Comfort** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Poor comfort index (< 40/100) on at least one stage |
 | **Bike shops** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | No repair resource within 2 km of stage midpoint (trips > 5 stages) |
-| **Bike shops** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Nearby shop sells bikes but does not offer repair service |
 | **Resupply** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage >= 40 km with no food/resupply POI along the route |
 | **Resupply** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | All resupply POIs on the stage are closed at estimated passage time |
 | **Accommodation** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | All detected accommodations on the stage are likely closed due to seasonality |

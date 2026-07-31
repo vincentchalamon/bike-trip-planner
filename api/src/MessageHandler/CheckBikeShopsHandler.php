@@ -93,22 +93,12 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
             foreach ($stages as $i => $stage) {
                 $geometry = $stage->geometry ?: [$stage->startPoint, $stage->endPoint];
                 $midpoint = $geometry[(int) (\count($geometry) / 2)];
-
-                $hasNearbyRepair = false;
-                foreach ($repairShopLocations as $shop) {
-                    if ($this->haversine->inMeters($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']) < self::BIKE_SHOP_PROXIMITY_METERS) {
-                        $hasNearbyRepair = true;
-                        break;
-                    }
-                }
+                $hasNearbyRepair = array_any($repairShopLocations, fn (array $shop): bool => $this->haversine->inMeters($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']) < self::BIKE_SHOP_PROXIMITY_METERS);
 
                 if ($hasNearbyRepair) {
                     continue;
                 }
 
-                $hasNearbySaleOnly = array_any($saleOnlyShopLocations, fn (array $shop): bool => $this->haversine->inMeters($midpoint->lat, $midpoint->lon, $shop['lat'], $shop['lon']) < self::BIKE_SHOP_PROXIMITY_METERS);
-
-                $translationKey = $hasNearbySaleOnly ? 'alert.bike_shop.no_repair_nudge' : 'alert.bike_shop.nudge';
                 $allShops = [...$repairShopLocations, ...$saleOnlyShopLocations];
                 $nearestShop = $this->findNearestShop($midpoint, $allShops);
                 $stagesWithoutBikeShop[] = [
@@ -116,7 +106,7 @@ final readonly class CheckBikeShopsHandler extends AbstractTripMessageHandler
                     'dayNumber' => $stage->dayNumber,
                     'type' => AlertType::NUDGE->value,
                     'message' => $this->translator->trans(
-                        $translationKey,
+                        'alert.bike_shop.nudge',
                         ['%stage%' => $stage->dayNumber],
                         'alerts',
                         $locale,

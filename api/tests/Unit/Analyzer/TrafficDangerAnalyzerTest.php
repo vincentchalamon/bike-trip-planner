@@ -199,10 +199,11 @@ final class TrafficDangerAnalyzerTest extends TestCase
     }
 
     #[Test]
-    public function warningAlertForSecondaryWithoutCycleway(): void
+    public function nudgeAlertForSecondaryWithoutMaxspeed(): void
     {
         $stage = $this->createStage();
 
+        // A missing maxspeed tag is missing data, not a danger: NUDGE, never WARNING.
         $alerts = $this->analyzer->analyze($stage, [
             'osmWays' => [
                 ['highway' => 'secondary', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
@@ -210,13 +211,28 @@ final class TrafficDangerAnalyzerTest extends TestCase
         ]);
 
         $this->assertCount(1, $alerts);
-        $this->assertSame(AlertType::WARNING, $alerts[0]->type);
+        $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
         $this->assertEqualsWithDelta(45.5, $alerts[0]->lat, 0.001);
         $this->assertEqualsWithDelta(5.5, $alerts[0]->lon, 0.001);
         $this->assertNotNull($alerts[0]->action);
         $this->assertSame(AlertActionKind::NAVIGATE, $alerts[0]->action->kind);
         $this->assertEqualsWithDelta(45.5, $alerts[0]->action->payload['lat'], 0.001);
         $this->assertEqualsWithDelta(5.5, $alerts[0]->action->payload['lon'], 0.001);
+    }
+
+    #[Test]
+    public function nudgeAlertForSecondaryWithUnreadableMaxspeed(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'secondary', 'maxspeed' => 'walk', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertSame(AlertType::NUDGE, $alerts[0]->type);
     }
 
     #[Test]
@@ -260,12 +276,16 @@ final class TrafficDangerAnalyzerTest extends TestCase
 
         $alerts = $this->analyzer->analyze($stage, [
             'osmWays' => [
-                ['highway' => 'secondary', 'maxspeed' => '90', 'length' => 600.0],
+                ['highway' => 'secondary', 'maxspeed' => '90', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
             ],
         ]);
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
+        $this->assertEqualsWithDelta(45.5, $alerts[0]->lat, 0.001);
+        $this->assertEqualsWithDelta(5.5, $alerts[0]->lon, 0.001);
+        $this->assertNotNull($alerts[0]->action);
+        $this->assertSame(AlertActionKind::NAVIGATE, $alerts[0]->action->kind);
     }
 
     #[Test]
@@ -276,7 +296,7 @@ final class TrafficDangerAnalyzerTest extends TestCase
         $alerts = $this->analyzer->analyze($stage, [
             'osmWays' => [
                 ['highway' => 'primary', 'lat' => 45.5, 'lon' => 5.5, 'length' => 600.0],
-                ['highway' => 'secondary', 'lat' => 45.6, 'lon' => 5.6, 'length' => 700.0],
+                ['highway' => 'secondary', 'maxspeed' => '90', 'lat' => 45.6, 'lon' => 5.6, 'length' => 700.0],
                 ['highway' => 'secondary', 'maxspeed' => '30', 'lat' => 45.7, 'lon' => 5.7, 'length' => 800.0],
             ],
         ]);

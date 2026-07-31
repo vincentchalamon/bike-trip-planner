@@ -16,8 +16,6 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
 {
     private const int UNPAVED_THRESHOLD_METERS = 500;
 
-    private const int MISSING_DATA_THRESHOLD_PERCENT = 30;
-
     /** @var list<string> */
     private const array UNPAVED_SURFACES = [
         'unpaved', 'gravel', 'dirt', 'ground', 'grass', 'sand',
@@ -41,10 +39,7 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
         /** @var string $locale */
         $locale = $context['locale'] ?? 'en';
 
-        return [
-            ...$this->detectUnpavedSections($osmWays, $stage, $locale),
-            ...$this->detectMissingSurfaceData($osmWays, $stage, $locale),
-        ];
+        return $this->detectUnpavedSections($osmWays, $stage, $locale);
     }
 
     public static function getPriority(): int
@@ -74,15 +69,13 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
-        $surfaceList = implode(', ', array_keys($surfaces));
-
         return [new Alert(
             type: AlertType::WARNING,
             message: $this->translator->trans(
                 'alert.surface.warning',
                 [
                     '%length%' => (int) $unpavedLength,
-                    '%surface%' => $surfaceList ?: $this->translator->trans('alert.surface.fallback', [], 'alerts', $locale),
+                    '%surface%' => implode(', ', array_keys($surfaces)),
                 ],
                 'alerts',
                 $locale,
@@ -94,40 +87,6 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
                 label: $this->translator->trans('alert.surface.action', [], 'alerts', $locale),
                 payload: ['lat' => $stage->startPoint->lat, 'lon' => $stage->startPoint->lon],
             ),
-        )];
-    }
-
-    /**
-     * @param list<array{surface?: string, length?: float}> $osmWays
-     *
-     * @return list<Alert>
-     */
-    private function detectMissingSurfaceData(array $osmWays, Stage $stage, string $locale): array
-    {
-        $waysWithoutSurface = 0;
-
-        foreach ($osmWays as $way) {
-            if ('' === ($way['surface'] ?? '')) {
-                ++$waysWithoutSurface;
-            }
-        }
-
-        $missingPercent = (int) round($waysWithoutSurface / \count($osmWays) * 100);
-
-        if ($missingPercent < self::MISSING_DATA_THRESHOLD_PERCENT) {
-            return [];
-        }
-
-        return [new Alert(
-            type: AlertType::WARNING,
-            message: $this->translator->trans(
-                'alert.surface.missing_data',
-                ['%percent%' => $missingPercent],
-                'alerts',
-                $locale,
-            ),
-            lat: $stage->startPoint->lat,
-            lon: $stage->startPoint->lon,
         )];
     }
 }
