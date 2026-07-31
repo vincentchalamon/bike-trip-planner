@@ -63,6 +63,10 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
         $baseDate = $startDate ?? new \DateTimeImmutable('today', new \DateTimeZone('UTC'));
         $stageDate = $baseDate->modify(\sprintf('+%d days', $stageIndex));
 
+        if (false === $stageDate) {
+            return [];
+        }
+
         // The rider's timezone at the stage end point: everything below is local time.
         $timezone = $this->timezoneResolver->resolve($stage->endPoint->lat, $stage->endPoint->lon);
 

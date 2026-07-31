@@ -9,7 +9,7 @@ import { useUiStore } from "@/store/ui-store";
 import { reverseGeocode } from "@/lib/geocode/client";
 import { toast } from "@/components/ui/sonner";
 import { DEFAULT_ACCOMMODATION_RADIUS_KM } from "@/lib/accommodation-constants";
-import type { StageData } from "@/lib/validation/schemas";
+import type { AlertData, StageData } from "@/lib/validation/schemas";
 
 /**
  * The Mercure hub the browser subscribes to. An explicit
@@ -256,7 +256,7 @@ function dispatchEvent(event: MercureEvent): void {
         store.updateStageAlerts(
           stageIndex,
           alerts.map((a) => ({
-            type: a.type as "nudge",
+            type: a.type as AlertData["type"],
             message: a.message,
             lat: null,
             lon: null,
