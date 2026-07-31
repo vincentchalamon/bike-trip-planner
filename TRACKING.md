@@ -1202,22 +1202,26 @@ Assainissement du moteur d'alertes : ce qui est faux, ce qui n'est pas fondé, c
 
 | Ordre | ID | Titre | Effort | PRs | Statut | Dépend de |
 |-------|----|-------|--------|-----|--------|-----------|
-| 1 | [#859](https://github.com/vincentchalamon/bike-trip-planner/issues/859) | fix(terrain): attribute ways to the ridden route, not to a 100 m neighbourhood | - | [#894](https://github.com/vincentchalamon/bike-trip-planner/pull/894) `feature/859` | En cours | - |
-| 2 | [#860](https://github.com/vincentchalamon/bike-trip-planner/issues/860) | fix(terrain): widen the unpaved surface vocabulary | - | [#895](https://github.com/vincentchalamon/bike-trip-planner/pull/895) `feature/860` | En cours | - |
-| 3 | [#861](https://github.com/vincentchalamon/bike-trip-planner/issues/861) | fix(alerts): drop the tag-presence rules and the dead surface fallback | - | [#896](https://github.com/vincentchalamon/bike-trip-planner/pull/896) `feature/861` | En cours | - |
-| 4 | [#862](https://github.com/vincentchalamon/bike-trip-planner/issues/862) | feat(alerts): locale-aware distance formatter and translated tag values | - | [#899](https://github.com/vincentchalamon/bike-trip-planner/pull/899) `feature/862` → base `feature/859` | En cours | [#859](https://github.com/vincentchalamon/bike-trip-planner/issues/859) |
-| 5 | [#863](https://github.com/vincentchalamon/bike-trip-planner/issues/863) | fix(alerts): restore navigate and dismiss actions with coordinates end-to-end | - | [#897](https://github.com/vincentchalamon/bike-trip-planner/pull/897) `feature/863` | En cours | - |
-| 6 | [#864](https://github.com/vincentchalamon/bike-trip-planner/issues/864) | fix(alerts): rest-day guard, local-time sunset and multi-year calendar | - | [#898](https://github.com/vincentchalamon/bike-trip-planner/pull/898) `feature/864` | En cours | - |
+| 1 | [#859](https://github.com/vincentchalamon/bike-trip-planner/issues/859) | fix(terrain): attribute ways to the ridden route, not to a 100 m neighbourhood | - | [#894](https://github.com/vincentchalamon/bike-trip-planner/pull/894) `feature/859` | ✅ Mergée | - |
+| 2 | [#860](https://github.com/vincentchalamon/bike-trip-planner/issues/860) | fix(terrain): widen the unpaved surface vocabulary | - | [#895](https://github.com/vincentchalamon/bike-trip-planner/pull/895) `feature/860` | En cours (rebasée) | - |
+| 3 | [#861](https://github.com/vincentchalamon/bike-trip-planner/issues/861) | fix(alerts): drop the tag-presence rules and the dead surface fallback | - | [#896](https://github.com/vincentchalamon/bike-trip-planner/pull/896) `feature/861` | ✅ Mergée | - |
+| 4 | [#862](https://github.com/vincentchalamon/bike-trip-planner/issues/862) | feat(alerts): locale-aware distance formatter and translated tag values | - | [#899](https://github.com/vincentchalamon/bike-trip-planner/pull/899) `feature/862` | En cours (rebasée sur `main`) | [#859](https://github.com/vincentchalamon/bike-trip-planner/issues/859) ✅ |
+| 5 | [#863](https://github.com/vincentchalamon/bike-trip-planner/issues/863) | fix(alerts): restore navigate and dismiss actions with coordinates end-to-end | - | [#897](https://github.com/vincentchalamon/bike-trip-planner/pull/897) `feature/863` | ✅ Mergée | - |
+| 6 | [#864](https://github.com/vincentchalamon/bike-trip-planner/issues/864) | fix(alerts): rest-day guard, local-time sunset and multi-year calendar | - | [#898](https://github.com/vincentchalamon/bike-trip-planner/pull/898) `feature/864` | En cours (rebasée) | - |
 
-### Ordre de merge et conflits attendus (sprint 44)
+### Conflits de merge : résolutions appliquées (sprint 44)
 
-Les 6 issues ont été traitées en parallèle via `/sprint 44`, donc plusieurs branches touchent les mêmes fichiers. Points à surveiller au merge :
+Les 6 issues ont été traitées en parallèle via `/sprint 44`, donc plusieurs branches touchaient les mêmes fichiers. **#894, #896 et #897 sont mergées** ; les trois PRs restantes ont été rebasées sur `main` et les conflits résolus comme suit.
 
-- **#899 est empilée sur `feature/859`** (base ≠ `main`) : merger **#894 d'abord**, puis #899 se retargette automatiquement sur `main`.
-- **`SurfaceAlertAnalyzer.php`** — #895 étend le vocabulaire, #896 **supprime** `detectMissingSurfaceData()`, #898 y ajoute le garde `isRestDay`, #899 y injecte le formateur. La suppression de #896 doit gagner ; vérifier que le repli `tracktype` de #895 ne la réintroduit pas.
-- **`WaysRepository.php`** — #894 réécrit le SQL du corridor, #895 ajoute deux colonnes au `SELECT`. Diffs disjoints par construction.
-- **`alerts.fr.yaml` / `alerts.en.yaml`** — touchés par #895, #896, #897, #898 et #899. #899 laisse volontairement `alert.surface.fallback` en place parce que #896 la supprime (évite une suppression concurrente).
-- **`use-mercure.ts`** — #897 (reconstruction d'action) et #898 (payload calendrier) ; diffs sur des `case` distincts.
+- **#899 était empilée sur `feature/859`.** Après le squash-merge de #894, GitHub l'a retargettée sur `main` mais la branche portait encore le commit pré-squash de #859. Résolu par `git rebase --onto origin/main <commit-859>` (pas un rebase simple, qui aurait rejoué du code déjà mergé).
+- **`SurfaceAlertAnalyzer.php`** — la suppression de `detectMissingSurfaceData()` par #896 a gagné dans #895 et #899, comme prévu. Effets de bord traités : le `$surfaceList` de #895 avait disparu (#896 a inliné le `implode`), et 5 cas de `SurfaceAlertAnalyzerTest` attendaient 2 alertes au lieu d'1.
+- **`WaysRepository.php`** — la requête clippée de #894 a été conservée, augmentée des deux colonnes `tracktype` / `smoothness` de #895 avec l'alias de la CTE `followed` (`f.tags`, pas `w.tags`).
+- **`WaysIndexReadTest.php`** — #894 et #895 avaient chacune ajouté un test au même endroit : **les deux sont conservés**, et les deux colonnes de #895 ont été portées sur l'oracle réécrit par #894.
+- **`alerts.*.yaml`** — les clés supprimées par #896 (`alert.surface.fallback`, `alert.surface.missing_data`) ne sont pas réintroduites ; la ligne `alert.railway_station.action` ajoutée par #897 est préservée, et les reformulations de #895 / #899 conservées.
+- **`mock-data.ts`** — #897 et #898 avaient inséré une fixture au même endroit : **les deux sont conservées**.
+- **Interaction #897 ↔ #899** — #897 assertait que le libellé d'action valait la _clé_ de traduction (son stub renvoyait la clé) alors que #899 branche le vrai `Translator` ; l'assertion a été alignée sur la chaîne rendue.
+
+Note outillage : GitHub sait désormais gérer les [PRs empilées](https://docs.github.com/en/pull-requests/how-tos/stacked-pull-requests) — à utiliser pour les prochains sprints plutôt qu'une base `feature/<n>` manuelle.
 
 ### Recette Sprint 44
 
