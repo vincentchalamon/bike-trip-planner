@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -105,9 +106,13 @@ final readonly class CheckRailwayStationsHandler extends AbstractTripMessageHand
                 ];
 
                 if (null !== $nearestStation) {
-                    $alert['action'] = 'navigate';
-                    $alert['actionLat'] = $nearestStation['lat'];
-                    $alert['actionLon'] = $nearestStation['lon'];
+                    $alert['action'] = [
+                        'kind' => AlertActionKind::NAVIGATE->value,
+                        'label' => $this->translator->trans('alert.railway_station.action', [], 'alerts', $locale),
+                        'payload' => ['lat' => $nearestStation['lat'], 'lon' => $nearestStation['lon']],
+                    ];
+                    $alert['lat'] = $nearestStation['lat'];
+                    $alert['lon'] = $nearestStation['lon'];
                 }
 
                 $alerts[] = $alert;

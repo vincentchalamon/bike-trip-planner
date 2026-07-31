@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Analyzer\AnalyzerRegistryInterface;
-use App\ApiResource\Model\Alert;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -13,6 +12,7 @@ use App\ComputationTracker\TripGenerationTrackerInterface;
 use App\Enum\ComputationName;
 use App\Geo\GeometryDistributorInterface;
 use App\Mercure\MercureEventType;
+use App\Mercure\StagePayloadMapper;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeTerrain;
 use App\Osm\WaysRepositoryInterface;
@@ -36,6 +36,7 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
         private AnalyzerRegistryInterface $analyzerRegistry,
         private WaysRepositoryInterface $waysRepository,
         private GeometryDistributorInterface $distributor,
+        private StagePayloadMapper $stagePayloadMapper,
         MessageBusInterface $messageBus,
     ) {
         parent::__construct($computationTracker, $publisher, $generationTracker, $logger, $tripStateManager, $messageBus);
@@ -92,10 +93,13 @@ final readonly class AnalyzeTerrainHandler extends AbstractTripMessageHandler
                 $this->tripStateManager->updateStageAlerts($tripId, $stage->dayNumber, array_values($stage->alerts));
             }
 
+            // Coordinates and contextual actions are part of the live payload: the
+            // frontend must be able to zoom to a discontinuity without waiting for a
+            // reload through TripDetailProvider (issue #863).
             $alertsData = [];
             foreach ($stages as $i => $stage) {
                 $alertsData[$i] = array_map(
-                    static fn (Alert $a): array => ['type' => $a->type->value, 'message' => $a->message],
+                    $this->stagePayloadMapper->alertToPayload(...),
                     $stage->alerts,
                 );
             }

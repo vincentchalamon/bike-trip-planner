@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
@@ -114,7 +115,11 @@ final readonly class CheckBorderCrossingHandler extends AbstractTripMessageHandl
                         'alerts',
                         $locale,
                     ),
-                    'action' => 'navigate',
+                    'action' => [
+                        'kind' => AlertActionKind::NAVIGATE->value,
+                        'label' => $this->translator->trans('alert.border_crossing.action', [], 'alerts', $locale),
+                        'payload' => ['lat' => $crossingPoint->lat, 'lon' => $crossingPoint->lon],
+                    ],
                     'lat' => $crossingPoint->lat,
                     'lon' => $crossingPoint->lon,
                 ];

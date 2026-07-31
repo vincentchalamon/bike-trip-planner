@@ -4,6 +4,7 @@ import {
   stagesComputedEvent,
   alertsWithActionsEvent,
   terrainAlertsEvent,
+  terrainAlertsWithServerFilteredActionsEvent,
   tripCompleteEvent,
 } from "../fixtures/mock-data";
 
@@ -107,6 +108,36 @@ test.describe("Alert actions", () => {
     // terrainAlertsEvent only has alerts on stages 0 and 1; stage 2 (card 3) has none
     const stage3 = mockedPage.getByTestId("stage-card-3");
     await expect(stage3.getByTestId("alert-action-button")).not.toBeVisible();
+  });
+
+  test("live terrain alerts expose their navigate action, and none for filtered kinds", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      terrainAlertsWithServerFilteredActionsEvent(),
+      tripCompleteEvent(),
+    ]);
+
+    // The critical group is expanded by default: the navigate action of a
+    // continuity alert must be clickable straight from the live event (#863).
+    const stage1 = mockedPage.getByTestId("stage-card-1");
+    await expect(stage1).toContainText("Discontinuity between stage 1 and 2");
+
+    const navigate = stage1.getByText("Show the discontinuity on the map");
+    await expect(navigate).toBeVisible();
+    await expect(navigate).not.toBeDisabled();
+
+    // The elevation alert carries an auto_fix action upstream; it is filtered
+    // server-side, so no (dead, disabled) button is rendered.
+    const stage2 = mockedPage.getByTestId("stage-card-2");
+    await stage2.getByTestId("alert-group-toggle-warning").click();
+    await expect(stage2).toContainText("Significant elevation gain (1200m)");
+    await expect(stage2.getByTestId("alert-action-button")).toHaveCount(0);
   });
 
   test("detour action button is displayed and disabled", async ({

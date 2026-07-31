@@ -1778,6 +1778,14 @@ export interface components {
                     message?: string;
                     lat?: number | null;
                     lon?: number | null;
+                    action?: {
+                        /** @enum {string} */
+                        kind?: "navigate" | "dismiss";
+                        label?: string;
+                        payload?: {
+                            [key: string]: unknown;
+                        };
+                    } | null;
                 }[];
                 pois?: {
                     name?: string;
@@ -2015,6 +2023,14 @@ export interface components {
                     message?: string;
                     lat?: number | null;
                     lon?: number | null;
+                    action?: {
+                        /** @enum {string} */
+                        kind?: "navigate" | "dismiss";
+                        label?: string;
+                        payload?: {
+                            [key: string]: unknown;
+                        };
+                    } | null;
                 }[];
                 pois?: {
                     name?: string;

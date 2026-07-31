@@ -121,6 +121,12 @@ final readonly class TripDetail
                         'message' => ['type' => 'string'],
                         'lat' => ['oneOf' => [['type' => 'number'], ['type' => 'null']]],
                         'lon' => ['oneOf' => [['type' => 'number'], ['type' => 'null']]],
+                        // Contextual action, restricted to the kinds the frontend wires (issue #863).
+                        'action' => ['oneOf' => [['type' => 'object', 'properties' => [
+                            'kind' => ['type' => 'string', 'enum' => ['navigate', 'dismiss']],
+                            'label' => ['type' => 'string'],
+                            'payload' => ['type' => 'object', 'additionalProperties' => true],
+                        ]], ['type' => 'null']]],
                     ]]],
                     'pois' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
                         'name' => ['type' => 'string'],

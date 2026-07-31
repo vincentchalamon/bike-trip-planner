@@ -23,4 +23,24 @@ final readonly class AlertAction
         public array $payload = [],
     ) {
     }
+
+    /**
+     * Wire format for the frontend, or null when the kind is not wired there yet
+     * (issue #397): `auto_fix` and `detour` would render a dead disabled button,
+     * so they are not delivered at all.
+     *
+     * @return array{kind: string, label: string, payload: array<string, mixed>}|null
+     */
+    public function toDeliverablePayload(): ?array
+    {
+        if (AlertActionKind::NAVIGATE !== $this->kind && AlertActionKind::DISMISS !== $this->kind) {
+            return null;
+        }
+
+        return [
+            'kind' => $this->kind->value,
+            'label' => $this->label,
+            'payload' => $this->payload,
+        ];
+    }
 }

@@ -9,6 +9,8 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Query;
 use App\ApiResource\Model\Accommodation;
 use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Model\CulturalPoiAlert;
 use App\ApiResource\Model\PointOfInterest;
@@ -611,6 +613,78 @@ final class DoctrineTripRequestRepositoryTest extends TestCase
 
         self::assertSame('https://www.komoot.com/tour/222', $existing->sourceUrl);
         self::assertSame(0.8, $existing->fatigueFactor);
+    }
+
+    #[Test]
+    public function alertActionRoundtrip(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+
+        $this->entityManager->method('find')->willReturn($trip);
+        $this->entityManager->method('createQuery')->willReturn($this->createStub(Query::class));
+
+        $stageDto = new StageDto(
+            tripId: $tripId,
+            dayNumber: 1,
+            distance: 42.0,
+            elevation: 100.0,
+            startPoint: new Coordinate(48.0, 2.0, 0.0),
+            endPoint: new Coordinate(48.1, 2.1, 0.0),
+        );
+        $stageDto->addAlert(new Alert(
+            type: AlertType::CRITICAL,
+            message: 'Discontinuity between stage 1 and 2',
+            lat: 48.05,
+            lon: 2.05,
+            action: new AlertAction(
+                kind: AlertActionKind::NAVIGATE,
+                label: 'Voir la discontinuité sur la carte',
+                payload: ['lat' => 48.05, 'lon' => 2.05],
+            ),
+        ));
+
+        $this->repository->storeStages($tripId, [$stageDto]);
+
+        $stages = $this->repository->getStages($tripId);
+
+        self::assertNotNull($stages);
+        $action = $stages[0]->alerts[0]->action;
+        self::assertInstanceOf(AlertAction::class, $action);
+        self::assertSame(AlertActionKind::NAVIGATE, $action->kind);
+        self::assertSame('Voir la discontinuité sur la carte', $action->label);
+        self::assertSame(['lat' => 48.05, 'lon' => 2.05], $action->payload);
+    }
+
+    #[Test]
+    public function alertPersistedWithoutActionIsRestoredWithoutAction(): void
+    {
+        $tripId = Uuid::v7()->toRfc4122();
+        $trip = new TripRequest(Uuid::fromString($tripId));
+
+        // Alerts persisted before issue #863 carry no "action" key at all.
+        $stageEntity = new \App\Entity\Stage($trip);
+        $stageEntity->setPosition(0);
+        $stageEntity->setDayNumber(1);
+        $stageEntity->setDistance(10.0);
+        $stageEntity->setElevation(100.0);
+        $stageEntity->setStartLat(48.0);
+        $stageEntity->setStartLon(2.0);
+        $stageEntity->setEndLat(48.1);
+        $stageEntity->setEndLon(2.1);
+        $stageEntity->setAlerts([
+            ['type' => 'warning', 'message' => 'Legacy alert', 'lat' => 48.0, 'lon' => 2.0],
+        ]);
+        $trip->addStage($stageEntity);
+
+        $this->entityManager->method('find')->willReturn($trip);
+
+        $stages = $this->repository->getStages($tripId);
+
+        self::assertNotNull($stages);
+        self::assertCount(1, $stages[0]->alerts);
+        self::assertSame('Legacy alert', $stages[0]->alerts[0]->message);
+        self::assertNull($stages[0]->alerts[0]->action);
     }
 
     #[Test]

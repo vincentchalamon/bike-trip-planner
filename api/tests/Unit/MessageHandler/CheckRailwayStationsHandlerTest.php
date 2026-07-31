@@ -185,9 +185,10 @@ final class CheckRailwayStationsHandlerTest extends TestCase
                     // Only Stage 2 has no nearby station and gets a nudge alert
                     return 1 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && 'navigate' === $alerts[0]['action']
-                        && isset($alerts[0]['actionLat'])
-                        && isset($alerts[0]['actionLon']);
+                        && 'navigate' === $alerts[0]['action']['kind']
+                        && 'alert.railway_station.action' === $alerts[0]['action']['label']
+                        && isset($alerts[0]['action']['payload']['lat'], $alerts[0]['action']['payload']['lon'])
+                        && isset($alerts[0]['lat'], $alerts[0]['lon']);
                 }),
             );
 
