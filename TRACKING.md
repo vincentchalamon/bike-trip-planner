@@ -1203,7 +1203,7 @@ Assainissement du moteur d'alertes : ce qui est faux, ce qui n'est pas fondé, c
 | Ordre | ID | Titre | Effort | PRs | Statut | Dépend de |
 |-------|----|-------|--------|-----|--------|-----------|
 | 1 | [#859](https://github.com/vincentchalamon/bike-trip-planner/issues/859) | fix(terrain): attribute ways to the ridden route, not to a 100 m neighbourhood | - | [#894](https://github.com/vincentchalamon/bike-trip-planner/pull/894) `feature/859` | ✅ Mergée | - |
-| 2 | [#860](https://github.com/vincentchalamon/bike-trip-planner/issues/860) | fix(terrain): widen the unpaved surface vocabulary | - | [#895](https://github.com/vincentchalamon/bike-trip-planner/pull/895) `feature/860` | En cours (rebasée) | - |
+| 2 | [#860](https://github.com/vincentchalamon/bike-trip-planner/issues/860) | fix(terrain): widen the unpaved surface vocabulary | - | [#895](https://github.com/vincentchalamon/bike-trip-planner/pull/895) `feature/860` | ✅ Mergée | - |
 | 3 | [#861](https://github.com/vincentchalamon/bike-trip-planner/issues/861) | fix(alerts): drop the tag-presence rules and the dead surface fallback | - | [#896](https://github.com/vincentchalamon/bike-trip-planner/pull/896) `feature/861` | ✅ Mergée | - |
 | 4 | [#862](https://github.com/vincentchalamon/bike-trip-planner/issues/862) | feat(alerts): locale-aware distance formatter and translated tag values | - | [#899](https://github.com/vincentchalamon/bike-trip-planner/pull/899) `feature/862` | En cours (rebasée sur `main`) | [#859](https://github.com/vincentchalamon/bike-trip-planner/issues/859) ✅ |
 | 5 | [#863](https://github.com/vincentchalamon/bike-trip-planner/issues/863) | fix(alerts): restore navigate and dismiss actions with coordinates end-to-end | - | [#897](https://github.com/vincentchalamon/bike-trip-planner/pull/897) `feature/863` | ✅ Mergée | - |
@@ -1211,7 +1211,7 @@ Assainissement du moteur d'alertes : ce qui est faux, ce qui n'est pas fondé, c
 
 ### Conflits de merge : résolutions appliquées (sprint 44)
 
-Les 6 issues ont été traitées en parallèle via `/sprint 44`, donc plusieurs branches touchaient les mêmes fichiers. **#894, #896 et #897 sont mergées** ; les trois PRs restantes ont été rebasées sur `main` et les conflits résolus comme suit.
+Les 6 issues ont été traitées en parallèle via `/sprint 44`, donc plusieurs branches touchaient les mêmes fichiers. **#894, #895, #896 et #897 sont mergées** ; #898 et #899 ont été rebasées sur `main` et les conflits résolus comme suit.
 
 - **#899 était empilée sur `feature/859`.** Après le squash-merge de #894, GitHub l'a retargettée sur `main` mais la branche portait encore le commit pré-squash de #859. Résolu par `git rebase --onto origin/main <commit-859>` (pas un rebase simple, qui aurait rejoué du code déjà mergé).
 - **`SurfaceAlertAnalyzer.php`** — la suppression de `detectMissingSurfaceData()` par #896 a gagné dans #895 et #899, comme prévu. Effets de bord traités : le `$surfaceList` de #895 avait disparu (#896 a inliné le `implode`), et 5 cas de `SurfaceAlertAnalyzerTest` attendaient 2 alertes au lieu d'1.
@@ -1219,6 +1219,7 @@ Les 6 issues ont été traitées en parallèle via `/sprint 44`, donc plusieurs 
 - **`WaysIndexReadTest.php`** — #894 et #895 avaient chacune ajouté un test au même endroit : **les deux sont conservés**, et les deux colonnes de #895 ont été portées sur l'oracle réécrit par #894.
 - **`alerts.*.yaml`** — les clés supprimées par #896 (`alert.surface.fallback`, `alert.surface.missing_data`) ne sont pas réintroduites ; la ligne `alert.railway_station.action` ajoutée par #897 est préservée, et les reformulations de #895 / #899 conservées.
 - **`mock-data.ts`** — #897 et #898 avaient inséré une fixture au même endroit : **les deux sont conservées**.
+- **Arbitrage non prévu par les deux PRs — signaux de repli traduits.** #895 fait remonter `tracktype=grade4` / `smoothness=bad` comme pseudo-valeurs de surface dans le message, et #899 interdit toute valeur de tag brute dans un message traduit. Les deux étant désormais dans le même code, il fallait trancher : laisser passer la pseudo-valeur (fuite d'un tag brut, contraire au contrat de #899) ou la rabattre sur `surface.unknown` (perte de l'information de #895). **Choix retenu : 8 clés de traduction dédiées** (`surface.tracktype_grade3..5`, `surface.smoothness_bad..impassable`), et `translateSurface()` normalise le `=` en `_`. Le message reste informatif _et_ entièrement traduit. Les 5 tests de #895 qui assertaient la valeur brute ont été alignés.
 - **Interaction #897 ↔ #899** — #897 assertait que le libellé d'action valait la _clé_ de traduction (son stub renvoyait la clé) alors que #899 branche le vrai `Translator` ; l'assertion a été alignée sur la chaîne rendue.
 
 Note outillage : GitHub sait désormais gérer les [PRs empilées](https://docs.github.com/en/pull-requests/how-tos/stacked-pull-requests) — à utiliser pour les prochains sprints plutôt qu'une base `feature/<n>` manuelle.
