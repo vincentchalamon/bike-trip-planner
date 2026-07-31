@@ -197,9 +197,10 @@ export type MercureEvent =
   | {
       type: "calendar_alerts";
       data: {
-        nudges: {
+        alerts: {
           stageIndex: number;
-          type: "holiday" | "sunday";
+          dayNumber: number;
+          type: string;
           message: string;
           date: string;
         }[];

@@ -31,6 +31,12 @@ final readonly class EbikeRangeAnalyzer implements StageAnalyzerInterface
 
     public function analyze(Stage $stage, array $context = []): array
     {
+        // A rest day is not ridden: the battery is not drained, and it is where the
+        // bike gets charged anyway.
+        if ($stage->isRestDay) {
+            return [];
+        }
+
         if (true !== ($context['ebikeMode'] ?? false)) {
             return [];
         }

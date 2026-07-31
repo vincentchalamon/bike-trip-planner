@@ -120,6 +120,24 @@ final class ElevationAlertAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function noAlertForRestDay(): void
+    {
+        $stage = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 1,
+            distance: 0.0,
+            elevation: 2000.0,
+            startPoint: new Coordinate(45.0, 5.0),
+            endPoint: new Coordinate(45.0, 5.0),
+            isRestDay: true,
+        );
+
+        $alerts = $this->analyzer->analyze($stage);
+
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
     public function priority(): void
     {
         $this->assertSame(10, ElevationAlertAnalyzer::getPriority());

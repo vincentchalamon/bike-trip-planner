@@ -10,6 +10,9 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\RiderTimeEstimatorInterface;
 use App\Enum\AlertType;
+use App\Geo\HaversineDistance;
+use App\Geo\TimezoneResolver;
+use App\Osm\AdminBoundaryRepositoryInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
@@ -36,6 +39,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $this->analyzer = new SunsetAlertAnalyzer(
             $this->riderTimeEstimator,
             $this->translator,
+            $this->timezoneResolver(),
         );
     }
 
@@ -116,6 +120,28 @@ final class SunsetAlertAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function displaysSunsetAndTwilightInLocalTime(): void
+    {
+        // Paris on 21 June 2026: sunset 21:57 CEST / 19:57 UTC, civil twilight end
+        // 22:40 CEST / 20:40 UTC. The message must show the CEST times — a rider in
+        // France reading "19:57" would not believe it.
+        $stage = $this->createStage(lat: 48.85, lon: 2.35);
+
+        $this->riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(23.0);
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'startDate' => new \DateTimeImmutable('2026-06-21', new \DateTimeZone('UTC')),
+            'stageIndex' => 0,
+            'departureHour' => 8,
+            'averageSpeed' => 15.0,
+        ]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertStringContainsString('21:57', $alerts[0]->message);
+        $this->assertStringContainsString('22:40', $alerts[0]->message);
+    }
+
+    #[Test]
     public function noAlertWhenNoStartDateAndArrivalBeforeTwilight(): void
     {
         // Uses today's date as fallback — just check that it doesn't crash with null startDate
@@ -152,7 +178,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         $riderTimeEstimator = $this->createStub(RiderTimeEstimatorInterface::class);
         $riderTimeEstimator->method('estimateTimeAtDistance')->willReturn(22.0);
 
-        $analyzer = new SunsetAlertAnalyzer($riderTimeEstimator, $translator);
+        $analyzer = new SunsetAlertAnalyzer($riderTimeEstimator, $translator, $this->timezoneResolver());
         $stage = $this->createStage(lat: 48.85, lon: 2.35);
 
         $alerts = $analyzer->analyze($stage, [
@@ -200,7 +226,7 @@ final class SunsetAlertAnalyzerTest extends TestCase
         // estimateTimeAtDistance should NOT be called for polar conditions
         $riderTimeEstimator = $this->createMock(RiderTimeEstimatorInterface::class);
         $riderTimeEstimator->expects($this->never())->method('estimateTimeAtDistance');
-        $analyzer = new SunsetAlertAnalyzer($riderTimeEstimator, $this->translator);
+        $analyzer = new SunsetAlertAnalyzer($riderTimeEstimator, $this->translator, $this->timezoneResolver());
 
         $alerts = $analyzer->analyze($stage, [
             'startDate' => new \DateTimeImmutable('2024-12-15', new \DateTimeZone('UTC')),
@@ -210,6 +236,14 @@ final class SunsetAlertAnalyzerTest extends TestCase
         ]);
 
         $this->assertSame([], $alerts);
+    }
+
+    private function timezoneResolver(?string $countryCode = 'FR'): TimezoneResolver
+    {
+        $adminBoundaryRepository = $this->createStub(AdminBoundaryRepositoryInterface::class);
+        $adminBoundaryRepository->method('findCountryCodeAt')->willReturn($countryCode);
+
+        return new TimezoneResolver(new HaversineDistance(), $adminBoundaryRepository);
     }
 
     private function createStage(

@@ -23,6 +23,11 @@ final readonly class ElevationAlertAnalyzer implements StageAnalyzerInterface
 
     public function analyze(Stage $stage, array $context = []): array
     {
+        // A rest day is not ridden: it has no climbing to report.
+        if ($stage->isRestDay) {
+            return [];
+        }
+
         if ($stage->elevation <= self::THRESHOLD_METERS) {
             return [];
         }

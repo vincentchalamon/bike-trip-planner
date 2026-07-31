@@ -19,7 +19,7 @@ alert.water.nudge: "Tronçon de plus de %threshold% sans point d'eau potable dé
 alert.water.action: "Point d'eau le plus proche"
 alert.calendar.nudge: "L'étape %stage% coïncide avec un jour férié (%holiday%). Certains commerces peuvent être fermés."
 alert.calendar.action: "J'ai compris"
-alert.calendar.fallback: "Jour férié"
+alert.calendar.unnamed_nudge: "L'étape %stage% coïncide avec un jour férié. Certains commerces peuvent être fermés."
 alert.calendar.sunday_nudge: "L'étape %stage% tombe un dimanche : certains commerces peuvent être fermés, notamment l'après-midi."
 alert.resupply.timing_warning: "Des commerces existent sur l'étape %stage%, mais tu y passerais en dehors des horaires d'ouverture habituels."
 alert.steep_gradient.warning: "Montée raide détectée : %gradient%% de pente sur %distance%. Difficile avec un vélo chargé."

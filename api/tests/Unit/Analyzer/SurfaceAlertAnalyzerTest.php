@@ -344,6 +344,26 @@ final class SurfaceAlertAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function noAlertForRestDay(): void
+    {
+        $stage = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 1,
+            distance: 0.0,
+            elevation: 0.0,
+            startPoint: new Coordinate(45.0, 5.0),
+            endPoint: new Coordinate(45.0, 5.0),
+            isRestDay: true,
+        );
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [['surface' => 'gravel', 'length' => 5000.0]],
+        ]);
+
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
     public function priority(): void
     {
         $this->assertSame(20, SurfaceAlertAnalyzer::getPriority());

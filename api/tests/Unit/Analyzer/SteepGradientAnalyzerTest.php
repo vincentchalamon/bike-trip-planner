@@ -228,6 +228,32 @@ final class SteepGradientAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function noAlertForRestDay(): void
+    {
+        $stage = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 1,
+            distance: 0.0,
+            elevation: 0.0,
+            startPoint: new Coordinate(45.0, 5.0),
+            endPoint: new Coordinate(45.005, 5.0),
+            geometry: [
+                new Coordinate(45.0, 5.0, 200.0),
+                new Coordinate(45.001, 5.0, 220.0),
+                new Coordinate(45.002, 5.0, 240.0),
+                new Coordinate(45.003, 5.0, 260.0),
+                new Coordinate(45.004, 5.0, 280.0),
+                new Coordinate(45.005, 5.0, 300.0),
+            ],
+            isRestDay: true,
+        );
+
+        $alerts = $this->analyzer->analyze($stage);
+
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
     public function priority(): void
     {
         $this->assertSame(20, SteepGradientAnalyzer::getPriority());

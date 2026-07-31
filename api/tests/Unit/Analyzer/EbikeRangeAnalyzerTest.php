@@ -160,6 +160,24 @@ final class EbikeRangeAnalyzerTest extends TestCase
     }
 
     #[Test]
+    public function noAlertForRestDay(): void
+    {
+        $stage = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 1,
+            distance: 200.0,
+            elevation: 0.0,
+            startPoint: new Coordinate(45.0, 5.0),
+            endPoint: new Coordinate(45.0, 5.0),
+            isRestDay: true,
+        );
+
+        $alerts = $this->analyzer->analyze($stage, ['ebikeMode' => true]);
+
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
     public function priority(): void
     {
         $this->assertSame(20, EbikeRangeAnalyzer::getPriority());

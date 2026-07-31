@@ -1,4 +1,41 @@
 import { test, expect } from "../fixtures/base.fixture";
+import {
+  routeParsedEvent,
+  stagesComputedEvent,
+  calendarAlertsEvent,
+  tripCompleteEvent,
+} from "../fixtures/mock-data";
+
+test.describe("Calendar alerts over Mercure", () => {
+  // Guards the frontend/backend contract reworked in #864: the payload moved from
+  // `nudges` to `alerts` and the severity is now read from `type` instead of being
+  // hardcoded to "nudge" on the client.
+  test("renders calendar alerts under the severity the server sent", async ({
+    submitUrl,
+    injectSequence,
+    mockedPage,
+  }) => {
+    await submitUrl();
+    await injectSequence([
+      routeParsedEvent(),
+      stagesComputedEvent(),
+      calendarAlertsEvent(),
+      tripCompleteEvent(),
+    ]);
+
+    // Stage 1 carries the nudge-level holiday alert.
+    const stage1 = mockedPage.getByTestId("stage-card-1");
+    await stage1.getByTestId("alert-group-toggle-nudge").click();
+    await expect(stage1).toContainText("jour ferie");
+
+    // Stage 2 carries a warning-level alert. Expanding the *warning* group is the
+    // assertion: with the previously hardcoded `type: "nudge"` this toggle would not
+    // exist at all and the click would fail.
+    const stage2 = mockedPage.getByTestId("stage-card-2");
+    await stage2.getByTestId("alert-group-toggle-warning").click();
+    await expect(stage2).toContainText("dimanche");
+  });
+});
 
 test.describe("Date range picker in ConfigPanel", () => {
   test("shows date range picker when config panel opens", async ({

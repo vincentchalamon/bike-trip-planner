@@ -170,8 +170,16 @@ test.describe("ModificationQueue — apply all", () => {
     createFullTrip,
     mockedPage,
   }) => {
-    // Intercept the recompute request so we can control the response timing
+    // Intercept the recompute request so we can control the response timing.
+    // `recomputeIntercepted` is awaited before releasing the response: the
+    // "Applying…" state can appear before Playwright's route callback has run, and
+    // calling an unset `recomputeResolve` would silently no-op, leaving the request
+    // hanging and the queue panel visible for good.
     let recomputeResolve: (() => void) | undefined;
+    let signalIntercepted: () => void = () => {};
+    const recomputeIntercepted = new Promise<void>((resolve) => {
+      signalIntercepted = resolve;
+    });
     await mockedPage.route("**/trips/*/recompute", (route, request) => {
       if (request.method() !== "POST") return route.fallback();
       // Hold the response until the test resolves it
@@ -184,6 +192,7 @@ test.describe("ModificationQueue — apply all", () => {
             body: JSON.stringify({ "@type": "Trip", id: "test-trip-abc-123" }),
           });
         };
+        signalIntercepted();
       });
     });
 
@@ -208,7 +217,8 @@ test.describe("ModificationQueue — apply all", () => {
       timeout: 3000,
     });
 
-    // Resolve the request
+    // Resolve the request, once we know the route handler actually holds it
+    await recomputeIntercepted;
     recomputeResolve?.();
 
     // After success the queue panel should disappear

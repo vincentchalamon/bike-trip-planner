@@ -26,6 +26,10 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  * Checks for pharmacies, hospitals and clinics within 15 km of each stage.
  *
  * Emits a NUDGE alert when no health service is found near a stage.
+ *
+ * Deliberately has no `isRestDay` guard: the check is evaluated at the stage midpoint,
+ * which for a rest day is the place the rider stays for a whole day. Knowing there is
+ * no pharmacy within 15 km is at least as useful there as on a transit day.
  */
 #[AsMessageHandler]
 final readonly class CheckHealthServicesHandler extends AbstractTripMessageHandler

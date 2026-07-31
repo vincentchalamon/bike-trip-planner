@@ -124,9 +124,11 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
                     $pois[] = ['name' => $poi->name, 'category' => $poi->category];
                 }
 
-                // Lunch nudge: flag long stages with no food POIs
+                // Lunch nudge: flag long stages with no food POIs.
+                // Both alerts below are about passing through while riding, so a rest day
+                // is skipped — its POIs are still scanned and published (useful on the spot).
                 $alerts = [];
-                if ($stage->distance >= self::LUNCH_NUDGE_DISTANCE_KM && !$this->hasResupplyPoi($stage)) {
+                if (!$stage->isRestDay && $stage->distance >= self::LUNCH_NUDGE_DISTANCE_KM && !$this->hasResupplyPoi($stage)) {
                     $alert = new Alert(
                         type: AlertType::NUDGE,
                         message: $this->translator->trans('alert.lunch.nudge', [], 'alerts', $locale),
@@ -139,7 +141,7 @@ final readonly class ScanPoisHandler extends AbstractTripMessageHandler
 
                 // Resupply timing warning: warn when all resupply POIs on this stage
                 // would be closed at the estimated rider passage time
-                if ($this->hasResupplyPoi($stage) && !$this->hasAnyOpenResupplyPoi($stage, $departureHour, $averageSpeed)) {
+                if (!$stage->isRestDay && $this->hasResupplyPoi($stage) && !$this->hasAnyOpenResupplyPoi($stage, $departureHour, $averageSpeed)) {
                     $alert = new Alert(
                         type: AlertType::WARNING,
                         message: $this->translator->trans(

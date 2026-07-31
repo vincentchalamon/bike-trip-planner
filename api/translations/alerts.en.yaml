@@ -19,7 +19,7 @@ alert.water.nudge: "Stretch of over %threshold% without a detected drinking-wate
 alert.water.action: "Nearest water point"
 alert.calendar.nudge: "Stage %stage% coincides with a public holiday (%holiday%). Some businesses may be closed."
 alert.calendar.action: "Got it"
-alert.calendar.fallback: "Public holiday"
+alert.calendar.unnamed_nudge: "Stage %stage% coincides with a public holiday. Some businesses may be closed."
 alert.calendar.sunday_nudge: "Stage %stage% falls on a Sunday. Some businesses may be closed, especially in the afternoon."
 alert.resupply.timing_warning: "Shops exist on stage %stage%, but you would pass them outside typical opening hours."
 alert.steep_gradient.warning: "Steep climb detected: %gradient%% gradient over %distance%. Tough with a loaded bike."

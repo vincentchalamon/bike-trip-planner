@@ -11,6 +11,7 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Stage;
 use App\Engine\RiderTimeEstimatorInterface;
 use App\Enum\AlertType;
+use App\Geo\TimezoneResolverInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
@@ -19,6 +20,11 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  *
  * Uses PHP native date_sun_info() — no external API, no extra dependency.
  * Twilight threshold: CIVIL_TWILIGHT_END (sun 6° below horizon — still light enough to ride safely).
+ *
+ * Every hour handled here is the rider's local time at the stage end point: the
+ * timezone is resolved from the coordinates (TimezoneResolver), so the comparison
+ * against `departureHour` (local by definition) is homogeneous and the displayed
+ * sunset/twilight times match what the rider sees out the window.
  *
  * Context keys consumed:
  *  - 'startDate'     (\DateTimeImmutable|null) — trip start date; falls back to today
@@ -32,6 +38,7 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
     public function __construct(
         private RiderTimeEstimatorInterface $riderTimeEstimator,
         private TranslatorInterface $translator,
+        private TimezoneResolverInterface $timezoneResolver,
     ) {
     }
 
@@ -60,9 +67,15 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
-        // Compute sun information for the stage end point at the stage date
+        // The rider's timezone at the stage end point: everything below is local time.
+        $timezone = $this->timezoneResolver->resolve($stage->endPoint->lat, $stage->endPoint->lon);
+
+        // Compute sun information for the stage end point at local noon on the stage
+        // date, so the solar day matches the calendar day the rider planned.
+        $localNoon = new \DateTimeImmutable($stageDate->format('Y-m-d').' 12:00:00', $timezone);
+
         $sunInfo = date_sun_info(
-            (int) $stageDate->format('U'),
+            $localNoon->getTimestamp(),
             $stage->endPoint->lat,
             $stage->endPoint->lon,
         );
@@ -75,11 +88,7 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
             return [];
         }
 
-        // Compute estimated arrival as decimal hour (UTC).
-        // Note: departureHour is the rider's local time. Since the architecture does not
-        // carry timezone information, we treat it as UTC for comparison purposes.
-        // For European locations (UTC+1 to UTC+3), this may produce a conservative alert
-        // (off by 1–3 h), which is acceptable for a planning tool.
+        // Estimated arrival as a decimal hour, derived from departureHour (local time).
         $estimatedArrival = $this->riderTimeEstimator->estimateTimeAtDistance(
             $stage->distance,
             $stage->distance,
@@ -88,8 +97,8 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
             $stage->elevation,
         );
 
-        // Convert civil twilight end timestamp to a decimal hour of the day (UTC)
-        $twilightDate = new \DateTimeImmutable('@'.$civilTwilightEnd, new \DateTimeZone('UTC'));
+        // Convert the civil twilight end timestamp to a local decimal hour of the day
+        $twilightDate = new \DateTimeImmutable('@'.$civilTwilightEnd)->setTimezone($timezone);
         $twilightDecimalHours = (float) $twilightDate->format('G') + (float) $twilightDate->format('i') / 60.0;
 
         if ($estimatedArrival <= $twilightDecimalHours) {
@@ -98,7 +107,7 @@ final readonly class SunsetAlertAnalyzer implements StageAnalyzerInterface
 
         $rawSunset = $sunInfo['sunset'];
         $sunsetTimestamp = \is_int($rawSunset) ? $rawSunset : $civilTwilightEnd;
-        $sunsetDate = new \DateTimeImmutable('@'.$sunsetTimestamp, new \DateTimeZone('UTC'));
+        $sunsetDate = new \DateTimeImmutable('@'.$sunsetTimestamp)->setTimezone($timezone);
         $sunsetHm = $sunsetDate->format('H:i');
         $twilightHm = $twilightDate->format('H:i');
 

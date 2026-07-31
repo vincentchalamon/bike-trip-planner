@@ -56,6 +56,11 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
 
     public function analyze(Stage $stage, array $context = []): array
     {
+        // A rest day is not ridden: its surface is irrelevant.
+        if ($stage->isRestDay) {
+            return [];
+        }
+
         /** @var list<array{surface?: string, tracktype?: string, smoothness?: string, length?: float}> $osmWays */
         $osmWays = $context['osmWays'] ?? [];
 

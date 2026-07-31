@@ -134,6 +134,29 @@ final class ContinuityAnalyzerTest extends TestCase
         return new ContinuityAnalyzer($distanceCalculator, $translator, $this->createDistanceFormatter());
     }
 
+    #[Test]
+    public function restDayIsStillChecked(): void
+    {
+        // A rest day copies the previous stage's end point, so this check IS the real
+        // continuity check between the two ridden stages around it: no isRestDay guard.
+        $analyzer = $this->makeAnalyzer(800.0);
+        $restDay = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 2,
+            distance: 0.0,
+            elevation: 0.0,
+            startPoint: new Coordinate(45.1, 5.1),
+            endPoint: new Coordinate(45.1, 5.1),
+            isRestDay: true,
+        );
+        $nextStage = $this->createStage(45.2, 5.2, 45.3, 5.3);
+
+        $alerts = $analyzer->analyze($restDay, ['nextStage' => $nextStage]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertSame(AlertType::CRITICAL, $alerts[0]->type);
+    }
+
     private function createStage(float $startLat, float $startLon, float $endLat, float $endLon): Stage
     {
         return new Stage(
