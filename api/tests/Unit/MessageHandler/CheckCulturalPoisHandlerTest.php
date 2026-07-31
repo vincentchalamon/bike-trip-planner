@@ -16,6 +16,8 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCulturalPois;
 use App\MessageHandler\CheckCulturalPoisHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Tests\Unit\AlertMessageTestTrait;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -24,6 +26,55 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CheckCulturalPoisHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
+    /**
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function renderedMessageProvider(): iterable
+    {
+        yield 'french castle' => ['fr', 'castle', "Point d'intérêt culturel à proximité de l'étape 1 : Castle Rock (château, 250m du tracé). L'ajouter à ton itinéraire ?"];
+        yield 'english castle' => ['en', 'castle', 'Cultural POI nearby on stage 1: Castle Rock (castle, 250m from route). Add it to your itinerary?'];
+        yield 'french underscored type' => ['fr', 'archaeological_site', "Point d'intérêt culturel à proximité de l'étape 1 : Castle Rock (site archéologique, 250m du tracé). L'ajouter à ton itinéraire ?"];
+        yield 'french unmapped type falls back' => ['fr', 'obelisk', "Point d'intérêt culturel à proximité de l'étape 1 : Castle Rock (site remarquable, 250m du tracé). L'ajouter à ton itinéraire ?"];
+    }
+
+    #[DataProvider('renderedMessageProvider')]
+    #[Test]
+    public function renderedMessageTranslatesThePoiType(string $locale, string $poiType, string $expected): void
+    {
+        $tripStateManager = $this->createTripStateManager([$this->createStage(1)], $locale);
+
+        $registry = $this->makeRegistryWithPois([
+            ['name' => 'Castle Rock', 'type' => $poiType, 'lat' => 48.2, 'lon' => 2.2, 'source' => 'osm'],
+        ]);
+
+        $publishedEvents = [];
+        $publisher = $this->createStub(TripUpdatePublisherInterface::class);
+        $publisher->method('publish')
+            ->willReturnCallback(static function (string $tripId, MercureEventType $type, array $payload) use (&$publishedEvents): void {
+                $publishedEvents[] = ['type' => $type, 'payload' => $payload];
+            });
+
+        $haversine = $this->createStub(GeoDistanceInterface::class);
+        $haversine->method('inMeters')->willReturn(250.0);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturnCallback(
+            static fn (array $items): array => [0 => $items],
+        );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $registry, $haversine, $distributor, $this->createAlertTranslator());
+        $handler(new CheckCulturalPois('trip-1'));
+
+        $alertEvents = array_filter($publishedEvents, static fn (array $e): bool => MercureEventType::CULTURAL_POI_ALERTS === $e['type']);
+        $event = array_first($alertEvents);
+        self::assertNotNull($event);
+
+        self::assertSame($expected, $event['payload']['alerts'][0]['message']);
+        self::assertSame($poiType, $event['payload']['alerts'][0]['poiType'], 'The machine-readable poiType field stays raw.');
+    }
+
     private function createStage(int $dayNumber, bool $isRestDay = false): Stage
     {
         $coord = new Coordinate(lat: 48.0, lon: 2.0);
@@ -50,12 +101,13 @@ final class CheckCulturalPoisHandlerTest extends TestCase
         CulturalPoiSourceRegistry $registry,
         GeoDistanceInterface $haversine,
         ?GeometryDistributorInterface $distributor = null,
+        ?TranslatorInterface $translator = null,
     ): CheckCulturalPoisHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
+        $stubTranslator = $this->createStub(TranslatorInterface::class);
+        $stubTranslator->method('trans')->willReturnCallback(
             static fn (string $id, array $params): string => $id.': '.json_encode($params),
         );
 
@@ -71,7 +123,7 @@ final class CheckCulturalPoisHandlerTest extends TestCase
             $registry,
             $distributor,
             $haversine,
-            $translator,
+            $translator ?? $stubTranslator,
             $this->createStub(MessageBusInterface::class),
         );
     }
@@ -79,11 +131,11 @@ final class CheckCulturalPoisHandlerTest extends TestCase
     /**
      * @param list<Stage>|null $stages
      */
-    private function createTripStateManager(?array $stages): TripRequestRepositoryInterface
+    private function createTripStateManager(?array $stages, string $locale = 'en'): TripRequestRepositoryInterface
     {
         $manager = $this->createStub(TripRequestRepositoryInterface::class);
         $manager->method('getStages')->willReturn($stages);
-        $manager->method('getLocale')->willReturn('en');
+        $manager->method('getLocale')->willReturn($locale);
 
         return $manager;
     }

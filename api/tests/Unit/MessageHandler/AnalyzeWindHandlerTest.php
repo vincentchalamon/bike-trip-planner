@@ -9,11 +9,14 @@ use App\ApiResource\Model\WeatherForecast;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Format\DecimalFormatter;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\AnalyzeWind;
 use App\MessageHandler\AnalyzeWindHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Tests\Unit\AlertMessageTestTrait;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -22,6 +25,49 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class AnalyzeWindHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function renderedMessageProvider(): iterable
+    {
+        yield 'french' => ['fr', 'Vents de face attendus pour 2/2 étapes (≥25 km/h). Prévois du temps supplémentaire.'];
+        yield 'english' => ['en', 'Headwinds expected for 2/2 stages (≥25 km/h). Allow extra time.'];
+    }
+
+    /**
+     * The threshold is a `>=` comparison: a stage at exactly 25 km/h counts, so
+     * the message must read the constant and say "≥", not ">".
+     */
+    #[DataProvider('renderedMessageProvider')]
+    #[Test]
+    public function renderedMessageMatchesTheHeadwindCondition(string $locale, string $expected): void
+    {
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn([
+            $this->createStage('trip-1', 1, $this->createWeather(windSpeed: 25.0, relativeWind: WeatherForecast::RELATIVE_WIND_HEADWIND)),
+            $this->createStage('trip-1', 2, $this->createWeather(windSpeed: 30.0, relativeWind: WeatherForecast::RELATIVE_WIND_HEADWIND)),
+        ]);
+        $tripStateManager->method('getLocale')->willReturn($locale);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::WIND_ALERTS,
+                $this->callback(static function (array $data) use ($expected): bool {
+                    self::assertSame($expected, $data['alerts'][0]['message']);
+
+                    return true;
+                }),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, null, $this->createAlertTranslator());
+        $handler(new AnalyzeWind('trip-1'));
+    }
+
     private function createWeather(
         float $windSpeed = 10.0,
         string $relativeWind = WeatherForecast::RELATIVE_WIND_CROSSWIND,
@@ -60,12 +106,13 @@ final class AnalyzeWindHandlerTest extends TestCase
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
         ?TripGenerationTrackerInterface $generationTracker = null,
+        ?TranslatorInterface $translator = null,
     ): AnalyzeWindHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
+        $stubTranslator = $this->createStub(TranslatorInterface::class);
+        $stubTranslator->method('trans')->willReturnCallback(
             static fn (string $id, array $params): string => match ($id) {
                 'alert.wind.warning' => \sprintf('Headwind on %d/%d stages', $params['%count%'], $params['%total%']),
                 'alert.comfort.warning' => \sprintf('Poor comfort on %d/%d stages', $params['%count%'], $params['%total%']),
@@ -79,7 +126,8 @@ final class AnalyzeWindHandlerTest extends TestCase
             $generationTracker ?? $this->createStub(TripGenerationTrackerInterface::class),
             new NullLogger(),
             $tripStateManager,
-            $translator,
+            $translator ?? $stubTranslator,
+            new DecimalFormatter(),
             $this->createStub(MessageBusInterface::class),
         );
     }

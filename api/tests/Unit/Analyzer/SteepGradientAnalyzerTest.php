@@ -9,13 +9,18 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
+use App\Format\DecimalFormatter;
 use App\Enum\AlertType;
+use App\Tests\Unit\AlertMessageTestTrait;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class SteepGradientAnalyzerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private SteepGradientAnalyzer $analyzer;
 
     #[\Override]
@@ -39,7 +44,7 @@ final class SteepGradientAnalyzerTest extends TestCase
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        $this->analyzer = new SteepGradientAnalyzer($distanceCalculator, $translator);
+        $this->analyzer = new SteepGradientAnalyzer($distanceCalculator, $translator, $this->createDistanceFormatter(), new DecimalFormatter());
     }
 
     #[Test]
@@ -205,7 +210,7 @@ final class SteepGradientAnalyzerTest extends TestCase
             }
         );
 
-        $analyzer = new SteepGradientAnalyzer($distanceCalculator, $translator);
+        $analyzer = new SteepGradientAnalyzer($distanceCalculator, $translator, $this->createDistanceFormatter(), new DecimalFormatter());
 
         $stage = $this->createStageWithGeometry([
             new Coordinate(45.0, 5.0, 200.0),
@@ -226,6 +231,43 @@ final class SteepGradientAnalyzerTest extends TestCase
     public function priority(): void
     {
         $this->assertSame(20, SteepGradientAnalyzer::getPriority());
+    }
+
+    /**
+     * @return iterable<string, array{string, float, float, string}>
+     */
+    public static function renderedMessageProvider(): iterable
+    {
+        // 5 segments of 120 m gaining 10 m each: 50 m over 600 m = 8.33 %.
+        yield 'french' => ['fr', 120.0, 10.0, 'Montée raide détectée : 8,3% de pente sur 600 m. Difficile avec un vélo chargé.'];
+        yield 'english' => ['en', 120.0, 10.0, 'Steep climb detected: 8.3% gradient over 600 m. Tough with a loaded bike.'];
+        // 5 segments of 100 m gaining 9 m each: a round 9 % must keep one decimal.
+        yield 'round gradient keeps a constant precision (fr)' => ['fr', 100.0, 9.0, 'Montée raide détectée : 9,0% de pente sur 500 m. Difficile avec un vélo chargé.'];
+        yield 'round gradient keeps a constant precision (en)' => ['en', 100.0, 9.0, 'Steep climb detected: 9.0% gradient over 500 m. Tough with a loaded bike.'];
+    }
+
+    #[DataProvider('renderedMessageProvider')]
+    #[Test]
+    public function renderedMessageLocalisesGradientAndDistance(string $locale, float $segmentMeters, float $segmentGain, string $expected): void
+    {
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('distanceBetween')->willReturn($segmentMeters);
+
+        $analyzer = new SteepGradientAnalyzer(
+            $distanceCalculator,
+            $this->createAlertTranslator(),
+            $this->createDistanceFormatter(),
+            new DecimalFormatter(),
+        );
+
+        $geometry = [];
+        for ($i = 0; $i <= 5; ++$i) {
+            $geometry[] = new Coordinate(45.0 + $i / 1000, 5.0, 200.0 + $i * $segmentGain);
+        }
+
+        $alerts = $analyzer->analyze($this->createStageWithGeometry($geometry), ['locale' => $locale]);
+
+        $this->assertSame($expected, $alerts[0]->message);
     }
 
     /**

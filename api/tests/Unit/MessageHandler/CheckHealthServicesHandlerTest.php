@@ -8,6 +8,8 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\ComputationTracker\TripGenerationTrackerInterface;
+use App\Format\DecimalFormatter;
+use App\Format\DistanceFormatter;
 use App\Geo\GeoDistanceInterface;
 use App\Mercure\MercureEventType;
 use App\Mercure\TripUpdatePublisherInterface;
@@ -15,14 +17,54 @@ use App\Message\CheckHealthServices;
 use App\MessageHandler\CheckHealthServicesHandler;
 use App\Osm\HealthServiceRepositoryInterface;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Tests\Unit\AlertMessageTestTrait;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CheckHealthServicesHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function renderedMessageProvider(): iterable
+    {
+        yield 'french' => ['fr', "Aucune pharmacie, hôpital ni clinique détecté dans un rayon de 15 km autour de l'étape 1. Emporte une trousse de premiers secours et vérifie les villes proches avant le départ."];
+        yield 'english' => ['en', 'No pharmacy, hospital, or clinic detected within 15 km of stage 1. Carry a first-aid kit and check nearby towns before departure.'];
+    }
+
+    #[DataProvider('renderedMessageProvider')]
+    #[Test]
+    public function nudgeMessageDerivesItsThresholdFromTheConstant(string $locale, string $expected): void
+    {
+        $tripStateManager = $this->tripStateManager($this->createStages('trip-1', 1), $locale);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::HEALTH_SERVICE_ALERTS,
+                $this->callback(static function (array $data) use ($expected): bool {
+                    self::assertSame($expected, $data['alerts'][0]['message']);
+
+                    return true;
+                }),
+            );
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $publisher,
+            $this->healthServiceRepository([]),
+            $this->createStub(GeoDistanceInterface::class),
+        );
+        $handler(new CheckHealthServices('trip-1'));
+    }
+
     /**
      * @return list<Stage>
      */
@@ -63,11 +105,11 @@ final class CheckHealthServicesHandlerTest extends TestCase
     /**
      * @param list<Stage>|null $stages
      */
-    private function tripStateManager(?array $stages): TripRequestRepositoryInterface
+    private function tripStateManager(?array $stages, string $locale = 'en'): TripRequestRepositoryInterface
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
         $tripStateManager->method('getStages')->willReturn($stages);
-        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getLocale')->willReturn($locale);
         $tripStateManager->method('getDecimatedPoints')->willReturn(null);
 
         return $tripStateManager;
@@ -82,14 +124,6 @@ final class CheckHealthServicesHandlerTest extends TestCase
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
-            static fn (string $id, array $params): string => match ($id) {
-                'alert.health_service.nudge' => \sprintf('No health service near stage %s.', $params['%stage%']),
-                default => $id,
-            },
-        );
-
         $generationTracker = $this->createStub(TripGenerationTrackerInterface::class);
 
         return new CheckHealthServicesHandler(
@@ -100,7 +134,8 @@ final class CheckHealthServicesHandlerTest extends TestCase
             $tripStateManager,
             $healthServiceRepository,
             $haversine,
-            $translator,
+            $this->createAlertTranslator(),
+            new DistanceFormatter(new DecimalFormatter()),
             $this->createStub(MessageBusInterface::class),
         );
     }
@@ -149,7 +184,7 @@ final class CheckHealthServicesHandlerTest extends TestCase
 
                     return 3 === \count($alerts)
                         && 'nudge' === $alerts[0]['type']
-                        && str_contains((string) $alerts[0]['message'], 'No health service near stage 1');
+                        && str_contains((string) $alerts[0]['message'], 'within 15 km of stage 1');
                 }),
             );
 

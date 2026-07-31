@@ -9,12 +9,16 @@ use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Enum\AlertType;
+use App\Tests\Unit\AlertMessageTestTrait;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class TrafficDangerAnalyzerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     private TrafficDangerAnalyzer $analyzer;
 
     #[\Override]
@@ -25,7 +29,7 @@ final class TrafficDangerAnalyzerTest extends TestCase
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        $this->analyzer = new TrafficDangerAnalyzer($translator);
+        $this->analyzer = new TrafficDangerAnalyzer($translator, $this->createDistanceFormatter());
     }
 
     #[Test]
@@ -390,6 +394,32 @@ final class TrafficDangerAnalyzerTest extends TestCase
     public function priority(): void
     {
         $this->assertSame(20, TrafficDangerAnalyzer::getPriority());
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function renderedMessageProvider(): iterable
+    {
+        yield 'french' => ['fr', '2 segment(s) sur route principale sans piste cyclable (12,4 km au total).'];
+        yield 'english' => ['en', '2 segment(s) on main road without bike lane detected (12.4 km in total).'];
+    }
+
+    #[DataProvider('renderedMessageProvider')]
+    #[Test]
+    public function renderedMessageSumsLengthsInKilometres(string $locale, string $expected): void
+    {
+        $analyzer = new TrafficDangerAnalyzer($this->createAlertTranslator(), $this->createDistanceFormatter());
+
+        $alerts = $analyzer->analyze($this->createStage(), [
+            'locale' => $locale,
+            'osmWays' => [
+                ['highway' => 'primary', 'length' => 6_200.0],
+                ['highway' => 'trunk', 'length' => 6_200.0],
+            ],
+        ]);
+
+        $this->assertSame($expected, $alerts[0]->message);
     }
 
     private function createStage(): Stage

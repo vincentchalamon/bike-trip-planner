@@ -14,6 +14,8 @@ use App\Mercure\TripUpdatePublisherInterface;
 use App\Message\CheckCalendar;
 use App\MessageHandler\CheckCalendarHandler;
 use App\Repository\TripRequestRepositoryInterface;
+use App\Tests\Unit\AlertMessageTestTrait;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -22,6 +24,47 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class CheckCalendarHandlerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function holidayNameProvider(): iterable
+    {
+        yield 'french' => ['fr', "L'étape 1 coïncide avec un jour férié (La Fête nationale). Certains commerces peuvent être fermés."];
+        yield 'english' => ['en', 'Stage 1 coincides with a public holiday (Bastille Day). Some businesses may be closed.'];
+    }
+
+    #[DataProvider('holidayNameProvider')]
+    #[Test]
+    public function holidayNameIsInTheMessageLocale(string $locale, string $expected): void
+    {
+        // 2026-07-14 (Bastille Day) is a Tuesday, so only the holiday nudge fires.
+        $request = new TripRequest();
+        $request->startDate = new \DateTimeImmutable('2026-07-14');
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getRequest')->willReturn($request);
+        $tripStateManager->method('getStages')->willReturn([$this->createStage('trip-1', 1)]);
+        $tripStateManager->method('getLocale')->willReturn($locale);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::CALENDAR_ALERTS,
+                $this->callback(static function (array $data) use ($expected): bool {
+                    self::assertSame($expected, $data['nudges'][0]['message']);
+
+                    return true;
+                }),
+            );
+
+        $handler = $this->createHandler($tripStateManager, $publisher, $this->createAlertTranslator());
+        $handler(new CheckCalendar('trip-1'));
+    }
+
     private function createStage(string $tripId, int $dayNumber): Stage
     {
         return new Stage(
@@ -37,12 +80,13 @@ final class CheckCalendarHandlerTest extends TestCase
     private function createHandler(
         TripRequestRepositoryInterface $tripStateManager,
         TripUpdatePublisherInterface $publisher,
+        ?TranslatorInterface $translator = null,
     ): CheckCalendarHandler {
         $computationTracker = $this->createStub(ComputationTrackerInterface::class);
         $computationTracker->method('getProgress')->willReturn(['completed' => 0, 'failed' => 0, 'total' => 1]);
 
-        $translator = $this->createStub(TranslatorInterface::class);
-        $translator->method('trans')->willReturnCallback(
+        $stubTranslator = $this->createStub(TranslatorInterface::class);
+        $stubTranslator->method('trans')->willReturnCallback(
             static fn (string $id, array $params): string => match ($id) {
                 'alert.calendar.sunday_nudge' => \sprintf('Stage %s falls on a Sunday.', $params['%stage%']),
                 'alert.calendar.nudge' => \sprintf('Stage %s: holiday %s.', $params['%stage%'], $params['%holiday%']),
@@ -59,7 +103,7 @@ final class CheckCalendarHandlerTest extends TestCase
             $generationTracker,
             new NullLogger(),
             $tripStateManager,
-            $translator,
+            $translator ?? $stubTranslator,
             $this->createStub(MessageBusInterface::class),
         );
     }

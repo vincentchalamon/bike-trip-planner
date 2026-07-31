@@ -10,12 +10,16 @@ use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage;
 use App\Engine\DistanceCalculatorInterface;
 use App\Enum\AlertType;
+use App\Tests\Unit\AlertMessageTestTrait;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ContinuityAnalyzerTest extends TestCase
 {
+    use AlertMessageTestTrait;
+
     #[Test]
     public function noAlertWithoutNextStage(): void
     {
@@ -93,6 +97,30 @@ final class ContinuityAnalyzerTest extends TestCase
         $this->assertSame(5, ContinuityAnalyzer::getPriority());
     }
 
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function renderedCriticalMessageProvider(): iterable
+    {
+        yield 'french' => ['fr', 'Discontinuité : 0,6 km entre étape 1 et 1.'];
+        yield 'english' => ['en', 'Discontinuity: 0.6 km between stage 1 and 1.'];
+    }
+
+    #[DataProvider('renderedCriticalMessageProvider')]
+    #[Test]
+    public function renderedCriticalMessageUsesTheLocaleDecimalSeparator(string $locale, string $expected): void
+    {
+        $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
+        $distanceCalculator->method('distanceBetween')->willReturn(600.0);
+
+        $analyzer = new ContinuityAnalyzer($distanceCalculator, $this->createAlertTranslator(), $this->createDistanceFormatter());
+        $stage = $this->createStage(45.0, 5.0, 45.1, 5.1);
+
+        $alerts = $analyzer->analyze($stage, ['locale' => $locale, 'nextStage' => $this->createStage(45.11, 5.1, 45.2, 5.2)]);
+
+        $this->assertSame($expected, $alerts[0]->message);
+    }
+
     private function makeAnalyzer(float $distanceBetweenMeters = 0.0): ContinuityAnalyzer
     {
         $distanceCalculator = $this->createStub(DistanceCalculatorInterface::class);
@@ -103,7 +131,7 @@ final class ContinuityAnalyzerTest extends TestCase
             static fn (string $id, array $parameters = []): string => $id.': '.json_encode($parameters),
         );
 
-        return new ContinuityAnalyzer($distanceCalculator, $translator);
+        return new ContinuityAnalyzer($distanceCalculator, $translator, $this->createDistanceFormatter());
     }
 
     private function createStage(float $startLat, float $startLon, float $endLat, float $endLon): Stage
