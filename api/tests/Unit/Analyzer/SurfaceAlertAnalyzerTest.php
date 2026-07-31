@@ -113,6 +113,18 @@ final class SurfaceAlertAnalyzerTest extends TestCase
         yield 'compacted' => ['compacted'];
         yield 'fine_gravel' => ['fine_gravel'];
         yield 'pebblestone' => ['pebblestone'];
+        yield 'earth' => ['earth'];
+        yield 'clay' => ['clay'];
+        yield 'rock' => ['rock'];
+        yield 'stone' => ['stone'];
+        yield 'woodchips' => ['woodchips'];
+        yield 'wood' => ['wood'];
+        yield 'metal' => ['metal'];
+        // Paved but rough: the alert still fires, the wording just must not call them unpaved.
+        yield 'sett' => ['sett'];
+        yield 'cobblestone' => ['cobblestone'];
+        yield 'unhewn_cobblestone' => ['unhewn_cobblestone'];
+        yield 'paving_stones' => ['paving_stones'];
     }
 
     #[DataProvider('unpavedSurfaceProvider')]
@@ -129,6 +141,113 @@ final class SurfaceAlertAnalyzerTest extends TestCase
 
         $this->assertCount(1, $alerts);
         $this->assertSame(AlertType::WARNING, $alerts[0]->type);
+    }
+
+    #[Test]
+    public function detectsCompositeSurfaceValue(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['surface' => 'gravel;dirt', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertStringContainsString('alert.surface.warning', $alerts[0]->message);
+        // Both components are reported, not the raw composite string.
+        $this->assertStringContainsString('gravel, dirt', $alerts[0]->message);
+    }
+
+    #[Test]
+    public function ignoresCompositeSurfaceValueWithoutRoughComponent(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['surface' => 'asphalt;concrete', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertSame([], $alerts);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function unpavedTracktypeProvider(): iterable
+    {
+        yield 'grade3' => ['grade3'];
+        yield 'grade4' => ['grade4'];
+        yield 'grade5' => ['grade5'];
+    }
+
+    #[DataProvider('unpavedTracktypeProvider')]
+    #[Test]
+    public function detectsTracktypeWhenSurfaceIsAbsent(string $tracktype): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'track', 'tracktype' => $tracktype, 'length' => 600.0],
+            ],
+        ]);
+
+        // Only the rough-surface warning: the missing-surface-data rule was dropped
+        // as a tag-presence alert (issue #861).
+        $this->assertCount(1, $alerts);
+        $this->assertStringContainsString('alert.surface.warning', $alerts[0]->message);
+        $this->assertStringContainsString('tracktype='.$tracktype, $alerts[0]->message);
+    }
+
+    #[Test]
+    public function ignoresMaintainedTracktypeWhenSurfaceIsAbsent(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['highway' => 'track', 'tracktype' => 'grade1', 'length' => 600.0],
+            ],
+        ]);
+
+        // No alert at all: grade1 is a solid surface, and an undocumented `surface`
+        // is no longer an alert of its own (issue #861).
+        $this->assertSame([], $alerts);
+    }
+
+    #[Test]
+    public function detectsSmoothnessWhenSurfaceIsAbsent(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['smoothness' => 'very_bad', 'length' => 600.0],
+            ],
+        ]);
+
+        $this->assertCount(1, $alerts);
+        $this->assertStringContainsString('alert.surface.warning', $alerts[0]->message);
+        $this->assertStringContainsString('smoothness=very_bad', $alerts[0]->message);
+    }
+
+    #[Test]
+    public function explicitSurfaceWinsOverSmoothnessFallback(): void
+    {
+        $stage = $this->createStage();
+
+        $alerts = $this->analyzer->analyze($stage, [
+            'osmWays' => [
+                ['surface' => 'asphalt', 'smoothness' => 'bad', 'length' => 5000.0],
+                ['surface' => 'asphalt', 'tracktype' => 'grade5', 'length' => 5000.0],
+            ],
+        ]);
+
+        $this->assertSame([], $alerts);
     }
 
     #[Test]

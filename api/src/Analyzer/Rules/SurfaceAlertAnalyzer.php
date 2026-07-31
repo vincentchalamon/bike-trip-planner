@@ -14,13 +14,38 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
 {
-    private const int UNPAVED_THRESHOLD_METERS = 500;
+    private const int ROUGH_THRESHOLD_METERS = 500;
 
     /** @var list<string> */
     private const array UNPAVED_SURFACES = [
         'unpaved', 'gravel', 'dirt', 'ground', 'grass', 'sand',
         'mud', 'compacted', 'fine_gravel', 'pebblestone',
+        'earth', 'clay', 'rock', 'stone', 'woodchips', 'wood', 'metal',
     ];
+
+    /**
+     * Paved, but rough enough to matter on a loaded bike. Kept apart from the
+     * unpaved values so the alert wording stays truthful (cobbles *are* paved).
+     *
+     * @var list<string>
+     */
+    private const array ROUGH_PAVED_SURFACES = [
+        'sett', 'cobblestone', 'unhewn_cobblestone', 'paving_stones',
+    ];
+
+    /** @var list<string> */
+    private const array ROUGH_SURFACES = [...self::UNPAVED_SURFACES, ...self::ROUGH_PAVED_SURFACES];
+
+    /**
+     * Secondary signals, used only when `surface` is absent: an unmaintained
+     * track or a very poor smoothness is de facto not a road surface.
+     *
+     * @var list<string>
+     */
+    private const array UNPAVED_TRACKTYPES = ['grade3', 'grade4', 'grade5'];
+
+    /** @var list<string> */
+    private const array ROUGH_SMOOTHNESS = ['bad', 'very_bad', 'horrible', 'very_horrible', 'impassable'];
 
     public function __construct(
         private TranslatorInterface $translator,
@@ -29,7 +54,7 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
 
     public function analyze(Stage $stage, array $context = []): array
     {
-        /** @var list<array{surface?: string, length?: float}> $osmWays */
+        /** @var list<array{surface?: string, tracktype?: string, smoothness?: string, length?: float}> $osmWays */
         $osmWays = $context['osmWays'] ?? [];
 
         if ([] === $osmWays) {
@@ -39,7 +64,7 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
         /** @var string $locale */
         $locale = $context['locale'] ?? 'en';
 
-        return $this->detectUnpavedSections($osmWays, $stage, $locale);
+        return $this->detectRoughSections($osmWays, $stage, $locale);
     }
 
     public static function getPriority(): int
@@ -48,24 +73,28 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
     }
 
     /**
-     * @param list<array{surface?: string, length?: float}> $osmWays
+     * @param list<array{surface?: string, tracktype?: string, smoothness?: string, length?: float}> $osmWays
      *
      * @return list<Alert>
      */
-    private function detectUnpavedSections(array $osmWays, Stage $stage, string $locale): array
+    private function detectRoughSections(array $osmWays, Stage $stage, string $locale): array
     {
-        $unpavedLength = 0.0;
+        $roughLength = 0.0;
         $surfaces = [];
 
         foreach ($osmWays as $way) {
-            $surface = $way['surface'] ?? '';
-            if (\in_array($surface, self::UNPAVED_SURFACES, true)) {
-                $unpavedLength += $way['length'] ?? 0.0;
+            $matched = $this->roughSurfacesOf($way);
+            if ([] === $matched) {
+                continue;
+            }
+
+            $roughLength += $way['length'] ?? 0.0;
+            foreach ($matched as $surface) {
                 $surfaces[$surface] = true;
             }
         }
 
-        if ($unpavedLength < self::UNPAVED_THRESHOLD_METERS) {
+        if ($roughLength < self::ROUGH_THRESHOLD_METERS) {
             return [];
         }
 
@@ -74,7 +103,7 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
             message: $this->translator->trans(
                 'alert.surface.warning',
                 [
-                    '%length%' => (int) $unpavedLength,
+                    '%length%' => (int) $roughLength,
                     '%surface%' => implode(', ', array_keys($surfaces)),
                 ],
                 'alerts',
@@ -88,5 +117,42 @@ final readonly class SurfaceAlertAnalyzer implements StageAnalyzerInterface
                 payload: ['lat' => $stage->startPoint->lat, 'lon' => $stage->startPoint->lon],
             ),
         )];
+    }
+
+    /**
+     * The rough surface values carried by a way, empty when it rides smooth.
+     *
+     * OSM allows composite values (`surface=gravel;dirt`), so each component is
+     * tested. `tracktype` / `smoothness` are only a fallback: an explicit
+     * `surface` always wins, so `surface=asphalt` + `smoothness=bad` is smooth.
+     *
+     * @param array{surface?: string, tracktype?: string, smoothness?: string, length?: float} $way
+     *
+     * @return list<string>
+     */
+    private function roughSurfacesOf(array $way): array
+    {
+        $surface = trim($way['surface'] ?? '');
+
+        if ('' !== $surface) {
+            $components = array_map(trim(...), explode(';', strtolower($surface)));
+
+            return array_values(array_filter(
+                $components,
+                static fn (string $component): bool => \in_array($component, self::ROUGH_SURFACES, true),
+            ));
+        }
+
+        $tracktype = strtolower(trim($way['tracktype'] ?? ''));
+        if (\in_array($tracktype, self::UNPAVED_TRACKTYPES, true)) {
+            return ['tracktype='.$tracktype];
+        }
+
+        $smoothness = strtolower(trim($way['smoothness'] ?? ''));
+        if (\in_array($smoothness, self::ROUGH_SMOOTHNESS, true)) {
+            return ['smoothness='.$smoothness];
+        }
+
+        return [];
     }
 }

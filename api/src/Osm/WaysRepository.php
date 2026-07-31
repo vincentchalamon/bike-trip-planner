@@ -28,7 +28,7 @@ use Doctrine\DBAL\Connection;
  * superset and the result is identical to the unfiltered scan. See
  * WaysIndexReadTest for the behaviour guard.
  *
- * @phpstan-type WayRow = array{lat: float, lon: float, surface: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float}
+ * @phpstan-type WayRow = array{lat: float, lon: float, surface: string, tracktype: string, smoothness: string, highway: string, cycleway: string, 'cycleway:right': string, 'cycleway:left': string, 'cycleway:both': string, bicycle: string, maxspeed: string, length: float}
  */
 final readonly class WaysRepository implements WaysRepositoryInterface
 {
@@ -102,6 +102,8 @@ final readonly class WaysRepository implements WaysRepositoryInterface
                        ST_X(_c.centroid) AS lon,
                        _l.length AS length,
                        f.tags->>'surface' AS surface,
+                       f.tags->>'tracktype' AS tracktype,
+                       f.tags->>'smoothness' AS smoothness,
                        f.tags->>'highway' AS highway,
                        f.tags->>'cycleway' AS cycleway,
                        f.tags->>'cycleway:right' AS cycleway_right,
@@ -128,6 +130,8 @@ final readonly class WaysRepository implements WaysRepositoryInterface
                 'lat' => (float) $row['lat'],
                 'lon' => (float) $row['lon'],
                 'surface' => (string) ($row['surface'] ?? ''),
+                'tracktype' => (string) ($row['tracktype'] ?? ''),
+                'smoothness' => (string) ($row['smoothness'] ?? ''),
                 'highway' => (string) ($row['highway'] ?? ''),
                 'cycleway' => (string) ($row['cycleway'] ?? ''),
                 'cycleway:right' => (string) ($row['cycleway_right'] ?? ''),

@@ -74,10 +74,34 @@ final class WaysIndexReadTest extends KernelTestCase
         // Tags absent from the row default to '' (the shape the analyzers expect).
         self::assertSame('', $way['cycleway']);
         self::assertSame('', $way['bicycle']);
+        self::assertSame('', $way['tracktype']);
+        self::assertSame('', $way['smoothness']);
         // Centroid of the linestring + a real geography length in meters.
         self::assertEqualsWithDelta(49.61, $way['lat'], 0.01);
         self::assertEqualsWithDelta(6.14, $way['lon'], 0.01);
         self::assertGreaterThan(1000.0, $way['length']);
+    }
+
+    /**
+     * The surface analyzer falls back on tracktype / smoothness when `surface` is
+     * missing, so both tags must reach it from the jsonb column (issue #860).
+     */
+    #[Test]
+    public function findInCorridorProjectsTracktypeAndSmoothness(): void
+    {
+        $this->connection->executeStatement('TRUNCATE osm.ways');
+        $this->connection->executeStatement(<<<'SQL'
+            INSERT INTO osm.ways (osm_id, tags, geom) VALUES
+              (20, '{"highway":"track","tracktype":"grade4","smoothness":"very_bad"}'::jsonb,
+                   ST_SetSRID(ST_GeomFromText('LINESTRING(6.13 49.60, 6.15 49.62)'), 4326))
+            SQL);
+
+        $ways = new WaysRepository($this->connection)->findInCorridor(self::CORRIDOR_ROUTE, self::RADIUS_METERS);
+
+        self::assertCount(1, $ways);
+        self::assertSame('', $ways[0]['surface']);
+        self::assertSame('grade4', $ways[0]['tracktype']);
+        self::assertSame('very_bad', $ways[0]['smoothness']);
     }
 
     /**
@@ -153,8 +177,9 @@ final class WaysIndexReadTest extends KernelTestCase
               -- On the corridor, unpaved, no surface-less tags.
               (11, '{"highway":"track","surface":"gravel"}'::jsonb,
                    ST_SetSRID(ST_GeomFromText('LINESTRING(6.135 49.605, 6.145 49.615)'), 4326)),
-              -- On the corridor, surface tag missing (counts toward missing-data %).
-              (12, '{"highway":"residential"}'::jsonb,
+              -- On the corridor, surface tag missing, but carrying the
+              -- tracktype/smoothness fallback signals.
+              (12, '{"highway":"track","tracktype":"grade4","smoothness":"bad"}'::jsonb,
                    ST_SetSRID(ST_GeomFromText('LINESTRING(6.140 49.610, 6.142 49.612)'), 4326)),
               -- Bbox false positive: within the padded envelope but ~600 m north of
               -- the route line, so excluded by the metric predicate.
@@ -210,6 +235,8 @@ final class WaysIndexReadTest extends KernelTestCase
                        ST_X(_c.centroid) AS lon,
                        _l.length AS length,
                        tags->>'surface' AS surface,
+                       tags->>'tracktype' AS tracktype,
+                       tags->>'smoothness' AS smoothness,
                        tags->>'highway' AS highway,
                        tags->>'cycleway' AS cycleway,
                        tags->>'cycleway:right' AS cycleway_right,
@@ -234,6 +261,8 @@ final class WaysIndexReadTest extends KernelTestCase
                 'lat' => (float) $row['lat'],
                 'lon' => (float) $row['lon'],
                 'surface' => (string) ($row['surface'] ?? ''),
+                'tracktype' => (string) ($row['tracktype'] ?? ''),
+                'smoothness' => (string) ($row['smoothness'] ?? ''),
                 'highway' => (string) ($row['highway'] ?? ''),
                 'cycleway' => (string) ($row['cycleway'] ?? ''),
                 'cycleway:right' => (string) ($row['cycleway_right'] ?? ''),
