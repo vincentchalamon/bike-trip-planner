@@ -91,7 +91,9 @@ final readonly class CheckWaterPointsHandler extends AbstractTripMessageHandler
                     'waterPoints' => $waterPointsWithDistance,
                 ];
 
-                if ($this->hasWaterGap($stage, $waterPointsWithDistance)) {
+                // A rest day is not ridden: no on-route hydration gap to warn about.
+                // Its water points still ship in the payload above (useful where you stay).
+                if (!$stage->isRestDay && $this->hasWaterGap($stage, $waterPointsWithDistance)) {
                     $nearestWp = $this->findNearestWaterPoint($stage, $allWaterPoints);
                     $alerts[] = [
                         'stageIndex' => $i,

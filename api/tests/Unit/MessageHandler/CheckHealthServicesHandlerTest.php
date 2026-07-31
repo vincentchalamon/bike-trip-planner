@@ -223,6 +223,49 @@ final class CheckHealthServicesHandlerTest extends TestCase
     }
 
     #[Test]
+    public function restDayIsStillChecked(): void
+    {
+        // Deliberate exception to the rest-day guard: the check runs at the stage
+        // midpoint, i.e. where the rider stays all day, so "no pharmacy within 15 km"
+        // stays relevant.
+        $stages = [
+            ...$this->createStages('trip-1', 1),
+            new Stage(
+                tripId: 'trip-1',
+                dayNumber: 2,
+                distance: 0.0,
+                elevation: 0.0,
+                startPoint: new Coordinate(48.5, 2.5),
+                endPoint: new Coordinate(48.5, 2.5),
+                isRestDay: true,
+            ),
+        ];
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::HEALTH_SERVICE_ALERTS,
+                $this->callback(static function (array $data): bool {
+                    $alerts = $data['alerts'];
+                    \assert(\is_array($alerts));
+
+                    return 2 === \count($alerts)
+                        && \in_array(1, array_column($alerts, 'stageIndex'), true);
+                }),
+            );
+
+        $handler = $this->createHandler(
+            $this->tripStateManager($stages),
+            $publisher,
+            $this->healthServiceRepository([]),
+            $this->createStub(GeoDistanceInterface::class),
+        );
+        $handler(new CheckHealthServices('trip-1'));
+    }
+
+    #[Test]
     public function nullStagesReturnsEarly(): void
     {
         $tripStateManager = $this->tripStateManager(null);

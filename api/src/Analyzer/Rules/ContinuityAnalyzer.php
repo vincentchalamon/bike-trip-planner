@@ -14,6 +14,12 @@ use App\Enum\AlertType;
 use App\Format\DistanceFormatter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
+/**
+ * Deliberately has no `isRestDay` guard: a rest day duplicates the previous stage's
+ * end point as both its start and end, so the rest-day → next-stage check IS the real
+ * continuity check between the two ridden stages around it. Skipping rest days would
+ * silently drop a genuine route gap.
+ */
 final readonly class ContinuityAnalyzer implements StageAnalyzerInterface
 {
     private const float CRITICAL_THRESHOLD_METERS = 500.0;

@@ -12,4 +12,12 @@ interface AdminBoundaryRepositoryInterface
      * the default name), or null when the point lies outside every stored country.
      */
     public function findCountryAt(float $lat, float $lon, string $locale): ?string;
+
+    /**
+     * Resolves the ISO 3166-1 alpha-2 code of the country containing the given point,
+     * or null when the point lies outside every stored country or the boundary carries
+     * no ISO code. Callers needing a country-keyed dataset (public holidays…) use this
+     * instead of the localised name.
+     */
+    public function findCountryCodeAt(float $lat, float $lon): ?string;
 }

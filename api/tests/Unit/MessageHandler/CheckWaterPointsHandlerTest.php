@@ -248,6 +248,51 @@ final class CheckWaterPointsHandlerTest extends TestCase
     }
 
     #[Test]
+    public function restDayEmitsNoAlertButKeepsItsWaterPoints(): void
+    {
+        // Same setup as longStageWithoutWaterPointEmitsNudge, but flagged as a rest day:
+        // no hydration-gap nudge, yet the (empty) per-stage water list still ships.
+        $restDay = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 1,
+            distance: 50.0,
+            elevation: 0.0,
+            startPoint: new Coordinate(48.0, 2.0),
+            endPoint: new Coordinate(48.0, 2.0),
+            geometry: [new Coordinate(48.0, 2.0)],
+            isRestDay: true,
+        );
+
+        $tripStateManager = $this->tripStateManager([$restDay]);
+
+        $distributor = $this->createStub(GeometryDistributorInterface::class);
+        $distributor->method('distributeByGeometry')->willReturn([]);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::WATER_POINT_ALERTS,
+                $this->callback(static function (array $data): bool {
+                    $byStage = $data['waterPointsByStage'];
+                    \assert(\is_array($byStage));
+
+                    return [] === $data['alerts'] && 1 === \count($byStage);
+                }),
+            );
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $publisher,
+            $this->waterPointRepository([]),
+            $distributor,
+            $this->createStub(GeoDistanceInterface::class),
+        );
+        $handler(new CheckWaterPoints('trip-1'));
+    }
+
+    #[Test]
     public function noStagesReturnsEarly(): void
     {
         $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);

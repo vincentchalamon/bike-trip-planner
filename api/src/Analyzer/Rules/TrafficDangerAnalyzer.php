@@ -33,6 +33,11 @@ final readonly class TrafficDangerAnalyzer implements StageAnalyzerInterface
 
     public function analyze(Stage $stage, array $context = []): array
     {
+        // A rest day is not ridden: its traffic exposure is irrelevant.
+        if ($stage->isRestDay) {
+            return [];
+        }
+
         /** @var list<array{highway?: string, cycleway?: string, 'cycleway:right'?: string, 'cycleway:left'?: string, 'cycleway:both'?: string, bicycle?: string, maxspeed?: string, length?: float, lat?: float, lon?: float}> $osmWays */
         $osmWays = $context['osmWays'] ?? [];
 

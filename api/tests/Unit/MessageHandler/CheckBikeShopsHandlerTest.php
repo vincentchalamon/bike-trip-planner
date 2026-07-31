@@ -204,6 +204,50 @@ final class CheckBikeShopsHandlerTest extends TestCase
     }
 
     #[Test]
+    public function restDayIsSkipped(): void
+    {
+        $stages = $this->createStages('trip-1');
+        $stages[2] = new Stage(
+            tripId: 'trip-1',
+            dayNumber: 3,
+            distance: 0.0,
+            elevation: 0.0,
+            startPoint: new Coordinate(48.5, 2.5),
+            endPoint: new Coordinate(48.5, 2.5),
+            isRestDay: true,
+        );
+
+        $tripStateManager = $this->createStub(TripRequestRepositoryInterface::class);
+        $tripStateManager->method('getStages')->willReturn($stages);
+        $tripStateManager->method('getLocale')->willReturn('en');
+        $tripStateManager->method('getDecimatedPoints')->willReturn(null);
+
+        $publisher = $this->createMock(TripUpdatePublisherInterface::class);
+        $publisher->expects($this->once())
+            ->method('publish')
+            ->with(
+                'trip-1',
+                MercureEventType::BIKE_SHOP_ALERTS,
+                $this->callback(static function (array $data): bool {
+                    $alerts = $data['alerts'];
+                    \assert(\is_array($alerts));
+
+                    // 6 stages, one of which is a rest day: only the 5 ridden days alert.
+                    return 5 === \count($alerts)
+                        && !\in_array(2, array_column($alerts, 'stageIndex'), true);
+                }),
+            );
+
+        $handler = $this->createHandler(
+            $tripStateManager,
+            $publisher,
+            $this->bikeShopRepository([]),
+            $this->createStub(GeoDistanceInterface::class),
+        );
+        $handler(new CheckBikeShops('trip-1'));
+    }
+
+    #[Test]
     public function tripWithFewStagesIsSkipped(): void
     {
         // BR-06: trips of 5 days or fewer skip the check entirely, but must still mark

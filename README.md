@@ -126,8 +126,8 @@ Rules are executed in priority order (lower = higher priority):
 | **Traffic** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Secondary road, no cycleway, `maxspeed` tagged and > 50 km/h |
 | **Traffic** | 20 | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Secondary road, no cycleway, `maxspeed` <= 50 km/h or absent/unreadable |
 | **E-bike range** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Day distance > effective range (80 km - elevation / 25); action navigates to the nearest charging station within 2 km, else suggests shortening the stage |
-| **Sunset** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Estimated arrival time exceeds civil twilight end at stage end point |
-| **Calendar** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage falls on a French public holiday |
+| **Sunset** | 20 | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Estimated arrival time exceeds civil twilight end at stage end point (times shown in the stage's local timezone) |
+| **Calendar** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage falls on a public holiday of a country the route crosses, for any year the trip spans (France as fallback when no boundary resolves) |
 | **Calendar** | -- | ![nudge](https://img.shields.io/badge/-nudge-0288d1) | Stage falls on a Sunday (businesses may be closed) |
 | **Wind** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Headwind >= 25 km/h on >= 60 % of stages with weather data |
 | **Comfort** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Poor comfort index (< 40/100) on at least one stage |
@@ -146,6 +146,8 @@ Rules are executed in priority order (lower = higher priority):
 | **Ford** | -- | ![warning](https://img.shields.io/badge/-warning-ed6c02) | Stage crosses a ford and rain is forecast (precipitation probability >= 50 %): possibly impassable in high water |
 
 **Terrain rules** (Continuity, Elevation, Steep gradient, Surface, Traffic, E-bike range, Sunset, Rest day) implement `StageAnalyzerInterface` and are auto-discovered via `#[AutoconfigureTag('app.stage_analyzer')]`. Rules with `--` priority (Calendar, Wind + Comfort, Bike shops, Resupply, Accommodation, Water points, Cultural POI, Railway station, Health services, Border crossing, Ferry, Ford) are separate async Symfony Message handlers; Comfort is co-located with Wind inside `AnalyzeWindHandler`. Ford runs after the weather computation (its severity depends on the per-stage forecast).
+
+**Rest days** are skipped by every rule that describes riding (Elevation, Steep gradient, Surface, Traffic, E-bike range, Sunset, Bike shops, Water points, Resupply). Three rules run on rest days on purpose: Continuity (a rest day duplicates the previous stage's end point, so its check is the real gap between the two ridden stages around it), Health services (evaluated at the stage midpoint, i.e. where the rider stays all day) and Calendar (a holiday closes shops whether or not you pedal).
 
 ---
 

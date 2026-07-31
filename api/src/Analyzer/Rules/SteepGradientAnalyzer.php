@@ -32,6 +32,11 @@ final readonly class SteepGradientAnalyzer implements StageAnalyzerInterface
 
     public function analyze(Stage $stage, array $context = []): array
     {
+        // A rest day is not ridden: it has no climb to report.
+        if ($stage->isRestDay) {
+            return [];
+        }
+
         $geometry = $stage->geometry;
         if (\count($geometry) < 2) {
             return [];

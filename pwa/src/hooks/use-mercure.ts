@@ -238,26 +238,26 @@ function dispatchEvent(event: MercureEvent): void {
       break;
 
     case "calendar_alerts": {
-      const calendarByStage = new Map<number, typeof event.data.nudges>();
-      for (const nudge of event.data.nudges) {
-        const existing = calendarByStage.get(nudge.stageIndex) ?? [];
-        existing.push(nudge);
-        calendarByStage.set(nudge.stageIndex, existing);
+      const calendarByStage = new Map<number, typeof event.data.alerts>();
+      for (const alert of event.data.alerts) {
+        const existing = calendarByStage.get(alert.stageIndex) ?? [];
+        existing.push(alert);
+        calendarByStage.set(alert.stageIndex, existing);
       }
-      // The payload is a full replacement of the calendar nudges: clear the
+      // The payload is a full replacement of the calendar alerts: clear the
       // group on EVERY stage first, otherwise a stage that dropped out of the
       // new set (e.g. no longer a Sunday after a rest-day insert) keeps its
-      // stale nudge because the loop below only visits stages present in the
+      // stale alert because the loop below only visits stages present in the
       // payload (recette bug: "L'étape 3 tombe un dimanche" on a Tuesday).
       for (let i = 0; i < store.stages.length; i++) {
         store.updateStageAlerts(i, [], "calendar");
       }
-      for (const [stageIndex, nudges] of calendarByStage) {
+      for (const [stageIndex, alerts] of calendarByStage) {
         store.updateStageAlerts(
           stageIndex,
-          nudges.map((n) => ({
-            type: "nudge" as const,
-            message: n.message,
+          alerts.map((a) => ({
+            type: a.type as "nudge",
+            message: a.message,
             lat: null,
             lon: null,
           })),

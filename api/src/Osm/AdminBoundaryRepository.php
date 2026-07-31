@@ -41,4 +41,28 @@ final readonly class AdminBoundaryRepository implements AdminBoundaryRepositoryI
 
         return \is_string($country) && '' !== $country ? $country : null;
     }
+
+    public function findCountryCodeAt(float $lat, float $lon): ?string
+    {
+        $code = $this->connection->fetchOne(
+            <<<'SQL'
+                SELECT COALESCE(tags->>'ISO3166-1', tags->>'ISO3166-1:alpha2')
+                FROM osm.admin_boundaries
+                WHERE admin_level = 2
+                  AND ST_Covers(geom, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326))
+                ORDER BY osm_id
+                LIMIT 1
+                SQL,
+            [
+                'lon' => $lon,
+                'lat' => $lat,
+            ],
+        );
+
+        if (!\is_string($code) || 1 !== preg_match('/^[A-Za-z]{2}$/', $code)) {
+            return null;
+        }
+
+        return strtoupper($code);
+    }
 }
