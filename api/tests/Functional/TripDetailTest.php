@@ -6,11 +6,15 @@ namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use ApiPlatform\Symfony\Bundle\Test\Client;
+use App\ApiResource\Model\Alert;
+use App\ApiResource\Model\AlertAction;
+use App\ApiResource\Model\AlertActionKind;
 use App\ApiResource\Model\Coordinate;
 use App\ApiResource\Stage as StageDto;
 use App\ApiResource\TripRequest;
 use App\ComputationTracker\ComputationTrackerInterface;
 use App\Entity\User;
+use App\Enum\AlertType;
 use App\Enum\ComputationName;
 use App\Repository\DoctrineTripRequestRepository;
 use Doctrine\DBAL\Connection;
@@ -108,6 +112,70 @@ final class TripDetailTest extends ApiTestCase
         // undefined and falls back to the presence of the underlying data).
         $this->assertNull($data['weatherStatus'] ?? null);
         $this->assertNull($data['aiStatus'] ?? null);
+    }
+
+    /**
+     * REST is the third serialization boundary that used to strip `action`
+     * (issue #863). Only `navigate` and `dismiss` are deliverable; `auto_fix`
+     * and `detour` would render a dead disabled button (issue #397), so they
+     * must come back as null rather than leak to the frontend.
+     */
+    #[Test]
+    public function detailExposesDeliverableAlertActionsAndFiltersTheOthers(): void
+    {
+        $repo = $this->seedTrip(self::TRIP_ID);
+
+        $stage = new StageDto(
+            tripId: self::TRIP_ID,
+            dayNumber: 1,
+            distance: 85.5,
+            elevation: 1200.0,
+            startPoint: new Coordinate(45.0, 6.0, 1000.0),
+            endPoint: new Coordinate(45.5, 6.5, 800.0),
+            geometry: [new Coordinate(45.0, 6.0, 1000.0)],
+        );
+        $stage->alerts = [
+            new Alert(
+                type: AlertType::CRITICAL,
+                message: 'Discontinuity',
+                lat: 48.1,
+                lon: 2.2,
+                action: new AlertAction(
+                    kind: AlertActionKind::NAVIGATE,
+                    label: 'Voir la discontinuité sur la carte',
+                    payload: ['lat' => 48.1, 'lon' => 2.2],
+                ),
+            ),
+            new Alert(
+                type: AlertType::WARNING,
+                message: 'Elevation',
+                action: new AlertAction(kind: AlertActionKind::AUTO_FIX, label: 'Couper l\'étape en deux'),
+            ),
+            new Alert(type: AlertType::NUDGE, message: 'No action at all'),
+        ];
+        $repo->storeStages(self::TRIP_ID, [$stage]);
+        $repo->storeStatus(self::TRIP_ID, 'ready');
+
+        $response = $this->client->request('GET', \sprintf('/trips/%s/detail', self::TRIP_ID), [
+            'headers' => array_merge(['Accept' => 'application/ld+json'], $this->authHeader($this->jwtToken)),
+        ]);
+
+        $this->assertResponseIsSuccessful();
+
+        $alerts = $response->toArray(false)['stages'][0]['alerts'];
+        $this->assertCount(3, $alerts);
+
+        $this->assertSame([
+            'kind' => 'navigate',
+            'label' => 'Voir la discontinuité sur la carte',
+            'payload' => ['lat' => 48.1, 'lon' => 2.2],
+        ], $alerts[0]['action']);
+        $this->assertEqualsWithDelta(48.1, $alerts[0]['lat'], 0.0001);
+        $this->assertEqualsWithDelta(2.2, $alerts[0]['lon'], 0.0001);
+
+        // JSON-LD strips null properties, so a filtered or absent action is absent.
+        $this->assertNull($alerts[1]['action'] ?? null);
+        $this->assertNull($alerts[2]['action'] ?? null);
     }
 
     #[Test]
